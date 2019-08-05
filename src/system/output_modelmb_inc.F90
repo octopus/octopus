@@ -45,14 +45,14 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
   PUSH_SUB(X(output_modelmb))
 
   ! make sure directory exists
-  call io_mkdir(trim(dir))
+  call io_mkdir_old(trim(dir))
   ! all model mb stuff should be in this directory
   dirname = trim(dir)//'/modelmb'
-  call io_mkdir(trim(dirname))
+  call io_mkdir_old(trim(dirname))
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open_old(trim(filename), action='write')
 
   ! treat all particle types
   SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))

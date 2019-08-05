@@ -89,7 +89,7 @@
       end do
 
       !and print the spectrum
-      iunit = io_open('td.general/infrared', action='write')
+      iunit = io_open_old('td.general/infrared', action='write')
 
 100   FORMAT(100('#'))
 
@@ -133,7 +133,7 @@
       PUSH_SUB(read_dipole)
 
       ! Opens the coordinates files.
-      iunit = io_open('td.general/multipoles', action='read')
+      iunit = io_open_old('td.general/multipoles', action='read')
 
       call io_skip_header(iunit)
 
@@ -175,7 +175,7 @@
       end_iter = iter - 1
 
       write (message(1), '(a)') "Read dipole moment from '"// &
-        trim(io_workpath('td.general/multipoles'))//"'."
+        trim(io_workpath_old('td.general/multipoles'))//"'."
       call messages_info(1)
 
       POP_SUB(read_dipole)

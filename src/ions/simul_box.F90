@@ -1290,7 +1290,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -1360,7 +1360,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -1553,7 +1553,7 @@ contains
       call messages_warning(3)
 
       ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir(STATIC_DIR)
+      call io_mkdir_old(STATIC_DIR)
       call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
     end if
 

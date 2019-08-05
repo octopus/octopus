@@ -260,7 +260,7 @@ program oct_unfold
   else if(run_mode == OPTION__UNFOLDMODE__UNFOLD_RUN) then
 
     !Sanity check
-    file_gvec = io_open('unfold_gvec.dat', action='read')
+    file_gvec = io_open_old('unfold_gvec.dat', action='read')
     read(file_gvec, *)
     read(file_gvec, *) ik
     if(ik /= path_kpoints_grid%npoints) then
@@ -321,8 +321,8 @@ contains
     PUSH_SUB(unfold_setup)
 
     if(mpi_grp_is_root(mpi_world)) then
-      file_gvec = io_open('unfold_gvec.dat', action='write')
-      file_kpts = io_open('unfold_kpt.dat', action='write')
+      file_gvec = io_open_old('unfold_gvec.dat', action='write')
+      file_kpts = io_open_old('unfold_kpt.dat', action='write')
       write(file_kpts,'(a)')  '%KpointsReduced'
       write(file_gvec,'(a)')  '#Created by oct-unfold'
       write(file_gvec,'(i5)') path_kpoints_grid%npoints
@@ -413,7 +413,7 @@ contains
 
     SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
-    file_gvec = io_open('./unfold_gvec.dat', action='read')
+    file_gvec = io_open_old('./unfold_gvec.dat', action='read')
     read(file_gvec,*)
     read(file_gvec,*)
     do ik = 1, st%d%nik
@@ -480,7 +480,7 @@ contains
 
       if(mpi_grp_is_root(gr%mesh%mpi_grp)) then
         write(filename,"(a13,i3.3,a4)") "./static/ake_",ik,".dat"
-        file_ake = io_open(trim(filename), action='write')
+        file_ake = io_open_old(trim(filename), action='write')
         write(file_ake, '(a)') '#Energy Ak(E)'
         write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       end if
@@ -554,7 +554,7 @@ contains
 #endif  
 
     if(mpi_grp_is_root(mpi_world)) then
-      file_ake = io_open("static/ake.dat", action='write')
+      file_ake = io_open_old("static/ake.dat", action='write')
       write(file_ake, '(a)') '#Energy Ak(E)'
       write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       do ik = 1, st%d%nik

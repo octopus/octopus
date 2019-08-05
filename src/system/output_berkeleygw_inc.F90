@@ -39,7 +39,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
   if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
   if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
 
-  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
+  if(mpi_grp_is_root(mpi_world)) iunit = io_open_old(trim(dir) // 'vxc.dat', action='write')
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))
 
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
@@ -64,7 +64,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
   set_null = .false.
   
   if(bgw%calc_exchange) then
-    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
+    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open_old(trim(dir) // 'x.dat', action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
     if(.not. associated(hm%hf_st)) then
       hm%hf_st => st
@@ -210,14 +210,14 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   end do
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
+    iunit = io_open_old(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
     write(iunit,*) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit,*) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)
   end if
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
+    iunit = io_open_old(trim(dir) // 'vmtxel', action='write', form='unformatted')
     write(iunit) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)

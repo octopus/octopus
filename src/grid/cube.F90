@@ -646,7 +646,7 @@ contains
       call cube_partition(cube, part)
   
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/cube_partition')
+        call io_mkdir_old('debug/cube_partition')
         npart = cube%mpi_grp%size
       
         ! Debug output. Write points of each partition in a different file.
@@ -654,7 +654,7 @@ contains
 
           write(filenum, '(i3.3)') nn
 
-          iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
+          iunit = io_open_old('debug/cube_partition/cube_partition.'//filenum, &
                action='write')
           do kk = 1, cube%rs_n_global(3)
             do jj = 1, cube%rs_n_global(2)

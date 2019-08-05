@@ -46,7 +46,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open(file = fname, action = 'write')
+  iunit = io_open_old(file = fname, action = 'write')
 
   write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
   write(iunit, fmt = '(a,i2,a,i2)') '# l =', ll, '; m =', mm
@@ -130,7 +130,7 @@ subroutine X(output_me_ks_multipoles2d)(fname, st, gr, dir, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open(file = fname, action = 'write')
+  iunit = io_open_old(file = fname, action = 'write')
 
   select case(dir)
   case(1)
@@ -208,7 +208,7 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open(file = fname, action = 'write')
+  iunit = io_open_old(file = fname, action = 'write')
 
   write(iunit, fmt = '(a)') '# Dipole matrix elements file: <Phi_i | X**l | Phi_j>' 
   write(iunit, fmt = '(a,i2)') '# l =', ll
@@ -294,7 +294,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
   
   do idir = 1, gr%sb%dim
 
-    iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
+    iunit = io_open_old(file = trim(fname)//index2axis(idir), action = 'write')
 
     write(iunit, '(a)') '# Dipole matrix elements file: |<Phi_i | r | Phi_j>|' 
     write(iunit, '(a,i4)')      '# ik =', ik

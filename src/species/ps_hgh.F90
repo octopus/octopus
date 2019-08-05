@@ -90,7 +90,7 @@ contains
 
     PUSH_SUB(hgh_init)
 
-    iunit = io_open(trim(filename), action='read', form='formatted', status='old')
+    iunit = io_open_old(trim(filename), action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
@@ -665,12 +665,12 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir(trim(dir))
-    hgh_unit = io_open(trim(dirname)//'/hgh', action='write')
-    loc_unit = io_open(trim(dirname)//'/local', action='write')
-    dat_unit = io_open(trim(dirname)//'/info', action='write')
-    kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
-    wav_unit = io_open(trim(dirname)//'/wave', action='write')
+    call io_mkdir_old(trim(dir))
+    hgh_unit = io_open_old(trim(dirname)//'/hgh', action='write')
+    loc_unit = io_open_old(trim(dirname)//'/local', action='write')
+    dat_unit = io_open_old(trim(dirname)//'/info', action='write')
+    kbp_unit = io_open_old(trim(dirname)//'/nonlocal', action='write')
+    wav_unit = io_open_old(trim(dirname)//'/wave', action='write')
 
     ! Writes down the input file, to be checked against SHARE_DIR/pseudopotentials/HGH/ATOM_NAME.hgh
     write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

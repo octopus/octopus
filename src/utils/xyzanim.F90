@@ -89,7 +89,7 @@ program xyzanim
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
   ! Opens the coordinates file
-  coords_unit = io_open(coords_file, action='read', recl = record_length)
+  coords_unit = io_open_old(coords_file, action='read', recl = record_length)
 
   call io_skip_header(coords_unit)
   ierr = 0
@@ -104,10 +104,10 @@ program xyzanim
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
       if(.not.multifiles)then
-        call io_mkdir('td.general')
+        call io_mkdir_old('td.general')
         call geometry_write_xyz(geo, 'td.general/movie', append = .true., comment = trim(comment))
       else
-        call io_mkdir('td.general/movie/')
+        call io_mkdir_old('td.general/movie/')
         write(coords_file,'(i7.7)')iter
         call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), append = .false.)
       end if

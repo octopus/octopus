@@ -274,7 +274,7 @@ contains
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
       
-      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
+      prof_vars%mem_iunit = io_open_old(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
       write(prof_vars%mem_iunit, '(5a16,a70)') 'Elapsed Time', 'Alloc/Dealloc', 'Size (words)', 'Prof Mem', &
         'Sys Mem', 'Variable Name(Filename:Line)'
     end if
@@ -308,7 +308,7 @@ contains
 
       prof_vars%output_dir = 'profiling'
 
-      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
+      if(mpi_grp_is_root(mpi_world)) call io_mkdir_old(trim(prof_vars%output_dir))
 
       POP_SUB(profiling_init.get_output_dir)
     end subroutine get_output_dir
@@ -835,7 +835,7 @@ contains
     end if
 
     filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number
-    iunit = io_open(trim(filename), action='write')
+    iunit = io_open_old(trim(filename), action='write')
     if(iunit < 0) then
       message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
       call messages_warning(1)

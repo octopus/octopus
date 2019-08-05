@@ -857,7 +857,7 @@ contains
     ! reading PCM cavity from standard output file in two steps
 
     ! first step - counting tesserae
-    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
+    asc_unit_test = io_open_old(PCM_DIR//'ASC_e.dat', action='read')
     pcm%n_tesserae = 0
     iocheck = 1
     do while( iocheck >= 0 )
@@ -873,8 +873,8 @@ contains
 
     ! second step - reading of PCM tessellation arrays from standard output file
     !               writing the cavity to debug-purpose file
-    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
-    cavity_unit = io_open(PCM_DIR//'cavity_check.xyz', action='write')
+    asc_unit_test = io_open_old(PCM_DIR//'ASC_e.dat', action='read')
+    cavity_unit = io_open_old(PCM_DIR//'cavity_check.xyz', action='write')
     write(cavity_unit,'(I3)') pcm%n_tesserae
     write(cavity_unit,*)
     do ia = 1, pcm%n_tesserae
@@ -894,12 +894,12 @@ contains
     ! N.B. we assume nuclei fixed in time
 
     ! opening time-dependent PCM charges standard and debug-purpose file
-    asc_vs_t_unit = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='read', form='formatted')
-    asc_vs_t_unit_check = io_open(PCM_DIR//'ASC_e_vs_t_check.dat', action='write', form='formatted')
+    asc_vs_t_unit = io_open_old(PCM_DIR//'ASC_e_vs_t.dat', action='read', form='formatted')
+    asc_vs_t_unit_check = io_open_old(PCM_DIR//'ASC_e_vs_t_check.dat', action='write', form='formatted')
 
     ! opening time-dependent PCM and total dipole debug-purpose files
-    dipole_vs_t_unit_check = io_open(PCM_DIR//'dipole_e_vs_t_check.dat', action='write', form='formatted')
-    dipole_vs_t_unit_check1 = io_open(PCM_DIR//'dipole_e_vs_t_check1.dat', action='write', form='formatted')
+    dipole_vs_t_unit_check = io_open_old(PCM_DIR//'dipole_e_vs_t_check.dat', action='write', form='formatted')
+    dipole_vs_t_unit_check1 = io_open_old(PCM_DIR//'dipole_e_vs_t_check1.dat', action='write', form='formatted')
 
     ! reading PCM charges for the zeroth-iteration - not used - pcm%q_e_in is only auxiliary here
     read(asc_vs_t_unit,trim(adjustl(asc_vs_t_unit_format))) aux_float1, ( pcm%q_e_in(ia) , ia=1,pcm%n_tesserae )
@@ -1670,9 +1670,9 @@ contains
 
     ! Try to get the trajectory from multipole file
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open_old('multipoles', action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open_old('td.general/multipoles', action='read', status='old')
     end if
     if (.not.(iunit < 0)) then
       call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
@@ -1741,9 +1741,9 @@ contains
     PUSH_SUB(spectrum_hs_ar_from_mult)
 
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open_old('multipoles', action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open_old('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
@@ -1835,9 +1835,9 @@ contains
 
     PUSH_SUB(spectrum_hs_from_mult)
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open_old('multipoles', action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open_old('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
@@ -2162,7 +2162,7 @@ contains
 
     if(present(w0)) then
 
-      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+      iunit = io_open_old(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
       write(iunit, '(a1,a20,a20)') '#', &
         str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
@@ -2216,7 +2216,7 @@ contains
 
       ! output
     if(trim(out_file) /= '-') then
-      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+      iunit = io_open_old(trim(out_file) // "." // trim(pol), action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
        
       write(iunit, '(a1,a20,a20)') &
@@ -2365,11 +2365,11 @@ contains
 
     ! open files
     filename = trim('td.general/')//trim(fname)
-    iunit = io_open(filename, action='read', status='old', die=.false.)
+    iunit = io_open_old(filename, action='read', status='old', die=.false.)
 
     if(iunit < 0) then
       filename = trim('./')//trim(fname)
-      iunit = io_open(filename, action='read', status='old')
+      iunit = io_open_old(filename, action='read', status='old')
     end if
 
 
@@ -2690,10 +2690,10 @@ contains
     end if
     
     if (spins_singlet .and. spins_triplet) then
-      out_file = io_open('cross_section_diagonal-sigma_s', action='write')
-      out_file_t = io_open('cross_section_diagonal-sigma_t', action='write')
+      out_file = io_open_old('cross_section_diagonal-sigma_s', action='write')
+      out_file_t = io_open_old('cross_section_diagonal-sigma_t', action='write')
     else
-      out_file = io_open('cross_section_diagonal-sigma', action='write')
+      out_file = io_open_old('cross_section_diagonal-sigma', action='write')
     end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)

@@ -289,7 +289,7 @@ contains
 ! mysterious problems with optimization on PGI 12.4.0.
 
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
+      iunit_o = io_open_old(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
 #endif

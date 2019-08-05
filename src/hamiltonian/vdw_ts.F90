@@ -450,8 +450,8 @@ contains
      PUSH_SUB(vdw_ts_write_c6ab)
 
      if(mpi_grp_is_root(mpi_world)) then  
-       call io_mkdir(dir)
-       iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
+       call io_mkdir_old(dir)
+       iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')  
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 

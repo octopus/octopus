@@ -287,7 +287,7 @@ contains
       if(hm%family_is_mgga_with_exc) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
-      iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+      iunit = io_open_old(trim(dir)//'/output_me_one_body', action='write')
 
       id = st%nst*(st%nst+1)/2
 
@@ -324,7 +324,7 @@ contains
       if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
-      iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+      iunit = io_open_old(trim(dir)//'/output_me_two_body', action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
       id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
@@ -387,7 +387,7 @@ contains
 
     call states_calc_momentum(st, gr%der, momentum)
 
-    iunit = io_open(fname, action='write')
+    iunit = io_open_old(fname, action='write')
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -479,7 +479,7 @@ contains
     if(st%d%nspin == 2) ns = 2
     ASSERT(gr%sb%dim == 3)
 
-    iunit = io_open(fname, action='write')
+    iunit = io_open_old(fname, action='write')
 
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') 'Warning: When non-local pseudopotentials are used '

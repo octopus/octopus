@@ -963,12 +963,12 @@ contains
 
     PUSH_SUB(controlfunction_write)
 
-    call io_mkdir(trim(filename))
+    call io_mkdir_old(trim(filename))
 
     call controlfunction_copy(par, cp)
     call controlfunction_to_realtime(par)
 
-    iunit = io_open(trim(filename)//'/Fluence', action='write')
+    iunit = io_open_old(trim(filename)//'/Fluence', action='write')
     write(iunit, '(a,es20.8e3)') 'Fluence = ', controlfunction_fluence(par)
     call io_close(iunit)
 
@@ -981,9 +981,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+          iunit = io_open_old(trim(filename)//'/cp-'//digit, action='write')
         else
-          iunit = io_open(trim(filename)//'/cp', action='write')
+          iunit = io_open_old(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
         do iter = 1, tdf_niter(par%f(ipar)) + 1
@@ -999,9 +999,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+          iunit = io_open_old(trim(filename)//'/cp-'//digit, action='write')
         else
-          iunit = io_open(trim(filename)//'/cp', action='write')
+          iunit = io_open_old(trim(filename)//'/cp', action='write')
         end if
         write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
         do iter = 1, tdf_niter(par%f(ipar)) + 1
@@ -1022,9 +1022,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
+          iunit = io_open_old(trim(filename)//'/cpw-'//digit, action='write')
         else
-          iunit = io_open(trim(filename)//'/cpw', action='write')
+          iunit = io_open_old(trim(filename)//'/cpw', action='write')
         end if
         write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                               '      Im[e(w)]       '
@@ -1054,7 +1054,7 @@ contains
       
 
     case(controlfunction_mode_f)
-      iunit = io_open(trim(filename)//'/cpw', action='write')
+      iunit = io_open_old(trim(filename)//'/cpw', action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                             '      Im[e(w)]       '
       
@@ -1084,7 +1084,7 @@ contains
 
     ! Now, in case of a parametrized control function, the parameters.
     if(cf_common%representation /= ctr_rt) then
-      iunit = io_open(trim(filename)//'/theta', action='write')
+      iunit = io_open_old(trim(filename)//'/theta', action='write')
       do idof = 1, par%dof
         write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
       end do

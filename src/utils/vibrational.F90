@@ -91,7 +91,7 @@
     call simul_box_init(sb, default_namespace, geo, space)
 
     ! Opens the coordinates files.
-    iunit = io_open('td.general/coordinates', action='read')
+    iunit = io_open_old('td.general/coordinates', action='read')
 
     call io_skip_header(iunit)
 
@@ -136,7 +136,7 @@
     SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
 
     ! Opens the coordinates files.
-    iunit = io_open('td.general/coordinates', action='read')
+    iunit = io_open_old('td.general/coordinates', action='read')
 
     call io_skip_header(iunit)
 
@@ -204,7 +204,7 @@
     call calculate_vaf(vaf)
 
    !print the vaf
-    iunit = io_open('td.general/velocity_autocorrelation', action='write')
+    iunit = io_open_old('td.general/velocity_autocorrelation', action='write')
 
 800 FORMAT(80('#'))      
     write(unit = iunit, iostat = ierr, fmt = 800) 
@@ -240,7 +240,7 @@
 
 
     !and print the spectrum
-    iunit = io_open('td.general/vibrational_spectrum', action='write')
+    iunit = io_open_old('td.general/vibrational_spectrum', action='write')
 
     write(unit = iunit, iostat = ierr, fmt = 800) 
     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
@@ -279,7 +279,7 @@
       PUSH_SUB(calculate_vaf)
 
       write (message(1), '(a)') "Read velocities from '"// &
-        trim(io_workpath('td.general/coordinates'))//"'"
+        trim(io_workpath_old('td.general/coordinates'))//"'"
       call messages_info(1)
 
       !calculating the vaf, formula from

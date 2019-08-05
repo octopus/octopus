@@ -793,7 +793,7 @@ contains
     PUSH_SUB(ps_debug)
 
     ! A text file with some basic data.
-    iunit = io_open(trim(dir)//'/pseudo-info', action='write')
+    iunit = io_open_old(trim(dir)//'/pseudo-info', action='write')
     write(iunit,'(a,/)')      ps%label
     write(iunit,'(a,a,/)')    'Format  : ', ps_name(ps%file_format)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
@@ -827,22 +827,22 @@ contains
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local', action='write')
+    iunit  = io_open_old(trim(dir)//'/local', action='write')
     call spline_print(ps%vl, iunit)
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local_long_range', action='write')
+    iunit  = io_open_old(trim(dir)//'/local_long_range', action='write')
     call spline_print(ps%vlr, iunit)
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local_long_range_density', action='write')
+    iunit  = io_open_old(trim(dir)//'/local_long_range_density', action='write')
     call spline_print(ps%nlr, iunit)
     call io_close(iunit)
     
     ! Fourier transform of the local part
-    iunit = io_open(trim(dir)//'/local_ft', action='write')
+    iunit = io_open_old(trim(dir)//'/local_ft', action='write')
     SAFE_ALLOCATE(fw(1:1, 1:1))
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
@@ -852,15 +852,15 @@ contains
     call io_close(iunit)
 
     ! Kleinman-Bylander projectors
-    iunit = io_open(trim(dir)//'/nonlocal', action='write')
+    iunit = io_open_old(trim(dir)//'/nonlocal', action='write')
     call spline_print(ps%kb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_derivative', action='write')
+    iunit = io_open_old(trim(dir)//'/nonlocal_derivative', action='write')
     call spline_print(ps%dkb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
+    iunit = io_open_old(trim(dir)//'/nonlocal_ft', action='write')
     SAFE_ALLOCATE(fw(0:ps%lmax, 1:ps%kbc))
     call spline_init(fw)
     do k = 0, ps%lmax
@@ -874,24 +874,24 @@ contains
     call io_close(iunit)
 
     ! Pseudo-wavefunctions
-    iunit = io_open(trim(dir)//'/wavefunctions', action='write')
+    iunit = io_open_old(trim(dir)//'/wavefunctions', action='write')
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
     ! Density
     if (ps%has_density) then
-      iunit = io_open(trim(dir)//'/density', action='write')
+      iunit = io_open_old(trim(dir)//'/density', action='write')
       call spline_print(ps%density, iunit)
       call io_close(iunit)
 
-      iunit = io_open(trim(dir)//'/density_derivative', action='write')
+      iunit = io_open_old(trim(dir)//'/density_derivative', action='write')
       call spline_print(ps%density_der, iunit)
       call io_close(iunit)
     end if
 
     ! Non-linear core-corrections
     if(ps_has_nlcc(ps)) then
-      iunit = io_open(trim(dir)//'/nlcc', action='write')
+      iunit = io_open_old(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
     end if

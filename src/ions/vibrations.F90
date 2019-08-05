@@ -99,8 +99,8 @@ contains
     this%suffix = suffix
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(VIB_MODES_DIR)
-      call io_rm(this%filename_dynmat)
+      call io_mkdir_old(VIB_MODES_DIR)
+      call io_rm_old(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     end if
 
@@ -221,7 +221,7 @@ contains
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
 
-    iunit = io_open(this%filename_dynmat, action='write', position='append')
+    iunit = io_open_old(this%filename_dynmat, action='write', position='append')
 
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
@@ -245,7 +245,7 @@ contains
 
     PUSH_SUB(vibrations_out_dyn_matrix_header)
 
-    iunit = io_open(this%filename_dynmat, action='write') ! start at the beginning
+    iunit = io_open_old(this%filename_dynmat, action='write') ! start at the beginning
     write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
       '[' // trim(units_abbrev(this%unit_dynmat)) // ']'
     call io_close(iunit)
@@ -330,14 +330,14 @@ contains
     PUSH_SUB(vibrations_output)
 
     ! output frequencies and eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
+    iunit = io_open_old(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6,f17.8)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
     ! output eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write')
+    iunit = io_open_old(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6)', advance='no') imat
       do jmat = 1, this%num_modes

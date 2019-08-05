@@ -173,7 +173,7 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(KDOTP_DIR) ! data output
+      call io_mkdir_old(KDOTP_DIR) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     end if
 
@@ -464,7 +464,7 @@ contains
     PUSH_SUB(kdotp_write_band_velocity)
 
     write(filename, '(a)') KDOTP_DIR//'velocity'
-    iunit = io_open(trim(filename), action='write')
+    iunit = io_open_old(trim(filename), action='write')
     write(iunit,'(a)') '# Band velocities'
 
     do ik = 1, st%d%nik
@@ -514,7 +514,7 @@ contains
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
-      iunit = io_open(trim(filename), action='write')
+      iunit = io_open_old(trim(filename), action='write')
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2

@@ -858,7 +858,7 @@ contains
 
     ! skip for now, since we know what the files are going to be called
     !read the densities
-!    iunit_rho = io_open(trim(dir)//'/density', action='write')
+!    iunit_rho = io_open_old(trim(dir)//'/density', action='write')
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.

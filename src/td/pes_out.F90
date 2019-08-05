@@ -144,7 +144,7 @@ contains
     
     PUSH_SUB(pes_out_arpes_cut)
     
-    iunit = io_open(file, action='write')
+    iunit = io_open_old(file, action='write')
     write(iunit, '(a)') '##################################################'
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
                                       str_center("Ppath", 18), &
@@ -219,7 +219,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map_cut)
 
-    iunit = io_open(file, action='write')
+    iunit = io_open_old(file, action='write')
 
 
 

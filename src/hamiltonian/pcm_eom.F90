@@ -252,7 +252,7 @@ contains
 
     if (which_eom == PCM_ELECTRONS) then
       SAFE_ALLOCATE(q_tp(1:nts_act))
-      asc_unit = io_open(PCM_DIR//'ASC_e.dat', action='read')
+      asc_unit = io_open_old(PCM_DIR//'ASC_e.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -260,7 +260,7 @@ contains
 
     else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
       SAFE_ALLOCATE(qext_tp(1:nts_act))
-      asc_unit = io_open(PCM_DIR//'ASC_ext.dat', action='read')
+      asc_unit = io_open_old(PCM_DIR//'ASC_ext.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -268,7 +268,7 @@ contains
 
     else if (which_eom == PCM_KICK) then
       SAFE_ALLOCATE(qkick_tp(1:nts_act))
-      asc_unit = io_open(PCM_DIR//'ASC_kick.dat', action='read')
+      asc_unit = io_open_old(PCM_DIR//'ASC_kick.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -485,8 +485,8 @@ contains
     call do_PCM_propMat()
 
     if (which_eom == PCM_ELECTRONS) then
-      pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write')
-      pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write')
+      pcmmat0_unit = io_open_old(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write')
+      pcmmatd_unit = io_open_old(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write')
       do jtess = 1, nts_act
         do itess = 1, nts_act
           write(pcmmat0_unit,*) matq0(itess, jtess)
@@ -496,8 +496,8 @@ contains
       call io_close(pcmmat0_unit)
       call io_close(pcmmatd_unit)
     else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
-      pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write')
-      pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write')
+      pcmmat0_unit = io_open_old(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write')
+      pcmmatd_unit = io_open_old(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write')
       do jtess = 1, nts_act
         do itess = 1, nts_act
           write(pcmmat0_unit,*) matq0_lf(itess, jtess)

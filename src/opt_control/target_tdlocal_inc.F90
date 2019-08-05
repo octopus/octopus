@@ -79,7 +79,7 @@
     integer :: ierr
     PUSH_SUB(target_output_tdlocal)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir_old(trim(dir))
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
       call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &

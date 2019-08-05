@@ -258,8 +258,8 @@ contains
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir(STATIC_DIR)
-        iunit = io_open(STATIC_DIR//'/eigenvalues', action='write')
+        call io_mkdir_old(STATIC_DIR)
+        iunit = io_open_old(STATIC_DIR//'/eigenvalues', action='write')
         
         if(converged) then
           write(iunit,'(a)') 'All states converged.'

@@ -103,7 +103,7 @@ contains
 
     PUSH_SUB(spline_filter_mask_init)
 
-    iunit = io_open(trim(conf%share)//"/filter_mask.data", action='read', status='old', die=.true.)
+    iunit = io_open_old(trim(conf%share)//"/filter_mask.data", action='read', status='old', die=.true.)
 
     do i = 1, mask_n
       read(iunit, *) mask_x(i), mask_y(i)

@@ -1143,8 +1143,8 @@ contains
       PUSH_SUB(scf_run.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir_old(dir)
+        iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)
  
@@ -1337,8 +1337,8 @@ contains
       integer :: iunit
       character(len=12) :: label
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir_old(dir)
+        iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
         write(iunit, '(a)', advance = 'no') '#iter energy           '
         label = 'energy_diff'
         write(iunit, '(1x,a)', advance = 'no') label
@@ -1369,8 +1369,8 @@ contains
       integer :: iunit
       
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
+        call io_mkdir_old(dir)
+        iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens

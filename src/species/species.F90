@@ -975,7 +975,7 @@ contains
 
       if(debug%info) then
         write(dirname, '(a)') 'debug/geometry'
-        call io_mkdir(dirname)
+        call io_mkdir_old(dirname)
         call species_debug(trim(dirname), this)
       end if
     end if
@@ -1596,9 +1596,9 @@ contains
 
     dirname = trim(dir)//'/'//trim(spec%label)
 
-    call io_mkdir(dirname)
+    call io_mkdir_old(dirname)
 
-    iunit = io_open(trim(dirname)//'/info', action='write')
+    iunit = io_open_old(trim(dirname)//'/info', action='write')
 
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)

@@ -140,7 +140,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -190,7 +190,7 @@ contains
     idx%enlarge = 0
     idx%is_hypercube = .false.
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -249,7 +249,7 @@ contains
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(allocated(idx%lxyz))
-        call io_binary_write(trim(io_workpath(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_write(trim(io_workpath_old(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
@@ -287,7 +287,7 @@ contains
 
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
-        call io_binary_read(trim(io_workpath(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_read(trim(io_workpath_old(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."

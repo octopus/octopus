@@ -500,9 +500,9 @@ contains
         end do
       end if
 
-      call io_rm("geom/optimization.log")
+      call io_rm_old("geom/optimization.log")
 
-      call io_rm("work-geom.xyz")
+      call io_rm_old("work-geom.xyz")
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
@@ -517,7 +517,7 @@ contains
         write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
         inquire(file = trim(filename), exist = does_exist)
         if(does_exist) then
-          call io_rm(trim(filename))
+          call io_rm_old(trim(filename))
           iter = iter + 1
         else
           exit
@@ -646,7 +646,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
-    call io_mkdir('geom')
+    call io_mkdir_old('geom')
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last')
 
@@ -662,7 +662,7 @@ contains
     call from_coords(g_opt, coords)
 
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
+      iunit = io_open_old(trim('geom/optimization.log'), action = 'write', position = 'append')
 
       if(geom_iter == 1) then
         write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 

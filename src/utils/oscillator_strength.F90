@@ -187,7 +187,7 @@ contains
   
     mode = COSINE_TRANSFORM
   
-    iunit = io_open(trim(ffile), action='read', status='old', die=.false.)
+    iunit = io_open_old(trim(ffile), action='read', status='old', die=.false.)
     if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)
@@ -418,7 +418,7 @@ contains
   
     PUSH_SUB(write_polarizability)
 
-    iunit = io_open('polarizability', status='replace', action = 'write', die=.false.)
+    iunit = io_open_old('polarizability', status='replace', action = 'write', die=.false.)
     write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the following data:'
     write(iunit, '(a)') '#'
   
@@ -638,7 +638,7 @@ contains
     SAFE_ALLOCATE(iunit(1:nfiles))
     do j = 1, nfiles
       write(filename,'(a11,i1)') 'multipoles.', j
-      iunit(j) = io_open(trim(filename), action='read', status='old', die=.false.)
+      iunit(j) = io_open_old(trim(filename), action='read', status='old', die=.false.)
     end do
   
     SAFE_ALLOCATE( q(1:nfiles))
@@ -867,7 +867,7 @@ contains
   
     PUSH_SUB(write_ot)
 
-    iunit = io_open('ot', action='write', status='replace')
+    iunit = io_open_old('ot', action='write', status='replace')
   
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     write(iunit, '(a15,i2)')      '# Order        ', order
@@ -926,7 +926,7 @@ contains
   
     PUSH_SUB(read_ot)
 
-    iunit = io_open('ot', action='read', status='old')
+    iunit = io_open_old('ot', action='read', status='old')
     if(iunit == 0) then
       write(message(1),'(a)') 'A file called ot should be present and was not found.'
       call messages_fatal(1)
@@ -1085,7 +1085,7 @@ contains
       tarray(i) = aw
     end do
   
-    iunit = io_open('omega', action='write', status='replace')
+    iunit = io_open_old('omega', action='write', status='replace')
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, iunit)
     write(iunit, '(a)') '#%'

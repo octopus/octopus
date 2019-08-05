@@ -454,8 +454,8 @@ contains
       call messages_info(2)
     end if
 
-    call io_mkdir('wd.general')
-    wd_info = io_open(file='wd.general/wd.info', action='write')
+    call io_mkdir_old('wd.general')
+    wd_info = io_open_old(file='wd.general/wd.info', action='write')
     call messages_print_stress(wd_info, "Fourier Transform Options")
 
     !%Variable ConvertEnergyMin
@@ -606,7 +606,7 @@ contains
            '[' // trim(units_abbrev(units_out%energy)) // ']'
       if (mpi_world%rank == 0) write(wd_info,'(a)') message(1)
       call messages_info(1)
-      call io_mkdir(trim(filename))
+      call io_mkdir_old(trim(filename))
     end do
     call io_close(wd_info)
 
@@ -805,7 +805,7 @@ contains
     !%End
     call parse_variable(namespace, 'ConvertOutputFolder', "convert", out_folder)
     call add_last_slash(out_folder)
-    call io_mkdir(out_folder)
+    call io_mkdir_old(out_folder)
 
     !%Variable ConvertOutputFilename
     !%Type string

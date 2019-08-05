@@ -496,7 +496,7 @@ contains
     if(debug%info) then
   
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/PNFFT')
+        call io_mkdir_old('debug/PNFFT')
       end if
 #ifdef HAVE_MPI
       call MPI_Barrier(mpi_world%comm, ierr)
@@ -505,7 +505,7 @@ contains
       nn = mpi_world%rank
       write(filenum, '(i3.3)') nn
 
-      iunit = io_open('debug/PNFFT/rs_partition.'//filenum, &
+      iunit = io_open_old('debug/PNFFT/rs_partition.'//filenum, &
            action='write')
            
       do i1 = 1, pnfft%M(1)

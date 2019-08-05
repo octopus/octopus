@@ -69,7 +69,7 @@ contains
       call messages_fatal()
     end if
     
-    iunit = io_open(filename, action='read', form='formatted', status='old')
+    iunit = io_open_old(filename, action='read', form='formatted', status='old')
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
 

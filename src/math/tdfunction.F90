@@ -426,7 +426,7 @@ contains
     f%mode = TDF_FROM_FILE
     ierr = 0
 
-    iunit = io_open(trim(filename), action='read', status='old')
+    iunit = io_open_old(trim(filename), action='read', status='old')
 
     ! count lines in file
     call io_skip_header(iunit)

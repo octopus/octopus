@@ -172,34 +172,34 @@ contains
       call messages_fatal(2)
     end if
 
-    call io_mkdir('local.general')
+    call io_mkdir_old('local.general')
 
     if(mpi_grp_is_root(mpi_world)) then
       do id = 1, nd
         if(writ%out(LOCAL_OUT_MULTIPOLES, id)%write) then 
-          call io_mkdir('local.general/multipoles')
+          call io_mkdir_old('local.general/multipoles')
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
+          trim(io_workpath_old("local.general/multipoles/"//trim(lab(id))//".multipoles")))
         end if
 
         if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
-          call io_mkdir('local.general/potential')
+          call io_mkdir_old('local.general/potential')
           call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL,id)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential")))
+          units_from_atomic(units_out%time, dt), trim(io_workpath_old("local.general/potential/"//trim(lab(id))//".potential")))
         end if
 
         if(writ%out(LOCAL_OUT_DENSITY, id)%write) then
-          call io_mkdir('local.general/densities')
+          call io_mkdir_old('local.general/densities')
           call write_iter_init(writ%out(LOCAL_OUT_DENSITY,id)%handle, first, &
-            units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities")))
+            units_from_atomic(units_out%time, dt), trim(io_workpath_old("local.general/densities/"//trim(lab(id))//".densities")))
         end if
 
         if(writ%out(LOCAL_OUT_ENERGY, id)%write) then 
-          call io_mkdir('local.general/energy')
+          call io_mkdir_old('local.general/energy')
           call write_iter_init(writ%out(LOCAL_OUT_ENERGY,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy")))
+          trim(io_workpath_old("local.general/energy/"//trim(lab(id))//".energy")))
         end if
       end do
     end if
@@ -730,9 +730,9 @@ contains
     PUSH_SUB(out_bld_multipoles)
     
     write(folder,'(a,a)')'local.general/multipoles/',trim(label)
-    call io_mkdir(folder)
+    call io_mkdir_old(folder)
     write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
-    out_bld = io_open(file=trim(filename), action='write')
+    out_bld = io_open_old(file=trim(filename), action='write')
 
     write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
                         trim(label), ' domain and iteration number: ',iter

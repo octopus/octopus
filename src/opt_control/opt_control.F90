@@ -101,7 +101,7 @@ contains
 
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
-    call io_mkdir(OCT_DIR)
+    call io_mkdir_old(OCT_DIR)
 
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".

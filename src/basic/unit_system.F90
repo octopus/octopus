@@ -390,7 +390,7 @@ contains
 
     PUSH_SUB(unit_system_from_file)
 
-    iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
+    iunit = io_open_old(file = trim(fname), action = 'read', status = 'old', die = .false.)
     if(iunit < 0) then
       ierr = -2
       POP_SUB(unit_system_from_file)

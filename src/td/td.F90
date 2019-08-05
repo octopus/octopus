@@ -856,10 +856,10 @@ contains
       PUSH_SUB(td_run.td_read_coordinates)
 
       call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/coordinates'), action='read', status='old')
+      open(unit = iunit, file = io_workpath_old('td.general/coordinates'), action='read', status='old')
 
       if(iunit < 0) then
-        message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
+        message(1) = "Could not open file '"//trim(io_workpath_old('td.general/coordinates'))//"'."
         message(2) = "Starting simulation from initial geometry."
         call messages_warning(2)
         POP_SUB(td_run.td_read_coordinates)

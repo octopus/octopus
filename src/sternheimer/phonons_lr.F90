@@ -413,7 +413,7 @@ contains
 
       PUSH_SUB(phonons_lr_run.calc_infrared)
 
-      iunit_ir = io_open(VIB_MODES_DIR//'infrared', action='write')
+      iunit_ir = io_open_old(VIB_MODES_DIR//'infrared', action='write')
 
       write(iunit_ir, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
       do idir = 1, ndim
@@ -519,7 +519,7 @@ contains
 
     ! for some reason, direct usage of this%suffix gives an odd result
     suffix = vibrations_get_suffix(this)
-    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', action='write')
+    iunit = io_open_old(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
     SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))

@@ -918,8 +918,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
     if (this%shape /= M_PLANES) then
-      iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
-      iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
+      iunittwo = io_open_old('td.general/PES_flux.distribution.out', action='write', position='rewind')
+      iunitone = io_open_old('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
       write(iunitone, '(a19)') '# E, total spectrum'
     end if
     
@@ -1077,7 +1077,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
             itot = ist + (ik-1) * st%nst +  (isdim-1) * st%nst * st%d%kpt%nglobal
             write(filename,'(i10.10)') itot
             
-            iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', action='write', position='rewind')
+            iunitone = io_open_old('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
+              action='write', position='rewind')
             write(iunitone, '(a29)') '# gx, gy, gz distribution'
             
             do ikp = 1, this%nkpnts

@@ -363,7 +363,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call info()
-      call io_mkdir(EM_RESP_DIR) ! output
+      call io_mkdir_old(EM_RESP_DIR) ! output
     end if
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
@@ -1006,7 +1006,7 @@ contains
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-    call io_mkdir(trim(dirname))
+    call io_mkdir_old(trim(dirname))
 
     call write_eta()
 
@@ -1049,7 +1049,7 @@ contains
 
       PUSH_SUB(em_resp_output.write_eta)
 
-      iunit = io_open(trim(dirname)//'/eta', action='write')
+      iunit = io_open_old(trim(dirname)//'/eta', action='write')
 
       write(iunit, '(3a)') 'Imaginary part of frequency [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit, '(f20.6)') units_from_atomic(units_out%energy, em_vars%eta)
@@ -1101,7 +1101,7 @@ contains
       
       PUSH_SUB(em_resp_output.out_polarizability)
   
-      iunit = io_open(trim(dirname)//'/alpha', action='write')
+      iunit = io_open_old(trim(dirname)//'/alpha', action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
@@ -1122,7 +1122,7 @@ contains
           end do
         end do
 
-        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        iunit = io_open_old(trim(dirname)//'/cross_section', action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
         crossp(1:gr%sb%dim, 1:gr%sb%dim) = matmul(cross(1:gr%sb%dim, 1:gr%sb%dim), cross(1:gr%sb%dim, 1:gr%sb%dim))
@@ -1163,7 +1163,7 @@ contains
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
   
-      iunit = io_open(trim(dirname)//'/epsilon', action='write')
+      iunit = io_open_old(trim(dirname)//'/epsilon', action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
@@ -1206,7 +1206,7 @@ contains
             end do
           end do
         end do
-        iunit = io_open(trim(dirname)//'/epsilon_k_re', action='write')
+        iunit = io_open_old(trim(dirname)//'/epsilon_k_re', action='write')
 
         write(iunit, '(a)') '# Real part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1238,7 +1238,7 @@ contains
         end do
         call io_close(iunit)
 
-        iunit = io_open(trim(dirname)//'/epsilon_k_im', action='write')
+        iunit = io_open_old(trim(dirname)//'/epsilon_k_im', action='write')
 
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1285,10 +1285,10 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         write(dirname1, '(a)') EM_RESP_DIR//'freq_0.0000'
-        call io_mkdir(trim(dirname1))
-        iunit = io_open(trim(dirname1)//'/susceptibility', action='write')
+        call io_mkdir_old(trim(dirname1))
+        iunit = io_open_old(trim(dirname1)//'/susceptibility', action='write')
       else  
-        iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+        iunit = io_open_old(trim(dirname)//'/susceptibility', action='write')
       end if
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -1353,7 +1353,7 @@ contains
         do idir = 1, gr%sb%dim
 
           write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
-          iunit = io_open(trim(fname), action='write')
+          iunit = io_open_old(trim(fname), action='write')
 
           if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1489,7 +1489,7 @@ contains
         
         dic = dic*M_zI*M_HALF
 
-        iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
+        iunit = io_open_old(trim(dirname)//'/rotatory_strength', action='write')
 
         ! print header
         write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
@@ -1528,7 +1528,7 @@ contains
       diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
       epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
   
-      iunit = io_open(trim(dirname)//'/alpha_mo', action='write')
+      iunit = io_open_old(trim(dirname)//'/alpha_mo', action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1612,7 +1612,7 @@ contains
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
-	iunit = io_open(trim(dirname)//'/epsilon_mo_k', action='write')
+	iunit = io_open_old(trim(dirname)//'/epsilon_mo_k', action='write')
 
         write(iunit, '(a)') '# Contribution to dielectric tensor for B = 1 a.u.'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1673,7 +1673,7 @@ contains
     PUSH_SUB(out_hyperpolarizability)
 
     ! Output first hyperpolarizability (beta)
-    iunit = io_open(trim(dirname)//'/beta', action='write')
+    iunit = io_open_old(trim(dirname)//'/beta', action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
 

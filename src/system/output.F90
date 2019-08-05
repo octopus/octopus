@@ -609,7 +609,7 @@ contains
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
+      call io_mkdir_old(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)
 
@@ -657,7 +657,7 @@ contains
     if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
-      call io_mkdir(dir)
+      call io_mkdir_old(dir)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
@@ -835,7 +835,7 @@ contains
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
-      iunit = io_open(file=trim(fname), action = 'write')
+      iunit = io_open_old(file=trim(fname), action = 'write')
       call basins_write(basins, gr%mesh, iunit)
       call io_close(iunit)
 
@@ -1275,7 +1275,7 @@ contains
 
     sheader = 'VXC'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
+      iunit = io_open_old(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     ! convert from Ha to Ry, make usable with same processing as RHO
@@ -1290,7 +1290,7 @@ contains
 
     sheader = 'RHO'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
+      iunit = io_open_old(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
@@ -1309,7 +1309,7 @@ contains
 
     sheader = 'WFN'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
+      iunit = io_open_old(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
 

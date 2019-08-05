@@ -186,7 +186,7 @@ contains
       n_possible_pairs = n_filled(1) * n_empty(1)
     end select
 
-    iunit = io_open(file = trim(filename), action = 'read', status = 'old', die = .true.)
+    iunit = io_open_old(file = trim(filename), action = 'read', status = 'old', die = .true.)
     call io_skip_header(iunit)
 
     ! Now we count the number of pairs in the file
@@ -320,7 +320,7 @@ contains
 
     PUSH_SUB(excited_states_output)
 
-    iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
+    iunit = io_open_old(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
     do ipair = 1, excited_state%n_pairs
       write(iunit, '(3i5,es20.12)') excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
                                     excited_state%pair(ipair)%kk, excited_state%weight(ipair)

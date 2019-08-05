@@ -862,8 +862,8 @@ contains
 
     PUSH_SUB(qcasida_write)
 
-    call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
+    call io_mkdir_old(CASIDA_DIR)
+    iunit = io_open_old(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
                                                              '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &

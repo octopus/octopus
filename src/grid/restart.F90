@@ -496,9 +496,9 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    dir_exists = io_dir_exists(trim(restart%pwd))
+    dir_exists = io_dir_exists_old(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
-      call io_mkdir(trim(restart%pwd), parents=.true.)
+      call io_mkdir_old(trim(restart%pwd), parents=.true.)
     end if
 
     if (restart%data_type == RESTART_UNDEFINED) then
@@ -516,7 +516,7 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
+          iunit = io_open_old(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
@@ -631,9 +631,9 @@ contains
       select case (restart%type)
       case (RESTART_TYPE_LOAD)
         message(1) = "Info: Finished reading information from '"//trim(restart%dir)//"'."
-        call io_rm(trim(restart%pwd)//"/loading")
+        call io_rm_old(trim(restart%pwd)//"/loading")
       case (RESTART_TYPE_DUMP)
-        call io_rm(trim(restart%pwd)//"/dumping")
+        call io_rm_old(trim(restart%pwd)//"/dumping")
         message(1) = "Info: Finished writing information to '"//trim(restart%dir)//"'."
       end select
       call messages_info(1)
@@ -663,7 +663,7 @@ contains
 
     PUSH_SUB(restart_dir)
 
-    restart_dir = io_workpath(restart%pwd)
+    restart_dir = io_workpath_old(restart%pwd)
 
     POP_SUB(restart_dir)
   end function restart_dir
@@ -731,7 +731,7 @@ contains
 
     ASSERT (restart%type == RESTART_TYPE_DUMP)
 
-    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), parents=.true.)
+    call io_mkdir_old(trim(restart%pwd)//"/"//trim(dirname), parents=.true.)
 
     POP_SUB(restart_mkdir)
   end subroutine restart_mkdir
@@ -748,7 +748,7 @@ contains
 
     PUSH_SUB(restart_rm)
 
-    call io_rm(trim(restart%pwd)//"/"//trim(name))
+    call io_rm_old(trim(restart%pwd)//"/"//trim(name))
 
     POP_SUB(restart_rm)
   end subroutine restart_rm
@@ -794,7 +794,7 @@ contains
 
     if (present(status)) status_ = status
 
-    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
+    restart_open = io_open_old(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
                            die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    

@@ -125,8 +125,8 @@ program propagation_spectrum
 
       PUSH_SUB(read_files)
       
-      in_file(1) = io_open(trim(fname), action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname), action='read', status='old', die=.false.)
+      in_file(1) = io_open_old(trim(fname), action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open_old('td.general/'//trim(fname), action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname), '" found. This will be the only file to be processed.'
         write(message(2),'(a)')  '(If more than one file is to be used, the files should be called'
@@ -161,8 +161,8 @@ program propagation_spectrum
         ! In this case, we will always want the full tensor
         calculate_tensor = .true.
         
-        in_file(1) = io_open(trim(fname)//'.1', action='read', status='old', die=.false.)
-        if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname)//'.1', action='read', status='old', die=.false.)
+        in_file(1) = io_open_old(trim(fname)//'.1', action='read', status='old', die=.false.)
+        if(in_file(1) < 0) in_file(1) = io_open_old('td.general/'//trim(fname)//'.1', action='read', status='old', die=.false.)
         if(in_file(1) < 0) then ! Could not find proper files. Die and complain.
           write(message(1),'(5a)') 'No "', trim(fname), '" or "', trim(fname), '.1" file found. At least one of those'
           write(message(2),'(a)')  'should be visible.'
@@ -178,8 +178,8 @@ program propagation_spectrum
           call messages_info(2)
           
         else if(eq_axes == 2) then
-          in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
-          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
+          in_file(2) = io_open_old(trim(fname)//'.2', action='read', status='old', die=.false.)
+          if(in_file(2) < 0) in_file(2) = io_open_old('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
@@ -190,15 +190,15 @@ program propagation_spectrum
           call messages_info(2)
           
         else ! No equivalent axes
-          in_file(2) = io_open(trim(fname)//'.2', action='read', status='old', die=.false.)
-          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
+          in_file(2) = io_open_old(trim(fname)//'.2', action='read', status='old', die=.false.)
+          if(in_file(2) < 0) in_file(2) = io_open_old('td.general/'//trim(fname)//'.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
             call messages_fatal(2)
           end if
-          in_file(3) = io_open(trim(fname)//'.3', action='read', status='old', die=.false.)
-          if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', action='read', status='old', die=.false.)
+          in_file(3) = io_open_old(trim(fname)//'.3', action='read', status='old', die=.false.)
+          if(in_file(3) < 0) in_file(3) = io_open_old('td.general/'//trim(fname)//'.3', action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.3".'
@@ -215,7 +215,7 @@ program propagation_spectrum
         reference_multipoles = .false.
       else
         reference_multipoles = .true.
-        ref_file = io_open(trim(reffname), action='read', status='old', die=.false.)
+        ref_file = io_open_old(trim(reffname), action='read', status='old', die=.false.)
         if(ref_file < 0) then
           write(message(1),'(3a)') 'No "',trim(reffname), '" file found.'
           call messages_fatal(1)
@@ -238,7 +238,7 @@ program propagation_spectrum
 
       if(.not.calculate_tensor) then
 
-        out_file(1) = io_open(trim(fname)//'_vector', action='write')
+        out_file(1) = io_open_old(trim(fname)//'_vector', action='write')
         if(.not.reference_multipoles) then
           call spectrum_cross_section(namespace, in_file(1), out_file(1), spectrum)
         else
@@ -257,7 +257,7 @@ program propagation_spectrum
         SAFE_ALLOCATE(filename(1:jj))
         do ii = 1, jj
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
-          out_file(ii) = io_open(trim(filename(ii)), action='write')
+          out_file(ii) = io_open_old(trim(filename(ii)), action='write')
           if(.not.reference_multipoles) then
             call spectrum_cross_section(namespace, in_file(ii), out_file(ii), spectrum)
           else
@@ -265,10 +265,10 @@ program propagation_spectrum
           end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
-          in_file(ii)  = io_open(trim(filename(ii)), action='read', status='old')
+          in_file(ii)  = io_open_old(trim(filename(ii)), action='read', status='old')
         end do
 
-        out_file(1) = io_open(trim(fname)//'_tensor', action='write')
+        out_file(1) = io_open_old(trim(fname)//'_tensor', action='write')
         call spectrum_cross_section_tensor(spectrum, namespace, out_file(1), in_file(1:jj))
         do ii = 1, jj
           call io_close(in_file(ii))
@@ -286,15 +286,15 @@ program propagation_spectrum
 
       PUSH_SUB(calculate_dipole_power)
 
-      in_file(1) = io_open(trim(fname_in), action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), action='read', status='old', die=.false.)
+      in_file(1) = io_open_old(trim(fname_in), action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open_old('td.general/'//trim(fname_in), action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname_in), '" found.'
         write(message(2),'(a)')
         call messages_info(2)
       end if
 
-      out_file(1) = io_open(trim(fname_out), action='write')
+      out_file(1) = io_open_old(trim(fname_out), action='write')
       call spectrum_dipole_power(in_file(1), out_file(1), spectrum)
 
       call io_close(in_file(1))
@@ -309,15 +309,15 @@ program propagation_spectrum
 
       PUSH_SUB(calculate_rotatory_strength)
 
-      in_file(1) = io_open(trim(fname_in), action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), action='read', status='old', die=.false.)
+      in_file(1) = io_open_old(trim(fname_in), action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open_old('td.general/'//trim(fname_in), action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname_in), '" found.'
         write(message(2),'(a)')
         call messages_info(2)
       end if
 
-      out_file(1) = io_open(trim(fname_out), action='write')
+      out_file(1) = io_open_old(trim(fname_out), action='write')
       call spectrum_rotatory_strength(in_file(1), out_file(1), spectrum)
 
       call io_close(in_file(1))
@@ -334,10 +334,10 @@ program propagation_spectrum
       PUSH_SUB(calculate_ftchd)
 
       ! read files
-      in_file(1) = io_open(trim(fname_in) // '.sin', action='read', status='old', die=.false.)
-      in_file(2) = io_open(trim(fname_in) // '.cos', action='read', status='old', die=.false.)
+      in_file(1) = io_open_old(trim(fname_in) // '.sin', action='read', status='old', die=.false.)
+      in_file(2) = io_open_old(trim(fname_in) // '.cos', action='read', status='old', die=.false.)
 
-      out_file(1) = io_open(trim(fname_out), action='write')
+      out_file(1) = io_open_old(trim(fname_out), action='write')
       call spectrum_dyn_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
       call io_close(in_file(1))
       call io_close(out_file(1))

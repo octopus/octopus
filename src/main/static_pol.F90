@@ -642,7 +642,7 @@ contains
 
       PUSH_SUB(output_end_)
 
-      call io_mkdir(EM_RESP_FD_DIR)
+      call io_mkdir_old(EM_RESP_FD_DIR)
 
       if((bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
          bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then 
@@ -668,7 +668,7 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
-        iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
+        iunit = io_open_old(EM_RESP_FD_DIR//'alpha', action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
         alpha(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim) = (dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1) - &

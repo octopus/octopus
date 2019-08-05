@@ -621,7 +621,7 @@ contains
       call messages_info(1)        
     end if
 
-    call io_mkdir('pcm')
+    call io_mkdir_old('pcm')
 
     !%Variable PCMCavity
     !%Type string
@@ -678,7 +678,7 @@ contains
       end do
 
       if (mpi_grp_is_root(mpi_world)) then
-        pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')
+        pcm%info_unit = io_open_old(PCM_DIR//'pcm_info.out', action='write')
       
         write(pcm%info_unit, '(A35)') '# Configuration: Molecule + Solvent'
         write(pcm%info_unit, '(A35)') '# ---------------------------------'
@@ -750,7 +750,7 @@ contains
     else
 
       !> The cavity surface will be read from a external file
-      iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
+      iunit = io_open_old(trim(pcm%input_cavity), status='old', action='read')
       read(iunit,*) pcm%n_tesserae
 
       if (pcm%n_tesserae > MXTS) then
@@ -797,7 +797,7 @@ contains
     end if
 
     if (mpi_grp_is_root(mpi_world)) then
-      cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
+      cav_unit_test = io_open_old(PCM_DIR//'cavity_mol.xyz', action='write')
 
       write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
       write (cav_unit_test,'(2X)')
@@ -840,7 +840,7 @@ contains
 
     !>printing out the cavity surface
     if (gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
-      cav_gamess_unit = io_open(PCM_DIR//'geom_cavity_gamess.out', action='write')
+      cav_gamess_unit = io_open_old(PCM_DIR//'geom_cavity_gamess.out', action='write')
 
       write(cav_gamess_unit,*) pcm%n_tesserae
 
@@ -885,7 +885,7 @@ contains
       call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_d)
 
       if (gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
-        pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
+        pcmmat_gamess_unit = io_open_old(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
 
         do jtess = 1, pcm%n_tesserae
           do itess = 1, pcm%n_tesserae
@@ -906,7 +906,7 @@ contains
 
         if (mpi_grp_is_root(mpi_world)) then
           ! only to benchmark
-          pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf.out', action='write')
+          pcmmat_unit = io_open_old(PCM_DIR//'pcm_matrix_dynamic_lf.out', action='write')
           do jtess = 1, pcm%n_tesserae
             do itess = 1, pcm%n_tesserae
               write(pcmmat_unit,*) pcm%matrix_lf_d(itess,jtess)
@@ -925,8 +925,8 @@ contains
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
 
     if (mpi_grp_is_root(mpi_world)) then
-      pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
-      if (gamess_benchmark) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', action='write')
+      pcmmat_unit = io_open_old(PCM_DIR//'pcm_matrix.out', action='write')
+      if (gamess_benchmark) pcmmat_gamess_unit = io_open_old(PCM_DIR//'pcm_matrix_gamess.out', action='write')
 
       do jtess = 1, pcm%n_tesserae
         do itess = 1, pcm%n_tesserae
@@ -953,7 +953,7 @@ contains
 
       if (mpi_grp_is_root(mpi_world)) then
         ! only to benchmark
-        pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_static_lf.out', action='write')
+        pcmmat_unit = io_open_old(PCM_DIR//'pcm_matrix_static_lf.out', action='write')
         do jtess = 1, pcm%n_tesserae
           do itess = 1, pcm%n_tesserae
             write(pcmmat_unit,*) pcm%matrix_lf(itess,jtess)
@@ -1347,7 +1347,7 @@ contains
       write (asc_vs_t_unit_format,'(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
   
       if (pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc == PCM_ELECTRONS ) then
-        asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
+        asc_vs_t_unit_e = io_open_old(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
         write(asc_vs_t_unit_e,trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
           (pcm%q_e(ia) , ia = 1,pcm%n_tesserae)
         call io_close(asc_vs_t_unit_e)
@@ -3045,11 +3045,11 @@ contains
     PUSH_SUB(pcm_end)
 
     if (pcm%solute .and. pcm%localf) then
-      asc_unit_test     = io_open(PCM_DIR//'ASC.dat', action='write')     
-      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
-      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', action='write')
-      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', action='write')
-      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
+      asc_unit_test     = io_open_old(PCM_DIR//'ASC.dat', action='write')     
+      asc_unit_test_sol = io_open_old(PCM_DIR//'ASC_sol.dat', action='write')
+      asc_unit_test_e   = io_open_old(PCM_DIR//'ASC_e.dat', action='write')
+      asc_unit_test_n   = io_open_old(PCM_DIR//'ASC_n.dat', action='write')
+      asc_unit_test_ext = io_open_old(PCM_DIR//'ASC_ext.dat', action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test,*)     pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia) + pcm%q_ext(ia), ia
         write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
@@ -3064,9 +3064,9 @@ contains
       call io_close(asc_unit_test_ext)
 
     else if (pcm%solute .and. .not.pcm%localf) then
-      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
-      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', action='write')
-      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', action='write')
+      asc_unit_test_sol = io_open_old(PCM_DIR//'ASC_sol.dat', action='write')
+      asc_unit_test_e   = io_open_old(PCM_DIR//'ASC_e.dat', action='write')
+      asc_unit_test_n   = io_open_old(PCM_DIR//'ASC_n.dat', action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
         write(asc_unit_test_e,*)   pcm%tess(ia)%point, pcm%q_e(ia), ia
@@ -3077,7 +3077,7 @@ contains
       call io_close(asc_unit_test_n)
 
     else if (.not. pcm%solute .and. pcm%localf) then
-      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
+      asc_unit_test_ext = io_open_old(PCM_DIR//'ASC_ext.dat', action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do

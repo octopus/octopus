@@ -575,10 +575,10 @@ contains
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
-      call io_mkdir('debug/mesh_partition')
+      call io_mkdir_old('debug/mesh_partition')
       
       write(filenum, '(i6.6)') vp%partno
-      iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
+      iunit = io_open_old('debug/mesh_partition/ghost_points.'//filenum, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
         write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, dim)

@@ -212,9 +212,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
 ! This code (and related below) is commented out because it causes mysterious optimization
 ! problems with PGI 12.4.0 -- LAPACK fails in diagonalization, only if mesh partition from scratch!
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    iunit_h = io_open_old(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
+    iunit_s = io_open_old(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
+    iunit_e = io_open_old(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
@@ -565,9 +565,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 
 #ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    iunit_h = io_open_old(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
+    iunit_s = io_open_old(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
+    iunit_e = io_open_old(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'

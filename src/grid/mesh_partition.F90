@@ -290,8 +290,8 @@ contains
       message(5) = 'Info: Edges are not directed and appear twice in the lists.'
       call messages_info(5)
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/mesh_partition')
-        iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
+        call io_mkdir_old('debug/mesh_partition')
+        iunit = io_open_old('debug/mesh_partition/mesh_graph.txt', action='write')
         write(iunit, *) nv_global, ne_global/2
         do iv = 1, nv
           write(iunit, *) adjncy_global(xadj_global(iv):xadj_global(iv+1) - 1)
@@ -851,13 +851,13 @@ contains
 
     PUSH_SUB(mesh_partition_messages_debug)
 
-    call io_mkdir('debug/mesh_partition')
+    call io_mkdir_old('debug/mesh_partition')
 
     ! Debug output. Write points of each partition in a different file.
     write(filenum, '(i6.6)') mesh%mpi_grp%rank+1
 
     ! without boundary
-    iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+    iunit = io_open_old('debug/mesh_partition/mesh_partition.'//filenum, &
       action='write')
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
@@ -866,7 +866,7 @@ contains
     call io_close(iunit)
 
     ! with boundary included
-    iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
+    iunit = io_open_old('debug/mesh_partition/mesh_partition_all.'//filenum, &
       action='write')
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
@@ -880,7 +880,7 @@ contains
 
     ! points from enlargement
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open('debug/mesh_partition/mesh_partition_boundary', &
+      iunit = io_open_old('debug/mesh_partition/mesh_partition_boundary', &
         action='write')
       do ii = mesh%np_global+1, mesh%np_part_global
         write(iunit, '(i8,99f18.8)') ii, mesh_x_global(mesh, ii)

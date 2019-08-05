@@ -31,10 +31,10 @@ module io_oct_m
 
   private
   public ::              &
-    io_workpath,         &
-    io_open,             &
-    io_mkdir,            &
-    io_rm,               &
+    io_workpath_old,         &
+    io_open_old,             &
+    io_mkdir_old,            &
+    io_rm_old,               &
     io_init,             &
     io_end,              &
     io_status,           &
@@ -49,7 +49,7 @@ module io_oct_m
     iopar_find_line,     &
     io_skip_header,      &
     io_file_exists,      &
-    io_dir_exists
+    io_dir_exists_old
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -168,7 +168,7 @@ contains
     end if
 
     if(debug%info) then
-      call io_mkdir('debug')
+      call io_mkdir_old('debug')
     end if
 
     if(debug%trace_file) then
@@ -177,7 +177,7 @@ contains
     end if
 
     ! create static directory
-    call io_mkdir(STATIC_DIR)
+    call io_mkdir_old(STATIC_DIR)
 
     if(debug%info) then
       !%Variable MPIDebugHook
@@ -284,10 +284,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  character(len=MAX_PATH_LEN) function io_workpath(path) result(wpath)
+  character(len=MAX_PATH_LEN) function io_workpath_old(path) result(wpath)
     character(len=*),  intent(in) :: path
 
-    PUSH_SUB(io_workpath)
+    PUSH_SUB(io_workpath_old)
 
     if(path(1:1)  ==  '/') then
       ! we do not change absolute path names
@@ -296,32 +296,32 @@ contains
       write(wpath, '(3a)') trim(work_dir), "/", trim(path)
     end if
 
-    POP_SUB(io_workpath)
+    POP_SUB(io_workpath_old)
 
-  end function io_workpath
+  end function io_workpath_old
 
 
   ! ---------------------------------------------------------
-  subroutine io_mkdir(fname, parents)
+  subroutine io_mkdir_old(fname, parents)
     character(len=*),  intent(in) :: fname
     logical, optional, intent(in) :: parents
 
     logical :: parents_
     integer :: last_slash, pos, length
 
-    PUSH_SUB(io_mkdir)
+    PUSH_SUB(io_mkdir_old)
 
     parents_ = .false.
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath(fname)))
+      call loct_mkdir(trim(io_workpath_old(fname)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
       pos = 1
       length = index(fname, '/') - 1
       do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1))))
+        call loct_mkdir(trim(io_workpath_old(fname(1:pos+length-1))))
         pos = pos + length + 1
         length = index(fname(pos:), "/") - 1
         if (length < 1) length = len_trim(fname(pos:))
@@ -329,24 +329,24 @@ contains
 
     end if
 
-    POP_SUB(io_mkdir)
-  end subroutine io_mkdir
+    POP_SUB(io_mkdir_old)
+  end subroutine io_mkdir_old
 
 
   ! ---------------------------------------------------------
-  subroutine io_rm(fname)
+  subroutine io_rm_old(fname)
     character(len=*),  intent(in) :: fname
 
-    PUSH_SUB(io_rm)
+    PUSH_SUB(io_rm_old)
 
-    call loct_rm(trim(io_workpath(fname)))
+    call loct_rm(trim(io_workpath_old(fname)))
 
-    POP_SUB(io_rm)
-  end subroutine io_rm
+    POP_SUB(io_rm_old)
+  end subroutine io_rm_old
 
   
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
+  integer function io_open_old(file, action, status, form, position, die, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
@@ -359,7 +359,7 @@ contains
     integer            :: iostat
     type(mpi_grp_t)    :: grp_
 
-    PUSH_SUB(io_open)
+    PUSH_SUB(io_open_old)
 
     if(present(grp)) then
       grp_%comm = grp%comm
@@ -387,11 +387,11 @@ contains
           write(message(1), '(a)') '*** IO Error: Too many files open.'
           call messages_fatal(1)
         end if
-        POP_SUB(io_open)
+        POP_SUB(io_open_old)
         return
       end if
 
-      file_ = io_workpath(file)
+      file_ = io_workpath_old(file)
 
       if(present(recl)) then
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
@@ -419,9 +419,9 @@ contains
     end if
 #endif
 
-    POP_SUB(io_open)
+    POP_SUB(io_open_old)
     
-  end function io_open
+  end function io_open_old
 
 
   ! ---------------------------------------------------------
@@ -567,7 +567,7 @@ contains
         call debug_enable(debug)
         ! this call does not hurt if the directory is already there
         ! but is otherwise required
-        call io_mkdir('debug')
+        call io_mkdir_old('debug')
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('enable_debug_mode')
         ! artificially increase sub stack to avoid underflow
@@ -619,15 +619,15 @@ contains
 
   !> Returns true if a dir with name 'dir' exists
   ! ---------------------------------------------------------
-  logical function io_dir_exists(dir)
+  logical function io_dir_exists_old(dir)
     character(len=*), intent(in)  :: dir
 
-    PUSH_SUB(io_dir_exists)
+    PUSH_SUB(io_dir_exists_old)
 
-    io_dir_exists = loct_dir_exists(trim(io_workpath(dir)))
+    io_dir_exists_old = loct_dir_exists(trim(io_workpath_old(dir)))
 
-    POP_SUB(io_dir_exists)
-  end function io_dir_exists
+    POP_SUB(io_dir_exists_old)
+  end function io_dir_exists_old
 
   ! ---------------------------------------------------------
   subroutine iopar_read(grp, iunit, lines, n_lines, ierr)

@@ -859,7 +859,7 @@ contains
 
     PUSH_SUB(pes_mask_output_full_mapM.out_ascii)
 
-    iunit = io_open(file, action='write')
+    iunit = io_open_old(file, action='write')
 
 
     ll = 1
@@ -923,7 +923,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
   
-  iunit = io_open(file, action='write')
+  iunit = io_open_old(file, action='write')
 
 
   
@@ -1544,7 +1544,7 @@ subroutine pes_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   nx = size(pesM,1)
   ny = size(pesM,2)
 
-  iunit = io_open(file, action='write')
+  iunit = io_open_old(file, action='write')
 
   select case (mode)
     case(1)
@@ -1826,7 +1826,7 @@ subroutine pes_mask_write_power_total(file, step, pes, npoints)
 
   nn = size(pes,1)
 
-  iunit = io_open(file, action='write')
+  iunit = io_open_old(file, action='write')
 
   !!Header
   write(iunit, '(a)') '##################################################'
@@ -1957,7 +1957,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
       ! Output the full matrix in binary format for subsequent post-processing 
       if(st%d%nik == 1) then
       write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
+      call io_binary_write(io_workpath_old(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
                            pesK, ierr)
                            
          
@@ -2010,7 +2010,7 @@ subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
 
 
   filename = trim(dir)//'pes'
-  iunit = io_open(filename, action='read', status='old')
+  iunit = io_open_old(filename, action='read', status='old')
 
   SAFE_ALLOCATE(RR(1:2))
 
@@ -2062,7 +2062,7 @@ subroutine pes_mask_write_info(mask, dir)
 
   filename = trim(dir)//'/pes'
 
-  iunit = io_open(filename, action='write')
+  iunit = io_open_old(filename, action='write')
 
   write(iunit, '(a10,2x,i2)') 'dim', mask%mesh%sb%dim
   write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_R(1)

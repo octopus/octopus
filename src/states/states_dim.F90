@@ -214,8 +214,8 @@ contains
 
       PUSH_SUB(states_choose_kpoints.print_kpoints_debug)
       
-      call io_mkdir('debug/')
-      iunit = io_open('debug/kpoints', action = 'write')
+      call io_mkdir_old('debug/')
+      iunit = io_open_old('debug/kpoints', action = 'write')
       call kpoints_write_info(sb%kpoints, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)
 

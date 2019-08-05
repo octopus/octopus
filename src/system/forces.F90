@@ -481,7 +481,7 @@ contains
     end if
 
 
-    iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
+    iunit2 = io_open_old(trim(dir)//'/forces', action='write', position='asis')
     write(iunit2,'(a)') &
       ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z)' // &
       ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'

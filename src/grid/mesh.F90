@@ -399,7 +399,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -439,7 +439,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -484,7 +484,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='write', die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
       call messages_warning(1)
@@ -532,7 +532,7 @@ contains
     read_np_part = 0
     read_np = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., grp=mpi_grp)
+    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -626,7 +626,7 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(io_workpath(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        call io_binary_read(trim(io_workpath_old(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."

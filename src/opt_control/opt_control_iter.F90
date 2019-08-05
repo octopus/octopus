@@ -132,7 +132,7 @@ contains
     SAFE_ALLOCATE(iterator%best_par)
     call controlfunction_copy(iterator%best_par, par)
 
-    iterator%convergence_iunit = io_open(OCT_DIR//'convergence', action='write')
+    iterator%convergence_iunit = io_open_old(OCT_DIR//'convergence', action='write')
 
     write(iterator%convergence_iunit, '(91(''#''))') 
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
@@ -142,7 +142,7 @@ contains
     write(iterator%convergence_iunit, '(91(''#''))') 
 
     if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
-       iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
+       iterator%velocities_iunit = io_open_old(OCT_DIR//'velocities', action='write')
     end if
 
     POP_SUB(oct_iterator_init)
