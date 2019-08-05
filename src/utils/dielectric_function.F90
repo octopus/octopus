@@ -106,7 +106,7 @@ program dielectric_function
 
   in_file = io_open_old('td.general/gauge_field', action='read', status='old', die=.false.)
   if(in_file < 0) then 
-    message(1) = "Cannot open file '"//trim(io_workpath_old('td.general/gauge_field'))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
@@ -129,7 +129,8 @@ program dielectric_function
     call parse_variable(default_namespace, 'TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open_old(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath_old(trim(ref_filename)//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"// &
+        trim(io_workpath(trim(ref_filename)//'/gauge_field', default_namespace))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
@@ -175,7 +176,7 @@ program dielectric_function
   end if
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath_old('td.general/gauge_field'))//"'"
+    trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
   call messages_info(1)
 
 

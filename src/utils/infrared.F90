@@ -175,7 +175,7 @@
       end_iter = iter - 1
 
       write (message(1), '(a)') "Read dipole moment from '"// &
-        trim(io_workpath_old('td.general/multipoles'))//"'."
+        trim(io_workpath('td.general/multipoles', default_namespace))//"'."
       call messages_info(1)
 
       POP_SUB(read_dipole)

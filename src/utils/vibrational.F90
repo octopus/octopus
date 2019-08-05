@@ -279,7 +279,7 @@
       PUSH_SUB(calculate_vaf)
 
       write (message(1), '(a)') "Read velocities from '"// &
-        trim(io_workpath_old('td.general/coordinates'))//"'"
+        trim(io_workpath('td.general/coordinates', default_namespace))//"'"
       call messages_info(1)
 
       !calculating the vaf, formula from

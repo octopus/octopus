@@ -180,26 +180,28 @@ contains
           call io_mkdir_old('local.general/multipoles')
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath_old("local.general/multipoles/"//trim(lab(id))//".multipoles")))
+          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
           call io_mkdir_old('local.general/potential')
           call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL,id)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath_old("local.general/potential/"//trim(lab(id))//".potential")))
+          units_from_atomic(units_out%time, dt), &
+          trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_DENSITY, id)%write) then
           call io_mkdir_old('local.general/densities')
           call write_iter_init(writ%out(LOCAL_OUT_DENSITY,id)%handle, first, &
-            units_from_atomic(units_out%time, dt), trim(io_workpath_old("local.general/densities/"//trim(lab(id))//".densities")))
+            units_from_atomic(units_out%time, dt), &
+            trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_ENERGY, id)%write) then 
           call io_mkdir_old('local.general/energy')
           call write_iter_init(writ%out(LOCAL_OUT_ENERGY,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath_old("local.general/energy/"//trim(lab(id))//".energy")))
+          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy", namespace)))
         end if
       end do
     end if
