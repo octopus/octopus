@@ -27,6 +27,7 @@ module ps_oct_m
   use parser_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_oct_m
   use ps_fhi_oct_m
@@ -144,9 +145,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, parser, label, z, user_lmax, user_llocal, ispin, filename)
+  subroutine ps_init(ps, namespace, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     character(len=10), intent(in)    :: label
     integer,           intent(in)    :: user_lmax
     integer,           intent(in)    :: user_llocal
@@ -170,7 +171,7 @@ contains
     
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
-    call messages_obsolete_variable(parser, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call messages_obsolete_variable(namespace, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float
@@ -189,7 +190,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
-    call parse_variable(parser, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
     ps%file_format = pseudo_detect_format(filename)

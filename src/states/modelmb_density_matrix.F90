@@ -32,6 +32,7 @@ module modelmb_density_matrix_oct_m
   use messages_oct_m
   use modelmb_1part_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -59,9 +60,9 @@ module modelmb_density_matrix_oct_m
 
 contains
 
-  subroutine modelmb_density_matrix_init(dir, parser, st, denmat)
+  subroutine modelmb_density_matrix_init(dir, namespace, st, denmat)
     character(len=*),       intent(in)  :: dir
-    type(parser_t),         intent(in)  :: parser
+    type(namespace_t),      intent(in)  :: namespace
     type(states_t),         intent(in)  :: st
     type(modelmb_denmat_t), intent(out) :: denmat
 
@@ -98,10 +99,10 @@ contains
     !%
     !%End
    
-    call messages_obsolete_variable(parser, 'DensityMatrixtoCalc', 'DensitytoCalc')
-    call messages_obsolete_variable(parser, 'DensitiestoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensityMatrixtoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensitiestoCalc', 'DensitytoCalc')
 
-    if(parse_block(parser, 'DensitytoCalc', blk) /= 0) then
+    if(parse_block(namespace, 'DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
      call messages_fatal(1)
     end if

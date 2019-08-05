@@ -30,6 +30,7 @@ module states_mxll_restart_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -57,10 +58,10 @@ module states_mxll_restart_oct_m
 contains
 
   !----------------------------------------------------------
-  subroutine states_mxll_read_user_def(mesh, st, user_def_rs_state, parser)
+  subroutine states_mxll_read_user_def(mesh, st, user_def_rs_state, namespace)
     type(mesh_t),        intent(inout) :: mesh
     type(states_mxll_t), intent(inout) :: st
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     CMPLX,               intent(inout) :: user_def_rs_state(:,:)
 
     type(block_t)      :: blk
@@ -126,7 +127,7 @@ contains
     !% This row defines the magnetic field component of the corresponding dimension
     !%End
 
-    if(parse_block(parser, 'UserDefinedInitialMaxwellStates', blk) == 0) then
+    if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
       !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'))
 

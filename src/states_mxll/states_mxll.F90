@@ -32,6 +32,7 @@ module states_mxll_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
@@ -223,9 +224,9 @@ contains
   end subroutine states_mxll_null
 
   ! ---------------------------------------------------------
-  subroutine states_mxll_init(st, parser, gr, geo)
+  subroutine states_mxll_init(st, namespace, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
-    type(parser_t),              intent(in)    :: parser
+    type(namespace_t),           intent(in)    :: namespace
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
@@ -273,7 +274,7 @@ contains
     !%Option minus -1
     !% Riemann Silberstein sign is minus
     !%End
-    call parse_variable(parser, 'RiemannSilbersteinSign', OPTION__RIEMANNSILBERSTEINSIGN__PLUS, st%rs_sign)
+    call parse_variable(namespace, 'RiemannSilbersteinSign', OPTION__RIEMANNSILBERSTEINSIGN__PLUS, st%rs_sign)
 
     !%Variable MaxwellFieldsCoordinate
     !%Type block
@@ -288,7 +289,7 @@ contains
     !%End
 
     st%selected_points_number = 1
-    if(parse_block(parser, 'MaxwellFieldsCoordinate', blk) == 0) then
+    if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
       st%selected_points_number = nlines
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1:nlines))

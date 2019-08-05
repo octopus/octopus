@@ -38,6 +38,7 @@ module fft_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use nfft_oct_m
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
@@ -157,8 +158,8 @@ contains
 
   ! ---------------------------------------------------------
   !> initialize the table
-  subroutine fft_all_init(parser)
-    type(parser_t),      intent(in)   :: parser
+  subroutine fft_all_init(namespace)
+    type(namespace_t),      intent(in)   :: namespace
     
     integer :: ii
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
@@ -187,7 +188,7 @@ contains
     !% be written if the number is not good, with a suggestion of a better one to use, so you
     !% can try a different spacing if you want to get a good number.
     !%End
-    call parse_variable(parser, 'FFTOptimize', .true., fft_optimize)
+    call parse_variable(namespace, 'FFTOptimize', .true., fft_optimize)
     do ii = 1, FFT_MAX
       fft_refs(ii) = FFT_NULL
     end do
@@ -214,7 +215,7 @@ contains
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
-    call parse_variable(parser, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
+    call parse_variable(namespace, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
 
     !%Variable FFTLibrary
@@ -231,7 +232,7 @@ contains
     !% (experimental) Uses a GPU accelerated library. This only
     !% works if Octopus was compiled with Cuda or OpenCL support.
     !%End
-    call parse_variable(parser, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
+    call parse_variable(namespace, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
 
     if(fft_default_lib == FFTLIB_ACCEL) then
 #if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
@@ -261,8 +262,8 @@ contains
     end if
 #endif
 
-    call nfft_guru_options(nfft_options, parser)
-    call pnfft_guru_options(pnfft_options, parser)
+    call nfft_guru_options(nfft_options, namespace)
+    call pnfft_guru_options(pnfft_options, namespace)
     
     POP_SUB(fft_all_init)
   end subroutine fft_all_init

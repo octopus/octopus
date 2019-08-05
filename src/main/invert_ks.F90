@@ -28,6 +28,7 @@ module invert_ks_oct_m
   use io_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -105,7 +106,7 @@ contains
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
           sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, sys%parser, nspin, sys%hm, sys%psolver, sys%gr, &
+        call invertks_iter(target_rho, sys%namespace, nspin, sys%hm, sys%psolver, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
              sys%ks%ks_inversion%method)
       end if
@@ -133,11 +134,11 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, sys%ks, STATIC_DIR)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
-    call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
+    call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
     call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
@@ -172,7 +173,7 @@ contains
       !% Name of the file that contains the density used as the target in the 
       !% inversion of the KS equations.
       !%End
-      call parse_variable(sys%parser, 'InvertKSTargetDensity', "target_density.dat", filename)
+      call parse_variable(sys%namespace, 'InvertKSTargetDensity', "target_density.dat", filename)
 
       iunit = io_open(filename, action='read', status='old')
 

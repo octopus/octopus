@@ -30,11 +30,12 @@ module exponential_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
-  use parser_oct_m
-  use poisson_oct_m
   use mesh_function_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -70,9 +71,9 @@ module exponential_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine exponential_init(te, parser)
+  subroutine exponential_init(te, namespace)
     type(exponential_t), intent(out) :: te
-    type(parser_t),      intent(in)  :: parser
+    type(namespace_t),   intent(in)  :: namespace
     
     PUSH_SUB(exponential_init)
 
@@ -128,7 +129,7 @@ contains
     !% 3967 (1984); R. Kosloff, <i>Annu. Rev. Phys. Chem.</i> <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, <i>MTAC</i> <b>9</b>, 118 (1955).
     !%End
-    call parse_variable(parser, 'TDExponentialMethod', EXP_TAYLOR, te%exp_method)
+    call parse_variable(namespace, 'TDExponentialMethod', EXP_TAYLOR, te%exp_method)
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
@@ -145,7 +146,7 @@ contains
       !% make sure that this value is not too big, or else the evolution will be
       !% wrong.
       !%End
-      call parse_variable(parser, 'TDLanczosTol', CNST(1e-5), te%lanczos_tol)
+      call parse_variable(namespace, 'TDLanczosTol', CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call messages_input_error('TDLanczosTol')
 
     case default
@@ -163,7 +164,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call parse_variable(parser, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
+      call parse_variable(namespace, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
       if (te%exp_order < 2) call messages_input_error('TDExpOrder')
 
     end if
@@ -184,7 +185,7 @@ contains
       !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
       !% According to this reference, this is much more precise than CGS or MGS algorithms.
       !%End
-      call parse_variable(parser, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
+      call parse_variable(namespace, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
                               te%arnoldi_gs)
     end if
 

@@ -26,6 +26,7 @@ module mesh_partition_oct_m
   use metis_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
@@ -65,9 +66,9 @@ contains
   !! which has to be allocated beforehand.
   !! (mesh_partition_end should be called later.)
   ! ---------------------------------------------------------------
-  subroutine mesh_partition(mesh, parser, lapl_stencil, vsize)
+  subroutine mesh_partition(mesh, namespace, lapl_stencil, vsize)
     type(mesh_t),      intent(inout)  :: mesh
-    type(parser_t),    intent(in)     :: parser
+    type(namespace_t), intent(in)     :: namespace
     type(stencil_t),   intent(in)     :: lapl_stencil
     integer,           intent(in)     :: vsize        !< number of partitions to be created. Might
                                                       !! be different from the actual number of
@@ -140,7 +141,7 @@ contains
 #ifdef HAVE_PARMETIS
     default = PARMETIS
 #endif
-    call parse_variable(parser, 'MeshPartitionPackage', default, library)
+    call parse_variable(namespace, 'MeshPartitionPackage', default, library)
 
 #if !defined(HAVE_METIS)
     if(library == METIS) then
@@ -170,7 +171,7 @@ contains
     !% partition. This in principle should give a better partition, but
     !% it is slower and requires more memory.
     !%End
-    call parse_variable(parser, 'MeshPartitionStencil', STAR, stencil_to_use)
+    call parse_variable(namespace, 'MeshPartitionStencil', STAR, stencil_to_use)
 
     if (stencil_to_use == STAR) then
       call stencil_star_get_lapl(stencil, mesh%sb%dim, order = 1)
@@ -336,7 +337,7 @@ contains
       !%Option graph 2
       !% Graph partitioning (called 'k-way' by METIS).
       !%End
-      call parse_variable(parser, 'MeshPartition', default_method, method)
+      call parse_variable(namespace, 'MeshPartition', default_method, method)
 
       SAFE_ALLOCATE(part_global(1:nv_global))
 

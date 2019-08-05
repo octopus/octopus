@@ -19,11 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_local(gr, parser, tg, td)
-    type(grid_t),   intent(in)    :: gr
-    type(parser_t), intent(in)    :: parser
-    type(target_t), intent(inout) :: tg
-    type(td_t),     intent(in)    :: td
+  subroutine target_init_local(gr, namespace, tg, td)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
 
     integer             :: ip
     FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
@@ -41,10 +41,10 @@
     !% that defines the target. This should be done by defining it through a string, using 
     !% the variable <tt>OCTLocalTarget</tt>.
     !%End
-    if(parse_is_defined(parser, 'OCTLocalTarget')) then
+    if(parse_is_defined(namespace, 'OCTLocalTarget')) then
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
-      call parse_variable(parser, 'OCTLocalTarget', "0", expression)
+      call parse_variable(namespace, 'OCTLocalTarget', "0", expression)
       call conv_to_C_string(expression)
       do ip = 1, gr%mesh%np
         call mesh_r(gr%mesh, ip, rr, coords = xx)

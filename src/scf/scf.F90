@@ -46,6 +46,7 @@ module scf_oct_m
   use mpi_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
@@ -124,9 +125,9 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, parser, gr, geo, st, mc, hm, ks, conv_force)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, conv_force)
     type(scf_t),          intent(inout) :: scf
-    type(parser_t),       intent(in)    :: parser
+    type(namespace_t),    intent(in)    :: namespace
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
@@ -151,7 +152,7 @@ contains
     !% 0 means just do LCAO (or read from restart), compute the eigenvalues and energy,
     !% and stop, without updating the wavefunctions or density.
     !%End
-    call parse_variable(parser, 'MaximumIter', 200, scf%max_iter)
+    call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
     !%Variable MaximumIterBerry
     !%Type integer
@@ -164,7 +165,7 @@ contains
     !% has not been achieved. -1 means unlimited.
     !%End
     if(associated(hm%vberry)) then
-      call parse_variable(parser, 'MaximumIterBerry', 10, scf%max_iter_berry)
+      call parse_variable(namespace, 'MaximumIterBerry', 10, scf%max_iter_berry)
       if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
     end if
     
@@ -178,7 +179,7 @@ contains
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable(parser, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
     
     !%Variable ConvAbsDens
     !%Type float
@@ -191,7 +192,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable(parser, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
+    call parse_variable(namespace, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
@@ -209,7 +210,7 @@ contains
     !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
     !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
-    call parse_variable(parser, 'ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
+    call parse_variable(namespace, 'ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -223,7 +224,7 @@ contains
     !%
     !% A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable(parser, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
 
     !%Variable ConvRelEv
     !%Type float
@@ -237,10 +238,10 @@ contains
     !%
     !%A zero value (the default) means do not use this criterion.
     !%End
-    call parse_variable(parser, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
-    call messages_obsolete_variable(parser, 'ConvAbsForce', 'ConvForce')
-    call messages_obsolete_variable(parser, 'ConvRelForce', 'ConvForce')
+    call messages_obsolete_variable(namespace, 'ConvAbsForce', 'ConvForce')
+    call messages_obsolete_variable(namespace, 'ConvRelForce', 'ConvForce')
 
     !%Variable ConvForce
     !%Type float
@@ -252,7 +253,7 @@ contains
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8 H/b.
     !%End
-    call parse_variable(parser, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
+    call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
     scf%check_conv = &
       scf%conv_energy_diff > M_ZERO .or. &
@@ -284,11 +285,11 @@ contains
     !% If true, the calculation will not be considered converged unless all states have
     !% individual errors less than <tt>EigensolverTolerance</tt>.
     !%End
-    call parse_variable(parser, 'ConvEigenError', .false., scf%conv_eigen_error)
+    call parse_variable(namespace, 'ConvEigenError', .false., scf%conv_eigen_error)
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
-    call messages_obsolete_variable(parser, 'What2Mix', 'MixField')
+    call messages_obsolete_variable(namespace, 'What2Mix', 'MixField')
 
     !%Variable MixField
     !%Type integer
@@ -315,7 +316,7 @@ contains
     mixdefault = OPTION__MIXFIELD__POTENTIAL
     if(hm%theory_level == INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
-    call parse_variable(parser, 'MixField', mixdefault, scf%mix_field)
+    call parse_variable(namespace, 'MixField', mixdefault, scf%mix_field)
     if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
@@ -357,9 +358,9 @@ contains
     mix_type = TYPE_FLOAT
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, parser, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, parser, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
     !If we use LDA+U, we also have do mix it
@@ -370,20 +371,20 @@ contains
     call mix_get_field(scf%smix, scf%mixfield)
 
     if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
-      call lda_u_loadbasis(hm%lda_u, parser, st, gr%mesh, mc, ierr)
+      call lda_u_loadbasis(hm%lda_u, namespace, st, gr%mesh, mc, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
       end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, parser, st, gr%der, mc, associated(hm%hm_base%phase))
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, parser, gr, st, ks%xc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, ks%xc)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, parser, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     !%Variable SCFinLCAO
@@ -396,7 +397,7 @@ contains
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).
     !%End
-    call parse_variable(parser, 'SCFinLCAO', .false., scf%lcao_restricted)
+    call parse_variable(namespace, 'SCFinLCAO', .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       call messages_experimental('SCFinLCAO')
       message(1) = 'Info: SCF restricted to LCAO subspace.'
@@ -418,7 +419,7 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call parse_variable(parser, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
+    call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
 
     !%Variable SCFCalculateStress
@@ -429,7 +430,7 @@ contains
     !% calculated at the end of a self-consistent iteration. The
     !% default is no.
     !%End
-    call parse_variable(parser, 'SCFCalculateStress', .false. , scf%calc_stress)
+    call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -443,7 +444,7 @@ contains
     !% periodic directions. Ref:
     !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
-    call parse_variable(parser, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
+    call parse_variable(namespace, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
@@ -454,7 +455,7 @@ contains
     !% (Experimental) This variable controls whether partial charges
     !% are calculated at the end of a self-consistent iteration.
     !%End
-    call parse_variable(parser, 'SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
+    call parse_variable(namespace, 'SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
@@ -476,7 +477,7 @@ contains
     !% The default is half the minimum distance between two atoms
     !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
-    call parse_variable(parser, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
 
     scf%forced_finish = .false.
@@ -525,9 +526,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, parser, mc, gr, geo, st, ks, hm, psolver, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
+  subroutine scf_run(scf, namespace, mc, gr, geo, st, ks, hm, psolver, outp, gs_run, verbosity, iters_done, &
+    restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
-    type(parser_t),            intent(in)    :: parser
+    type(namespace_t),         intent(in)    :: namespace
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
     type(geometry_t),          intent(inout) :: geo !< geometry
@@ -568,7 +570,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, parser, gr, geo, st)
+      call lcao_init(lcao, namespace, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
@@ -585,7 +587,7 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          call v_ks_calc(ks, parser, hm, st, geo)
+          call v_ks_calc(ks, namespace, hm, st, geo)
         end if
       end if
 
@@ -664,7 +666,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, parser, geo, hm, st, ks)
+      call forces_calculate(gr, namespace, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -713,7 +715,7 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, gr, st, hm, psolver, iter)
 
-            call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
+            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
             dipole_prev = dipole
             call calc_dipole(dipole)
@@ -746,7 +748,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -778,7 +780,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
+        call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -792,7 +794,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
+          call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -837,7 +839,7 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -855,10 +857,10 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
       end select
 
 
@@ -939,7 +941,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, parser, gr, geo, st, hm, psolver, ks, dirname)
+        call output_all(outp, namespace, gr, geo, st, hm, psolver, ks, dirname)
       end if
 
       ! save information for the next iteration
@@ -973,7 +975,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call v_ks_calc(ks, parser, hm, st, geo)
+      call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 
     select case(scf%mix_field)
@@ -1003,7 +1005,7 @@ contains
 
     ! calculate forces
     if(scf%calc_force) then
-      call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
+      call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
     end if
 
     ! calculate stress
@@ -1018,12 +1020,12 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, parser, gr, geo, st, hm, psolver, ks, STATIC_DIR)
+      call output_all(outp, namespace, gr, geo, st, hm, psolver, ks, STATIC_DIR)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_write_bandstructure(STATIC_DIR, parser, st%nst, st, gr%sb, geo, gr%mesh, &
+        call states_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
           hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
@@ -1230,7 +1232,7 @@ contains
         SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
         call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, parser, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+        call partial_charges_calculate(partial_charges, namespace, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         call partial_charges_end(partial_charges)
 
         if(mpi_grp_is_root(mpi_world)) then

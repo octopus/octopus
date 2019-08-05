@@ -36,6 +36,7 @@ module current_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -73,9 +74,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this, parser, sb)
+  subroutine current_init(this, namespace, sb)
     type(current_t),   intent(out)   :: this
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     type(simul_box_t), intent(in)    :: sb
 
     PUSH_SUB(current_init)
@@ -99,7 +100,7 @@ contains
     !% Hamiltonian with the position operator. (Experimental)
     !%End
 
-    call parse_variable(parser, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
+    call parse_variable(namespace, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")

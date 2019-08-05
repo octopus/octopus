@@ -39,6 +39,7 @@ module pnfft_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pfft_oct_m
   use pnfft_params_oct_m
@@ -101,9 +102,9 @@ module pnfft_oct_m
 contains
 
   ! ---------------------------------------------------------  
-  subroutine pnfft_guru_options(pnfft, parser)
+  subroutine pnfft_guru_options(pnfft, namespace)
     type(pnfft_t),     intent(inout) :: pnfft
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(pnfft_guru_options)
 
@@ -115,7 +116,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_variable(parser, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
+    call parse_variable(namespace, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
 
     !%Variable PNFFTOversampling
     !%Type float
@@ -124,7 +125,7 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(parser, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
+    call parse_variable(namespace, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
 
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options

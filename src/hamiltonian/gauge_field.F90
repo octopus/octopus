@@ -24,6 +24,7 @@ module gauge_field_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -84,9 +85,9 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, parser, sb)
+  subroutine gauge_field_init(this, namespace, sb)
     type(gauge_field_t),     intent(out)   :: this
-    type(parser_t),          intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     type(simul_box_t),       intent(in)    :: sb
 
     integer :: ii, iop
@@ -117,7 +118,7 @@ contains
     !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
     !%End
 
-    call parse_variable(parser, 'GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
+    call parse_variable(namespace, 'GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
 
     !%Variable GaugeFieldPropagate
     !%Type logical
@@ -127,7 +128,7 @@ contains
     !% Propagate the gauge field with initial condition set by GaugeVectorField or zero if not specified
     !%End
 
-    call parse_variable(parser, 'GaugeFieldPropagate', .false., this%with_gauge_field)
+    call parse_variable(namespace, 'GaugeFieldPropagate', .false., this%with_gauge_field)
 
     !%Variable GaugeVectorField
     !%Type block
@@ -146,7 +147,7 @@ contains
     !%End
     ! Read the initial gauge vector field
 
-    if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
+    if(parse_block(namespace, 'GaugeVectorField', blk) == 0) then
 
       this%with_gauge_field = .true.
 
@@ -182,7 +183,7 @@ contains
     !% systems one can apply this probe with a delay relative to the start of the simulation.
     !%End
 
-    call parse_variable(parser, 'GaugeFieldDelay', M_ZERO, this%kicktime)
+    call parse_variable(namespace, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)

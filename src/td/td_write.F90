@@ -46,6 +46,7 @@ module td_write_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use pert_oct_m
@@ -154,9 +155,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, parser, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
+  subroutine td_write_init(writ, namespace, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
-    type(parser_t),           intent(in)    :: parser
+    type(namespace_t),        intent(in)    :: namespace
     type(output_t),           intent(out)   :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(inout) :: st
@@ -291,7 +292,7 @@ contains
     if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
     if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
-    call parse_variable(parser, 'TDOutput', default, flags)
+    call parse_variable(namespace, 'TDOutput', default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
 
@@ -331,13 +332,13 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
-    call parse_variable(parser, 'TDMultipoleLmax', 1, writ%lmax)
+    call parse_variable(namespace, 'TDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
       call messages_fatal(2)
     end if
-    call messages_obsolete_variable(parser, 'TDDipoleLmax', 'TDMultipoleLmax')
+    call messages_obsolete_variable(namespace, 'TDDipoleLmax', 'TDMultipoleLmax')
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
@@ -355,7 +356,7 @@ contains
     end if
 
     ! This variable is documented in scf/scf.F90
-    call parse_variable(parser, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
@@ -380,7 +381,7 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
         if(ierr == 0) &
@@ -406,7 +407,7 @@ contains
           !% is set by the number of states in the propagation and the number of unoccupied states
           !% available.
           !%End
-          call parse_variable(parser, 'TDProjStateStart', 1, writ%gs_st%st_start)
+          call parse_variable(namespace, 'TDProjStateStart', 1, writ%gs_st%st_start)
         else
            writ%gs_st%st_start = 1
         end if
@@ -435,7 +436,7 @@ contains
         
       end if
  
-      call states_load(restart_gs, parser, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
+      call states_load(restart_gs, namespace, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -484,7 +485,7 @@ contains
       !% These weights should be normalized to one; otherwise the routine
       !% will normalize them, and write a warning.
       !%End
-      if(parse_block(parser, 'TDExcitedStatesToProject', blk) == 0) then
+      if(parse_block(namespace, 'TDExcitedStatesToProject', blk) == 0) then
         writ%n_excited_states = parse_block_n(blk)
         SAFE_ALLOCATE(writ%excited_st(1:writ%n_excited_states))
         do ist = 1, writ%n_excited_states
@@ -507,7 +508,7 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. 
     !% Implemented only for projections and number of excited electrons for the moment.
     !%End
-    call parse_variable(parser, 'TDOutputComputeInterval', 50, writ%compute_interval)
+    call parse_variable(namespace, 'TDOutputComputeInterval', 50, writ%compute_interval)
     if(writ%compute_interval < 0) then
       message(1) = "TDOutputComputeInterval must be >= 0."
       call messages_fatal(1)
@@ -649,7 +650,7 @@ contains
     
     if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       call v_ks_calculate_current(ks, .true.)
-      call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.false., time = iter*dt)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
 
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
@@ -660,7 +661,7 @@ contains
       call io_mkdir(outp%iter_dir)
     end if
 
-    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, parser, outp%how)
+    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp%how)
 
     !%Variable TDOutputDFTU
     !%Type flag
@@ -677,7 +678,7 @@ contains
     !%End
     default = 0
     if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
-    call parse_variable(parser, 'TDOutputDFTU', default, flags)
+    call parse_variable(namespace, 'TDOutputDFTU', default, flags)
 
     if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
       call messages_input_error('TDOutputDFTU')
@@ -736,9 +737,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, parser, outp, gr, st, hm, psolver, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, namespace, outp, gr, st, hm, psolver, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(output_t),      intent(in)    :: outp
     type(grid_t),        intent(in)    :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
@@ -761,7 +762,7 @@ contains
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
     if(writ%out(OUT_ANGULAR)%write) then
-      call td_write_angular(writ%out(OUT_ANGULAR)%handle, parser, gr, geo, hm, psolver, st, kick, iter)
+      call td_write_angular(writ%out(OUT_ANGULAR)%handle, namespace, gr, geo, hm, psolver, st, kick, iter)
     end if
 
     if(writ%out(OUT_SPIN)%write) &
@@ -776,7 +777,7 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, parser, hm, psolver, gr, st, ks, iter)
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, namespace, hm, psolver, gr, st, ks, iter)
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
@@ -832,7 +833,8 @@ contains
     end if
     
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, parser, writ%partial_charges, gr%fine%mesh, st, geo, iter)
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, writ%partial_charges, gr%fine%mesh, st, &
+        geo, iter)
     end if
     
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
@@ -882,9 +884,9 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(writ, parser, gr, st, hm, psolver, ks, outp, geo, iter, dt)
+  subroutine td_write_output(writ, namespace, gr, st, hm, psolver, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
-    type(parser_t),       intent(in)    :: parser
+    type(namespace_t),    intent(in)    :: namespace
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -904,7 +906,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, parser, gr, geo, st, hm, psolver, ks, filename)
+    call output_all(outp, namespace, gr, geo, st, hm, psolver, ks, filename)
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
     else
@@ -1026,9 +1028,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, parser, gr, geo, hm, psolver, st, kick, iter)
+  subroutine td_write_angular(out_angular, namespace, gr, geo, hm, psolver, st, kick, iter)
     type(c_ptr),            intent(inout) :: out_angular
-    type(parser_t),         intent(in)    :: parser
+    type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
@@ -1044,13 +1046,13 @@ contains
 
     PUSH_SUB(td_write_angular)
 
-    call pert_init(angular_momentum, parser, PERTURBATION_MAGNETIC, gr, geo)
+    call pert_init(angular_momentum, namespace, PERTURBATION_MAGNETIC, gr, geo)
 
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
        angular(idir) = &
-         M_TWO*real(zpert_states_expectation_value(angular_momentum, parser, gr, geo, hm, psolver, st), REAL_PRECISION)
+         M_TWO*real(zpert_states_expectation_value(angular_momentum, namespace, gr, geo, hm, psolver, st), REAL_PRECISION)
     end do
 
     call pert_end(angular_momentum)
@@ -2584,9 +2586,9 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, parser, hm, psolver, gr, st, ks, iter)
+  subroutine td_write_floquet(out_floquet, namespace, hm, psolver, gr, st, ks, iter)
     type(c_ptr),         intent(inout) :: out_floquet
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(hamiltonian_t), intent(inout) :: hm
     type(poisson_t),     intent(in)    :: psolver
     type(grid_t),        intent(in)    :: gr
@@ -2632,7 +2634,7 @@ contains
     !% Other options will work, but likely be nonsense.
     !% 
     !%End
-    call parse_variable(parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+    call parse_variable(namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
     if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -2650,7 +2652,7 @@ contains
     !% Number of points on which one Floquet cycle is sampled in the time-integral of the Floquet analysis.
     !%
     !%End 
-    call parse_variable(parser, 'TDFloquetSample',20 ,nt)
+    call parse_variable(namespace, 'TDFloquetSample',20 ,nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
     dt = Tcycle/real(nT)
 
@@ -2661,7 +2663,7 @@ contains
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding is performed.
     !%End
-    call parse_variable(parser, 'TDFloquetDimension',-1,Forder)
+    call parse_variable(namespace, 'TDFloquetDimension',-1,Forder)
     if(Forder.ge.0) then
        call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
        !Dimension of multiphoton Floquet-Hamiltonian
@@ -3009,9 +3011,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, parser, partial_charges, mesh, st, geo, iter)
+  subroutine td_write_partial_charges(out_partial_charges, namespace, partial_charges, mesh, st, geo, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
-    type(parser_t),          intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     type(partial_charges_t), intent(in)    :: partial_charges
     type(mesh_t),            intent(in)    :: mesh
     type(states_t),          intent(in)    :: st
@@ -3026,7 +3028,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, parser, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(partial_charges, namespace, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 

@@ -32,6 +32,7 @@ module tdfunction_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use splines_oct_m
@@ -119,11 +120,11 @@ contains
 
   !------------------------------------------------------------
   !> This function initializes "f" from the TDFunctions block.
-  subroutine tdf_read(f, parser, function_name, ierr)
-    type(tdf_t),      intent(inout) :: f
-    type(parser_t),   intent(in)    :: parser
-    character(len=*), intent(in)    :: function_name
-    integer,          intent(out)   :: ierr  !< Error code, 0 on success.
+  subroutine tdf_read(f, namespace, function_name, ierr)
+    type(tdf_t),       intent(inout) :: f
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: function_name
+    integer,           intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
     integer :: nrows, i, function_type
@@ -203,7 +204,7 @@ contains
     !% that defines the field.
     !%End
     ierr = -3
-    if(parse_block(parser, 'TDFunctions', blk) /= 0) then
+    if(parse_block(namespace, 'TDFunctions', blk) /= 0) then
       ierr = -1
       POP_SUB(tdf_read)
       return

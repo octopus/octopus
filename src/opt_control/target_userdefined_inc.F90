@@ -19,11 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_userdefined(gr, parser, tg, td)
-    type(grid_t),   intent(in)    :: gr
-    type(parser_t), intent(in)    :: parser
-    type(target_t), intent(inout) :: tg
-    type(td_t),     intent(in)    :: td
+  subroutine target_init_userdefined(gr, namespace, tg, td)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
 
     integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
     type(block_t)       :: blk
@@ -52,7 +52,7 @@
     !% <br>%</tt>
     !%  
     !%End
-    if(parse_block(parser, 'OCTTargetUserdefined', blk) == 0) then
+    if(parse_block(namespace, 'OCTTargetUserdefined', blk) == 0) then
         
       no_states = parse_block_n(blk)
       do ib = 1, no_states
@@ -118,9 +118,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_userdefined(tg, parser, gr, dir, geo, hm, outp)
+  subroutine target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
-    type(parser_t),      intent(in) :: parser
+    type(namespace_t),   intent(in) :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -129,7 +129,7 @@
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

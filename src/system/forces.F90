@@ -44,6 +44,7 @@ module forces_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use projector_oct_m
@@ -109,9 +110,9 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine forces_costate_calculate(gr, parser, geo, hm, psi, chi, f, q)
+  subroutine forces_costate_calculate(gr, namespace, geo, hm, psi, chi, f, q)
     type(grid_t),        intent(in)    :: gr
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
     type(hamiltonian_t), intent(in)    :: hm
     type(states_t),      intent(in)    :: psi
@@ -228,7 +229,7 @@ contains
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
       call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-      call zhamiltonian_apply_atom (hm, parser, geo, gr, iatom, zpsi, viapsi)
+      call zhamiltonian_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
@@ -248,9 +249,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old, t, dt)
+  subroutine forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old, t, dt)
     type(grid_t),        intent(in)    :: gr
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(inout) :: st
@@ -288,7 +289,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
     ! if we use vdw TS, we need to compute it now
     if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
-      call vdw_ts_force_calculate(ks%vdw_ts, parser, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
     end if
 
     do iatom = 1, geo%natoms
@@ -315,9 +316,9 @@ contains
     SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, parser, geo, hm, st, force, force_loc, force_nl, force_u)
+      call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, parser, geo, hm, st, force, force_loc, force_nl, force_u)
+      call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
     if(associated(st%rho_core)) then

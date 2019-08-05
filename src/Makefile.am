@@ -67,6 +67,7 @@ basic_f_srcs =                                 \
 	basic/mpi.F90                          \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
+	basic/namespace.F90                    \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \

@@ -20,6 +20,7 @@
 
 module debug_oct_m
   use global_oct_m
+  use namespace_oct_m
   use parser_oct_m
 
   implicit none
@@ -44,9 +45,9 @@ module debug_oct_m
 
 contains
   
-  subroutine debug_init(this, parser)
-    type(debug_t),  intent(out)   :: this
-    type(parser_t), intent(in)    :: parser
+  subroutine debug_init(this, namespace)
+    type(debug_t),     intent(out)   :: this
+    type(namespace_t), intent(in)    :: namespace
 
     !%Variable Debug
     !%Type flag
@@ -75,7 +76,7 @@ contains
     !% This enables Octopus to perform some extra checks, to ensure
     !% code correctness, that might be too costly for regular runs.
     !%End
-    call parse_variable(parser, 'Debug', OPTION__DEBUG__NO, this%bits)
+    call parse_variable(namespace, 'Debug', OPTION__DEBUG__NO, this%bits)
 
     call from_bits(this)
     

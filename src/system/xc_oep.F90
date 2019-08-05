@@ -32,6 +32,7 @@ module xc_oep_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -88,9 +89,9 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, parser, family, gr, st)
+  subroutine xc_oep_init(oep, namespace, family, gr, st)
     type(xc_oep_t),     intent(out)   :: oep
-    type(parser_t),     intent(in)    :: parser
+    type(namespace_t),  intent(in)    :: namespace
     integer,            intent(in)    :: family
     type(grid_t),       intent(inout) :: gr
     type(states_t),     intent(in)    :: st
@@ -124,8 +125,8 @@ contains
     !% <tt>OEPMixing</tt>. Note that default for <tt>LRMaximumIter</tt> is set to 10.
     !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
     !%End
-    call messages_obsolete_variable(parser, 'OEP_Level', 'OEPLevel')
-    call parse_variable(parser, 'OEPLevel', XC_OEP_KLI, oep%level)
+    call messages_obsolete_variable(namespace, 'OEP_Level', 'OEPLevel')
+    call parse_variable(namespace, 'OEPLevel', XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
@@ -143,8 +144,8 @@ contains
         !% The linear mixing factor used to solve the Sternheimer
         !% equation in the full OEP procedure.
         !%End
-        call messages_obsolete_variable(parser, 'OEP_Mixing', 'OEPMixing')
-        call parse_variable(parser, 'OEPMixing', M_ONE, oep%mixing)
+        call messages_obsolete_variable(namespace, 'OEP_Mixing', 'OEPMixing')
+        call parse_variable(namespace, 'OEPMixing', M_ONE, oep%mixing)
       end if
 
      ! this routine is only prepared for finite systems. (Why not?)
@@ -162,8 +163,8 @@ contains
       end if
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
-        call scf_tol_init(oep%scftol, parser, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, parser, gr, states_are_real(st))
+        call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
         call lr_init(oep%lr)
       end if
 

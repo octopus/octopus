@@ -22,6 +22,7 @@ module root_solver_oct_m
   use global_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use ode_solver_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -93,9 +94,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine root_solver_read(rs, parser)
-    type(root_solver_t), intent(out) :: rs
-    type(parser_t),      intent(in)  :: parser
+  subroutine root_solver_read(rs, namespace)
+    type(root_solver_t),   intent(out) :: rs
+    type(namespace_t),     intent(in)  :: namespace
 
     PUSH_SUB(root_solver_read)
 
@@ -110,7 +111,7 @@ contains
     !%Option root_watterstrom 5
     !% Watterstrom method.
     !%End
-    call parse_variable(parser, 'RootSolver', ROOT_NEWTON, rs%solver_type)
+    call parse_variable(namespace, 'RootSolver', ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
       call messages_input_error('RootSolver')
     end if
@@ -123,7 +124,7 @@ contains
     !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
     !%End
-    call parse_variable(parser, 'RootSolverMaxIter', 100, rs%maxiter)
+    call parse_variable(namespace, 'RootSolverMaxIter', 100, rs%maxiter)
 
     !%Variable RootSolverRelTolerance
     !%Type float
@@ -132,7 +133,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_variable(parser, 'RootSolverRelTolerance', CNST(1e-8), rs%rel_tolerance)
+    call parse_variable(namespace, 'RootSolverRelTolerance', CNST(1e-8), rs%rel_tolerance)
 
     !%Variable RootSolverAbsTolerance
     !%Type float
@@ -141,7 +142,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_variable(parser, 'RootSolverAbsTolerance', CNST(1e-8), rs%abs_tolerance)
+    call parse_variable(namespace, 'RootSolverAbsTolerance', CNST(1e-8), rs%abs_tolerance)
 
     !%Variable RootSolverHavePolynomial
     !%Type logical
@@ -151,7 +152,7 @@ contains
     !%  If set to yes, the coefficients of the polynomial have to be passed to
     !%  the root solver.
     !%End
-    call parse_variable(parser, 'RootSolverHavePolynomial', .false., rs%have_polynomial)
+    call parse_variable(namespace, 'RootSolverHavePolynomial', .false., rs%have_polynomial)
 
     !%Variable RootSolverWSRadius
     !%Type float
@@ -161,7 +162,7 @@ contains
     !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
     !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
     !%End
-    call parse_variable(parser, 'RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
+    call parse_variable(namespace, 'RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
 
     if(rs%solver_type == ROOT_WATTERSTROM) then
 
@@ -183,7 +184,7 @@ contains
       !%Option ode_pd89 4
       !% Prince-Dormand solver.
       !%End
-      call parse_variable(parser, 'WatterstromODESolver', ODE_PD89, rs%ode_solver%solver_type)
+      call parse_variable(namespace, 'WatterstromODESolver', ODE_PD89, rs%ode_solver%solver_type)
 
       !%Variable WatterstromODESolverNSteps
       !%Type integer
@@ -193,7 +194,7 @@ contains
       !% Number of steps which the chosen ODE solver should perform
       !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
       !%End
-      call parse_variable(parser, 'WatterstromODESolverNSteps', 400, rs%ode_solver%nsteps)
+      call parse_variable(namespace, 'WatterstromODESolverNSteps', 400, rs%ode_solver%nsteps)
 
       ! set up ODE solver
       rs%ode_solver%nsize       = rs%poly_order

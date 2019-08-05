@@ -37,6 +37,7 @@ program oct_convert
   use mesh_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use output_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -53,7 +54,7 @@ program oct_convert
 
   character(len=256) :: config_str
   integer :: ierr
-  type(parser_t) :: parser
+  type(namespace_t) :: default_namespace
   type(poisson_t) :: psolver
   
   call getopt_init(ierr)
@@ -64,12 +65,13 @@ program oct_convert
   call global_init()
   call calc_mode_par_init()
 
-  call parser_init(parser)
+  call parser_init()
+  default_namespace = namespace_t("")
+  
+  call messages_init(default_namespace)
 
-  call messages_init(parser)
-
-  call io_init(parser)
-  call profiling_init(parser)
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
   call messages_experimental("oct-convert utility")
 
   call print_header()
@@ -77,9 +79,9 @@ program oct_convert
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
 
-  call restart_module_init(parser)
-  call fft_all_init(parser)
-  call unit_system_init(parser)
+  call restart_module_init(default_namespace)
+  call fft_all_init(default_namespace)
+  call unit_system_init(default_namespace)
 
   call convert()
 
@@ -90,7 +92,7 @@ program oct_convert
   call print_date("Calculation ended on ")
   call messages_end()
 
-  call parser_end(parser)
+  call parser_end()
 
   call global_end()
 
@@ -112,7 +114,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call system_init(sys, parser)
+    call system_init(sys, default_namespace)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
@@ -128,7 +130,7 @@ contains
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files, it should be one space ' '.
     !%End
-    call parse_variable(parser, 'ConvertFilename', 'density', basename)
+    call parse_variable(default_namespace, 'ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -154,7 +156,7 @@ contains
     !% Convert utility will generate a new mesh function constructed by linear 
     !% combination of scalar function of different mesh functions,
     !%End
-    call parse_variable(parser, 'ConvertHow', CONVERT_FORMAT, c_how)
+    call parse_variable(default_namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
 
     !%Variable ConvertIterateFolder
     !%Type logical
@@ -164,7 +166,7 @@ contains
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_variable(parser, 'ConvertIterateFolder', .true., iterate_folder)
+    call parse_variable(default_namespace, 'ConvertIterateFolder', .true., iterate_folder)
 
     if (iterate_folder) then
       folder_default  = 'td.'
@@ -181,7 +183,7 @@ contains
     !% The folder name where the input files are. The default is
     !% <tt>td.</tt> if <tt>ConvertIterateFolder = true</tt>, otherwise <tt>restart</tt>.
     !%End
-    call parse_variable(parser, 'ConvertFolder', folder_default, folder)
+    call parse_variable(default_namespace, 'ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
     !%Variable ConvertStart
@@ -191,7 +193,7 @@ contains
     !% The starting number of the filename or folder.
     !% Default is 0 if <tt>ConvertIterateFolder = true</tt>, otherwise 1.
     !%End
-    call parse_variable(parser, 'ConvertStart', c_start_default, c_start)
+    call parse_variable(default_namespace, 'ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -200,7 +202,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_variable(parser, 'ConvertEnd', 1, c_end)
+    call parse_variable(default_namespace, 'ConvertEnd', 1, c_end)
 
     !%Variable ConvertStep
     !%Type integer
@@ -209,7 +211,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_variable(parser, 'ConvertStep', 1, c_step)
+    call parse_variable(default_namespace, 'ConvertStep', 1, c_step)
 
     !%Variable ConvertSubtractFilename
     !%Type string
@@ -218,7 +220,7 @@ contains
     !%Description
     !% Input filename. The file which is going to subtracted to rest of the files.
     !%End
-    call parse_variable(parser, 'ConvertSubtractFilename', 'density', ref_name)
+    call parse_variable(default_namespace, 'ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
     ! Delete the extension if present
     length = len_trim(ref_name)
@@ -235,7 +237,7 @@ contains
     !%Description
     !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_variable(parser, 'ConvertSubtract', .false., subtract_file)
+    call parse_variable(default_namespace, 'ConvertSubtract', .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -244,21 +246,21 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_variable(parser, 'ConvertSubtractFolder', '.', ref_folder)
+    call parse_variable(default_namespace, 'ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, sys%parser, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, default_namespace, sys%geo, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, sys%parser, sys%geo, sys%mc, basename, folder, &
+      call convert_transform(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, sys%parser, sys%geo, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -271,23 +273,23 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, parser, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+  subroutine convert_low(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
     subtract_file, ref_name, ref_folder)
-    type(mesh_t),     intent(in)    :: mesh
-    type(parser_t),   intent(in)    :: parser
-    type(geometry_t), intent(in)    :: geo
+    type(mesh_t),      intent(in)    :: mesh
+    type(namespace_t), intent(in)    :: namespace
+    type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
-    character(len=*), intent(inout) :: basename       !< File name
-    character(len=*), intent(in)    :: in_folder      !< Folder name
-    integer,          intent(in)    :: c_start        !< The first file number
-    integer,          intent(in)    :: c_end          !< The last file number
-    integer,          intent(in)    :: c_step         !< The step between files
-    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
-    logical,          intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
-                                                      !! If false, it iterates over the filenames
-    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
-    character(len=*), intent(inout) :: ref_name       !< Reference file name 
-    character(len=*), intent(inout) :: ref_folder     !< Reference folder name
+    character(len=*),  intent(inout) :: basename       !< File name
+    character(len=*),  intent(in)    :: in_folder      !< Folder name
+    integer,           intent(in)    :: c_start        !< The first file number
+    integer,           intent(in)    :: c_end          !< The last file number
+    integer,           intent(in)    :: c_step         !< The step between files
+    type(output_t),    intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
+    logical,           intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
+                                                       !! If false, it iterates over the filenames
+    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
+    character(len=*),  intent(inout) :: ref_name       !< Reference file name 
+    character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
     type(restart_t)          :: restart
     integer                  :: ierr, ii, folder_index
@@ -307,7 +309,7 @@ contains
  
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
-      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
@@ -331,7 +333,7 @@ contains
     else 
       restart_folder = in_folder
     end if
-    call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+    call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                       dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
@@ -398,21 +400,21 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, parser, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
-    type(mesh_t)    , intent(in)    :: mesh
-    type(parser_t),   intent(in)    :: parser
-    type(geometry_t), intent(in)    :: geo
+    type(mesh_t)    ,  intent(in)    :: mesh
+    type(namespace_t), intent(in)    :: namespace
+    type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
-    character(len=*), intent(inout) :: basename       !< File name
-    character(len=*), intent(in)    :: in_folder      !< Folder name
-    integer,          intent(in)    :: c_start        !< The first file number
-    integer,          intent(in)    :: c_end          !< The last file number
-    integer,          intent(in)    :: c_step         !< The step between files
-    type(output_t),   intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
-    logical,          intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
-    character(len=*), intent(inout) :: ref_name       !< Reference file name 
-    character(len=*), intent(inout) :: ref_folder     !< Reference folder name
+    character(len=*),  intent(inout) :: basename       !< File name
+    character(len=*),  intent(in)    :: in_folder      !< Folder name
+    integer,           intent(in)    :: c_start        !< The first file number
+    integer,           intent(in)    :: c_end          !< The last file number
+    integer,           intent(in)    :: c_step         !< The step between files
+    type(output_t),    intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
+    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
+    character(len=*),  intent(inout) :: ref_name       !< Reference file name 
+    character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
     integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count, t_point
@@ -445,7 +447,7 @@ contains
 
     ! set default time_step as dt from TD section
     fdefault = M_ZERO
-    call parse_variable(parser, 'TDTimeStep', fdefault, dt, unit = units_inp%time)
+    call parse_variable(namespace, 'TDTimeStep', fdefault, dt, unit = units_inp%time)
     if (dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -463,7 +465,7 @@ contains
     !%Description
     !% Minimum energy to output from Fourier transform.
     !%End
-    call parse_variable(parser, 'ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
+    call parse_variable(namespace, 'ConvertEnergyMin', M_ZERO, min_energy, units_inp%energy)
     call messages_print_var_value(wd_info, 'ConvertEnergyMin', min_energy, unit = units_out%energy)
 
     !%Variable ConvertReadSize
@@ -475,7 +477,7 @@ contains
     !% yet tested, so it should be one. For the serial run, a number
     !% of 100-1000 will speed-up the execution time by this factor.
     !%End
-    call parse_variable(parser, 'ConvertReadSize', mesh%np, chunk_size)
+    call parse_variable(namespace, 'ConvertReadSize', mesh%np, chunk_size)
     call messages_print_var_value(wd_info, 'ConvertReadSize', chunk_size)
     !Check that default value is set when ConvertReadSize = 0
     if ( chunk_size == 0) chunk_size = mesh%np
@@ -501,7 +503,7 @@ contains
     !% Maximum energy to output from Fourier transform.
     !%End
     fdefault = units_from_atomic(units_inp%energy, w_max)
-    call parse_variable(parser, 'ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
+    call parse_variable(namespace, 'ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
     if (max_energy > w_max) then
       write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
            units_from_atomic(units_inp%energy, max_energy)
@@ -526,7 +528,7 @@ contains
     !% It uses the same variable described in how to obtain spectrum from
     !% a time-propagation calculation. 
     !%End
-    call parse_variable(parser, 'ConvertFTMethod', 1, ft_method)
+    call parse_variable(namespace, 'ConvertFTMethod', 1, ft_method)
     call messages_print_var_option(wd_info, 'ConvertFTMethod', ft_method)
 
     !TODO: check if e_point can be used instead of e_point+1
@@ -554,10 +556,10 @@ contains
         !% the sampling rate will be <math>2 \pi / T</math>, where <math>T</math> is the total propagation time.
         !%End
         fdefault = M_TWO * M_PI / (dt * time_steps)
-        call parse_variable(parser, 'ConvertEnergyStep',fdefault, dw, units_inp%energy)
+        call parse_variable(namespace, 'ConvertEnergyStep',fdefault, dw, units_inp%energy)
         if (dw <= M_ZERO) dw = M_TWO * M_PI / (dt * time_steps)
         
-        call spectrum_init(spectrum, parser, dw, w_max)
+        call spectrum_init(spectrum, namespace, dw, w_max)
         ! Manually setting already defined variables on spectrum.
         spectrum%start_time = c_start * dt
         spectrum%end_time = c_end * dt 
@@ -570,7 +572,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
-    call kick_init(kick, parser, 1, mesh%sb%dim, geo%periodic_dim)
+    call kick_init(kick, namespace, 1, mesh%sb%dim, geo%periodic_dim)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)
@@ -583,7 +585,7 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call messages_info(1)
-      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
@@ -613,7 +615,7 @@ contains
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
       restart_folder = folder(1:folder_index)
-      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(restart_folder), mesh = mesh)
     end if
    
@@ -754,9 +756,9 @@ contains
   ! ---------------------------------------------------------
   !> Given a set of mesh function operations it computes a  
   !! a resulting mesh function from linear combination of them.
-  subroutine convert_operate(mesh, parser, geo, mc, outp)
+  subroutine convert_operate(mesh, namespace, geo, mc, outp)
     type(mesh_t),      intent(in)    :: mesh
-    type(parser_t),    intent(in)   :: parser
+    type(namespace_t), intent(in)   :: namespace
     type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
     type(output_t)  ,  intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
@@ -785,7 +787,7 @@ contains
     !%End
     ! First, find out if there is a ConvertScalarOperation block.
     n_operations = 0
-    if(parse_block(parser, 'ConvertScalarOperation', blk) == 0) then
+    if(parse_block(namespace, 'ConvertScalarOperation', blk) == 0) then
       n_operations = parse_block_n(blk)
     end if
 
@@ -801,7 +803,7 @@ contains
     !% The folder name where the output files will be write. The default is
     !% <tt>convert</tt>. 
     !%End
-    call parse_variable(parser, 'ConvertOutputFolder', "convert", out_folder)
+    call parse_variable(namespace, 'ConvertOutputFolder', "convert", out_folder)
     call add_last_slash(out_folder)
     call io_mkdir(out_folder)
 
@@ -813,7 +815,7 @@ contains
     !% Output filename. The name of the file in which the converted mesh function will be 
     !% written in the format specified in <tt>OutputFormat</tt>. 
     !%End
-    call parse_variable(parser, 'ConvertOutputFilename', 'density', out_filename)
+    call parse_variable(namespace, 'ConvertOutputFilename', 'density', out_filename)
 
     SAFE_ALLOCATE(tmp_ff(1:mesh%np))
     SAFE_ALLOCATE(scalar_ff(1:mesh%np))
@@ -836,7 +838,7 @@ contains
       end if
       ! FIXME: why only real functions? Please generalize.
       ! TODO: check if mesh function are real or complex.
-      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)

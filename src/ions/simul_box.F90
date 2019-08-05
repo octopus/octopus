@@ -32,6 +32,7 @@ module simul_box_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -140,9 +141,9 @@ module simul_box_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, parser, geo, space)
+  subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
-    type(parser_t),                      intent(in)    :: parser
+    type(namespace_t),                   intent(in)    :: namespace
     type(geometry_t),                    intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
@@ -157,16 +158,16 @@ contains
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
-    call simul_box_build_lattice(sb, parser)       ! Build lattice vectors.
+    call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb)
 
-    call symmetries_init(sb%symm, parser, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
+    call symmetries_init(sb%symm, namespace, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
-    call kpoints_init(sb%kpoints, parser, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
+    call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
     call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim)
 
@@ -205,7 +206,7 @@ contains
       !%End
 
       if(geo%periodic_dim == -1) then
-        call parse_variable(parser, 'PeriodicDimensions', 0, sb%periodic_dim)
+        call parse_variable(namespace, 'PeriodicDimensions', 0, sb%periodic_dim)
       else
         sb%periodic_dim = geo%periodic_dim
       end if
@@ -235,7 +236,7 @@ contains
       !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
       !%End
 
-      if(parse_block(parser, 'MultiResolutionArea', blk) == 0) then
+      if(parse_block(namespace, 'MultiResolutionArea', blk) == 0) then
 
         call messages_experimental('Multi-resolution')
 
@@ -273,8 +274,8 @@ contains
         !%Description
         !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
         !%End
-        call messages_obsolete_variable(parser, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_variable(parser, 'MultiResolutionInterpolationOrder', 5, order)
+        call messages_obsolete_variable(namespace, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
+        call parse_variable(namespace, 'MultiResolutionInterpolationOrder', 5, order)
         call simul_box_interp_init(sb, order)
 
         sb%mr_flag = .true.
@@ -345,7 +346,7 @@ contains
       else
         default_boxshape = MINIMUM
       end if
-      call parse_variable(parser, 'BoxShape', default_boxshape, sb%box_shape)
+      call parse_variable(namespace, 'BoxShape', default_boxshape, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
@@ -387,7 +388,7 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call parse_variable(parser, 'Radius', def_rsize, sb%rsize, units_inp%length)
+        call parse_variable(namespace, 'Radius', def_rsize, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO) call messages_input_error('radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
@@ -399,7 +400,7 @@ contains
         end if
 
         default=sb%rsize
-        call parse_variable(parser, 'radius', default, sb%rsize, units_inp%length)
+        call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error('Radius')
       end select
 
@@ -417,7 +418,7 @@ contains
           default = def_rsize
         end if
 
-        call parse_variable(parser, 'Xlength', default, sb%xsize, units_inp%length)
+        call parse_variable(namespace, 'Xlength', default, sb%xsize, units_inp%length)
         if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
           call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
       end if
@@ -448,8 +449,8 @@ contains
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
-        else if(parse_block(parser, 'Lsize', blk) == 0) then
-          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(parser, 'LatticeVectors')) &
+        else if(parse_block(namespace, 'Lsize', blk) == 0) then
+          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(namespace, 'LatticeVectors')) &
               call messages_input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
@@ -457,8 +458,8 @@ contains
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
-        else if ((parse_is_defined(parser, 'Lsize'))) then
-          call parse_variable(parser, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
+        else if ((parse_is_defined(namespace, 'Lsize'))) then
+          call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error('Lsize')
           end if
@@ -489,7 +490,7 @@ contains
         !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
 #if defined(HAVE_GDLIB)
-        call parse_variable(parser, 'BoxShapeImage', '', sb%filename)
+        call parse_variable(namespace, 'BoxShapeImage', '', sb%filename)
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1)
@@ -542,7 +543,7 @@ contains
         !% with axis parallel to the <i>z</i>-axis.
         !%End
 
-        call parse_variable(parser, 'BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
+        call parse_variable(namespace, 'BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 
@@ -563,7 +564,7 @@ contains
         end do
       end select
 
-      call messages_obsolete_variable(parser, 'BoxOffset')
+      call messages_obsolete_variable(namespace, 'BoxOffset')
       
       POP_SUB(simul_box_init.read_box)
     end subroutine read_box
@@ -624,9 +625,9 @@ contains
   end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, parser, rlattice_primitive)
+  subroutine simul_box_build_lattice(sb, namespace, rlattice_primitive)
     type(simul_box_t), intent(inout) :: sb
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
@@ -657,7 +658,7 @@ contains
       has_angles = .false.
       angles = CNST(90.0)
 
-      if (parse_block(parser, 'LatticeParameters', blk) == 0) then
+      if (parse_block(namespace, 'LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
           call parse_block_float(blk, 0, idim - 1, lparams(idim))
         end do
@@ -675,7 +676,7 @@ contains
         end if
         call parse_block_end(blk)
 
-        if (parse_is_defined(parser, 'Lsize')) then
+        if (parse_is_defined(namespace, 'Lsize')) then
           message(1) = 'LatticeParameters is incompatible with Lsize'
           call messages_print_var_info(stdout, "LatticeParameters")
           call messages_fatal(1)
@@ -715,7 +716,7 @@ contains
           sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
         end if
 
-        if (parse_is_defined(parser, 'LatticeVectors')) then
+        if (parse_is_defined(namespace, 'LatticeVectors')) then
           message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
           call messages_print_var_info(stdout, "LatticeParameters")
           call messages_fatal(1)
@@ -723,7 +724,7 @@ contains
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
 
-        if (.not. parse_is_defined(parser, 'Lsize')) then
+        if (.not. parse_is_defined(namespace, 'Lsize')) then
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
         end if
@@ -745,7 +746,7 @@ contains
         sb%nonorthogonal = .false.
         forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
-        if (parse_block(parser, 'LatticeVectors', blk) == 0) then 
+        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
           do idim = 1, sb%dim
             do jdim = 1, sb%dim
               call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
@@ -754,7 +755,7 @@ contains
           end do
           call parse_block_end(blk)
 
-          if (.not. parse_is_defined(parser, 'Lsize')) then
+          if (.not. parse_is_defined(namespace, 'Lsize')) then
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
           end if
@@ -1342,9 +1343,9 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_load(sb, parser, dir, filename, mpi_grp, ierr)
+  subroutine simul_box_load(sb, namespace, dir, filename, mpi_grp, ierr)
     type(simul_box_t), intent(inout) :: sb
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     character(len=*),  intent(in)    :: dir
     character(len=*),  intent(in)    :: filename
     type(mpi_grp_t),   intent(in)    :: mpi_grp
@@ -1481,7 +1482,7 @@ contains
     end if
 
     if (ierr == 0) then
-      call simul_box_build_lattice(sb, parser, rlattice_primitive)
+      call simul_box_build_lattice(sb, namespace, rlattice_primitive)
     end if
 
     POP_SUB(simul_box_load)

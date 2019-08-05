@@ -24,6 +24,7 @@ program propagation_spectrum
   use io_oct_m
   use kick_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use spectrum_oct_m
@@ -37,7 +38,7 @@ program propagation_spectrum
   type(spectrum_t) :: spectrum
   type(unit_system_t) :: file_units
   character(len=80) :: refmultipoles
-  type(parser_t) :: parser
+  type(namespace_t) :: default_namespace
   
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -47,20 +48,21 @@ program propagation_spectrum
   if(ierr == 0) call getopt_propagation_spectrum(refmultipoles)
   call getopt_end()
 
-  call parser_init(parser)
+  call parser_init()
+  default_namespace = namespace_t("")
   
-  call messages_init(parser)
+  call messages_init(default_namespace)
 
-  call io_init(parser)
+  call io_init(default_namespace)
 
-  call unit_system_init(parser)
+  call unit_system_init(default_namespace)
 
-  call spectrum_init(spectrum, parser)
+  call spectrum_init(spectrum, default_namespace)
 
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
       call read_files('multipoles', refmultipoles)
-      call calculate_absorption('cross_section', parser)
+      call calculate_absorption('cross_section', default_namespace)
     case (SPECTRUM_P_POWER)
       call calculate_dipole_power("multipoles", 'dipole_power')
     case (SPECTRUM_ENERGYLOSS)
@@ -76,7 +78,7 @@ program propagation_spectrum
   call io_end()
   call messages_end()
 
-  call parser_end(parser)
+  call parser_end()
   
   call global_end()
 
@@ -225,9 +227,9 @@ program propagation_spectrum
 
 
     !----------------------------------------------------------------------------   
-    subroutine calculate_absorption(fname, parser)
-      character(len=*), intent(in) :: fname
-      type(parser_t),   intent(in) :: parser
+    subroutine calculate_absorption(fname, namespace)
+      character(len=*),  intent(in) :: fname
+      type(namespace_t), intent(in) :: namespace
 
       integer :: ii, jj
       character(len=150), allocatable :: filename(:)
@@ -238,9 +240,9 @@ program propagation_spectrum
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
         if(.not.reference_multipoles) then
-          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum)
+          call spectrum_cross_section(namespace, in_file(1), out_file(1), spectrum)
         else
-          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum, ref_file)
+          call spectrum_cross_section(namespace, in_file(1), out_file(1), spectrum, ref_file)
         end if
         call io_close(in_file(1))
         call io_close(out_file(1))
@@ -257,9 +259,9 @@ program propagation_spectrum
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), action='write')
           if(.not.reference_multipoles) then
-            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum)
+            call spectrum_cross_section(namespace, in_file(ii), out_file(ii), spectrum)
           else
-            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum, ref_file)
+            call spectrum_cross_section(namespace, in_file(ii), out_file(ii), spectrum, ref_file)
           end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
@@ -267,7 +269,7 @@ program propagation_spectrum
         end do
 
         out_file(1) = io_open(trim(fname)//'_tensor', action='write')
-        call spectrum_cross_section_tensor(spectrum, parser, out_file(1), in_file(1:jj))
+        call spectrum_cross_section_tensor(spectrum, namespace, out_file(1), in_file(1:jj))
         do ii = 1, jj
           call io_close(in_file(ii))
         end do

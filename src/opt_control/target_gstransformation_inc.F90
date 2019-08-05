@@ -19,12 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, parser, tg, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(parser_t),   intent(in)    :: parser
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(inout) :: restart
+  subroutine target_init_gstransformation(gr, namespace, tg, td, restart)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(restart_t),   intent(inout) :: restart
 
     PUSH_SUB(target_init_gstransformation)
 
@@ -46,9 +46,9 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call transform_states(tg%st, parser, restart, gr, prefix = "OCTTarget")
+    call transform_states(tg%st, namespace, restart, gr, prefix = "OCTTarget")
 
-    if(.not. parse_is_defined(parser, 'OCTTargetTransformStates')) then
+    if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
       message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
       call messages_fatal(2)
@@ -70,9 +70,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, parser, gr, dir, geo, hm, outp)
+  subroutine target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -81,7 +81,7 @@
     PUSH_SUB(target_output_gstransformation)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation

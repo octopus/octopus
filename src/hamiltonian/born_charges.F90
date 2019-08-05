@@ -23,6 +23,7 @@ module born_charges_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -50,9 +51,9 @@ module born_charges_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine born_charges_init(this, parser, geo, st, dim)
+  subroutine born_charges_init(this, namespace, geo, st, dim)
     type(Born_charges_t), intent(out) :: this
-    type(parser_t),       intent(in)    :: parser
+    type(namespace_t),    intent(in)    :: namespace
     type(geometry_t),     intent(in)  :: geo
     type(states_t),       intent(in)  :: st
     integer,              intent(in)  :: dim
@@ -82,7 +83,7 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_variable(parser, 'BornChargeSumRuleCorrection', .true., this%correct)
+    call parse_variable(namespace, 'BornChargeSumRuleCorrection', .true., this%correct)
 
     POP_SUB(born_charges_init)
   end subroutine born_charges_init
