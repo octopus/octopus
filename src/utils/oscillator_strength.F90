@@ -1129,7 +1129,7 @@ program oscillator_strength
                         READ_RESONANCES_FROM_FILE         = 3, &
                         GENERATE_OMEGA_FILE               = 4
   character(len=100) :: ffile
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
 
   ! Reads the information passed through the command line options (if available).
   call getopt_init(ierr)
@@ -1161,8 +1161,8 @@ program oscillator_strength
   ! Initialize stuff
   call global_init(is_serial = .true.)
   call parser_init()
-  namespace = namespace_t("")
-  call io_init(namespace, defaults = .true.)
+  default_namespace = namespace_t("")
+  call io_init(default_namespace, defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)

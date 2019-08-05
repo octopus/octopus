@@ -45,7 +45,7 @@ program casida_spectrum
   integer :: ierr, idir, jdir, iatom
   type(casida_spectrum_t) :: cs
   FLOAT :: rotation(MAX_DIM, MAX_DIM), rot2(MAX_DIM, MAX_DIM), identity(MAX_DIM, MAX_DIM), coord(MAX_DIM)
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   type(block_t) :: blk
   type(geometry_t) :: geo
 
@@ -57,14 +57,14 @@ program casida_spectrum
   call getopt_end()
 
   call parser_init()
-  namespace = namespace_t("")
-  call messages_init(namespace)
-  call io_init(namespace)
-  call unit_system_init(namespace)
-  call space_init(cs%space, namespace)
+  default_namespace = namespace_t("")
+  call messages_init(default_namespace)
+  call io_init(default_namespace)
+  call unit_system_init(default_namespace)
+  call space_init(cs%space, default_namespace)
 
   ! Reads the spin components. This is read here, as well as in states_init.
-  call parse_variable(namespace, 'SpinComponents', 1, cs%ispin)
+  call parse_variable(default_namespace, 'SpinComponents', 1, cs%ispin)
   if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call messages_input_error('SpinComponents')
   cs%ispin = min(2, cs%ispin)
 
@@ -75,7 +75,7 @@ program casida_spectrum
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_variable(namespace, 'CasidaSpectrumBroadening', CNST(0.005), cs%br, units_inp%energy)
+  call parse_variable(default_namespace, 'CasidaSpectrumBroadening', CNST(0.005), cs%br, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumBroadening', cs%br, unit = units_out%energy)
 
@@ -86,7 +86,7 @@ program casida_spectrum
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_variable(namespace, 'CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
+  call parse_variable(default_namespace, 'CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumEnergyStep', cs%energy_step, unit = units_out%energy)
 
@@ -97,7 +97,7 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies greater than <tt>CasidaSpectrumMinEnergy</tt>.
   !%End
-  call parse_variable(namespace, 'CasidaSpectrumMinEnergy', M_ZERO, cs%min_energy, units_inp%energy)
+  call parse_variable(default_namespace, 'CasidaSpectrumMinEnergy', M_ZERO, cs%min_energy, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumMinEnergy', cs%min_energy, unit = units_out%energy)
 
@@ -108,7 +108,7 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
   !%End
-  call parse_variable(namespace, 'CasidaSpectrumMaxEnergy', M_ONE, cs%max_energy, units_inp%energy)
+  call parse_variable(default_namespace, 'CasidaSpectrumMaxEnergy', M_ONE, cs%max_energy, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumMaxEnergy', cs%max_energy, unit = units_out%energy)
 
@@ -126,7 +126,7 @@ program casida_spectrum
   !% will also be output. Size of matrix must be <tt>Dimensions</tt>.
   !%End
 
-  if (parse_block(namespace, 'CasidaSpectrumRotationMatrix', blk) == 0) then 
+  if (parse_block(default_namespace, 'CasidaSpectrumRotationMatrix', blk) == 0) then 
     rotation(:,:) = M_ZERO
     do idir = 1, cs%space%dim
       do jdir = 1, cs%space%dim
@@ -148,7 +148,7 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    call geometry_init(geo, namespace, cs%space)
+    call geometry_init(geo, default_namespace, cs%space)
     do iatom = 1, geo%natoms
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))

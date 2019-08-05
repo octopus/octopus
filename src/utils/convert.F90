@@ -54,7 +54,7 @@ program oct_convert
 
   character(len=256) :: config_str
   integer :: ierr
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   type(poisson_t) :: psolver
   
   call getopt_init(ierr)
@@ -66,12 +66,12 @@ program oct_convert
   call calc_mode_par_init()
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
   
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
-  call profiling_init(namespace)
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
   call messages_experimental("oct-convert utility")
 
   call print_header()
@@ -79,9 +79,9 @@ program oct_convert
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
 
-  call restart_module_init(namespace)
-  call fft_all_init(namespace)
-  call unit_system_init(namespace)
+  call restart_module_init(default_namespace)
+  call fft_all_init(default_namespace)
+  call unit_system_init(default_namespace)
 
   call convert()
 
@@ -114,7 +114,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call system_init(sys, namespace)
+    call system_init(sys, default_namespace)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
@@ -130,7 +130,7 @@ contains
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files, it should be one space ' '.
     !%End
-    call parse_variable(namespace, 'ConvertFilename', 'density', basename)
+    call parse_variable(default_namespace, 'ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -156,7 +156,7 @@ contains
     !% Convert utility will generate a new mesh function constructed by linear 
     !% combination of scalar function of different mesh functions,
     !%End
-    call parse_variable(namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
+    call parse_variable(default_namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
 
     !%Variable ConvertIterateFolder
     !%Type logical
@@ -166,7 +166,7 @@ contains
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_variable(namespace, 'ConvertIterateFolder', .true., iterate_folder)
+    call parse_variable(default_namespace, 'ConvertIterateFolder', .true., iterate_folder)
 
     if (iterate_folder) then
       folder_default  = 'td.'
@@ -183,7 +183,7 @@ contains
     !% The folder name where the input files are. The default is
     !% <tt>td.</tt> if <tt>ConvertIterateFolder = true</tt>, otherwise <tt>restart</tt>.
     !%End
-    call parse_variable(namespace, 'ConvertFolder', folder_default, folder)
+    call parse_variable(default_namespace, 'ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
     !%Variable ConvertStart
@@ -193,7 +193,7 @@ contains
     !% The starting number of the filename or folder.
     !% Default is 0 if <tt>ConvertIterateFolder = true</tt>, otherwise 1.
     !%End
-    call parse_variable(namespace, 'ConvertStart', c_start_default, c_start)
+    call parse_variable(default_namespace, 'ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -202,7 +202,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_variable(namespace, 'ConvertEnd', 1, c_end)
+    call parse_variable(default_namespace, 'ConvertEnd', 1, c_end)
 
     !%Variable ConvertStep
     !%Type integer
@@ -211,7 +211,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_variable(namespace, 'ConvertStep', 1, c_step)
+    call parse_variable(default_namespace, 'ConvertStep', 1, c_step)
 
     !%Variable ConvertSubtractFilename
     !%Type string
@@ -220,7 +220,7 @@ contains
     !%Description
     !% Input filename. The file which is going to subtracted to rest of the files.
     !%End
-    call parse_variable(namespace, 'ConvertSubtractFilename', 'density', ref_name)
+    call parse_variable(default_namespace, 'ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
     ! Delete the extension if present
     length = len_trim(ref_name)
@@ -237,7 +237,7 @@ contains
     !%Description
     !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_variable(namespace, 'ConvertSubtract', .false., subtract_file)
+    call parse_variable(default_namespace, 'ConvertSubtract', .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -246,21 +246,21 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_variable(namespace, 'ConvertSubtractFolder', '.', ref_folder)
+    call parse_variable(default_namespace, 'ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, sys%namespace, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, default_namespace, sys%geo, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, sys%namespace, sys%geo, sys%mc, basename, folder, &
+      call convert_transform(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, sys%namespace, sys%geo, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select

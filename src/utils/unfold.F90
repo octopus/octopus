@@ -79,7 +79,7 @@ program oct_unfold
   integer       :: ierr, run_mode, file_gvec, jdim
   FLOAT         :: lparams(MAX_DIM), rlattice_pc(MAX_DIM, MAX_DIM), klattice_pc(MAX_DIM, MAX_DIM)
   FLOAT         :: volume_element_pc
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   type(block_t) :: blk
   integer       :: nhighsympoints, nsegments
   integer       :: icol, idir, ncols
@@ -92,26 +92,26 @@ program oct_unfold
   ! the usual initializations
   call global_init(is_serial = .false.)
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
   call calc_mode_par_init()
 
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
-  call profiling_init(namespace)
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
 
   call print_header()
   call messages_print_stress(stdout, "Unfolding Band-structure")
   call messages_print_stress(stdout)
 
   call messages_experimental("oct-unfold utility")
-  call fft_all_init(namespace)
-  call unit_system_init(namespace)
-  call restart_module_init(namespace)
+  call fft_all_init(default_namespace)
+  call unit_system_init(default_namespace)
+  call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, namespace)
-  call simul_box_init(sb, namespace, sys%geo, sys%space)
+  call system_init(sys, default_namespace)
+  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then
     message(1) = "oct-unfold can only be used for periodic ystems."
@@ -140,7 +140,7 @@ program oct_unfold
   !%Option unfold_run bit(2)
   !% Perform the actual unfolding, based on the states obtained from the previous unocc run.
   !%End
-  call parse_variable(namespace, 'UnfoldMode', 0, run_mode)
+  call parse_variable(default_namespace, 'UnfoldMode', 0, run_mode)
   if( .not. varinfo_valid_option('UnfoldMode', run_mode)) then
     call messages_input_error("UnfoldMode must be set to a value different from 0.")
   end if
@@ -153,7 +153,7 @@ program oct_unfold
   !% The lattice parameters of the primitive cell, on which unfolding is performed. 
   !%End
   lparams(:) = M_ONE
-  if(parse_block(namespace, 'UnfoldLatticeParameters', blk) == 0) then
+  if(parse_block(default_namespace, 'UnfoldLatticeParameters', blk) == 0) then
     do idim = 1, sb%dim
       call parse_block_float(blk, 0, idim-1, lparams(idim))
     end do
@@ -172,7 +172,7 @@ program oct_unfold
   rlattice_pc = M_ZERO
   forall(idim = 1:sb%dim) rlattice_pc(idim, idim) = M_ONE
 
-  if(parse_block(namespace, 'UnfoldLatticeVectors', blk) == 0) then
+  if(parse_block(default_namespace, 'UnfoldLatticeVectors', blk) == 0) then
     do idim = 1, sb%dim
       do jdim = 1, sb%dim
         call parse_block_float(blk, idim-1,  jdim-1, rlattice_pc(jdim, idim))
@@ -201,7 +201,7 @@ program oct_unfold
   !% Specifies the k-point path for which the unfolding need to be done.
   !% The syntax is identical to <tt>KPointsPath</tt>.
   !%End
-  if(parse_block(namespace, 'UnfoldKPointsPath', blk) /= 0) then
+  if(parse_block(default_namespace, 'UnfoldKPointsPath', blk) /= 0) then
     write(message(1),'(a)') 'Error while reading UnfoldPointsPath.'
     call messages_fatal(1)
   end if
@@ -271,8 +271,8 @@ program oct_unfold
  
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-    call restart_init(restart, sys%namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, namespace, sys%st, sys%gr, ierr, label = ": unfold")
+    call restart_init(restart, default_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(restart, default_namespace, sys%st, sys%gr, ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
@@ -376,7 +376,7 @@ contains
     !% If you specify 0, the resolution will be set to be 1/1000 points between <tt>UnfoldMinEnergy</tt>
     !% and <tt>UnfoldMaxEnergy</tt> 
     !%End
-    call parse_variable(namespace, 'UnfoldEnergyStep', M_ZERO, de)
+    call parse_variable(default_namespace, 'UnfoldEnergyStep', M_ZERO, de)
     if(de < M_ZERO) then
       message(1) = "UnfoldEnergyStep must be positive"
       call messages_fatal(1)
@@ -389,7 +389,7 @@ contains
     !% Specifies the start of the energy range for the unfolded band structure.
     !% The default value correspond to the samllest eigenvalue.
     !%End
-    call parse_variable(namespace, 'UnfoldMinEnergy', minval(st%eigenval(:, :)), eigmin)
+    call parse_variable(default_namespace, 'UnfoldMinEnergy', minval(st%eigenval(:, :)), eigmin)
 
     !%Variable UnfoldMaxEnergy
     !%Type float
@@ -398,7 +398,7 @@ contains
     !% Specifies the end of the energy range for the unfolded band structure.
     !% The default value correspond to the largest eigenvalue.
     !%End
-    call parse_variable(namespace, 'UnfoldMaxEnergy', maxval(st%eigenval(:, :)), eigmax)
+    call parse_variable(default_namespace, 'UnfoldMaxEnergy', maxval(st%eigenval(:, :)), eigmax)
  
     if(de == M_ZERO) then
       de = (eigmax - eigmin) / CNST(1000)

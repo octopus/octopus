@@ -90,7 +90,7 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -103,19 +103,19 @@ program photoelectron_spectrum
   call global_init(is_serial = .true.)
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
 
-  call messages_init(namespace)  
-  call io_init(namespace)
+  call messages_init(default_namespace)  
+  call io_init(default_namespace)
 
   !* In order to initialize k-points
-  call unit_system_init(namespace)
+  call unit_system_init(default_namespace)
   
-  call space_init(space, namespace)
-  call geometry_init(geo, namespace, space)
-  call simul_box_init(sb, namespace, geo, space)
+  call space_init(space, default_namespace)
+  call geometry_init(geo, default_namespace, space)
+  call simul_box_init(sb, default_namespace, geo, space)
   gr%sb = sb
-  call states_init(st, namespace, gr, geo)
+  call states_init(st, default_namespace, gr, geo)
   !*
 
   !Initialize variables
@@ -130,7 +130,7 @@ program photoelectron_spectrum
   call messages_print_stress(stdout,"Postprocessing")  
   
   !Figure out wich method has been used to calculate the photoelectron data  
-  call parse_variable(namespace, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
+  call parse_variable(default_namespace, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
   
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
@@ -158,8 +158,8 @@ program photoelectron_spectrum
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
-    call parse_variable(namespace, 'PES_Flux_Shape', option, pflux%shape)
-    call pes_flux_reciprocal_mesh_gen(pflux, namespace, sb, st, 0, post = .true.)
+    call parse_variable(default_namespace, 'PES_Flux_Shape', option, pflux%shape)
+    call pes_flux_reciprocal_mesh_gen(pflux, default_namespace, sb, st, 0, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)
     ngpt = pflux%ngpt
@@ -235,8 +235,8 @@ program photoelectron_spectrum
 
   
   
-  call restart_module_init(namespace)
-  call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
+  call restart_module_init(default_namespace)
+  call restart_init(restart, default_namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
   if(ierr /= 0) then
     message(1) = "Unable to read time-dependent restart information."
     call messages_fatal(1)
@@ -258,7 +258,7 @@ program photoelectron_spectrum
   !%End
   st_range(1:2)=(/1, st%nst/)
   resolve_states = .false.
-  if(parse_block(namespace, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
+  if(parse_block(default_namespace, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
     if(parse_block_cols(blk,0) < 2) call messages_input_error('PhotoelectronSpectrumResolveStates')
     do idim = 1, 2
       call parse_block_integer(blk, 0, idim - 1, st_range(idim))
@@ -266,7 +266,7 @@ program photoelectron_spectrum
     call parse_block_end(blk)
     if (abs(st_range(2)-st_range(1)) > 0)resolve_states = .true.    
   else
-    call parse_variable(namespace, 'PhotoelectronSpectrumResolveStates', .false., resolve_states)
+    call parse_variable(default_namespace, 'PhotoelectronSpectrumResolveStates', .false., resolve_states)
   end if
   
   
@@ -373,7 +373,7 @@ program photoelectron_spectrum
   !%Option arpes_cut bit(8)
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable(namespace, 'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
+  call parse_variable(default_namespace, 'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep
@@ -392,7 +392,7 @@ program photoelectron_spectrum
   if(uEspan(2) > 0 ) Emax = uEspan(2)
 
 
-  call unit_system_init(namespace)
+  call unit_system_init(default_namespace)
  
   write(message(1),'(a,f10.2,a2,f10.2,a2,f10.2,a1)') &
                    "Zenith axis: (",pol(1),", ",pol(2),", ",pol(3),")"
@@ -645,7 +645,7 @@ program photoelectron_spectrum
 
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
-        call io_function_read_how(sb, namespace, how, ignore_error = .true.)
+        call io_function_read_how(sb, default_namespace, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
         filename = outfile('./PES_velocity_map', ist, ispin)
@@ -769,7 +769,7 @@ program photoelectron_spectrum
         PUSH_SUB(get_laser_polarization)
         
         no_l = 0
-        if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
+        if(parse_block(default_namespace, 'TDExternalFields', blk) == 0) then
           no_l = parse_block_n(blk)
 
           call parse_block_cmplx(blk, 0, 1, cPol(1))

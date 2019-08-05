@@ -69,19 +69,19 @@ program oct_local_multipoles
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
-  type(namespace_t)     :: namespace
+  type(namespace_t)     :: default_namespace
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
   
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
-  call profiling_init(namespace)
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
  
   call print_header()
   call messages_print_stress(stdout, "Local Domains mode")
@@ -89,12 +89,12 @@ program oct_local_multipoles
     
   call messages_experimental("oct-local_multipoles utility")
 
-  call unit_system_init(namespace)
-  call restart_module_init(namespace)
+  call unit_system_init(default_namespace)
+  call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, namespace)
-  call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
+  call system_init(sys, default_namespace)
+  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   call local_domains()
 
@@ -140,7 +140,7 @@ contains
     !%Description
     !% The folder name where the density used as input file is.
     !%End
-    call parse_variable(namespace, 'LDFolder', folder_default, folder)
+    call parse_variable(default_namespace, 'LDFolder', folder_default, folder)
 
     ! Check if the folder is finished by an /
     if(index(folder, '/', back = .true.) /= len_trim(folder)) then
@@ -148,7 +148,7 @@ contains
     end if
 
     default_dt = M_ZERO
-    call parse_variable(namespace, 'TDTimeStep', default_dt, dt, unit = units_inp%time)
+    call parse_variable(default_namespace, 'TDTimeStep', default_dt, dt, unit = units_inp%time)
     if (dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -163,7 +163,7 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_variable(namespace, 'LDFilename', 'density', basename)
+    call parse_variable(default_namespace, 'LDFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -181,7 +181,7 @@ contains
     !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
-    call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
+    call parse_variable(default_namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -190,7 +190,7 @@ contains
     !%Description
     !% Controls if the calculation of the local domains is desired at each iteration.
     !%End
-    call parse_variable(namespace, 'LDUpdate', .false., ldupdate)
+    call parse_variable(default_namespace, 'LDUpdate', .false., ldupdate)
 
     !%Variable LDOverWrite                                                                                             
     !%Type logical                                                                                                     
@@ -199,7 +199,7 @@ contains
     !%Description                                                                                                      
     !% Controls whether to over-write existing files.                                                                          
     !%End                                                                                                              
-    call parse_variable(namespace, 'LDOverWrite', .true., ldoverwrite)                       
+    call parse_variable(default_namespace, 'LDOverWrite', .true., ldoverwrite)                       
 
     !%Variable LDRadiiFile
     !%Type string
@@ -209,7 +209,7 @@ contains
     !% Full path for the radii file. If set, def_rsize will be reset to the new values. 
     !% This file should have the same format as share/PP/default.
     !%End
-    call parse_variable(namespace, 'LDRadiiFile', 'default', radiifile)
+    call parse_variable(default_namespace, 'LDRadiiFile', 'default', radiifile)
 
     if(trim(radiifile) /= "default") then
       n_spec_def = max(0, loct_number_of_lines(radiifile))
@@ -248,7 +248,7 @@ contains
     !%Description
     !% Restart information will be read from <tt>LDRestartFolder</tt>.
     !%End
-    call parse_variable(namespace, 'LDRestart', .false., ldrestart)
+    call parse_variable(default_namespace, 'LDRestart', .false., ldrestart)
 
     if (ldrestart) then
       write(folder_default,'(a)')'ld.general'
@@ -260,7 +260,7 @@ contains
       !%Description
       !% The folder name where the density used as input file is.
       !%End
-      call parse_variable(namespace, 'LDRestartFolder', folder_default, ldrestart_folder)
+      call parse_variable(default_namespace, 'LDRestartFolder', folder_default, ldrestart_folder)
 
       ! Check if the folder is finished by an /
       if (index(ldrestart_folder, '/', .true.) /= len_trim(ldrestart_folder)) then
@@ -276,7 +276,7 @@ contains
     !%Description
     !% This variable decides if a folder is going to be iterated.
     !%End
-    call parse_variable(namespace, 'LDIterateFolder', .false., iterate)
+    call parse_variable(default_namespace, 'LDIterateFolder', .false., iterate)
 
     !%Variable LDStart
     !%Type integer
@@ -285,7 +285,7 @@ contains
     !%Description
     !% The starting number of the filename or folder.
     !%End
-    call parse_variable(namespace, 'LDStart', 0, l_start)
+    call parse_variable(default_namespace, 'LDStart', 0, l_start)
 
     !%Variable LDEnd
     !%Type integer
@@ -294,7 +294,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_variable(namespace, 'LDEnd', 0, l_end)
+    call parse_variable(default_namespace, 'LDEnd', 0, l_end)
 
     !%Variable LDStep
     !%Type integer
@@ -303,7 +303,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_variable(namespace, 'LDStep', 1, l_step)
+    call parse_variable(default_namespace, 'LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
@@ -316,14 +316,14 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, sys%namespace, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, sys%namespace, local%nd, local%lab, 0, dt)
+    call kick_init(kick, default_namespace, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
+    call local_write_init(local%writ, default_namespace, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
 
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
-      call restart_init(restart_ld, sys%namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+      call restart_init(restart_ld, default_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
       call local_restart(local, restart_ld)
       call restart_end(restart_ld)
@@ -340,7 +340,7 @@ contains
     else 
       restart_folder = folder
     end if
-    call restart_init(restart, sys%namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+    call restart_init(restart, default_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                       dir=trim(restart_folder), mesh = sys%gr%mesh)
 
 !!$    call loct_progress_bar(-1, l_end-l_start)
@@ -376,12 +376,12 @@ contains
 
       ! Look for the mesh points inside local domains
       if(iter == l_start .and. .not.ldrestart) then
-        call local_inside_domain(local, sys%namespace, sys%st%rho(:,1))
+        call local_inside_domain(local, default_namespace, sys%st%rho(:,1))
       else
-        if (ldupdate) call local_inside_domain(local, sys%namespace, sys%st%rho(:,1))
+        if (ldupdate) call local_inside_domain(local, default_namespace, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, sys%namespace, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
+      call local_write_iter(local%writ, default_namespace, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
                               sys%gr, sys%st, sys%hm, sys%psolver, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -444,7 +444,7 @@ contains
 
     ! First, find out if there is a LocalDomains block.
     local%nd = 0
-    if(parse_block(namespace, 'LocalDomains', blk) == 0) then
+    if(parse_block(default_namespace, 'LocalDomains', blk) == 0) then
       local%nd = parse_block_n(blk)
     end if
 
@@ -773,7 +773,7 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, sys%namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
+    call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
                       mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:lcl%nd+2))
@@ -832,7 +832,7 @@ contains
     !%Description
     !% If set, atomic radii will be used to assign lone pairs to ion. 
     !%End
-    call parse_variable(namespace, 'LDUseAtomicRadii', .false., lduseatomicradii)
+    call parse_variable(default_namespace, 'LDUseAtomicRadii', .false., lduseatomicradii)
 
     SAFE_ALLOCATE(ion_map(1:sys%geo%natoms))
 
@@ -887,13 +887,13 @@ contains
     !% Writes additional information to files, when computing local multipoles. For 
     !% example, it writes coordinates of each local domain.
     !%End
-    call parse_variable(namespace, 'LDExtraWrite', .false., extra_write)
+    call parse_variable(default_namespace, 'LDExtraWrite', .false., extra_write)
 
     SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
     SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
 
     if (extra_write) then
-      call parse_variable(namespace, 'LDOutputFormat', 0, how)
+      call parse_variable(default_namespace, 'LDOutputFormat', 0, how)
       if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
         call messages_input_error('LDOutputFormat')
       end if

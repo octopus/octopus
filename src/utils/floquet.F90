@@ -68,38 +68,38 @@ program oct_floquet
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   
   ! the usual initializations
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
   
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
-  call profiling_init(namespace)
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
 
   call print_header()
   call messages_print_stress(stdout, "Non-interacting Floquet")
   call messages_print_stress(stdout)
 
   call messages_experimental("oct-floquet utility")
-  call fft_all_init(namespace)
-  call unit_system_init(namespace)
-  call restart_module_init(namespace)
+  call fft_all_init(default_namespace)
+  call unit_system_init(default_namespace)
+  call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, namespace)
-  call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
+  call system_init(sys, default_namespace)
+  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_epot_generate(sys%hm, sys%namespace, gr, sys%geo, st, sys%psolver, time=M_ZERO)
+  call hamiltonian_epot_generate(sys%hm, default_namespace, gr, sys%geo, st, sys%psolver, time=M_ZERO)
   call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call states_allocate_wfns(st, gr%mesh)
@@ -113,15 +113,15 @@ program oct_floquet
      call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
   end if
 
-  call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-  if(ierr == 0) call states_load(restart, sys%namespace, st, gr, ierr, label = ": gs")
+  call restart_init(restart, default_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+  if(ierr == 0) call states_load(restart, default_namespace, st, gr, ierr, label = ": gs")
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'
      call messages_fatal(1)
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call v_ks_calc(sys%ks, default_namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call floquet_init()
@@ -157,7 +157,7 @@ contains
       ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
 
       ! variables documented in td/td_write.F90
-      call parse_variable(namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+      call parse_variable(default_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
       call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
       if(abs(omega)<=M_EPSILON) then
          message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -167,11 +167,11 @@ contains
       ! get time of one cycle
       Tcycle=M_TWO*M_PI/omega
 
-      call parse_variable(namespace, 'TDFloquetSample',20 ,nt)
+      call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
       dt = Tcycle/real(nT)
 
-      call parse_variable(namespace, 'TDFloquetDimension',-1,Forder)
+      call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
       if(Forder.ge.0) then
         call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
         !Dimension of multiphoton Floquet-Hamiltonian

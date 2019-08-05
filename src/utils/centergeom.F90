@@ -38,7 +38,7 @@ program centergeom
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   
   call global_init(is_serial = .true.)
 
@@ -47,18 +47,18 @@ program centergeom
   call getopt_end()
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
 
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
-  call unit_system_init(namespace)
+  call io_init(default_namespace)
+  call unit_system_init(default_namespace)
 
-  call space_init(space, namespace)
-  call geometry_init(geo, namespace, space)
-  call simul_box_init(sb, namespace, geo, space)
+  call space_init(space, default_namespace)
+  call geometry_init(geo, default_namespace, space)
+  call simul_box_init(sb, default_namespace, geo, space)
 
-  call xyz_adjust_it(geo, namespace)
+  call xyz_adjust_it(geo, default_namespace)
   call geometry_write_xyz(geo, './adjusted')
 
   call simul_box_end(sb)

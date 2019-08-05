@@ -38,7 +38,7 @@ program propagation_spectrum
   type(spectrum_t) :: spectrum
   type(unit_system_t) :: file_units
   character(len=80) :: refmultipoles
-  type(namespace_t) :: namespace
+  type(namespace_t) :: default_namespace
   
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -49,20 +49,20 @@ program propagation_spectrum
   call getopt_end()
 
   call parser_init()
-  namespace = namespace_t("")
+  default_namespace = namespace_t("")
   
-  call messages_init(namespace)
+  call messages_init(default_namespace)
 
-  call io_init(namespace)
+  call io_init(default_namespace)
 
-  call unit_system_init(namespace)
+  call unit_system_init(default_namespace)
 
-  call spectrum_init(spectrum, namespace)
+  call spectrum_init(spectrum, default_namespace)
 
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
       call read_files('multipoles', refmultipoles)
-      call calculate_absorption('cross_section', namespace)
+      call calculate_absorption('cross_section', default_namespace)
     case (SPECTRUM_P_POWER)
       call calculate_dipole_power("multipoles", 'dipole_power')
     case (SPECTRUM_ENERGYLOSS)
