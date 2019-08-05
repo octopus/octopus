@@ -126,6 +126,7 @@ module output_oct_m
     integer(8), public :: whatBZ              !< what to output - for k-point resolved output
     integer(8), public :: what_lda_u          !< what to output for the LDA+U part
     integer(8), public :: how                 !< how to output
+    type(namespace_t), pointer, public :: namespace    !< namespace for different systems
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -149,12 +150,12 @@ module output_oct_m
 contains
 
   subroutine output_init(outp, namespace, sb, st, nst, ks)
-    type(output_t),       intent(out)   :: outp
-    type(namespace_t),    intent(in)    :: namespace
-    type(simul_box_t),    intent(in)    :: sb
-    type(states_t),       intent(in)    :: st
-    integer,              intent(in)    :: nst
-    type(v_ks_t),         intent(inout) :: ks
+    type(output_t),            intent(out)   :: outp
+    type(namespace_t), target, intent(in)    :: namespace
+    type(simul_box_t),         intent(in)    :: sb
+    type(states_t),            intent(in)    :: st
+    integer,                   intent(in)    :: nst
+    type(v_ks_t),              intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -162,6 +163,8 @@ contains
     integer :: what_no_how, what_no_how_u
 
     PUSH_SUB(output_init)
+
+    outp%namespace => namespace
 
     !%Variable Output
     !%Type flag
