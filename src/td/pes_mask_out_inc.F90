@@ -1957,8 +1957,8 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
       ! Output the full matrix in binary format for subsequent post-processing 
       if(st%d%nik == 1) then
       write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath_old(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
-                           pesK, ierr)
+      call io_binary_write(io_workpath(fn, outp%namespace), &
+        mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
                            
          
       ! Total power spectrum 
