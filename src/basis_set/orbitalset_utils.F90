@@ -70,12 +70,13 @@ contains
     end do
   end function orbitalset_utils_count
 
-  subroutine orbitalset_init_intersite(this, ind, sb, geo, der, os, nos, maxnorbs, rcut, kpt, has_phase)
+  subroutine orbitalset_init_intersite(this, ind, sb, geo, der, psolver, os, nos, maxnorbs, rcut, kpt, has_phase)
     type(orbitalset_t),           intent(inout) :: this
     integer,                      intent(in)    :: ind
     type(simul_box_t),            intent(in)    :: sb
     type(geometry_t),             intent(in)    :: geo
     type(derivatives_t),          intent(in)    :: der
+    type(poisson_t),              intent(in)    :: psolver
     type(orbitalset_t),           intent(inout) :: os(:) !> inout as this is also in orbs
     integer,                      intent(in)    :: nos, maxnorbs
     FLOAT,                        intent(in)    :: rcut
