@@ -784,12 +784,20 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
-        write(fname, '(a,i1)') 'bader-sp', is
+        if(st%d%nspin == 1) then
+          write(fname, '(a)') 'bader'
+        else
+          write(fname, '(a,i1)') 'bader-sp', is
+        end if
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, &
           geo = geo, grp = mpi_grp)
 
-        write(fname, '(a,i1)') 'bader_basins-sp', is
+        if(st%d%nspin == 1) then
+          write(fname, '(a)') 'bader_basins'
+        else
+          write(fname, '(a,i1)') 'bader_basins-sp', is
+        end if
         call out_basins(f_loc(:,1), fname)
       end do
     end if

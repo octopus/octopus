@@ -349,10 +349,10 @@ contains
 
           if(mpi_grp_is_root(mpi_world)) then
             if(os%nn /= 0 ) then
-              write(filename,'(a, i3.3, a1, a2, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+              write(filename,'(a, i3.3, a1, a, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
                            os%nn, l_notation(os%ll), '.dat'
             else
-              write(filename,'(a,  i3.3, a1, a2, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+              write(filename,'(a,  i3.3, a1, a, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
                             l_notation(os%ll), '.dat'
             end if
  
