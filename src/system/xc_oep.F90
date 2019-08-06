@@ -83,7 +83,6 @@ module xc_oep_oct_m
     integer               :: mixing_scheme
     FLOAT,         public :: norm2ss
     FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
-    integer               :: noccst
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -338,12 +337,6 @@ contains
       end if
     end do
     oep%eigen_n = oep%eigen_n - 1
-
-    ! find how many states are occupied.
-    oep%noccst = 0
-    do ist = 1, st%nst
-      if(st%occ(ist, is) > M_EPSILON) oep%noccst = ist
-    end do
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)

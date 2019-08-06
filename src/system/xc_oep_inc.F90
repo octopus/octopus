@@ -185,8 +185,9 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    do ist = 1, oep%noccst !only over occupied states
+    do ist = 1, st%nst !only over occupied states
 
+      if(abs(st%occ(ist,1))<= M_EPSILON) cycle
       call states_get_state(st, gr%mesh, ist, is, psi)
 
       ! evaluate right-hand side
@@ -226,7 +227,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
     end if
 
-    do ist = 1, oep%noccst
+    do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_get_state(st, gr%mesh, ist, is, psi)
         vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))

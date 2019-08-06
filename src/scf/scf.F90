@@ -590,8 +590,9 @@ contains
           if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
             call v_ks_calc(ks, namespace, hm, st, geo)
           else
-            if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= 5) &
+            if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= 5) then
               call v_ks_calc(ks, namespace, hm, st, geo)
+            end if
           end if
         end if
       end if
