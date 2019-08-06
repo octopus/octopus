@@ -67,7 +67,8 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   end if
   
   if (i_am_root) then
-    call X(io_function_output_global)(restart%format, restart%pwd, filename, mesh, ff_global, unit_one, ierr)
+    call X(io_function_output_global)(restart%format, restart%pwd, filename, restart%namespace, &
+      mesh, ff_global, unit_one, ierr)
     ! all restart files are in atomic units
 
     if (mesh%parallel_in_domains) then

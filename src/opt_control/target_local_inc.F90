@@ -85,7 +85,7 @@
     
     call io_mkdir_old(trim(dir))
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'local_target', outp%namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 

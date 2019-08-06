@@ -748,10 +748,10 @@ contains
           call messages_input_error('LDOutputFormat')
         end if
         filename = 'basinsmap'
-        call dio_function_output(how, &
-          trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
-        call dio_function_output(how, &
-          trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), 'dens_ff2', default_namespace, &
+          sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
         call io_close(iunit)
       end if
       call basins_end(basins)
@@ -909,13 +909,13 @@ contains
       end do
       
       write(filename,'(a,a,a)')'domain.mesh'
-      call dio_function_output(how, &
-      trim('local.general'), trim(filename), sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+      call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       
       do id = 1, nd
         write(filename,'(a,a,a)')'domain.',trim(lab(id))
-        call dio_function_output(how, &
-        trim('local.general'), trim(filename), sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       end do
     end if
 

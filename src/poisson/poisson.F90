@@ -933,10 +933,11 @@ contains
   !! file by calculating numerically and analytically the Hartree
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
-  subroutine poisson_test(this, mesh, repetitions)
-    type(poisson_t), intent(in) :: this
-    type(mesh_t),    intent(in) :: mesh
-    integer,         intent(in) :: repetitions
+  subroutine poisson_test(this, mesh, namespace, repetitions)
+    type(poisson_t),   intent(in) :: this
+    type(mesh_t),      intent(in) :: mesh
+    type(namespace_t), intent(in) :: namespace
+    integer,           intent(in) :: repetitions
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
@@ -1071,12 +1072,18 @@ contains
     
     call io_close(iunit)
     
-    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_rho", mesh, rho, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_exact", mesh, vh_exact, unit_one, ierr)
-    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", mesh, vh, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_rho", namespace, &
+      mesh, rho, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_exact", namespace, &
+      mesh, vh_exact, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisX'), ".", "poisson_test_numerical", namespace, &
+      mesh, vh, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_rho", namespace, &
+      mesh, rho, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_exact", namespace, &
+      mesh, vh_exact, unit_one, ierr)
+    call dio_function_output (io_function_fill_how('AxisY'), ".", "poisson_test_numerical", namespace, &
+      mesh, vh, unit_one, ierr)
     ! not dimensionless, but no need for unit conversion for a test routine
 
     SAFE_DEALLOCATE_A(rho)

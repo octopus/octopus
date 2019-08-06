@@ -500,7 +500,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, outp%namespace, gr%fine%mesh, &
         RhoAB(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
@@ -526,7 +526,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
               end if
             end if
               
-            call zio_function_output(outp%how, dir, fname, gr%mesh, &
+            call zio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, &
               PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
 
           end do
@@ -924,7 +924,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
   
-  iunit = io_open(file, action='write')
+  iunit = io_open_old(file, action='write')
 
 
   

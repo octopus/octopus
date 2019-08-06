@@ -888,7 +888,7 @@ contains
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, rho, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, namespace, rho, st%d%ispin, &
             -minval(st%eigenval(st%nst,:)), qsp(ispin), vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
@@ -943,20 +943,20 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%psolver, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc)
         end if
       end if
@@ -1113,6 +1113,8 @@ contains
           do ispin = 1, hm%d%nspin
             call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
               ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
+            ! This output needs a namespace argument to work from now on. It
+            ! hasn't been touched for some years now, so I won't adapt it. - SO
             ! some debugging output that I will keep here for the moment, XA
             !          call dio_function_output(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
             !          call dio_function_output(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
@@ -1327,6 +1329,8 @@ contains
       ! restriction since the boundary conditions are not zero for the
       ! Hartree potential (and for some XC functionals).
       call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, pot, hm%vhartree, INJECTION)
+      ! This output needs a namespace argument to work from now on. It
+      ! hasn't been touched for some years now, so I won't adapt it. - SO
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
       !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)

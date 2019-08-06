@@ -27,6 +27,7 @@ module pes_out_oct_m
   use loct_oct_m
   use math_oct_m
   use messages_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif    

@@ -603,11 +603,12 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vector_dim, unit, & 
-  ierr, grp, root, vector_dim_labels)
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, ff, vector_dim, &
+    unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
   R_TYPE,           target,   intent(in)  :: ff(:, :)
@@ -677,7 +678,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr)
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, &
+          ff_global(:, ivd), unit, ierr)
       end do
     end if
 
@@ -1513,9 +1515,10 @@ end subroutine X(io_function_output_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ierr)
+subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff, unit, ierr)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
   type(unit_t),               intent(in)  :: unit
@@ -1528,7 +1531,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global_BZ))
 
-  call io_mkdir_old(dir)
+  call io_mkdir(dir, namespace)
 
 ! Define the format
   mformat    = '(99es23.14E3)'

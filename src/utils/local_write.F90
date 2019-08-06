@@ -328,8 +328,8 @@ contains
         if (out_dens(id)%write) then
           folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
           write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+          call dio_function_output(how,  trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
         end if
         if (out_pot(id)%write) then
         !Computes Hartree potential just for n[r], r belongs to id domain.
@@ -337,8 +337,8 @@ contains
           call dpoisson_solve(psolver, tmp_vh, tmp_rho)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
           st%rho(:,is) = M_ZERO
           do ix = 1, gr%mesh%np
@@ -347,8 +347,8 @@ contains
           call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
           st%rho(:,is) = st_rho(:)
         end if
       end do
@@ -360,14 +360,14 @@ contains
         call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
       !Computes global XC potential
         call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
       end do
     end if
 

@@ -149,6 +149,7 @@ module pcm_oct_m
     integer                          :: calc_method      !< which method should be used to obtain the pcm potential
     integer                          :: tess_nn          !< number of tessera center mesh-point nearest neighbors
     FLOAT, public                    :: dt               !< time-step of propagation
+    type(namespace_t), pointer       :: namespace        !< namespace, needed for output
   end type pcm_t
 
   type pcm_min_t
@@ -190,14 +191,14 @@ contains
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
   subroutine pcm_init(pcm, namespace, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
-    type(pcm_t),       intent(out) :: pcm
-    type(geometry_t),  intent(in)  :: geo
-    type(namespace_t), intent(in)  :: namespace
-    type(grid_t),      intent(in)  :: grid
-    FLOAT,             intent(in)  :: qtot
-    FLOAT,             intent(in)  :: val_charge
-    logical,           intent(in)  :: external_potentials_present
-    logical,           intent(in)  :: kick_present
+    type(pcm_t),               intent(out) :: pcm
+    type(geometry_t),          intent(in)  :: geo
+    type(namespace_t), target, intent(in)  :: namespace
+    type(grid_t),              intent(in)  :: grid
+    FLOAT,                     intent(in)  :: qtot
+    FLOAT,                     intent(in)  :: val_charge
+    logical,                   intent(in)  :: external_potentials_present
+    logical,                   intent(in)  :: kick_present
 
     integer :: ia, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
@@ -226,6 +227,8 @@ contains
     pcm%iter = 0
     pcm%update_iter = 1
     pcm%kick_like = .false.
+
+    pcm%namespace => namespace
 
     !%Variable PCMCalculation
     !%Type logical
@@ -1837,7 +1840,8 @@ contains
       call messages_info()
       
       ! Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm",  mesh, rho, unit_one, ierr)
+      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm", pcm%namespace, &
+        mesh, rho, unit_one, ierr)
     end if  
 
     SAFE_DEALLOCATE_A(pt)
@@ -1882,7 +1886,8 @@ contains
     
     if (debug%info) then  
       !   Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm",  mesh, v_pcm, unit_one, ierr)
+      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm", pcm%namespace, &
+        mesh, v_pcm, unit_one, ierr)
     end if
 
     call profiling_out(prof_init)

@@ -18,14 +18,15 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, gr, psolver, st, is, oep, ex, ec)
-  type(xc_t),      intent(in)    :: xcs
-  type(grid_t),    intent(in)    :: gr
-  type(poisson_t), intent(in)    :: psolver
-  type(states_t),  intent(inout) :: st
-  integer,         intent(in)    :: is
-  type(xc_oep_t),  intent(inout) :: oep
-  FLOAT,           intent(inout) :: ex, ec
+subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
+  type(xc_t),        intent(in)    :: xcs
+  type(grid_t),      intent(in)    :: gr
+  type(poisson_t),   intent(in)    :: psolver
+  type(namespace_t), intent(in)    :: namespace
+  type(states_t),    intent(inout) :: st
+  integer,           intent(in)    :: is
+  type(xc_oep_t),    intent(inout) :: oep
+  FLOAT,             intent(inout) :: ex, ec
 
   integer  :: ist
   FLOAT :: ex2, ec2, ex_, ec_, edummy
@@ -60,7 +61,8 @@ subroutine X(oep_sic) (xcs, gr, psolver, st, is, oep, ex, ec)
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(gr%fine%der, xcs, st, psolver, rho, SPIN_POLARIZED, edummy, edummy, vxc, ex=ex2, ec=ec2)
+      call xc_get_vxc(gr%fine%der, xcs, st, psolver, namespace, rho, SPIN_POLARIZED, &
+        edummy, edummy, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2

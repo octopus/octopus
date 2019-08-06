@@ -233,6 +233,9 @@ contains
       end do
 
 
+      ! For this to work again, a namespace has to be available. I don't make
+      ! the change now because this debugging output has been commented out for
+      ! 4 years. - SO
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
       !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)

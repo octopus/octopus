@@ -995,6 +995,8 @@ contains
 
     mask_fn(:) = M_ONE - mask_fn(:)
 
+! This output needs a namespace argument to work from now on. It
+! hasn't been touched for some years now, so I won't adapt it. - SO
 !   Keep this here to debug further mask shapes.    
 !     call dio_function_output(io_function_fill_how("PlaneZ"), &
 !                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)

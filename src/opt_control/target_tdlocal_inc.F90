@@ -82,7 +82,7 @@
     call io_mkdir_old(trim(dir))
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'td_local_target', outp%namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 

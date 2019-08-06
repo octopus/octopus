@@ -16,11 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+    vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
   type(poisson_t),      intent(in)    :: psolver
+  type(namespace_t),    intent(in)    :: namespace
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
@@ -400,7 +402,8 @@ subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, e
   if(present(deltaxc)) deltaxc = M_ZERO
 
   if(xcs%xc_density_correction == LR_X) then
-    call xc_density_correction_calc(xcs, der, psolver, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
+    call xc_density_correction_calc(xcs, der, psolver, namespace, spin_channels, &
+      rho, vx, dedd, deltaxc = deltaxc)
 
     if(calc_energy) then
       ! correct the energy density from Levy-Perdew, note that vx now
@@ -885,10 +888,11 @@ end subroutine xc_get_vxc
 
 ! -----------------------------------------------------
 
-subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, vxc, deltaxc)
+subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
   type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
   type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
   FLOAT,               intent(inout) :: refvx(:)
@@ -917,9 +921,12 @@ subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, 
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
+      der%mesh, density(:, 1), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
+      der%mesh, refvx(:), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
 
   if(xcs%xcd_optimize_cutoff) then
@@ -1013,7 +1020,8 @@ subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, 
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   
     if(mpi_world%rank == 0) then
       print*, "Iter",    iter, ncutoff, qxcfin
@@ -1029,12 +1037,18 @@ subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, 
   end if
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
 
   forall(ip = 1:der%mesh%np) 
@@ -1056,9 +1070,12 @@ subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, 
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
   
   dd = dmf_integrate(der%mesh, lrvxc)/vol
@@ -1072,7 +1089,8 @@ subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, 
   if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
   
   call profiling_out(prof)

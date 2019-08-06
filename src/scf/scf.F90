@@ -707,7 +707,7 @@ contains
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
-        call lcao_wf(lcao, st, gr, geo, hm, psolver)
+        call lcao_wf(lcao, st, gr, geo, hm, psolver, namespace)
       else
         if(associated(hm%vberry)) then
           ks%frozen_hxc = .true.

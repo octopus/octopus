@@ -301,7 +301,7 @@ contains
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, der%mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)

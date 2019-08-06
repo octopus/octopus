@@ -83,7 +83,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, psolver, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
     end if
     ! calculate uxc_bar for the occupied states
 
