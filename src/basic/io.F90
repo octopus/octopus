@@ -33,7 +33,6 @@ module io_oct_m
   public ::              &
     io_workpath_old,         &
     io_open_old,             &
-    io_mkdir_old,            &
     io_rm_old,               &
     io_workpath,         &
     io_open,             &
@@ -181,9 +180,6 @@ contains
       call delete_debug_trace()
     end if
 
-    ! create static directory
-    call io_mkdir_old(STATIC_DIR)
-
     if(debug%info) then
       !%Variable MPIDebugHook
       !%Type logical
@@ -304,38 +300,6 @@ contains
     POP_SUB(io_workpath_old)
 
   end function io_workpath_old
-
-
-  ! ---------------------------------------------------------
-  subroutine io_mkdir_old(fname, parents)
-    character(len=*),  intent(in) :: fname
-    logical, optional, intent(in) :: parents
-
-    logical :: parents_
-    integer :: last_slash, pos, length
-
-    PUSH_SUB(io_mkdir_old)
-
-    parents_ = .false.
-    if (present(parents)) parents_ = parents
-
-    if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath_old(fname)))
-    else
-      last_slash = max(index(fname, "/", .true.), len_trim(fname))
-      pos = 1
-      length = index(fname, '/') - 1
-      do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath_old(fname(1:pos+length-1))))
-        pos = pos + length + 1
-        length = index(fname(pos:), "/") - 1
-        if (length < 1) length = len_trim(fname(pos:))
-      end do
-
-    end if
-
-    POP_SUB(io_mkdir_old)
-  end subroutine io_mkdir_old
 
 
   ! ---------------------------------------------------------
