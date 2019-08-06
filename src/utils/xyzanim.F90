@@ -105,11 +105,13 @@ program xyzanim
       write(comment, '(i10,f20.6)') iter, time
       if(.not.multifiles)then
         call io_mkdir('td.general', default_namespace)
-        call geometry_write_xyz(geo, 'td.general/movie', append = .true., comment = trim(comment))
+        call geometry_write_xyz(geo, 'td.general/movie', default_namespace, &
+          append = .true., comment = trim(comment))
       else
         call io_mkdir('td.general/movie/', default_namespace)
         write(coords_file,'(i7.7)')iter
-        call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), append = .false.)
+        call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), default_namespace, &
+          append = .false.)
       end if
     end if
   end do

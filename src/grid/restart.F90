@@ -546,7 +546,7 @@ contains
             call messages_fatal(1)
           end if
 
-          call simul_box_dump(mesh%sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          call simul_box_dump(mesh%sb, namespace, restart%pwd, "mesh", restart%mpi_grp, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)

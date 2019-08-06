@@ -65,17 +65,18 @@ module vibrations_oct_m
     character (len=2) :: suffix
     character (len=80) :: filename_dynmat
     type(unit_t) :: unit_dynmat
+    type(namespace_t), pointer :: namespace
   end type vibrations_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine vibrations_init(this, geo, sb, suffix, namespace)
-    type(vibrations_t), intent(out) :: this
-    type(geometry_t),   intent(in)  :: geo
-    type(simul_box_t),  intent(in)  :: sb
-    character (len=2),  intent(in)  :: suffix
-    type(namespace_t),  intent(in)  :: namespace
+    type(vibrations_t),        intent(out) :: this
+    type(geometry_t),          intent(in)  :: geo
+    type(simul_box_t),         intent(in)  :: sb
+    character (len=2),         intent(in)  :: suffix
+    type(namespace_t), target, intent(in)  :: namespace
 
     integer :: iatom
 
@@ -84,6 +85,7 @@ contains
     this%ndim = sb%dim
     this%natoms = geo%natoms
     this%num_modes = geo%natoms*sb%dim
+    this%namespace => namespace
     SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%infrared(1:this%num_modes, 1:this%ndim))
     SAFE_ALLOCATE(this%normal_mode(1:this%num_modes, 1:this%num_modes))
@@ -223,7 +225,7 @@ contains
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
 
-    iunit = io_open_old(this%filename_dynmat, action='write', position='append')
+    iunit = io_open(this%filename_dynmat, action='write', namespace=this%namespace, position='append')
 
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
@@ -247,7 +249,7 @@ contains
 
     PUSH_SUB(vibrations_out_dyn_matrix_header)
 
-    iunit = io_open_old(this%filename_dynmat, action='write') ! start at the beginning
+    iunit = io_open(this%filename_dynmat, namespace=this%namespace, action='write') ! start at the beginning
     write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
       '[' // trim(units_abbrev(this%unit_dynmat)) // ']'
     call io_close(iunit)
@@ -332,14 +334,16 @@ contains
     PUSH_SUB(vibrations_output)
 
     ! output frequencies and eigenvectors
-    iunit = io_open_old(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
+    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write', &
+      namespace=this%namespace)
     do imat = 1, this%num_modes
       write(iunit, '(i6,f17.8)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
     ! output eigenvectors
-    iunit = io_open_old(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write')
+    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write', &
+      namespace=this%namespace)
     do imat = 1, this%num_modes
       write(iunit, '(i6)', advance='no') imat
       do jmat = 1, this%num_modes

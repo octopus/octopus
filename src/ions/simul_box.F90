@@ -1277,8 +1277,9 @@ contains
 
 
   !--------------------------------------------------------------
-  subroutine simul_box_dump(sb, dir, filename, mpi_grp, ierr)
+  subroutine simul_box_dump(sb, namespace, dir, filename, mpi_grp, ierr)
     type(simul_box_t), intent(in)  :: sb
+    type(namespace_t), intent(in)  :: namespace
     character(len=*),  intent(in)  :: dir
     character(len=*),  intent(in)  :: filename
     type(mpi_grp_t),   intent(in)  :: mpi_grp
@@ -1290,7 +1291,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="write", position="append", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", namespace=namespace, &
+      position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -1360,7 +1362,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", namespace=namespace, &
+      status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -1555,7 +1558,7 @@ contains
 
       ! then write out the geometry, whether asked for or not in Output variable
       call io_mkdir(STATIC_DIR, namespace)
-      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
+      call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry', namespace)
     end if
 
     if(simul_box_min_distance(geo, sb, real_atoms_only = .true.) < threshold) then
