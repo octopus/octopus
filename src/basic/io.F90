@@ -51,7 +51,6 @@ module io_oct_m
     iopar_find_line,     &
     io_skip_header,      &
     io_file_exists,      &
-    io_dir_exists_old,       &
     io_dir_exists
 
   integer, parameter :: min_lun=10, max_lun=99
@@ -738,18 +737,6 @@ contains
 
     POP_SUB(io_dir_exists)
   end function io_dir_exists
-
-  !> Returns true if a dir with name 'dir' exists
-  ! ---------------------------------------------------------
-  logical function io_dir_exists_old(dir)
-    character(len=*), intent(in)  :: dir
-
-    PUSH_SUB(io_dir_exists_old)
-
-    io_dir_exists_old = loct_dir_exists(trim(io_workpath_old(dir)))
-
-    POP_SUB(io_dir_exists_old)
-  end function io_dir_exists_old
 
   ! ---------------------------------------------------------
   subroutine iopar_read(grp, iunit, lines, n_lines, ierr)

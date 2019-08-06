@@ -498,7 +498,7 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    dir_exists = io_dir_exists_old(trim(restart%pwd))
+    dir_exists = io_dir_exists(trim(restart%pwd), namespace)
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
       call io_mkdir(trim(restart%pwd), namespace, parents=.true.)
     end if
