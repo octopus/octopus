@@ -29,6 +29,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
   use profiling_oct_m
@@ -581,10 +582,11 @@ contains
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, ierr)
+  subroutine mesh_check_dump_compatibility(mesh, dir, filename, namespace, mpi_grp, grid_changed, grid_reordered, map, ierr)
     type(mesh_t),         intent(in)  :: mesh
     character(len=*),     intent(in)  :: dir
     character(len=*),     intent(in)  :: filename
+    type(namespace_t),    intent(in)  :: namespace
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
@@ -626,7 +628,7 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(io_workpath_old(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."

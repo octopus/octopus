@@ -26,6 +26,7 @@ module vtk_oct_m
   use io_oct_m
   use io_binary_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use species_oct_m
   use unit_oct_m
@@ -59,9 +60,10 @@ contains
 
   ! -----------------------------------------------------
   
-  subroutine vtk_output_geometry(filename, geo, ascii)
+  subroutine vtk_output_geometry(filename, geo, namespace, ascii)
     character(len=*),           intent(in) :: filename
     type(geometry_t),           intent(in) :: geo
+    type(namespace_t),          intent(in) :: namespace
     logical,          optional, intent(in) :: ascii
 
     integer :: iunit, iatom, ierr
@@ -100,7 +102,8 @@ contains
       do iatom = 1, geo%natoms
         data(1:3, iatom) = geo%atom(iatom)%x(1:3)
       end do
-      call io_binary_write(io_workpath_old(fullname), 3*geo%natoms, data, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname, namespace), 3*geo%natoms, data, &
+        ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(data)
       iunit = io_open_old(trim(fullname), action='write', position = 'append')
       write(iunit, '(1a)') ''
@@ -119,7 +122,8 @@ contains
         idata(1, iatom) = 1
         idata(2, iatom) = iatom - 1
       end do
-      call io_binary_write(io_workpath_old(fullname), 2*geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname, namespace), 2*geo%natoms, idata, &
+        ierr, nohead = .true., fendian = is_little_endian())
       SAFE_DEALLOCATE_A(idata)
       iunit = io_open_old(trim(fullname), action='write', position = 'append')
       write(iunit, '(1a)') ''
@@ -142,7 +146,8 @@ contains
         idata(iatom, 1) = nint(species_z(geo%atom(iatom)%species))
       end do
       
-      call io_binary_write(io_workpath_old(fullname), geo%natoms, idata, ierr, nohead = .true., fendian = is_little_endian())
+      call io_binary_write(io_workpath(fullname, namespace), geo%natoms, idata, &
+        ierr, nohead = .true., fendian = is_little_endian())
 
       SAFE_DEALLOCATE_A(idata)
 

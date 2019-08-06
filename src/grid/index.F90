@@ -25,6 +25,7 @@ module index_oct_m
   use io_binary_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
 
   implicit none
 
@@ -232,11 +233,12 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_dump_lxyz(idx, np, dir, mpi_grp, ierr)
+  subroutine index_dump_lxyz(idx, np, dir, mpi_grp, namespace, ierr)
     type(index_t),    intent(in)  :: idx
     integer,          intent(in)  :: np
     character(len=*), intent(in)  :: dir
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: ierr
 
     integer :: err
@@ -249,7 +251,7 @@ contains
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(allocated(idx%lxyz))
-        call io_binary_write(trim(io_workpath_old(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_write(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
@@ -269,11 +271,12 @@ contains
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file
-  subroutine index_load_lxyz(idx, np, dir, mpi_grp, ierr)
+  subroutine index_load_lxyz(idx, np, dir, mpi_grp, namespace, ierr)
     type(index_t),     intent(inout) :: idx
     integer,           intent(in)    :: np
     character(len=*),  intent(in)    :: dir
     type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
     integer,           intent(out)   :: ierr
 
     integer :: ip, idir, ix(MAX_DIM), err
@@ -287,7 +290,7 @@ contains
 
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
-        call io_binary_read(trim(io_workpath_old(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_read(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."
