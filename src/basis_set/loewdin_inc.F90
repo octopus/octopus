@@ -16,9 +16,10 @@
 !! 02110-1301, USA.
 !!
 
- subroutine X(loewdin_orthogonalize)( basis, kpt )
+ subroutine X(loewdin_orthogonalize)( basis, kpt, namespace )
    type(orbitalbasis_t),    intent(inout):: basis
    type(distributed_t),     intent(in)   :: kpt
+   type(namespace_t),       intent(in)   :: namespace
 
    R_TYPE, allocatable :: overlap(:,:), overlap2(:,:)
    FLOAT,  allocatable :: eigenval(:)
@@ -43,7 +44,7 @@
    do ik = kpt%start, kpt%end
 
      call X(loewdin_overlap)(basis, overlap, ik)
-     if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
+     if(debug%info) call X(print_matrix)(basis, 'overlap', namespace, overlap, ik)
 
      !We compute S^{-1/2} from S
      call lalg_eigensolve(basis%size, overlap, eigenval)
@@ -53,7 +54,7 @@
        overlap2(is, 1:basis%size) = eigenval(is)* overlap2(is, 1:basis%size)     
      end do 
      overlap = matmul(overlap,overlap2)
-     if(debug%info) call X(print_matrix)(basis, 'loewdin', overlap, ik)
+     if(debug%info) call X(print_matrix)(basis, 'loewdin', namespace, overlap, ik)
 
      !We now contruct the orthogonalized basis
      do ind = 1, basis%size
@@ -81,7 +82,7 @@
      !orthogonalization
      if(debug%info) then
        call X(loewdin_overlap)(basis, overlap, ik)
-       call X(print_matrix)(basis, 'overlap_after', overlap, ik)
+       call X(print_matrix)(basis, 'overlap_after', namespace, overlap, ik)
      end if
 
    end do
@@ -151,9 +152,10 @@
   POP_SUB(X(loewdin_overlap))
  end subroutine X(loewdin_overlap) 
 
-subroutine X(loewdin_info)(basis, kpt)
+subroutine X(loewdin_info)(basis, kpt, namespace)
    type(orbitalbasis_t),    intent(inout):: basis
    type(distributed_t),     intent(in)   :: kpt
+   type(namespace_t),       intent(in)   :: namespace
 
    R_TYPE, allocatable :: overlap(:,:)
    integer :: ik
@@ -164,7 +166,7 @@ subroutine X(loewdin_info)(basis, kpt)
 
    do ik = kpt%start, kpt%end
      call X(loewdin_overlap)(basis, overlap, ik)
-     if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
+     if(debug%info) call X(print_matrix)(basis, 'overlap', namespace, overlap, ik)
    end do
 
    SAFE_DEALLOCATE_A(overlap)
@@ -172,9 +174,10 @@ subroutine X(loewdin_info)(basis, kpt)
    POP_SUB(X(loewdin_info))
 end subroutine X(loewdin_info)
 
-subroutine X(print_matrix)(basis, label, overlap, ik)
+subroutine X(print_matrix)(basis, label, namespace, overlap, ik)
   type(orbitalbasis_t),   intent(in) :: basis
   character(len=*),       intent(in) :: label
+  type(namespace_t),      intent(in) :: namespace
   R_TYPE,                 intent(in) :: overlap(:,:) !< (basis%size,basis%size)
   integer,                intent(in) :: ik
 
@@ -186,7 +189,8 @@ subroutine X(print_matrix)(basis, label, overlap, ik)
   PUSH_SUB(X(print_matrix))
   
   write(filename, '(i5.5)') ik
-  iunit = io_open_old(trim(basis%debugdir) // "/" //trim(label) // "_nk" // filename, action='write')
+  iunit = io_open(trim(basis%debugdir) // "/" //trim(label) // "_nk" // filename, action='write', &
+    namespace=namespace)
   write(iunit,'(a)') ' Orthogonalization matrix '
 #ifdef R_TCOMPLEX
   write(iunit,'(a)') ' Real part '

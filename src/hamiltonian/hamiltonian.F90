@@ -524,7 +524,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, namespace)
       end if
 
       POP_SUB(hamiltonian_init.init_phase)
@@ -682,10 +682,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, boundaries, time)
+  subroutine hamiltonian_update(this, mesh, boundaries, namespace, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(boundaries_t),  intent(in)    :: boundaries
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT, optional,     intent(in)    :: time
 
     integer :: ispin, ip, idir, iatom, ilaser
@@ -893,7 +894,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, namespace, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
@@ -951,7 +952,7 @@ contains
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
+    call hamiltonian_update(this, gr%mesh, gr%der%boundaries, namespace, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
@@ -967,7 +968,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, namespace, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate

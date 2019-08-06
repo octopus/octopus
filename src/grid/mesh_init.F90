@@ -851,7 +851,7 @@ contains
     call partition_get_global(mesh%bndry_partition, mesh%vp%part_vec(mesh%np_global+1:mesh%np_part_global))      
 
     if (has_virtual_partition) then
-      call profiling_end()
+      call profiling_end(namespace)
       call print_date("Calculation ended on ")
       write(message(1),'(a)') "Execution has ended."
       write(message(2),'(a)') "If you want to run your system, do not use MeshPartitionVirtualSize."

@@ -113,7 +113,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
 
     else
 
@@ -141,7 +141,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -227,7 +227,7 @@ contains
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! propagate dt/2 with H(t)
@@ -246,7 +246,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
@@ -363,7 +363,7 @@ contains
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
       endif
 
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
@@ -378,7 +378,7 @@ contains
     end do
 
     if(tr%method == PROP_CAETRS) then
-      call v_ks_calc_finish(ks, hm)
+      call v_ks_calc_finish(ks, hm, namespace)
 
       if(hm%family_is_mgga_with_exc) then 
         call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
@@ -431,7 +431,7 @@ contains
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 

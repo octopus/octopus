@@ -122,7 +122,7 @@ contains
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt/M_TWO)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 

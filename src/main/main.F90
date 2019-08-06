@@ -152,7 +152,7 @@ program octopus
   call messages_switch_status('finished')
   call io_end()
   
-  call profiling_end()
+  call profiling_end(default_namespace)
   
   call calc_mode_par_end()
 

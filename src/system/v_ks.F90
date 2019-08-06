@@ -669,7 +669,7 @@ contains
     calc_current_ = optional_default(calc_current, .true.)
 
     call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
-    call v_ks_calc_finish(ks, hm)
+    call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
       call energy_calc_eigenvalues(hm, ks%gr%der, ks%psolver, st)
@@ -1066,9 +1066,10 @@ contains
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
 
-  subroutine v_ks_calc_finish(ks, hm)
+  subroutine v_ks_calc_finish(ks, hm, namespace)
     type(v_ks_t), target, intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
+    type(namespace_t),    intent(in)    :: namespace
 
     integer                           :: ip, ispin
 
@@ -1191,9 +1192,9 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, time = ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, namespace, time = ks%calc%time)
     else
-      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, namespace)
     end if
 
 

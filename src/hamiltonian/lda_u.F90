@@ -433,11 +433,12 @@ contains
  end subroutine lda_u_end
 
  ! When moving the ions, the basis must be reconstructed
- subroutine lda_u_update_basis(this, gr, geo, st, has_phase)
+ subroutine lda_u_update_basis(this, gr, geo, st, namespace, has_phase)
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
+  type(namespace_t),         intent(in)    :: namespace
   logical,                   intent(in)    :: has_phase
 
   if(this%level == DFT_U_NONE) return
@@ -463,7 +464,7 @@ contains
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_update
   if(has_phase) then
-    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d)
+    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
   end if
 
   POP_SUB(lda_u_update_basis)
@@ -496,10 +497,11 @@ contains
 
 
  !> Build the phase correction to the global phase for all orbitals
- subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)
+ subroutine lda_u_build_phase_correction(this, sb, std, namespace, vec_pot, vec_pot_var)
    type(lda_u_t),                 intent(inout) :: this
    type(simul_box_t),             intent(in)    :: sb 
    type(states_dim_t),            intent(in)    :: std
+   type(namespace_t),             intent(in)    :: namespace
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -517,9 +519,9 @@ contains
    end do
 
    if(this%basis%orthogonalization) then
-     call zloewdin_orthogonalize(this%basis, std%kpt)
+     call zloewdin_orthogonalize(this%basis, std%kpt, namespace)
    else
-     if(debug%info) call zloewdin_info(this%basis, std%kpt)
+     if(debug%info) call zloewdin_info(this%basis, std%kpt, namespace)
    end if
   
    POP_SUB(lda_u_build_phase_correction)

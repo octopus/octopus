@@ -100,8 +100,7 @@ program oct_local_multipoles
 
   call simul_box_end(sb)
   call system_end(sys)
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()

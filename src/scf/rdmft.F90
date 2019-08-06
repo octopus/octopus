@@ -932,7 +932,7 @@ contains
     call profiling_in(prof_orb_cg, "CG")
     
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace)
     
     rdm%eigens%converged = 0
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -962,7 +962,7 @@ contains
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace)
     call rdm_derivatives(rdm, hm, psolver, st, gr)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)

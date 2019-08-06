@@ -151,9 +151,10 @@ contains
   end subroutine local_operator_copy
 
   ! ---------------------------------------------------------
-  subroutine read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+  subroutine read_resonances_file(order, ffile, namespace, search_interval, final_time, nfrequencies)
     integer, intent(inout)       :: order
     character(len=*), intent(in) :: ffile
+    type(namespace_t), intent(in):: namespace
     FLOAT,   intent(inout)       :: search_interval
     FLOAT,   intent(in)          :: final_time
     integer, intent(in)          :: nfrequencies
@@ -179,7 +180,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -187,7 +188,7 @@ contains
   
     mode = COSINE_TRANSFORM
   
-    iunit = io_open_old(trim(ffile), action='read', status='old', die=.false.)
+    iunit = io_open(trim(ffile), action='read', namespace=namespace, status='old', die=.false.)
     if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)
@@ -227,7 +228,7 @@ contains
       search_interval = M_HALF
     end if
   
-    call read_ot(nspin, order_in_file, nw_subtracted)
+    call read_ot(namespace, nspin, order_in_file, nw_subtracted)
   
     if(order_in_file /= order) then
       write(message(1), '(a)') 'The ot file should contain the second-order response in this run mode.'
@@ -282,7 +283,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
+  subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, &
+      damping, namespace)
     integer, intent(inout) :: order
     FLOAT,   intent(inout) :: omega
     FLOAT,   intent(inout) :: search_interval
@@ -290,6 +292,7 @@ contains
     integer, intent(inout) :: nresonances
     integer, intent(inout) :: nfrequencies
     FLOAT,   intent(in)    :: damping
+    type(namespace_t), intent(in) :: namespace
   
     FLOAT :: leftbound, rightbound, dw, power
     FLOAT, allocatable :: w(:), c0I2(:)
@@ -306,7 +309,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -327,7 +330,7 @@ contains
     leftbound = omega - search_interval
     rightbound = omega + search_interval
   
-    call read_ot(nspin, order_in_file, nw_subtracted)
+    call read_ot(namespace, nspin, order_in_file, nw_subtracted)
   
     if(order_in_file /= order) then
       write(message(1), '(a)') 'Internal error in analyze_signal'
@@ -913,7 +916,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine read_ot(nspin, order, nw_subtracted)
+  subroutine read_ot(namespace, nspin, order, nw_subtracted)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(out) :: nspin
     integer, intent(out) :: order
     integer, intent(out) :: nw_subtracted
@@ -963,7 +967,7 @@ contains
     call io_skip_header(iunit)
   
     ! Figure out about the units of the file
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1), '(a)') 'Could not figure out the units in file "ot".'
       call messages_fatal(1)
@@ -1007,7 +1011,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
+  subroutine print_omega_file(namespace, omega, search_interval, final_time, nfrequencies)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,   intent(inout) :: omega
     FLOAT,   intent(inout) :: search_interval
     FLOAT,   intent(inout) :: final_time
@@ -1029,7 +1034,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -1053,7 +1058,7 @@ contains
     SAFE_ALLOCATE(warray(1:nfrequencies))
     SAFE_ALLOCATE(tarray(1:nfrequencies))
   
-    call read_ot(nspin, order, nw_subtracted)
+    call read_ot(namespace, nspin, order, nw_subtracted)
   
     if(mod(order, 2) == 1) then
       mode = SINE_TRANSFORM
@@ -1168,11 +1173,12 @@ program oscillator_strength
   case(GENERATE_NTHORDER_SIGNAL)
     call generate_signal(order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
-    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
+    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping, &
+      default_namespace)
   case(READ_RESONANCES_FROM_FILE)
-    call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+    call read_resonances_file(order, ffile, default_namespace, search_interval, final_time, nfrequencies)
   case(GENERATE_OMEGA_FILE)
-    call print_omega_file(omega, search_interval, final_time, nfrequencies)
+    call print_omega_file(default_namespace, omega, search_interval, final_time, nfrequencies)
   case default
   end select
 
