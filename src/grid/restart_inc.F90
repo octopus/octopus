@@ -122,7 +122,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   
   if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(io_function_input) (full_filename, mesh, ff(1:mesh%np), ierr, &
+    call X(io_function_input) (full_filename, restart%namespace, mesh, ff(1:mesh%np), ierr, &
                                map = restart%map)
 
     POP_SUB(X(restart_read_mesh_function))

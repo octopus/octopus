@@ -1211,7 +1211,7 @@ contains
                 call messages_info(3)
 
                 ! finally read the state
-                call zio_function_input(filename, mesh, zpsi(:, 1), ierr)
+                call zio_function_input(filename, namespace, mesh, zpsi(:, 1), ierr)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr

@@ -770,7 +770,8 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:der%mesh%np))
-        call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
+        call species_get_local(geo%atom(iatom)%species, der%mesh, namespace, &
+          geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
       end if
 
       if(allocated(vl)) then

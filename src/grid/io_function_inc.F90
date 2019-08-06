@@ -39,8 +39,9 @@
 !!             -4 : function in file is complex, dp. \n
 ! ---------------------------------------------------------
 
-subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
+subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
+  type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -63,7 +64,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(io_function_input_global)(filename, mesh, ff_global, ierr, map)
+      call X(io_function_input_global)(filename, namespace, mesh, ff_global, ierr, map)
     end if
     if(debug%info) call messages_debug_newlines(2)
 
@@ -84,7 +85,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
     ASSERT(.false.) 
 #endif
   else
-    call X(io_function_input_global)(filename, mesh, ff, ierr, map)
+    call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   end if
 
   POP_SUB(X(io_function_input))
@@ -93,8 +94,9 @@ end subroutine X(io_function_input)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
+subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
+  type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -131,7 +133,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 #if defined(HAVE_NETCDF)
   case("ncdf")
     ASSERT(.not. present(map))
-    file = io_workpath_old(filename)
+    file = io_workpath(filename, namespace)
     status = nf90_open(trim(file), NF90_WRITE, ncid)
     if(status /= NF90_NOERR) then
       ierr = 2
@@ -161,12 +163,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
     if(present(map)) then
 
-      call io_binary_get_info(io_workpath_old(filename), np, file_size, ierr)
+      call io_binary_get_info(io_workpath(filename, namespace), np, file_size, ierr)
 
       if (ierr == 0) then
         SAFE_ALLOCATE(read_ff(1:np))
 
-        call io_binary_read(io_workpath_old(filename), np, read_ff, ierr)
+        call io_binary_read(io_workpath(filename, namespace), np, read_ff, ierr)
         call profiling_count_transfers(np, read_ff(1))
         
         if (ierr == 0) then
@@ -180,7 +182,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
       end if
 
     else
-      call io_binary_read(io_workpath_old(filename), mesh%np_global, ff, ierr)
+      call io_binary_read(io_workpath(filename, namespace), mesh%np_global, ff, ierr)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
 
@@ -194,22 +196,22 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
-    call io_csv_get_info(filename, dims, ierr)
+    call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
     
     if (ierr /= 0) then
-      message(1) = "Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(io_workpath(filename, namespace))//""
       call messages_fatal(1)
     end if
     
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
 #ifdef R_TREAL
-    call dread_csv(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
+    call dread_csv(io_workpath(filename, namespace), dims(1)*dims(2)*dims(3), read_ff, ierr)
 #else
     call messages_not_implemented("Reading complex CSV file")
 #endif
 
     if (ierr /= 0) then
-      message(1) = "Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(io_workpath(filename, namespace))//""
       call messages_fatal(1)
     end if
 
