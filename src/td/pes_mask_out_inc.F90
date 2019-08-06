@@ -773,9 +773,10 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
+subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pmesh)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   FLOAT,             intent(in) :: Lk(:,:)
   integer,           intent(in) :: ll(:)  
   integer,           intent(in) :: how
@@ -827,10 +828,10 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
     call messages_info(1)
     
     if (present(pmesh)) then          
-      call dvtk_out_cf_structured(filename, 'PES_mapM', ierr, cf, cube,& 
+      call dvtk_out_cf_structured(filename, namespace, 'PES_mapM', ierr, cf, cube,& 
         sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
     else 
-      call dvtk_out_cf(filename, 'PES_mapM', ierr, cf, cube, dk(:),& 
+      call dvtk_out_cf(filename, namespace, 'PES_mapM', ierr, cf, cube, dk(:),& 
         sqrt(units_out%energy)**sb%dim)
     end if        
       
@@ -859,7 +860,7 @@ contains
 
     PUSH_SUB(pes_mask_output_full_mapM.out_ascii)
 
-    iunit = io_open_old(file, action='write')
+    iunit = io_open(file, action='write', namespace=namespace)
 
 
     ll = 1
@@ -923,7 +924,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
   
-  iunit = io_open_old(file, action='write')
+  iunit = io_open(file, action='write')
 
 
   
@@ -1529,13 +1530,13 @@ end subroutine pes_mask_output_ar_spherical_cut_M
 !
 ! ========================================================================
 subroutine pes_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: pesM(:,:)
-  integer,          intent(in) :: mode
-  FLOAT,            intent(in) :: xGrid(:)   !< max min and step for the x axis
-  FLOAT,            intent(in) :: yGrid(:)   !< max min and step for the y axis
-  FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
-  FLOAT, optional,  intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
+  character(len=*),  intent(in) :: file
+  FLOAT,             intent(in) :: pesM(:,:)
+  integer,           intent(in) :: mode
+  FLOAT,             intent(in) :: xGrid(:)   !< max min and step for the x axis
+  FLOAT,             intent(in) :: yGrid(:)   !< max min and step for the y axis
+  FLOAT,             intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
+  FLOAT, optional,   intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
 
   integer :: nx,ny, iunit, ix,iy
 

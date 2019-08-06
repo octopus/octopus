@@ -439,11 +439,12 @@ end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
+subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, vector_dim, unit, ierr, &
   geo, grp, root, is_global, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:, :)
   integer,                    intent(in)  :: vector_dim
@@ -537,7 +538,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr, geo)
+        call X(io_function_output_global)(how_seq, dir, full_fname, namespace, mesh, &
+          ff_global(:, ivd), unit, ierr, geo)
       end do
     end if
 
@@ -581,11 +583,11 @@ contains
       call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
 
-    filename = io_workpath_old(trim(dir)//'/'//trim(fname)//".vtk")
+    filename = trim(dir)//'/'//trim(fname)//".vtk"
 
     forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
 
-    call X(vtk_out_cf_vector)(filename, fname, ierr, cf, vector_dim, cube, dk, unit)
+    call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
 
     do ivd = 1, vector_dim
       call X(cube_function_free_RS)(cube, cf(ivd))
@@ -701,10 +703,11 @@ end subroutine X(io_function_output_vector_BZ)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
+subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ierr, geo, grp, root, is_global)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:)
   type(unit_t),               intent(in)  :: unit
@@ -765,7 +768,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
   end if
 
   if(i_am_root) then
-    call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, geo = geo)
+    call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff_global, unit, ierr, geo = geo)
   end if
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
@@ -784,7 +787,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
 
   ! serial mode
   ASSERT(.not. mesh%parallel_in_domains)
-  call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, geo = geo)
+  call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff, unit, ierr, geo = geo)
 
 #endif
 
@@ -793,9 +796,10 @@ end subroutine X(io_function_output)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, geo)
+subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, unit, ierr, geo)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
   type(unit_t),               intent(in)  :: unit
@@ -887,7 +891,7 @@ contains
 
     PUSH_SUB(X(io_function_output_global).out_binary)
 
-    workdir = io_workpath_old(dir)
+    workdir = io_workpath(dir, namespace)
     call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', np_max, ff, ierr)
 
     call profiling_count_transfers(np_max, ff(1))
@@ -1442,7 +1446,7 @@ contains
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    filename = io_workpath_old(trim(dir)//'/'//trim(fname)//".ncdf")
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", namespace)
 
      
     call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
@@ -1476,7 +1480,7 @@ contains
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    filename = io_workpath_old(trim(dir)//'/'//trim(fname)//".vtk")
+    filename = trim(dir)//'/'//trim(fname)//".vtk"
    
 
     if(mesh%sb%nonorthogonal) then
@@ -1492,11 +1496,11 @@ contains
         end do
       end do
       
-      call X(vtk_out_cf_structured)(filename, fname, ierr, cf, cube, unit, points)     
+      call X(vtk_out_cf_structured)(filename, namespace, fname, ierr, cf, cube, unit, points)     
       SAFE_DEALLOCATE_A(points) 
     else  
       !Ordinary grid
-      call X(vtk_out_cf)(filename, fname, ierr, cf, cube, dk(:), unit)
+      call X(vtk_out_cf)(filename, namespace, fname, ierr, cf, cube, dk(:), unit)
     end if  
 
     call X(cube_function_free_RS)(cube, cf)

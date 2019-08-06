@@ -653,11 +653,11 @@ program photoelectron_spectrum
           !force vtk output
           how = io_function_fill_how("VTK")
            
-!           call pes_mask_output_full_mapM(pesP_out, filename, Lg, llp, how, sb, pmesh)
-          call pes_out_velocity_map(pesP_out, filename, Lg, llp, how, sb, pmesh)
+!           call pes_mask_output_full_mapM(pesP_out, filename, default_namespace, Lg, llp, how, sb, pmesh)
+          call pes_out_velocity_map(pesP_out, filename, default_namespace, Lg, llp, how, sb, pmesh)
         else
-!           call pes_mask_output_full_mapM(pesP_out, filename, Lg, llp, how, sb)
-          call pes_out_velocity_map(pesP_out, filename, Lg, llp, how, sb)
+!           call pes_mask_output_full_mapM(pesP_out, filename, default_namespace, Lg, llp, how, sb)
+          call pes_out_velocity_map(pesP_out, filename, default_namespace, Lg, llp, how, sb)
         end if
         
       end if
@@ -673,9 +673,9 @@ program photoelectron_spectrum
         how = io_function_fill_how("VTK")
 
 !         call pes_mask_output_full_mapM(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-!                                        Lg, llp, how, sb, pmesh)
+!                                        default_namespace, Lg, llp, how, sb, pmesh)
         call pes_out_velocity_map(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-                                       Lg, llp, how, sb, pmesh)
+                                  default_namespace, Lg, llp, how, sb, pmesh)
       end if
       
       

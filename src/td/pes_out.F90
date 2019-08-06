@@ -62,9 +62,10 @@ module pes_out_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map(pesK, file, Lk, ll, how, sb, pmesh)
+  subroutine pes_out_velocity_map(pesK, file, namespace, Lk, ll, how, sb, pmesh)
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
     integer(8),        intent(in) :: how
@@ -115,10 +116,10 @@ contains
       call messages_info(1)
     
       if (present(pmesh)) then          
-        call dvtk_out_cf_structured(filename, 'PES_vel_map', ierr, cf, cube,& 
+        call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,& 
           sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
       else 
-        call dvtk_out_cf(filename, 'PES_vel_map', ierr, cf, cube, dk(:),& 
+        call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),& 
           sqrt(units_out%energy)**sb%dim)
       end if        
     end if
