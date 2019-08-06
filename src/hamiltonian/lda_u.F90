@@ -306,7 +306,7 @@ contains
      !% Only available with ACBN0 functional.
      !% It is strongly recommended to set AOLoewdin=yes when using the option.
      !%End
-     call parse_variable(parser, 'ACBN0IntersiteInteraction', .false., this%intersite)
+     call parse_variable(namespace, 'ACBN0IntersiteInteraction', .false., this%intersite)
      if(this%intersite) call messages_experimental("ACBN0IntersiteInteraction")
      call messages_print_var_value(stdout, 'ACBN0IntersiteInteraction', this%intersite)
 
@@ -325,7 +325,7 @@ contains
        !% The cutoff radius defining the maximal intersite distance considered.
        !% Only available with ACBN0 functional with intersite interaction.
        !%End
-       call parse_variable(parser, 'ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
+       call parse_variable(namespace, 'ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
        if(abs(this%intersite_radius) < M_EPSILON) then
          call messages_write("ACBN0IntersiteCutoff must be greater than 0")
          call messages_fatal(1)
@@ -487,11 +487,12 @@ contains
  end subroutine lda_u_end
 
  ! When moving the ions, the basis must be reconstructed
- subroutine lda_u_update_basis(this, gr, geo, st, has_phase)
+ subroutine lda_u_update_basis(this, gr, geo, st, psolver, has_phase)
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
+  type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: has_phase
 
   integer :: ios, maxorbs, nspin
@@ -520,7 +521,7 @@ contains
   if(this%intersite) then
     this%maxneighbors = 0
     do ios = 1, this%norbsets
-      call orbitalset_init_intersite(this%orbsets(ios), ios, gr%sb, geo, gr%der, this%orbsets, &
+      call orbitalset_init_intersite(this%orbsets(ios), ios, gr%sb, geo, gr%der, psolver, this%orbsets, &
             this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase)
       this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
     end do
