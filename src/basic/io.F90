@@ -33,7 +33,6 @@ module io_oct_m
   public ::              &
     io_workpath_old,         &
     io_open_old,             &
-    io_rm_old,               &
     io_workpath,         &
     io_open,             &
     io_mkdir,            &
@@ -300,18 +299,6 @@ contains
     POP_SUB(io_workpath_old)
 
   end function io_workpath_old
-
-
-  ! ---------------------------------------------------------
-  subroutine io_rm_old(fname)
-    character(len=*),  intent(in) :: fname
-
-    PUSH_SUB(io_rm_old)
-
-    call loct_rm(trim(io_workpath_old(fname)))
-
-    POP_SUB(io_rm_old)
-  end subroutine io_rm_old
 
 
   ! ---------------------------------------------------------

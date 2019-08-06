@@ -634,9 +634,9 @@ contains
       select case (restart%type)
       case (RESTART_TYPE_LOAD)
         message(1) = "Info: Finished reading information from '"//trim(restart%dir)//"'."
-        call io_rm_old(trim(restart%pwd)//"/loading")
+        call io_rm(trim(restart%pwd)//"/loading", restart%namespace)
       case (RESTART_TYPE_DUMP)
-        call io_rm_old(trim(restart%pwd)//"/dumping")
+        call io_rm(trim(restart%pwd)//"/dumping", restart%namespace)
         message(1) = "Info: Finished writing information to '"//trim(restart%dir)//"'."
       end select
       call messages_info(1)
@@ -751,7 +751,7 @@ contains
 
     PUSH_SUB(restart_rm)
 
-    call io_rm_old(trim(restart%pwd)//"/"//trim(name))
+    call io_rm(trim(restart%pwd)//"/"//trim(name), restart%namespace)
 
     POP_SUB(restart_rm)
   end subroutine restart_rm

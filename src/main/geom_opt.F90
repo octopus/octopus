@@ -500,9 +500,9 @@ contains
         end do
       end if
 
-      call io_rm_old("geom/optimization.log")
+      call io_rm("geom/optimization.log", sys%namespace)
 
-      call io_rm_old("work-geom.xyz")
+      call io_rm("work-geom.xyz", sys%namespace)
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
@@ -517,7 +517,7 @@ contains
         write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
         inquire(file = trim(filename), exist = does_exist)
         if(does_exist) then
-          call io_rm_old(trim(filename))
+          call io_rm(trim(filename), sys%namespace)
           iter = iter + 1
         else
           exit
