@@ -21,6 +21,7 @@ module pcm_eom_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   implicit none
 
@@ -127,7 +128,8 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
-  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, this_eps, this_deb, this_drl) 
+  subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, &
+      this_eps, namespace, this_deb, this_drl) 
     save
     FLOAT,                         intent(out) :: q_t(:)
     FLOAT,                         intent(in)  :: pot_t(:)
@@ -136,6 +138,7 @@ contains
     logical,                       intent(in)  :: input_asc
     integer,                       intent(in)  :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
     integer,                       intent(in)  :: this_eps !< type of dielectric model to be used, either Debye (PCM_DEBYE_MODEL) or Drude-Lorentz (PCM_DRUDE_MODEL)
+    type(namespace_t),             intent(in)  :: namespace
     type(debye_param_t), optional, intent(in)  :: this_deb
     type(drude_param_t), optional, intent(in)  :: this_drl
 
@@ -198,7 +201,7 @@ contains
       select case (which_eps)
       case (PCM_DEBYE_MODEL)
         !> initialize pcm charges due to electrons, external potential or kick
-        call pcm_charges_from_input_file(q_t, pot_t)
+        call pcm_charges_from_input_file(q_t, pot_t, namespace)
 
         POP_SUB(pcm_charges_propagation)
         return
@@ -213,7 +216,7 @@ contains
         (initial_kick     .and. which_eom == PCM_KICK)) then
 
       !> initialize pcm matrices
-      call pcm_bem_init()
+      call pcm_bem_init(namespace)
 
       !> initialize pcm charges due to electrons, external potential or kick
       call init_charges(q_t, pot_t)
@@ -239,9 +242,10 @@ contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Polarization charges initialization from input file
-  subroutine pcm_charges_from_input_file(q_t, pot_t)
+  subroutine pcm_charges_from_input_file(q_t, pot_t, namespace)
     FLOAT, intent(out) :: q_t(:)
     FLOAT, intent(in)  :: pot_t(:)
+    type(namespace_t), intent(in) :: namespace
 
     FLOAT :: aux1(3)
     integer :: aux2
@@ -252,7 +256,7 @@ contains
 
     if (which_eom == PCM_ELECTRONS) then
       SAFE_ALLOCATE(q_tp(1:nts_act))
-      asc_unit = io_open_old(PCM_DIR//'ASC_e.dat', action='read')
+      asc_unit = io_open(PCM_DIR//'ASC_e.dat', action='read', namespace=namespace)
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -260,7 +264,7 @@ contains
 
     else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
       SAFE_ALLOCATE(qext_tp(1:nts_act))
-      asc_unit = io_open_old(PCM_DIR//'ASC_ext.dat', action='read')
+      asc_unit = io_open(PCM_DIR//'ASC_ext.dat', action='read', namespace=namespace)
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -268,7 +272,7 @@ contains
 
     else if (which_eom == PCM_KICK) then
       SAFE_ALLOCATE(qkick_tp(1:nts_act))
-      asc_unit = io_open_old(PCM_DIR//'ASC_kick.dat', action='read')
+      asc_unit = io_open(PCM_DIR//'ASC_kick.dat', action='read', namespace=namespace)
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
@@ -461,7 +465,8 @@ contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Boundary Element Method (BEM) EOM-IEF-PCM matrices initialization.
-  subroutine pcm_bem_init()
+  subroutine pcm_bem_init(namespace)
+    type(namespace_t), intent(in) :: namespace
     integer :: itess, jtess
     integer :: pcmmat0_unit, pcmmatd_unit
 
@@ -485,8 +490,10 @@ contains
     call do_PCM_propMat()
 
     if (which_eom == PCM_ELECTRONS) then
-      pcmmat0_unit = io_open_old(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write')
-      pcmmatd_unit = io_open_old(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write')
+      pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write', &
+        namespace=namespace)
+      pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write', &
+        namespace=namespace)
       do jtess = 1, nts_act
         do itess = 1, nts_act
           write(pcmmat0_unit,*) matq0(itess, jtess)
@@ -496,8 +503,10 @@ contains
       call io_close(pcmmat0_unit)
       call io_close(pcmmatd_unit)
     else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
-      pcmmat0_unit = io_open_old(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write')
-      pcmmatd_unit = io_open_old(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write')
+      pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write', &
+        namespace=namespace)
+      pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write', &
+        namespace=namespace)
       do jtess = 1, nts_act
         do itess = 1, nts_act
           write(pcmmat0_unit,*) matq0_lf(itess, jtess)

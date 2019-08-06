@@ -327,7 +327,7 @@ contains
         call messages_info(1)
       else
         call born_from_infrared(vib, born)
-        call out_Born_charges(born, geo, ndim, VIB_MODES_DIR, write_real = .true.)
+        call out_Born_charges(born, geo, sys%namespace, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
       end if
 

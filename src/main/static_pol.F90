@@ -703,8 +703,8 @@ contains
         call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR)
 
         if(calc_Born) then
-          call out_Born_charges(Born_charges, sys%geo, sys%gr%mesh%sb%dim, EM_RESP_FD_DIR, &
-            states_are_real(sys%st))
+          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%mesh%sb%dim, &
+            EM_RESP_FD_DIR, states_are_real(sys%st))
         end if
       end if
 

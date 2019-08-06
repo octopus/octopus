@@ -452,7 +452,7 @@ contains
 
      if(mpi_grp_is_root(mpi_world)) then  
        call io_mkdir(dir, namespace)
-       iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')  
+       iunit = io_open(trim(dir) // "/" // trim(fname), action='write', namespace=namespace)
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 

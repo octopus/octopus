@@ -940,7 +940,7 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
     if(debug%info) then
       if(mpi_world%rank == 0) then
         write(number, '(i4)') iter
-        iunit = io_open_old('qxc.'//trim(adjustl(number)), action='write')
+        iunit = io_open('qxc.'//trim(adjustl(number)), action='write', namespace=namespace)
       end if
     end if
     do

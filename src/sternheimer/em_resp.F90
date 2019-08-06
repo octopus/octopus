@@ -1014,7 +1014,7 @@ contains
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
         call out_polarizability()
         if(em_vars%calc_Born) then
-          call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
+          call out_Born_charges(em_vars%Born_charges(ifactor), geo, namespace, gr%sb%dim, dirname, &
             write_real = em_vars%eta < M_EPSILON)
         end if
 

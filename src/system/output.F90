@@ -713,10 +713,10 @@ contains
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
-        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
-        call lda_u_write_effectiveU(dir, hm%lda_u)
+        call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
         call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
@@ -725,7 +725,7 @@ contains
         call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
-        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
 
     call profiling_out(prof)

@@ -131,9 +131,10 @@ contains
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
-  subroutine out_Born_charges(this, geo, dim, dirname, write_real)
+  subroutine out_Born_charges(this, geo, namespace, dim, dirname, write_real)
     type(Born_charges_t), intent(inout) :: this
     type(geometry_t),     intent(in)    :: geo
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
     logical,              intent(in)    :: write_real
@@ -146,7 +147,7 @@ contains
 
     call correct_Born_charges(this, geo, dim)
 
-    iunit = io_open_old(trim(dirname)//'/Born_charges', action='write')
+    iunit = io_open(trim(dirname)//'/Born_charges', action='write', namespace=namespace)
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms
