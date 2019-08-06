@@ -28,6 +28,7 @@ module pes_spm_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -53,10 +54,11 @@ module pes_spm_oct_m
     pes_spm_load
 
   type pes_spm_t
+    private
     integer                    :: nspoints                  !< how many points we store the wf
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     FLOAT, pointer             :: rcoords_nrm(:,:)
-    CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
+    CMPLX, pointer, public     :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
     FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
     integer                    :: recipe                    !< type of calculation (RAW/PHASE)
@@ -78,11 +80,12 @@ module pes_spm_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init(this, mesh, st, save_iter)
-    type(pes_spm_t), intent(out) :: this
-    type(mesh_t),    intent(in)  :: mesh
-    type(states_t),  intent(in)  :: st
-    integer,         intent(in)  :: save_iter
+  subroutine pes_spm_init(this, namespace, mesh, st, save_iter)
+    type(pes_spm_t),   intent(out) :: this
+    type(namespace_t), intent(in)  :: namespace
+    type(mesh_t),      intent(in)  :: mesh
+    type(states_t),    intent(in)  :: st
+    integer,           intent(in)  :: save_iter
 
     type(block_t) :: blk
     integer       :: stst, stend, kptst, kptend, sdim, mdim
@@ -117,9 +120,9 @@ contains
     !% <br>%
     !% </tt>
     !%End
-    call messages_obsolete_variable('PhotoElectronSpectrumPoints', 'PES_spm_points')
+    call messages_obsolete_variable(namespace, 'PhotoElectronSpectrumPoints', 'PES_spm_points')
     this%sphgrid = .false.
-    if (parse_block('PES_spm_points', blk) < 0) then
+    if (parse_block(namespace, 'PES_spm_points', blk) < 0) then
       this%sphgrid = .true.
     end if
 
@@ -143,7 +146,7 @@ contains
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
-    call parse_variable('PES_spm_recipe', M_PHASE, this%recipe)
+    call parse_variable(namespace, 'PES_spm_recipe', M_PHASE, this%recipe)
     if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
       call messages_input_error('PES_spm_recipe')
     call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
@@ -157,7 +160,7 @@ contains
     !% time-propagation, evaluated by the PES_spm method. <tt>PES_spm_OmegaMax</tt> is then the maximum frequency
     !% (approximate kinetic energy) and <tt>PES_spm_DeltaOmega</tt> the spacing in frequency domain of the spectrum.
     !%End
-    call parse_variable('PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
+    call parse_variable(namespace, 'PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
     this%onfly = .false.
     if(this%omegamax > M_ZERO) then
       this%onfly = .true.
@@ -173,7 +176,7 @@ contains
     !% The spacing in frequency domain for the photoelectron spectrum (if <tt>PES_spm_OmegaMax > 0</tt>).
     !% The default is <tt>PES_spm_OmegaMax/500</tt>.
     !%End
-    call parse_variable('PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
+    call parse_variable(namespace, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
     if(this%onfly) then
       if(this%delomega <= M_ZERO) call messages_input_error('PES_spm_DeltaOmega')
       call messages_print_var_value(stdout, "PES_spm_DeltaOmega", this%delomega)
@@ -187,7 +190,7 @@ contains
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable('PES_spm_StepsThetaR', 45, this%nstepsthetar)
+    call parse_variable(namespace, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
     if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
 
     !%Variable PES_spm_StepsPhiR
@@ -198,7 +201,7 @@ contains
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable('PES_spm_StepsPhiR', 90, this%nstepsphir)
+    call parse_variable(namespace, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
       if(this%nstepsphir < 0)  call messages_input_error('PES_spm_StepsPhiR')
       if(this%nstepsphir == 0) this%nstepsphir = 1
@@ -212,8 +215,8 @@ contains
     !% are given).
     !%End
     if(this%sphgrid) then
-      if(parse_is_defined('PES_spm_Radius')) then
-        call parse_variable('PES_spm_Radius', M_ZERO, radius)
+      if(parse_is_defined(namespace, 'PES_spm_Radius')) then
+        call parse_variable(namespace, 'PES_spm_Radius', M_ZERO, radius)
         if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else

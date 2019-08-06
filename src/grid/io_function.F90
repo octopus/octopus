@@ -34,6 +34,7 @@ module io_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
@@ -101,8 +102,9 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, how, ignore_error)
+  subroutine io_function_read_how(sb, namespace, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
+    type(namespace_t), intent(in)  :: namespace
     integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
@@ -110,7 +112,7 @@ contains
 
     how = 0_8
     
-    call messages_obsolete_variable('OutputHow', 'OutputFormat')
+    call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
     
     !%Variable OutputFormat
     !%Type flag
@@ -200,7 +202,7 @@ contains
     !%Option integrate_yz bit(23)
     !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
     !%End
-    call parse_variable('OutputFormat', 0, how)
+    call parse_variable(namespace, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
       call messages_input_error('OutputFormat')
     end if

@@ -32,6 +32,7 @@ module geom_opt_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use read_coords_oct_m
@@ -54,6 +55,7 @@ module geom_opt_oct_m
   public :: geom_opt_run
 
   type geom_opt_t
+    private
     integer  :: method
     FLOAT    :: step
     FLOAT    :: line_tol
@@ -87,9 +89,8 @@ module geom_opt_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, hm, fromscratch)
+  subroutine geom_opt_run(sys, fromscratch)
     type(system_t), target,      intent(inout) :: sys
-    type(hamiltonian_t), target, intent(inout) :: hm
     logical,                     intent(inout) :: fromscratch
 
     integer :: ierr
@@ -107,8 +108,8 @@ contains
 
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+      call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      if(ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."
@@ -117,22 +118,22 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, conv_force = CNST(1e-8))
 
     if(fromScratch) then
-      call lcao_run(sys, hm, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call system_h_setup(sys, hm)
+      call system_h_setup(sys)
     end if
 
     !Initial point
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
 
     !Minimize
     select case(g_opt%method)
@@ -176,7 +177,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_unpack(sys%st)
   
     ! print out geometry
     call from_coords(g_opt, coords)
@@ -210,7 +211,7 @@ contains
       g_opt%mesh   => sys%gr%mesh
       g_opt%geo    => sys%geo
       g_opt%st     => sys%st
-      g_opt%hm     => hm
+      g_opt%hm     => sys%hm
       g_opt%syst   => sys
       g_opt%dim    =  sys%gr%mesh%sb%dim
 
@@ -226,7 +227,7 @@ contains
       !% freedom of the optimization by using the translational
       !% invariance.
       !%End
-      call parse_variable('GOCenter', .false.,  center)
+      call parse_variable(sys%namespace, 'GOCenter', .false.,  center)
 
       if(center) then
         g_opt%fixed_atom = 1
@@ -282,7 +283,7 @@ contains
       !% The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_variable('GOMethod', MINMETHOD_FIRE, g_opt%method)
+      call parse_variable(sys%namespace, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -297,7 +298,7 @@ contains
       !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
       !% this criterion is ignored.
       !%End
-      call parse_variable('GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
+      call parse_variable(sys%namespace, 'GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
       
       !%Variable GOMinimumMove
       !%Type float
@@ -317,7 +318,7 @@ contains
       else
         default_toldr = -M_ONE
       end if
-      call parse_variable('GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
+      call parse_variable(sys%namespace, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
       
@@ -332,10 +333,10 @@ contains
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
-        call parse_variable('GOStep', default_step, g_opt%step)
+        call parse_variable(sys%namespace, 'GOStep', default_step, g_opt%step)
       else
         default_step = CNST(0.1)*unit_femtosecond%factor
-        call parse_variable('GOStep', default_step, g_opt%step, unit = units_inp%time)
+        call parse_variable(sys%namespace, 'GOStep', default_step, g_opt%step, unit = units_inp%time)
       end if
 
       !%Variable GOLineTol
@@ -347,7 +348,7 @@ contains
       !% that use the forces.
       !% WARNING: in some weird units.
       !%End
-      call parse_variable('GOLineTol', CNST(0.1), g_opt%line_tol)
+      call parse_variable(sys%namespace, 'GOLineTol', CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer
@@ -357,7 +358,7 @@ contains
       !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations.
       !%End
-      call parse_variable('GOMaxIter', 200, g_opt%max_iter)
+      call parse_variable(sys%namespace, 'GOMaxIter', 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
@@ -379,7 +380,7 @@ contains
       !% If <tt>GOFireMass</tt> <= 0, the masses of each 
       !% species will be used.
       !%End
-      call parse_variable('GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
+      call parse_variable(sys%namespace, 'GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
 
       !%Variable GOFireIntegrator
       !%Type integer
@@ -394,9 +395,9 @@ contains
       !%Option euler 0
       !% The Euler method.
       !%End
-      call parse_variable('GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
+      call parse_variable(sys%namespace, 'GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
-      call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
+      call messages_obsolete_variable(sys%namespace, 'GOWhat2Minimize', 'GOObjective')
 
       !%Variable GOObjective
       !%Type integer
@@ -415,7 +416,7 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call parse_variable('GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
+      call parse_variable(sys%namespace, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
@@ -473,7 +474,7 @@ contains
       !%End
 
       call read_coords_init(xyz)
-      call read_coords_read('GOConstrains', xyz, g_opt%geo%space)
+      call read_coords_read('GOConstrains', xyz, g_opt%geo%space, sys%namespace)
       if(xyz%source /= READ_COORDS_ERR) then
         !Sanity check
         if(g_opt%geo%natoms /= xyz%n) then
@@ -524,7 +525,7 @@ contains
       ! TODO: clean forces directory
       end do
 
-      call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(g_opt%restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(geom_opt_run.init_)
     end subroutine init_
@@ -568,7 +569,7 @@ contains
 
     call from_coords(g_opt, coords)
 
-    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, rotate = .false.)
+    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, g_opt%syst%namespace, rotate = .false.)
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
@@ -576,14 +577,14 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
+    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%psolver)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
+    call energy_calc_total(g_opt%hm, g_opt%syst%psolver, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
-      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
+    call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &
+      g_opt%hm, g_opt%syst%psolver, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
     if(getgrad  ==  1) call to_grad(g_opt, df)

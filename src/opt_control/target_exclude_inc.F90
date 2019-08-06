@@ -19,11 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_exclude(gr, tg, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(inout) :: restart
+  subroutine target_init_exclude(gr, namespace, tg, td, restart)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(restart_t),   intent(inout) :: restart
 
     PUSH_SUB(target_init_exclude)
 
@@ -43,10 +44,10 @@
     !% in this list only states that have been calculated in a previous "gs" or "unocc" calculation,
     !% or otherwise the error will be silently ignored.
     !%End
-    call parse_variable('OCTExcludedStates', '1', tg%excluded_states_list)
+    call parse_variable(namespace, 'OCTExcludedStates', '1', tg%excluded_states_list)
     call states_deallocate_wfns(tg%st)
 
-    call states_look_and_load(restart, tg%st, gr)
+    call states_look_and_load(restart, namespace, tg%st, gr)
 
     POP_SUB(target_init_exclude)
   end subroutine target_init_exclude
@@ -62,18 +63,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_exclude(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+  subroutine target_output_exclude(tg, namespace, gr, dir, geo, hm, outp)
+    type(target_t),      intent(in) :: tg
+    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_exclude)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_exclude)
   end subroutine target_output_exclude
@@ -83,9 +85,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_exclude(gr, tg, psi) result(j1)
-    type(grid_t),     intent(inout) :: gr
-    type(target_t),   intent(inout) :: tg
-    type(states_t),   intent(inout) :: psi
+    type(grid_t),   intent(in) :: gr
+    type(target_t), intent(in) :: tg
+    type(states_t), intent(in) :: psi
 
     integer :: ist
     CMPLX, allocatable :: zpsi1(:, :), zpsi(:, :)
@@ -115,9 +117,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_exclude(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
     integer :: ist, ib

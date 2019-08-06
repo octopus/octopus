@@ -24,6 +24,7 @@
     use global_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -44,6 +45,7 @@
     FLOAT :: dw, max_energy
     integer :: ifreq, idir
     integer, parameter :: max_freq = 10000
+    type(namespace_t) :: default_namespace
 
     ! Initialize stuff
     call global_init(is_serial = .true.)
@@ -52,26 +54,29 @@
 
     call getopt_end()
 
-    call messages_init()
+    call parser_init()
+    default_namespace = namespace_t("")
+    
+    call messages_init(default_namespace)
 
-    call io_init()
+    call io_init(default_namespace)
 
-    call unit_system_init()
+    call unit_system_init(default_namespace)
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable('TDMaxSteps', 1500, max_iter)
-    call parse_variable('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_variable('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_variable('PropagationSpectrumMaxEnergy', &
+    call parse_variable(default_namespace, 'TDMaxSteps', 1500, max_iter)
+    call parse_variable(default_namespace, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable(default_namespace, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable(default_namespace, 'PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
 
     if (end_time < M_ZERO) end_time = huge(end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, default_namespace)
+    call geometry_init(geo, default_namespace, space)
+    call simul_box_init(sb, default_namespace, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
@@ -114,6 +119,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end()
     call global_end()
 
   contains

@@ -27,6 +27,7 @@ module species_pot_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -64,8 +65,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_atom_density(mesh, sb, atom, spin_channels, rho)
+  subroutine species_atom_density(mesh, namespace, sb, atom, spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
+    type(namespace_t),    intent(in)    :: namespace
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     integer,              intent(in)    :: spin_channels
@@ -106,7 +108,7 @@ contains
 
        if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
           call volume_init(volume)
-          call volume_read_from_block(volume, trim(species_rho_string(species)))
+          call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
        end if
 
       call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
@@ -542,8 +544,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, pos, mesh, rho)
+  subroutine species_get_density(species, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
+    type(namespace_t),          intent(in)  :: namespace
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
@@ -702,7 +705,7 @@ contains
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
         call volume_init(volume)
-        call volume_read_from_block(volume, trim(species_rho_string(species)))
+        call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
        
       call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &

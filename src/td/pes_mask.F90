@@ -42,6 +42,7 @@ module pes_mask_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif  
@@ -89,8 +90,9 @@ module pes_mask_oct_m
     
   
   type pes_mask_t
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
-                                               !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
+    private
+    CMPLX, pointer, public :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
+                                                       !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
                                                
     ! mesh- and cube-related stuff      
     integer          :: np                     !< number of mesh points associated with the mesh
@@ -102,19 +104,19 @@ module pes_mask_oct_m
     
     FLOAT            :: spacing(3)       !< the spacing
     
-    type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
-    type(cube_t)     :: cube                   !< the cubic mesh
+    type(mesh_t), pointer, public  :: mesh             !< a pointer to the mesh
+    type(cube_t)                   :: cube             !< the cubic mesh
     
-    FLOAT, pointer :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, pointer, public :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
     
-    FLOAT, pointer :: Mk(:,:,:) => NULL()      !< the momentum space filter
-    type(cube_function_t) :: cM                !< the mask cube function
-    FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
-    integer        :: shape                    !< which mask function?
-    FLOAT, pointer :: ufn(:) => NULL()         !< user-defined mask function
-    logical        :: user_def
+    FLOAT, pointer, public :: Mk(:,:,:) => NULL()      !< the momentum space filter
+    type(cube_function_t)  :: cM                       !< the mask cube function
+    FLOAT, pointer, public :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
+    integer                :: shape                    !< which mask function?
+    FLOAT, pointer         :: ufn(:) => NULL()         !< user-defined mask function
+    logical                :: user_def
     
-    FLOAT, pointer :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
+    FLOAT, pointer, public :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
     
     FLOAT            :: enlarge(3)             !< Fourier space enlargement
     FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
@@ -173,8 +175,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
+  subroutine pes_mask_init(mask, namespace, mesh, sb, st, hm, max_iter,dt)
     type(pes_mask_t),         intent(out) :: mask
+    type(namespace_t),        intent(in)  :: namespace
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_t),           intent(in)  :: st
@@ -238,7 +241,7 @@ contains
     !% Passive analysis of the wf. Simply analyze the plane-wave components of the 
     !% wavefunctions on the region <i>r</i> > <i>R1</i>. This mode employs a step masking function by default.
     !%End
-    call parse_variable('PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
+    call parse_variable(namespace, 'PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
     if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
@@ -266,7 +269,7 @@ contains
     !% getting rid of an unwanted ionization signal coming from the pump.
     !% NOTE: This will enforce the mask boundary conditions for all times. 
     !%End
-    call parse_variable('PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
+    call parse_variable(namespace, 'PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
 
     !%Variable PESMaskPlaneWaveProjection
     !%Type integer
@@ -294,7 +297,7 @@ contains
     !%Option pnfft_map 7
     !% Use PNFFT library. 
     !%End
-    call parse_variable('PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
+    call parse_variable(namespace, 'PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
       call messages_input_error('PESMaskPlaneWaveProjection')
@@ -348,7 +351,7 @@ contains
     !%End
 
     mask%enlarge = M_ONE
-    call parse_variable('PESMaskEnlargeFactor', M_ONE, mask%enlarge(1))
+    call parse_variable(namespace, 'PESMaskEnlargeFactor', M_ONE, mask%enlarge(1))
     
     if ( mask%enlarge(1) /= M_ONE ) then
 
@@ -367,8 +370,7 @@ contains
       call messages_fatal(1) 
     end if
  
-    
-     call messages_obsolete_variable('PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
+    call messages_obsolete_variable(namespace, 'PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
     
     !%Variable PESMask2PEnlargeFactor
     !%Type float
@@ -386,7 +388,7 @@ contains
     !%End
     
     mask%enlarge_2p = M_ONE
-    call parse_variable('PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
+    call parse_variable(namespace, 'PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
 
     
     if ( mask%enlarge_2p(1) /= M_ONE ) then
@@ -412,7 +414,7 @@ contains
       call messages_fatal(1) 
     end if
     
-    call messages_obsolete_variable('PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
+    call messages_obsolete_variable(namespace, 'PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
     
     
     mask%ll = 1
@@ -562,7 +564,7 @@ contains
     !%Option m_erf 3 
     !%Error function. Not Implemented.
     !%End
-    call parse_variable('PESMaskShape', defaultMask, mask%shape)
+    call parse_variable(namespace, 'PESMaskShape', defaultMask, mask%shape)
     if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
@@ -585,7 +587,7 @@ contains
     !% behaviours.
     !%End
     cols_pesmask_block = 0
-    if (parse_block('PESMaskSize', blk) == 0) then
+    if (parse_block(namespace, 'PESMaskSize', blk) == 0) then
       cols_pesmask_block = parse_block_cols(blk, 0)
     end if
 
@@ -669,7 +671,7 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_variable('PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
+    call parse_variable(namespace, 'PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
@@ -699,7 +701,7 @@ contains
     !% and total simulation time. 
     !% Note: Carefully choose <math>R1</math> in order to avoid contributions from returning electrons. 
     !%End
-    call parse_variable('PESMaskIncludePsiA', .false., mask%add_psia)
+    call parse_variable(namespace, 'PESMaskIncludePsiA', .false., mask%add_psia)
     if(mask%add_psia) then
       message(1)= "Input: Include contribution from Psi_A."
       call messages_info(1)
@@ -718,7 +720,7 @@ contains
       tmp = maxval(mask%Lk(1:mask%ll(idim),1:mesh%sb%dim))**M_TWO/M_TWO
       if (tmp > MaxE) MaxE = tmp
     end do
-    call parse_variable('PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
+    call parse_variable(namespace, 'PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax, unit = units_out%energy)
 
     !%Variable PESMaskSpectEnergyStep 
@@ -728,7 +730,7 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = minval(mask%Lk(2,1:mesh%sb%dim)-mask%Lk(1,1:mesh%sb%dim))**M_TWO/M_TWO
-    call parse_variable('PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
+    call parse_variable(namespace, 'PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     
 

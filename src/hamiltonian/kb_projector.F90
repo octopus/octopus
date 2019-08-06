@@ -48,10 +48,11 @@ module kb_projector_oct_m
        kb_projector_end
 
   type kb_projector_t
-    integer          :: n_s       !< number of points inside the sphere
-    integer          :: n_c       !< number of components per projector
-    FLOAT,   pointer :: p(:,:)    !< projectors
-    FLOAT            :: e(2)      !< KB energies
+    private
+    integer                  :: n_s       !< number of points inside the sphere
+    integer,          public :: n_c       !< number of components per projector
+    FLOAT,   pointer, public :: p(:,:)    !< projectors
+    FLOAT,            public :: e(2)      !< KB energies
   end type kb_projector_t
 
 

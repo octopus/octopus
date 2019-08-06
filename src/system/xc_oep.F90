@@ -32,6 +32,7 @@ module xc_oep_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -67,7 +68,8 @@ module xc_oep_oct_m
     OEP_MIXING_SCHEME_DENS  = 3
 
   type xc_oep_t
-    integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    private
+    integer,       public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
     FLOAT                 :: mixing     !< how much of the function S(r) to add to vxc in every iteration
     type(lr_t)            :: lr         !< to solve the equation H psi = b
     type(linear_solver_t) :: solver
@@ -75,11 +77,11 @@ module xc_oep_oct_m
     integer               :: eigen_n
     integer, pointer      :: eigen_type(:), eigen_index(:)
     FLOAT                 :: socc, sfact
-    FLOAT,   pointer      :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,pointer, public :: vxc(:,:), uxc_bar(:,:)
     FLOAT,   pointer      :: dlxc(:, :, :)
     CMPLX,   pointer      :: zlxc(:, :, :)
     integer               :: mixing_scheme
-    FLOAT                 :: norm2ss
+    FLOAT,         public :: norm2ss
     FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
     integer               :: noccst
   end type xc_oep_t
@@ -94,8 +96,9 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, family, gr, st)
+  subroutine xc_oep_init(oep, namespace, family, gr, st)
     type(xc_oep_t),     intent(out)   :: oep
+    type(namespace_t),  intent(in)    :: namespace
     integer,            intent(in)    :: family
     type(grid_t),       intent(inout) :: gr
     type(states_t),     intent(in)    :: st
@@ -129,8 +132,8 @@ contains
     !% <tt>OEPMixing</tt>. Note that default for <tt>LRMaximumIter</tt> is set to 10.
     !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
     !%End
-    call messages_obsolete_variable('OEP_Level', 'OEPLevel')
-    call parse_variable('OEPLevel', XC_OEP_KLI, oep%level)
+    call messages_obsolete_variable(namespace, 'OEP_Level', 'OEPLevel')
+    call parse_variable(namespace, 'OEPLevel', XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
@@ -148,8 +151,8 @@ contains
         !% The linear mixing factor used to solve the Sternheimer
         !% equation in the full OEP procedure.
         !%End
-        call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
-        call parse_variable('OEPMixing', M_ONE, oep%mixing)
+        call messages_obsolete_variable(namespace, 'OEP_Mixing', 'OEPMixing')
+        call parse_variable(namespace, 'OEPMixing', M_ONE, oep%mixing)
 
         !%Variable OEPMixingScheme
         !%Type integer
@@ -168,7 +171,7 @@ contains
         !%Use the inverse of the electron density
         !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. B</i> <b>68</b>, 035103 (2003)
         !%End
-        call parse_variable('OEPMixingScheme', OEP_MIXING_SCHEME_CONST, oep%mixing_scheme)
+        call parse_variable(namespace, 'OEPMixingScheme', OEP_MIXING_SCHEME_CONST, oep%mixing_scheme)
 
         if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
           SAFE_ALLOCATE(oep%vxc_old(1:gr%mesh%np,st%d%ispin))
@@ -178,7 +181,6 @@ contains
         end if
 
         oep%norm2ss = M_ZERO
-
       end if
 
      ! this routine is only prepared for finite systems. (Why not?)
@@ -198,8 +200,8 @@ contains
 
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
-        call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, gr, states_are_real(st))
+        call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
         call lr_init(oep%lr)
       end if
 

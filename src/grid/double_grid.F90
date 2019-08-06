@@ -23,6 +23,7 @@ module double_grid_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -66,8 +67,9 @@ module double_grid_oct_m
 
 contains
 
-  subroutine double_grid_init(this, sb)
+  subroutine double_grid_init(this, namespace, sb)
     type(double_grid_t), intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
 
     PUSH_SUB(double_grid_init)
@@ -85,7 +87,7 @@ contains
     !% pseudopotentials. This is experimental, especially in parallel.
     !%End
     if (sb%dim == 3) then 
-      call parse_variable('DoubleGrid', .false., this%use_double_grid)
+      call parse_variable(namespace, 'DoubleGrid', .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
     end if
@@ -101,7 +103,7 @@ contains
     !% an odd number. Low-order interpolation schemes are not
     !% recommended.
     !%End
-    call parse_variable('DoubleGridOrder', 9, this%order)
+    call parse_variable(namespace, 'DoubleGridOrder', 9, this%order)
     
     ASSERT(mod(this%order,2) == 1)
     

@@ -21,8 +21,9 @@
 module filter_oct_m  
   use global_oct_m
   use io_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use string_oct_m
   use tdfunction_oct_m
@@ -55,10 +56,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_init(steps, dt, filter)    
-    integer,          intent(in)  :: steps 
-    FLOAT,            intent(in)  :: dt
-    type(filter_t), intent(inout) :: filter
+  subroutine filter_init(steps, namespace, dt, filter)    
+    integer,           intent(in)  :: steps
+    type(namespace_t), intent(in)  :: namespace
+    FLOAT,             intent(in)  :: dt
+    type(filter_t),    intent(inout) :: filter
 
     type(block_t) :: blk
     integer :: i, no_f
@@ -105,7 +107,7 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( parse_block('OCTFilter', blk) == 0 ) then
+    if( parse_block(namespace, 'OCTFilter', blk) == 0 ) then
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then

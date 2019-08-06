@@ -36,8 +36,10 @@ module pert_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use physics_op_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
@@ -113,11 +115,12 @@ module pert_oct_m
 contains
 
   ! --------------------------------------------------------------------
-  subroutine pert_init(this, pert_type, gr, geo)
-    type(pert_t),      intent(out)   :: this
-    integer,           intent(in)    :: pert_type
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
+  subroutine pert_init(this, namespace, pert_type, gr, geo)
+    type(pert_t),      intent(out) :: this
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(in)  :: pert_type
+    type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
 
     PUSH_SUB(pert_init)
     
@@ -145,7 +148,7 @@ contains
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call parse_variable('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
+      call parse_variable(namespace, 'MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call messages_input_error('MagneticGaugeCorrection')
 
@@ -165,8 +168,8 @@ contains
       !% For testing purposes, set to false to ignore the term <math>-i \left[\vec{r}, V\right]</math> in
       !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
-      call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
-      call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
+      call messages_obsolete_variable(namespace, 'KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
+      call parse_variable(namespace, 'KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
       !%Variable KdotPVelMethod
       !%Type integer
@@ -179,7 +182,7 @@ contains
       !%Option hcom_vel 1
       !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
       !%End
-      call parse_variable('KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
+      call parse_variable(namespace, 'KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
     end if
 
     POP_SUB(pert_init)

@@ -17,10 +17,12 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converged, ik, diff, tau)
   type(grid_t),        target, intent(in)    :: gr
   type(states_t),              intent(inout) :: st
   type(hamiltonian_t), target, intent(in)    :: hm
+  type(poisson_t),             intent(in)    :: psolver
+  type(exponential_t),         intent(inout) :: te
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
   integer,                     intent(inout) :: converged
@@ -31,14 +33,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   integer :: ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), c(:, :), psi(:, :)
   FLOAT, allocatable :: eig(:)
-  type(exponential_t) :: te
 
   PUSH_SUB(X(eigensolver_evolution))
 
   maxiter = niter
   matvec = 0
-
-  call exponential_init(te)
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -75,7 +74,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
     do ist = conv + 1, st%nst
       call states_get_state(st, gr%mesh, ist, ik, psi)
       !TODO: convert these opperations to batched versions 
-      call X(hamiltonian_apply)(hm, gr%der, psi, hpsi, ist, ik)
+      call X(hamiltonian_apply)(hm, gr%der, psolver, psi, hpsi, ist, ik)
       st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
       diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 
@@ -96,7 +95,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   converged = conv
 
   niter = matvec
-  call exponential_end(te)
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)
@@ -121,7 +119,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
+    call exponential_apply(te, gr%der, hm, psolver, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
 #if defined(R_TREAL)
     psi(1:gr%mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_DEALLOCATE_P(zpsi)

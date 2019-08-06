@@ -35,7 +35,6 @@ MixingScheme = linear
 MixField = potential
 
 LinearSolver = cg
-PoissonSolver = direct_sum
 ConvRelEv = 5e-7
 ConvAbsEv = 5e-7
 ConvRelDens = 5e-7

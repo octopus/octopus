@@ -58,6 +58,7 @@ module cube_function_oct_m
     zcube_function_allgather
 
   type cube_function_t
+    ! Components are public by default
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid

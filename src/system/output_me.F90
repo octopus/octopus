@@ -34,7 +34,9 @@ module output_me_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use projector_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -56,6 +58,7 @@ module output_me_oct_m
     output_me
 
   type output_me_t
+    private
     integer :: what                !< what to output 
     !> If output_ksdipole, this number sets up which matrix elements will
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
@@ -79,8 +82,9 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb, st, nst)
+  subroutine output_me_init(this, namespace, sb, st, nst)
     type(output_me_t), intent(out) :: this
+    type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     type(states_t),    intent(in)  :: st
     integer,           intent(in)  :: nst
@@ -117,7 +121,7 @@ contains
     !% Not yet supported for spinors.
     !%End
 
-    call parse_variable('OutputMatrixElements', 0, this%what)
+    call parse_variable(namespace, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
     end if
@@ -152,7 +156,7 @@ contains
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
-      call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
+      call parse_variable(namespace, 'OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     !%Variable OutputMEStart
@@ -163,7 +167,7 @@ contains
     !% Specifies the state/band index for starting to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEStart', 1, this%st_start)
+    call parse_variable(namespace, 'OutputMEStart', 1, this%st_start)
     ASSERT(this%st_start > 0 .and. this%st_start <= nst)
 
     !%Variable OutputMEEnd
@@ -174,7 +178,7 @@ contains
     !% Specifies the highest state/band index used to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEEnd', nst, this%st_end)
+    call parse_variable(namespace, 'OutputMEEnd', nst, this%st_end)
     ASSERT(this%st_end > 0 .and. this%st_end <= nst)
     ASSERT(this%st_start <= this%st_end)
     this%nst = this%st_end - this%st_start +1
@@ -184,13 +188,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm)
+  subroutine output_me(this, dir, st, gr, geo, hm, psolver)
     type(output_me_t),   intent(in)    :: this
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
+    type(poisson_t),     intent(in)    :: psolver
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
@@ -330,7 +335,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_me_two_body(gr, st, psolver, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -340,10 +345,10 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_me_two_body(gr, st, psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
         else
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_me_two_body(gr, st, psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint)
         end if
 
@@ -369,7 +374,7 @@ contains
   subroutine output_me_out_momentum(fname, st, gr)
     character(len=*), intent(in) :: fname
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
@@ -456,7 +461,7 @@ contains
   subroutine output_me_out_ang_momentum(fname, st, gr)
     character(len=*), intent(in)    :: fname
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
 
     integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin

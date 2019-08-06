@@ -68,7 +68,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(dorbital(1:sphere%np))
-    call datomic_orbital_get_submesh(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
+    call datomic_orbital_get_submesh(spec, sphere, ii, ll, mm, ispin, dorbital)
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
 
@@ -78,7 +78,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
     SAFE_ALLOCATE(orbital(1:sphere%np))
 
-    call X(atomic_orbital_get_submesh)(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
+    call X(atomic_orbital_get_submesh)(spec, sphere, ii, ll, mm, ispin, orbital)
     
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
@@ -103,7 +103,7 @@ end subroutine X(lcao_atomic_orbital)
 subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
@@ -155,12 +155,13 @@ end subroutine X(lcao_simple)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
+subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
+  type(poisson_t),     intent(in)    :: psolver
   integer, optional,   intent(in)    :: start
 
   integer :: nst, ik, n1, n2, idim, lcao_start, ie, maxmtxel
@@ -237,7 +238,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
 
     do ik = kstart, kend
       ispin = states_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_apply)(hm, gr%der, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_apply)(hm, gr%der, psolver, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs
@@ -371,7 +372,7 @@ end subroutine X(lcao_wf)
 subroutine X(init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
 
@@ -483,7 +484,7 @@ end subroutine X(get_ao)
 subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
 
@@ -534,12 +535,13 @@ end subroutine X(lcao_alt_init_orbitals)
 
 ! ---------------------------------------------------------
 !> The alternative implementation.
-subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
+subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
+  type(poisson_t),     intent(in)    :: psolver
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ispin, nev, ib, n1, n2
@@ -643,7 +645,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
         call batch_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi)
 
         call X(submesh_batch_add)(this%sphere(iatom), this%orbitals(iatom), psib)
-        call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+        call X(hamiltonian_apply_batch)(hm, gr%der, psolver, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
           if(.not. this%calc_atom(jatom)) cycle
@@ -1216,7 +1218,7 @@ end subroutine X(lcao_alt_wf)
         end if
 
         call X(atomic_orbital_get_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
-          ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
+          ispin, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
       end do
  
       call profiling_out(prof_orbitals)

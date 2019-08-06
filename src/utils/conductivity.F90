@@ -26,6 +26,7 @@
     use grid_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -54,7 +55,7 @@
     integer :: skip
     FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
-    
+    type(namespace_t) :: default_namespace    
     
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
@@ -62,15 +63,18 @@
     call getopt_init(ierr)
     call getopt_end()
 
-    call messages_init()
+    call parser_init()
+    default_namespace = namespace_t("")
+
+    call messages_init(default_namespace)
 
     call messages_experimental('oct-conductivity')
 
-    call io_init()
+    call io_init(default_namespace)
 
-    call unit_system_init()
+    call unit_system_init(default_namespace)
 
-    call spectrum_init(spectrum, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
+    call spectrum_init(spectrum, default_namespace, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
     !%Type integer
@@ -83,8 +87,8 @@
     !% time step used to calculate the conductivity.
     !%End
 
-    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
-    call parse_variable('ConductivitySpectrumTimeStepFactor', 1, skip)
+    call messages_obsolete_variable(default_namespace, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
+    call parse_variable(default_namespace, 'ConductivitySpectrumTimeStepFactor', 1, skip)
     if(skip <= 0) call messages_input_error('ConductivitySpectrumTimeStepFactor')
 
     !%Variable ConductivityFromForces
@@ -94,19 +98,19 @@
     !%Description
     !% (Experimental) If enabled, Octopus will attempt to calculate the conductivity from the forces instead of the current. 
     !%End
-    call parse_variable('ConductivityFromForces', .false., from_forces)
+    call parse_variable(default_namespace, 'ConductivityFromForces', .false., from_forces)
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
     max_freq = spectrum_nenergy_steps(spectrum)
     
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, default_namespace)
+    call geometry_init(geo, default_namespace, space)
+    call simul_box_init(sb, default_namespace, geo, space)
 
-    call grid_init_stage_0(gr, geo, space)
-    call states_init(st, gr, geo)
+    call grid_init_stage_0(gr, default_namespace, geo, space)
+    call states_init(st, default_namespace, gr, geo)
     
     if(from_forces) then
 
@@ -452,6 +456,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end()
     call global_end()
 
   end program conductivity

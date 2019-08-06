@@ -29,6 +29,7 @@ module ground_state_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
@@ -59,14 +60,14 @@ contains
   end subroutine ground_state_run_init
 
   ! ---------------------------------------------------------
-  subroutine ground_state_run(sys, hm, fromScratch)
+  subroutine ground_state_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
-    type(scf_t)  :: scfv
+    type(scf_t)     :: scfv
     type(restart_t) :: restart_load, restart_dump
-    integer      :: ierr
+    integer         :: ierr
+    type(rdm_t)     :: rdm
 
     PUSH_SUB(ground_state_run)
 
@@ -89,10 +90,10 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
+      call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
                         mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
       if(ierr == 0) &
-        call states_load(restart_load, sys%st, sys%gr, ierr)
+        call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
 
       if(ierr /= 0) then
         call messages_write("Unable to read wavefunctions.")
@@ -105,25 +106,18 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
 
     if(fromScratch) then
-      if(sys%ks%theory_level == RDMFT) then
-        call messages_write("RDMFT calculations cannot be started FromScratch")
-        call messages_new_line()
-        call messages_write("Run a DFT calculation with XCFunctional = oep_x first")
-        call messages_fatal()
-      else
-        call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-      end if
+      call lcao_run(sys, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, hm, calc_eigenval = .false.)
+      call system_h_setup(sys, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then
@@ -133,25 +127,29 @@ contains
     end if
     call messages_info()
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%ks, fromScratch)
+      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%psolver, sys%outp, scfv%max_iter, &
+        restart_dump)
+      call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
+        call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%psolver, sys%outp, &
                      restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
+        call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%psolver, sys%outp, &
+          restart_dump=restart_dump)
       end if
     end if
 
     call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_unpack(sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

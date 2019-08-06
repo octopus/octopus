@@ -59,6 +59,7 @@ module profiling_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
+  use namespace_oct_m
   use sort_oct_m
   use string_oct_m
   use types_oct_m
@@ -138,7 +139,8 @@ module profiling_oct_m
   integer, parameter :: MAX_MEMORY_VARS = 25
 
   type profile_vars_t
-    integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
+    private
+    integer, public          :: mode    !< 1=time, 2=memory, 4=memory_full
 
     type(profile_pointer_t)  :: current !< the currently active profile
     type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !< the list of all profiles
@@ -176,7 +178,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Create profiling subdirectory.
-  subroutine profiling_init()
+  subroutine profiling_init(namespace)
+    type(namespace_t),          intent(in)    :: namespace
+    
     integer :: ii
 
     PUSH_SUB(profiling_init)
@@ -209,7 +213,7 @@ contains
     !% Enable instrumentation using LIKWID.
     !%End
 
-    call parse_variable('ProfilingMode', 0, prof_vars%mode)
+    call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode)) then
       call messages_input_error('ProfilingMode')
     end if
@@ -230,7 +234,7 @@ contains
     !% will write the profile. If set to yes, all nodes will print it.
     !%End
 
-    call parse_variable('ProfilingAllNodes', .false., prof_vars%all_nodes)
+    call parse_variable(namespace, 'ProfilingAllNodes', .false., prof_vars%all_nodes)
 
     call get_output_dir()
 
@@ -260,7 +264,7 @@ contains
       !% is requested (in kb). Note that this variable only works when 
       !% <tt>ProfilingMode = prof_memory(_full)</tt>.
       !%End
-      call parse_variable('MemoryLimit', -1, ii)
+      call parse_variable(namespace, 'MemoryLimit', -1, ii)
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 

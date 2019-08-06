@@ -24,10 +24,11 @@
 !! BIT 36 563-578 (1996) doi:10.1007/BF01731934 .
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
-subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(in)    :: gr
   type(states_t),              intent(inout) :: st
   type(hamiltonian_t),         intent(in)    :: hm
+  type(poisson_t),             intent(in)    :: psolver
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
@@ -177,7 +178,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
       end do
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, vvb, avb, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, vvb, avb, ik)
       INCR(matvec, blk)
 
       call batch_end(vvb)
@@ -298,7 +299,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       do idim = 1, dim
         call lalg_copy(gr%mesh%np, av(:, idim, d1 + 1), aux(:, idim))
       end do
-      call X(preconditioner_apply)(pre, gr, hm, ik, aux(:,:), vv(:,:, d1+1))
+      call X(preconditioner_apply)(pre, gr, hm, psolver, ik, aux(:,:), vv(:,:, d1+1))
 
     end do inner_loop
   end do outer_loop

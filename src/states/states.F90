@@ -40,6 +40,7 @@ module states_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
@@ -106,6 +107,7 @@ module states_oct_m
   end type states_priv_t
 
   type states_t
+    ! Components are public by default
     type(states_dim_t)       :: d
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
@@ -124,7 +126,7 @@ module states_oct_m
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     !> k-point resolved current
-    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np_part, gr%sb%dim, kpt_start:kpt_end)
+    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np gr%sb%dim, kpt_start:kpt_end)
 
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
@@ -132,6 +134,9 @@ module states_oct_m
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
+    FLOAT, pointer :: frozen_tau(:, :)
+    FLOAT, pointer :: frozen_gdens(:,:,:)
+    FLOAT, pointer :: frozen_ldens(:,:)
 
     logical        :: calc_eigenval
     logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
@@ -141,7 +146,7 @@ module states_oct_m
     logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
     logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
     FLOAT, pointer :: occ(:,:)      !< the occupation numbers
-    logical        :: fixed_spins   !< In spinors mode, the spin direction is set
+    logical, private :: fixed_spins   !< In spinors mode, the spin direction is set
                                     !< for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
 
@@ -170,10 +175,10 @@ module states_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
-    type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
+    type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
-    logical                     :: packed
+    logical, private            :: packed
 
     integer                     :: randomization      !< Method used to generate random states
   end type states_t
@@ -221,6 +226,7 @@ contains
     nullify(st%rho, st%current)
     nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
+    nullify(st%frozen_tau, st%frozen_gdens, st%frozen_ldens)
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
@@ -237,10 +243,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo)
-    type(states_t), target, intent(inout) :: st
-    type(grid_t),           intent(in)    :: gr
-    type(geometry_t),       intent(in)    :: geo
+  subroutine states_init(st, namespace, gr, geo)
+    type(states_t),    target, intent(inout) :: st
+    type(namespace_t),         intent(in)    :: namespace
+    type(grid_t),              intent(in)    :: gr
+    type(geometry_t),          intent(in)    :: geo
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
@@ -274,7 +281,7 @@ contains
     !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
-    call parse_variable('SpinComponents', UNPOLARIZED, st%d%ispin)
+    call parse_variable(namespace, 'SpinComponents', UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
@@ -296,7 +303,7 @@ contains
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
-    call parse_variable('ExcessCharge', M_ZERO, excess_charge)
+    call parse_variable(namespace, 'ExcessCharge', M_ZERO, excess_charge)
 
     !%Variable CalcEigenvalues
     !%Type logical
@@ -311,7 +318,7 @@ contains
     !%
     !% This mode cannot be used with unoccupied states.    
     !%End
-    call parse_variable('CalcEigenvalues', .true., st%calc_eigenval)
+    call parse_variable(namespace, 'CalcEigenvalues', .true., st%calc_eigenval)
     if(.not. st%calc_eigenval) call messages_experimental('CalcEigenvalues = .false.')
     
     !%Variable TotalStates
@@ -328,7 +335,7 @@ contains
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
     !%End
-    call parse_variable('TotalStates', 0, ntot)
+    call parse_variable(namespace, 'TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
       call messages_fatal(1)
@@ -350,7 +357,7 @@ contains
     !% an electronic temperature with <tt>Smearing</tt>, or in order to calculate
     !% excited states (including with <tt>CalculationMode = unocc</tt>).
     !%End
-    call parse_variable('ExtraStates', 0, nempty)
+    call parse_variable(namespace, 'ExtraStates', 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
@@ -374,7 +381,7 @@ contains
     !% unocc calculation faster.
     !% By default, all extra states need to be converged.
     !%End
-    call parse_variable('ExtraStatesToConverge', nempty, nempty_conv)
+    call parse_variable(namespace, 'ExtraStatesToConverge', nempty, nempty_conv)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
       message(2) = '(0 <= ExtraStatesToConverge)'
@@ -466,7 +473,7 @@ contains
 
     ASSERT(default > 0)
 
-    call parse_variable('StatesBlockSize', default, st%d%block_size)
+    call parse_variable(namespace, 'StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
       call messages_fatal()
@@ -495,14 +502,14 @@ contains
     !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
-    call parse_variable('OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
+    call parse_variable(namespace, 'OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
-         .or. parse_is_defined('OCTTargetUserdefined')) then
+    if(parse_is_defined(namespace, 'UserDefinedStates') .or. parse_is_defined(namespace, 'OCTInitialUserdefined') &
+         .or. parse_is_defined(namespace, 'OCTTargetUserdefined')) then
       SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
       ! initially we mark all 'formulas' as undefined
       st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
@@ -529,11 +536,11 @@ contains
     !%Option par_dependent 2
     !% The randomization depends on the number of taks used in the calculation.
     !%End
-    call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
+    call parse_variable(namespace, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
-    call states_read_initial_spins(st)
+    call states_read_initial_occs(st, namespace, excess_charge, gr%sb%kpoints)
+    call states_read_initial_spins(st, namespace)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -546,7 +553,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init (st%modelmbparticles,gr)
+    call modelmb_particles_init(st%modelmbparticles, namespace, gr)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
@@ -565,7 +572,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
 #ifdef HAVE_SCALAPACK
@@ -584,7 +591,7 @@ contains
     !% Warning: This variable is designed for testing and
     !% benchmarking and normal users need not use it.
     !%End
-    call parse_variable('ForceComplex', .false., force)
+    call parse_variable(namespace, 'ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
 
@@ -597,11 +604,11 @@ contains
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look(restart, nik, dim, nst, ierr)
-    type(restart_t), intent(inout) :: restart
-    integer,         intent(out)   :: nik
-    integer,         intent(out)   :: dim
-    integer,         intent(out)   :: nst
-    integer,         intent(out)   :: ierr
+    type(restart_t), intent(in)  :: restart
+    integer,         intent(out) :: nik
+    integer,         intent(out) :: dim
+    integer,         intent(out) :: nst
+    integer,         intent(out) :: ierr
 
     character(len=256) :: lines(3)
     character(len=20)   :: char
@@ -632,10 +639,11 @@ contains
   !! The resulting occupations are placed on the st\%occ variable. The
   !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
-  subroutine states_read_initial_occs(st, excess_charge, kpoints)
-    type(states_t),  intent(inout) :: st
-    FLOAT,           intent(in)    :: excess_charge
-    type(kpoints_t), intent(in)    :: kpoints
+  subroutine states_read_initial_occs(st, namespace, excess_charge, kpoints)
+    type(states_t),     intent(inout) :: st
+    type(namespace_t),  intent(in)    :: namespace
+    FLOAT,              intent(in)    :: excess_charge
+    type(kpoints_t),    intent(in)    :: kpoints
 
     integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos, spin_n
     type(block_t) :: blk
@@ -655,7 +663,7 @@ contains
     !% if the occupations from the previous calculation had been set via the <tt>Occupations</tt> block,
     !% <i>i.e.</i> fixed. Otherwise, occupations will be determined by smearing.
     !%End
-    call parse_variable('RestartFixedOccupations', .false., st%restart_fixed_occ)
+    call parse_variable(namespace, 'RestartFixedOccupations', .false., st%restart_fixed_occ)
     ! we will turn on st%fixed_occ if restart_read is ever called
 
     !%Variable Occupations
@@ -728,7 +736,7 @@ contains
 
     integral_occs = .true.
 
-    occ_fix: if(parse_block('Occupations', blk) == 0) then
+    occ_fix: if(parse_block(namespace, 'Occupations', blk) == 0) then
       ! read in occupations
       st%fixed_occ = .true.
 
@@ -853,12 +861,12 @@ contains
     !% according to the order of the expectation values of the restart wavefunctions.
     !%End
     if(st%fixed_occ) then
-      call parse_variable('RestartReorderOccs', .false., st%restart_reorder_occs)
+      call parse_variable(namespace, 'RestartReorderOccs', .false., st%restart_reorder_occs)
     else
       st%restart_reorder_occs = .false.
     end if
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
+    call smear_init(st%smear, namespace, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
     unoccupied_states = (st%d%ispin /= SPINORS .and. st%nst*2 > st%qtot) .or. (st%d%ispin == SPINORS .and. st%nst > st%qtot)
     
@@ -898,8 +906,9 @@ contains
   !! resulting spins are placed onto the st\%spin pointer. The boolean
   !! st\%fixed_spins is set to true if (and only if) the InitialSpins
   !! block is present.
-  subroutine states_read_initial_spins(st)
-    type(states_t), intent(inout) :: st
+  subroutine states_read_initial_spins(st, namespace)
+    type(states_t),    intent(inout) :: st
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: i, j
     type(block_t) :: blk
@@ -946,7 +955,7 @@ contains
     !% This constraint must be fulfilled:
     !% <br><math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
     !%End
-    spin_fix: if(parse_block('InitialSpins', blk)==0) then
+    spin_fix: if(parse_block(namespace, 'InitialSpins', blk)==0) then
       do i = 1, st%nst
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
@@ -1144,24 +1153,7 @@ contains
 
     PUSH_SUB(states_deallocate_wfns)
 
-    if (st%group%block_initialized) then
-       do ib = 1, st%group%nblocks
-          do iq = st%d%kpt%start, st%d%kpt%end
-            if(st%group%block_is_local(ib, iq)) then
-              call batch_end(st%group%psib(ib, iq))
-            end if
-          end do
-       end do
-
-       SAFE_DEALLOCATE_P(st%group%psib)
-
-       SAFE_DEALLOCATE_P(st%group%iblock)
-       SAFE_DEALLOCATE_P(st%group%block_range)
-       SAFE_DEALLOCATE_P(st%group%block_size)
-       SAFE_DEALLOCATE_P(st%group%block_is_local)
-       SAFE_DEALLOCATE_A(st%group%block_node)
-       st%group%block_initialized = .false.
-    end if
+    call states_group_end(st%group, st%d)
 
     POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
@@ -1207,7 +1199,7 @@ contains
     end if
 
     if(.not. associated(st%current_kpt)) then
-      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
 
@@ -1218,9 +1210,10 @@ contains
   !> This subroutine: (i) Fills in the block size (st\%d\%block_size);
   !! (ii) Finds out whether or not to pack the states (st\%d\%pack_states);
   !! (iii) Finds out the orthogonalization method (st\%d\%orth_method).
-  subroutine states_exec_init(st, mc)
-    type(states_t),    intent(inout) :: st
-    type(multicomm_t), intent(in)    :: mc
+  subroutine states_exec_init(st, namespace, mc)
+    type(states_t),       intent(inout) :: st
+    type(namespace_t),    intent(in)    :: namespace
+    type(multicomm_t),    intent(in)    :: mc
 
     integer :: default
     logical :: defaultl
@@ -1250,7 +1243,7 @@ contains
     if(accel_is_enabled()) then
       defaultl = .false.
     end if
-    call parse_variable('StatesPack', defaultl, st%d%pack_states)
+    call parse_variable(namespace, 'StatesPack', defaultl, st%d%pack_states)
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
@@ -1271,7 +1264,7 @@ contains
     if(accel_is_enabled() .and. .not. st%d%pack_states) then
       defaultl = .true.
     end if
-    call parse_variable('StatesMirror', defaultl, st%d%mirror_states)
+    call parse_variable(namespace, 'StatesMirror', defaultl, st%d%mirror_states)
 
     call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
@@ -1311,7 +1304,7 @@ contains
     end if
 #endif
     
-    call parse_variable('StatesOrthogonalization', default, st%d%orth_method)
+    call parse_variable(namespace, 'StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
@@ -1330,7 +1323,7 @@ contains
     !% amount of memory in megabytes that would be subtracted from
     !% the total device memory.
     !%End
-    call parse_variable('StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
+    call parse_variable(namespace, 'StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
@@ -1387,6 +1380,9 @@ contains
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
+    call loct_pointer_copy(stout%frozen_tau, stin%frozen_tau)
+    call loct_pointer_copy(stout%frozen_gdens, stin%frozen_gdens)
+    call loct_pointer_copy(stout%frozen_ldens, stin%frozen_ldens)
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1457,6 +1453,9 @@ contains
     SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
+    SAFE_DEALLOCATE_P(st%frozen_tau)
+    SAFE_DEALLOCATE_P(st%frozen_gdens)
+    SAFE_DEALLOCATE_P(st%frozen_ldens)
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 
@@ -1707,9 +1706,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_distribute_nodes(st, mc)
-    type(states_t),    intent(inout) :: st
-    type(multicomm_t), intent(in)    :: mc
+  subroutine states_distribute_nodes(st, namespace, mc)
+    type(states_t),       intent(inout) :: st
+    type(namespace_t),    intent(in)    :: namespace
+    type(multicomm_t),    intent(in)    :: mc
 
     PUSH_SUB(states_distribute_nodes)
 
@@ -1737,7 +1737,7 @@ contains
     !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
     !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
     !%End
-    call parse_variable('ScaLAPACKCompatible', &
+    call parse_variable(namespace, 'ScaLAPACKCompatible', &
       calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
     if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
@@ -1823,7 +1823,8 @@ contains
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
   subroutine states_calc_quantities(der, st, nlcc, &
-    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
+    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, &
+    gi_kinetic_energy_density, st_end)
     type(derivatives_t),     intent(in)    :: der
     type(states_t),          intent(in)    :: st
     logical,                 intent(in)    :: nlcc
@@ -1832,6 +1833,7 @@ contains
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
     FLOAT, optional,         intent(out)   :: density_laplacian(:,:)            !< The Laplacian of the density.
     FLOAT, optional,         intent(out)   :: gi_kinetic_energy_density(:,:)    !< The gauge-invariant kinetic energy density.
+    integer, optional,       intent(in)    :: st_end                            !< Maximum state used to compute the quantities
 
     FLOAT, pointer :: jp(:, :, :)
     FLOAT, pointer :: tau(:, :)
@@ -1839,7 +1841,7 @@ contains
     FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
     CMPLX, allocatable :: psi_gpsi(:)
     CMPLX   :: c_tmp
-    integer :: is, ik, ist, i_dim, st_dim, ii
+    integer :: is, ik, ist, i_dim, st_dim, ii, st_end_, idir
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
     FLOAT, allocatable :: symm(:, :)
@@ -1849,6 +1851,8 @@ contains
     call profiling_in(prof, "STATES_CALC_QUANTITIES")
 
     PUSH_SUB(states_calc_quantities)
+
+    st_end_ = min(st%st_end, optional_default(st_end, st%st_end))
 
     something_to_do = present(kinetic_energy_density) .or. present(gi_kinetic_energy_density) .or. &
       present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian)
@@ -1892,7 +1896,9 @@ contains
       kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
       is = states_dim_get_spin_index(st%d, ik)
 
-      do ist = st%st_start, st%st_end
+      do ist = st%st_start, st_end_
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
 
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
@@ -1912,8 +1918,6 @@ contains
             call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
           end do
         end if
-
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
@@ -2094,6 +2098,32 @@ contains
            density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
          end do
       end if
+    end if
+
+    !If we freeze some of the orbitals, we need to had the contributions here
+    !Only in the case we are not computing it
+    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
+      do is = 1, st%d%nspin
+        do ii = 1, der%mesh%np
+          tau(ii, is) = tau(ii, is) + st%frozen_tau(ii, is)
+        end do
+      end do
+    end if
+    if(associated(st%frozen_gdens) .and. .not. present(st_end)) then
+      do is = 1, st%d%nspin
+        do idir = 1, der%mesh%sb%dim
+          do ii = 1, der%mesh%np
+            density_gradient(ii, idir, is) = density_gradient(ii, idir, is) + st%frozen_gdens(ii, idir, is)
+          end do
+        end do
+      end do
+    end if
+    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
+      do is = 1, st%d%nspin
+        do ii = 1, der%mesh%np
+          density_laplacian(ii, is) = density_laplacian(ii, is) + st%frozen_ldens(ii, is)
+        end do
+      end do
     end if
 
     SAFE_DEALLOCATE_A(wf_psi)
@@ -2369,13 +2399,14 @@ contains
 
   ! ---------------------------------------------------------
   !> number of occupied-unoccipied pairs for Casida
-  subroutine states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
-    type(states_t),    intent(in)  :: st
-    integer,           intent(out) :: n_pairs
-    integer,           intent(out) :: n_occ(:)   !< nik
-    integer,           intent(out) :: n_unocc(:) !< nik
-    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
-    logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
+  subroutine states_count_pairs(st, namespace, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
+    type(states_t),       intent(in)  :: st
+    type(namespace_t),    intent(in)  :: namespace
+    integer,              intent(out) :: n_pairs
+    integer,              intent(out) :: n_occ(:)   !< nik
+    integer,              intent(out) :: n_unocc(:) !< nik
+    logical, allocatable, intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
+    logical,              intent(out) :: is_frac_occ !< are there fractional occupations?
 
     integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: nst_string, default, wfn_list
@@ -2401,7 +2432,7 @@ contains
     !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
     !%End
 
-    call parse_variable('CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
+    call parse_variable(namespace, 'CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -2430,7 +2461,7 @@ contains
     if(energy_window < M_ZERO) then
       write(nst_string,'(i6)') st%nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable('CasidaKohnShamStates', default, wfn_list)
+      call parse_variable(namespace, 'CasidaKohnShamStates', default, wfn_list)
 
       write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
       call messages_info(1)

@@ -35,6 +35,8 @@ module density_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -56,9 +58,12 @@ module density_oct_m
     states_freeze_orbitals,           &
     states_total_density,             &
     ddensity_accumulate_grad,         &
-    zdensity_accumulate_grad
+    zdensity_accumulate_grad,         &
+    states_freeze_redistribute_states,&
+    states_freeze_adjust_qtot
 
   type density_calc_t
+    private
     FLOAT,                pointer :: density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
@@ -116,7 +121,7 @@ contains
   subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
-    type(batch_t),                intent(inout) :: psib
+    type(batch_t),                intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -142,15 +147,17 @@ contains
       case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
+                real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
             end forall
           end do
         end if
@@ -165,7 +172,7 @@ contains
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
+               real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
             end do
           end do
         end if
@@ -207,6 +214,8 @@ contains
 
       do ist = 1, psib%nst
 
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, psi)
 
         call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
@@ -240,7 +249,10 @@ contains
 
       SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
 
+
       do ist = 1, psib%nst
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
         
         do ip = 1, this%gr%fine%mesh%np
@@ -248,8 +260,8 @@ contains
           psi1 = zpsi(ip, 1)
           psi2 = zpsi(ip, 2)
 
-          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
-          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
+          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
+          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
 
           term = weight(ist)*psi1*conjg(psi2)
           this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
@@ -339,9 +351,9 @@ contains
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
   subroutine density_calc(st, gr, density)
-    type(states_t),          intent(inout)  :: st
-    type(grid_t),            intent(in)     :: gr
-    FLOAT,                   intent(out)    :: density(:, :)
+    type(states_t),          intent(in)  :: st
+    type(grid_t),            intent(in)  :: gr
+    FLOAT,                   intent(out) :: density(:, :)
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -365,11 +377,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, gr, mc, n)
+  subroutine states_freeze_orbitals(st, namespace, gr, mc, n, family_is_mgga)
     type(states_t),    intent(inout) :: st
+    type(namespace_t), intent(in)    :: namespace
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
+    logical,           intent(in)    :: family_is_mgga
 
     integer :: ist, istep, ik, ib, nblock, st_min
     integer :: nodeto, nodefr, nsend, nreceiv
@@ -431,13 +445,25 @@ contains
 
     call density_calc_end(dens_calc)
 
+    if(family_is_mgga) then
+      if(.not.associated(st%frozen_tau)) then
+        SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
+      end if    
+      if(.not.associated(st%frozen_gdens)) then
+        SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      end if
+      if(.not.associated(st%frozen_ldens)) then
+        SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
+      end if
+
+      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
+           density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
+    end if 
+
+
     call states_copy(staux, st)
 
-    st%nst = st%nst - n
-
-    call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, mc)
-    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+    call states_freeze_redistribute_states(st, namespace, gr, mc, n)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
@@ -501,18 +527,32 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(rec_buffer)
     
-    ! Change the smearing method by fixing the occupations to 
-    ! that of the ground-state such that the unfrozen states inherit 
-    ! those values.
-    st%smear%method = SMEAR_FIXED_OCC
-  
-    ! Set total charge
-    st%qtot = M_ZERO
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        st%qtot = st%qtot + staux%occ(n+ist, ik) * st%d%kweights(ik)
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        st%occ(ist, ik) = staux%occ(n+ist, ik)
+        st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
       end do
     end do
+
+    call states_end(staux)
+    POP_SUB(states_freeze_orbitals)
+  end subroutine states_freeze_orbitals
+
+  ! ---------------------------------------------------------
+  subroutine states_freeze_redistribute_states(st, namespace, gr, mc, nn)
+    type(states_t),    intent(inout) :: st
+    type(namespace_t), intent(in)    :: namespace
+    type(grid_t),      intent(in)    :: gr
+    type(multicomm_t), intent(in)    :: mc
+    integer,           intent(in)    :: nn
+
+    PUSH_SUB(states_freeze_redistribute_states)
+
+    st%nst = st%nst - nn
+
+    call states_deallocate_wfns(st)
+    call states_distribute_nodes(st, namespace, mc)
+    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
@@ -522,16 +562,40 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
 
+
+    POP_SUB(states_freeze_redistribute_states)
+  end subroutine states_freeze_redistribute_states
+
+  ! ---------------------------------------------------------
+  subroutine states_freeze_adjust_qtot(st)
+    type(states_t), intent(inout) :: st
+
+    integer :: ik, ist
+
+    PUSH_SUB(states_freeze_adjust_occs)
+
+    ! Change the smearing method by fixing the occupations to  
+    ! that of the ground-state such that the unfrozen states inherit 
+    ! those values.
+    st%smear%method = SMEAR_FIXED_OCC 
+
+    ! Set total charge
+    st%qtot = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        st%occ(ist, ik) = staux%occ(n+ist, ik)
-        st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
+        st%qtot = st%qtot + st%occ(ist, ik) * st%d%kweights(ik)
       end do
     end do
 
-    call states_end(staux)
-    POP_SUB(states_freeze_orbitals)
-  end subroutine states_freeze_orbitals
+#if defined(HAVE_MPI)        
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
+    end if
+#endif  
+
+
+    POP_SUB(states_freeze_adjust_qtot)
+  end subroutine states_freeze_adjust_qtot
 
 
   ! ---------------------------------------------------------
@@ -559,7 +623,7 @@ contains
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
         total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if

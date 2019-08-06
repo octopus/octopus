@@ -23,6 +23,7 @@ module born_charges_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -35,12 +36,13 @@ module born_charges_oct_m
   private
   public ::                &
     Born_charges_t,        &
-    Born_charges_init,     &
+    born_charges_init,     &
     Born_charges_end,      &
     out_Born_charges
 
   type Born_charges_t
-    CMPLX, pointer :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    private
+    CMPLX, pointer, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
     CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?
@@ -49,15 +51,16 @@ module born_charges_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine Born_charges_init(this, geo, st, dim)
+  subroutine born_charges_init(this, namespace, geo, st, dim)
     type(Born_charges_t), intent(out) :: this
+    type(namespace_t),    intent(in)    :: namespace
     type(geometry_t),     intent(in)  :: geo
     type(states_t),       intent(in)  :: st
     integer,              intent(in)  :: dim
 
     integer :: idir
 
-    PUSH_SUB(Born_charges_init)
+    PUSH_SUB(born_charges_init)
 
     nullify(this%charge)
     SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
@@ -80,10 +83,10 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_variable('BornChargeSumRuleCorrection', .true., this%correct)
+    call parse_variable(namespace, 'BornChargeSumRuleCorrection', .true., this%correct)
 
-    POP_SUB(Born_charges_init)
-  end subroutine Born_charges_init
+    POP_SUB(born_charges_init)
+  end subroutine born_charges_init
 
   ! ---------------------------------------------------------
   subroutine Born_charges_end(this)

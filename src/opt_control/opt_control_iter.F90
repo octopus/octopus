@@ -23,8 +23,9 @@ module opt_control_iter_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use system_oct_m
 
@@ -64,9 +65,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_init(iterator, par)
-    type(oct_iterator_t), intent(inout)        :: iterator
-    type(controlfunction_t), intent(in) :: par
+  subroutine oct_iterator_init(iterator, namespace, par)
+    type(oct_iterator_t),    intent(inout) :: iterator
+    type(namespace_t),       intent(in)    :: namespace        
+    type(controlfunction_t), intent(in)    :: par
 
     PUSH_SUB(oct_iterator_init)
 
@@ -90,7 +92,7 @@ contains
     !% of the QOCT equations, <i>i.e.</i> a critical point of the QOCT functional (not
     !% necessarily a maximum, and not necessarily the global maximum). 
     !%End
-    call parse_variable('OCTEps', CNST(1.0e-6), iterator%eps)
+    call parse_variable(namespace, 'OCTEps', CNST(1.0e-6), iterator%eps)
     if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
 
     !%Variable OCTMaxIter
@@ -101,7 +103,7 @@ contains
     !% The maximum number of iterations.
     !% Typical values range from 10-100.
     !%End
-    call parse_variable('OCTMaxIter', 10, iterator%ctr_iter_max)
+    call parse_variable(namespace, 'OCTMaxIter', 10, iterator%ctr_iter_max)
 
     if( iterator%ctr_iter_max < 0 .and. iterator%eps < M_ZERO ) then
       message(1) = "OCTMaxIter and OCTEps cannot be both < 0."
@@ -117,7 +119,7 @@ contains
     !% Writes to disk the laser pulse data during the OCT algorithm at intermediate steps.
     !% These are files called <tt>opt_control/laser.xxxx</tt>, where <tt>xxxx</tt> is the iteration number.
     !%End
-    call parse_variable('OCTDumpIntermediate', .false., iterator%dump_intermediate)
+    call parse_variable(namespace, 'OCTDumpIntermediate', .false., iterator%dump_intermediate)
     call messages_print_var_value(stdout, "OCTDumpIntermediate", iterator%dump_intermediate)
 
     iterator%ctr_iter = 0
@@ -139,7 +141,7 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
        iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
     end if
 
@@ -149,9 +151,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_end(iterator)
+  subroutine oct_iterator_end(iterator, namespace)
     type(oct_iterator_t), intent(inout) :: iterator
-
+    type(namespace_t),    intent(in)    :: namespace
+    
     PUSH_SUB(oct_iterator_end)
 
     call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
@@ -161,7 +164,7 @@ contains
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
        call io_close(iterator%velocities_iunit)
     end if
 
@@ -299,7 +302,7 @@ contains
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
       iterator%ctr_iter, j, j1, j2, delta
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(sys%namespace, 'OCTVelocityTarget')) then
        call velocities_write(iterator, sys)
     end if
 

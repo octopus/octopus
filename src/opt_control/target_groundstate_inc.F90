@@ -19,11 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_groundstate(gr, tg, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(inout) :: restart
+  subroutine target_init_groundstate(gr, namespace, tg, td, restart)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(restart_t),   intent(in)    :: restart
 
     integer :: ierr
 
@@ -32,7 +33,7 @@
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
 
-    call states_load(restart, tg%st, gr, ierr)
+    call states_load(restart, namespace, tg%st, gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -55,18 +56,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_groundstate(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+  subroutine target_output_groundstate(tg, namespace, gr, dir, geo, hm, outp)
+    type(target_t),      intent(in) :: tg
+    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_groundstate)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_groundstate)
   end subroutine target_output_groundstate
@@ -76,9 +78,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_groundstate(tg, gr, psi) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: psi
+    type(target_t),   intent(in) :: tg
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: psi
 
     integer :: ist, ik
     CMPLX, allocatable :: zpsi(:, :), zst(:, :)
@@ -108,9 +110,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_groundstate(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
     integer :: ik, ist

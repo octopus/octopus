@@ -39,6 +39,7 @@ module hamiltonian_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -100,6 +101,8 @@ module hamiltonian_oct_m
     zoct_exchange_operator
 
   type hamiltonian_t
+    ! Components are public by default
+
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
     type(states_dim_t)       :: d
@@ -128,16 +131,16 @@ module hamiltonian_oct_m
     type(pcm_t)  :: pcm        !< handles pcm variables
  
     !> absorbing boundaries
-    logical :: adjoint
+    logical, private :: adjoint
 
     !> Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
     !> Mass of the particle (in most cases, mass = 1, electron mass)
-    FLOAT :: mass
+    FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
-    FLOAT :: mass_scaling(MAX_DIM)
+    FLOAT, private :: mass_scaling(MAX_DIM)
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
@@ -145,7 +148,7 @@ module hamiltonian_oct_m
     logical :: scdm_EXX
 
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
-    logical :: inh_term
+    logical, private :: inh_term
     type(states_t) :: inh_st
 
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
@@ -155,7 +158,7 @@ module hamiltonian_oct_m
     type(scissor_t) :: scissor
 
     FLOAT :: current_time
-    logical :: apply_packed  !< This is initialized by the StatesPack variable.
+    logical, private :: apply_packed  !< This is initialized by the StatesPack variable.
     
     type(scdm_t)  :: scdm
 
@@ -163,7 +166,7 @@ module hamiltonian_oct_m
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
-    logical :: time_zero
+    logical, private :: time_zero
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -183,11 +186,13 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, namespace, gr, geo, st, psolver, theory_level, xc_family, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
+    type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
+    type(poisson_t),                            intent(in)    :: psolver
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
     logical,                                    intent(in)    :: family_is_mgga_with_exc
@@ -221,7 +226,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call parse_variable('ParticleMass', M_ONE, hm%mass)
+    call parse_variable(namespace, 'ParticleMass', M_ONE, hm%mass)
 
     !%Variable RashbaSpinOrbitCoupling
     !%Type float
@@ -233,8 +238,8 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy * units_inp%length)
-    if(parse_is_defined('RashbaSpinOrbitCoupling')) then
+    call parse_variable(namespace, 'RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
+    if(parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
         call messages_fatal(1)
@@ -277,10 +282,10 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, namespace, gr, hm%geo, psolver, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, gr%sb)
+    call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
@@ -293,11 +298,12 @@ contains
 
     !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. &
-      gauge_field_is_applied(hm%ep%gfield) .or. &
-      parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
+    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield) .or. &
+      parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
+      call states_set_complex(st)
+    end if
 
-    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
+    call parse_variable(namespace, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -331,7 +337,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
+    call bc_init(hm%bc, namespace, gr%mesh, gr%mesh%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -350,7 +356,7 @@ contains
     !%
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block('MassScaling', blk) == 0) then
+    if(parse_block(namespace, 'MassScaling', blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > gr%sb%dim) then
           call messages_input_error("MassScaling")
@@ -385,12 +391,12 @@ contains
     !% Octopus determines the effective U term using the 
     !% ACBN0 functional as defined in PRX 5, 011006 (2015)
     !%End
-    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call parse_variable(namespace, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
+      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, psolver)
     end if
  
 
@@ -411,13 +417,13 @@ contains
     !% additional copying but makes operations more efficient.
     !% See also the related <tt>StatesPack</tt> variable.
     !%End
-    call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
+    call parse_variable(namespace, 'HamiltonianApplyPacked', .true., hm%apply_packed)
 
     external_potentials_present = epot_have_external_potentials(hm%ep)
 
     kick_present = epot_have_kick(hm%ep)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
+    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
     !%Variable SCDM_EXX
@@ -428,14 +434,16 @@ contains
     !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
     !% the Fock operator for exact exchange will be applied with the SCDM method.
     !%End
-    call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
+    call parse_variable(namespace, 'scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
         call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
       end if
-       message(1) = "Info: Using SCDM for exact exchange"
-       call messages_info(1)
+      message(1) = "Info: Using SCDM for exact exchange"
+      call messages_info(1)
+
+      call scdm_init(hm%hf_st, namespace, gr%der, psolver%cube, hm%scdm)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -457,7 +465,7 @@ contains
     !% zero, so that all time depedent field at that time will be
     !% included.
     !%End
-    call parse_variable('TimeZero', .false., hm%time_zero)
+    call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
@@ -839,18 +847,21 @@ contains
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
-            this%hm_base%phase_corr = M_ONE
           end if
         end if
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          !We add the vector potential
+          kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
+          !It is more efficient to compute the exponential of the full array
           forall (ip = 1:mesh%np_part)
-            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
-              + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+            this%hm_base%phase(ip, ik) = -M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*kpoint(1:mesh%sb%dim))
           end forall
+          this%hm_base%phase(1:mesh%np_part, ik) = exp(this%hm_base%phase(1:mesh%np_part, ik))
+
           if(compute_phase_correction) then
             ! loop over boundary points
             sp = mesh%np
@@ -866,13 +877,16 @@ contains
 
               ! compute phase correction from global coordinate (opposite sign!)
               x_global = mesh_x_global(mesh, ip_inner)
-              this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
-                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
-                  + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+
+              !It is more efficient to compute the exponential of the full array 
+              this%hm_base%phase_corr(ip, ik) = M_zI * sum(x_global(1:mesh%sb%dim) * kpoint(1:mesh%sb%dim))
             end do
+            this%hm_base%phase_corr(sp+1:mesh%np_part, ik) = exp(this%hm_base%phase_corr(sp+1:mesh%np_part, ik)) &
+                                            *this%hm_base%phase(sp+1:mesh%np_part, ik)
           end if
 
         end do
+
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
@@ -882,8 +896,6 @@ contains
           call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
-
-
       end if
 
       max_npoints = this%hm_base%max_npoints
@@ -925,17 +937,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
+  subroutine hamiltonian_epot_generate(this, namespace, gr, geo, st, psolver, time)
     type(hamiltonian_t),      intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
+    type(poisson_t),          intent(in)    :: psolver
     FLOAT,          optional, intent(in)    :: time
 
     PUSH_SUB(hamiltonian_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, gr, this%geo, st)
+    call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
@@ -943,17 +957,17 @@ contains
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
      if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, geo = geo)
 
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
       !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
-        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, psolver, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
@@ -1035,13 +1049,14 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)    :: geo
-    type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: ia
-    CMPLX,               intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,               intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  subroutine zhamiltonian_apply_atom (hm, namespace, geo, gr, ia, psi, vpsi)
+    type(hamiltonian_t), intent(in)  :: hm
+    type(namespace_t),   intent(in)  :: namespace
+    type(geometry_t),    intent(in)  :: geo
+    type(grid_t),        intent(in)  :: gr
+    integer,             intent(in)  :: ia
+    CMPLX,               intent(in)  :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,               intent(out) :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
 
     integer :: idim
     FLOAT, allocatable :: vlocal(:)
@@ -1049,7 +1064,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)

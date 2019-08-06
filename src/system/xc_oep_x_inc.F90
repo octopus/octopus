@@ -36,15 +36,16 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
-  type(derivatives_t), intent(inout) :: der
-  type(states_t), target, intent(in) :: st
-  integer,        intent(in)    :: is
-  integer,        intent(in)    :: jdm
-  R_TYPE,         intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
-  FLOAT,          intent(inout) :: ex
-  FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
-  R_TYPE, optional, intent(out) :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
+subroutine X(oep_x) (der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
+  type(derivatives_t),    intent(in)    :: der
+  type(poisson_t),        intent(in)    :: psolver
+  type(states_t), target, intent(in)    :: st
+  integer,                intent(in)    :: is
+  integer,                intent(in)    :: jdm
+  R_TYPE,                 intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
+  FLOAT,                  intent(inout) :: ex
+  FLOAT,                  intent(in)    :: exx_coef !< amount of EXX (for hybrids)
+  R_TYPE, optional,       intent(out) :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)

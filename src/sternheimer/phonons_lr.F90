@@ -32,12 +32,13 @@ module phonons_lr_oct_m
   use kdotp_calc_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use parser_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -67,9 +68,8 @@ module phonons_lr_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, hm, fromscratch)
+  subroutine phonons_lr_run(sys, fromscratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
@@ -114,7 +114,7 @@ contains
     !% and written in directory <tt>restart/vib_modes/phn_nm_wfs_XXXXX</tt>.
     !% This part is time-consuming and not parallel, but not needed for most purposes.
     !%End
-    call parse_variable('CalcNormalModeWfs', .false., normal_mode_wfs)
+    call parse_variable(sys%namespace, 'CalcNormalModeWfs', .false., normal_mode_wfs)
 
     !%Variable CalcInfrared
     !%Type logical
@@ -124,7 +124,7 @@ contains
     !% If set to true, infrared intensities (and Born charges) will be calculated
     !% and written in <tt>vib_modes/infrared</tt>.
     !%End
-    call parse_variable('CalcInfrared', .true., do_infrared)
+    call parse_variable(sys%namespace, 'CalcInfrared', .true., do_infrared)
 
     !%Variable SymmetrizeDynamicalMatrix
     !%Type logical
@@ -135,17 +135,17 @@ contains
     !% the matrix will be symmetrized to enforce <math>D_{ij} = D_{ji}</math>. If set to false,
     !% only the upper half of the matrix will be calculated.
     !%End
-    call parse_variable('SymmetrizeDynamicalMatrix', .true., symmetrize)
+    call parse_variable(sys%namespace, 'SymmetrizeDynamicalMatrix', .true., symmetrize)
 
     ! replaced by properly saving and reading the dynamical matrix
-    call messages_obsolete_variable('UseRestartDontSolve')
+    call messages_obsolete_variable(sys%namespace, 'UseRestartDontSolve')
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, st, gr)
+      call states_look_and_load(gs_restart, sys%namespace, st, gr)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -157,7 +157,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(kdotp_restart, sys%namespace, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -171,7 +171,7 @@ contains
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        if (ierr == 0) call states_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -186,14 +186,14 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call system_h_setup(sys, hm)
-    call sternheimer_init(sh, sys, hm, wfs_are_cplx = states_are_complex(st))
+    call system_h_setup(sys)
+    call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr")
 
-    call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
+    call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 
     if(do_infrared) then
-      call Born_charges_init(born, geo, st, ndim)
+      call born_charges_init(born, sys%namespace, geo, st, ndim)
     end if
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
@@ -204,18 +204,18 @@ contains
 
     !the  <phi0 | v2 | phi0> term
     if(states_are_real(st)) then
-      call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call dionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     else
-      call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call zionic_pert_matrix_elements_2(sys%gr, sys%namespace, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
-    call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
+    call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, gr, geo)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
-    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%namespace, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_load, sys%namespace, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
 
     if (fromScratch) then
       start_mode = 1
@@ -245,7 +245,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_load(restart_load, st, gr, ierr, lr = lr(1))
+        if (ierr == 0) call states_load(restart_load, sys%namespace, st, gr, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_warning(1)
@@ -257,17 +257,17 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(states_are_real(st)) then
-        call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
+        call dsternheimer_solve(sh, sys, lr, 1, M_ZERO, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
+        call zsternheimer_solve(sh, sys, lr, 1, M_z0, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call dforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       else
-        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call zforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes
@@ -338,9 +338,9 @@ contains
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
       if(states_are_real(st)) then
-        call dphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
+        call dphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
       else
-        call zphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
+        call zphonons_lr_wavefunctions(lr(1), sys%namespace, st, gr, vib, restart_load, restart_dump)
       end if
     end if
 

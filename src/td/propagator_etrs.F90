@@ -35,6 +35,9 @@ module propagator_etrs_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_function_oct_m
+  use namespace_oct_m
+  use parser_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -56,9 +59,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_etrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -91,7 +96,7 @@ contains
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
             psib2 = zpsib_dt, deltat2 = dt)
 
           !use the dt propagation to calculate the density
@@ -104,7 +109,7 @@ contains
 
       call density_calc_end(dens_calc)
 
-      call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -115,7 +120,7 @@ contains
       ! propagate dt/2 with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         end do
       end do
 
@@ -126,7 +131,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -142,7 +147,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
       end do
     end do
 
@@ -158,9 +163,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
+  subroutine td_etrs_sc(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -203,7 +210,7 @@ contains
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
         !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
           psib2 = zpsib_dt, deltat2 = dt)
 
         !use the dt propagation to calculate the density
@@ -216,7 +223,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
+    call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -228,7 +235,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -257,15 +264,16 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
+      call density_calc_init(dens_calc, st, gr, st%rho)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end do
       end do
+      call density_calc_end(dens_calc)
 
-      call density_calc(st, gr, st%rho)
-
-      call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed
@@ -295,6 +303,7 @@ contains
 
     if(hm%lda_u_level /= DFT_U_NONE) then 
       call lda_u_write_U(hm%lda_u, stdout) 
+      call lda_u_write_V(hm%lda_u, stdout)
     end if
 
     ! print an empty line
@@ -318,9 +327,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_aetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -356,14 +367,14 @@ contains
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
+      call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
 
     ! propagate half of the time step with H(time - dt)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
       end do
     end do
 
@@ -414,7 +425,7 @@ contains
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -466,7 +477,7 @@ contains
           call profiling_out(phase_prof)
         end if
 
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
       end do

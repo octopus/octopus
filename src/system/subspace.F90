@@ -39,8 +39,10 @@ module subspace_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pblas_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use scalapack_oct_m
   use states_oct_m
@@ -60,6 +62,7 @@ module subspace_oct_m
     zsubspace_diag
 
   type subspace_t
+    private
     integer :: method
   end type subspace_t
 
@@ -67,8 +70,9 @@ module subspace_oct_m
   
 contains
 
-  subroutine subspace_init(this, st, no_sd)
+  subroutine subspace_init(this, namespace, st, no_sd)
     type(subspace_t),  intent(out) :: this
+    type(namespace_t), intent(in)  :: namespace
     type(states_t),    intent(in)  :: st
     logical,           intent(in)  :: no_sd
 
@@ -106,7 +110,7 @@ contains
       if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
 
-      call parse_variable('SubspaceDiagonalization', default, this%method)
+      call parse_variable(namespace, 'SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
     end if

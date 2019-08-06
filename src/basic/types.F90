@@ -33,6 +33,7 @@ module types_oct_m
     type_is_single
 
   type type_t
+    private
     integer :: itype
   end type type_t
 

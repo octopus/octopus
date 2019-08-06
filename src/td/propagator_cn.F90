@@ -29,6 +29,9 @@ module propagator_cn_oct_m
   use lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -45,6 +48,7 @@ module propagator_cn_oct_m
 
   type(grid_t),            pointer, private :: grid_p
   type(hamiltonian_t),     pointer, private :: hm_p
+  type(poisson_t),         pointer, private :: psolver_p
   type(propagator_t),      pointer, private :: tr_p
   integer,                 private :: ik_op, ist_op, dim_op
   FLOAT,                   private :: t_op, dt_op
@@ -53,8 +57,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Crank-Nicolson propagator
-  subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
+  subroutine td_crank_nicolson(hm, psolver, namespace, gr, st, tr, time, dt, ions, geo, use_sparskit)
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),     target,     intent(in)    :: psolver
+    type(namespace_t),               intent(in)    :: namespace
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -86,6 +92,7 @@ contains
     ! define pointer and variables for usage in td_zop, td_zopt routines
     grid_p    => gr
     hm_p      => hm
+    psolver_p => psolver
     tr_p      => tr
     dt_op = dt
     t_op  = time - dt/M_TWO
@@ -104,7 +111,7 @@ contains
     if(ion_dynamics_ions_move(ions)) then
       call ion_dynamics_save_state(ions, geo, ions_state)
       call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
+      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt/M_TWO)
     end if
 
     if(hm%family_is_mgga_with_exc) then
@@ -124,7 +131,7 @@ contains
       do ist = st%st_start, st%st_end
 
         call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
-        call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO)
+        call exponential_apply(tr%te, gr%der, hm, psolver, zpsi_rhs, ist, ik, dt/M_TWO)
 
         if(hamiltonian_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
@@ -145,9 +152,7 @@ contains
         ik_op = ik
 
         if(use_sparskit) then
-#ifdef HAVE_SPARSKIT
           call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
-#endif
         else
           iter = 2000
           call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
@@ -203,7 +208,7 @@ contains
         M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, psolver_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = real(zpsi(1:grid_p%mesh%np, idim))
@@ -240,7 +245,7 @@ contains
         M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, psolver_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) =    real(zpsi(1:grid_p%mesh%np, idim))
@@ -270,7 +275,7 @@ contains
       zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, psolver_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)

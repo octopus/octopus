@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_kli_pauli_solve(mesh, st, oep)
-  type(mesh_t),   intent(in)    :: mesh
-  type(states_t), intent(in)    :: st
-  type(xc_oep_t), intent(inout) :: oep
+subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
+  type(mesh_t),      intent(in)    :: mesh
+  type(namespace_t), intent(in)    :: namespace
+  type(states_t),    intent(in)    :: st
+  type(xc_oep_t),    intent(inout) :: oep
   !
   integer :: is, ip, ii, jj, ist, eigen_n, it, kssi
   FLOAT, allocatable :: rho(:,:), lambda(:), n(:), t_rho(:,:)
@@ -109,7 +110,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     vs = vloc ! Slater part
 
     ! iteration criteria
-    call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=50)
+    call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=50)
 
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)

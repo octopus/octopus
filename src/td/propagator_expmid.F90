@@ -29,6 +29,9 @@ module propagator_expmid_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_oct_m
@@ -44,8 +47,10 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine exponential_midpoint(hm, psolver, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
+    type(namespace_t),               intent(in)    :: namespace
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -77,7 +82,7 @@ contains
     if(move_ions .and.  ion_dynamics_ions_move(ions)) then
       call ion_dynamics_save_state(ions, geo, ions_state)
       call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, ionic_scale*CNST(0.5)*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
+      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt/M_TWO)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -91,7 +96,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, dt)
 
       end do
     end do
