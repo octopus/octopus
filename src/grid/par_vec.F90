@@ -225,7 +225,7 @@ contains
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
-       inner_partition, bndry_partition, vp)
+       inner_partition, bndry_partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master process.
 
@@ -239,6 +239,7 @@ contains
     type(partition_t),intent(in)    :: inner_partition
     type(partition_t),intent(in)    :: bndry_partition
     type(pv_t),       intent(inout) :: vp             !< Description of partition.
+    type(namespace_t),intent(in)    :: namespace
 
     ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -575,7 +576,7 @@ contains
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
-      call io_mkdir_old('debug/mesh_partition')
+      call io_mkdir('debug/mesh_partition', namespace)
       
       write(filenum, '(i6.6)') vp%partno
       iunit = io_open_old('debug/mesh_partition/ghost_points.'//filenum, action='write')

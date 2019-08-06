@@ -28,6 +28,7 @@ module ps_hgh_oct_m
   use loct_math_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -654,9 +655,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_debug(psp, dir)
-    type(ps_hgh_t),   intent(in) :: psp
-    character(len=*), intent(in) :: dir
+  subroutine hgh_debug(psp, dir, namespace)
+    type(ps_hgh_t),    intent(in) :: psp
+    character(len=*),  intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
 
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
@@ -665,7 +667,7 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir_old(trim(dir))
+    call io_mkdir(trim(dir), namespace)
     hgh_unit = io_open_old(trim(dirname)//'/hgh', action='write')
     loc_unit = io_open_old(trim(dirname)//'/local', action='write')
     dat_unit = io_open_old(trim(dirname)//'/info', action='write')

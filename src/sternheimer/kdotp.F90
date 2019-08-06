@@ -173,7 +173,7 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir_old(KDOTP_DIR) ! data output
+      call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     end if
 

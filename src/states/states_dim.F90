@@ -26,6 +26,7 @@ module states_dim_oct_m
   use math_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
 
@@ -186,9 +187,10 @@ contains
   end subroutine kpoints_distribute
   
   ! ---------------------------------------------------------
-  subroutine states_choose_kpoints(dd, sb)
+  subroutine states_choose_kpoints(dd, sb, namespace)
     type(states_dim_t), intent(inout) :: dd
     type(simul_box_t),  intent(in)    :: sb
+    type(namespace_t),  intent(in)    :: namespace
 
     integer :: ik, iq
 
@@ -214,7 +216,7 @@ contains
 
       PUSH_SUB(states_choose_kpoints.print_kpoints_debug)
       
-      call io_mkdir_old('debug/')
+      call io_mkdir('debug/', namespace)
       iunit = io_open_old('debug/kpoints', action = 'write')
       call kpoints_write_info(sb%kpoints, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)

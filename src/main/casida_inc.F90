@@ -1111,7 +1111,7 @@ subroutine X(casida_write)(cas, sys)
 
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
-    call io_mkdir_old(CASIDA_DIR)
+    call io_mkdir(CASIDA_DIR, sys%namespace)
     iunit = io_open_old(CASIDA_DIR//trim(theory_name(cas)), action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) then
@@ -1146,12 +1146,12 @@ subroutine X(casida_write)(cas, sys)
     end do
     call io_close(iunit)
   
-    if(cas%qcalc) call qcasida_write(cas)
+    if(cas%qcalc) call qcasida_write(cas, sys%namespace)
   
     if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
       if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
         dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-        call io_mkdir_old(trim(dir_name))
+        call io_mkdir(trim(dir_name), sys%namespace)
       end if
       
       do ia = 1, cas%n_pairs

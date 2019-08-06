@@ -339,12 +339,13 @@ contains
 
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_magnetization(dir, this, geo, mesh, st)
+ subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
    type(geometry_t),  intent(in)    :: geo
    type(mesh_t),      intent(in)    :: mesh
    type(states_t),    intent(in)    :: st
+   type(namespace_t), intent(in)    :: namespace
 
    integer :: iunit, ia, ios, im
    FLOAT, allocatable :: mm(:,:)
@@ -353,7 +354,7 @@ contains
 
    PUSH_SUB(lda_u_write_magnetization)
 
-   call io_mkdir_old(dir)
+   call io_mkdir(dir, namespace)
     iunit = io_open_old(trim(dir)//"/magnetization.xsf", action='write', position='asis')
 
     if(this%nspins > 1) then

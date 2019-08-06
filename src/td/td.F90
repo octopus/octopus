@@ -518,7 +518,7 @@ contains
       call check_point()
 
       ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly()
+      call io_debug_on_the_fly(sys%namespace)
 
       call profiling_out(prof)
       if (stopping) exit

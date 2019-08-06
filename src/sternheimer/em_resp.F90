@@ -363,7 +363,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call info()
-      call io_mkdir_old(EM_RESP_DIR) ! output
+      call io_mkdir(EM_RESP_DIR, sys%namespace) ! output
     end if
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
@@ -564,9 +564,9 @@ contains
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear()
+        call dcalc_properties_nonlinear(sys%namespace)
       else
-        call zcalc_properties_nonlinear()
+        call zcalc_properties_nonlinear(sys%namespace)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -1006,7 +1006,7 @@ contains
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-    call io_mkdir_old(trim(dirname))
+    call io_mkdir(trim(dirname), namespace)
 
     call write_eta()
 
@@ -1285,7 +1285,7 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         write(dirname1, '(a)') EM_RESP_DIR//'freq_0.0000'
-        call io_mkdir_old(trim(dirname1))
+        call io_mkdir(trim(dirname1), namespace)
         iunit = io_open_old(trim(dirname1)//'/susceptibility', action='write')
       else  
         iunit = io_open_old(trim(dirname)//'/susceptibility', action='write')

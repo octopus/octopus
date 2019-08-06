@@ -948,9 +948,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_write(filename, cp)
+  subroutine controlfunction_write(filename, cp, namespace)
     character(len=*), intent(in) :: filename
     type(controlfunction_t), intent(in) :: cp
+    type(namespace_t),       intent(in) :: namespace
 
     integer :: iter, ipar, ifreq, iunit, niter, nfreqs, idof
     FLOAT :: time, wmax, dw, ww, wa, wb, dt
@@ -963,7 +964,7 @@ contains
 
     PUSH_SUB(controlfunction_write)
 
-    call io_mkdir_old(trim(filename))
+    call io_mkdir(trim(filename), namespace)
 
     call controlfunction_copy(par, cp)
     call controlfunction_to_realtime(par)

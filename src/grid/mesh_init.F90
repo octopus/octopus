@@ -924,7 +924,7 @@ contains
     end if
 
     call vec_init(mesh%mpi_grp%comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
-         mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp)
+         mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp, namespace)
 
     ! check the number of ghost neighbours in parallel
     nnb = 0
@@ -974,7 +974,7 @@ contains
     
     if (partition_print) then
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)
-      call mesh_partition_messages_debug(mesh)
+      call mesh_partition_messages_debug(mesh, namespace)
     end if   
 #endif
 

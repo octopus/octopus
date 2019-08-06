@@ -579,7 +579,7 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true., &
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, verbose = .true., &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)

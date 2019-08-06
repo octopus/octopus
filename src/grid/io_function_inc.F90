@@ -138,7 +138,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     if(status /= NF90_NOERR) then
       ierr = 2
     else
-      call cube_init(cube, mesh%idx%ll, mesh%sb)
+      call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
       call cube_function_null(cf)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
@@ -192,7 +192,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       call messages_fatal(1)
     end if 
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
@@ -573,7 +573,7 @@ contains
 
     PUSH_SUB(X(io_function_output_vector).out_vtk)
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
 
     SAFE_ALLOCATE(cf(1:vector_dim))
 
@@ -816,7 +816,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global))
 
-  call io_mkdir_old(dir)
+  call io_mkdir(dir, namespace)
 
 ! Define the format
   mformat    = '(99es23.14E3)'
@@ -1184,7 +1184,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1256,7 +1256,7 @@ contains
     ASSERT(present(geo))
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1349,7 +1349,7 @@ contains
     end if
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1443,7 +1443,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_netcdf)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1477,7 +1477,7 @@ contains
 
     forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
     
-    call cube_init(cube, mesh%idx%ll, mesh%sb, spacing = dk )
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)

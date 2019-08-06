@@ -624,7 +624,7 @@ contains
       call messages_info(1)        
     end if
 
-    call io_mkdir_old('pcm')
+    call io_mkdir('pcm', namespace)
 
     !%Variable PCMCavity
     !%Type string

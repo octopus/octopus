@@ -440,17 +440,18 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, geo, dir, fname)
+  subroutine vdw_ts_write_c6ab(this, geo, dir, fname, namespace)
      type(vdw_ts_t)  , intent(inout) :: this
      type(geometry_t),    intent(in) :: geo
      character(len=*), intent(in)    :: dir, fname
+     type(namespace_t),   intent(in) :: namespace
  
      integer :: iunit, iatom, jatom
 
      PUSH_SUB(vdw_ts_write_c6ab)
 
      if(mpi_grp_is_root(mpi_world)) then  
-       call io_mkdir_old(dir)
+       call io_mkdir(dir, namespace)
        iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')  
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 

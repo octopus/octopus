@@ -45,10 +45,10 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
   PUSH_SUB(X(output_modelmb))
 
   ! make sure directory exists
-  call io_mkdir_old(trim(dir))
+  call io_mkdir(trim(dir), namespace)
   ! all model mb stuff should be in this directory
   dirname = trim(dir)//'/modelmb'
-  call io_mkdir_old(trim(dirname))
+  call io_mkdir(trim(dirname), namespace)
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'

@@ -642,7 +642,7 @@ contains
 
       PUSH_SUB(output_end_)
 
-      call io_mkdir_old(EM_RESP_FD_DIR)
+      call io_mkdir(EM_RESP_FD_DIR, sys%namespace)
 
       if((bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
          bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then 

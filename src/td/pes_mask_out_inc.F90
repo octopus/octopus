@@ -793,7 +793,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
 
   PUSH_SUB(pes_mask_output_full_mapM)
 
-  call cube_init(cube, ll, sb)
+  call cube_init(cube, ll, sb, namespace)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK

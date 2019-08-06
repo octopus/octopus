@@ -920,8 +920,9 @@ contains
   !! functions (filtering, etc), some of which depend on the grid
   !! cutoff value.
   ! ---------------------------------------------------------
-  subroutine species_pot_init(this, grid_cutoff, filter)
+  subroutine species_pot_init(this, namespace, grid_cutoff, filter)
     type(species_t),     intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(in)    :: grid_cutoff
     integer,             intent(in)    :: filter
 
@@ -975,8 +976,8 @@ contains
 
       if(debug%info) then
         write(dirname, '(a)') 'debug/geometry'
-        call io_mkdir_old(dirname)
-        call species_debug(trim(dirname), this)
+        call io_mkdir(dirname, namespace)
+        call species_debug(trim(dirname), this, namespace)
       end if
     end if
 
@@ -1579,9 +1580,10 @@ contains
 ! Private procedures
 
   ! ---------------------------------------------------------
-  subroutine species_debug(dir, spec)
-    character(len=*), intent(in) :: dir
-    type(species_t),  intent(in) :: spec
+  subroutine species_debug(dir, spec, namespace)
+    character(len=*),  intent(in) :: dir
+    type(species_t),   intent(in) :: spec
+    type(namespace_t), intent(in) :: namespace
 
     character(len=256) :: dirname
     integer :: iunit
@@ -1596,7 +1598,7 @@ contains
 
     dirname = trim(dir)//'/'//trim(spec%label)
 
-    call io_mkdir_old(dirname)
+    call io_mkdir(dirname, namespace)
 
     iunit = io_open_old(trim(dirname)//'/info', action='write')
 

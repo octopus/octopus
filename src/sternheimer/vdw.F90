@@ -247,7 +247,7 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir_old(VDW_DIR)               ! output data
+        call io_mkdir(VDW_DIR, sys%namespace)               ! output data
       end if
 
       call restart_init(restart_dump, sys%namespace, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)

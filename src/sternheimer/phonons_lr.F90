@@ -188,7 +188,7 @@ contains
 
     call system_h_setup(sys)
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
-    call vibrations_init(vib, geo, gr%sb, "lr")
+    call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 

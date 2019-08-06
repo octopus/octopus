@@ -521,7 +521,7 @@ contains
       first = iter + 1
     end if
 
-    call io_mkdir_old('td.general')
+    call io_mkdir('td.general', namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
       if(writ%out(OUT_MULTIPOLES)%write) &
@@ -682,7 +682,7 @@ contains
     end if
 
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
-      call io_mkdir_old(outp%iter_dir)
+      call io_mkdir(outp%iter_dir, namespace)
     end if
 
     if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp%how)

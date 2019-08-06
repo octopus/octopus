@@ -104,7 +104,7 @@ contains
       end if
     end if
 
-    call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
     call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
 

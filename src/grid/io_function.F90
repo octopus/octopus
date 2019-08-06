@@ -317,10 +317,11 @@ contains
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
-  subroutine write_bild_forces_file(dir, fname, geo, mesh)
+  subroutine write_bild_forces_file(dir, fname, geo, mesh, namespace)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
+    type(namespace_t),  intent(in) :: namespace
 
     integer :: iunit, iatom, idir
     FLOAT, allocatable :: forces(:,:), center(:,:)
@@ -330,7 +331,7 @@ contains
 
     PUSH_SUB(write_bild_forces_file)
 
-    call io_mkdir_old(dir)
+    call io_mkdir(dir, namespace)
     iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.bild', action='write', position='asis')
 
     write(frmt,'(a,i0,a)')'(a,2(', mesh%sb%dim,'f16.6,1x))'
@@ -366,11 +367,12 @@ contains
   !> Includes information about simulation box and periodicity when applicable.
   !> This differs from a normal xyz file by including information about box
   !> shape and always using Angstroms.
-  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh)
-    character(len=*), intent(in) :: dir
-    character(len=*), intent(in) :: fname
-    type(geometry_t), intent(in) :: geo
-    type(mesh_t),     intent(in) :: mesh
+  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh, namespace)
+    character(len=*),  intent(in) :: dir
+    character(len=*),  intent(in) :: fname
+    type(geometry_t),  intent(in) :: geo
+    type(mesh_t),      intent(in) :: mesh
+    type(namespace_t), intent(in) :: namespace
 
     integer :: iunit
     integer :: idir
@@ -379,7 +381,7 @@ contains
 
     PUSH_SUB(write_canonicalized_xyz_file)
 
-    call io_mkdir_old(dir)
+    call io_mkdir(dir, namespace)
     iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
 
     write(iunit, '(i6)') geo%natoms
@@ -405,10 +407,11 @@ contains
   end subroutine write_canonicalized_xyz_file
 
   ! ---------------------------------------------------------
-  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)
+  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, namespace, write_forces)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
+    type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: write_forces
 
     integer :: iunit, iatom, idir
@@ -419,7 +422,7 @@ contains
 
     PUSH_SUB(write_xsf_geometry_file)
 
-    call io_mkdir_old(dir)
+    call io_mkdir(dir, namespace)
     iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position='asis')
 
     if(.not. present(write_forces)) then

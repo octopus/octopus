@@ -173,7 +173,7 @@ contains
     end if
 
     if(debug%info) then
-      call io_mkdir_old('debug')
+      call io_mkdir('debug', namespace)
     end if
 
     if(debug%trace_file) then
@@ -714,7 +714,8 @@ contains
   ! ---------------------------------------------------------
   !> check if debug mode or message flushing should be enabled or
   !! disabled on the fly
-  subroutine io_debug_on_the_fly()
+  subroutine io_debug_on_the_fly(namespace)
+    type(namespace_t), intent(in) :: namespace
 
     PUSH_SUB(io_debug_on_the_fly)
 
@@ -724,7 +725,7 @@ contains
         call debug_enable(debug)
         ! this call does not hurt if the directory is already there
         ! but is otherwise required
-        call io_mkdir_old('debug')
+        call io_mkdir('debug', namespace)
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('enable_debug_mode')
         ! artificially increase sub stack to avoid underflow

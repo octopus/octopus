@@ -308,7 +308,7 @@ contains
 
       prof_vars%output_dir = 'profiling'
 
-      if(mpi_grp_is_root(mpi_world)) call io_mkdir_old(trim(prof_vars%output_dir))
+      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir), namespace)
 
       POP_SUB(profiling_init.get_output_dir)
     end subroutine get_output_dir

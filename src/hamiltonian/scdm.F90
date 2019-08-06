@@ -271,7 +271,7 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
   
   ! create a cube object for the small box, with double size for coulomb truncation
   box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
-  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, namespace, fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
   
   ! set up poisson solver used for the exchange operator with scdm states
   ! this replicates poisson_kernel_init()

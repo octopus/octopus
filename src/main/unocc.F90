@@ -258,7 +258,7 @@ contains
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir_old(STATIC_DIR)
+        call io_mkdir(STATIC_DIR, sys%namespace)
         iunit = io_open_old(STATIC_DIR//'/eigenvalues', action='write')
         
         if(converged) then

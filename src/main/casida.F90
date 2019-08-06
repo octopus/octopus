@@ -853,8 +853,9 @@ contains
   end function casida_matrix_factor
 
   ! ---------------------------------------------------------
-  subroutine qcasida_write(cas)
-    type(casida_t), intent(in) :: cas
+  subroutine qcasida_write(cas, namespace)
+    type(casida_t),    intent(in) :: cas
+    type(namespace_t), intent(in) :: namespace
 
     integer :: iunit, ia
 
@@ -862,7 +863,7 @@ contains
 
     PUSH_SUB(qcasida_write)
 
-    call io_mkdir_old(CASIDA_DIR)
+    call io_mkdir(CASIDA_DIR, namespace)
     iunit = io_open_old(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
                                                              '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'

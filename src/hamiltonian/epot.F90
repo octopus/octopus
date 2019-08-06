@@ -181,7 +181,7 @@ contains
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
-      call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
+      call species_pot_init(geo%species(ispec), namespace, mesh_gcutoff(gr%mesh), filter)
     end do
 
     SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))

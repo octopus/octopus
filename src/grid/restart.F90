@@ -500,7 +500,7 @@ contains
     ! Check if the directory already exists and create it if necessary
     dir_exists = io_dir_exists_old(trim(restart%pwd))
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
-      call io_mkdir_old(trim(restart%pwd), parents=.true.)
+      call io_mkdir(trim(restart%pwd), namespace, parents=.true.)
     end if
 
     if (restart%data_type == RESTART_UNDEFINED) then
@@ -734,7 +734,7 @@ contains
 
     ASSERT (restart%type == RESTART_TYPE_DUMP)
 
-    call io_mkdir_old(trim(restart%pwd)//"/"//trim(dirname), parents=.true.)
+    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), restart%namespace, parents=.true.)
 
     POP_SUB(restart_mkdir)
   end subroutine restart_mkdir

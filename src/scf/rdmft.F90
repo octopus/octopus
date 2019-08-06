@@ -473,7 +473,7 @@ contains
       PUSH_SUB(scf_rdmft.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir_old(dir)
+        call io_mkdir(dir, namespace)
         iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)

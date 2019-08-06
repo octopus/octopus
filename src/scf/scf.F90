@@ -967,7 +967,7 @@ contains
       end if
 
       ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly()
+      call io_debug_on_the_fly(namespace)
 
       call profiling_out(prof)
     end do !iter
@@ -1032,7 +1032,7 @@ contains
     end if
 
     if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
-      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff', namespace)
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)
@@ -1143,7 +1143,7 @@ contains
       PUSH_SUB(scf_run.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir_old(dir)
+        call io_mkdir(dir, namespace)
         iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)
@@ -1337,7 +1337,7 @@ contains
       integer :: iunit
       character(len=12) :: label
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir_old(dir)
+        call io_mkdir(dir, namespace)
         iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
         write(iunit, '(a)', advance = 'no') '#iter energy           '
         label = 'energy_diff'
@@ -1369,7 +1369,7 @@ contains
       integer :: iunit
       
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir_old(dir)
+        call io_mkdir(dir, namespace)
         iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)

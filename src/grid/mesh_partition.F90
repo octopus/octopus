@@ -290,7 +290,7 @@ contains
       message(5) = 'Info: Edges are not directed and appear twice in the lists.'
       call messages_info(5)
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir_old('debug/mesh_partition')
+        call io_mkdir('debug/mesh_partition', namespace)
         iunit = io_open_old('debug/mesh_partition/mesh_graph.txt', action='write')
         write(iunit, *) nv_global, ne_global/2
         do iv = 1, nv
@@ -840,8 +840,9 @@ contains
   end subroutine mesh_partition_write_info
 
   ! ----------------------------------------------------
-  subroutine mesh_partition_messages_debug(mesh)
-    type(mesh_t),    intent(in)    :: mesh
+  subroutine mesh_partition_messages_debug(mesh, namespace)
+    type(mesh_t),      intent(in)    :: mesh
+    type(namespace_t), intent(in)    :: namespace
     
     integer              :: ii, jj         ! Counter.
     integer              :: iunit          ! For debug output to files.
@@ -851,7 +852,7 @@ contains
 
     PUSH_SUB(mesh_partition_messages_debug)
 
-    call io_mkdir_old('debug/mesh_partition')
+    call io_mkdir('debug/mesh_partition', namespace)
 
     ! Debug output. Write points of each partition in a different file.
     write(filenum, '(i6.6)') mesh%mpi_grp%rank+1

@@ -215,7 +215,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(mpi_grp_is_root(mpi_world)) then
 
-    call io_mkdir_old(dir)
+    call io_mkdir(dir, outp%namespace)
     iunit = io_open_old(trim(dir)//'/'//'current-flow', action='write')
 
     select case(gr%mesh%sb%dim)

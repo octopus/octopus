@@ -279,7 +279,8 @@ program oct_unfold
     end if
     call restart_end(restart)  
 
-    call cube_init(zcube, sys%gr%mesh%idx%ll, sb, fft_type = FFT_COMPLEX, dont_optimize = .true.)
+    call cube_init(zcube, sys%gr%mesh%idx%ll, sb, default_namespace, &
+      fft_type = FFT_COMPLEX, dont_optimize = .true.)
     call cube_function_null(cf)
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)

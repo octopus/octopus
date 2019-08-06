@@ -161,7 +161,7 @@ contains
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
-    call simul_box_check_atoms_are_too_close(geo, sb)
+    call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
     call symmetries_init(sb%symm, namespace, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
 
@@ -1530,9 +1530,10 @@ contains
 
   ! -----------------------------------------------------
 
-  subroutine simul_box_check_atoms_are_too_close(geo, sb)
+  subroutine simul_box_check_atoms_are_too_close(geo, sb, namespace)
     type(geometry_t),  intent(in) :: geo
     type(simul_box_t), intent(in) :: sb
+    type(namespace_t), intent(in) :: namespace
 
     FLOAT :: mindist
     FLOAT, parameter :: threshold = CNST(1e-5)
@@ -1553,7 +1554,7 @@ contains
       call messages_warning(3)
 
       ! then write out the geometry, whether asked for or not in Output variable
-      call io_mkdir_old(STATIC_DIR)
+      call io_mkdir(STATIC_DIR, namespace)
       call geometry_write_xyz(geo, trim(STATIC_DIR)//'/geometry')
     end if
 

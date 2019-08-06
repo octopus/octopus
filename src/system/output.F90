@@ -612,7 +612,7 @@ contains
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir_old(outp%iter_dir)
+      call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
 
@@ -660,7 +660,7 @@ contains
     if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
-      call io_mkdir_old(dir)
+      call io_mkdir(dir, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
@@ -678,7 +678,7 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
@@ -691,9 +691,9 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh)
+        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
       else
-        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
+        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
@@ -719,7 +719,7 @@ contains
         call lda_u_write_effectiveU(dir, hm%lda_u)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
-        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
         call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
@@ -1248,7 +1248,8 @@ contains
       call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
     end if
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
+      fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1)

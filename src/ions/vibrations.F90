@@ -25,6 +25,7 @@ module vibrations_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
@@ -69,11 +70,12 @@ module vibrations_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vibrations_init(this, geo, sb, suffix)
+  subroutine vibrations_init(this, geo, sb, suffix, namespace)
     type(vibrations_t), intent(out) :: this
     type(geometry_t),   intent(in)  :: geo
     type(simul_box_t),  intent(in)  :: sb
     character (len=2),  intent(in)  :: suffix
+    type(namespace_t),  intent(in)  :: namespace
 
     integer :: iatom
 
@@ -99,7 +101,7 @@ contains
     this%suffix = suffix
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir_old(VIB_MODES_DIR)
+      call io_mkdir(VIB_MODES_DIR, namespace)
       call io_rm_old(this%filename_dynmat)
       call vibrations_out_dyn_matrix_header(this)
     end if
