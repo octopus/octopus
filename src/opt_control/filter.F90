@@ -237,8 +237,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_write(filter)
-    type(filter_t), intent(in) :: filter
+  subroutine filter_write(filter, namespace)
+    type(filter_t),    intent(in) :: filter
+    type(namespace_t), intent(in) :: namespace
 
     integer :: kk, iunit, i, max_iter
     character(len=80) :: filename
@@ -254,7 +255,7 @@ contains
     do kk = 1, filter%no_filters
       write(filename,'(a,i2.2)') OCT_DIR//'filter', kk
       max_iter = tdf_niter(filter%f(kk))
-      iunit = io_open_old(filename, action='write')
+      iunit = io_open(filename, action='write', namespace=namespace)
       SAFE_ALLOCATE(wgrid(1:max_iter/2+1))
       call tdf_fourier_grid(filter%f(kk), wgrid)
       do i = 1, max_iter/2+1

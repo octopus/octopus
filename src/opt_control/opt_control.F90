@@ -141,7 +141,7 @@ contains
 
     ! If filters are to be used, they also have to be initialized.
     call filter_init(td%max_iter, sys%namespace, td%dt, filter)
-    call filter_write(filter)
+    call filter_write(filter, sys%namespace)
 
 
     ! Figure out the starting wavefunction(s), and the target.

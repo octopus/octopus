@@ -240,7 +240,7 @@ contains
             call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
           case(TDF_FROM_FILE)
             call parse_block_string(blk, i-1, 2, filename)
-            call tdf_init_fromfile(f, trim(filename), ierr)
+            call tdf_init_fromfile(f, trim(filename), namespace, ierr)
           case(TDF_FROM_EXPR)
             call parse_block_string(blk, i-1, 2, function_expression)
             call tdf_init_fromexpr(f, trim(function_expression))
@@ -412,9 +412,10 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_fromfile(f, filename, ierr)
+  subroutine tdf_init_fromfile(f, filename, namespace, ierr)
     type(tdf_t),      intent(inout) :: f
     character(len=*), intent(in)    :: filename
+    type(namespace_t),intent(in)    :: namespace
     integer,          intent(out)   :: ierr
 
     integer :: iunit, lines, j
@@ -426,7 +427,7 @@ contains
     f%mode = TDF_FROM_FILE
     ierr = 0
 
-    iunit = io_open_old(trim(filename), action='read', status='old')
+    iunit = io_open(trim(filename), action='read', namespace=namespace, status='old')
 
     ! count lines in file
     call io_skip_header(iunit)
