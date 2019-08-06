@@ -159,7 +159,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   integer :: iter, ist, iter_used
   FLOAT :: vxc_bar, ff, residue
   FLOAT, allocatable :: ss(:), vxc_old(:)
-  R_TYPE, allocatable :: bb(:,:), psi(:, :)
+  R_TYPE, allocatable :: bb(:,:), psi(:, :), psi2(:,:)
 
   call profiling_in(C_PROFILING_XC_OEP_FULL, 'XC_OEP_FULL')
   PUSH_SUB(X(xc_oep_solve))
@@ -171,6 +171,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   SAFE_ALLOCATE(     ss(1:gr%mesh%np))
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
 
   vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
 
@@ -189,9 +190,12 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
       if(abs(st%occ(ist,1))<= M_EPSILON) cycle
       call states_get_state(st, gr%mesh, ist, is, psi)
+      psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
 
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
+      vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+      !vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
+
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
@@ -199,19 +203,19 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
       call X(linear_solver_solve_HXeY)(oep%solver, hm, psolver, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
-      
+
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
 
       ! calculate this funny function ss
       ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1))
     end do
 
-
-    if ((oep%mixing_scheme == OEP_MIXING_SCHEME_CONST)) then
+    select case (oep%mixing_scheme)
+    case (OEP_MIXING_SCHEME_CONST)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
-    else if (oep%mixing_scheme == OEP_MIXING_SCHEME_DENS) then
+    case (OEP_MIXING_SCHEME_DENS)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
-    else if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
+    case (OEP_MIXING_SCHEME_BB)
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
         oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old(:, is)) &
           / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
@@ -225,12 +229,14 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
       oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
       oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
-    end if
+    end select
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_get_state(st, gr%mesh, ist, is, psi)
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
+        psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
+        vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+        !vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
