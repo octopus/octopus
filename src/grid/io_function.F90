@@ -332,7 +332,8 @@ contains
     PUSH_SUB(write_bild_forces_file)
 
     call io_mkdir(dir, namespace)
-    iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.bild', action='write', position='asis')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.bild', action='write', &
+      namespace=namespace, position='asis')
 
     write(frmt,'(a,i0,a)')'(a,2(', mesh%sb%dim,'f16.6,1x))'
 
@@ -382,7 +383,7 @@ contains
     PUSH_SUB(write_canonicalized_xyz_file)
 
     call io_mkdir(dir, namespace)
-    iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', namespace=namespace, position='asis')
 
     write(iunit, '(i6)') geo%natoms
     call simul_box_write_short_info(mesh%sb, iunit)
@@ -423,7 +424,7 @@ contains
     PUSH_SUB(write_xsf_geometry_file)
 
     call io_mkdir(dir, namespace)
-    iunit = io_open_old(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position='asis')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', namespace=namespace, position='asis')
 
     if(.not. present(write_forces)) then
       write_forces_ = .false.

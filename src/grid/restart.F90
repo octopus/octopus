@@ -518,7 +518,8 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open_old(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', &
+            namespace=namespace, die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
@@ -526,7 +527,7 @@ contains
           end if
           call io_close(iunit, grp=restart%mpi_grp)
           
-          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)
@@ -539,7 +540,7 @@ contains
             call messages_fatal(1)
           end if
 
-          call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, ierr)
+          call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh fingerprint to '"//trim(restart%pwd)//"/grid'."
             call messages_fatal(1)
@@ -797,8 +798,9 @@ contains
 
     if (present(status)) status_ = status
 
-    restart_open = io_open_old(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
-                           die=die, position=position, form="formatted", grp=restart%mpi_grp)
+    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), &
+      namespace=restart%namespace, status=trim(status_), &
+      die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."

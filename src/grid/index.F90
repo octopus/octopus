@@ -128,12 +128,13 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_dump(idx, dir, filename, mpi_grp, ierr)
-    type(index_t),    intent(in)  :: idx 
-    character(len=*), intent(in)  :: dir
-    character(len=*), intent(in)  :: filename
-    type(mpi_grp_t),  intent(in)  :: mpi_grp
-    integer,          intent(out) :: ierr
+  subroutine index_dump(idx, dir, filename, mpi_grp, namespace, ierr)
+    type(index_t),     intent(in)  :: idx 
+    character(len=*),  intent(in)  :: dir
+    character(len=*),  intent(in)  :: filename
+    type(mpi_grp_t),   intent(in)  :: mpi_grp
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(out) :: ierr
 
     integer :: iunit, idir
 
@@ -141,7 +142,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open_old(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', namespace=namespace, &
+      position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -171,12 +173,13 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_load(idx, dir, filename, mpi_grp, ierr)
-    type(index_t),    intent(inout) :: idx
-    character(len=*), intent(in)    :: dir
-    character(len=*), intent(in)    :: filename
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: ierr
+  subroutine index_load(idx, dir, filename, mpi_grp, namespace, ierr)
+    type(index_t),     intent(inout) :: idx
+    character(len=*),  intent(in)    :: dir
+    character(len=*),  intent(in)    :: filename
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(out)   :: ierr
 
     integer :: iunit, idir, err
     character(len=100) :: lines(6)
@@ -191,7 +194,8 @@ contains
     idx%enlarge = 0
     idx%is_hypercube = .false.
 
-    iunit = io_open_old(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", namespace=namespace, &
+      status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
