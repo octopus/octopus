@@ -31,8 +31,6 @@ module io_oct_m
 
   private
   public ::              &
-    io_workpath_old,         &
-    io_open_old,             &
     io_workpath,         &
     io_open,             &
     io_mkdir,            &
@@ -280,103 +278,6 @@ contains
     POP_SUB(io_free)
 
   end subroutine io_free
-
-
-  ! ---------------------------------------------------------
-  character(len=MAX_PATH_LEN) function io_workpath_old(path) result(wpath)
-    character(len=*),  intent(in) :: path
-
-    PUSH_SUB(io_workpath_old)
-
-    if(path(1:1)  ==  '/') then
-      ! we do not change absolute path names
-      wpath = trim(path)
-    else
-      write(wpath, '(3a)') trim(work_dir), "/", trim(path)
-    end if
-
-    POP_SUB(io_workpath_old)
-
-  end function io_workpath_old
-
-
-  ! ---------------------------------------------------------
-  integer function io_open_old(file, action, status, form, position, die, recl, grp) result(iunit)
-    character(len=*), intent(in) :: file, action
-    character(len=*), intent(in), optional :: status, form, position
-    logical,          intent(in), optional :: die
-    integer,          intent(in), optional :: recl
-    type(mpi_grp_t),  intent(in), optional :: grp
-
-    character(len=20)  :: status_, form_, position_
-    character(len=MAX_PATH_LEN) :: file_
-    logical            :: die_
-    integer            :: iostat
-    type(mpi_grp_t)    :: grp_
-
-    PUSH_SUB(io_open_old)
-
-    if(present(grp)) then
-      grp_%comm = grp%comm
-      grp_%rank = grp%rank
-      grp_%size = grp%size
-    else
-      call mpi_grp_init(grp_, -1)
-    end if
-
-
-    if(mpi_grp_is_root(grp_)) then
-
-      status_ = 'unknown'
-      if(present(status  )) status_   = status
-      form_   = 'formatted'
-      if(present(form    )) form_     = form
-      position_ = 'asis'
-      if(present(position)) position_ = position
-      die_    = .true.
-      if(present(die     )) die_      = die
-
-      call io_assign(iunit)
-      if(iunit<0) then
-        if(die_) then
-          write(message(1), '(a)') '*** IO Error: Too many files open.'
-          call messages_fatal(1)
-        end if
-        POP_SUB(io_open_old)
-        return
-      end if
-
-      file_ = io_workpath_old(file)
-
-      if(present(recl)) then
-        open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-          recl=recl, action=trim(action), position=trim(position_), iostat=iostat)
-      else
-        open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-          action=trim(action), position=trim(position_), iostat=iostat)
-      end if
-
-      if(iostat /= 0) then
-        call io_free(iunit)
-        iunit = -1
-        if(die_) then
-          write(message(1), '(5a,i6)') '*** IO Error: Could not open file "', trim(file_), &
-            '" for action="', trim(action), '". Error code = ', iostat
-          call messages_fatal(1)
-        end if
-      end if
-
-    end if
-
-#if defined(HAVE_MPI)
-    if(grp_%size > 1) then
-      call MPI_Bcast(iunit, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
-    end if
-#endif
-
-    POP_SUB(io_open_old)
-
-  end function io_open_old
 
 
   ! ---------------------------------------------------------
