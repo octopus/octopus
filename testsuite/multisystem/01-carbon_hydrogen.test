@@ -6,7 +6,12 @@ TestGroups : long-run, multisystem
 Enabled    : Yes
 
 Input: 01-carbon_hydrogen.01-gs.inp
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.47347615
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.255242
-match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.048493
+match ; Carbon SCF convergence ; GREPCOUNT(Carbon/static/info, 'SCF converged') ; 1
+match ; Hydrogen SCF convergence ; GREPCOUNT(Hydrogen/static/info, 'SCF converged') ; 1
+match ; Hydrogen Total energy       ; GREPFIELD(Hydrogen/static/info, 'Total       =', 3) ; -0.47347615
+match ; Hydrogen Eigenvalue   [1up] ; GREPFIELD(Hydrogen/static/info, '1   up', 3) ; -0.255242
+match ; Hydrogen Eigenvalue   [1dn] ; GREPFIELD(Hydrogen/static/info, '1   dn', 3) ; -0.048493
+
+Input: 01-carbon_hydrogen.02-td.inp
+
+Input: 01-carbon_hydrogen.03-td_restart.inp
