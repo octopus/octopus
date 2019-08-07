@@ -284,10 +284,19 @@ contains
   character(len=MAX_PATH_LEN) function io_workpath(path, namespace) result(wpath)
     character(len=*),  intent(in) :: path
     type(namespace_t),    intent(in) :: namespace
+    logical :: absolute_path
 
     PUSH_SUB(io_workpath)
 
-    if(len(path) > 0 .and. path(1:1)  ==  '/') then
+    ! use the logical to avoid problems with the string length
+    absolute_path = .false.
+    if(len(path) > 0) then
+      if(path(1:1)  ==  '/') then
+        absolute_path = .true.
+      end if
+    end if
+
+    if(absolute_path) then
       ! we do not change absolute path names
       wpath = trim(path)
     else
@@ -320,7 +329,7 @@ contains
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath(".", namespace)))
+      call loct_mkdir(trim(io_workpath("", namespace)))
       call loct_mkdir(trim(io_workpath(fname, namespace)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
