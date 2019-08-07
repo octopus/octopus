@@ -763,6 +763,7 @@ contains
     psolver_p => psolver
     tr_p      => tr
     st_p      => st
+    namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
