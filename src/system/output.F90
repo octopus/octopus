@@ -1243,9 +1243,9 @@ contains
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc, namespace)
+      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, namespace, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc, namespace)
+      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, namespace, vxc)
     end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
