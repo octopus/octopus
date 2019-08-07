@@ -147,7 +147,7 @@ contains
 
     call correct_Born_charges(this, geo, dim)
 
-    iunit = io_open(trim(dirname)//'/Born_charges', action='write', namespace=namespace)
+    iunit = io_open(trim(dirname)//'/Born_charges', namespace, action='write')
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms

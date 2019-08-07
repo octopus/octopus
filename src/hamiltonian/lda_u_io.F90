@@ -66,7 +66,7 @@ contains
    PUSH_SUB(lda_u_write_occupation_matrices)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-   iunit = io_open(trim(dir) // "/occ_matrices", action='write', namespace=namespace)
+   iunit = io_open(trim(dir) // "/occ_matrices", namespace, action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
    do ios = 1, this%norbsets
@@ -92,7 +92,7 @@ contains
    call io_close(iunit)
 
    if(this%level == DFT_U_ACBN0) then
-     iunit = io_open(trim(dir) // "/renorm_occ_matrices", action='write', namespace=namespace)
+     iunit = io_open(trim(dir) // "/renorm_occ_matrices", namespace, action='write')
      write(iunit,'(a)') ' Renormalized occupation matrices '
 
      do ios = 1, this%norbsets
@@ -134,7 +134,7 @@ contains
    PUSH_SUB(lda_u_write_effectiveU)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     iunit = io_open(trim(dir) // "/effectiveU", action='write', namespace=namespace)
+     iunit = io_open(trim(dir) // "/effectiveU", namespace, action='write')
      call lda_u_write_U(this, iunit)
 
      write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
@@ -227,7 +227,7 @@ contains
 
      call compute_ACBNO_U_kanamori(this, st, kanamori)
 
-     iunit = io_open(trim(dir) // "/kanamoriU", action='write', namespace=namespace)
+     iunit = io_open(trim(dir) // "/kanamoriU", namespace, action='write')
 
      write(iunit, '(a,a,a,f7.3,a)') 'Intraorbital U [', &
        trim(units_abbrev(units_out%energy)),']:'
@@ -358,7 +358,7 @@ contains
    PUSH_SUB(lda_u_write_magnetization)
 
    call io_mkdir(dir, namespace)
-    iunit = io_open(trim(dir)//"/magnetization.xsf", action='write', namespace=namespace, position='asis')
+    iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
       SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))

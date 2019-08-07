@@ -442,7 +442,7 @@ contains
     if(present(append)) then
       if(append) position = 'append'
     end if
-    iunit = io_open(trim(fname)//'.xyz', action='write', namespace=namespace, position=position)
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
 
     write(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -456,7 +456,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='write', namespace=namespace, position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
@@ -479,7 +479,7 @@ contains
 
     PUSH_SUB(geometry_read_xyz)
 
-    iunit = io_open(trim(fname)//'.xyz', action='read', namespace=namespace, position='rewind')
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
 
     read(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -493,7 +493,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='read', namespace=namespace, position='rewind')
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
       read(iunit, '(i4)') geo%ncatoms
       read(iunit, *)
       do iatom = 1, geo%ncatoms

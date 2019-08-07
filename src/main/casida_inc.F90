@@ -1112,7 +1112,7 @@ subroutine X(casida_write)(cas, sys)
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR, sys%namespace)
-    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write', namespace=sys%namespace)
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), sys%namespace, action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
@@ -1160,7 +1160,7 @@ subroutine X(casida_write)(cas, sys)
           
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
-            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write', namespace=sys%namespace)
+            iunit = io_open(trim(dir_name)//'/'//trim(str), sys%namespace, action='write')
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
@@ -1186,7 +1186,7 @@ subroutine X(casida_write)(cas, sys)
           end if
           
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write', namespace=sys%namespace)
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if

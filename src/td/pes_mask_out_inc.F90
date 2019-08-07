@@ -860,7 +860,7 @@ contains
 
     PUSH_SUB(pes_mask_output_full_mapM.out_ascii)
 
-    iunit = io_open(file, action='write', namespace=namespace)
+    iunit = io_open(file, namespace, action='write')
 
 
     ll = 1

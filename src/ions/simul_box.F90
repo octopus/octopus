@@ -1291,7 +1291,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="write", namespace=namespace, &
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
       position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
@@ -1362,7 +1362,7 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", namespace=namespace, &
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
       status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1

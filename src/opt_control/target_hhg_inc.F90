@@ -170,7 +170,7 @@
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
 
-    iunit = io_open('.alpha', action = 'write', namespace=namespace)
+    iunit = io_open('.alpha', namespace, action='write')
     dw = (M_TWO * M_PI) / (td%max_iter * tg%dt)
     do jj = 0, td%max_iter - 1
       ww = jj * dw

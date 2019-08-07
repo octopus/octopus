@@ -508,7 +508,7 @@ contains
       write(filenum, '(i3.3)') nn
 
       iunit = io_open('debug/PNFFT/rs_partition.'//filenum, &
-           action='write', namespace=namespace)
+           namespace, action='write')
            
       do i1 = 1, pnfft%M(1)
        do i2 = 1, pnfft%M(2)

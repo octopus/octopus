@@ -188,7 +188,7 @@ contains
   
     mode = COSINE_TRANSFORM
   
-    iunit = io_open(trim(ffile), action='read', namespace=namespace, status='old', die=.false.)
+    iunit = io_open(trim(ffile), namespace, action='read', status='old', die=.false.)
     if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)

@@ -658,7 +658,7 @@ contains
           write(filenum, '(i3.3)') nn
 
           iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
-               action='write', namespace=namespace)
+            namespace, action='write')
           do kk = 1, cube%rs_n_global(3)
             do jj = 1, cube%rs_n_global(2)
               do ii = 1, cube%rs_n_global(1)

@@ -275,7 +275,7 @@ contains
 #endif
       
       prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, &
-        action='write', namespace=namespace)
+        namespace, action='write')
       write(prof_vars%mem_iunit, '(5a16,a70)') 'Elapsed Time', 'Alloc/Dealloc', 'Size (words)', 'Prof Mem', &
         'Sys Mem', 'Variable Name(Filename:Line)'
     end if
@@ -838,7 +838,7 @@ contains
     end if
 
     filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number
-    iunit = io_open(trim(filename), action='write', namespace=namespace)
+    iunit = io_open(trim(filename), namespace, action='write')
     if(iunit < 0) then
       message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
       call messages_warning(1)

@@ -668,7 +668,7 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
-        iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write', namespace=sys%namespace)
+        iunit = io_open(EM_RESP_FD_DIR//'alpha', sys%namespace, action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
         alpha(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim) = (dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1) - &

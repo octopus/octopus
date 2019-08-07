@@ -452,9 +452,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function io_open(file, action, namespace, status, form, position, die, recl, grp) result(iunit)
+  integer function io_open(file, namespace, action, status, form, position, die, recl, grp) result(iunit)
     character(len=*), intent(in) :: file, action
-    type(namespace_t),   intent(in) :: namespace
+    type(namespace_t),intent(in) :: namespace
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
     integer,          intent(in), optional :: recl

@@ -664,8 +664,8 @@ contains
     call from_coords(g_opt, coords)
 
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim('geom/optimization.log'), action = 'write', &
-        namespace=g_opt%syst%outp%namespace, position = 'append')
+      iunit = io_open(trim('geom/optimization.log'), g_opt%syst%outp%namespace, &
+        action = 'write', position = 'append')
 
       if(geom_iter == 1) then
         write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 

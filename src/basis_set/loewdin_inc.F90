@@ -189,8 +189,8 @@ subroutine X(print_matrix)(basis, label, namespace, overlap, ik)
   PUSH_SUB(X(print_matrix))
   
   write(filename, '(i5.5)') ik
-  iunit = io_open(trim(basis%debugdir) // "/" //trim(label) // "_nk" // filename, action='write', &
-    namespace=namespace)
+  iunit = io_open(trim(basis%debugdir) // "/" //trim(label) // "_nk" // filename, namespace, &
+    action='write')
   write(iunit,'(a)') ' Orthogonalization matrix '
 #ifdef R_TCOMPLEX
   write(iunit,'(a)') ' Real part '

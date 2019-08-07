@@ -176,7 +176,7 @@ contains
       !%End
       call parse_variable(sys%namespace, 'InvertKSTargetDensity', "target_density.dat", filename)
 
-      iunit = io_open(filename, action='read', namespace=sys%namespace, status='old')
+      iunit = io_open(filename, sys%namespace, action='read', status='old')
 
       npoints = 0
       do pass = 1, 2

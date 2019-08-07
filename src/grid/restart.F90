@@ -518,8 +518,8 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', &
-            namespace=namespace, die=.true., grp=restart%mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', namespace, action='write', &
+            die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
@@ -798,8 +798,8 @@ contains
 
     if (present(status)) status_ = status
 
-    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), &
-      namespace=restart%namespace, status=trim(status_), &
+    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), restart%namespace, &
+      action=trim(action), status=trim(status_), &
       die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    

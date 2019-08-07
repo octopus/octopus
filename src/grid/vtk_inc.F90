@@ -39,7 +39,7 @@ subroutine X(vtk_out_cf)(filename, namespace, fieldname, ierr, cf_in, cube, spac
 
   np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
-  iunit = io_open(trim(filename), action='write', namespace=namespace)
+  iunit = io_open(trim(filename), namespace, action='write')
 
   write(iunit, '(1a)') '# vtk DataFile Version 2.0 '
 
@@ -75,7 +75,7 @@ subroutine X(vtk_out_cf)(filename, namespace, fieldname, ierr, cf_in, cube, spac
 
 #ifdef R_TCOMPLEX
 
-  iunit = io_open(trim(filename), action='write', namespace=namespace, position='append')
+  iunit = io_open(trim(filename), namespace, action='write', position='append')
 
   write(iunit, '(1a)') ' '
   write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
@@ -119,7 +119,7 @@ subroutine X(vtk_out_cf_vector)(filename, namespace, fieldname, ierr, cf_in, vec
 
   np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
-  iunit = io_open(trim(filename), action='write', namespace=namespace)
+  iunit = io_open(trim(filename), namespace, action='write')
 
   write(iunit, '(1a)') '# vtk DataFile Version 2.0 '
 
@@ -155,7 +155,7 @@ subroutine X(vtk_out_cf_vector)(filename, namespace, fieldname, ierr, cf_in, vec
 
 #ifdef R_TCOMPLEX
 
-  iunit = io_open(trim(filename), action='write', namespace=namespace, position='append')
+  iunit = io_open(trim(filename), namespace, action='write', position='append')
 
   write(iunit, '(1a)') ' '
   write(iunit, '(3a,i1)') 'SCALARS Im_'//trim(fieldname), ' double ', vector_dim
@@ -207,7 +207,7 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
 
   np =  product(cube%rs_n_global(1:3))
 
-  iunit = io_open(trim(filename), action='write', namespace=namespace)
+  iunit = io_open(trim(filename), namespace, action='write')
 
   if (optional_default(ascii, .false.)) then 
     ! ASCII
@@ -285,7 +285,7 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
 
     SAFE_DEALLOCATE_A(pnts1)
 
-    iunit = io_open(trim(filename), action='write', namespace=namespace, position='append')
+    iunit = io_open(trim(filename), namespace, action='write', position='append')
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 #ifdef R_TCOMPLEX
@@ -310,7 +310,7 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
 
 #ifdef R_TCOMPLEX
 
-    iunit = io_open(trim(filename), action='write', namespace=namespace, position='append')
+    iunit = io_open(trim(filename), namespace, action='write', position='append')
     write(iunit, '(1a)') ' '
     write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
     write(iunit, '(1a)') 'LOOKUP_TABLE default'

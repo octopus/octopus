@@ -291,7 +291,7 @@ contains
       call messages_info(5)
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/mesh_partition', namespace)
-        iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write', namespace=namespace)
+        iunit = io_open('debug/mesh_partition/mesh_graph.txt', namespace, action='write')
         write(iunit, *) nv_global, ne_global/2
         do iv = 1, nv
           write(iunit, *) adjncy_global(xadj_global(iv):xadj_global(iv+1) - 1)
@@ -859,7 +859,7 @@ contains
 
     ! without boundary
     iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-      action='write', namespace=namespace)
+      namespace, action='write')
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
       write(iunit, '(i8,99f18.8)') jj, mesh_x_global(mesh, jj)
@@ -868,7 +868,7 @@ contains
 
     ! with boundary included
     iunit = io_open('debug/mesh_partition/mesh_partition_all.'//filenum, &
-      action='write', namespace=namespace)
+      namespace, action='write')
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
       write(iunit, '(i8,99f18.8)') jj, mesh_x_global(mesh, jj)
@@ -882,7 +882,7 @@ contains
     ! points from enlargement
     if(mpi_grp_is_root(mpi_world)) then
       iunit = io_open('debug/mesh_partition/mesh_partition_boundary', &
-        action='write', namespace=namespace)
+        namespace, action='write')
       do ii = mesh%np_global+1, mesh%np_part_global
         write(iunit, '(i8,99f18.8)') ii, mesh_x_global(mesh, ii)
       end do

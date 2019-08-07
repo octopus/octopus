@@ -225,7 +225,7 @@ contains
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
 
-    iunit = io_open(this%filename_dynmat, action='write', namespace=this%namespace, position='append')
+    iunit = io_open(this%filename_dynmat, this%namespace, action='write', position='append')
 
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
@@ -334,16 +334,14 @@ contains
     PUSH_SUB(vibrations_output)
 
     ! output frequencies and eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write', &
-      namespace=this%namespace)
+    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), this%namespace, action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6,f17.8)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
     ! output eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write', &
-      namespace=this%namespace)
+    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), this%namespace, action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6)', advance='no') imat
       do jmat = 1, this%num_modes
