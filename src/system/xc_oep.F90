@@ -25,6 +25,7 @@ module xc_oep_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use lalg_basic_oct_m 
   use lalg_adv_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m

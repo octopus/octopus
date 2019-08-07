@@ -173,7 +173,8 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
 
-  vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
+  !vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
+  call lalg_copy(gr%mesh%np, vxc, vxc_old)
 
   if(.not. lr_is_allocated(oep%lr)) then
     call lr_allocate(oep%lr, st, gr%mesh)
@@ -226,8 +227,10 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
         call messages_info(1)
       end if
 
-      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
-      oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
+!      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
+!      oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
+      call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
+      call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
     end select
 
@@ -263,7 +266,9 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   message(2) = ''
   call messages_info(2)
 
-  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
+  !vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
+  call lalg_copy(gr%mesh%np, vxc_old, vxc)
+
   SAFE_DEALLOCATE_A(bb)
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(vxc_old)
