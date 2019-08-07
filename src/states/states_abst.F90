@@ -29,7 +29,7 @@ module states_abst_oct_m
   private
 
   public ::                           &
-    states_abst_t,                &
+    states_abst_t,                    &
     states_are_complex,               &
     states_are_real,                  &
     states_set_complex
