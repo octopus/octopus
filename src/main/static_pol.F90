@@ -700,7 +700,7 @@ contains
         call io_close(iunit)
         
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
-        call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR)
+        call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR, sys%namespace)
 
         if(calc_Born) then
           call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%mesh%sb%dim, &

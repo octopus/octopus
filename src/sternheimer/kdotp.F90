@@ -174,7 +174,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
-      call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
+      call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:), sys%namespace)
     end if
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
@@ -313,7 +313,7 @@ contains
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
-      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars)
+      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
     end if
 
     ! clean up some things
@@ -453,10 +453,11 @@ contains
   end subroutine kdotp_lr_run
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_band_velocity(st, periodic_dim, velocity)
-    type(states_t), intent(inout) :: st
-    integer,        intent(in)    :: periodic_dim
-    FLOAT,          intent(in)    :: velocity(:,:,:)
+  subroutine kdotp_write_band_velocity(st, periodic_dim, velocity, namespace)
+    type(states_t),    intent(inout) :: st
+    integer,           intent(in)    :: periodic_dim
+    FLOAT,             intent(in)    :: velocity(:,:,:)
+    type(namespace_t), intent(inout) :: namespace
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin, idir
@@ -464,7 +465,7 @@ contains
     PUSH_SUB(kdotp_write_band_velocity)
 
     write(filename, '(a)') KDOTP_DIR//'velocity'
-    iunit = io_open_old(trim(filename), action='write')
+    iunit = io_open(trim(filename), namespace, action='write')
     write(iunit,'(a)') '# Band velocities'
 
     do ik = 1, st%d%nik
@@ -497,10 +498,11 @@ contains
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars)
+  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars, namespace)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(kdotp_t),        intent(inout) :: kdotp_vars
+    type(namespace_t),    intent(in)    :: namespace
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin
@@ -514,7 +516,7 @@ contains
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
-      iunit = io_open_old(trim(filename), action='write')
+      iunit = io_open(trim(filename), namespace, action='write')
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2

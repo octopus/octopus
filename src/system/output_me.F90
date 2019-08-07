@@ -188,7 +188,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm, psolver)
+  subroutine output_me(this, dir, st, gr, geo, hm, psolver, namespace)
     type(output_me_t),   intent(in)    :: this
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(inout) :: st
@@ -196,6 +196,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
     type(poisson_t),     intent(in)    :: psolver
+    type(namespace_t),   intent(in)    :: namespace
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
@@ -207,12 +208,12 @@ contains
 
     if(bitand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
-      call output_me_out_momentum(fname, st, gr)
+      call output_me_out_momentum(fname, st, gr, namespace)
     end if
 
     if(bitand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
-      call output_me_out_ang_momentum(fname, st, gr)
+      call output_me_out_ang_momentum(fname, st, gr, namespace)
     end if
 
     if(bitand(this%what, output_me_ks_multipoles) /= 0) then
@@ -226,9 +227,9 @@ contains
               write(fname,'(i4)') id
               write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
               if (states_are_real(st)) then
-                call doutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+                call doutput_me_ks_multipoles(fname, namespace, st, gr, ll, mm, ik)
               else
-                call zoutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+                call zoutput_me_ks_multipoles(fname, namespace, st, gr, ll, mm, ik)
               end if
 
               id = id + 1
@@ -239,9 +240,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call doutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
             else
-              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
             end if
 
             id = id + 1
@@ -252,9 +253,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call doutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
             else
-              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
             end if
 
             id = id + 1
@@ -270,9 +271,9 @@ contains
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, st, gr, hm, geo, ik)
+            call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
           else
-            call zoutput_me_dipole(this, fname, st, gr, hm, geo, ik)
+            call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
           end if
       end do
     end if
@@ -287,7 +288,7 @@ contains
       if(hm%family_is_mgga_with_exc) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
-      iunit = io_open_old(trim(dir)//'/output_me_one_body', action='write')
+      iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')
 
       id = st%nst*(st%nst+1)/2
 
@@ -324,7 +325,7 @@ contains
       if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
-      iunit = io_open_old(trim(dir)//'/output_me_two_body', action='write')
+      iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
       id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
@@ -371,10 +372,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_momentum(fname, st, gr)
-    character(len=*), intent(in) :: fname
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+  subroutine output_me_out_momentum(fname, st, gr, namespace)
+    character(len=*),  intent(in) :: fname
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
@@ -387,7 +389,7 @@ contains
 
     call states_calc_momentum(st, gr%der, momentum)
 
-    iunit = io_open_old(fname, action='write')
+    iunit = io_open(fname, namespace, action='write')
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -458,10 +460,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_ang_momentum(fname, st, gr)
-    character(len=*), intent(in)    :: fname
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+  subroutine output_me_out_ang_momentum(fname, st, gr, namespace)
+    character(len=*),  intent(in)    :: fname
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
 
     integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin
@@ -479,7 +482,7 @@ contains
     if(st%d%nspin == 2) ns = 2
     ASSERT(gr%sb%dim == 3)
 
-    iunit = io_open_old(fname, action='write')
+    iunit = io_open(fname, namespace, action='write')
 
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') 'Warning: When non-local pseudopotentials are used '

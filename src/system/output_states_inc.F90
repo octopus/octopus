@@ -174,7 +174,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, namespace, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, namespace)
     call dos_end(dos)
   end if
 
@@ -216,7 +216,7 @@ subroutine output_current_flow(gr, st, dir, outp)
   if(mpi_grp_is_root(mpi_world)) then
 
     call io_mkdir(dir, outp%namespace)
-    iunit = io_open_old(trim(dir)//'/'//'current-flow', action='write')
+    iunit = io_open(trim(dir)//'/'//'current-flow', outp%namespace, action='write')
 
     select case(gr%mesh%sb%dim)
     case(3)

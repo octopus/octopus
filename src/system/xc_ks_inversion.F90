@@ -447,7 +447,7 @@ contains
     vhxc(1:np,1:nspin) = aux_hm%vhxc(1:np,1:nspin)
          
     if(verbosity == 1 .or. verbosity == 2) then
-      iunit = io_open_old('InvertKSconvergence', action = 'write')
+      iunit = io_open('InvertKSconvergence', namespace, action = 'write')
     end if
 
     diffdensity = M_ONE

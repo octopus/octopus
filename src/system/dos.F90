@@ -141,7 +141,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm)
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_t),           intent(in) :: st
@@ -149,6 +149,7 @@ contains
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
     type(hamiltonian_t),      intent(in) :: hm
+    type(namespace_t),        intent(in) :: namespace
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -185,7 +186,7 @@ contains
           else
             write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
           end if
-          iunit(is) = io_open_old(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
         end do
@@ -216,7 +217,7 @@ contains
       if(st%d%nspin > 1) then    
         do is = 0, ns-1
           write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
-          iunit(is) = io_open_old(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
 
@@ -236,7 +237,7 @@ contains
       end if
 
 
-      iunit(0) = io_open_old(trim(dir)//'/'//'total-dos.dat', action='write')    
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', namespace, action='write')    
       write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
       
       ! compute total density of states
@@ -257,7 +258,7 @@ contains
 
 
       ! write Fermi file
-      iunit(0) = io_open_old(trim(dir)//'/'//'total-dos-efermi.dat', action='write')
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', namespace, action='write')
       write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
         '] in a format compatible with total-dos.dat'
 
@@ -357,7 +358,7 @@ contains
                             l_notation(os%ll), '.dat'
             end if
  
-            iunit(0) = io_open_old(trim(dir)//'/'//trim(filename), action='write')
+            iunit(0) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
             ! write header
             write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], projected DOS'
           end if

@@ -79,7 +79,7 @@ contains
     call sternheimer_init(sh, sys, wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
-      iunit = io_open_old(VDW_DIR//'vdw_c6', action='write')
+      iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='write')
       write(iunit, '(a,i3)') '# npoints = ', gaus_leg_n
       write(iunit, '(a1,a12,2a20)') '#', 'omega', 'domega', 'pol'
       call io_close(iunit)
@@ -91,7 +91,7 @@ contains
 
       pol = get_pol(omega)
       if(mpi_grp_is_root(mpi_world)) then
-        iunit = io_open_old(VDW_DIR//'vdw_c6', action='write', position='append')
+        iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='write', position='append')
         write(iunit, '(3es20.12)') aimag(omega), domega, pol
         call io_close(iunit)
       end if
@@ -102,7 +102,7 @@ contains
     end do
 
     if((gauss_start  <=  gaus_leg_n).and.mpi_grp_is_root(mpi_world)) then
-      iunit = io_open_old(VDW_DIR//'vdw_c6', action='write', position='append')
+      iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='write', position='append')
       write(iunit, '(1x)')
       write(iunit, '(a,es20.12)') "C_3  [a.u. ] = ", c3
       write(iunit, '(a,es20.12)') "C_6  [a.u. ] = ", c6
@@ -188,7 +188,7 @@ contains
       ! check if we can restart
       inquire(file=VDW_DIR//'vdw_c6', exist=file_exists)
       if(.not.fromScratch .and. file_exists) then
-        iunit = io_open_old(VDW_DIR//'vdw_c6', action='read')
+        iunit = io_open(VDW_DIR//'vdw_c6', sys%namespace, action='read')
         read(iunit, '(a12,i3)', iostat=ierr) dirname, ii
         if(ii /= gaus_leg_n) then
           message(1) = "Invalid restart of van der Waals calculation."

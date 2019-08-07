@@ -698,7 +698,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, dir, st, gr, geo, hm, psolver)
+      call output_me(outp%me, dir, st, gr, geo, hm, psolver, namespace)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
@@ -838,7 +838,7 @@ contains
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
-      iunit = io_open_old(file=trim(fname), action = 'write')
+      iunit = io_open(trim(fname), outp%namespace, action = 'write')
       call basins_write(basins, gr%mesh, iunit)
       call io_close(iunit)
 
@@ -1243,9 +1243,9 @@ contains
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
+      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc, namespace)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
+      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc, namespace)
     end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
@@ -1271,9 +1271,9 @@ contains
       call messages_info(1)
 
       if(states_are_real(st)) then
-        call dbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call dbgw_vmtxel(bgw, dir, st, gr, ifmax, namespace)
       else
-        call zbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call zbgw_vmtxel(bgw, dir, st, gr, ifmax, namespace)
       end if
     end if
 
@@ -1282,7 +1282,7 @@ contains
 
     sheader = 'VXC'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open_old(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'VXC', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     ! convert from Ha to Ry, make usable with same processing as RHO
@@ -1297,7 +1297,7 @@ contains
 
     sheader = 'RHO'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open_old(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'RHO', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
@@ -1316,7 +1316,7 @@ contains
 
     sheader = 'WFN'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open_old(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // bgw%wfn_filename, namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
 

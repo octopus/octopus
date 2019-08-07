@@ -29,11 +29,12 @@
 !! the Kohn-Sham states in the irreducible subspace ik.
 !!
 ! ---------------------------------------------------------
-subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
-  character(len=*), intent(in) :: fname
-  type(states_t),   intent(in) :: st
-  type(grid_t),     intent(in) :: gr
-  integer,          intent(in) :: ll, mm, ik
+subroutine X(output_me_ks_multipoles)(fname, namespace, st, gr, ll, mm, ik)
+  character(len=*),  intent(in) :: fname
+  type(namespace_t), intent(in) :: namespace
+  type(states_t),    intent(in) :: st
+  type(grid_t),      intent(in) :: gr
+  integer,           intent(in) :: ll, mm, ik
   
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: multipole(:)
@@ -46,7 +47,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open_old(file = fname, action = 'write')
+  iunit = io_open(fname, namespace, action = 'write')
 
   write(iunit, fmt = '(a)') '# Multipole matrix elements file: <Phi_i | r**l * Y_{lm}(theta,phi) | Phi_j>' 
   write(iunit, fmt = '(a,i2,a,i2)') '# l =', ll, '; m =', mm
@@ -113,11 +114,12 @@ end subroutine X(output_me_ks_multipoles)
 !!
 !! The argument dir should be 1 (X) or 2 (Y).
 ! ---------------------------------------------------------
-subroutine X(output_me_ks_multipoles2d)(fname, st, gr, dir, ik)
-  character(len=*), intent(in) :: fname
-  type(states_t),   intent(in) :: st
-  type(grid_t),     intent(in) :: gr
-  integer,          intent(in) :: dir, ik
+subroutine X(output_me_ks_multipoles2d)(fname, namespace, st, gr, dir, ik)
+  character(len=*),  intent(in) :: fname
+  type(namespace_t), intent(in) :: namespace
+  type(states_t),    intent(in) :: st
+  type(grid_t),      intent(in) :: gr
+  integer,           intent(in) :: dir, ik
   
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: dipole(:)
@@ -130,7 +132,7 @@ subroutine X(output_me_ks_multipoles2d)(fname, st, gr, dir, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open_old(file = fname, action = 'write')
+  iunit = io_open(fname, namespace, action = 'write')
 
   select case(dir)
   case(1)
@@ -191,11 +193,12 @@ end subroutine X(output_me_ks_multipoles2d)
 !! It prints the moment of ll-th order, for single orbital states
 !! irreducible subspace ik.
 ! ---------------------------------------------------------
-subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
-  character(len=*), intent(in) :: fname
-  type(states_t),   intent(in) :: st
-  type(grid_t),     intent(in) :: gr
-  integer,          intent(in) :: ll, ik
+subroutine X(output_me_ks_multipoles1d)(fname, namespace, st, gr, ll, ik)
+  character(len=*),  intent(in) :: fname
+  type(namespace_t), intent(in) :: namespace
+  type(states_t),    intent(in) :: st
+  type(grid_t),      intent(in) :: gr
+  integer,           intent(in) :: ll, ik
 
   integer :: iunit, ip, ist, jst
   FLOAT, allocatable :: dipole(:)
@@ -208,7 +211,7 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
-  iunit = io_open_old(file = fname, action = 'write')
+  iunit = io_open(fname, namespace, action = 'write')
 
   write(iunit, fmt = '(a)') '# Dipole matrix elements file: <Phi_i | X**l | Phi_j>' 
   write(iunit, fmt = '(a,i2)') '# l =', ll
@@ -266,9 +269,10 @@ end subroutine X(output_me_ks_multipoles1d)
 !! It prints the states to the file opened in iunit.
 !!
 ! ---------------------------------------------------------
-subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
+subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
   type(output_me_t),   intent(in) :: this
   character(len=*),    intent(in) :: fname
+  type(namespace_t),   intent(in) :: namespace
   type(states_t),      intent(in) :: st
   type(grid_t),        intent(in) :: gr
   type(hamiltonian_t), intent(in) :: hm
@@ -294,7 +298,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
   
   do idir = 1, gr%sb%dim
 
-    iunit = io_open_old(file = trim(fname)//index2axis(idir), action = 'write')
+    iunit = io_open(trim(fname)//index2axis(idir), namespace, action = 'write')
 
     write(iunit, '(a)') '# Dipole matrix elements file: |<Phi_i | r | Phi_j>|' 
     write(iunit, '(a,i4)')      '# ik =', ik
