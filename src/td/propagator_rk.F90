@@ -705,7 +705,7 @@ contains
 
   subroutine td_runge_kutta4(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace    
+    type(namespace_t),   target,     intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
