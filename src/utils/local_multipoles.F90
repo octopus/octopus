@@ -217,7 +217,7 @@ contains
       ! get parameters from file
       do ia = 1, sys%geo%nspecies
         read_data = 0
-        iunit = io_open_old(radiifile, action='read', status='old', die=.false.)
+        iunit = io_open(radiifile, default_namespace, action='read', status='old', die=.false.)
         if(iunit > 0) then
           if(ia == 1) then
             write(message(1),'(a,a)')'Redefining def_rsize from file:', trim(radiifile)

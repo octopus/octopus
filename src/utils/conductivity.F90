@@ -118,7 +118,7 @@
       call messages_info()
 
       ! Opens the coordinates files.
-      iunit = io_open_old('td.general/coordinates', action='read')
+      iunit = io_open('td.general/coordinates', default_namespace, action='read')
 
       call io_skip_header(iunit)
 
@@ -163,7 +163,7 @@
       SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
 
       ! Opens the coordinates files.
-      iunit = io_open_old('td.general/coordinates', action='read', status='old', die=.false.)
+      iunit = io_open('td.general/coordinates', default_namespace, action='read', status='old', die=.false.)
 
       call io_skip_header(iunit)
 
@@ -213,7 +213,7 @@
       call messages_info()
 
       ! Opens the coordinates files.
-      iunit = io_open_old('td.general/total_current', action='read')
+      iunit = io_open('td.general/total_current', default_namespace, action='read')
 
       call io_skip_header(iunit)
 
@@ -254,7 +254,7 @@
       SAFE_ALLOCATE(heat_current(1:3, 1:ntime))
       SAFE_ALLOCATE(time(1:ntime))
       
-      iunit = io_open_old('td.general/total_current', action='read', status='old', die=.false.)
+      iunit = io_open('td.general/total_current', default_namespace, action='read', status='old', die=.false.)
       
       if(iunit > 0) then
         
@@ -277,7 +277,7 @@
         
       end if
 
-         iunit = io_open_old('td.general/total_heat_current', action='read', status='old', die=.false.)
+         iunit = io_open('td.general/total_heat_current', default_namespace, action='read', status='old', die=.false.)
       
       if(iunit > 0) then
         
@@ -309,7 +309,7 @@
     SAFE_ALLOCATE(heatcurr(ntime, 1:3, 1:1))
     integral = CNST(0.0)
 
-    if(from_forces) iunit = io_open_old('td.general/current_from_forces', action='write')
+    if(from_forces) iunit = io_open('td.general/current_from_forces', default_namespace, action='write')
 
     do iter = 1, ntime
 
@@ -374,7 +374,7 @@
 
 
     !and print the spectrum
-    iunit = io_open_old('td.general/conductivity', action='write')
+    iunit = io_open('td.general/conductivity', default_namespace, action='write')
 
     
     write(unit = iunit, iostat = ierr, fmt = '(a)') &
@@ -421,7 +421,7 @@
 
 
     !and print the spectrum
-    iunit = io_open_old('td.general/heat_conductivity', action='write')
+    iunit = io_open('td.general/heat_conductivity', default_namespace, action='write')
 
     
     write(unit = iunit, iostat = ierr, fmt = '(a)') &

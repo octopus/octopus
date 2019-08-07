@@ -89,7 +89,7 @@ program xyzanim
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
   ! Opens the coordinates file
-  coords_unit = io_open_old(coords_file, action='read', recl = record_length)
+  coords_unit = io_open(coords_file, default_namespace, action='read', recl = record_length)
 
   call io_skip_header(coords_unit)
   ierr = 0

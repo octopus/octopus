@@ -89,7 +89,7 @@
       end do
 
       !and print the spectrum
-      iunit = io_open_old('td.general/infrared', action='write')
+      iunit = io_open('td.general/infrared', default_namespace, action='write')
 
 100   FORMAT(100('#'))
 
@@ -133,7 +133,7 @@
       PUSH_SUB(read_dipole)
 
       ! Opens the coordinates files.
-      iunit = io_open_old('td.general/multipoles', action='read')
+      iunit = io_open('td.general/multipoles', default_namespace, action='read')
 
       call io_skip_header(iunit)
 

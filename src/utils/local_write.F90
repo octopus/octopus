@@ -735,7 +735,7 @@ contains
     write(folder,'(a,a)')'local.general/multipoles/',trim(label)
     call io_mkdir(folder, namespace)
     write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
-    out_bld = io_open_old(file=trim(filename), action='write')
+    out_bld = io_open(file=trim(filename), namespace, action='write')
 
     write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
                         trim(label), ' domain and iteration number: ',iter
