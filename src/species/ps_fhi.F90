@@ -23,6 +23,7 @@ module ps_fhi_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_file_oct_m
   use ps_cpi_oct_m
@@ -50,9 +51,10 @@ module ps_fhi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_fhi_init(ps_fhi, filename)
-    type(ps_fhi_t),   intent(inout) :: ps_fhi
-    character(len=*), intent(in)    :: filename
+  subroutine ps_fhi_init(ps_fhi, filename, namespace)
+    type(ps_fhi_t),    intent(inout) :: ps_fhi
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit
     logical :: found
@@ -71,7 +73,7 @@ contains
       call messages_fatal()
     end if
 
-    iunit = io_open_old(filename, action='read', form='formatted', status='old')
+    iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
     call ps_fhi_file_read(iunit, ps_fhi%fhi_file)
     call ps_cpi_file_read(iunit, ps_fhi%cpi_file)
     call io_close(iunit)

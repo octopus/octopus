@@ -64,7 +64,7 @@
       call messages_fatal(1)
     end if
 
-    call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
+    call excited_states_init(tg%est, tg%st, "oct-excited-state-target", namespace) 
 
     POP_SUB(target_init_excited)
   end subroutine target_init_excited
@@ -93,7 +93,7 @@
     
     call io_mkdir(trim(dir), outp%namespace)
     call output_states(tg%est%st, namespace, gr, geo, hm, trim(dir)//'/st', outp)
-    call excited_states_output(tg%est, trim(dir))
+    call excited_states_output(tg%est, trim(dir), namespace)
 
     POP_SUB(target_output_excited)
   end subroutine target_output_excited

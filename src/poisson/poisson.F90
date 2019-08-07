@@ -1024,7 +1024,7 @@ contains
     end do
 
     ! Output results
-    iunit = io_open_old("hartree_results", action='write')
+    iunit = io_open("hartree_results", namespace, action='write')
     delta = dmf_nrm2(mesh, vh-vh_exact)
     write(iunit, '(a,f19.13)' ) 'Hartree test (abs.) = ', delta
     delta = delta/dmf_nrm2(mesh, vh_exact)

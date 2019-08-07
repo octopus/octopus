@@ -218,7 +218,7 @@ contains
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
 
-      iunit = io_open(str, status='old', namespace, action='read')
+      iunit = io_open(str, namespace, action='read', status='old')
       read(iunit, *) gf%n
 
       if(gf%n <= 0) then
@@ -260,7 +260,7 @@ contains
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
 
-      iunit = io_open(str, status='old', namespace, action='read')
+      iunit = io_open(str, namespace, action='read', status='old')
 
       read(iunit, '(a256)') str
       if(str(1:9) == 'ANIMSTEPS') then

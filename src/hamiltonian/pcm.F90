@@ -753,7 +753,7 @@ contains
     else
 
       !> The cavity surface will be read from a external file
-      iunit = io_open(trim(pcm%input_cavity), status='old', pcm%namespace, action='read')
+      iunit = io_open(trim(pcm%input_cavity), pcm%namespace, action='read', status='old')
       read(iunit,*) pcm%n_tesserae
 
       if (pcm%n_tesserae > MXTS) then

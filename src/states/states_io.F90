@@ -528,7 +528,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      iunit = io_open_old(trim(dir)//'/'//trim('tpa_xas'), action='write')    
+      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), namespace, action='write')    
 
       ! header
       if(use_qvector) then
@@ -684,7 +684,7 @@ contains
         else
           write(filename, '(a)') 'bandstructure'
         end if
-        iunit(is) = io_open_old(trim(dir)//'/'//trim(filename), action='write')    
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
 
         ! write header
         write(iunit(is),'(a)',advance='no') '# coord. '

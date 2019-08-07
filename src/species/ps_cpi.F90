@@ -24,6 +24,7 @@ module ps_cpi_oct_m
   use io_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_file_oct_m
   use ps_in_grid_oct_m
@@ -49,9 +50,10 @@ module ps_cpi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_cpi_init(ps_cpi, filename)
-    type(ps_cpi_t),   intent(inout) :: ps_cpi
-    character(len=*), intent(in)    :: filename
+  subroutine ps_cpi_init(ps_cpi, filename, namespace)
+    type(ps_cpi_t),    intent(inout) :: ps_cpi
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit
     logical :: found
@@ -69,7 +71,7 @@ contains
       call messages_fatal()
     end if
     
-    iunit = io_open_old(filename, action='read', form='formatted', status='old')
+    iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
 

@@ -474,7 +474,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir(dir, namespace)
-        iunit = io_open_old(trim(dir) // "/" // trim(fname), action='write')
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
         call grid_write_info(gr, geo, iunit)
 

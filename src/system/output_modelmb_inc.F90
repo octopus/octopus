@@ -52,7 +52,7 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'
-  iunit = io_open_old(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   ! treat all particle types
   SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
@@ -102,7 +102,7 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .and. symmetries_satisfied) then
-      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then

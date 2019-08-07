@@ -490,7 +490,7 @@ contains
         SAFE_ALLOCATE(writ%excited_st(1:writ%n_excited_states))
         do ist = 1, writ%n_excited_states
           call parse_block_string(blk, ist-1, 0, filename)
-          call excited_states_init(writ%excited_st(ist), writ%gs_st, trim(filename)) 
+          call excited_states_init(writ%excited_st(ist), writ%gs_st, trim(filename), namespace) 
         end do
       else
         writ%n_excited_states = 0

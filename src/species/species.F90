@@ -1600,7 +1600,7 @@ contains
 
     call io_mkdir(dirname, namespace)
 
-    iunit = io_open_old(trim(dirname)//'/info', action='write')
+    iunit = io_open(trim(dirname)//'/info', namespace, action='write')
 
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)
@@ -1630,7 +1630,7 @@ contains
     write(iunit, '(a,f15.2)') 'hubbard_alpha = ', spec%hubbard_alpha
 
     if(species_is_ps(spec)) then
-       if(debug%info) call ps_debug(spec%ps, trim(dirname))
+       if(debug%info) call ps_debug(spec%ps, trim(dirname), namespace)
     end if
 
     call io_close(iunit)
