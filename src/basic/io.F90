@@ -320,7 +320,7 @@ contains
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath("", namespace)))
+      call loct_mkdir(trim(io_workpath(".", namespace)))
       call loct_mkdir(trim(io_workpath(fname, namespace)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
