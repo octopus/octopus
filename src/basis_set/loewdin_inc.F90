@@ -48,31 +48,32 @@
 
      !We compute S^{-1/2} from S
      call lalg_eigensolve(basis%size, overlap, eigenval)
+     if(debug%info) call X(print_matrix)(basis, 'eigenvec', namespace, overlap, ik)
      overlap2 = R_CONJ(transpose(overlap))
      do is = 1, basis%size
        eigenval(is) = M_ONE/sqrt(eigenval(is))
-       overlap2(is, 1:basis%size) = eigenval(is)* overlap2(is, 1:basis%size)     
+       overlap2(is, 1:basis%size) = eigenval(is) * overlap2(is, 1:basis%size)     
      end do 
      overlap = matmul(overlap,overlap2)
      if(debug%info) call X(print_matrix)(basis, 'loewdin', namespace, overlap, ik)
 
      !We now contruct the orthogonalized basis
      do ind = 1, basis%size
-       ios  = basis%global2os(1,ind)
-       iorb = basis%global2os(2,ind)
+       ios  = basis%global2os(1, ind)
+       iorb = basis%global2os(2, ind)
        os => basis%orbsets(ios)
-       os%eorb_mesh(:,iorb,:,ik) = R_TOTYPE(M_ZERO)
+       os%eorb_mesh(:, iorb, :, ik) = R_TOTYPE(M_ZERO)
        do idim = 1, os%ndim
          do ind2 = 1, basis%size
-           ios2  = basis%global2os(1,ind2)
-           iorb2 = basis%global2os(2,ind2)
+           ios2  = basis%global2os(1, ind2)
+           iorb2 = basis%global2os(2, ind2)
            os2 => basis%orbsets(ios2)
            ns = os2%sphere%np
-           if(abs(overlap(ind2,ind)) < CNST(1e-6)) cycle
+           if(abs(overlap(ind2, ind)) < CNST(1e-6)) cycle
            do is = 1, ns
-             os%eorb_mesh(os2%sphere%map(is),iorb,idim,ik) &
-                      = os%eorb_mesh(os2%sphere%map(is),iorb,idim,ik) &
-                      + overlap(ind2,ind)*os2%zorb(is,idim,iorb2)*os2%phase(is, ik)
+             os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
+                      = os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
+                      + overlap(ind2, ind)*os2%zorb(is, idim, iorb2)*os2%phase(is, ik)
            end do
          end do
        end do
@@ -115,25 +116,24 @@
 
   PUSH_SUB(X(loewdin_overlap))
 
-  overlap(1:basis%size,1:basis%size) = R_TOTYPE(M_ZERO)
+  overlap(1:basis%size, 1:basis%size) = R_TOTYPE(M_ZERO)
 
   do ind = 1, basis%size
-    ios  = basis%global2os(1,ind)
-    iorb = basis%global2os(2,ind)
+    ios  = basis%global2os(1, ind)
+    iorb = basis%global2os(2, ind)
     os => basis%orbsets(ios)
     do ind2 = ind, basis%size
-      ios2  = basis%global2os(1,ind2)
-      iorb2 = basis%global2os(2,ind2)
+      ios2  = basis%global2os(1, ind2)
+      iorb2 = basis%global2os(2, ind2)
       os2 => basis%orbsets(ios2)
 
       if(simul_box_is_periodic(os%sphere%mesh%sb))then
  #ifdef R_TCOMPLEX
         overlap(ind,ind2) = M_Z0
         do idim = 1, os%ndim
-          overlap(ind,ind2) = overlap(ind,ind2) + zmf_dotp(os%sphere%mesh, &
-                         os%eorb_mesh(:,iorb,idim,ik), os2%eorb_mesh(:,iorb2,idim,ik))
+          overlap(ind, ind2) = overlap(ind, ind2) + zmf_dotp(os%sphere%mesh, &
+                         os%eorb_mesh(:, iorb, idim, ik), os2%eorb_mesh(:, iorb2, idim, ik))
         end do
-        if(abs(overlap(ind,ind2)) < CNST(1.0e-6)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
  #endif
       else
         call messages_not_implemented("Lowdin orthogonalization with submeshes.")
@@ -141,10 +141,10 @@
     end do !ind2
   end do !ind
 
-  !Thre overlap matric is Hermitian
+  !The overlap matrix is Hermitian
   do ind = 1, basis%size
     do ind2 = 1, ind-1
-      overlap(ind,ind2) = R_CONJ(overlap(ind2, ind))
+      overlap(ind, ind2) = R_CONJ(overlap(ind2, ind))
     end do
   end do
     

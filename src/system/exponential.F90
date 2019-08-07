@@ -37,8 +37,8 @@ module exponential_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
   use types_oct_m
   use xc_oct_m
 
@@ -315,7 +315,7 @@ contains
    !We apply the phase only to np points, and the phase for the np+1 to np_part points
    !will be treated as a phase correction in the Hamiltonian
     if(phase_correction) then
-      call states_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .false.)
+      call states_elec_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .false.)
     end if
 
     select case(te%exp_method)
@@ -328,7 +328,7 @@ contains
     end select
 
     if(phase_correction) then
-      call states_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .true.)
+      call states_elec_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .true.)
     end if
 
 
@@ -516,7 +516,7 @@ contains
           end if
 
           !orthogonalize against previous vectors
-          call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
+          call zstates_elec_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
             normalize = .false., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter), &
             gs_scheme = te%arnoldi_gs)
 
@@ -549,7 +549,7 @@ contains
       ! We have an inhomogeneous term.
       if( hamiltonian_inh_term(hm) ) then
 
-        call states_get_state(hm%inh_st, der%mesh, ist, ik, v(:, :, 1))
+        call states_elec_get_state(hm%inh_st, der%mesh, ist, ik, v(:, :, 1))
         beta = zmf_nrm2(der%mesh, hm%d%dim, v(:, :, 1))
 
         if(beta > CNST(1.0e-12)) then
@@ -577,7 +577,7 @@ contains
             end if
 
             !orthogonalize against previous vectors
-            call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
+            call zstates_elec_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
               v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
               norm = hamilt(iter + 1, iter), gs_scheme = te%arnoldi_gs)
 
@@ -925,21 +925,21 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(poisson_t),     intent(in)    :: psolver
     type(xc_t),          intent(in)    :: xc
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: deltat
     integer, optional,   intent(inout) :: order
 
     integer :: ik, ib, i
     FLOAT :: zfact
 
-    type(states_t) :: st1, hst1
+    type(states_elec_t) :: st1, hst1
 
     PUSH_SUB(exponential_apply_all)
 
     ASSERT(te%exp_method  ==  EXP_TAYLOR)
 
-    call states_copy(st1, st)
-    call states_copy(hst1, st)
+    call states_elec_copy(st1, st)
+    call states_elec_copy(hst1, st)
 
     zfact = M_ONE
     do i = 1, te%exp_order
@@ -962,15 +962,15 @@ contains
     end do
     ! End of Taylor expansion loop.
 
-    call states_end(st1)
-    call states_end(hst1)
+    call states_elec_end(st1)
+    call states_elec_end(hst1)
 
     ! We now add the inhomogeneous part, if present.
     if(hamiltonian_inh_term(hm)) then
       !write(*, *) 'Now we apply the inhomogeneous term...'
 
-      call states_copy(st1, hm%inh_st)
-      call states_copy(hst1, hm%inh_st)
+      call states_elec_copy(st1, hm%inh_st)
+      call states_elec_copy(hst1, hm%inh_st)
 
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -999,8 +999,8 @@ contains
 
       end do
 
-      call states_end(st1)
-      call states_end(hst1)
+      call states_elec_end(st1)
+      call states_elec_end(hst1)
 
     end if
 

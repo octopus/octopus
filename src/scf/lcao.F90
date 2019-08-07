@@ -51,10 +51,11 @@ module lcao_oct_m
   use scalapack_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
-  use states_io_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_io_oct_m
   use submesh_oct_m
   use system_oct_m
   use unit_oct_m
@@ -135,7 +136,7 @@ contains
     type(namespace_t),    intent(in)  :: namespace
     type(grid_t),         intent(in)  :: gr
     type(geometry_t),     intent(in)  :: geo
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
     integer :: ii, ll, mm
@@ -756,17 +757,17 @@ contains
 
       if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
         if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
         else
-          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
         end if
       else
         call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%psolver, sys%namespace, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
-        call states_fermi(sys%st, sys%gr%mesh)
-        call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+        call states_elec_fermi(sys%st, sys%gr%mesh)
+        call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
@@ -794,18 +795,18 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_orthogonalize(sys%st, sys%gr%mesh)
+      call states_elec_orthogonalize(sys%st, sys%gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
         call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
-          call states_fermi(sys%st, sys%gr%mesh) ! occupations
+          call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
 
       end if
@@ -815,7 +816,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_orthogonalize(sys%st, sys%gr%mesh)
+        call states_elec_orthogonalize(sys%st, sys%gr%mesh)
       end if
 
     end if
@@ -858,7 +859,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lcao_wf(this, st, gr, geo, hm, psolver, namespace, start)
     type(lcao_t),        intent(inout) :: this
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
@@ -964,7 +965,7 @@ contains
   subroutine lcao_atom_density(this, namespace, st, gr, sb, geo, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
-    type(states_t),           intent(in)    :: st
+    type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(simul_box_t),        intent(in)    :: sb
     type(geometry_t), target, intent(in)    :: geo
@@ -1066,15 +1067,15 @@ contains
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
   subroutine lcao_guess_density(this, namespace, st, gr, sb, geo, qtot, nspin, spin_channels, rho)
-    type(lcao_t),      intent(inout) :: this
-    type(namespace_t), intent(in)    :: namespace
-    type(states_t),    intent(in)    :: st
-    type(grid_t),      intent(in)    :: gr
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    FLOAT,             intent(in)    :: qtot  !< the total charge of the system
-    integer,           intent(in)    :: nspin, spin_channels
-    FLOAT,             intent(out)   :: rho(:, :)
+    type(lcao_t),        intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(in)    :: st
+    type(grid_t),        intent(in)    :: gr
+    type(simul_box_t),   intent(in)    :: sb
+    type(geometry_t),    intent(in)    :: geo
+    FLOAT,               intent(in)    :: qtot  !< the total charge of the system
+    integer,             intent(in)    :: nspin, spin_channels
+    FLOAT,               intent(out)   :: rho(:, :)
 
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
@@ -1343,7 +1344,7 @@ contains
 
   subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     integer, optional,   intent(in)    :: start

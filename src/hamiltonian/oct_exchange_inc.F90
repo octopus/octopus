@@ -36,7 +36,7 @@ subroutine X(oct_exchange_operator)(this, der, hpsi, ist, ik)
   select case(this%oct_st%d%ispin)
   case(UNPOLARIZED)
     ASSERT(this%oct_st%d%nik  ==  1)
-    call states_get_state(this%oct_st, der%mesh, ist, 1, psi2)
+    call states_elec_get_state(this%oct_st, der%mesh, ist, 1, psi2)
     forall(ip = 1:der%mesh%np)
       hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(this%oct_pot(ip, 1) + this%oct_fxc(ip, 1, 1)*this%oct_rho(ip, 1))
     end forall
@@ -44,7 +44,7 @@ subroutine X(oct_exchange_operator)(this, der, hpsi, ist, ik)
   case(SPIN_POLARIZED)
     ASSERT(this%oct_st%d%nik  ==  2)
 
-    call states_get_state(this%oct_st, der%mesh, ist, ik, psi2)
+    call states_elec_get_state(this%oct_st, der%mesh, ist, ik, psi2)
 
     do ik2 = 1, 2
       forall(ip = 1:der%mesh%np)

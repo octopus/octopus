@@ -19,7 +19,7 @@
 ! ---------------------------------------------------------
 subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converged, ik, diff, tau)
   type(grid_t),        target, intent(in)    :: gr
-  type(states_t),              intent(inout) :: st
+  type(states_elec_t),         intent(inout) :: st
   type(hamiltonian_t), target, intent(in)    :: hm
   type(poisson_t),             intent(in)    :: psolver
   type(exponential_t),         intent(inout) :: te
@@ -51,16 +51,16 @@ subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converg
   do iter = 1, maxiter
 
     do ist = conv + 1, st%nst
-      call states_get_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_get_state(st, gr%mesh, ist, ik, psi)
       !TODO: convert this opperation to batched versions 
       call exponentiate(psi, j)
-      call states_set_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_set_state(st, gr%mesh, ist, ik, psi)
       matvec = matvec + j
     end do
 
     ! This is the orthonormalization suggested by Aichinger and Krotschek
     ! [Comp. Mat. Science 34, 188 (2005)]
-    call X(states_calc_overlap)(st, gr%mesh, ik, c)
+    call X(states_elec_calc_overlap)(st, gr%mesh, ik, c)
 
     call lalg_eigensolve(st%nst, c, eig)
 
@@ -68,15 +68,15 @@ subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converg
       c(1:st%nst, i) = c(1:st%nst, i)/sqrt(eig(i))
     end do
 
-    call states_rotate(gr%mesh, st, c, ik)
+    call states_elec_rotate(gr%mesh, st, c, ik)
     
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call states_get_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_get_state(st, gr%mesh, ist, ik, psi)
       !TODO: convert these opperations to batched versions 
       call X(hamiltonian_apply)(hm, gr%der, psolver, psi, hpsi, ist, ik)
       st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
-      diff(ist) = X(states_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
+      diff(ist) = X(states_elec_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 
       if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &

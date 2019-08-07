@@ -23,7 +23,7 @@
 !! THESE ROUTINES ARE DEPRECATED, THEY SHOULD NOT BE USED BY NEW CODE.
 !! They are slow (too many data copies) and they are not maintained.
 
-module states_block_oct_m
+module states_elec_block_oct_m
   use batch_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -36,15 +36,15 @@ module states_block_oct_m
   use mpi_lib_oct_m
   use multicomm_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
   private
 
   public ::                    &
-    states_blockt_mul,         &
-    states_block_matr_mul_add
+    states_elec_blockt_mul,         &
+    states_elec_block_matr_mul_add
 
 
 !   ! This type encapsulates an array of wavefunctions with numbers
@@ -57,22 +57,22 @@ module states_block_oct_m
 !   !   lbound(stb, 3)    = st_start
 !   !   ubound(stb, 3)    = st_end
 !   !   st_end-st_start+1 = nst
-!   ! with stb of type(states_block_t).
-!   type states_block_t
+!   ! with stb of type(states_elec_block_t).
+!   type states_elec_block_t
 !     integer        :: st_start
 !     integer        :: st_end
 !     integer        :: nst
 !     FLOAT, pointer :: dpsi(:, :, :) ! dpsi(gr%mesh%np_part, DIM, st_start:st_end)
 !     CMPLX, pointer :: zpsi(:, :, :) ! zpsi(gr%mesh%np_part, DIM, st_start:st_end)
-!   end type states_block_t
+!   end type states_elec_block_t
 
-  interface states_blockt_mul
-    module procedure dstates_blockt_mul, zstates_blockt_mul
-  end interface states_blockt_mul
+  interface states_elec_blockt_mul
+    module procedure dstates_elec_blockt_mul, zstates_elec_blockt_mul
+  end interface states_elec_blockt_mul
 
-  interface states_block_matr_mul_add
-    module procedure dstates_block_matr_mul_add, zstates_block_matr_mul_add
-  end interface states_block_matr_mul_add
+  interface states_elec_block_matr_mul_add
+    module procedure dstates_elec_block_matr_mul_add, zstates_elec_block_matr_mul_add
+  end interface states_elec_block_matr_mul_add
 
   type(profile_t), save, public :: &
     C_PROFILING_BLOCKT,            &
@@ -89,16 +89,16 @@ contains
   !> From the global state number index set global_idx(1:length)
   !! create the local sets idx(1:cnt(rank), rank), for rank=0, ..., comm_size-1
   !! using the states distribution stored in st.
-  subroutine states_block_local_idx(st, global_idx, length, cnt, idx)
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: global_idx(:)
-    integer,        intent(in) :: length
-    integer,        pointer    :: cnt(:)
-    integer,        pointer    :: idx(:, :)
+  subroutine states_elec_block_local_idx(st, global_idx, length, cnt, idx)
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: global_idx(:)
+    integer,             intent(in) :: length
+    integer,             pointer    :: cnt(:)
+    integer,             pointer    :: idx(:, :)
 
     integer :: size, node, ist, i
 
-    PUSH_SUB(states_block_local_idx)
+    PUSH_SUB(states_elec_block_local_idx)
 
     size = st%mpi_grp%size
     SAFE_ALLOCATE(cnt(0:size-1))
@@ -123,19 +123,19 @@ contains
       end if
     end do
 
-    POP_SUB(states_block_local_idx)
-  end subroutine states_block_local_idx
+    POP_SUB(states_elec_block_local_idx)
+  end subroutine states_elec_block_local_idx
 
 
 #include "undef.F90"
 #include "real.F90"
-#include "states_block_inc.F90"
+#include "states_elec_block_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "states_block_inc.F90"
+#include "states_elec_block_inc.F90"
 #include "undef.F90"
-end module states_block_oct_m
+end module states_elec_block_oct_m
 
 
 !! Local Variables:

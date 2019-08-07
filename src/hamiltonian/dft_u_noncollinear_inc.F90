@@ -22,7 +22,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
   type(lda_u_t),       intent(inout) :: this
   type(mesh_t),        intent(in)    :: mesh
   type(derivatives_t), intent(in)    :: der
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   type(poisson_t),     intent(in)    :: psolver
 
   integer :: ist, jst, kst, lst, ijst, klst
@@ -91,7 +91,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
 
                 !$omp parallel do
                 do ip=1,np_sphere
-                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,lst))*os%zorb(ip,is2,kst)
+                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,kst))*os%zorb(ip,is2,lst)
                 end do
                 !$omp end parallel do
 

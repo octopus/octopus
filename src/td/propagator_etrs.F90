@@ -41,8 +41,8 @@ module propagator_etrs_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
-  use states_dim_oct_m
-  use states_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_oct_m
   use types_oct_m
   use v_ks_oct_m
 
@@ -65,7 +65,7 @@ contains
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
@@ -113,7 +113,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
+      call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
 
     else
 
@@ -141,7 +141,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
+    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -169,7 +169,7 @@ contains
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
@@ -227,7 +227,7 @@ contains
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
+    call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! propagate dt/2 with H(t)
@@ -246,7 +246,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
+    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
@@ -303,6 +303,7 @@ contains
 
     if(hm%lda_u_level /= DFT_U_NONE) then 
       call lda_u_write_U(hm%lda_u, stdout) 
+      call lda_u_write_V(hm%lda_u, stdout)
     end if
 
     ! print an empty line
@@ -332,7 +333,7 @@ contains
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
@@ -363,7 +364,7 @@ contains
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
       endif
 
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
+      call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
@@ -431,7 +432,7 @@ contains
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time)
+    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -439,7 +440,7 @@ contains
 
     ! propagate the other half with H(t)
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_dim_get_spin_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
 

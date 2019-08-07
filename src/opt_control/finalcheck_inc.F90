@@ -22,7 +22,7 @@
     type(system_t), intent(inout)      :: sys
     type(td_t), intent(inout)          :: td
 
-    type(states_t) :: psi
+    type(states_elec_t) :: psi
     type(opt_control_state_t) :: qcpsi    
     FLOAT :: j1, jfunctional, fluence, j2
 
@@ -61,7 +61,7 @@
     call output_states(psi, sys%namespace, sys%gr, sys%geo, sys%hm, OCT_DIR//'final', sys%outp)
 
     nullify(par)
-    call states_end(psi)
+    call states_elec_end(psi)
     POP_SUB(oct_finalcheck)
   end subroutine oct_finalcheck
 

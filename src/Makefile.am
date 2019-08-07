@@ -267,6 +267,7 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 # Sources in grid
 grid_f_srcs =                                 \
 	grid/basins.F90                       \
+	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
 	grid/batch_ops.F90                    \
 	grid/boundaries.F90                   \
@@ -380,14 +381,15 @@ states_f_srcs =                                 \
 	states/opt_control_state.F90            \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_block.F90                 \
-	states/states_calc.F90                  \
-	states/states_dim.F90                   \
-	states/states.F90                       \
-	states/states_group.F90                 \
-	states/states_io.F90                    \
-	states/states_parallel.F90              \
-	states/states_restart.F90
+	states/states_elec_block.F90            \
+	states/states_elec_calc.F90             \
+	states/states_elec_dim.F90              \
+	states/states_abst.F90                  \
+	states/states_elec.F90                  \
+	states/states_elec_group.F90            \
+	states/states_elec_io.F90               \
+	states/states_elec_parallel.F90         \
+	states/states_elec_restart.F90
 
 states_srcs = $(states_f_srcs)
 
@@ -398,10 +400,10 @@ noinst_HEADERS +=                               \
 	states/modelmb_density_matrix_inc.F90   \
 	states/modelmb_exchange_syms_inc.F90    \
 	states/physics_op_inc.F90               \
-	states/states_block_inc.F90             \
-	states/states_calc_inc.F90              \
-	states/states_inc.F90                   \
-	states/states_parallel_inc.F90
+	states/states_elec_block_inc.F90        \
+	states/states_elec_calc_inc.F90         \
+	states/states_elec_inc.F90              \
+	states/states_elec_parallel_inc.F90
 
 # Sources in states_mxll
 states_mxll_f_srcs =                            \

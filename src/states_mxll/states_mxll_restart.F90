@@ -36,12 +36,12 @@ module states_mxll_restart_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use states_mxll_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use string_oct_m
   use types_oct_m
   use unit_system_oct_m
   use unit_oct_m
-  use states_restart_oct_m
+  use states_elec_restart_oct_m
   use batch_oct_m
   use batch_ops_oct_m
     

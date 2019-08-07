@@ -35,8 +35,9 @@ module dos_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -63,9 +64,9 @@ module dos_oct_m
 contains
 
   subroutine dos_init(this, namespace, st)
-    type(dos_t),       intent(out)   :: this
-    type(namespace_t), intent(in)    :: namespace
-    type(states_t),    intent(in)    :: st
+    type(dos_t),         intent(out)   :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(in)    :: st
 
     FLOAT :: evalmin, evalmax, eextend
 
@@ -142,9 +143,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
-    type(dos_t),               intent(in) :: this
+    type(dos_t),              intent(in) :: this
     character(len=*),         intent(in) :: dir
-    type(states_t),           intent(in) :: st
+    type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
@@ -375,7 +376,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
             if(states_are_real(st)) then
-              call states_get_state(st, mesh, ist, ik, dpsi )
+              call states_elec_get_state(st, mesh, ist, ik, dpsi )
               call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -383,7 +384,7 @@ contains
                 end do
               end do
             else
-              call states_get_state(st, mesh, ist, ik, zpsi )
+              call states_elec_get_state(st, mesh, ist, ik, zpsi )
               if(associated(hm%hm_base%phase)) then
               ! Apply the phase that contains both the k-point and vector-potential terms.
                 do idim = 1, st%d%dim

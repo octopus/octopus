@@ -51,9 +51,10 @@ module hamiltonian_oct_m
   use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -105,7 +106,7 @@ module hamiltonian_oct_m
 
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
-    type(states_dim_t)       :: d
+    type(states_elec_dim_t)  :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
     type(bc_t)               :: bc      !< boundaries
@@ -143,13 +144,13 @@ module hamiltonian_oct_m
     FLOAT, private :: mass_scaling(MAX_DIM)
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
-    type(states_t), pointer :: hf_st
+    type(states_elec_t), pointer :: hf_st
     !> use the SCDM method to compute the action of the Fock operator
     logical :: scdm_EXX
 
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical, private :: inh_term
-    type(states_t) :: inh_st
+    type(states_elec_t) :: inh_st
 
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
     !! Hartree Fock, also useful only for the OCT equations
@@ -191,7 +192,7 @@ contains
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
-    type(states_t),                     target, intent(inout) :: st
+    type(states_elec_t),                target, intent(inout) :: st
     type(poisson_t),                            intent(in)    :: psolver
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
@@ -214,7 +215,7 @@ contains
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
-    call states_dim_copy(hm%d, st%d)
+    call states_elec_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
     !%Type float
@@ -490,7 +491,7 @@ contains
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
-        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
         forall (ip = 1:gr%mesh%np_part)
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
@@ -563,7 +564,7 @@ contains
 
     call bc_end(hm%bc)
 
-    call states_dim_end(hm%d) 
+    call states_elec_dim_end(hm%d) 
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
@@ -571,8 +572,8 @@ contains
 
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
-      if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
-      call states_end(hm%hf_st)
+      if(hm%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%hf_st)
+      call states_elec_end(hm%hf_st)
       SAFE_DEALLOCATE_P(hm%hf_st)
     end if
 
@@ -621,12 +622,12 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_set_inh(hm, st)
     type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
 
     PUSH_SUB(hamiltonian_set_inh)
 
-    if(hm%inh_term) call states_end(hm%inh_st)
-    call states_copy(hm%inh_st, st)
+    if(hm%inh_term) call states_elec_end(hm%inh_st)
+    call states_elec_copy(hm%inh_st, st)
     hm%inh_term = .true.
 
     POP_SUB(hamiltonian_set_inh)
@@ -640,7 +641,7 @@ contains
     PUSH_SUB(hamiltonian_remove_inh)
 
     if(hm%inh_term) then
-      call states_end(hm%inh_st)
+      call states_elec_end(hm%inh_st)
       hm%inh_term = .false.
     end if
 
@@ -682,10 +683,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, boundaries, namespace, time)
+  subroutine hamiltonian_update(this, mesh, namespace, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(boundaries_t),  intent(in)    :: boundaries
     type(namespace_t),   intent(in)    :: namespace
     FLOAT, optional,     intent(in)    :: time
 
@@ -853,7 +853,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
           !We add the vector potential
           kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
@@ -943,7 +943,7 @@ contains
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
-    type(states_t),           intent(inout) :: st
+    type(states_elec_t),      intent(inout) :: st
     type(poisson_t),          intent(in)    :: psolver
     FLOAT,          optional, intent(in)    :: time
 
@@ -952,7 +952,7 @@ contains
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_update(this, gr%mesh, gr%der%boundaries, namespace, time)
+    call hamiltonian_update(this, gr%mesh, namespace, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
@@ -968,7 +968,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, namespace, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, psolver, namespace, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
@@ -1407,7 +1407,7 @@ contains
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
-          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
 
           forall (ip = 1:mesh%np_part)
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &

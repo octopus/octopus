@@ -41,9 +41,10 @@ module test_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
@@ -241,8 +242,8 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
     call hamiltonian_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver)
@@ -265,7 +266,7 @@ contains
 
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_projector)
@@ -294,9 +295,9 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
@@ -354,7 +355,7 @@ contains
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_dft_u)
@@ -400,12 +401,12 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
     call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
     call hamiltonian_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
@@ -446,7 +447,7 @@ contains
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_hamiltonian)
@@ -472,9 +473,9 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
       call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -483,7 +484,7 @@ contains
     write(message(1),'(a,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
     call messages_info(1)
 
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_density_calc)
@@ -549,13 +550,13 @@ contains
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      call dstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      call zstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     call system_end(sys)

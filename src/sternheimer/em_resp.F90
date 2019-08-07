@@ -45,9 +45,10 @@ module em_resp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use string_oct_m
   use system_oct_m
@@ -171,14 +172,14 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
       call messages_fatal(1)
     end if
 
-    ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
+    ! Use of ForceComplex will make this true after states_elec_look_and_load even if it was not before.
     ! Otherwise, this line is a tautology.
     complex_response = states_are_complex(sys%st)
 
@@ -222,7 +223,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -661,7 +662,7 @@ contains
     do ifactor = 1, em_vars%nfactor
       call Born_charges_end(em_vars%Born_charges(ifactor))
     end do
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
 
     POP_SUB(em_resp_run)
 
@@ -983,7 +984,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, namespace, gr, hm, psolver, geo, outp, em_vars, iomega, ifactor)
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(namespace_t),    intent(in)    :: namespace
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
@@ -1378,12 +1379,12 @@ contains
 
                 if(states_are_complex(st)) then
                   SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_get_state(st, gr%mesh, ist, ik, zpsi)
+                  call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
                   proj = zmf_dotp(gr%mesh, st%d%dim, zpsi, em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                   SAFE_DEALLOCATE_A(zpsi)
                 else
                   SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_get_state(st, gr%mesh, ist, ik, dpsi)
+                  call states_elec_get_state(st, gr%mesh, ist, ik, dpsi)
                   proj = dmf_dotp(gr%mesh, st%d%dim, dpsi, em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                   SAFE_DEALLOCATE_A(dpsi)
                 end if
@@ -1471,7 +1472,7 @@ contains
         
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-        call states_get_state(st, gr%mesh, psi)
+        call states_elec_get_state(st, gr%mesh, psi)
 
         dic = M_ZERO
         do idir = 1, gr%sb%dim

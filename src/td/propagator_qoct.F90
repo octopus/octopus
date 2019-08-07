@@ -34,7 +34,7 @@ module propagator_qoct_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -54,7 +54,7 @@ contains
     type(namespace_t),   intent(in)    :: namespace
     type(xc_t),          intent(in)    :: xc
     type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(propagator_t),  intent(inout) :: tr
     FLOAT,               intent(in)    :: t, dt
     type(ion_dynamics_t),            intent(inout) :: ions
@@ -80,7 +80,7 @@ contains
       call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = t - dt/M_TWO)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, namespace, time = t-dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, namespace, time = t-dt/M_TWO)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
     call exponential_apply_all(tr%te, gr%der, hm, psolver, xc, st, dt)
 

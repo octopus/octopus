@@ -30,11 +30,11 @@
 !!
 ! ---------------------------------------------------------
 subroutine X(output_me_ks_multipoles)(fname, namespace, st, gr, ll, mm, ik)
-  character(len=*),  intent(in) :: fname
-  type(namespace_t), intent(in) :: namespace
-  type(states_t),    intent(in) :: st
-  type(grid_t),      intent(in) :: gr
-  integer,           intent(in) :: ll, mm, ik
+  character(len=*),    intent(in) :: fname
+  type(namespace_t),   intent(in) :: namespace
+  type(states_elec_t), intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  integer,             intent(in) :: ll, mm, ik
   
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: multipole(:)
@@ -68,14 +68,14 @@ subroutine X(output_me_ks_multipoles)(fname, namespace, st, gr, ll, mm, ik)
   end do
   
   ASSERT(.not. st%parallel_in_states)
-  ! how to do this properly? states_matrix
+  ! how to do this properly? states_elec_matrix
   do ist = 1, st%nst
 
-    call states_get_state(st, gr%mesh, ist, 1, psii)
+    call states_elec_get_state(st, gr%mesh, ist, 1, psii)
 
     do jst = 1, st%nst
 
-      call states_get_state(st, gr%mesh, jst, 1, psij)
+      call states_elec_get_state(st, gr%mesh, jst, 1, psij)
 
       psij(1:gr%mesh%np, 1) = psij(1:gr%mesh%np, 1)*multipole(1:gr%mesh%np)
 
@@ -115,12 +115,12 @@ end subroutine X(output_me_ks_multipoles)
 !! The argument dir should be 1 (X) or 2 (Y).
 ! ---------------------------------------------------------
 subroutine X(output_me_ks_multipoles2d)(fname, namespace, st, gr, dir, ik)
-  character(len=*),  intent(in) :: fname
-  type(namespace_t), intent(in) :: namespace
-  type(states_t),    intent(in) :: st
-  type(grid_t),      intent(in) :: gr
-  integer,           intent(in) :: dir, ik
-  
+  character(len=*),    intent(in) :: fname
+  type(namespace_t),   intent(in) :: namespace
+  type(states_elec_t), intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  integer,             intent(in) :: dir, ik
+    
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: dipole(:)
   FLOAT :: rr, xx(MAX_DIM)
@@ -152,14 +152,14 @@ subroutine X(output_me_ks_multipoles2d)(fname, namespace, st, gr, dir, ik)
   end do
   
   ASSERT(.not. st%parallel_in_states)
-  ! how to do this properly? states_matrix
+  ! how to do this properly? states_elec_matrix
   do ist = 1, st%nst
 
-    call states_get_state(st, gr%mesh, ist, 1, psii)
+    call states_elec_get_state(st, gr%mesh, ist, 1, psii)
 
     do jst = 1, st%nst
 
-      call states_get_state(st, gr%mesh, jst, 1, psij)
+      call states_elec_get_state(st, gr%mesh, jst, 1, psij)
 
       psij(1:gr%mesh%np, 1) = psij(1:gr%mesh%np, 1) * dipole(1:gr%mesh%np)
 
@@ -194,11 +194,11 @@ end subroutine X(output_me_ks_multipoles2d)
 !! irreducible subspace ik.
 ! ---------------------------------------------------------
 subroutine X(output_me_ks_multipoles1d)(fname, namespace, st, gr, ll, ik)
-  character(len=*),  intent(in) :: fname
-  type(namespace_t), intent(in) :: namespace
-  type(states_t),    intent(in) :: st
-  type(grid_t),      intent(in) :: gr
-  integer,           intent(in) :: ll, ik
+  character(len=*),    intent(in) :: fname
+  type(namespace_t),   intent(in) :: namespace
+  type(states_elec_t), intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  integer,             intent(in) :: ll, ik
 
   integer :: iunit, ip, ist, jst
   FLOAT, allocatable :: dipole(:)
@@ -234,11 +234,11 @@ subroutine X(output_me_ks_multipoles1d)(fname, namespace, st, gr, ll, ik)
   ASSERT(.not. st%parallel_in_states)
   do ist = 1, st%nst
 
-    call states_get_state(st, gr%mesh, ist, 1, psii)
+    call states_elec_get_state(st, gr%mesh, ist, 1, psii)
 
     do jst = 1, st%nst
 
-      call states_get_state(st, gr%mesh, jst, 1, psij)
+      call states_elec_get_state(st, gr%mesh, jst, 1, psij)
 
       psij(1:gr%mesh%np, 1) = psij(1:gr%mesh%np, 1) * dipole (1:gr%mesh%np)
 
@@ -273,7 +273,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
   type(output_me_t),   intent(in) :: this
   character(len=*),    intent(in) :: fname
   type(namespace_t),   intent(in) :: namespace
-  type(states_t),      intent(in) :: st
+  type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   type(hamiltonian_t), intent(in) :: hm
   type(geometry_t),    intent(in) :: geo
@@ -290,7 +290,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
     call messages_not_implemented("Dipole matrix elements with spinors")
   end if
 
-  ispin = states_dim_get_spin_index(st%d, ik)
+  ispin = states_elec_dim_get_spin_index(st%d, ik)
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
@@ -306,7 +306,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
   
     do ist = this%st_start, this%st_end
 
-      call states_get_state(st, gr%mesh, ist, ik, psii)
+      call states_elec_get_state(st, gr%mesh, ist, ik, psii)
 
       if(.not. simul_box_is_periodic(gr%mesh%sb)) then
 
@@ -325,7 +325,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         !We need the phase here as the routines for the nonlocal contributions assume that the wavefunctions have a phase.
 #ifdef R_TCOMPLEX
         if(associated(hm%hm_base%phase)) then
-          call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+          call states_elec_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
         end if
 #endif
 
@@ -361,10 +361,10 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
       do jst = this%st_start, this%st_end
 
-        call states_get_state(st, gr%mesh, jst, ik, psij)
+        call states_elec_get_state(st, gr%mesh, jst, ik, psij)
 #ifdef R_TCOMPLEX
         if(associated(hm%hm_base%phase)) then
-          call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
+          call states_elec_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
         end if
 #endif
 

@@ -33,7 +33,7 @@ module invert_ks_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use states_restart_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use xc_ks_inversion_oct_m
   
@@ -90,7 +90,7 @@ contains
       sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, sys%namespace)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
@@ -115,7 +115,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, sys%namespace)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, 1)
@@ -140,7 +140,7 @@ contains
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
     call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
-    call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call states_elec_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
       call messages_warning(1)

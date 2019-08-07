@@ -223,10 +223,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_velocity(gr, tg, chi_out, geo)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(states_t),   intent(inout) :: chi_out
-    type(geometry_t), intent(in)    :: geo
+    type(grid_t),        intent(in)    :: gr
+    type(target_t),      intent(inout) :: tg
+    type(states_elec_t), intent(inout) :: chi_out
+    type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ist, jst, ik, ib
     character(len=1024) :: temp_string
@@ -271,7 +271,7 @@
     type(hamiltonian_t), intent(in)    :: hm
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -291,7 +291,7 @@
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
           do idim = 1, gr%sb%dim
-            call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+            call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
             geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) &
               + real(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi), REAL_PRECISION)

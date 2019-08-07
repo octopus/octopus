@@ -49,9 +49,10 @@ module casida_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use system_oct_m
   use unit_oct_m
@@ -199,7 +200,7 @@ contains
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -213,7 +214,7 @@ contains
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
-    call states_count_pairs(sys%st, sys%namespace, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
+    call states_elec_count_pairs(sys%st, sys%namespace, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
     if(is_frac_occ) then
       call messages_not_implemented("Casida with partial occupations")
       ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
@@ -647,7 +648,7 @@ contains
     type(system_t), target, intent(inout) :: sys
     type(casida_t),         intent(inout) :: cas
 
-    type(states_t), pointer :: st
+    type(states_elec_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho_spin(:, :)
@@ -685,7 +686,7 @@ contains
       SAFE_ALLOCATE(cas%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       cas%fxc = M_ZERO
 
-      call states_total_density(st, mesh, cas%rho)
+      call states_elec_total_density(st, mesh, cas%rho)
       if(cas%triplet) then
         SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
         SAFE_ALLOCATE(fxc_spin(1:mesh%np, 1:2, 1:2))
@@ -794,10 +795,10 @@ contains
 
     ! ---------------------------------------------------------
     subroutine fxc_add_adsic(ks, st, mesh, cas)
-      type(v_ks_t),   intent(in)    :: ks
-      type(states_t), intent(in)    :: st
-      type(mesh_t),   intent(in)    :: mesh
-      type(casida_t), intent(inout) :: cas
+      type(v_ks_t),        intent(in)    :: ks
+      type(states_elec_t), intent(in)    :: st
+      type(mesh_t),        intent(in)    :: mesh
+      type(casida_t),      intent(inout) :: cas
 
       FLOAT, allocatable :: rho(:, :)
       FLOAT, allocatable :: fxc_sic(:,:,:)
@@ -912,10 +913,10 @@ contains
   end function theory_name
 
   logical function isnt_degenerate(cas, st, ia, jb)
-    type(casida_t), intent(in) :: cas
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: ia
-    integer,        intent(in) :: jb
+    type(casida_t),      intent(in) :: cas
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: ia
+    integer,             intent(in) :: jb
 
     type(states_pair_t), pointer :: pp, qq
 

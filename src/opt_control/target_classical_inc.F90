@@ -176,7 +176,7 @@
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
     FLOAT, pointer :: q(:, :), p(:, :), tq(:, :), tp(:, :)
-    type(states_t), pointer :: chi
+    type(states_elec_t), pointer :: chi
     PUSH_SUB(target_chi_classical)
       
     tq => opt_control_point_q(qcchi)

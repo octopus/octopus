@@ -21,7 +21,7 @@
 !> routine for output of model many-body quantities.
 !
 subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
-  type(states_t),         intent(in)    :: st
+  type(states_elec_t),    intent(in)    :: st
   type(namespace_t),      intent(in)    :: namespace
   type(grid_t),           intent(in)    :: gr ! may have to revert to intent inout if some subroutine complains
   character(len=*),       intent(in)    :: dir
@@ -82,7 +82,7 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
 
   do mm = 1, st%nst
 !TODO : check if there is another interface for get_states to avoid trivial slice of wf
-    call states_get_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_get_state(st, gr%mesh, 1, mm, 1, wf)
 
     youngstring = ""
     if (all(st%mmb_nspindown(:,mm) >= 0)) then

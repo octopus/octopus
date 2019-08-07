@@ -39,8 +39,9 @@ module static_pol_oct_m
   use scf_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -81,7 +82,7 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -195,7 +196,7 @@ contains
     ! now calculate the dipole without field
 
     sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np)
-    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, sys%namespace)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
 
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
@@ -243,7 +244,7 @@ contains
         ! except that we treat electrons as positive
 
         sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) + (-1)**isign * sys%gr%mesh%x(1:sys%gr%mesh%np, ii) * e_field
-        call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, sys%namespace)
+        call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
 
         if(isign == 1) then
           sign_char = '+'
@@ -256,7 +257,7 @@ contains
 
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
-          if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
           call system_h_setup(sys)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
@@ -294,7 +295,7 @@ contains
 
         if(write_restart_densities) then
           call restart_open_dir(restart_dump, trim(dir_name), ierr)
-          if (ierr == 0) call states_dump(restart_dump, sys%st, sys%gr, ierr)
+          if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, ierr)
           call restart_close_dir(restart_dump)
           if(ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
@@ -325,7 +326,7 @@ contains
   
       sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) &
         - (sys%gr%mesh%x(1:sys%gr%mesh%np, 2) + sys%gr%mesh%x(1:sys%gr%mesh%np, 3)) * e_field
-      call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries, sys%namespace)
+      call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
   
       if(isign == 1) then
         sign_char = '+'
@@ -337,7 +338,7 @@ contains
 
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
-        if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
         call system_h_setup(sys)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
@@ -383,7 +384,7 @@ contains
 
       if(write_restart_densities) then
         call restart_open_dir(restart_dump, "field_yz+", ierr)
-        if (ierr == 0) call states_dump(restart_dump, sys%st, sys%gr, ierr)
+        if (ierr == 0) call states_elec_dump(restart_dump, sys%st, sys%gr, ierr)
         call restart_close_dir(restart_dump)
         if(ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
@@ -412,7 +413,7 @@ contains
     subroutine init_()
       PUSH_SUB(static_pol_run.init_)
 
-      call states_allocate_wfns(sys%st, sys%gr%mesh)
+      call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       call messages_obsolete_variable(sys%namespace, "EMStaticField", "EMStaticElectricField")
       !%Variable EMStaticElectricField
@@ -492,7 +493,7 @@ contains
 
       PUSH_SUB(end_)
 
-      call states_deallocate_wfns(sys%st)
+      call states_elec_deallocate_wfns(sys%st)
 
       POP_SUB(end_)
     end subroutine end_

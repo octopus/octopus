@@ -17,14 +17,14 @@
 !!
 
 subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, namespace, vxc)
-  type(output_bgw_t),     intent(in)    :: bgw
-  character(len=*),       intent(in)    :: dir
-  type(states_t), target, intent(in)    :: st
-  type(grid_t),           intent(in)    :: gr
-  type(hamiltonian_t),    intent(inout) :: hm
-  type(poisson_t),        intent(in)    :: psolver
+  type(output_bgw_t),          intent(in)    :: bgw
+  character(len=*),            intent(in)    :: dir
+  type(states_elec_t), target, intent(in)    :: st
+  type(grid_t),                intent(in)    :: gr
+  type(hamiltonian_t),         intent(inout) :: hm
+  type(poisson_t),             intent(in)    :: psolver
   type(namespace_t),      intent(in)    :: namespace
-  FLOAT,                  intent(in)    :: vxc(:,:)
+  FLOAT,                       intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
   integer, allocatable :: diag(:), off1(:), off2(:)
@@ -104,7 +104,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, namespace, vxc)
     do ispin = 1, st%d%nspin
       ikk = ik + ispin - 1
       do idiag = 1, ndiag
-        call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
+        call states_elec_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
         ! multiplying psi*vxc first might be more efficient
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
@@ -116,8 +116,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, namespace, vxc)
 
       ! could do only upper or lower triangle here
       do ioff = 1, noffdiag
-        call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
-        call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
+        call states_elec_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
+        call states_elec_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
         mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi2(:) * vxc(:, ispin))
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
@@ -170,12 +170,12 @@ end subroutine X(bgw_vxc_dat)
 ! --------------------------------------------------------- 
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
 subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax, namespace)
-  type(output_bgw_t), intent(in) :: bgw
-  character(len=*),   intent(in) :: dir
-  type(states_t),     intent(in) :: st
-  type(grid_t),       intent(in) :: gr
-  integer,            intent(in) :: ifmax(:,:)
-  type(namespace_t),  intent(in) :: namespace
+  type(output_bgw_t),  intent(in) :: bgw
+  character(len=*),    intent(in) :: dir
+  type(states_elec_t), intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  integer,             intent(in) :: ifmax(:,:)
+  type(namespace_t),   intent(in) :: namespace
 
   integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)
@@ -198,10 +198,10 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax, namespace)
     do is = 1, st%d%nspin
       ikk = ik + is - 1
       do iv = 1, bgw%vmtxel_nvband
-        call states_get_state(st, gr%mesh, 1, ifmax(ik, is) - iv + 1, ikk, psi(:))
+        call states_elec_get_state(st, gr%mesh, 1, ifmax(ik, is) - iv + 1, ikk, psi(:))
         rpsi(:) = psi(:) * rvec(:)
         do ic = 1, bgw%vmtxel_ncband
-          call states_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
+          call states_elec_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
           ikcvs = is + (iv - 1 + (ic - 1 + (ik - 1)*bgw%vmtxel_ncband)*bgw%vmtxel_nvband)*st%d%nspin
           vmtxel(ikcvs) = X(mf_dotp)(gr%mesh, psi(:), rpsi(:))
 !          write(6,*) ikcvs, ikk, is, ifmax(ik, is) - iv + 1, ifmax(ik, is) + ic, vmtxel(ikcvs)

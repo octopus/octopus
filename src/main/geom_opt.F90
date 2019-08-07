@@ -40,8 +40,8 @@ module geom_opt_oct_m
   use scf_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -72,7 +72,7 @@ module geom_opt_oct_m
     type(hamiltonian_t), pointer :: hm
     type(system_t),      pointer :: syst
     type(mesh_t),        pointer :: mesh
-    type(states_t),      pointer :: st
+    type(states_elec_t), pointer :: st
     integer                      :: dim
     integer                      :: size
     integer                      :: fixed_atom
@@ -109,7 +109,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
+      if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."
@@ -133,7 +133,7 @@ contains
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
 
     !Minimize
     select case(g_opt%method)
@@ -177,7 +177,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
   
     ! print out geometry
     call from_coords(g_opt, coords)
@@ -205,7 +205,7 @@ contains
 
       PUSH_SUB(geom_opt_run.init_)
 
-      call states_allocate_wfns(sys%st, sys%gr%mesh)
+      call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       ! shortcuts
       g_opt%mesh   => sys%gr%mesh
@@ -535,7 +535,7 @@ contains
     subroutine end_()
       PUSH_SUB(geom_opt_run.end_)
 
-      call states_deallocate_wfns(sys%st)
+      call states_elec_deallocate_wfns(sys%st)
 
       call restart_end(g_opt%restart_dump)
 
