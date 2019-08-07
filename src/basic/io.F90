@@ -287,7 +287,7 @@ contains
 
     PUSH_SUB(io_workpath)
 
-    if(path(1:1)  ==  '/') then
+    if(len(path) > 0 .and. path(1:1)  ==  '/') then
       ! we do not change absolute path names
       wpath = trim(path)
     else
