@@ -188,7 +188,7 @@ contains
   
     mode = COSINE_TRANSFORM
   
-    iunit = io_open(trim(ffile), namespace, default_namespace, action='read', status='old', die=.false.)
+    iunit = io_open(trim(ffile), namespace, action='read', status='old', die=.false.)
     if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)
@@ -393,7 +393,7 @@ contains
   
     select case(order)
       case(1)
-        call write_polarizability(nfrequencies, nresonances, dw, w, c0I2, damping)
+        call write_polarizability(namespace, nfrequencies, nresonances, dw, w, c0I2, damping)
     end select
   
     SAFE_DEALLOCATE_A(ot)
@@ -409,7 +409,8 @@ contains
   !> Implements the SOS formula of the polarizability, and writes
   !! down to the "polarizability" file the real and imaginary part
   !! of the dynamical polarizability.
-  subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
+  subroutine write_polarizability(namespace, nfrequencies, nresonances, dw, w, c0I2, gamma)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(in) :: nfrequencies, nresonances
     FLOAT, intent(in)   :: dw
     FLOAT, intent(in)   :: w(nresonances), c0I2(nresonances)
@@ -421,7 +422,7 @@ contains
   
     PUSH_SUB(write_polarizability)
 
-    iunit = io_open('polarizability', status='replace', default_namespace, action = 'write', die=.false.)
+    iunit = io_open('polarizability', namespace, action = 'write', status='replace', die=.false.)
     write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the following data:'
     write(iunit, '(a)') '#'
   
@@ -598,7 +599,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine generate_signal(order, observable)
+  subroutine generate_signal(namespace, order, observable)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(in) :: order
     integer, intent(in) :: observable(2)
   
@@ -641,7 +643,7 @@ contains
     SAFE_ALLOCATE(iunit(1:nfiles))
     do j = 1, nfiles
       write(filename,'(a11,i1)') 'multipoles.', j
-      iunit(j) = io_open(trim(filename), default_namespace, action='read', status='old', die=.false.)
+      iunit(j) = io_open(trim(filename), namespace, action='read', status='old', die=.false.)
     end do
   
     SAFE_ALLOCATE( q(1:nfiles))
@@ -800,7 +802,7 @@ contains
   
     ot = ot / lambda**order
   
-    call write_ot(nspin, time_steps, dt, kick, order, ot(0:time_steps), observable)
+    call write_ot(namespace, nspin, time_steps, dt, kick, order, ot(0:time_steps), observable)
   
     ! Close files and exit.
     do j = 1, nfiles
@@ -856,7 +858,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine write_ot(nspin, time_steps, dt, kick, order, ot, observable)
+  subroutine write_ot(namespace, nspin, time_steps, dt, kick, order, ot, observable)
+    type(namespace_t),   intent(in) :: namespace
     integer,             intent(in) :: nspin, time_steps
     FLOAT,               intent(in) :: dt
     type(kick_t),        intent(in) :: kick
@@ -870,7 +873,7 @@ contains
   
     PUSH_SUB(write_ot)
 
-    iunit = io_open('ot', default_namespace, action='write', status='replace')
+    iunit = io_open('ot', namespace, action='write', status='replace')
   
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     write(iunit, '(a15,i2)')      '# Order        ', order
@@ -930,7 +933,7 @@ contains
   
     PUSH_SUB(read_ot)
 
-    iunit = io_open('ot', default_namespace, action='read', status='old')
+    iunit = io_open('ot', namespace, action='read', status='old')
     if(iunit == 0) then
       write(message(1),'(a)') 'A file called ot should be present and was not found.'
       call messages_fatal(1)
@@ -1090,7 +1093,7 @@ contains
       tarray(i) = aw
     end do
   
-    iunit = io_open('omega', default_namespace, action='write', status='replace')
+    iunit = io_open('omega', namespace, action='write', status='replace')
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, iunit)
     write(iunit, '(a)') '#%'
@@ -1171,7 +1174,7 @@ program oscillator_strength
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
-    call generate_signal(order, observable)
+    call generate_signal(default_namespace, order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
     call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping, &
       default_namespace)

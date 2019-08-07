@@ -454,7 +454,7 @@ contains
     end if
 
     call io_mkdir('wd.general', namespace)
-    wd_info = io_open(file='wd.general/wd.info', default_namespace, action='write')
+    wd_info = io_open('wd.general/wd.info', default_namespace, action='write')
     call messages_print_stress(wd_info, "Fourier Transform Options")
 
     !%Variable ConvertEnergyMin

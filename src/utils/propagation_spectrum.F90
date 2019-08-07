@@ -126,7 +126,8 @@ program propagation_spectrum
       PUSH_SUB(read_files)
       
       in_file(1) = io_open(trim(fname), default_namespace, action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname), default_namespace, action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname), default_namespace, &
+        action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname), '" found. This will be the only file to be processed.'
         write(message(2),'(a)')  '(If more than one file is to be used, the files should be called'
@@ -161,8 +162,10 @@ program propagation_spectrum
         ! In this case, we will always want the full tensor
         calculate_tensor = .true.
         
-        in_file(1) = io_open(trim(fname)//'.1', default_namespace, action='read', status='old', die=.false.)
-        if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname)//'.1', default_namespace, action='read', status='old', die=.false.)
+        in_file(1) = io_open(trim(fname)//'.1', default_namespace, action='read', &
+          status='old', die=.false.)
+        if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname)//'.1', default_namespace, &
+          action='read', status='old', die=.false.)
         if(in_file(1) < 0) then ! Could not find proper files. Die and complain.
           write(message(1),'(5a)') 'No "', trim(fname), '" or "', trim(fname), '.1" file found. At least one of those'
           write(message(2),'(a)')  'should be visible.'
@@ -179,7 +182,8 @@ program propagation_spectrum
           
         else if(eq_axes == 2) then
           in_file(2) = io_open(trim(fname)//'.2', default_namespace, action='read', status='old', die=.false.)
-          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', default_namespace, action='read', status='old', die=.false.)
+          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', default_namespace, &
+            action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has two equivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
@@ -190,15 +194,19 @@ program propagation_spectrum
           call messages_info(2)
           
         else ! No equivalent axes
-          in_file(2) = io_open(trim(fname)//'.2', default_namespace, action='read', status='old', die=.false.)
-          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', default_namespace, action='read', status='old', die=.false.)
+          in_file(2) = io_open(trim(fname)//'.2', default_namespace, action='read', &
+            status='old', die=.false.)
+          if(in_file(2) < 0) in_file(2) = io_open('td.general/'//trim(fname)//'.2', default_namespace, &
+            action='read', status='old', die=.false.)
           if(in_file(2) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.2".'
             call messages_fatal(2)
           end if
-          in_file(3) = io_open(trim(fname)//'.3', default_namespace, action='read', status='old', die=.false.)
-          if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', default_namespace, action='read', status='old', die=.false.)
+          in_file(3) = io_open(trim(fname)//'.3', default_namespace, action='read', &
+            status='old', die=.false.)
+          if(in_file(3) < 0) in_file(3) = io_open('td.general/'//trim(fname)//'.3', default_namespace, &
+            action='read', status='old', die=.false.)
           if(in_file(3) < 0) then
             write(message(1),'(3a)') 'The file "', trim(fname), '.1" tells me that the system has three inequivalent axes,'
             write(message(2),'(3a)') 'but I cannot find a "', trim(fname), '.3".'
@@ -287,7 +295,8 @@ program propagation_spectrum
       PUSH_SUB(calculate_dipole_power)
 
       in_file(1) = io_open(trim(fname_in), default_namespace, action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), default_namespace, action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), default_namespace, &
+        action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname_in), '" found.'
         write(message(2),'(a)')
@@ -310,7 +319,8 @@ program propagation_spectrum
       PUSH_SUB(calculate_rotatory_strength)
 
       in_file(1) = io_open(trim(fname_in), default_namespace, action='read', status='old', die=.false.)
-      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), default_namespace, action='read', status='old', die=.false.)
+      if(in_file(1) < 0) in_file(1) = io_open('td.general/'//trim(fname_in), default_namespace, &
+        action='read', status='old', die=.false.)
       if(in_file(1) >= 0) then
         write(message(1),'(3a)') 'File "', trim(fname_in), '" found.'
         write(message(2),'(a)')
