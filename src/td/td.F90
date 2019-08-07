@@ -459,7 +459,7 @@ contains
     call print_header()
 
     if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
-      call pes_init_write(td%pesv,gr%mesh,st)
+      call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
     end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call states_pack(st)

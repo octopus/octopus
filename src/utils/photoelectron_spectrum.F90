@@ -138,7 +138,7 @@ program photoelectron_spectrum
     call messages_new_line()  
     
     ! Note that Lg(:,:) is allocated inside pes_mask_read_info
-    call pes_mask_read_info("td.general/", dim, Emax, Estep, llp(:), Lg, RR)
+    call pes_mask_read_info("td.general/", default_namespace, dim, Emax, Estep, llp(:), Lg, RR)
     ! Keep a copy the original dimensions vector
     ! For periodic systems llg represents the extension on the g-point grid
     llg(1:dim) = llp(1:dim) 
@@ -539,7 +539,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_power_totalM(pesP_out,outfile('./PES_power',ist, ispin, 'sum'), &
-                                            Lg, llp, dim, Emax, Estep, interpolate = .true.)
+                                            default_namespace, Lg, llp, dim, Emax, Estep, interpolate = .true.)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Energy-resolved PES for the flux method") 
         end select 
@@ -552,7 +552,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_polar_M(pesP_out,outfile('./PES_angle_energy',ist, ispin, 'map'), &
-                                          Lg, llp, dim, pol, Emax, Estep)
+                                          default_namespace, Lg, llp, dim, pol, Emax, Estep)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Angle- and energy-resolved PES for the flux method") 
         end select                       
@@ -588,14 +588,14 @@ program photoelectron_spectrum
         end if
 
         if (need_pmesh) then
-          call pes_out_velocity_map_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+          call pes_out_velocity_map_cut(default_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, pmesh = pmesh)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+!           call pes_mask_output_full_mapM_cut(pesP_out, filename, default_namespace, llp, dim, pol, dir, integrate, &
 !                                              pos = idxZero, pmesh = pmesh)
         else
-          call pes_out_velocity_map_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+          call pes_out_velocity_map_cut(default_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, Lk = Lg)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+!           call pes_mask_output_full_mapM_cut(pesP_out, filename, default_namespace, llp, dim, pol, dir, integrate, &
 !                                              pos = idxZero, Lk = Lg)
         end if
       end if
@@ -611,7 +611,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy',ist,ispin,'map'), &
-                                          Lg, llp, dim, pol, Emax, Estep)
+                                          default_namespace, Lg, llp, dim, pol, Emax, Estep)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Angle and energy-resolved on a plane for the flux method") 
         end select   
@@ -635,7 +635,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere',ist,ispin,'map'), & 
-                                                  Lg, llp, dim, pol, Emin, Emax, Estep)
+                                                  default_namespace, Lg, llp, dim, pol, Emin, Emax, Estep)
 
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("PES on spherical cuts for the flux method") 
@@ -683,7 +683,7 @@ program photoelectron_spectrum
         call messages_print_stress(stdout, "ARPES cut on reciprocal space path")
         
         filename = outfile('./PES_ARPES', ist, ispin, "path")
-        call pes_out_arpes_cut(pesP_out, filename, llp, pmesh, Ekin)
+        call pes_out_arpes_cut(default_namespace, pesP_out, filename, llp, pmesh, Ekin)
         
       end if
       

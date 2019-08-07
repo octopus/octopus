@@ -235,11 +235,11 @@ contains
 
     PUSH_SUB(pes_output)
     
-    if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, iter, dt)
+    if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, outp%namespace, iter, dt)
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, dt)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, outp%namespace, dt)
 
     POP_SUB(pes_output)
   end subroutine pes_output
@@ -333,17 +333,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_init_write(pes, mesh, st)
-    type(pes_t),    intent(in)  :: pes
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
+  subroutine pes_init_write(pes, mesh, st, namespace)
+    type(pes_t),       intent(in)  :: pes
+    type(mesh_t),      intent(in)  :: mesh
+    type(states_t),    intent(in)  :: st
+    type(namespace_t), intent(in)  :: namespace
 
 
     PUSH_SUB(pes_init_write)
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      if(pes%calc_spm)   call pes_spm_init_write (pes%spm, mesh, st)
+      if(pes%calc_spm)   call pes_spm_init_write (pes%spm, mesh, st, namespace)
 
     end if
 

@@ -134,7 +134,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_arpes_cut(arpes, file, ll, pmesh, Ekin)
+  subroutine pes_out_arpes_cut(namespace, arpes, file, ll, pmesh, Ekin)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: arpes(:,:,:)
     character(len=*),  intent(in) :: file
     integer,           intent(in) :: ll(:)
@@ -146,7 +147,7 @@ contains
     
     PUSH_SUB(pes_out_arpes_cut)
     
-    iunit = io_open_old(file, action='write')
+    iunit = io_open(file, namespace, action='write')
     write(iunit, '(a)') '##################################################'
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
                                       str_center("Ppath", 18), &
@@ -192,7 +193,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map_cut(pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+  subroutine pes_out_velocity_map_cut(namespace, pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
     integer,           intent(in) :: ll(:)
@@ -221,7 +223,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map_cut)
 
-    iunit = io_open_old(file, action='write')
+    iunit = io_open(file, namespace, action='write')
 
 
 

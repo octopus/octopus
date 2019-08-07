@@ -757,11 +757,12 @@ end subroutine pes_flux_map_from_state_2
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! ---------------------------------------------------------
-subroutine pes_flux_output(this, mesh, sb, st, dt)
+subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   type(pes_flux_t), intent(inout)    :: this
   type(mesh_t),        intent(in)    :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(states_t),      intent(in)    :: st
+  type(namespace_t),   intent(in)    :: namespace
   FLOAT,               intent(in)    :: dt
 
   integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -918,8 +919,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
     if (this%shape /= M_PLANES) then
-      iunittwo = io_open_old('td.general/PES_flux.distribution.out', action='write', position='rewind')
-      iunitone = io_open_old('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
+      iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
+      iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
       write(iunitone, '(a19)') '# E, total spectrum'
     end if
     
@@ -1077,8 +1078,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
             itot = ist + (ik-1) * st%nst +  (isdim-1) * st%nst * st%d%kpt%nglobal
             write(filename,'(i10.10)') itot
             
-            iunitone = io_open_old('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
-              action='write', position='rewind')
+            iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
+              namespace, action='write', position='rewind')
             write(iunitone, '(a29)') '# gx, gy, gz distribution'
             
             do ikp = 1, this%nkpnts
