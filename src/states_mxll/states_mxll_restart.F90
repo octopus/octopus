@@ -201,7 +201,7 @@ contains
           if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_e_field)
             call messages_write("  E-field in dimension "//trim(cdim)//" : "//trim(filename_e_field), fmt='(a,i1,2a)')
-            call dio_function_input(filename_e_field, mesh, e_field(:), ierr)
+            call dio_function_input(filename_e_field, namespace, mesh, e_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -211,7 +211,7 @@ contains
           else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_b_field)
             call messages_write("  B-field in dimension "//trim(cdim)//" : "//trim(filename_b_field), fmt='(a,i1,2a)')
-            call dio_function_input(filename_b_field, mesh, b_field(:), ierr)
+            call dio_function_input(filename_b_field, namespace, mesh, b_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr

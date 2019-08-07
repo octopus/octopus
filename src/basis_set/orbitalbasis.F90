@@ -179,7 +179,7 @@ contains
 
   if(debug%info) then
     write(this%debugdir, '(a)') 'debug/ao_basis'
-    call io_mkdir(this%debugdir)
+    call io_mkdir(this%debugdir, namespace)
   end if
 
   POP_SUB(orbitalbasis_init)

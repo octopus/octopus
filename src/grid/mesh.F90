@@ -30,6 +30,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
   use profiling_oct_m
@@ -403,11 +404,12 @@ contains
   
   
   ! -------------------------------------------------------------- 
-  subroutine mesh_dump(this, dir, filename, mpi_grp, ierr)
+  subroutine mesh_dump(this, dir, filename, mpi_grp, namespace, ierr)
     class(mesh_t),    intent(in)  :: this
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t), intent(in)  :: namespace
     integer,          intent(out) :: ierr
     
     integer :: iunit, err
@@ -416,10 +418,11 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
+      position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      message(1) = "Unable to open file '"//io_workpath(trim(dir)//"/"//trim(filename), namespace)//"'."
       call messages_warning(1)
     else
       if (mpi_grp_is_root(mpi_grp)) then
@@ -430,7 +433,7 @@ contains
       call io_close(iunit, grp=mpi_grp)
     end if
 
-    call index_dump(this%idx, dir, filename, mpi_grp, err)
+    call index_dump(this%idx, dir, filename, mpi_grp, namespace, err)
     if (err /= 0) ierr = ierr + 2
 
     POP_SUB(mesh_dump)
@@ -439,12 +442,13 @@ contains
   
   ! -------------------------------------------------------------- 
   !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(this, dir, filename, mpi_grp, ierr)
+  subroutine mesh_load(this, dir, filename, mpi_grp, namespace, ierr)
     class(mesh_t),     intent(inout) :: this
-    character(len=*), intent(in)    :: dir
-    character(len=*), intent(in)    :: filename
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: ierr
+    character(len=*),  intent(in)    :: dir
+    character(len=*),  intent(in)    :: filename
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(out)   :: ierr
 
     integer :: iunit, err
     character(len=20)  :: str
@@ -456,7 +460,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
+      status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -480,7 +485,7 @@ contains
       call io_close(iunit, grp=mpi_grp)
     end if
 
-    call index_load(this%idx, dir, filename, mpi_grp, err)
+    call index_load(this%idx, dir, filename, mpi_grp, namespace, err)
     if (err /= 0) ierr = ierr + 8
 
     POP_SUB(mesh_load)
@@ -488,11 +493,12 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, ierr)
+  subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, namespace, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: ierr
 
     integer :: iunit
@@ -501,7 +507,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
+      die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
       call messages_warning(1)
@@ -528,11 +535,12 @@ contains
   !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored.
   !! fingerprint cannot be read, it returns ierr /= 0.
-  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
+  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: read_np_part
     integer,          intent(out) :: read_np
     integer,          intent(out) :: ierr
@@ -549,7 +557,8 @@ contains
     read_np_part = 0
     read_np = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
+      status='old', die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -598,10 +607,11 @@ contains
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, ierr)
+  subroutine mesh_check_dump_compatibility(mesh, dir, filename, namespace, mpi_grp, grid_changed, grid_reordered, map, ierr)
     type(mesh_t),         intent(in)  :: mesh
     character(len=*),     intent(in)  :: dir
     character(len=*),     intent(in)  :: filename
+    type(namespace_t),    intent(in)  :: namespace
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
@@ -620,7 +630,7 @@ contains
     grid_reordered = .false.
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, err)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, err)
     if (err /= 0) then
       ierr = ierr + 1
       message(1) = "Unable to read mesh fingerprint from '"//trim(dir)//"/"//trim(filename)//"'."
@@ -643,7 +653,7 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(io_workpath(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."

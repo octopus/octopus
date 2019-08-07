@@ -196,7 +196,7 @@ contains
     ! now calculate the dipole without field
 
     sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np)
-    call hamiltonian_update(sys%hm, sys%gr%mesh)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
 
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
@@ -244,7 +244,7 @@ contains
         ! except that we treat electrons as positive
 
         sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) + (-1)**isign * sys%gr%mesh%x(1:sys%gr%mesh%np, ii) * e_field
-        call hamiltonian_update(sys%hm, sys%gr%mesh)
+        call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
 
         if(isign == 1) then
           sign_char = '+'
@@ -326,7 +326,7 @@ contains
   
       sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) &
         - (sys%gr%mesh%x(1:sys%gr%mesh%np, 2) + sys%gr%mesh%x(1:sys%gr%mesh%np, 3)) * e_field
-      call hamiltonian_update(sys%hm, sys%gr%mesh)
+      call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
   
       if(isign == 1) then
         sign_char = '+'
@@ -572,14 +572,14 @@ contains
               fn_unit = units_out%length**(1-sys%gr%sb%dim) / units_out%energy
               write(fname, '(a,i1,2a)') 'fd_density-sp', is, '-', index2axis(ii)
               call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                sys%gr%mesh, lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
+                sys%namespace, sys%gr%mesh, lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
               ! save the trouble of writing many copies of each density, since ii,jj = jj,ii
               fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
               do jj = ii, sys%gr%mesh%sb%dim
                 write(fname, '(a,i1,4a)') 'fd2_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                  sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
+                  sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               end do
             end if
 
@@ -588,13 +588,13 @@ contains
                 fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
-                  sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
+                  sys%namespace, sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho(:, is), fn_unit, ierr, geo = sys%geo)
 
                 fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
                 write(fname, '(a,i1,6a)') 'beta_density-sp', is, '-', index2axis(ii), &
                   '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
-                  sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
+                  sys%namespace, sys%gr%mesh, -sys%gr%mesh%x(:, jj) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
               end do
             end if
           end do
@@ -620,10 +620,10 @@ contains
           do is = 1, sys%st%d%nspin
             write(fname, '(a,i1,2a)') 'lr_elf-sp', is, '-', index2axis(ii)
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                sys%gr%mesh, lr_elf(:, is), unit_one, ierr, geo = sys%geo)
+                sys%namespace, sys%gr%mesh, lr_elf(:, is), unit_one, ierr, geo = sys%geo)
             write(fname, '(a,i1,2a)') 'lr_elf_D-sp', is, '-', index2axis(ii)
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, geo = sys%geo)
+                sys%namespace, sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, geo = sys%geo)
           end do
         end if
 
@@ -643,7 +643,7 @@ contains
 
       PUSH_SUB(output_end_)
 
-      call io_mkdir(EM_RESP_FD_DIR)
+      call io_mkdir(EM_RESP_FD_DIR, sys%namespace)
 
       if((bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
          bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then 
@@ -656,20 +656,20 @@ contains
             fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'fd2_density-sp', is, '-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-              sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
+              sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           end if
   
           if(bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-              sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
+              sys%namespace, sys%gr%mesh, -sys%gr%mesh%x(:, 1) * lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           end if
         end do
       end if
 
       if(mpi_grp_is_root(mpi_world)) then ! output pol file
-        iunit = io_open(EM_RESP_FD_DIR//'alpha', action='write')
+        iunit = io_open(EM_RESP_FD_DIR//'alpha', sys%namespace, action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
         alpha(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim) = (dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1) - &
@@ -701,11 +701,11 @@ contains
         call io_close(iunit)
         
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
-        call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR)
+        call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR, sys%namespace)
 
         if(calc_Born) then
-          call out_Born_charges(Born_charges, sys%geo, sys%gr%mesh%sb%dim, EM_RESP_FD_DIR, &
-            states_are_real(sys%st))
+          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%mesh%sb%dim, &
+            EM_RESP_FD_DIR, states_are_real(sys%st))
         end if
       end if
 

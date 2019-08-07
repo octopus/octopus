@@ -100,7 +100,7 @@ program oct_floquet
 
   ! generate the full hamiltonian following the sequence in td_init
   call hamiltonian_epot_generate(sys%hm, default_namespace, gr, sys%geo, st, sys%psolver, time=M_ZERO)
-  call hamiltonian_update(sys%hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
 
   call states_elec_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
@@ -110,7 +110,7 @@ program oct_floquet
 
      ! initialize the vector field and update the hamiltonian     
      call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-     call hamiltonian_update(sys%hm, gr%mesh, time = M_ZERO)
+     call hamiltonian_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
   end if
 
   call restart_init(restart, default_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -122,7 +122,7 @@ program oct_floquet
 
   call density_calc(st, gr, st%rho)
   call v_ks_calc(sys%ks, default_namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_update(sys%hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
 
   call floquet_init()
 
@@ -137,8 +137,7 @@ program oct_floquet
   call simul_box_end(sb)
   call fft_all_end()
   call system_end(sys)
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
@@ -222,7 +221,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(sys%hm, gr%mesh, time=Tcycle+it*dt)
+      call hamiltonian_update(sys%hm, gr%mesh, default_namespace, time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_apply_all(sys%hm, sys%ks%xc, gr%der, sys%psolver, st, hm_st)
 
@@ -371,7 +370,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(sys%hm, gr%mesh, time=M_ZERO)
+    call hamiltonian_update(sys%hm, gr%mesh, default_namespace, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

@@ -101,7 +101,7 @@ contains
 
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
-    call io_mkdir(OCT_DIR)
+    call io_mkdir(OCT_DIR, sys%namespace)
 
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".
@@ -118,13 +118,13 @@ contains
     call controlfunction_set(par, sys%hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
-    call controlfunction_write(OCT_DIR//'initial_laser_inp', par)
+    call controlfunction_write(OCT_DIR//'initial_laser_inp', par, sys%namespace)
     call controlfunction_prepare_initial(par)
     call controlfunction_to_h(par, sys%hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
     call laser_write_info(sys%hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
-    call controlfunction_write(OCT_DIR//'initial_laser', par)
+    call controlfunction_write(OCT_DIR//'initial_laser', par, sys%namespace)
 
 
     ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
@@ -141,7 +141,7 @@ contains
 
     ! If filters are to be used, they also have to be initialized.
     call filter_init(td%max_iter, sys%namespace, td%dt, filter)
-    call filter_write(filter)
+    call filter_write(filter, sys%namespace)
 
 
     ! Figure out the starting wavefunction(s), and the target.

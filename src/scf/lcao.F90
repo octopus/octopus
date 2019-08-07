@@ -290,7 +290,7 @@ contains
 ! mysterious problems with optimization on PGI 12.4.0.
 
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
+      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
 #endif
@@ -762,7 +762,7 @@ contains
           call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
         end if
       else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%psolver, start = st_start)
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%psolver, sys%namespace, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
@@ -857,13 +857,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(this, st, gr, geo, hm, psolver, start)
+  subroutine lcao_wf(this, st, gr, geo, hm, psolver, namespace, start)
     type(lcao_t),        intent(inout) :: this
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
     type(poisson_t),     intent(in)    :: psolver
+    type(namespace_t),   intent(in)    :: namespace
     integer, optional,   intent(in)    :: start
 
     integer :: start_
@@ -879,15 +880,15 @@ contains
 
     if(this%alternative) then
       if (states_are_real(st)) then
-        call dlcao_alt_wf(this, st, gr, geo, hm, psolver, start_)
+        call dlcao_alt_wf(this, st, gr, geo, hm, psolver, namespace, start_)
       else
-        call zlcao_alt_wf(this, st, gr, geo, hm, psolver, start_)
+        call zlcao_alt_wf(this, st, gr, geo, hm, psolver, namespace, start_)
       end if
     else
       if (states_are_real(st)) then
-        call dlcao_wf(this, st, gr, geo, hm, psolver, start_)
+        call dlcao_wf(this, st, gr, geo, hm, psolver, namespace, start_)
       else
-        call zlcao_wf(this, st, gr, geo, hm, psolver, start_)
+        call zlcao_wf(this, st, gr, geo, hm, psolver, namespace, start_)
       end if
     end if
     POP_SUB(lcao_wf)

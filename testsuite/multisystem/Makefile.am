@@ -22,6 +22,8 @@ sharedir = $(pkgdatadir)/testsuite/multisystem
 
 dist_share_DATA =                                  \
 	01-carbon_hydrogen.test                    \
-	01-carbon_hydrogen.01-gs.inp
+	01-carbon_hydrogen.01-gs.inp               \
+	01-carbon_hydrogen.02-td.inp               \
+	01-carbon_hydrogen.03-td_restart.inp
 
 CLEANFILES = *~ *.bak

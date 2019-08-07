@@ -424,9 +424,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_xyz(geo, fname, append, comment)
+  subroutine geometry_write_xyz(geo, fname, namespace, append, comment)
     type(geometry_t),    intent(in) :: geo
     character(len=*),    intent(in) :: fname
+    type(namespace_t),   intent(in) :: namespace
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
@@ -441,7 +442,7 @@ contains
     if(present(append)) then
       if(append) position = 'append'
     end if
-    iunit = io_open(trim(fname)//'.xyz', action='write', position=position)
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
 
     write(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -455,7 +456,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='write', position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
@@ -468,16 +469,17 @@ contains
   end subroutine geometry_write_xyz
 
   ! ---------------------------------------------------------
-  subroutine geometry_read_xyz(geo, fname, comment)
+  subroutine geometry_read_xyz(geo, fname, namespace, comment)
     type(geometry_t),    intent(inout) :: geo
     character(len=*),    intent(in) :: fname
+    type(namespace_t),   intent(in) :: namespace
     character(len=*),    intent(in), optional :: comment
 
     integer :: iatom, iunit
 
     PUSH_SUB(geometry_read_xyz)
 
-    iunit = io_open(trim(fname)//'.xyz', action='read', position='rewind')
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
 
     read(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -491,7 +493,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='read', position='rewind')
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
       read(iunit, '(i4)') geo%ncatoms
       read(iunit, *)
       do iatom = 1, geo%ncatoms

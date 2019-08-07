@@ -45,14 +45,14 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
   PUSH_SUB(X(output_modelmb))
 
   ! make sure directory exists
-  call io_mkdir(trim(dir))
+  call io_mkdir(trim(dir), namespace)
   ! all model mb stuff should be in this directory
   dirname = trim(dir)//'/modelmb'
-  call io_mkdir(trim(dirname))
+  call io_mkdir(trim(dirname), namespace)
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   ! treat all particle types
   SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
@@ -102,14 +102,14 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .and. symmetries_satisfied) then
-      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
-      call X(io_function_output)(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
-        fn_unit, ierr, geo = geo)
+      call X(io_function_output)(outp%how, trim(dirname), trim(filename), outp%namespace, &
+        gr%mesh, wf, fn_unit, ierr, geo = geo)
     end if
 
   end do

@@ -474,8 +474,8 @@ contains
       PUSH_SUB(scf_rdmft.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
         call grid_write_info(gr, geo, iunit)
 
@@ -933,7 +933,7 @@ contains
     call profiling_in(prof_orb_cg, "CG")
     
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, namespace)
     
     rdm%eigens%converged = 0
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -963,7 +963,7 @@ contains
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, namespace)
     call rdm_derivatives(rdm, hm, psolver, st, gr)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)

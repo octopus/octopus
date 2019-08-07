@@ -85,7 +85,7 @@ contains
     call messages_info(1)
     call system_h_setup(sys)
 
-    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd")
+    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
 
     !%Variable Displacement
     !%Type float

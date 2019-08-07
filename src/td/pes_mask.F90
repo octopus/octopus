@@ -435,8 +435,9 @@ contains
       
     case(PW_MAP_PFFT)
       ASSERT(mask%mesh%parallel_in_domains)
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll, &
-                     mpi_grp = mask%mesh%mpi_grp, need_partition=.true., spacing = mesh%spacing)
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
+        fft_type = FFT_COMPLEX, fft_library = FFTLIB_PFFT, nn_out = ll, &
+        mpi_grp = mask%mesh%mpi_grp, need_partition=.true., spacing = mesh%spacing)
       !        print *,mpi_world%rank, "mask%mesh%mpi_grp%comm", mask%mesh%mpi_grp%comm, mask%mesh%mpi_grp%size
       !         print *,mpi_world%rank, "mask%cube%mpi_grp%comm", mask%cube%mpi_grp%comm, mask%cube%mpi_grp%size
       
@@ -457,8 +458,9 @@ contains
       end if
       
     case(PW_MAP_FFT)
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll, &
-                     spacing = mesh%spacing )
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
+        fft_type = FFT_COMPLEX, fft_library = FFTLIB_FFTW, nn_out = ll, &
+        spacing = mesh%spacing )
       mask%ll = ll 
       mask%fft = mask%cube%fft
       mask%np = mesh%np_part_global 
@@ -470,8 +472,9 @@ contains
       ! we just add 2 points for the enlarged region
       if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
 
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
-                     spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p )
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
+        fft_type = FFT_COMPLEX, fft_library = FFTLIB_NFFT, nn_out = ll, &
+        spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p )
                      
       mask%ll = ll 
       mask%fft = mask%cube%fft
@@ -482,9 +485,10 @@ contains
     
       if (mask%enlarge_2p(1) /= 1) mask%ll(1:sb%dim) = mask%ll(1:sb%dim) + 2 
 
-      call cube_init(mask%cube, mask%ll, mesh%sb, fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
-                     spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
-                     mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
+      call cube_init(mask%cube, mask%ll, mesh%sb, namespace, &
+        fft_type = FFT_COMPLEX, fft_library = FFTLIB_PNFFT, nn_out = ll, &
+        spacing = mesh%spacing, tp_enlarge = mask%enlarge_2p, &
+        mpi_grp = mask%mesh%mpi_grp, need_partition=.true.)
                      
                      
       mask%ll(1:3) = mask%cube%fs_n(1:3) 
@@ -995,6 +999,8 @@ contains
 
     mask_fn(:) = M_ONE - mask_fn(:)
 
+! This output needs a namespace argument to work from now on. It
+! hasn't been touched for some years now, so I won't adapt it. - SO
 !   Keep this here to debug further mask shapes.    
 !     call dio_function_output(io_function_fill_how("PlaneZ"), &
 !                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)

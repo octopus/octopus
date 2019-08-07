@@ -209,7 +209,7 @@ contains
 
   ! specific routine for 2 particles - this is analytical, no need for iterative scheme
   ! ---------------------------------------------------------
-  subroutine invertks_2part(target_rho, nspin, aux_hm, psolver, gr, st, eigensolver, asymptotics)
+  subroutine invertks_2part(target_rho, nspin, aux_hm, psolver, gr, st, eigensolver, namespace, asymptotics)
     FLOAT,               intent(in)    :: target_rho(:,:) !< (1:gr%mesh%np, 1:nspin)
     integer,             intent(in)    :: nspin
     type(hamiltonian_t), intent(inout) :: aux_hm
@@ -217,6 +217,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(inout) :: st
     type(eigensolver_t), intent(inout) :: eigensolver
+    type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: asymptotics
            
     integer :: ii, jj, asym1, asym2 
@@ -319,7 +320,7 @@ contains
       aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(1:np)
     end do
     
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, namespace)
     call eigensolver_run(eigensolver, gr, st, aux_hm, psolver, 1)
     call density_calc(st, gr, st%rho)
 
@@ -446,7 +447,7 @@ contains
     vhxc(1:np,1:nspin) = aux_hm%vhxc(1:np,1:nspin)
          
     if(verbosity == 1 .or. verbosity == 2) then
-      iunit = io_open('InvertKSconvergence', action = 'write')
+      iunit = io_open('InvertKSconvergence', namespace, action = 'write')
     end if
 
     diffdensity = M_ONE
@@ -460,13 +461,13 @@ contains
 
       if(verbosity == 2) then
         write(fname,'(i6.6)') counter
-        call dio_function_output(io_function_fill_how("AxisX"), &
-             ".", "vhxc"//fname, gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
-        call dio_function_output(io_function_fill_how("AxisX"), &
-             ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
+        call dio_function_output(io_function_fill_how("AxisX"), ".", "vhxc"//fname, namespace, &
+          gr%mesh, aux_hm%vhxc(:,1), units_out%energy, ierr)
+        call dio_function_output(io_function_fill_how("AxisX"), ".", "rho"//fname, namespace, &
+          gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       end if
 
-      call hamiltonian_update(aux_hm, gr%mesh)
+      call hamiltonian_update(aux_hm, gr%mesh, namespace)
       call eigensolver_run(eigensolver, gr, st, aux_hm, psolver, 1)
       call density_calc(st, gr, st%rho)      
 
@@ -592,7 +593,7 @@ contains
 
     !calculate final density
 
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, namespace)
     call eigensolver_run(eigensolver, gr, st, aux_hm, psolver, 1)
     call density_calc(st, gr, st%rho)
     
@@ -653,7 +654,7 @@ contains
       end do
 ! TODO: restart data found. Use first KS orbital to invert equation and get starting vhxc
 !      call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, gr, &
-!                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
+!                         ks_inversion%aux_st, ks_inversion%eigensolver, namespace, ks_inversion%asymp)
 
     end if
     !ks_inversion%aux_hm%ep%vpsl(:)  = M_ZERO ! hm%ep%vpsl(:)
@@ -667,7 +668,7 @@ contains
     ! adiabatic ks inversion
     case(XC_INV_METHOD_TWO_PARTICLE)
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, psolver, gr, &
-                         ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
+                         ks_inversion%aux_st, ks_inversion%eigensolver, namespace, ks_inversion%asymp)
     case(XC_INV_METHOD_VS_ITER : XC_INV_METHOD_ITER_GODBY)
       call invertks_iter(st%rho, namespace, st%d%nspin, ks_inversion%aux_hm, psolver, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp, &

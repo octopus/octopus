@@ -16,13 +16,14 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
+subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, namespace, vxc)
   type(output_bgw_t),          intent(in)    :: bgw
   character(len=*),            intent(in)    :: dir
   type(states_elec_t), target, intent(in)    :: st
   type(grid_t),                intent(in)    :: gr
   type(hamiltonian_t),         intent(inout) :: hm
   type(poisson_t),             intent(in)    :: psolver
+  type(namespace_t),      intent(in)    :: namespace
   FLOAT,                       intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
@@ -39,7 +40,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
   if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
   if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
 
-  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
+  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', namespace, action='write')
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))
 
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
@@ -64,7 +65,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
   set_null = .false.
   
   if(bgw%calc_exchange) then
-    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
+    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', namespace, action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
     if(.not. associated(hm%hf_st)) then
       hm%hf_st => st
@@ -168,12 +169,13 @@ end subroutine X(bgw_vxc_dat)
 
 ! --------------------------------------------------------- 
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
-subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
+subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax, namespace)
   type(output_bgw_t),  intent(in) :: bgw
   character(len=*),    intent(in) :: dir
   type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   integer,             intent(in) :: ifmax(:,:)
+  type(namespace_t),   intent(in) :: namespace
 
   integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)
@@ -210,14 +212,14 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   end do
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
+    iunit = io_open(trim(dir) // 'vmtxel.dat', namespace, action='write', form='formatted')
     write(iunit,*) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit,*) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)
   end if
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
+    iunit = io_open(trim(dir) // 'vmtxel', namespace, action='write', form='unformatted')
     write(iunit) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)

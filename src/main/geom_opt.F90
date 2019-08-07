@@ -183,7 +183,7 @@ contains
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
     call messages_info(1)
-    call geometry_write_xyz(g_opt%geo, './min')
+    call geometry_write_xyz(g_opt%geo, './min', g_opt%syst%namespace)
 
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
@@ -500,16 +500,16 @@ contains
         end do
       end if
 
-      call io_rm("geom/optimization.log")
+      call io_rm("geom/optimization.log", sys%namespace)
 
-      call io_rm("work-geom.xyz")
+      call io_rm("work-geom.xyz", sys%namespace)
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
         if(.not. does_exist) fromScratch = .true.
       end if
 
-      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last')
+      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last', sys%namespace)
       
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
@@ -517,7 +517,7 @@ contains
         write(filename, '(a,i4.4,a)') "geom/go.", iter, ".xyz"
         inquire(file = trim(filename), exist = does_exist)
         if(does_exist) then
-          call io_rm(trim(filename))
+          call io_rm(trim(filename), sys%namespace)
           iter = iter + 1
         else
           exit
@@ -573,7 +573,7 @@ contains
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
-    call geometry_write_xyz(g_opt%geo, './work-geom', append = .true.)
+    call geometry_write_xyz(g_opt%geo, './work-geom', g_opt%syst%namespace, append = .true.)
 
     call scf_mix_clear(g_opt%scfv)
 
@@ -646,23 +646,26 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
-    call io_mkdir('geom')
-    call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
-    call geometry_write_xyz(g_opt%geo, './last')
+    call io_mkdir('geom', g_opt%syst%outp%namespace)
+    call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
+    call geometry_write_xyz(g_opt%geo, './last', g_opt%syst%namespace)
 
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh)
+        call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
+          g_opt%syst%outp%namespace)
       else
-        call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, write_forces = .true.)
+        call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
+          g_opt%syst%outp%namespace, write_forces = .true.)
       end if
     end if
 
     call from_coords(g_opt, coords)
 
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim('geom/optimization.log'), action = 'write', position = 'append')
+      iunit = io_open(trim('geom/optimization.log'), g_opt%syst%outp%namespace, &
+        action = 'write', position = 'append')
 
       if(geom_iter == 1) then
         write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 

@@ -215,7 +215,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys, namespace)
-    call poisson_test(sys%psolver, sys%gr%mesh, param%repetitions)
+    call poisson_test(sys%psolver, sys%gr%mesh, namespace, param%repetitions)
     call system_end(sys)
 
     POP_SUB(test_hartree)

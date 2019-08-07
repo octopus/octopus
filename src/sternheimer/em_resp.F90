@@ -364,7 +364,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call info()
-      call io_mkdir(EM_RESP_DIR) ! output
+      call io_mkdir(EM_RESP_DIR, sys%namespace) ! output
     end if
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
@@ -565,9 +565,9 @@ contains
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear()
+        call dcalc_properties_nonlinear(sys%namespace)
       else
-        call zcalc_properties_nonlinear()
+        call zcalc_properties_nonlinear(sys%namespace)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -1007,7 +1007,7 @@ contains
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-    call io_mkdir(trim(dirname))
+    call io_mkdir(trim(dirname), namespace)
 
     call write_eta()
 
@@ -1015,7 +1015,7 @@ contains
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
         call out_polarizability()
         if(em_vars%calc_Born) then
-          call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
+          call out_Born_charges(em_vars%Born_charges(ifactor), geo, namespace, gr%sb%dim, dirname, &
             write_real = em_vars%eta < M_EPSILON)
         end if
 
@@ -1050,7 +1050,7 @@ contains
 
       PUSH_SUB(em_resp_output.write_eta)
 
-      iunit = io_open(trim(dirname)//'/eta', action='write')
+      iunit = io_open(trim(dirname)//'/eta', namespace, action='write')
 
       write(iunit, '(3a)') 'Imaginary part of frequency [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit, '(f20.6)') units_from_atomic(units_out%energy, em_vars%eta)
@@ -1102,7 +1102,7 @@ contains
       
       PUSH_SUB(em_resp_output.out_polarizability)
   
-      iunit = io_open(trim(dirname)//'/alpha', action='write')
+      iunit = io_open(trim(dirname)//'/alpha', namespace, action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
@@ -1123,7 +1123,7 @@ contains
           end do
         end do
 
-        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        iunit = io_open(trim(dirname)//'/cross_section', namespace, action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
         crossp(1:gr%sb%dim, 1:gr%sb%dim) = matmul(cross(1:gr%sb%dim, 1:gr%sb%dim), cross(1:gr%sb%dim, 1:gr%sb%dim))
@@ -1164,7 +1164,7 @@ contains
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
   
-      iunit = io_open(trim(dirname)//'/epsilon', action='write')
+      iunit = io_open(trim(dirname)//'/epsilon', namespace, action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
@@ -1207,7 +1207,7 @@ contains
             end do
           end do
         end do
-        iunit = io_open(trim(dirname)//'/epsilon_k_re', action='write')
+        iunit = io_open(trim(dirname)//'/epsilon_k_re', namespace, action='write')
 
         write(iunit, '(a)') '# Real part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1239,7 +1239,7 @@ contains
         end do
         call io_close(iunit)
 
-        iunit = io_open(trim(dirname)//'/epsilon_k_im', action='write')
+        iunit = io_open(trim(dirname)//'/epsilon_k_im', namespace, action='write')
 
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1286,10 +1286,10 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         write(dirname1, '(a)') EM_RESP_DIR//'freq_0.0000'
-        call io_mkdir(trim(dirname1))
-        iunit = io_open(trim(dirname1)//'/susceptibility', action='write')
+        call io_mkdir(trim(dirname1), namespace)
+        iunit = io_open(trim(dirname1)//'/susceptibility', namespace, action='write')
       else  
-        iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+        iunit = io_open(trim(dirname)//'/susceptibility', namespace, action='write')
       end if
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -1354,7 +1354,7 @@ contains
         do idir = 1, gr%sb%dim
 
           write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
-          iunit = io_open(trim(fname), action='write')
+          iunit = io_open(trim(fname), namespace, action='write')
 
           if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1490,7 +1490,7 @@ contains
         
         dic = dic*M_zI*M_HALF
 
-        iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
+        iunit = io_open(trim(dirname)//'/rotatory_strength', namespace, action='write')
 
         ! print header
         write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
@@ -1529,7 +1529,7 @@ contains
       diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
       epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
   
-      iunit = io_open(trim(dirname)//'/alpha_mo', action='write')
+      iunit = io_open(trim(dirname)//'/alpha_mo', namespace, action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1613,7 +1613,7 @@ contains
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
-	iunit = io_open(trim(dirname)//'/epsilon_mo_k', action='write')
+	iunit = io_open(trim(dirname)//'/epsilon_mo_k', namespace, action='write')
 
         write(iunit, '(a)') '# Contribution to dielectric tensor for B = 1 a.u.'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1660,12 +1660,13 @@ contains
   !> Ref: David M Bishop, Rev Mod Phys 62, 343 (1990)
   !! beta // and _L are eqn (154), beta  k is eqn (155)
   !! generalized to lack of Kleinman symmetry
-  subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
+  subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname, namespace)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
     FLOAT,              intent(in) :: freq_factor(:)
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
+    type(namespace_t),  intent(in) :: namespace
 
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     CMPLX :: HRS_VV, HRS_HV
@@ -1674,7 +1675,7 @@ contains
     PUSH_SUB(out_hyperpolarizability)
 
     ! Output first hyperpolarizability (beta)
-    iunit = io_open(trim(dirname)//'/beta', action='write')
+    iunit = io_open(trim(dirname)//'/beta', namespace, action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
 

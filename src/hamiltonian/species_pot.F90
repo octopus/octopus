@@ -900,9 +900,10 @@ contains
 
   ! ---------------------------------------------------------
   !> used when the density is not available, or otherwise the Poisson eqn would be used instead
-  subroutine species_get_local(species, mesh, x_atom, vl)
+  subroutine species_get_local(species, mesh, namespace, x_atom, vl)
     type(species_t), target, intent(in)  :: species
     type(mesh_t),            intent(in)  :: mesh
+    type(namespace_t),       intent(in)  :: namespace
     FLOAT,                   intent(in)  :: x_atom(:)
     FLOAT,                   intent(out) :: vl(:)
 
@@ -948,7 +949,7 @@ contains
 
       case(SPECIES_FROM_FILE)
 
-        call dio_function_input(trim(species_filename(species)), mesh, vl, err)
+        call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
         if(err /= 0) then
           write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err

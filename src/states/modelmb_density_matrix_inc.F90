@@ -146,12 +146,13 @@ end subroutine X(mf_calculate_gamma)
 
 
 ! ---------------------------------------------------------
-subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
   type(grid_t),           intent(in) :: gr
   type(states_elec_t),    intent(in) :: st
   R_TYPE,                 intent(in) :: wf(:) !< (1:gr%mesh%np)
   integer,                intent(in) :: mm
   type(modelmb_denmat_t), intent(in) :: denmat
+  type(namespace_t),      intent(in) :: namespace
 
   integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
   integer :: ikeeppart, idir
@@ -228,7 +229,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
 
       !Write everything into files
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
-      iunit = io_open(trim(filename), action='write')
+      iunit = io_open(trim(filename), namespace, action='write')
 
       do jj = mb_1part%npt, 1, -1
         write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
@@ -239,7 +240,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
           ikeeppart,'_imb', mm, '_', mb_1part%npt-jj+1
-        iunit = io_open(filename, action='write')
+        iunit = io_open(filename, namespace, action='write')
         do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
             mb_1part%enlarge_1part(1), ll, ix_1part)
@@ -253,7 +254,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       end do
       
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
-      iunit = io_open(filename,action='write')
+      iunit = io_open(filename, namespace, action='write')
       do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
           mb_1part%enlarge_1part(1), jj, ix_1part)
@@ -274,7 +275,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       call io_close(iunit)
 
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
-      iunit = io_open(filename,action='write')
+      iunit = io_open(filename, namespace, action='write')
       do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
           mb_1part%enlarge_1part(1), jj, ix_1part)

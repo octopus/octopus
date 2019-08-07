@@ -59,7 +59,7 @@ program centergeom
   call simul_box_init(sb, default_namespace, geo, space)
 
   call xyz_adjust_it(geo, default_namespace)
-  call geometry_write_xyz(geo, './adjusted')
+  call geometry_write_xyz(geo, './adjusted', default_namespace)
 
   call simul_box_end(sb)
   call geometry_end(geo)

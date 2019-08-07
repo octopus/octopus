@@ -86,8 +86,7 @@ program oct_convert
   call convert()
 
   call fft_all_end()
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
@@ -377,13 +376,13 @@ contains
       end if
       ! Write the corresponding output
       call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
-           trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           trim(out_name), outp%namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
       if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
-             trim(out_name), mesh, pot, units_out%energy, ierr, geo = geo)
+             trim(out_name), outp%namespace, mesh, pot, units_out%energy, ierr, geo = geo)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
       ! It does not matter if the current write has failed for the next iteration
@@ -454,8 +453,8 @@ contains
       call messages_info(2)
     end if
 
-    call io_mkdir('wd.general')
-    wd_info = io_open(file='wd.general/wd.info', action='write')
+    call io_mkdir('wd.general', namespace)
+    wd_info = io_open('wd.general/wd.info', default_namespace, action='write')
     call messages_print_stress(wd_info, "Fourier Transform Options")
 
     !%Variable ConvertEnergyMin
@@ -606,7 +605,7 @@ contains
            '[' // trim(units_abbrev(units_out%energy)) // ']'
       if (mpi_world%rank == 0) write(wd_info,'(a)') message(1)
       call messages_info(1)
-      call io_mkdir(trim(filename))
+      call io_mkdir(trim(filename), namespace)
     end do
     call io_close(wd_info)
 
@@ -723,7 +722,8 @@ contains
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), mesh, point_tmp(:, i_energy), units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           trim('density'), outp%namespace, mesh, point_tmp(:, i_energy), &
+           units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       end do
       call restart_end(restart)
     else
@@ -733,7 +733,8 @@ contains
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
           call dio_function_output(outp%how, trim(filename), & 
-             trim('density'), mesh, read_rff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+             trim('density'), outp%namespace, mesh, read_rff, &
+             units_out%length**(-mesh%sb%dim), ierr, geo = geo)
         end do
       end if
     end if
@@ -805,7 +806,7 @@ contains
     !%End
     call parse_variable(namespace, 'ConvertOutputFolder', "convert", out_folder)
     call add_last_slash(out_folder)
-    call io_mkdir(out_folder)
+    call io_mkdir(out_folder, namespace)
 
     !%Variable ConvertOutputFilename
     !%Type string
@@ -869,7 +870,7 @@ contains
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), mesh,  & 
+    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), outp%namespace, mesh, & 
       scalar_ff, units, ierr, geo = geo)
 
     SAFE_DEALLOCATE_A(tmp_ff)

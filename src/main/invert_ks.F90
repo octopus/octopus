@@ -90,7 +90,7 @@ contains
       sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(sys%hm, sys%gr%mesh)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
@@ -101,7 +101,8 @@ contains
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
       call invertks_2part(target_rho, nspin, sys%hm, sys%psolver, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, &
+             sys%ks%ks_inversion%asymp)
      
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
@@ -114,7 +115,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(sys%hm, sys%gr%mesh)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%namespace)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, sys%hm, sys%psolver, 1)
@@ -175,7 +176,7 @@ contains
       !%End
       call parse_variable(sys%namespace, 'InvertKSTargetDensity', "target_density.dat", filename)
 
-      iunit = io_open(filename, action='read', status='old')
+      iunit = io_open(filename, sys%namespace, action='read', status='old')
 
       npoints = 0
       do pass = 1, 2

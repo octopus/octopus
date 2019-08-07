@@ -154,13 +154,14 @@ end subroutine X(lcao_simple)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
+subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, namespace, start)
   type(lcao_t),        intent(inout) :: this
   type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
   integer, optional,   intent(in)    :: start
 
   integer :: nst, ik, n1, n2, idim, lcao_start, ie, maxmtxel
@@ -211,9 +212,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
 ! This code (and related below) is commented out because it causes mysterious optimization
 ! problems with PGI 12.4.0 -- LAPACK fails in diagonalization, only if mesh partition from scratch!
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
+    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
+    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
@@ -229,8 +230,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
 #ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, gr%mesh, lcaopsi(:, 1, ispin), &
-          sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
+        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace &
+          gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%mesh%sb%dim)), &
+          ierr, geo = geo)
       end if
 #endif
     end do
@@ -534,13 +536,14 @@ end subroutine X(lcao_alt_init_orbitals)
 
 ! ---------------------------------------------------------
 !> The alternative implementation.
-subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
+subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, namespace, start)
   type(lcao_t),        intent(inout) :: this
   type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ispin, nev, ib, n1, n2
@@ -564,9 +567,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 
 #ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', action='write')
+    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
+    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
+    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
@@ -685,8 +688,9 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 #ifdef LCAO_DEBUG
                 if(this%debug .and. mpi_grp_is_root(mpi_world)) then
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
-                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, gr%mesh, psii(:, 1, iorb), &
-                    sqrt(units_out%length**(-gr%mesh%sb%dim)), ierr, geo = geo)
+                  call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
+                    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%mesh%sb%dim)), &
+                    ierr, geo = geo)
                 end if
 #endif
 

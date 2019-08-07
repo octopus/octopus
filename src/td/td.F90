@@ -408,7 +408,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-      call hamiltonian_update(sys%hm, gr%mesh, time = td%dt*td%iter)
+      call hamiltonian_update(sys%hm, gr%mesh, sys%namespace, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -460,7 +460,7 @@ contains
     call print_header()
 
     if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
-      call pes_init_write(td%pesv,gr%mesh,st)
+      call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
     end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call st%pack()
@@ -519,7 +519,7 @@ contains
       call check_point()
 
       ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly()
+      call io_debug_on_the_fly(sys%namespace)
 
       call profiling_out(prof)
       if (stopping) exit
@@ -858,10 +858,10 @@ contains
       PUSH_SUB(td_run.td_read_coordinates)
 
       call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/coordinates'), action='read', status='old')
+      open(unit = iunit, file = io_workpath('td.general/coordinates', sys%namespace), action='read', status='old')
 
       if(iunit < 0) then
-        message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates'))//"'."
+        message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates', sys%namespace))//"'."
         message(2) = "Starting simulation from initial geometry."
         call messages_warning(2)
         POP_SUB(td_run.td_read_coordinates)
@@ -1107,7 +1107,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+        call hamiltonian_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
       end if
     end if
 

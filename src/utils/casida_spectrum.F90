@@ -153,7 +153,7 @@ program casida_spectrum
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
-    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated')
+    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated', default_namespace)
     call geometry_end(geo)
   else
     rotation(:,:) = identity(:,:)
@@ -193,7 +193,7 @@ contains
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
 
-    iunit = io_open(trim(dir)// fname, action='read', status='old', die = .false.)
+    iunit = io_open(trim(dir)// fname, default_namespace, action='read', status='old', die = .false.)
 
     if(iunit < 0) then
       message(1) = 'Cannot open file "'//trim(dir)//trim(fname)//'".'
@@ -252,7 +252,7 @@ contains
     call io_close(iunit)
 
     ! print spectra
-    iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
+    iunit = io_open(trim(dir)//"/spectrum."//fname, default_namespace, action='write')
 
     write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
     do idir = 1, cs%space%dim

@@ -97,7 +97,7 @@ program harmonic_spectrum
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from multipoles."
         call messages_info(1)
-        call spectrum_hs_ar_from_mult('hs-mult', spectrum, vec)
+        call spectrum_hs_ar_from_mult('hs-mult', default_namespace, spectrum, vec)
       else
         call spectrum_hs_from_mult('hs-mult', default_namespace, spectrum, pol, vec)
       end if
@@ -109,7 +109,7 @@ program harmonic_spectrum
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from acceleration."
         call messages_info(1)
-        call spectrum_hs_ar_from_acc('hs-acc', spectrum, vec)
+        call spectrum_hs_ar_from_acc('hs-acc', default_namespace, spectrum, vec)
       else
        call spectrum_hs_from_acc('hs-acc', default_namespace, spectrum, pol, vec)
       end if

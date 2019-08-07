@@ -189,7 +189,7 @@ contains
 
     call system_h_setup(sys)
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
-    call vibrations_init(vib, geo, gr%sb, "lr")
+    call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
 
     call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 
@@ -320,7 +320,7 @@ contains
     if(symmetrize) call vibrations_symmetrize_dyn_matrix(vib)
     call vibrations_diag_dyn_matrix(vib)
     call vibrations_output(vib)
-    call axsf_mode_output(vib, geo, gr%mesh)
+    call axsf_mode_output(vib, geo, gr%mesh, sys%namespace)
 
     if(do_infrared) then
       if(simul_box_is_periodic(gr%sb) .and. .not. smear_is_semiconducting(st%smear)) then
@@ -328,7 +328,7 @@ contains
         call messages_info(1)
       else
         call born_from_infrared(vib, born)
-        call out_Born_charges(born, geo, ndim, VIB_MODES_DIR, write_real = .true.)
+        call out_Born_charges(born, geo, sys%namespace, ndim, VIB_MODES_DIR, write_real = .true.)
         call calc_infrared()
       end if
 
@@ -414,7 +414,7 @@ contains
 
       PUSH_SUB(phonons_lr_run.calc_infrared)
 
-      iunit_ir = io_open(VIB_MODES_DIR//'infrared', action='write')
+      iunit_ir = io_open(VIB_MODES_DIR//'infrared', sys%namespace, action='write')
 
       write(iunit_ir, '(a)', advance = 'no') '#   freq ['//trim(units_abbrev(unit_invcm))//']'
       do idir = 1, ndim
@@ -505,10 +505,11 @@ contains
 
   ! ---------------------------------------------------------
   !> output eigenvectors as animated XSF file, one per frame, displacements as forces
-  subroutine axsf_mode_output(this, geo, mesh)
+  subroutine axsf_mode_output(this, geo, mesh, namespace)
     type(vibrations_t), intent(in) :: this
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
+    type(namespace_t),  intent(in) :: namespace
     
     integer :: iunit, iatom, idir, imat, jmat
     FLOAT, allocatable :: forces(:,:)
@@ -520,7 +521,7 @@ contains
 
     ! for some reason, direct usage of this%suffix gives an odd result
     suffix = vibrations_get_suffix(this)
-    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', action='write')
+    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//suffix//'.axsf', namespace, action='write')
 
     write(iunit, '(a,i6)') 'ANIMSTEPS ', this%num_modes
     SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))

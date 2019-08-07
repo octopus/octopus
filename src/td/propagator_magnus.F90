@@ -51,12 +51,13 @@ contains
   
   ! ---------------------------------------------------------
   !> Magnus propagator
-  subroutine td_magnus(hm, psolver, gr, st, tr, time, dt)
+  subroutine td_magnus(hm, psolver, gr, st, tr, namespace, time, dt)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_elec_t), target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
+    type(namespace_t),               intent(in)    :: namespace
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
 
@@ -81,7 +82,7 @@ contains
         else
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
         end if
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, namespace)
       end do
     else
       vaux = M_ZERO

@@ -547,7 +547,7 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       call td_crank_nicolson(hm, psolver, namespace, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
-      call td_magnus(hm, psolver, gr, st, tr, time, dt)
+      call td_magnus(hm, psolver, gr, st, tr, namespace, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call td_qoct_tddft_propagator(hm, psolver, namespace, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)

@@ -288,7 +288,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-        sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
+        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 
@@ -1111,8 +1111,8 @@ subroutine X(casida_write)(cas, sys)
 
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
-    call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
+    call io_mkdir(CASIDA_DIR, sys%namespace)
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), sys%namespace, action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
@@ -1146,12 +1146,12 @@ subroutine X(casida_write)(cas, sys)
     end do
     call io_close(iunit)
   
-    if(cas%qcalc) call qcasida_write(cas)
+    if(cas%qcalc) call qcasida_write(cas, sys%namespace)
   
     if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
       if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
         dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-        call io_mkdir(trim(dir_name))
+        call io_mkdir(trim(dir_name), sys%namespace)
       end if
       
       do ia = 1, cas%n_pairs
@@ -1160,7 +1160,7 @@ subroutine X(casida_write)(cas, sys)
           
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
-            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+            iunit = io_open(trim(dir_name)//'/'//trim(str), sys%namespace, action='write')
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
@@ -1186,7 +1186,7 @@ subroutine X(casida_write)(cas, sys)
           end if
           
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if
