@@ -24,23 +24,19 @@ spacing = 0.1
 SpinComponents = spin_polarized
 
 XCFunctional = oep_x
-OEPLevel = 5
+OEPLevel = oep_full
 
 OEPMixing = 0.5
-OEPMixingScheme = 2
-ParKPoints = 1
-
+OEPMixingScheme = oep_mixing_scheme_bb
+ParKPoints = no
 
 MixingScheme = linear
 MixField = potential
 
 LinearSolver = cg
-ConvRelEv = 5e-7
 ConvAbsEv = 5e-7
-ConvRelDens = 5e-7
 ConvAbsDens = 5e-7
 EigenSolverTolerance = 5e-8
 LRTolFinalTol = 5e-7
 LRConvAbsDens = 5e-7
-LRConvRelDens = 5e-7
 CGEnergyChangeThreshold = 1e-4
