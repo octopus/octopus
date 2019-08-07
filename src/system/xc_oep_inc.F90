@@ -210,7 +210,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
       ! calculate this funny function ss
       !ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1))
-      call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(:, 1, ist, is)*psi(:, 1)), ss(:))
+      call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
 
     end do
 
