@@ -112,7 +112,7 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_tdlocal(chi_out)
-    type(states_t), intent(inout) :: chi_out
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_tdlocal)
@@ -135,7 +135,7 @@
   subroutine target_tdcalc_tdlocal(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :), zpsi(:, :)
@@ -154,7 +154,7 @@
       opsi = M_z0
       do ist  = psi%st_start, psi%st_end
 
-        call states_get_state(psi, gr%mesh, ist, 1, zpsi)
+        call states_elec_get_state(psi, gr%mesh, ist, 1, zpsi)
         
         do ip = 1, gr%mesh%np
           opsi(ip, 1) = tg%rho(ip)*zpsi(ip, 1)

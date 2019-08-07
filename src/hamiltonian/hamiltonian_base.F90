@@ -41,8 +41,8 @@ module hamiltonian_base_oct_m
   use projector_matrix_oct_m
   use ps_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use types_oct_m
 

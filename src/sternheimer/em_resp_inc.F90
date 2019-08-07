@@ -52,7 +52,7 @@ subroutine X(run_sternheimer)(namespace)
               str_tmp = em_wfs_tag(idir, ifactor)
               call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
               if (ierr == 0) then
-                call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+                call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
               end if
               call restart_close_dir(restart_load)
 
@@ -67,7 +67,7 @@ subroutine X(run_sternheimer)(namespace)
               do idir2 = 1, gr%sb%periodic_dim
                 str_tmp = em_wfs_tag(idir, ifactor, idir2)              
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-                if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
+                if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
                   lr=kdotp_em_lr2(idir2, idir, sigma_alt, ifactor))
                 call restart_close_dir(restart_load)
               
@@ -88,10 +88,10 @@ subroutine X(run_sternheimer)(namespace)
                       if (ierr == 0) then
                         select case(ipert)
                           case(PK2)
-                            call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
+                            call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
                               lr = k2_lr(idir, idir2, sigma))
                           case(PKB)
-                            call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
+                            call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
                               lr = kb_lr(idir, idir2, sigma))
                         end select
                       end if
@@ -116,7 +116,7 @@ subroutine X(run_sternheimer)(namespace)
               if(sigma == 1 .and. ifactor == 1) then
                 str_tmp = em_wfs_tag(idir, ifactor, ipert = PB)  
                 call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-                if(ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
+                if(ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
                   lr = b_lr(idir, sigma))
                 call restart_close_dir(restart_load)
                 if(ierr /= 0) then
@@ -131,7 +131,7 @@ subroutine X(run_sternheimer)(namespace)
                   str_tmp = em_wfs_tag(idir, ifactor, idir2, ipert = PKE)              
                   call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
                   if (ierr == 0) then
-                    call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
+                    call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, &
                       lr = ke_lr(idir, idir2, sigma_alt, ifactor))
                   end if
                   call restart_close_dir(restart_load)
@@ -342,7 +342,7 @@ subroutine X(run_sternheimer)(namespace)
           str_tmp = kdotp_wfs_tag(min(idir, idir2), max(idir, idir2))
           ! 1 is the sigma index which is used in em_resp
           call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-          if (ierr == 0) call states_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr2)
+          if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr2)
           call restart_close_dir(kdotp_restart)
           if(ierr /= 0) then
             message(1) = "Unable to read second-order kdotp wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."

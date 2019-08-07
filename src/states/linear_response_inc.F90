@@ -32,7 +32,7 @@
 ! ---------------------------------------------------------
 subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
   type(mesh_t),        intent(in)    :: mesh
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   R_TYPE,              intent(inout) :: vec(:,:)
   integer,             intent(in)    :: ist, ik
   R_TYPE,              intent(in)    :: omega
@@ -117,7 +117,7 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
     SAFE_DEALLOCATE_A(theta_Fi)
   end if
 
-  call X(states_orthogonalize_single)(st, mesh, st%nst, ik, vec(:, :), theta_fi = theta, beta_ij = beta_ij)
+  call X(states_elec_orthogonalize_single)(st, mesh, st%nst, ik, vec(:, :), theta_fi = theta, beta_ij = beta_ij)
 
   SAFE_DEALLOCATE_A(beta_ij)
 
@@ -128,10 +128,10 @@ end subroutine X(lr_orth_vector)
 
 ! --------------------------------------------------------------------
 subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
-  type(mesh_t),   intent(in)    :: mesh
-  type(states_t), intent(in)    :: st
-  type(lr_t),     intent(inout) :: lr(:)
-  integer,        intent(in)    :: nsigma
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  type(lr_t),          intent(inout) :: lr(:)
+  integer,             intent(in)    :: nsigma
 
   integer :: ip, ist, ik, ispin, isigma
   FLOAT   :: weight, xx, dsmear, dos_ef, ef_shift
@@ -166,10 +166,10 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
-    ispin = states_dim_get_spin_index(st%d, ik)
+    ispin = states_elec_dim_get_spin_index(st%d, ik)
     do ist  = st%st_start, st%st_end
 
-      call states_get_state(st, mesh, ist, ik, psi)
+      call states_elec_get_state(st, mesh, ist, ik, psi)
       
       weight = st%d%kweights(ik)*st%smear%el_per_state
       
@@ -210,11 +210,11 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
       end do
       ef_shift = -TOFLOAT(avg_dl_rho) / dos_ef
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
+        ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ist  = st%st_start, st%st_end
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
 
-          call states_get_state(st, mesh, ist, ik, psi)
+          call states_elec_get_state(st, mesh, ist, ik, psi)
           
           do ip = 1, mesh%np
             lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(psi(ip, 1))**2 &
@@ -237,10 +237,10 @@ end subroutine X(lr_build_dl_rho)
 ! \alpha KS orbitals.
 ! ---------------------------------------------------------
 subroutine X(lr_orth_response)(mesh, st, lr, omega)
-  type(mesh_t),   intent(in)    :: mesh
-  type(states_t), intent(in)    :: st
-  type(lr_t),     intent(inout) :: lr
-  R_TYPE,         intent(in)    :: omega
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  type(lr_t),          intent(inout) :: lr
+  R_TYPE,              intent(in)    :: omega
   
   integer :: ist, ik
   PUSH_SUB(X(lr_orth_response))
@@ -257,10 +257,10 @@ end subroutine X(lr_orth_response)
 
 ! ---------------------------------------------------------
 subroutine X(lr_swap_sigma)(st, mesh, plus, minus)
-  type(states_t), intent(in)    :: st
-  type(mesh_t),   intent(in)    :: mesh
-  type(lr_t),     intent(inout) :: plus
-  type(lr_t),     intent(inout) :: minus
+  type(states_elec_t), intent(in)    :: st
+  type(mesh_t),        intent(in)    :: mesh
+  type(lr_t),          intent(inout) :: plus
+  type(lr_t),          intent(inout) :: minus
 
   integer :: ik, idim, ist
   R_TYPE, allocatable :: tmp(:)

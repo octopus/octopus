@@ -37,7 +37,7 @@ module propagator_cn_oct_m
   use propagator_base_oct_m
   use solvers_oct_m
   use sparskit_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -62,7 +62,7 @@ contains
     type(poisson_t),     target,     intent(in)    :: psolver
     type(namespace_t),               intent(in)    :: namespace
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
@@ -122,7 +122,7 @@ contains
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -130,13 +130,13 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
-        call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
+        call states_elec_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
         call exponential_apply(tr%te, gr%der, hm, psolver, zpsi_rhs, ist, ik, dt/M_TWO)
 
         if(hamiltonian_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
           do idim = 1, st%d%dim
-            call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+            call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
             forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
           end do
           SAFE_DEALLOCATE_A(inhpsi)
@@ -144,7 +144,7 @@ contains
 
         ! put the values in a continuous array
         do idim = 1, st%d%dim
-          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
+          call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
           rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
         end do
 
@@ -167,7 +167,7 @@ contains
         end if
 
         do idim = 1, st%d%dim
-          call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
+          call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
         end do
 
       end do

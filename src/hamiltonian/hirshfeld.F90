@@ -32,7 +32,7 @@ module hirshfeld_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_pot_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use species_oct_m
   use splines_oct_m
  
@@ -51,12 +51,12 @@ module hirshfeld_oct_m
   type hirshfeld_t
 
     private
-    type(mesh_t),     pointer     :: mesh
-    type(geometry_t), pointer     :: geo
-    type(states_t),   pointer     :: st
-    FLOAT,            pointer     :: total_density(:)  !< (mesh%np)
-    FLOAT,            pointer     :: free_volume(:)    !< (natoms)
-    FLOAT,            pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
+    type(mesh_t),        pointer     :: mesh
+    type(geometry_t),    pointer     :: geo
+    type(states_elec_t), pointer     :: st
+    FLOAT,               pointer     :: total_density(:)  !< (mesh%np)
+    FLOAT,               pointer     :: free_volume(:)    !< (natoms)
+    FLOAT,               pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
 
   end type hirshfeld_t
 
@@ -65,11 +65,11 @@ module hirshfeld_oct_m
 contains
 
   subroutine hirshfeld_init(this, namespace, mesh, geo, st)
-    type(hirshfeld_t),         intent(out)   :: this
-    type(namespace_t),         intent(in)    :: namespace
-    type(mesh_t),      target, intent(in)    :: mesh
-    type(geometry_t),  target, intent(in)    :: geo
-    type(states_t),    target, intent(in)    :: st
+    type(hirshfeld_t),           intent(out)   :: this
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),        target, intent(in)    :: mesh
+    type(geometry_t),    target, intent(in)    :: geo
+    type(states_elec_t), target, intent(in)    :: st
     
     integer :: iatom, ip, isp
     FLOAT :: rr, pos(1:MAX_DIM), rmax

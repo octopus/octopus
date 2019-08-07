@@ -41,9 +41,10 @@ module eigensolver_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -114,7 +115,7 @@ contains
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(xc_t), target,  intent(in)    :: xc
     logical, optional,   intent(in)    :: disable_preconditioner
 
@@ -428,7 +429,7 @@ contains
   subroutine eigensolver_run(eigens, gr, st, hm, psolver, iter, conv, nstconv)
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(poisson_t),      intent(in)    :: psolver
     integer,              intent(in)    :: iter

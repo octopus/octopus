@@ -50,10 +50,11 @@ module target_oct_m
   use restart_oct_m
   use species_oct_m
   use spectrum_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use string_oct_m
   use td_calc_oct_m
   use td_oct_m
@@ -109,7 +110,7 @@ module target_oct_m
   type target_t
     private
     integer :: type
-    type(states_t) :: st
+    type(states_elec_t) :: st
     type(excited_states_t) :: est
     FLOAT, pointer :: rho(:) => null()
     FLOAT, pointer :: td_fitness(:) => null()
@@ -165,13 +166,13 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  !> This just copies the states_t variable present in target, into st.
+  !> This just copies the states_elec_t variable present in target, into st.
   subroutine target_get_state(tg, st)
-    type(target_t), intent(in)    :: tg
-    type(states_t), intent(inout) :: st
+    type(target_t),      intent(in)    :: tg
+    type(states_elec_t), intent(inout) :: st
 
     PUSH_SUB(target_get_state)
-    call states_copy(st, tg%st)
+    call states_elec_copy(st, tg%st)
 
     POP_SUB(target_get_state)
   end subroutine target_get_state
@@ -193,7 +194,7 @@ contains
     type(multicomm_t),           intent(in)    :: mc
 
     integer :: ierr
-    type(states_t), pointer :: stin
+    type(states_elec_t), pointer :: stin
     type(restart_t) :: restart
 
     PUSH_SUB(target_init)
@@ -217,7 +218,7 @@ contains
     !% state (<i>i.e.</i> "single excitations"). The description of which excitations are
     !% used, and with which weights, should be given in a file called
     !% <tt>oct-excited-state-target</tt>.
-    !% See the documentation of subroutine <tt>excited_states_init</tt> in the source
+    !% See the documentation of subroutine <tt>excited_states_elec_init</tt> in the source
     !% code in order to use this feature.
     !%Option oct_tg_gstransformation 3
     !% The target operator is a projection operator on a transformation of the ground-state 
@@ -267,9 +268,9 @@ contains
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
       call messages_input_error('OCTTargetOperator')
 
-    call states_copy(tg%st, stin)
-    call states_deallocate_wfns(tg%st)
-    call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
+    call states_elec_copy(tg%st, stin)
+    call states_elec_deallocate_wfns(tg%st)
+    call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
     call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
@@ -328,7 +329,7 @@ contains
 
     PUSH_SUB(target_end)
 
-    call states_end(tg%st)
+    call states_elec_end(tg%st)
 
     select case(tg%type)
     case(oct_tg_groundstate)
@@ -416,7 +417,7 @@ contains
     type(poisson_t),     intent(in)    :: psolver
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(inout) :: psi
+    type(states_elec_t), intent(inout) :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -452,12 +453,12 @@ contains
   !> Calculates the inhomogeneous term that appears in the equation
   !! for chi, and places it into inh.
   subroutine target_inh(psi, gr, tg, time, inh, iter)
-    type(states_t),    intent(inout)     :: psi
-    type(grid_t),      intent(in)        :: gr
-    type(target_t),    intent(inout)     :: tg
-    FLOAT,             intent(in)        :: time
-    type(states_t),    intent(inout)     :: inh
-    integer,           intent(in)        :: iter
+    type(states_elec_t), intent(inout)     :: psi
+    type(grid_t),        intent(in)        :: gr
+    type(target_t),      intent(inout)     :: tg
+    FLOAT,               intent(in)        :: time
+    type(states_elec_t), intent(inout)     :: inh
+    integer,             intent(in)        :: iter
  
     integer :: ik, ist, ip, idim, ib
     CMPLX, allocatable :: zpsi(:)
@@ -475,9 +476,9 @@ contains
       do ik = inh%d%kpt%start, inh%d%kpt%end
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
-            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
             zpsi(1:gr%mesh%np) = -psi%occ(ist, ik)*tg%rho(1:gr%mesh%np)*zpsi(1:gr%mesh%np)
-            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do
       end do
@@ -488,11 +489,11 @@ contains
       do ik = inh%d%kpt%start, inh%d%kpt%end
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
-            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
             forall(ip = 1:gr%mesh%np)
               zpsi(ip) = -psi%occ(ist, ik)*M_TWO*sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim)*gvec(1:gr%sb%dim))*zpsi(ip)
             end forall
-            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do
       end do
@@ -502,11 +503,11 @@ contains
       do ik = inh%d%kpt%start, inh%d%kpt%end
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
-            call states_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
             forall(ip = 1:gr%mesh%np)
               zpsi(ip) = -psi%occ(ist, ik)*tg%rho(ip)*zpsi(ip)
             end forall
-            call states_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
+            call states_elec_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do
       end do
@@ -548,7 +549,7 @@ contains
     type(opt_control_state_t),  intent(inout)   :: qcpsi
     type(geometry_t), optional, intent(in)      :: geo
 
-    type(states_t), pointer :: psi
+    type(states_elec_t), pointer :: psi
 
     psi => opt_control_point_qs(qcpsi)
 
@@ -599,7 +600,7 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     FLOAT, pointer :: q(:, :), p(:, :)
-    type(states_t), pointer :: psi_in, chi_out
+    type(states_elec_t), pointer :: psi_in, chi_out
     PUSH_SUB(target_chi)
 
     psi_in => opt_control_point_qs(qcpsi_in)
@@ -624,9 +625,9 @@ contains
     case(oct_tg_exclude_state)
       call target_chi_exclude(tg, gr, psi_in, chi_out)
     case(oct_tg_hhg)
-      call target_chi_hhg(gr, chi_out)
+      call target_chi_hhg(chi_out)
     case(oct_tg_hhgnew)
-      call target_chi_hhg(gr, chi_out)
+      call target_chi_hhg(chi_out)
     case(oct_tg_velocity)
       call target_chi_velocity(gr, tg, chi_out, geo)
     case(oct_tg_classical)

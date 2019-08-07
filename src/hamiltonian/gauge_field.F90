@@ -29,8 +29,8 @@ module gauge_field_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use unit_oct_m
@@ -328,7 +328,7 @@ contains
   subroutine gauge_field_init_vec_pot(this, sb, st)
     type(gauge_field_t),  intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     
     PUSH_SUB(gauge_field_init_vec_pot)
 
@@ -437,9 +437,9 @@ contains
   ! ---------------------------------------------------------
 
   subroutine gauge_field_get_force(this, gr, st)
-    type(gauge_field_t),  intent(inout)    :: this
+    type(gauge_field_t),  intent(inout) :: this
     type(grid_t),         intent(in)    :: gr
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
 
     integer :: idir,ispin,istot
 

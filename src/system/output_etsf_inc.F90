@@ -29,7 +29,7 @@
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
 subroutine output_etsf(st, gr, geo, dir, outp)
-  type(states_t),         intent(in) :: st
+  type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
   character(len=*),       intent(in) :: dir
@@ -380,7 +380,7 @@ end subroutine output_etsf_kpoints_write
 ! --------------------------------------------------------
 
 subroutine output_etsf_electrons_dims(st, dims, flags)
-  type(states_t),          intent(in)    :: st
+  type(states_elec_t),     intent(in)    :: st
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
 
@@ -402,7 +402,7 @@ end subroutine output_etsf_electrons_dims
 ! --------------------------------------------------------
 
 subroutine output_etsf_electrons_write(st, ncid)
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   integer,             intent(in)    :: ncid
 
   type(etsf_electrons) :: electrons
@@ -445,7 +445,7 @@ end subroutine output_etsf_electrons_write
 ! --------------------------------------------------------
 
 subroutine output_etsf_density_dims(st, cube, dims, flags)
-  type(states_t),          intent(in)    :: st
+  type(states_elec_t),     intent(in)    :: st
   type(cube_t),            intent(in)    :: cube
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -466,7 +466,7 @@ end subroutine output_etsf_density_dims
 ! --------------------------------------------------------
 
 subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
-  type(states_t),        intent(in)    :: st
+  type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -520,7 +520,7 @@ end subroutine output_etsf_density_write
 ! --------------------------------------------------------
 
 subroutine output_etsf_wfs_rsp_dims(st, cube, dims, flags)
-  type(states_t),          intent(in)    :: st
+  type(states_elec_t),     intent(in)    :: st
   type(cube_t),            intent(in)    :: cube
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
@@ -529,7 +529,7 @@ subroutine output_etsf_wfs_rsp_dims(st, cube, dims, flags)
 
   if (states_are_real(st)) then
     dims%real_or_complex_wavefunctions = 1
-  elseif(states_are_complex(st)) then
+  else
     dims%real_or_complex_wavefunctions = 2
   end if
 
@@ -545,7 +545,7 @@ end subroutine output_etsf_wfs_rsp_dims
 ! --------------------------------------------------------
 
 subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
-  type(states_t),        intent(in)    :: st
+  type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -567,7 +567,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
   nkpoints = st%d%nik/nspin
   if (states_are_real(st)) then
     zdim = 1
-  elseif(states_are_complex(st)) then
+  else
     zdim = 2
   end if
 
@@ -584,13 +584,13 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
       do ist = 1, st%nst
         do idim = 1, st%d%dim
           if (states_are_real(st)) then
-            call states_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
+            call states_elec_get_state(st, mesh, idim, ist, ik + ispin - 1, dpsi)
 
             call dmesh_to_cube(mesh, dpsi, cube, cf, local = .true.)
             local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
 
-          else if(states_are_complex(st)) then
-            call states_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
+          else
+            call states_elec_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
 
             call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, cf, local = .true.)
             local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
@@ -699,7 +699,7 @@ end subroutine output_etsf_wfs_pw_dims
 ! --------------------------------------------------------
 
 subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
-  type(states_t),        intent(in)    :: st
+  type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -731,13 +731,13 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
   SAFE_ALLOCATE(zpsi(1:mesh%np))
 
   do iq = 1, st%d%nik
-    ispin = states_dim_get_spin_index(st%d, iq)
-    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    ispin = states_elec_dim_get_spin_index(st%d, iq)
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 
         ! for the moment we treat all functions as complex
-        call states_get_state(st, mesh, idim, ist, iq, zpsi)
+        call states_elec_get_state(st, mesh, idim, ist, iq, zpsi)
         call zmesh_to_cube(mesh, zpsi, cube, cf, local = .true.)
         call zcube_function_rs2fs(cube, cf)
 

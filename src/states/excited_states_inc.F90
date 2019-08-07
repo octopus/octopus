@@ -22,16 +22,16 @@
 !! one is an "excited_state".
 !!
 !! WARNING!!!!: periodic systems are not considered in these expressions.
-R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
+R_TYPE function X(states_elec_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
   type(mesh_t),           intent(in) :: mesh
   type(excited_states_t), intent(in) :: excited_state
-  type(states_t),         intent(in) :: st
+  type(states_elec_t),    intent(in) :: st
   R_TYPE,       optional, intent(in) :: mat(:, :, :)
 
   integer :: jj
   R_TYPE, allocatable :: mat_local(:, :, :)
 
-  PUSH_SUB(X(states_mpdotp_x))
+  PUSH_SUB(X(states_elec_mpdotp_x))
 
   dotp = M_ZERO
 
@@ -42,18 +42,18 @@ R_TYPE function X(states_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
   if(present(mat)) then
       mat_local = mat
   else 
-    call X(states_matrix)(mesh, excited_state%st, st, mat_local)
+    call X(states_elec_matrix)(mesh, excited_state%st, st, mat_local)
   end if
 
   do jj = 1, excited_state%n_pairs
-    call X(states_matrix_swap)(mat_local, excited_state%pair(jj))
-    dotp = dotp + excited_state%weight(jj) * X(states_mpdotp_g)(mesh, excited_state%st, st, mat_local) 
-    call X(states_matrix_swap)(mat_local, excited_state%pair(jj))
+    call X(states_elec_matrix_swap)(mat_local, excited_state%pair(jj))
+    dotp = dotp + excited_state%weight(jj) * X(states_elec_mpdotp_g)(mesh, excited_state%st, st, mat_local) 
+    call X(states_elec_matrix_swap)(mat_local, excited_state%pair(jj))
   end do
 
   SAFE_DEALLOCATE_A(mat_local)
-  POP_SUB(X(states_mpdotp_x))
-end function X(states_mpdotp_x)
+  POP_SUB(X(states_elec_mpdotp_x))
+end function X(states_elec_mpdotp_x)
 
 
 ! -------------------------------------------------------------
@@ -65,14 +65,14 @@ end function X(states_mpdotp_x)
 !! matrix that would correspond to the dot products between
 !! this excited state (on the left) and the same ground state
 !! (on the right)
-subroutine X(states_matrix_swap)(mat, pair)
+subroutine X(states_elec_matrix_swap)(mat, pair)
   R_TYPE,              intent(inout) :: mat(:, :, :)
   type(states_pair_t), intent(in)    :: pair
 
   integer :: ii, aa, ik
   R_TYPE, allocatable :: row(:)
 
-  PUSH_SUB(X(states_matrix_swap))
+  PUSH_SUB(X(states_elec_matrix_swap))
 
   ii = pair%i
   aa = pair%a
@@ -86,13 +86,13 @@ subroutine X(states_matrix_swap)(mat, pair)
   mat(aa, :, ik) = row(:)
 
   SAFE_DEALLOCATE_A(row)
-  POP_SUB(X(states_matrix_swap))
-end subroutine X(states_matrix_swap)
+  POP_SUB(X(states_elec_matrix_swap))
+end subroutine X(states_elec_matrix_swap)
 
 
 ! -------------------------------------------------------------
 !> Returns <st1 | O | st2>, where both st1 and st2 are Slater
-!! determinants represented by states_t st1 and st2. O is a
+!! determinants represented by states_elec_t st1 and st2. O is a
 !! one-body operator.
 !!
 !! The auxiliary Slater determinant opst2 is formed by the
@@ -101,9 +101,9 @@ end subroutine X(states_matrix_swap)
 !!
 !! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
 !! Phys. Rev. 97, 1474; Eq. 49].
-R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1opst2)
-  type(mesh_t),     intent(in) :: mesh
-  type(states_t),   intent(in) :: st1, st2, opst2
+R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1opst2)
+  type(mesh_t),          intent(in) :: mesh
+  type(states_elec_t),   intent(in) :: st1, st2, opst2
 
   integer :: ispin, nik, nst, ik, i1, j1, k1, i2, j2, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), &
@@ -113,7 +113,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   R_TYPE, allocatable :: bb(:, :), cc(:, :)
   R_TYPE :: zz, det
 
-  PUSH_SUB(X(states_mpmatrixelement_g))
+  PUSH_SUB(X(states_elec_mpmatrixelement_g))
 
   ! This should go away whenever the subroutine is ready.
   st1opst2 = R_TOTYPE(M_ONE)
@@ -138,8 +138,8 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   select case(ispin)
   case(UNPOLARIZED)
 
-    call X(states_matrix)(mesh, st1, st2, overlap_mat)
-    call X(states_matrix)(mesh, st1, opst2, op_mat)
+    call X(states_elec_matrix)(mesh, st1, st2, overlap_mat)
+    call X(states_elec_matrix)(mesh, st1, opst2, op_mat)
 
     do ik = 1, nik
 
@@ -150,7 +150,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
         call messages_fatal(1)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
-        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
         call messages_fatal(1)
       end if
 
@@ -202,8 +202,8 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
 
   case(SPIN_POLARIZED, SPINORS)
 
-    call X(states_matrix) (mesh, st1, st2, overlap_mat)
-    call X(states_matrix) (mesh, st1, opst2, op_mat)
+    call X(states_elec_matrix) (mesh, st1, st2, overlap_mat)
+    call X(states_elec_matrix) (mesh, st1, opst2, op_mat)
 
     do ik = 1, nik
 
@@ -214,7 +214,7 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
         call messages_fatal(1)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
-        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
         call messages_fatal(1)
       end if
 
@@ -259,25 +259,25 @@ R_TYPE function X(states_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1ops
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
 
-  POP_SUB(X(states_mpmatrixelement_g))
-end function X(states_mpmatrixelement_g)
+  POP_SUB(X(states_elec_mpmatrixelement_g))
+end function X(states_elec_mpmatrixelement_g)
 
 
 ! -------------------------------------------------------------
 !> Returns the dot product of two many-body states st1 and st2.
 !! \warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
-R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
-  type(mesh_t),     intent(in) :: mesh
-  type(states_t),   intent(in) :: st1, st2
-  R_TYPE, optional, intent(in) :: mat(:, :, :)
+R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
+  type(mesh_t),        intent(in) :: mesh
+  type(states_elec_t), intent(in) :: st1, st2
+  R_TYPE, optional,    intent(in) :: mat(:, :, :)
 
   integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
                           half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: aa(:, :, :), bb(:, :)
 
-  PUSH_SUB(X(states_mpdotp_g))
+  PUSH_SUB(X(states_elec_mpdotp_g))
 
   ispin = st1%d%ispin
   ASSERT(ispin  ==  st2%d%ispin)
@@ -299,7 +299,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   if(present(mat)) then
     aa(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
   else
-    call X(states_matrix) (mesh, st1, st2, aa)
+    call X(states_elec_matrix) (mesh, st1, st2, aa)
   end if
 
   select case(ispin)
@@ -314,7 +314,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
         call messages_fatal(1)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
-        message(1) = 'Internal Error: different number of occupied states in states_mpdotp_g'
+        message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp_g'
         call messages_fatal(1)
       end if
 
@@ -353,7 +353,7 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
         call messages_fatal(1)
       end if
       if(i1 /= i2) then
-        message(1) = 'Internal Error: different number of occupied states in states_mpdotp'
+        message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
         call messages_fatal(1)
       end if
 
@@ -379,8 +379,8 @@ R_TYPE function X(states_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   SAFE_DEALLOCATE_A(partially_filled2)
   SAFE_DEALLOCATE_A(half_filled1)
   SAFE_DEALLOCATE_A(half_filled2)
-  POP_SUB(X(states_mpdotp_g))
-end function X(states_mpdotp_g)
+  POP_SUB(X(states_elec_mpdotp_g))
+end function X(states_elec_mpdotp_g)
 
 
 !! Local Variables:

@@ -19,7 +19,7 @@
   ! ---------------------------------------------------------
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in)    :: hm
-    type(states_t),            intent(inout) :: st
+    type(states_elec_t),       intent(inout) :: st
     type(derivatives_t),       intent(in)    :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
@@ -209,7 +209,7 @@
 
       SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
       
-      call current_heat_calculate(der, hm, geo, st, heat_current)
+      call current_heat_calculate(der, hm, st, heat_current)
       
       do is = 1, hm%d%nspin
         if(st%d%nspin == 1) then
@@ -234,7 +234,7 @@
 
       !These two conditions should be copied from the density_calc_end routine
       !We cannot call this routine as we must not symmetrize of reduce on kpoints
-      ASSERT(.not.states_are_packed(st))
+      ASSERT(.not.st%are_packed())
       ASSERT(.not.gr%have_fine_mesh)
 
       do ik = st%d%kpt%start,st%d%kpt%end

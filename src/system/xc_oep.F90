@@ -37,8 +37,9 @@ module xc_oep_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
   use xc_oct_m
@@ -97,11 +98,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_init(oep, namespace, family, gr, st)
-    type(xc_oep_t),     intent(out)   :: oep
-    type(namespace_t),  intent(in)    :: namespace
-    integer,            intent(in)    :: family
-    type(grid_t),       intent(inout) :: gr
-    type(states_t),     intent(in)    :: st
+    type(xc_oep_t),      intent(out)   :: oep
+    type(namespace_t),   intent(in)    :: namespace
+    integer,             intent(in)    :: family
+    type(grid_t),        intent(inout) :: gr
+    type(states_elec_t), intent(in)    :: st
 
     PUSH_SUB(xc_oep_init)
 
@@ -283,9 +284,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_oep_AnalyzeEigen(oep, st, is)
-    type(xc_oep_t), intent(inout) :: oep
-    type(states_t), intent(in)    :: st
-    integer,        intent(in)    :: is
+    type(xc_oep_t),       intent(inout) :: oep
+    type(states_elec_t),  intent(in)    :: st
+    integer,              intent(in)    :: is
 
     integer  :: ist
     FLOAT :: max_eigen

@@ -42,9 +42,10 @@ module sternheimer_oct_m
   use restart_oct_m
   use scf_tol_oct_m
   use smear_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -279,7 +280,7 @@ contains
   subroutine sternheimer_build_fxc(this, mesh, st, ks)
     type(sternheimer_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(v_ks_t),        intent(in)    :: ks
 
     FLOAT, allocatable :: rho(:, :)
@@ -290,7 +291,7 @@ contains
     this%fxc = M_ZERO
 
     SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-    call states_total_density(st, mesh, rho)
+    call states_elec_total_density(st, mesh, rho)
     call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
     SAFE_DEALLOCATE_A(rho)
 
@@ -303,7 +304,7 @@ contains
   subroutine sternheimer_build_kxc(this, mesh, st, ks)
     type(sternheimer_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(v_ks_t),        intent(in)    :: ks
 
     FLOAT, allocatable :: rho(:, :)
@@ -315,7 +316,7 @@ contains
       this%kxc = M_ZERO
 
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
-      call states_total_density(st, mesh, rho)
+      call states_elec_total_density(st, mesh, rho)
       call xc_get_kxc(ks%xc, mesh, rho, st%d%ispin, this%kxc)
       SAFE_DEALLOCATE_A(rho)
     end if

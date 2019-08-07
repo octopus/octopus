@@ -58,11 +58,12 @@ module scf_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_group_oct_m
-  use states_io_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_group_oct_m
+  use states_elec_io_oct_m
+  use states_elec_restart_oct_m
   use stress_oct_m
   use symmetries_oct_m
   use types_oct_m
@@ -131,7 +132,7 @@ contains
     type(namespace_t),    intent(in)    :: namespace
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     type(multicomm_t),    intent(in)    :: mc
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
@@ -534,7 +535,7 @@ contains
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
     type(geometry_t),          intent(inout) :: geo !< geometry
-    type(states_t),            intent(inout) :: st !< States
+    type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_t),       intent(inout) :: hm !< Hamiltonian
     type(poisson_t),           intent(in)    :: psolver
@@ -583,7 +584,7 @@ contains
     if (present(restart_load)) then
       if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
-        call states_load_rho(restart_load, st, gr, ierr)
+        call states_elec_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
@@ -604,7 +605,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+          call hamiltonian_update(hm, gr%mesh)
           if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
             if (ks%oep%level == XC_OEP_FULL) then
               do is = 1, st%d%nspin
@@ -674,7 +675,7 @@ contains
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
-    evsum_in = states_eigenvalues_sum(st)
+    evsum_in = states_elec_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
     if (scf%conv_abs_force > M_ZERO) then
@@ -753,7 +754,7 @@ contains
       end if
 
       ! occupations
-      call states_fermi(st, gr%mesh)
+      call states_elec_fermi(st, gr%mesh)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! compute output density, potential (if needed) and eigenvalues sum
@@ -778,7 +779,7 @@ contains
       
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
-      evsum_out = states_eigenvalues_sum(st)
+      evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
       call energy_calc_total(hm, psolver, gr, st, iunit = 0)
@@ -860,7 +861,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+        call hamiltonian_update(hm, gr%mesh)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -888,7 +889,7 @@ contains
 #endif      
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
-        call modelmb_sym_all_states (gr, st, geo)
+        call modelmb_sym_all_states (gr, st)
       end if
 
       if (gs_run_ .and. present(restart_dump)) then 
@@ -897,13 +898,13 @@ contains
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
-          call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
 
-          call states_dump_rho(restart_dump, st, gr, ierr, iter=iter)
+          call states_elec_dump_rho(restart_dump, st, gr, ierr, iter=iter)
           if (ierr /= 0) then
             message(1) = 'Unable to write density.'
             call messages_warning(1)
@@ -1028,8 +1029,8 @@ contains
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(hm, gr%der, psolver, st)
-      call states_fermi(st, gr%mesh)
-      call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+      call states_elec_fermi(st, gr%mesh)
+      call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
 
     if(gs_run_) then 
@@ -1040,7 +1041,7 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
+        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
           hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
@@ -1088,9 +1089,9 @@ contains
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call messages_info(2)
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
         else
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
         if(associated(hm%vberry)) then
@@ -1185,11 +1186,11 @@ contains
           write(iunit,'(a)') 'Some of the states are not fully converged!'
         end if
 
-        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
+        call states_elec_write_eigenvalues(iunit, st%nst, st, gr%sb)
         write(iunit, '(1x)')
 
         if(simul_box_is_periodic(gr%sb)) then
-          call states_write_gaps(iunit, st, gr%sb)
+          call states_elec_write_gaps(iunit, st, gr%sb)
           write(iunit, '(1x)')
         end if
 

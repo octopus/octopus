@@ -43,8 +43,8 @@ module current_oct_m
   use projector_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -74,10 +74,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this, namespace, sb)
+  subroutine current_init(this, namespace)
     type(current_t),   intent(out)   :: this
     type(namespace_t), intent(in)    :: namespace
-    type(simul_box_t), intent(in)    :: sb
 
     PUSH_SUB(current_init)
 
@@ -123,7 +122,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine current_batch_accumulate(st, der, ik, ib, psib, gpsib, current, current_kpt)
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(derivatives_t), intent(inout) :: der
     integer,             intent(in)    :: ik
     integer,             intent(in)    :: ib
@@ -150,7 +149,7 @@ contains
     if(st%d%ispin == SPINORS .or. (batch_status(psib) == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
-        do ist = states_block_min(st, ib), states_block_max(st, ib)
+        do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
           if(abs(ww) <= M_EPSILON) cycle
@@ -228,7 +227,7 @@ contains
     else
 
       do ii = 1, psib%nst
-        ist = states_block_min(st, ib) + ii - 1
+        ist = states_elec_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
@@ -267,7 +266,7 @@ contains
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
@@ -307,7 +306,7 @@ contains
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
+        ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -327,7 +326,7 @@ contains
 
             call zhamiltonian_apply_batch(hm, der, psolver, rpsib, hrpsib, ik, set_bc = .false.)
 
-            do ist = states_block_min(st, ib), states_block_max(st, ib)
+            do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
               if(ww <= M_EPSILON) cycle
 
@@ -382,7 +381,7 @@ contains
         ! we can use the packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_dim_get_spin_index(st%d, ik)
+          ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
 
             call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -430,20 +429,20 @@ contains
         ! use the slow non-packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_dim_get_spin_index(st%d, ik)
+          ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ist = st%st_start, st%st_end
 
             ww = st%d%kweights(ik)*st%occ(ist, ik)
             if(abs(ww) <= M_EPSILON) cycle
 
-            call states_get_state(st, der%mesh, ist, ik, psi)
+            call states_elec_get_state(st, der%mesh, ist, ik, psi)
 
             do idim = 1, st%d%dim
               call boundaries_set(der%boundaries, psi(:, idim))
             end do
 
             if(associated(hm%hm_base%phase)) then 
-              call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+              call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
             end if
 
             do idim = 1, st%d%dim
@@ -518,7 +517,7 @@ contains
     if(st%d%ispin /= SPINORS) then
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
+        ispin = states_elec_dim_get_spin_index(st%d, ik)
         do idir = 1, der%mesh%sb%dim
           call lalg_axpy(der%mesh%np, M_ONE, current_kpt(:, idir, ik), current(1:der%mesh%np, idir, ispin))
         end do
@@ -582,7 +581,7 @@ contains
 
     cmel = M_z0
 
-    ispin = states_dim_get_spin_index(hm%d, ik)
+    ispin = states_elec_dim_get_spin_index(hm%d, ik)
     ppsi_i(:,:) = M_z0        
     ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
     ppsi_j(:,:) = M_z0        
@@ -661,11 +660,10 @@ contains
   end subroutine current_calculate_mel
 
   ! ---------------------------------------------------------
-  subroutine current_heat_calculate(der, hm, geo, st, current)
+  subroutine current_heat_calculate(der, hm, st, current)
     type(derivatives_t),  intent(in)    :: der
     type(hamiltonian_t),  intent(in)    :: hm
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
     integer :: ik, ist, idir, idim, ip, ispin, ndim
@@ -689,18 +687,18 @@ contains
     
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_dim_get_spin_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
 
         if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
         
-        call states_get_state(st, der%mesh, ist, ik, psi)
+        call states_elec_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim
           call boundaries_set(der%boundaries, psi(:, idim))
         end do
 
         if(associated(hm%hm_base%phase)) then 
-          call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+          call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
         end if
 
         do idim = 1, st%d%dim
@@ -708,7 +706,8 @@ contains
         end do
         do idir = 1, ndim
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
+            call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, &
+              conjugate = .true.)
           end if
             
           !do idim = 1, st%d%dim
@@ -720,7 +719,7 @@ contains
           end do
             
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
+            call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
                                   der%mesh%np_part,  conjugate = .false.)
           end if
             

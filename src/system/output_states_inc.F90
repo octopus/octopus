@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
-  type(states_t),         intent(in) :: st
+  type(states_elec_t),    intent(in) :: st
   type(namespace_t),      intent(in) :: namespace
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
@@ -95,11 +95,11 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
             end if
 
             if (states_are_real(st)) then
-              call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
+              call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               call dio_function_output(outp%how, dir, fname, gr%mesh, dtmp, &
                 fn_unit, ierr, geo = geo)
             else
-              call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
+              call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
                 fn_unit, ierr, geo = geo)
             end if
@@ -137,10 +137,10 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
             end if
 
             if (states_are_real(st)) then
-              call states_get_state(st, gr%mesh, idim, ist, ik, dtmp)
+              call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
               dtmp(1:gr%mesh%np) = abs(dtmp(1:gr%mesh%np))**2
             else
-              call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
+              call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
             call dio_function_output (outp%how, dir, fname, gr%mesh, &
@@ -156,7 +156,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
+    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
@@ -179,7 +179,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
-    call states_write_tpa(trim(dir), namespace, gr, st)
+    call states_elec_write_tpa(trim(dir), namespace, gr, st)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
@@ -198,7 +198,7 @@ end subroutine output_states
 ! ---------------------------------------------------------
 subroutine output_current_flow(gr, st, dir, outp)
   type(grid_t),         intent(in) :: gr
-  type(states_t),       intent(in) :: st
+  type(states_elec_t),  intent(in) :: st
   character(len=*),     intent(in) :: dir
   type(output_t),       intent(in) :: outp
 
@@ -249,7 +249,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
+    call states_elec_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim
       do ip = 1, gr%mesh%np

@@ -33,7 +33,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
   type(grid_t),        intent(in)    :: gr
   type(hamiltonian_t), intent(in)    :: hm
   type(poisson_t),     intent(in)    :: psolver
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
   FLOAT, optional,     intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
 
@@ -91,7 +91,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
 
     oep%uxc_bar(:, is) = M_ZERO
     do ist = st%st_start, st%st_end
-      call states_get_state(st, gr%mesh, idm, ist, isp, psi)
+      call states_elec_get_state(st, gr%mesh, idm, ist, isp, psi)
       oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(psi), oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false.))
     end do
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
@@ -151,7 +151,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   type(grid_t),        intent(in)    :: gr
   type(hamiltonian_t), intent(in)    :: hm
   type(poisson_t),     intent(in)    :: psolver
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   integer,             intent(in)    :: is
   FLOAT,               intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
   type(xc_oep_t),      intent(inout) :: oep
@@ -191,7 +191,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
     do ist = 1, st%nst !only over occupied states
 
       if(abs(st%occ(ist,1))<= M_EPSILON) cycle
-      call states_get_state(st, gr%mesh, ist, is, psi)
+      call states_elec_get_state(st, gr%mesh, ist, is, psi)
       psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
 
       ! evaluate right-hand side
@@ -242,7 +242,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        call states_get_state(st, gr%mesh, ist, is, psi)
+        call states_elec_get_state(st, gr%mesh, ist, is, psi)
         psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
         vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
         !vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
