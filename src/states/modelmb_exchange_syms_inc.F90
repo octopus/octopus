@@ -17,11 +17,9 @@
 !!
 
 !> project out states with proper symmetry for cases which are of symmetry = unknown
-subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, young_used, &
+subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
   wf, symmetries_satisfied, tproj_1yd, nspindown_out, iyoung_out, norm)
-  FLOAT,                    intent(in)    :: eigenval
   type(grid_t),             intent(in)    :: gr
-  integer,                  intent(in)    :: mm
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   integer,                  intent(in)    :: ncombo
   integer,                  intent(inout) :: young_used(:) !< (1:ncombo)
@@ -454,10 +452,9 @@ end subroutine X(modelmb_antisym_1spin)
 !
 !> routine to loop over projection of all states wrt fermionic or bosonic character
 !
-subroutine X(modelmb_sym_all_states) (gr, st, geo)
-  type(states_t),         intent(inout) :: st
+subroutine X(modelmb_sym_all_states) (gr, st)
+  type(states_elec_t),    intent(inout) :: st
   type(grid_t),           intent(in)    :: gr
-  type(geometry_t),       intent(in)    :: geo
 
   integer :: mm, itype
   integer :: tdrun
@@ -494,7 +491,7 @@ subroutine X(modelmb_sym_all_states) (gr, st, geo)
   young_used_save = 0
 
   do mm = 1, st%nst
-    call states_get_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_get_state(st, gr%mesh, 1, mm, 1, wf)
 
     symmetries_satisfied = .true.
     if (impose_exch_symmetry) then
@@ -505,18 +502,18 @@ subroutine X(modelmb_sym_all_states) (gr, st, geo)
         end if
       end if
 
-      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
-        st%modelmbparticles, ncombo, young_used_save, wf, symmetries_satisfied, .true.,&
+      call X(modelmb_sym_state)(gr, st%modelmbparticles, ncombo, young_used_save, &
+        wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
 
       young_used = 0
-      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
-        st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.,&
+      call X(modelmb_sym_state)(gr, st%modelmbparticles, ncombo, young_used, &
+        wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
     end if
 
     ! push back the projected state - this may overwrite with a bunch of 0s if we found a bosonic state...
-    call states_set_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_set_state(st, gr%mesh, 1, mm, 1, wf)
 
   end do
 

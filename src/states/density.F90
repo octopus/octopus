@@ -40,8 +40,9 @@ module density_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
 
@@ -55,17 +56,17 @@ module density_oct_m
     density_calc_accumulate,          &
     density_calc_end,                 &
     density_calc,                     &
-    states_freeze_orbitals,           &
-    states_total_density,             &
+    states_elec_freeze_orbitals,           &
+    states_elec_total_density,             &
     ddensity_accumulate_grad,         &
     zdensity_accumulate_grad,         &
-    states_freeze_redistribute_states,&
-    states_freeze_adjust_qtot
+    states_elec_freeze_redistribute_states,&
+    states_elec_freeze_adjust_qtot
 
   type density_calc_t
     private
     FLOAT,                pointer :: density(:, :)
-    type(states_t),       pointer :: st
+    type(states_elec_t),  pointer :: st
     type(grid_t),         pointer :: gr
     type(accel_mem_t)            :: buff_density
     integer                       :: pnp
@@ -76,7 +77,7 @@ contains
   
   subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
-    type(states_t),       target,   intent(in)    :: st
+    type(states_elec_t),       target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
 
@@ -136,7 +137,7 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_dim_get_spin_index(this%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(this%st%d, ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
@@ -351,7 +352,7 @@ contains
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
   subroutine density_calc(st, gr, density)
-    type(states_t),          intent(in)  :: st
+    type(states_elec_t),     intent(in)  :: st
     type(grid_t),            intent(in)  :: gr
     FLOAT,                   intent(out) :: density(:, :)
 
@@ -377,17 +378,17 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, namespace, gr, mc, n, family_is_mgga)
-    type(states_t),    intent(inout) :: st
-    type(namespace_t), intent(in)    :: namespace
-    type(grid_t),      intent(in)    :: gr
-    type(multicomm_t), intent(in)    :: mc
-    integer,           intent(in)    :: n
-    logical,           intent(in)    :: family_is_mgga
+  subroutine states_elec_freeze_orbitals(st, namespace, gr, mc, n, family_is_mgga)
+    type(states_elec_t), intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(multicomm_t),   intent(in)    :: mc
+    integer,             intent(in)    :: n
+    logical,             intent(in)    :: family_is_mgga
 
-    integer :: ist, istep, ik, ib, nblock, st_min
+    integer :: ist, ik, ib, nblock, st_min
     integer :: nodeto, nodefr, nsend, nreceiv
-    type(states_t) :: staux
+    type(states_elec_t) :: staux
     CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
     type(batch_t)  :: psib
     type(density_calc_t) :: dens_calc
@@ -395,7 +396,7 @@ contains
     integer :: status(MPI_STATUS_SIZE)
 #endif
 
-    PUSH_SUB(states_freeze_orbitals)
+    PUSH_SUB(states_elec_freeze_orbitals)
 
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
@@ -416,22 +417,22 @@ contains
 
       do ib =  st%group%block_start, st%group%block_end
         !We can use the full batch 
-        if(states_block_max(st, ib) <= n) then
+        if(states_elec_block_max(st, ib) <= n) then
 
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
-          if(states_block_max(st, ib) == n) exit
+          if(states_elec_block_max(st, ib) == n) exit
 
         else !Here we only use a part of this batch 
 
-          nblock = n - states_block_min(st, ib) + 1
+          nblock = n - states_elec_block_min(st, ib) + 1
 
           SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1:nblock))
 
           do ist = 1, nblock
-            call states_get_state(st, gr%mesh, states_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
+            call states_elec_get_state(st, gr%mesh, states_elec_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
           end do
 
-          call batch_init(psib, st%d%dim, states_block_min(st, ib), n, psi)
+          call batch_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi)
           call density_calc_accumulate(dens_calc, ik, psib)
           call batch_end(psib)
           SAFE_DEALLOCATE_A(psi)
@@ -456,14 +457,14 @@ contains
         SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
       end if
 
-      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
+      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
            density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
     end if 
 
 
-    call states_copy(staux, st)
+    call states_elec_copy(staux, st)
 
-    call states_freeze_redistribute_states(st, namespace, gr, mc, n)
+    call states_elec_freeze_redistribute_states(st, namespace, gr, mc, n)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
@@ -489,13 +490,13 @@ contains
 
           !Local copy
           if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == st%mpi_grp%rank) then
-            call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
-            call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))            
+            call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+            call states_elec_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))            
             nsend = nsend -1
             nreceiv= nreceiv-1
           else
             if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
-              call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+              call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
               call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
                     st%mpi_grp%comm, mpi_err)
               nsend = nsend -1
@@ -504,7 +505,7 @@ contains
             if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
                  ist, st%mpi_grp%comm, status, mpi_err)
-              call states_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
+              call states_elec_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
               nreceiv= nreceiv-1
             end if
           end if
@@ -518,8 +519,8 @@ contains
     else
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
-          call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
+          call states_elec_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
+          call states_elec_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
         end do
       end do
     end if
@@ -534,25 +535,25 @@ contains
       end do
     end do
 
-    call states_end(staux)
-    POP_SUB(states_freeze_orbitals)
-  end subroutine states_freeze_orbitals
+    call states_elec_end(staux)
+    POP_SUB(states_elec_freeze_orbitals)
+  end subroutine states_elec_freeze_orbitals
 
   ! ---------------------------------------------------------
-  subroutine states_freeze_redistribute_states(st, namespace, gr, mc, nn)
-    type(states_t),    intent(inout) :: st
-    type(namespace_t), intent(in)    :: namespace
-    type(grid_t),      intent(in)    :: gr
-    type(multicomm_t), intent(in)    :: mc
-    integer,           intent(in)    :: nn
+  subroutine states_elec_freeze_redistribute_states(st, namespace, gr, mc, nn)
+    type(states_elec_t), intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(multicomm_t),   intent(in)    :: mc
+    integer,             intent(in)    :: nn
 
-    PUSH_SUB(states_freeze_redistribute_states)
+    PUSH_SUB(states_elec_freeze_redistribute_states)
 
     st%nst = st%nst - nn
 
-    call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, namespace, mc)
-    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+    call states_elec_deallocate_wfns(st)
+    call states_elec_distribute_nodes(st, namespace, mc)
+    call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
@@ -563,16 +564,16 @@ contains
     st%occ      = M_ZERO
 
 
-    POP_SUB(states_freeze_redistribute_states)
-  end subroutine states_freeze_redistribute_states
+    POP_SUB(states_elec_freeze_redistribute_states)
+  end subroutine states_elec_freeze_redistribute_states
 
   ! ---------------------------------------------------------
-  subroutine states_freeze_adjust_qtot(st)
-    type(states_t), intent(inout) :: st
+  subroutine states_elec_freeze_adjust_qtot(st)
+    type(states_elec_t), intent(inout) :: st
 
     integer :: ik, ist
 
-    PUSH_SUB(states_freeze_adjust_occs)
+    PUSH_SUB(states_elec_freeze_adjust_occs)
 
     ! Change the smearing method by fixing the occupations to  
     ! that of the ground-state such that the unfrozen states inherit 
@@ -594,22 +595,22 @@ contains
 #endif  
 
 
-    POP_SUB(states_freeze_adjust_qtot)
-  end subroutine states_freeze_adjust_qtot
+    POP_SUB(states_elec_freeze_adjust_qtot)
+  end subroutine states_elec_freeze_adjust_qtot
 
 
   ! ---------------------------------------------------------
   !> this routine calculates the total electronic density,
   !! which is the sum of the part coming from the orbitals, the
   !! non-linear core corrections and the frozen orbitals
-  subroutine states_total_density(st, mesh, total_rho)
-    type(states_t),  intent(in)  :: st
-    type(mesh_t),    intent(in)  :: mesh
-    FLOAT,           intent(out) :: total_rho(:,:)
+  subroutine states_elec_total_density(st, mesh, total_rho)
+    type(states_elec_t),  intent(in)  :: st
+    type(mesh_t),         intent(in)  :: mesh
+    FLOAT,                intent(out) :: total_rho(:,:)
 
     integer :: is, ip
 
-    PUSH_SUB(states_total_density)
+    PUSH_SUB(states_elec_total_density)
 
     forall(ip = 1:mesh%np, is = 1:st%d%nspin)
       total_rho(ip, is) = st%rho(ip, is)
@@ -628,8 +629,8 @@ contains
       end forall
     end if
   
-    POP_SUB(states_total_density)
-  end subroutine states_total_density
+    POP_SUB(states_elec_total_density)
+  end subroutine states_elec_total_density
 
 #include "undef.F90"
 #include "real.F90"

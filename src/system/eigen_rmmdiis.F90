@@ -34,8 +34,8 @@ module eigen_rmmdiis_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
 
   implicit none
 

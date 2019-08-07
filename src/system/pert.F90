@@ -44,8 +44,8 @@ module pert_oct_m
   use projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use varinfo_oct_m
   use vibrations_oct_m
 
@@ -69,8 +69,8 @@ module pert_oct_m
      zpert_apply_order_2,              &
      dpert_expectation_value,          &
      zpert_expectation_value,          &
-     dpert_states_expectation_value,   &
-     zpert_states_expectation_value,   &
+     dpert_states_elec_expectation_value,   &
+     zpert_states_elec_expectation_value,   &
      dpert_expectation_density,        &
      zpert_expectation_density,        &
      dionic_pert_matrix_elements_2,    &

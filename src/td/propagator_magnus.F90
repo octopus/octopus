@@ -36,7 +36,7 @@ module propagator_magnus_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use propagator_rk_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use v_ks_oct_m
 
   implicit none
@@ -55,7 +55,7 @@ contains
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt
@@ -81,7 +81,7 @@ contains
         else
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
         end if
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+        call hamiltonian_update(hm, gr%mesh)
       end do
     else
       vaux = M_ZERO
@@ -114,9 +114,9 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
-        call states_get_state(st, gr%mesh, ist, ik, psi)
+        call states_elec_get_state(st, gr%mesh, ist, ik, psi)
         call exponential_apply(tr%te, gr%der, hm, psolver, psi, ist, ik, dt, vmagnus = tr%vmagnus)
-        call states_set_state(st, gr%mesh, ist, ik, psi)
+        call states_elec_set_state(st, gr%mesh, ist, ik, psi)
       end do
     end do
 
@@ -137,7 +137,7 @@ contains
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
+    type(states_elec_t), target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
     FLOAT,                           intent(in)    :: time
     FLOAT,                           intent(in)    :: dt

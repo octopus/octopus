@@ -30,8 +30,8 @@ module initst_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use string_oct_m
   use system_oct_m
   use td_oct_m
@@ -67,14 +67,14 @@ contains
     type(restart_t) :: restart
     CMPLX, allocatable :: zpsi(:, :)
 
-    type(states_t), pointer :: psi
+    type(states_elec_t), pointer :: psi
 
     PUSH_SUB(initial_state_init)
 
     call opt_control_state_init(qcstate, sys%st, sys%geo)
     psi => opt_control_point_qs(qcstate)
-    call states_deallocate_wfns(psi)
-    call states_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
+    call states_elec_deallocate_wfns(psi)
+    call states_elec_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer
@@ -101,7 +101,7 @@ contains
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
       call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_load(restart, sys%namespace, psi, sys%gr, ierr)
+      if(ierr == 0) call states_elec_load(restart, sys%namespace, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
         call messages_fatal(1)
@@ -197,7 +197,7 @@ contains
                   ! fill state
                   zpsi(ip, id) = cmplx(psi_re, psi_im, REAL_PRECISION)
                 end do
-                call states_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
+                call states_elec_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
               end do
             end do
           end do
@@ -205,9 +205,9 @@ contains
         call parse_block_end(blk)
         do ik = 1, psi%d%nik
           do is = psi%st_start, psi%st_end
-            call states_get_state(psi, sys%gr%mesh, is, ik, zpsi)
+            call states_elec_get_state(psi, sys%gr%mesh, is, ik, zpsi)
             call zmf_normalize(sys%gr%mesh, psi%d%dim, zpsi)
-            call states_set_state(psi, sys%gr%mesh, is, ik, zpsi)
+            call states_elec_set_state(psi, sys%gr%mesh, is, ik, zpsi)
           end do
         end do
         SAFE_DEALLOCATE_A(zpsi)
@@ -226,7 +226,7 @@ contains
     call parse_variable(sys%namespace, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
@@ -239,7 +239,7 @@ contains
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
-      call states_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
       call density_calc(psi, sys%gr, psi%rho)
     else

@@ -19,7 +19,7 @@
 subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   integer,                     intent(in)    :: ispin
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
@@ -47,7 +47,7 @@ end subroutine X(hamiltonian_base_local)
 subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsib, Impotential, potential_opencl)
   FLOAT,                        intent(in)    :: potential(:,:)
   type(mesh_t),                 intent(in)    :: mesh
-  type(states_dim_t),           intent(in)    :: std
+  type(states_elec_dim_t),      intent(in)    :: std
   integer,                      intent(in)    :: ispin
   type(batch_t), target,        intent(in)    :: psib
   type(batch_t), target,        intent(inout) :: vpsib
@@ -361,7 +361,7 @@ end subroutine X(hamiltonian_base_phase)
 subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   type(batch_t), target,       intent(in)    :: psib
   type(batch_t), target,       intent(inout) :: vpsib
 
@@ -419,7 +419,7 @@ end subroutine X(hamiltonian_base_rashba)
 subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   type(epot_t),                intent(in)    :: ep
   integer,                     intent(in)    :: ispin
   type(batch_t), target,       intent(in)    :: psib
@@ -495,7 +495,7 @@ end subroutine X(hamiltonian_base_magnetic)
 subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projection)
   type(hamiltonian_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
   type(projection_t),               intent(out)   :: projection
@@ -693,7 +693,7 @@ end subroutine X(hamiltonian_base_nlocal_start)
 subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
   type(hamiltonian_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(projection_t),       target, intent(inout) :: projection
   type(batch_t),                    intent(inout) :: vpsib
@@ -940,11 +940,10 @@ end subroutine X(hamiltonian_base_nlocal_finish)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1b, psi2b, force)
+subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1b, psi2b, force)
   type(hamiltonian_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_t),                   intent(in)    :: st
-  type(geometry_t),                 intent(in)    :: geo
+  type(states_elec_t),              intent(in)    :: st
   integer,                          intent(in)    :: iqn
   integer,                          intent(in)    :: ndim
   type(batch_t),                    intent(in)    :: psi1b
@@ -1098,7 +1097,7 @@ end subroutine X(hamiltonian_base_nlocal_force)
 subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, psib, commpsib)
   type(hamiltonian_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
   type(batch_t),                    intent(inout) :: commpsib(:)

@@ -46,8 +46,8 @@ module stress_oct_m
   use projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use v_ks_oct_m
 
@@ -78,7 +78,7 @@ contains
   subroutine stress_calculate(gr, hm, st, geo, ks )
     type(grid_t),         intent(inout) :: gr !< grid
     type(hamiltonian_t),  intent(inout) :: hm
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(geometry_t),     intent(inout) :: geo !< geometry
     type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(profile_t), save :: stress_prof
@@ -148,7 +148,7 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      call states_total_density(st, ks%gr%fine%mesh, rho)
+      call states_elec_total_density(st, ks%gr%fine%mesh, rho)
 
       nullify(rho_total)
 
@@ -329,10 +329,10 @@ contains
   subroutine stress_from_kinetic_energy_electron(der, hm, st, stress, stress_KE)
     type(derivatives_t),  intent(in)    :: der
     type(hamiltonian_t),  intent(in)    :: hm
-    type(states_t),       intent(inout) :: st
-    FLOAT,                         intent(inout) :: stress(:, :)
-    FLOAT,                         intent(out) :: stress_KE(3, 3) ! temporal
-    FLOAT :: stress_l(3, 3)
+    type(states_elec_t),  intent(inout) :: st
+    FLOAT,                intent(inout) :: stress(:, :)
+    FLOAT,                intent(out)   :: stress_KE(3, 3) ! temporal
+    FLOAT                               :: stress_l(3, 3)
     integer :: ik, ist, idir, jdir, idim, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
@@ -348,17 +348,17 @@ contains
     
 
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_dim_get_spin_index(st%d, ik)
+       ispin = states_elec_dim_get_spin_index(st%d, ik)
        do ist = st%st_start, st%st_end
           
-          call states_get_state(st, der%mesh, ist, ik, psi)
+          call states_elec_get_state(st, der%mesh, ist, ik, psi)
           
           do idim = 1, st%d%dim
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
           
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
+            call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
           do idim = 1, st%d%dim
@@ -400,13 +400,13 @@ contains
   
 ! -------------------------------------------------------
   subroutine stress_from_Hartree(st, hm, ks, stress, stress_Hartree)
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_t),  intent(in)    :: hm
-    type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
-    FLOAT,                         intent(inout) :: stress(:, :)
-    FLOAT,                         intent(out) :: stress_Hartree(3, 3) ! temporal
-    FLOAT :: stress_l(3, 3)
-    type(cube_t),    pointer             :: cube
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    FLOAT,                intent(inout) :: stress(:, :)
+    FLOAT,                intent(out)   :: stress_Hartree(3, 3) ! temporal
+    FLOAT                               :: stress_l(3, 3)
+    type(cube_t),    pointer            :: cube
     integer :: idir, jdir, ii, jj, kk
     FLOAT :: ss
     type(profile_t), save :: prof
@@ -493,7 +493,7 @@ contains
   subroutine stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
     type(grid_t),      target,        intent(in) :: gr !< grid
     type(hamiltonian_t),  intent(inout)    :: hm
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),    intent(inout) :: st
     type(geometry_t),          intent(in) :: geo !< geometry
     type(v_ks_t),              intent(in) :: ks !< Kohn-Sham
     type(cube_t),    pointer             :: cube
@@ -533,17 +533,17 @@ contains
 ! calculate stress from non-local pseudopotentials
     stress_t_NL = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_dim_get_spin_index(st%d, ik)
+       ispin = states_elec_dim_get_spin_index(st%d, ik)
        do ist = st%st_start, st%st_end
           
-          call states_get_state(st, der%mesh, ist, ik, psi)
+          call states_elec_get_state(st, der%mesh, ist, ik, psi)
           
           do idim = 1, st%d%dim
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+            call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           
           do idim = 1, st%d%dim

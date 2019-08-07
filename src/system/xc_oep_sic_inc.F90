@@ -19,13 +19,13 @@
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
 subroutine X(oep_sic) (xcs, gr, psolver, st, is, oep, ex, ec)
-  type(xc_t),      intent(in)    :: xcs
-  type(grid_t),    intent(in)    :: gr
-  type(poisson_t), intent(in)    :: psolver
-  type(states_t),  intent(inout) :: st
-  integer,         intent(in)    :: is
-  type(xc_oep_t),  intent(inout) :: oep
-  FLOAT,           intent(inout) :: ex, ec
+  type(xc_t),          intent(in)    :: xcs
+  type(grid_t),        intent(in)    :: gr
+  type(poisson_t),     intent(in)    :: psolver
+  type(states_elec_t), intent(inout) :: st
+  integer,             intent(in)    :: is
+  type(xc_oep_t),      intent(inout) :: oep
+  FLOAT,               intent(inout) :: ex, ec
 
   integer  :: ist
   FLOAT :: ex2, ec2, ex_, ec_, edummy
@@ -48,7 +48,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, st, is, oep, ex, ec)
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then ! we only need the occupied states
 
-      call states_get_state(st, gr%mesh, ist, is, psi)
+      call states_elec_get_state(st, gr%mesh, ist, is, psi)
 
       ! get orbital density
       rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_ABS(psi(1:gr%mesh%np, 1))**2

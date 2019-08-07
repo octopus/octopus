@@ -35,8 +35,8 @@ module eigen_lobpcg_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_block_oct_m
+  use states_elec_oct_m
+  use states_elec_block_oct_m
 
   implicit none
 

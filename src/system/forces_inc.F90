@@ -149,7 +149,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(in)    :: st
+  type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
   FLOAT,                          intent(out)   :: force_nl(:, :)
@@ -190,12 +190,12 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
 
-    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
     if(st%d%kweights(iq) <= M_EPSILON) cycle
 
     do ib = st%group%block_start, st%group%block_end
-      minst = states_block_min(st, ib)
-      maxst = states_block_max(st, ib)
+      minst = states_elec_block_min(st, ib)
+      maxst = states_elec_block_max(st, ib)
 
       call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
 
@@ -220,7 +220,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
-        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
+        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
 
       else 
 
@@ -408,7 +408,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
-  type(states_t),                 intent(in)    :: st
+  type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
   integer,                        intent(in)    :: lda_u_level
  
@@ -438,13 +438,13 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
       if(abs(ff) <= M_EPSILON) cycle
 
-      call states_get_state(st, gr%mesh, ist, iq, psi)
+      call states_elec_get_state(st, gr%mesh, ist, iq, psi)
 
       do idim = 1, st%d%dim
         call boundaries_set(gr%der%boundaries, psi(:, idim))
@@ -519,7 +519,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
-  type(states_t),                 intent(in)    :: st
+  type(states_elec_t),            intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
@@ -558,7 +558,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
-    ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq)
@@ -566,7 +566,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
 
       do idim = 1, st%d%dim
 
-        call states_get_state(st, gr%mesh, idim, ist, iq, psi(:, idim))
+        call states_elec_get_state(st, gr%mesh, idim, ist, iq, psi(:, idim))
         call boundaries_set(gr%der%boundaries, psi(:, idim))
         call lalg_copy(gr%mesh%np_part, lr%X(dl_psi)(:, idim, ist, iq), dl_psi(:, idim))
         call boundaries_set(gr%der%boundaries, dl_psi(:, idim))
@@ -653,7 +653,7 @@ subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, lr, lr2, born_char
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
-  type(states_t),                 intent(in)    :: st
+  type(states_elec_t),            intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
   type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges

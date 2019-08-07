@@ -36,7 +36,7 @@ module modelmb_density_matrix_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -63,7 +63,7 @@ contains
   subroutine modelmb_density_matrix_init(dir, namespace, st, denmat)
     character(len=*),       intent(in)  :: dir
     type(namespace_t),      intent(in)  :: namespace
-    type(states_t),         intent(in)  :: st
+    type(states_elec_t),    intent(in)  :: st
     type(modelmb_denmat_t), intent(out) :: denmat
 
     integer :: ncols, ipart

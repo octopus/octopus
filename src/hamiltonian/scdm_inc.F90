@@ -21,7 +21,7 @@
 
 subroutine X(scdm_localize)(st,mesh,scdm)
 
-  type(states_t), intent(in) :: st !< this contains the non-localize set KS (for now from hm%hf_st which is confusing)
+  type(states_elec_t), intent(in) :: st !< this contains the non-localize set KS (for now from hm%hf_st which is confusing)
   type(mesh_t), intent(in)   :: mesh
   type(scdm_t) :: scdm
 
@@ -61,7 +61,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   count = 0
   do vv = scdm%st%st_start, scdm%st%st_end
     count = count +1
-    call states_get_state(st, mesh, vv, st%d%nik, temp_state)
+    call states_elec_get_state(st, mesh, vv, st%d%nik, temp_state)
 #ifdef HAVE_MPI
     call vec_allgather(mesh%vp, state_global, temp_state(1:mesh%np,1))
 #else
@@ -85,7 +85,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     count = 0
     do vv = scdm%st%st_start,scdm%st%st_end
       count = count +1
-      call states_get_state(st, mesh, vv, st%d%nik, temp_state)
+      call states_elec_get_state(st, mesh, vv, st%d%nik, temp_state)
       temp_column(1:mesh%np) = temp_column(1:mesh%np) + &
                                   temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
     end do
@@ -139,7 +139,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     do jj = 1, nval
       temp_state(1:mesh%np,1) = temp_state(1:mesh%np,1) + SCDM_temp(1:mesh%np,jj)*Pcc(jj, vv)
     end do
-    call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call states_elec_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
 
   SAFE_DEALLOCATE_A(Pcc)
@@ -149,9 +149,9 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   ! normalise SCDM states
   do vv = scdm%st%st_start,scdm%st%st_end
-    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     call X(mf_normalize)(mesh, scdm%st%d%dim, temp_state)
-    call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call states_elec_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
 
   ! end of SCDM procedure
@@ -172,7 +172,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   end do
 
   do vv = scdm%st%st_start,scdm%st%st_end
-    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii=1,3
       scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
            lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
@@ -298,7 +298,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     scdm%box(:,:,:,vv) = temp_box(:,:,:)
 
     ! to copy the scdm state in the box, we need the global state (this is still in state distribution)
-    call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
+    call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
 #ifdef HAVE_MPI
     state_global(1:mesh%np_global) = M_ZERO
     call vec_allgather(mesh%vp, state_global, temp_state(1:mesh%np,1))
@@ -346,9 +346,9 @@ end subroutine X(scdm_localize)
 
 !> rotate states from KS to SCDM representation and construct SCDM states
 subroutine X(scdm_rotate_states)(st,mesh,scdm)
-  type(states_t), intent(inout)  :: st
-  type(mesh_t), intent(in)       :: mesh
-  type(scdm_t), intent(inout)    :: scdm
+  type(states_elec_t), intent(inout)  :: st
+  type(mesh_t),      intent(in)       :: mesh
+  type(scdm_t),      intent(inout)    :: scdm
 
   PUSH_SUB(X(scdm_rotate_states))
 
@@ -357,7 +357,7 @@ subroutine X(scdm_rotate_states)(st,mesh,scdm)
   call X(scdm_localize)(st,mesh,scdm)
 
   ! overwrite state object with the scdm states
-  call states_copy(st,scdm%st)
+  call states_elec_copy(st,scdm%st)
 
   POP_SUB(X(scdm_rotate_states))
 
@@ -403,12 +403,12 @@ end subroutine X(invert)
 !! This is not an all-purose routien for RRQR, but only operates on the
 !! specific set stored in st
 subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
-  type(states_t), intent(in)   :: st
-  type(scdm_t), intent(in)     :: scdm  !< this is only needed for the proc_grid
-  type(mesh_t), intent(in)     :: mesh
-  integer, intent(in)          :: nst
-  logical, intent(in)          :: root !< this is needed for serial 
-  integer, intent(out)         :: jpvt(:)
+  type(states_elec_t), intent(in) :: st
+  type(scdm_t), intent(in)        :: scdm  !< this is only needed for the proc_grid
+  type(mesh_t), intent(in)        :: mesh
+  integer, intent(in)             :: nst
+  logical, intent(in)             :: root !< this is needed for serial 
+  integer, intent(out)            :: jpvt(:)
 
   integer :: total_np, nref, info, wsize
   R_TYPE, allocatable :: tau(:), work(:)
@@ -460,7 +460,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 
   if(.not.do_serial) then
     
-    call states_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
+    call states_elec_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
     
     ik = 1
 
@@ -473,7 +473,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     do ist = st%st_start,st%st_end
       count = count + 1
 
-      call states_get_state(st, mesh, ist, ik, psi)
+      call states_elec_get_state(st, mesh, ist, ik, psi)
       
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
@@ -568,7 +568,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 #ifdef HAVE_MPI
         sender = 0
         if(state_is_local(st,ii)) then
-          call states_get_state(st, mesh, ii, st%d%nik, temp_state)
+          call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
           call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
@@ -585,7 +585,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
       SAFE_ALLOCATE(temp_state(1:mesh%np,1))
       do ii = 1, nst
         ! this call is necessary becasue we want to have only np not np_part
-        call states_get_state(st, mesh, ii, st%d%nik, temp_state)
+        call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
         KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
       end do
       SAFE_DEALLOCATE_A(temp_state)

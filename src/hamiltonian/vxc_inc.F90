@@ -19,7 +19,7 @@
 subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
   type(poisson_t),      intent(in)    :: psolver
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
@@ -137,9 +137,9 @@ subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, e
 
   ! Get the gradient and the Laplacian of the density and the kinetic-energy density
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
-  ! avoid calling the subroutine states_calc_quantities twice
+  ! avoid calling the subroutine states_elec_calc_quantities twice
   if((gga .and. (.not. mgga)) .or. xcs%xc_density_correction == LR_X) then
-    ! get gradient of the density (this is faster than calling states_calc_quantities)
+    ! get gradient of the density (this is faster than calling states_elec_calc_quantities)
     do isp = 1, spin_channels 
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
@@ -156,10 +156,10 @@ subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, e
     end if
 
     if (xcs%use_gi_ked) then
-      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
                                   density_gradient = gdens, density_laplacian = ldens)
     else
-      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
  density_gradient = gdens, density_laplacian = ldens)
     end if
 

@@ -39,14 +39,14 @@ module states_mxll_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use tdfunction_oct_m
-  use states_group_oct_m
+  use states_elec_group_oct_m
   
   implicit none
 
@@ -86,11 +86,11 @@ module states_mxll_oct_m
 
   type states_mxll_t
     ! Components are public by default
-    type(states_dim_t)           :: d
+    type(states_elec_dim_t)      :: d
     type(states_mxll_priv_t)     :: priv          !< the private components
     integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
-    type(states_group_t)         :: group
+    type(states_elec_group_t)    :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
 
     type(batch_t), pointer       :: rsb
@@ -209,8 +209,8 @@ contains
 
     PUSH_SUB(states_mxll_null)
 
-    call states_dim_null(st%d)
-    call states_group_null(st%group)
+    call states_elec_dim_null(st%d)
+    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist) 
     st%priv%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
@@ -244,7 +244,7 @@ contains
     st%d%ispin = UNPOLARIZED
     st%d%nspin = 1
     st%d%spin_channels = 1
-    call states_choose_kpoints(st%d, gr%sb)
+    call states_elec_choose_kpoints(st%d, gr%sb)
 
     SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
@@ -363,7 +363,7 @@ contains
 
     PUSH_SUB(states_mxll_end)
 
-    call states_dim_end(st%d)
+    call states_elec_dim_end(st%d)
     call batch_end(st%rsb)
     call batch_end(st%rs_transb)
     call batch_end(st%rs_longb)

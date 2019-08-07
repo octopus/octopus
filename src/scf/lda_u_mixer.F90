@@ -24,7 +24,8 @@ module lda_u_mixer_oct_m
   use messages_oct_m
   use mix_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use types_oct_m
  
   implicit none
@@ -61,7 +62,7 @@ contains
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
    type(mix_t),         intent(inout) :: smix
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    integer :: dim1
 
@@ -99,7 +100,7 @@ contains
  subroutine lda_u_mixer_init(this, mixer, st)
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    if(this%level == DFT_U_NONE) return
    PUSH_SUB(lda_u_mixer_init)
@@ -208,7 +209,7 @@ contains
  subroutine lda_u_mixer_get_vnew(this, mixer, st)
    type(lda_u_t),       intent(inout) :: this
    type(lda_u_mixer_t), intent(in)    :: mixer
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_get_vnew)

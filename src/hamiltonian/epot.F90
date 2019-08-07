@@ -43,10 +43,9 @@ module epot_oct_m
   use species_oct_m
   use species_pot_oct_m
   use spline_filter_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
-  use symmetrizer_oct_m
   use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -601,7 +600,7 @@ contains
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(in)    :: geo
-    type(states_t),           intent(inout) :: st
+    type(states_elec_t),      intent(inout) :: st
 
     integer :: ia, ip
     type(atom_t),      pointer :: atm
@@ -612,7 +611,6 @@ contains
     FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
-    type(symmetrizer_t) :: symmetrizer
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -670,7 +668,7 @@ contains
       if(.not. species_is_ps(atm%species)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), atm, st%d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
@@ -714,7 +712,7 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
+  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, rho_core, density)
     type(epot_t),             intent(in)    :: ep
     type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(in)    :: der
@@ -722,10 +720,8 @@ contains
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
-    FLOAT,          optional, intent(inout) :: Imvpsl(:)
     FLOAT,          optional, pointer       :: rho_core(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
-    FLOAT,          optional, intent(inout) :: Imdensity(:) !< ...and here, for complex scaling
 
     integer :: ip
     FLOAT :: radius

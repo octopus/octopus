@@ -35,8 +35,8 @@ module phonons_fd_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -73,7 +73,7 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -115,7 +115,7 @@ contains
     subroutine init_()
 
       PUSH_SUB(phonons_run.init_)
-      call states_allocate_wfns(sys%st, sys%gr%mesh)
+      call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       POP_SUB(phonons_run.init_)
     end subroutine init_
@@ -124,7 +124,7 @@ contains
     subroutine end_()
 
       PUSH_SUB(phonons_run.end_)
-      call states_deallocate_wfns(sys%st)
+      call states_elec_deallocate_wfns(sys%st)
 
       POP_SUB(phonons_run.end_)
     end subroutine end_
@@ -138,7 +138,7 @@ contains
     type(namespace_t),    intent(in)    :: namespace
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
     type(poisson_t),      intent(in)    :: psolver

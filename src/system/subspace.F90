@@ -45,9 +45,10 @@ module subspace_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use scalapack_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_parallel_oct_m
   use types_oct_m
   use varinfo_oct_m
 
@@ -71,10 +72,10 @@ module subspace_oct_m
 contains
 
   subroutine subspace_init(this, namespace, st, no_sd)
-    type(subspace_t),  intent(out) :: this
-    type(namespace_t), intent(in)  :: namespace
-    type(states_t),    intent(in)  :: st
-    logical,           intent(in)  :: no_sd
+    type(subspace_t),    intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
+    type(states_elec_t), intent(in)  :: st
+    logical,             intent(in)  :: no_sd
 
     integer :: default
 

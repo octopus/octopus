@@ -65,9 +65,10 @@ module output_oct_m
   use smear_oct_m
   use string_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_io_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_io_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
@@ -152,7 +153,7 @@ contains
     type(output_t),       intent(out)   :: outp
     type(namespace_t),    intent(in)    :: namespace
     type(simul_box_t),    intent(in)    :: sb
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
 
@@ -640,7 +641,7 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(namespace_t),    intent(in)    :: namespace
     type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(in)    :: ks
@@ -732,7 +733,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
-    type(states_t),         intent(inout) :: st
+    type(states_elec_t),    intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: dir
@@ -849,7 +850,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
-    type(states_t),         intent(inout) :: st
+    type(states_elec_t),    intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
     type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
@@ -866,7 +867,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
+    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -899,7 +900,7 @@ contains
     type(hamiltonian_t),       intent(in) :: hm
     type(poisson_t),           intent(in) :: psolver
     type(v_ks_t),              intent(in) :: ks
-    type(states_t),            intent(in) :: st
+    type(states_elec_t),       intent(in) :: st
     type(derivatives_t),       intent(in) :: der
     character(len=*),          intent(in) :: dir
     type(output_t),            intent(in) :: outp
@@ -921,7 +922,7 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
@@ -1184,7 +1185,7 @@ contains
   subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, psolver, geo)
     type(output_bgw_t),  intent(in)    :: bgw
     character(len=*),    intent(in)    :: dir
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
     type(v_ks_t),        intent(in)    :: ks
     type(hamiltonian_t), intent(inout) :: hm
@@ -1325,9 +1326,9 @@ contains
         do is = 1, st%d%nspin
           ikk = ik + is - 1
           if(states_are_real(st)) then
-            call states_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
+            call states_elec_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
           else
-            call states_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
+            call states_elec_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
           end if
         end do
         if(states_are_real(st)) then
@@ -1396,8 +1397,8 @@ contains
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
 !      end if
       do ik = 1, st%d%nik
-        is = states_dim_get_spin_index(st%d, ik)
-        ikk = states_dim_get_kpoint_index(st%d, ik)
+        is = states_elec_dim_get_spin_index(st%d, ik)
+        ikk = states_elec_dim_get_kpoint_index(st%d, ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
         do ist = 1, st%nst
@@ -1462,13 +1463,13 @@ contains
 
    ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(dir, this, outp, st, mesh, geo, has_phase)
-    character(len=*),  intent(in) :: dir
-    type(lda_u_t),     intent(in) :: this
-    type(output_t),    intent(in) :: outp
-    type(states_t),    intent(in) :: st
-    type(mesh_t),      intent(in) :: mesh
-    type(geometry_t),  intent(in) :: geo
-    logical,           intent(in) :: has_phase
+    character(len=*),    intent(in) :: dir
+    type(lda_u_t),       intent(in) :: this
+    type(output_t),      intent(in) :: outp
+    type(states_elec_t), intent(in) :: st
+    type(mesh_t),        intent(in) :: mesh
+    type(geometry_t),    intent(in) :: geo
+    logical,             intent(in) :: has_phase
 
     integer :: ios, im, ik, idim, ierr
     CMPLX, allocatable :: tmp(:)

@@ -34,7 +34,8 @@ module lda_u_io_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
  
@@ -57,9 +58,9 @@ contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
  subroutine lda_u_write_occupation_matrices(dir, this, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(states_t),    intent(in)    :: st
+   type(lda_u_t),       intent(in)    :: this
+   character(len=*),    intent(in)    :: dir
+   type(states_elec_t), intent(in)    :: st
 
    integer :: iunit, ios, ispin, im, imp
  
@@ -211,9 +212,9 @@ contains
 
  !--------------------------------------------------------- 
  subroutine lda_u_write_kanamoriU(dir, st, this)
-   type(lda_u_t),     intent(in)    :: this
-   type(states_t),    intent(in)    :: st
-   character(len=*),  intent(in)    :: dir
+   type(lda_u_t),       intent(in)    :: this
+   type(states_elec_t), intent(in)    :: st
+   character(len=*),    intent(in)    :: dir
 
    integer :: iunit, ios
    FLOAT, allocatable :: kanamori(:,:)
@@ -341,11 +342,11 @@ contains
 
  !--------------------------------------------------------- 
  subroutine lda_u_write_magnetization(dir, this, geo, mesh, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
-   type(mesh_t),      intent(in)    :: mesh
-   type(states_t),    intent(in)    :: st
+   type(lda_u_t),       intent(in)    :: this
+   character(len=*),    intent(in)    :: dir
+   type(geometry_t),    intent(in)    :: geo
+   type(mesh_t),        intent(in)    :: mesh
+   type(states_elec_t), intent(in)    :: st
 
    integer :: iunit, ia, ios, im
    FLOAT, allocatable :: mm(:,:)
@@ -493,7 +494,7 @@ contains
   subroutine lda_u_dump(restart, this, st, ierr, iter)
     type(restart_t),      intent(in)  :: restart
     type(lda_u_t),        intent(in)  :: this
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     integer,              intent(out) :: ierr
     integer, optional,    intent(in)  :: iter
 
@@ -557,7 +558,7 @@ contains
   subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     integer,              intent(out)   :: ierr
     logical, optional,    intent(in)    :: occ_only
     logical, optional,    intent(in)    :: u_only
@@ -629,7 +630,7 @@ contains
   subroutine lda_u_loadbasis(lda_u, namespace, st, mesh, mc, ierr)
     type(lda_u_t),        intent(inout) :: lda_u
     type(namespace_t),    intent(in)  :: namespace
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     type(mesh_t),         intent(in)    :: mesh
     type(multicomm_t),    intent(in)    :: mc
     integer,              intent(out)   :: ierr

@@ -296,9 +296,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_hhg(gr, chi_out)
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: chi_out
+  subroutine target_chi_hhg(chi_out)
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_hhg)
@@ -320,7 +319,7 @@
   subroutine target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -344,7 +343,7 @@
       acc = M_ZERO
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
-          call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+          call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
           do idim = 1, gr%sb%dim
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
             acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
@@ -393,7 +392,7 @@
     type(poisson_t),     intent(in)    :: psolver
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
 
     FLOAT :: acc(MAX_DIM)
