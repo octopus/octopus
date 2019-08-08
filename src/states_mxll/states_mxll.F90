@@ -244,7 +244,7 @@ contains
     st%d%ispin = UNPOLARIZED
     st%d%nspin = 1
     st%d%spin_channels = 1
-    call states_elec_choose_kpoints(st%d, gr%sb)
+    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
     SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))

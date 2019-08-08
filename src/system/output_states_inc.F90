@@ -43,7 +43,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
         st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
@@ -60,7 +60,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
-      call io_function_output_vector(outp%how, dir, fname, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
+      call io_function_output_vector(outp%how, dir, fname, namespace, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
         geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
     end do
     
@@ -96,11 +96,11 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
 
             if (states_are_real(st)) then
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, dtmp)
-              call dio_function_output(outp%how, dir, fname, gr%mesh, dtmp, &
+              call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp, &
                 fn_unit, ierr, geo = geo)
             else
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
-              call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
+              call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, ztmp, &
                 fn_unit, ierr, geo = geo)
             end if
           end do
@@ -143,7 +143,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
               call states_elec_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               dtmp(1:gr%mesh%np) = abs(ztmp(1:gr%mesh%np))**2
             end if
-            call dio_function_output (outp%how, dir, fname, gr%mesh, &
+            call dio_function_output (outp%how, dir, fname, namespace, gr%mesh, &
               dtmp, fn_unit, ierr, geo = geo)
           end do
         end do
@@ -160,12 +160,12 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
-      call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+      call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
         elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, 2
         write(fname, '(a,i1)') 'tau-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
@@ -174,7 +174,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, namespace, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, namespace)
     call dos_end(dos)
   end if
 
@@ -215,8 +215,8 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(mpi_grp_is_root(mpi_world)) then
 
-    call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//'current-flow', action='write')
+    call io_mkdir(dir, outp%namespace)
+    iunit = io_open(trim(dir)//'/'//'current-flow', outp%namespace, action='write')
 
     select case(gr%mesh%sb%dim)
     case(3)

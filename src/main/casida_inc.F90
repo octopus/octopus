@@ -288,7 +288,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-        sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
+        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 
@@ -306,7 +306,6 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   integer,             intent(in)  :: kk
   R_TYPE,              intent(out) :: rho(:)
 
-  R_TYPE, pointer :: psi_i(:), psi_a(:)
   integer :: ip, idim, iblock, ablock, ilin, alin
   type(profile_t), save :: prof
 
@@ -326,10 +325,9 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
   ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
 
-  psi_i => st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)
-  psi_a => st%group%psib(ablock, kk)%states_linear(alin)%X(psi)
-
-  forall(ip = 1:mesh%np) rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
+  do ip = 1, mesh%np
+    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)(ip))*st%group%psib(ablock, kk)%states_linear(alin)%X(psi)(ip)
+  end do
 
   call profiling_out(prof)
   POP_SUB(X(casida_get_rho))
@@ -840,9 +838,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   SAFE_DEALLOCATE_A(zdl_rho)
 
   SAFE_DEALLOCATE_A(lr_hmat1)
-  SAFE_DEALLOCATE_P(cas%X(lr_hmat2))
-  SAFE_DEALLOCATE_P(cas%X(mat2))
-  SAFE_DEALLOCATE_P(cas%X(w2))
+  SAFE_DEALLOCATE_A(cas%X(lr_hmat2))
+  SAFE_DEALLOCATE_A(cas%X(mat2))
+  SAFE_DEALLOCATE_A(cas%X(w2))
   
   if(cas%calc_forces_scf) then
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
@@ -990,7 +988,7 @@ end subroutine X(casida_save_pot_init)
 subroutine X(casida_save_pot_end)(this)
   type(casida_save_pot_t), intent(inout)   :: this
 
-  SAFE_DEALLOCATE_P(this%X(pot))
+  SAFE_DEALLOCATE_A(this%X(pot))
 
 end subroutine X(casida_save_pot_end)
 
@@ -1002,7 +1000,6 @@ subroutine X(casida_solve)(cas, st)
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
   integer :: ia, jb
-  type(states_pair_t), pointer :: p
 
   PUSH_SUB(X(casida_solve))
 
@@ -1034,8 +1031,7 @@ subroutine X(casida_solve)(cas, st)
 
     ! complete the matrix
     do ia = 1, cas%n_pairs
-      p => cas%pair(ia)
-      eig_diff = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
+      eig_diff = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
       
       do jb = ia, cas%n_pairs
         ! FIXME: need the equivalent of this stuff for forces too.
@@ -1111,8 +1107,8 @@ subroutine X(casida_write)(cas, sys)
 
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
-    call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
+    call io_mkdir(CASIDA_DIR, sys%namespace)
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), sys%namespace, action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
@@ -1146,12 +1142,12 @@ subroutine X(casida_write)(cas, sys)
     end do
     call io_close(iunit)
   
-    if(cas%qcalc) call qcasida_write(cas)
+    if(cas%qcalc) call qcasida_write(cas, sys%namespace)
   
     if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
       if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
         dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-        call io_mkdir(trim(dir_name))
+        call io_mkdir(trim(dir_name), sys%namespace)
       end if
       
       do ia = 1, cas%n_pairs
@@ -1160,7 +1156,7 @@ subroutine X(casida_write)(cas, sys)
           
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
-            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+            iunit = io_open(trim(dir_name)//'/'//trim(str), sys%namespace, action='write')
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
@@ -1186,7 +1182,7 @@ subroutine X(casida_write)(cas, sys)
           end if
           
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if

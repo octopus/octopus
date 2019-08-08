@@ -26,6 +26,7 @@ module basis_set_abst_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -64,23 +65,27 @@ module basis_set_abst_oct_m
       integer,                 intent(in) :: unit
     end subroutine write_info
 
-    subroutine dump(this, dir, filename, mpi_grp, ierr)
+    subroutine dump(this, dir, filename, mpi_grp, namespace, ierr)
       import basis_set_abst_t
       import mpi_grp_t
+      import namespace_t
       class(basis_set_abst_t), intent(in)  :: this
       character(len=*),        intent(in)  :: dir
       character(len=*),        intent(in)  :: filename
       type(mpi_grp_t),         intent(in)  :: mpi_grp
+      type(namespace_t),       intent(in)  :: namespace
       integer,                 intent(out) :: ierr
     end subroutine dump
 
-    subroutine load(this, dir, filename, mpi_grp, ierr)
+    subroutine load(this, dir, filename, mpi_grp, namespace, ierr)
       import basis_set_abst_t
       import mpi_grp_t
+      import namespace_t
       class(basis_set_abst_t), intent(inout) :: this
       character(len=*),        intent(in)    :: dir
       character(len=*),        intent(in)    :: filename
       type(mpi_grp_t),         intent(in)    :: mpi_grp
+      type(namespace_t),       intent(in)    :: namespace
       integer,                 intent(out)   :: ierr
     end subroutine load
   end interface

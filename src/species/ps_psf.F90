@@ -24,6 +24,7 @@ module ps_psf_oct_m
   use io_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_in_grid_oct_m
   use ps_psf_file_oct_m
@@ -51,10 +52,11 @@ module ps_psf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_init(pstm, ispin, filename)
-    type(ps_psf_t),   intent(inout) :: pstm
-    integer,          intent(in)    :: ispin
-    character(len=*), intent(in)    :: filename
+  subroutine ps_psf_init(pstm, ispin, filename, namespace)
+    type(ps_psf_t),    intent(inout) :: pstm
+    integer,           intent(in)    :: ispin
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
     
     character(len=MAX_PATH_LEN) :: fullpath
     integer :: iunit
@@ -83,9 +85,9 @@ contains
     end if
     
     if(ascii) then
-      iunit = io_open(fullpath, action='read', form='formatted', status='old')
+      iunit = io_open(fullpath, namespace, action='read', form='formatted', status='old')
     else
-      iunit = io_open(fullpath, action='read', form='unformatted', status='old')
+      iunit = io_open(fullpath, namespace, action='read', form='unformatted', status='old')
     end if
     call ps_psf_file_read(iunit, ascii, pstm%psf_file)
     call io_close(iunit)

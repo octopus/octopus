@@ -172,34 +172,36 @@ contains
       call messages_fatal(2)
     end if
 
-    call io_mkdir('local.general')
+    call io_mkdir('local.general', namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
       do id = 1, nd
         if(writ%out(LOCAL_OUT_MULTIPOLES, id)%write) then 
-          call io_mkdir('local.general/multipoles')
+          call io_mkdir('local.general/multipoles', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
+          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
-          call io_mkdir('local.general/potential')
+          call io_mkdir('local.general/potential', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL,id)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential")))
+          units_from_atomic(units_out%time, dt), &
+          trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_DENSITY, id)%write) then
-          call io_mkdir('local.general/densities')
+          call io_mkdir('local.general/densities', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_DENSITY,id)%handle, first, &
-            units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities")))
+            units_from_atomic(units_out%time, dt), &
+            trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_ENERGY, id)%write) then 
-          call io_mkdir('local.general/energy')
+          call io_mkdir('local.general/energy', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_ENERGY,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy")))
+          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy", namespace)))
         end if
       end do
     end if
@@ -326,8 +328,8 @@ contains
         if (out_dens(id)%write) then
           folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
           write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+          call dio_function_output(how,  trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
         end if
         if (out_pot(id)%write) then
         !Computes Hartree potential just for n[r], r belongs to id domain.
@@ -335,8 +337,8 @@ contains
           call dpoisson_solve(psolver, tmp_vh, tmp_rho)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
           st%rho(:,is) = M_ZERO
           do ix = 1, gr%mesh%np
@@ -345,8 +347,8 @@ contains
           call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
           st%rho(:,is) = st_rho(:)
         end if
       end do
@@ -358,14 +360,14 @@ contains
         call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
       !Computes global XC potential
         call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
       end do
     end if
 
@@ -669,7 +671,7 @@ contains
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd
-        call out_bld_multipoles(multipole(2:4, is, id), center(:,id), lab(id), iter)
+        call out_bld_multipoles(namespace, multipole(2:4, is, id), center(:,id), lab(id), iter)
       end do
     end if
 
@@ -717,11 +719,12 @@ contains
   end subroutine local_geometry_dipole
 
   ! ---------------------------------------------------------
-  subroutine out_bld_multipoles(multipoles, center, label, iter)
-    FLOAT,         intent(in) :: multipoles(:)
-    FLOAT,         intent(in) :: center(:)
-    character(15), intent(in) :: label
-    integer,       intent(in) :: iter
+  subroutine out_bld_multipoles(namespace, multipoles, center, label, iter)
+    type(namespace_t), intent(in) :: namespace
+    FLOAT,             intent(in) :: multipoles(:)
+    FLOAT,             intent(in) :: center(:)
+    character(15),     intent(in) :: label
+    integer,           intent(in) :: iter
    
     integer             :: ll, out_bld
     character(len=80)   :: filename, folder
@@ -730,9 +733,9 @@ contains
     PUSH_SUB(out_bld_multipoles)
     
     write(folder,'(a,a)')'local.general/multipoles/',trim(label)
-    call io_mkdir(folder)
+    call io_mkdir(folder, namespace)
     write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
-    out_bld = io_open(file=trim(filename), action='write')
+    out_bld = io_open(trim(filename), namespace, action='write')
 
     write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
                         trim(label), ' domain and iteration number: ',iter

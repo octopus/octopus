@@ -100,8 +100,7 @@ program oct_local_multipoles
 
   call simul_box_end(sb)
   call system_end(sys)
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
@@ -218,7 +217,7 @@ contains
       ! get parameters from file
       do ia = 1, sys%geo%nspecies
         read_data = 0
-        iunit = io_open(radiifile, action='read', status='old', die=.false.)
+        iunit = io_open(radiifile, default_namespace, action='read', status='old', die=.false.)
         if(iunit > 0) then
           if(ia == 1) then
             write(message(1),'(a,a)')'Redefining def_rsize from file:', trim(radiifile)
@@ -748,10 +747,10 @@ contains
           call messages_input_error('LDOutputFormat')
         end if
         filename = 'basinsmap'
-        call dio_function_output(how, &
-          trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
-        call dio_function_output(how, &
-          trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), 'dens_ff2', default_namespace, &
+          sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
         call io_close(iunit)
       end if
       call basins_end(basins)
@@ -909,13 +908,13 @@ contains
       end do
       
       write(filename,'(a,a,a)')'domain.mesh'
-      call dio_function_output(how, &
-      trim('local.general'), trim(filename), sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+      call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       
       do id = 1, nd
         write(filename,'(a,a,a)')'domain.',trim(lab(id))
-        call dio_function_output(how, &
-        trim('local.general'), trim(filename), sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       end do
     end if
 

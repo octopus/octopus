@@ -49,6 +49,7 @@ module libvdwxc_oct_m
     integer, pointer               :: libvdwxc_ptr
     type(mesh_t)                   :: mesh
     type(cube_t)                   :: cube
+    type(namespace_t), pointer     :: namespace
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     integer                        :: functional
     logical                        :: debug
@@ -63,9 +64,9 @@ module libvdwxc_oct_m
 contains
 
   subroutine libvdwxc_init(libvdwxc, namespace, functional)
-    type(libvdwxc_t),  intent(out) :: libvdwxc
-    type(namespace_t), intent(in)  :: namespace
-    integer,           intent(in)  :: functional
+    type(libvdwxc_t),          intent(out) :: libvdwxc
+    type(namespace_t), target, intent(in)  :: namespace
+    integer,                   intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
 #ifdef HAVE_LIBVDWXC
@@ -76,6 +77,7 @@ contains
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
+    libvdwxc%namespace => namespace
     !%Variable libvdwxcDebug
     !%Type logical
     !%Section Hamiltonian::XC
@@ -175,10 +177,10 @@ contains
     end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb)
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace)
     else
 #ifdef HAVE_MPI
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb, mpi_grp = mesh%mpi_grp, &
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace, mpi_grp = mesh%mpi_grp, &
         need_partition = .true., blocksize = blocksize)
       call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
 #endif
@@ -380,7 +382,7 @@ contains
         integer :: ierr
 
         call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
-          fname, this%mesh, arr, unit_one, ierr)
+          fname, this%namespace, this%mesh, arr, unit_one, ierr)
       end subroutine libvdwxc_write_array
 
     end subroutine libvdwxc_calculate

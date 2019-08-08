@@ -104,9 +104,9 @@ program dielectric_function
   start_time = spectrum%start_time
   call parse_variable(default_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
-  in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
+  in_file = io_open('td.general/gauge_field', default_namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then 
-    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
@@ -127,9 +127,10 @@ program dielectric_function
     !%End
 
     call parse_variable(default_namespace, 'TransientAbsorptionReference', '.', ref_filename)
-    ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
+    ref_file = io_open(trim(ref_filename)//'/gauge_field', default_namespace, action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"// &
+        trim(io_workpath(trim(ref_filename)//'/gauge_field', default_namespace))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
@@ -175,7 +176,7 @@ program dielectric_function
   end if
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath('td.general/gauge_field'))//"'"
+    trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
   call messages_info(1)
 
 
@@ -252,7 +253,7 @@ program dielectric_function
 
   write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
 
-  out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  out_file = io_open('td.general/inverse_dielectric_function', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
@@ -263,7 +264,7 @@ program dielectric_function
   end do
   call io_close(out_file)
  
-  out_file = io_open('td.general/dielectric_function', action='write')
+  out_file = io_open('td.general/dielectric_function', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
@@ -274,7 +275,7 @@ program dielectric_function
   end do
   call io_close(out_file)
 
-  out_file = io_open('td.general/chi', action='write')
+  out_file = io_open('td.general/chi', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)

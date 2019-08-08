@@ -24,6 +24,7 @@ module excited_states_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -104,10 +105,11 @@ contains
   !! This file structure is the one written by the casida run mode, in the files
   !! in the directory "excitations".
   !! ---------------------------------------------------------
-  subroutine excited_states_init(excited_state, ground_state, filename) 
-    type(excited_states_t), intent(inout)   :: excited_state
-    type(states_elec_t), target, intent(in) :: ground_state
-    character(len=*),       intent(in)      :: filename
+  subroutine excited_states_init(excited_state, ground_state, filename, namespace) 
+    type(excited_states_t),      intent(inout) :: excited_state
+    type(states_elec_t), target, intent(in)    :: ground_state
+    character(len=*),            intent(in)    :: filename
+    type(namespace_t),           intent(in)    :: namespace
 
     integer :: iunit, nst, ispin, nik, &
                n_possible_pairs, ipair, jpair, ist, ios, nspin, trash
@@ -186,7 +188,7 @@ contains
       n_possible_pairs = n_filled(1) * n_empty(1)
     end select
 
-    iunit = io_open(file = trim(filename), action = 'read', status = 'old', die = .true.)
+    iunit = io_open(trim(filename), namespace, action = 'read', status = 'old', die = .true.)
     call io_skip_header(iunit)
 
     ! Now we count the number of pairs in the file
@@ -312,15 +314,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine excited_states_output(excited_state, dirname)
+  subroutine excited_states_output(excited_state, dirname, namespace)
     type(excited_states_t), intent(in) :: excited_state
     character(len=*),       intent(in) :: dirname
+    type(namespace_t),      intent(in) :: namespace
 
     integer :: iunit, ipair
 
     PUSH_SUB(excited_states_output)
 
-    iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
+    iunit = io_open(trim(dirname)//'/excitations', namespace, action = 'write', status = 'replace')
     do ipair = 1, excited_state%n_pairs
       write(iunit, '(3i5,es20.12)') excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
                                     excited_state%pair(ipair)%kk, excited_state%weight(ipair)

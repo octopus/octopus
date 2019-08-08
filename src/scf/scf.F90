@@ -605,7 +605,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh)
+          call hamiltonian_update(hm, gr%mesh, namespace)
           if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
             if (ks%oep%level == XC_OEP_FULL) then
               do is = 1, st%d%nspin
@@ -723,7 +723,7 @@ contains
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
-        call lcao_wf(lcao, st, gr, geo, hm, psolver)
+        call lcao_wf(lcao, st, gr, geo, hm, psolver, namespace)
       else
         if(associated(hm%vberry)) then
           ks%frozen_hxc = .true.
@@ -861,7 +861,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, namespace)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -983,7 +983,7 @@ contains
       end if
 
       ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly()
+      call io_debug_on_the_fly(namespace)
 
       call profiling_out(prof)
     end do !iter
@@ -1048,7 +1048,7 @@ contains
     end if
 
     if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
-      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff', namespace)
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)
@@ -1160,8 +1160,8 @@ contains
       PUSH_SUB(scf_run.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
         call grid_write_info(gr, geo, iunit)
  
@@ -1234,7 +1234,7 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
+        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
 
         if(scf%calc_stress) then
            write(iunit,'(a)') "Stress tensor [H/b^3]"
@@ -1355,8 +1355,8 @@ contains
       integer :: iunit
       character(len=12) :: label
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
         write(iunit, '(a)', advance = 'no') '#iter energy           '
         label = 'energy_diff'
         write(iunit, '(1x,a)', advance = 'no') label
@@ -1393,8 +1393,8 @@ contains
       integer :: iunit
       
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens

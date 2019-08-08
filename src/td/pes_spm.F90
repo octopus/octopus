@@ -443,10 +443,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_output(this, mesh, st, iter, dt)
+  subroutine pes_spm_output(this, mesh, st, namespace, iter, dt)
     type(pes_spm_t),     intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
     type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
     integer,             intent(in) :: iter
     FLOAT,               intent(in) :: dt
 
@@ -553,8 +554,8 @@ contains
       ! OUTPUT FOR SPHERICAL GRID 
       ! -----------------------------------------------------------------
       if(this%sphgrid) then
-        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', action='write', position='rewind')
-        iunitone = io_open('td.general/'//'PES_spm.power.sum', action='write', position='rewind')
+        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', namespace, action='write', position='rewind')
+        iunitone = io_open('td.general/'//'PES_spm.power.sum', namespace, action='write', position='rewind')
         write(iunitone, '(a23)') '# omega, total spectrum'
    
         select case(mdim)
@@ -662,7 +663,8 @@ contains
               write(*,*) 'TEST', itot
               write(filenr, '(i10.10)') itot
    
-              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write', position='append')
+              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', &
+                namespace, action='write', position='append')
      
               do ii = 1, save_iter - mod(iter, save_iter)
                 jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -687,7 +689,8 @@ contains
                 itot = ist + (ik-1) * st%nst + (isdim-1) * st%nst*st%d%kpt%nglobal
                 write(filenr, '(i10.10)') itot
    
-                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', action='write', position='rewind')
+                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', &
+                  namespace, action='write', position='rewind')
                 write(iunitone, '(a48)') '# frequency, orbital spectrum at sampling points'
    
                 do iom = 1, this%nomega 
@@ -712,7 +715,7 @@ contains
         if(this%recipe == M_PHASE) then
           do isp = 1, this%nspoints
             write(filenr, '(i10.10)') isp
-            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write', position='append')
+            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write', position='append')
       
             do ii = 1, save_iter - mod(iter, save_iter)
               jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -727,7 +730,7 @@ contains
         end if
 
         if(this%onfly) then
-          iunitone = io_open('td.general/'//'PES_spm.total.out', action='write', position='rewind')
+          iunitone = io_open('td.general/'//'PES_spm.total.out', namespace, action='write', position='rewind')
           write(iunitone, '(a46)') '# frequency, total spectrum at sampling points'
           do iom = 1, this%nomega
             omega = iom*this%delomega
@@ -751,10 +754,11 @@ contains
   end subroutine pes_spm_output
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init_write(this, mesh, st)
+  subroutine pes_spm_init_write(this, mesh, st, namespace)
     type(PES_spm_t),     intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
     type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
 
     integer           :: ist, ik, isdim
     integer           :: isp
@@ -770,7 +774,7 @@ contains
         do isp = 1, this%nspoints
           write(filenr, '(i10.10)') isp
    
-          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write')
+          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', namespace, action='write')
           xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, isp)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
@@ -792,7 +796,7 @@ contains
           call io_close(iunit)
    
           if(this%recipe == M_PHASE) then
-            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write')
+            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write')
             write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
             call io_close(iunit)
           end if

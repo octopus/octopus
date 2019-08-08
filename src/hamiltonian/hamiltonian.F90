@@ -99,7 +99,8 @@ module hamiltonian_oct_m
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
     hamiltonian_load_vhxc,           &
-    zoct_exchange_operator
+    zoct_exchange_operator,          &
+    hamiltonian_set_vhxc
 
   type hamiltonian_t
     ! Components are public by default
@@ -525,7 +526,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, namespace)
       end if
 
       POP_SUB(hamiltonian_init.init_phase)
@@ -683,9 +684,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, time)
+  subroutine hamiltonian_update(this, mesh, namespace, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT, optional,     intent(in)    :: time
 
     integer :: ispin, ip, idir, iatom, ilaser
@@ -893,7 +895,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, namespace, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
@@ -951,7 +953,7 @@ contains
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_update(this, gr%mesh, time)
+    call hamiltonian_update(this, gr%mesh, namespace, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
@@ -967,7 +969,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, psolver, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, psolver, namespace, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
@@ -1454,6 +1456,23 @@ contains
     end subroutine build_phase
 
   end subroutine hamiltonian_update2
+
+ ! ---------------------------------------------------------
+ subroutine hamiltonian_set_vhxc(hm, mesh, vold, vold_tau)
+   type(hamiltonian_t), intent(inout)  :: hm
+   type(mesh_t),        intent(in)     :: mesh
+   FLOAT,               intent(in)     :: vold(:, :)
+   FLOAT, optional,     intent(in)     :: vold_tau(:, :)
+
+   PUSH_SUB(hamiltonian_set_vhxc)
+
+   call lalg_copy(mesh%np, hm%d%nspin, vold, hm%vhxc)
+   if(present(vold_tau)) then
+     call lalg_copy(mesh%np, hm%d%nspin, vold_tau, hm%vtau)
+   end if
+
+   POP_SUB(hamiltonian_set_vhxc)
+ end subroutine hamiltonian_set_vhxc
 
 
 #include "undef.F90"

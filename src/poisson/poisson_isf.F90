@@ -68,16 +68,17 @@ module poisson_isf_oct_m
 
   integer, parameter :: order_scaling_function = 8 
 
+
 contains
 
   ! ---------------------------------------------------------
   subroutine poisson_isf_init(this, namespace, mesh, cube, all_nodes_comm, init_world)
-    type(poisson_isf_t), intent(out)   :: this
-    type(namespace_t),   intent(in)    :: namespace
-    type(mesh_t),        intent(in)    :: mesh
-    type(cube_t),        intent(inout) :: cube
-    integer,             intent(in)    :: all_nodes_comm
-    logical, optional,   intent(in)    :: init_world 
+    type(poisson_isf_t),       intent(out)   :: this
+    type(namespace_t), target, intent(in)    :: namespace
+    type(mesh_t),              intent(in)    :: mesh
+    type(cube_t),              intent(inout) :: cube
+    integer,                   intent(in)    :: all_nodes_comm
+    logical, optional,         intent(in)    :: init_world 
 
     integer :: n1, n2, n3
     integer :: i_cnf
@@ -2057,7 +2058,7 @@ contains
     dr_gauss = 1.0e-08_8
     acc_gauss = 1.0e-08_8
     
-    iunit = io_open(trim(conf%share)//'/gequad.data', action = 'read', status = 'old', die = .true.)
+    iunit = io_open(trim(conf%share)//'/gequad.data', namespace_t(""), action = 'read', status = 'old', die = .true.)
 
     do i = 1, n_gauss
       read(iunit, *) idx, p_gauss(i), w_gauss(i)

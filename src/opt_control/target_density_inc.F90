@@ -350,10 +350,10 @@
     integer :: ierr
     PUSH_SUB(target_output_density)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
+        call dio_function_output(outp%how, trim(dir), 'density_target', outp%namespace, gr%mesh, &
           tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     end if

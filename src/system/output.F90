@@ -127,6 +127,7 @@ module output_oct_m
     integer(8), public :: whatBZ              !< what to output - for k-point resolved output
     integer(8), public :: what_lda_u          !< what to output for the LDA+U part
     integer(8), public :: how                 !< how to output
+    type(namespace_t), pointer, public :: namespace    !< namespace for different systems
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -150,12 +151,12 @@ module output_oct_m
 contains
 
   subroutine output_init(outp, namespace, sb, st, nst, ks)
-    type(output_t),       intent(out)   :: outp
-    type(namespace_t),    intent(in)    :: namespace
-    type(simul_box_t),    intent(in)    :: sb
-    type(states_elec_t),  intent(in)    :: st
-    integer,              intent(in)    :: nst
-    type(v_ks_t),         intent(inout) :: ks
+    type(output_t),            intent(out)   :: outp
+    type(namespace_t), target, intent(in)    :: namespace
+    type(simul_box_t),         intent(in)    :: sb
+    type(states_elec_t),       intent(in)    :: st
+    integer,                   intent(in)    :: nst
+    type(v_ks_t),              intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -163,6 +164,8 @@ contains
     integer :: what_no_how, what_no_how_u
 
     PUSH_SUB(output_init)
+
+    outp%namespace => namespace
 
     !%Variable Output
     !%Type flag
@@ -610,7 +613,7 @@ contains
     !%End
     call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
+      call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
 
@@ -658,13 +661,13 @@ contains
     if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
-      call io_mkdir(dir)
+      call io_mkdir(dir, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
-        call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
+        call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, gr%mesh%x(:,idir), &
           units_out%length, ierr, geo = geo)
       end do
     end if
@@ -676,27 +679,27 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call geometry_write_xyz(geo, trim(dir)//'/geometry')
-        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
+        call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
+        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
-        call vtk_output_geometry(trim(dir)//'/geometry', geo)
+        call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
       end if     
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh)
+        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
       else
-        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
+        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, dir, st, gr, geo, hm, psolver)
+      call output_me(outp%me, dir, st, gr, geo, hm, psolver, namespace)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
@@ -704,26 +707,26 @@ contains
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, psolver, geo)
+      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, psolver, geo, namespace)
     end if
     
-    call output_energy_density(hm, psolver, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
+    call output_energy_density(hm, psolver, ks, st, gr%der, dir, outp, geo, gr, namespace, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
-        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
-        call lda_u_write_effectiveU(dir, hm%lda_u)
+        call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
-        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
         call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
-        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
 
     call profiling_out(prof)
@@ -764,14 +767,14 @@ contains
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
         ! this quantity is dimensionless
 
         if(st%d%ispin /= UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
-            call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+            call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, &
               f_loc(:, is), unit_one, ierr, geo = geo, grp = mpi_grp)
             ! this quantity is dimensionless
           end do
@@ -791,7 +794,7 @@ contains
         else
           write(fname, '(a,i1)') 'bader-sp', is
         end if
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, &
           f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, &
           geo = geo, grp = mpi_grp)
 
@@ -807,7 +810,7 @@ contains
     ! Now the pressure
     if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
+      call dio_function_output(outp%how, dir, "el_pressure", outp%namespace, gr%mesh, &
         f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
     end if
@@ -831,12 +834,12 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
-      call dio_function_output(outp%how, dir, trim(filename), gr%mesh, &
+      call dio_function_output(outp%how, dir, trim(filename), outp%namespace, gr%mesh, &
         real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
-      iunit = io_open(file=trim(fname), action = 'write')
+      iunit = io_open(trim(fname), outp%namespace, action = 'write')
       call basins_write(basins, gr%mesh, iunit)
       call io_close(iunit)
 
@@ -896,7 +899,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(hm, psolver, ks, st, der, dir, outp, geo, gr, grp)
+  subroutine output_energy_density(hm, psolver, ks, st, der, dir, outp, geo, gr, namespace, grp)
     type(hamiltonian_t),       intent(in) :: hm
     type(poisson_t),           intent(in) :: psolver
     type(v_ks_t),              intent(in) :: ks
@@ -906,6 +909,7 @@ contains
     type(output_t),            intent(in) :: outp
     type(geometry_t),          intent(in) :: geo
     type(grid_t),              intent(in) :: gr
+    type(namespace_t),         intent(in) :: namespace
     type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
@@ -940,8 +944,8 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, psolver, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
-                      st%qtot, ex_density = ex_density, ec_density = ec_density)
+      call xc_get_vxc(gr%fine%der, ks%xc, st, psolver, namespace, st%rho, st%d%ispin, &
+        -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end forall
@@ -952,12 +956,12 @@ contains
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, &
           energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       case(SPIN_POLARIZED, SPINORS)
         do is = 1, 2
           write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+          call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, &
             energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
         end do
       end select
@@ -1182,7 +1186,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, psolver, geo)
+  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, psolver, geo, namespace)
     type(output_bgw_t),  intent(in)    :: bgw
     character(len=*),    intent(in)    :: dir
     type(states_elec_t), intent(in)    :: st
@@ -1191,6 +1195,7 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     type(poisson_t),     intent(in)    :: psolver
     type(geometry_t),    intent(in)    :: geo
+    type(namespace_t),   intent(in)    :: namespace
 
 #ifdef HAVE_BERKELEYGW
     integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3), ngkmax
@@ -1231,19 +1236,21 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, psolver, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, psolver, namespace, st%rho, st%d%ispin, &
+      -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
+      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, namespace, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
+      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, namespace, vxc)
     end if
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
+      fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
       call messages_fatal(1)
@@ -1265,9 +1272,9 @@ contains
       call messages_info(1)
 
       if(states_are_real(st)) then
-        call dbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call dbgw_vmtxel(bgw, dir, st, gr, ifmax, namespace)
       else
-        call zbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call zbgw_vmtxel(bgw, dir, st, gr, ifmax, namespace)
       end if
     end if
 
@@ -1276,7 +1283,7 @@ contains
 
     sheader = 'VXC'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'VXC', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     ! convert from Ha to Ry, make usable with same processing as RHO
@@ -1291,7 +1298,7 @@ contains
 
     sheader = 'RHO'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'RHO', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
@@ -1310,7 +1317,7 @@ contains
 
     sheader = 'WFN'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // bgw%wfn_filename, namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
 
@@ -1511,31 +1518,31 @@ contains
             end if
             if(has_phase) then
               if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-               call zio_function_output(outp%how, dir, fname, mesh, &
+               call zio_function_output(outp%how, dir, fname, outp%namespace, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
-               call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+               call zio_function_output(outp%how, dir, fname, outp%namespace, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
               if(this%basisfromstates) then
                 if (states_are_real(st)) then
-                  call dio_function_output(outp%how, dir, fname, mesh, &
+                  call dio_function_output(outp%how, dir, fname, outp%namespace, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 else
-                  call zio_function_output(outp%how, dir, fname, mesh, &
+                  call zio_function_output(outp%how, dir, fname, outp%namespace, mesh, &
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 end if
               else
                 if (states_are_real(st)) then
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                  call dio_function_output(outp%how, dir, fname, outp%namespace, mesh, dtmp, fn_unit, ierr, geo = geo)
                 else
                   tmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                  call zio_function_output(outp%how, dir, fname, outp%namespace, mesh, tmp, fn_unit, ierr, geo = geo)
                 end if
               end if
             end if

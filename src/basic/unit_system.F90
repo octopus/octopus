@@ -380,9 +380,10 @@ contains
   !! \todo  Although it seems to work in most cases, it is obviously
   !! a very weak code.
   ! ---------------------------------------------------------
-  subroutine unit_system_from_file(uu, fname, ierr)
+  subroutine unit_system_from_file(uu, fname, namespace, ierr)
     type(unit_system_t), intent(inout) :: uu
     character(len=*),    intent(in)    :: fname
+    type(namespace_t),   intent(in)    :: namespace
     integer,             intent(inout) :: ierr
 
     integer            :: iunit, ios
@@ -390,7 +391,7 @@ contains
 
     PUSH_SUB(unit_system_from_file)
 
-    iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
+    iunit = io_open(trim(fname), namespace, action='read', status='old', die=.false.)
     if(iunit < 0) then
       ierr = -2
       POP_SUB(unit_system_from_file)

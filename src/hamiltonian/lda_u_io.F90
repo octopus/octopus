@@ -57,17 +57,18 @@ module lda_u_io_oct_m
 contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
- subroutine lda_u_write_occupation_matrices(dir, this, st)
+ subroutine lda_u_write_occupation_matrices(dir, this, st, namespace)
    type(lda_u_t),       intent(in)    :: this
    character(len=*),    intent(in)    :: dir
    type(states_elec_t), intent(in)    :: st
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ios, ispin, im, imp
  
    PUSH_SUB(lda_u_write_occupation_matrices)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-   iunit = io_open(trim(dir) // "/occ_matrices", action='write')
+   iunit = io_open(trim(dir) // "/occ_matrices", namespace, action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
    do ios = 1, this%norbsets
@@ -93,7 +94,7 @@ contains
    call io_close(iunit)
 
    if(this%level == DFT_U_ACBN0) then
-     iunit = io_open(trim(dir) // "/renorm_occ_matrices", action='write')
+     iunit = io_open(trim(dir) // "/renorm_occ_matrices", namespace, action='write')
      write(iunit,'(a)') ' Renormalized occupation matrices '
 
      do ios = 1, this%norbsets
@@ -125,16 +126,17 @@ contains
  end subroutine lda_u_write_occupation_matrices
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this)
+ subroutine lda_u_write_effectiveU(dir, this, namespace)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
+   type(namespace_t), intent(in)    :: namespace
 
    integer :: iunit, ios
 
    PUSH_SUB(lda_u_write_effectiveU)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     iunit = io_open(trim(dir) // "/effectiveU", action='write')
+     iunit = io_open(trim(dir) // "/effectiveU", namespace, action='write')
      call lda_u_write_U(this, iunit)
 
      write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
@@ -211,10 +213,11 @@ contains
  end subroutine lda_u_write_effectiveU
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_kanamoriU(dir, st, this)
+ subroutine lda_u_write_kanamoriU(dir, st, this, namespace)
    type(lda_u_t),       intent(in)    :: this
    type(states_elec_t), intent(in)    :: st
    character(len=*),    intent(in)    :: dir
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ios
    FLOAT, allocatable :: kanamori(:,:)
@@ -226,7 +229,7 @@ contains
 
      call compute_ACBNO_U_kanamori(this, st, kanamori)
 
-     iunit = io_open(trim(dir) // "/kanamoriU", action='write')
+     iunit = io_open(trim(dir) // "/kanamoriU", namespace, action='write')
 
      write(iunit, '(a,a,a,f7.3,a)') 'Intraorbital U [', &
        trim(units_abbrev(units_out%energy)),']:'
@@ -341,12 +344,13 @@ contains
 
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_magnetization(dir, this, geo, mesh, st)
+ subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
    type(lda_u_t),       intent(in)    :: this
    character(len=*),    intent(in)    :: dir
    type(geometry_t),    intent(in)    :: geo
    type(mesh_t),        intent(in)    :: mesh
    type(states_elec_t), intent(in)    :: st
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ia, ios, im
    FLOAT, allocatable :: mm(:,:)
@@ -355,8 +359,8 @@ contains
 
    PUSH_SUB(lda_u_write_magnetization)
 
-   call io_mkdir(dir)
-    iunit = io_open(trim(dir)//"/magnetization.xsf", action='write', position='asis')
+   call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
       SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))

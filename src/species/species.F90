@@ -920,8 +920,9 @@ contains
   !! functions (filtering, etc), some of which depend on the grid
   !! cutoff value.
   ! ---------------------------------------------------------
-  subroutine species_pot_init(this, grid_cutoff, filter)
+  subroutine species_pot_init(this, namespace, grid_cutoff, filter)
     type(species_t),     intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(in)    :: grid_cutoff
     integer,             intent(in)    :: filter
 
@@ -975,8 +976,8 @@ contains
 
       if(debug%info) then
         write(dirname, '(a)') 'debug/geometry'
-        call io_mkdir(dirname)
-        call species_debug(trim(dirname), this)
+        call io_mkdir(dirname, namespace)
+        call species_debug(trim(dirname), this, namespace)
       end if
     end if
 
@@ -1579,9 +1580,10 @@ contains
 ! Private procedures
 
   ! ---------------------------------------------------------
-  subroutine species_debug(dir, spec)
-    character(len=*), intent(in) :: dir
-    type(species_t),  intent(in) :: spec
+  subroutine species_debug(dir, spec, namespace)
+    character(len=*),  intent(in) :: dir
+    type(species_t),   intent(in) :: spec
+    type(namespace_t), intent(in) :: namespace
 
     character(len=256) :: dirname
     integer :: iunit
@@ -1596,9 +1598,9 @@ contains
 
     dirname = trim(dir)//'/'//trim(spec%label)
 
-    call io_mkdir(dirname)
+    call io_mkdir(dirname, namespace)
 
-    iunit = io_open(trim(dirname)//'/info', action='write')
+    iunit = io_open(trim(dirname)//'/info', namespace, action='write')
 
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)
@@ -1628,7 +1630,7 @@ contains
     write(iunit, '(a,f15.2)') 'hubbard_alpha = ', spec%hubbard_alpha
 
     if(species_is_ps(spec)) then
-       if(debug%info) call ps_debug(spec%ps, trim(dirname))
+       if(debug%info) call ps_debug(spec%ps, trim(dirname), namespace)
     end if
 
     call io_close(iunit)

@@ -131,7 +131,7 @@ contains
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
 
-    ! FIXME: is the next section not basically the same as the routine ion_interaction_calculate?
+    ! FIXME: is the next section not basically the same as the routine ion_internamespace, action_calculate?
 
     f = M_ZERO
     do iatom = 1, geo%natoms
@@ -443,11 +443,12 @@ contains
 
  ! ----------------------------------------------------------------------
 
-  subroutine forces_write_info(iunit, geo, sb, dir)
+  subroutine forces_write_info(iunit, geo, sb, dir, namespace)
     integer,             intent(in)    :: iunit
     type(geometry_t),    intent(in)    :: geo
     type(simul_box_t),   intent(in)    :: sb
     character(len=*),    intent(in)    :: dir
+    type(namespace_t),   intent(in)    :: namespace
 
     integer :: iatom, idir, ii, iunit2
     FLOAT:: rr(1:3), ff(1:3), torque(1:3)
@@ -482,7 +483,7 @@ contains
     end if
 
 
-    iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
+    iunit2 = io_open(trim(dir)//'/forces', namespace, action='write', position='asis')
     write(iunit2,'(a)') &
       ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z)' // &
       ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'

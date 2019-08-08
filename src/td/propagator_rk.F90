@@ -45,6 +45,7 @@ module propagator_rk_oct_m
   use sparskit_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
+  use propagation_ops_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -62,6 +63,7 @@ module propagator_rk_oct_m
   type(states_elec_t),     pointer, private :: st_p
   type(xc_t),              pointer, private :: xc_p
   type(propagator_t),      pointer, private :: tr_p
+  type(namespace_t),       pointer, private :: namespace_p
   integer,                 private :: dim_op
   FLOAT,                   private :: t_op, dt_op
   FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
@@ -363,7 +365,7 @@ contains
         call density_calc(stphi, gr, stphi%rho)
         call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
-        call hamiltonian_update(hm, gr%mesh, time = tau)
+        call hamiltonian_update(hm, gr%mesh, namespace, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, psolver, stphi, hst)
@@ -392,8 +394,9 @@ contains
       if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_set(hm%oct_exchange, stphi, gr%mesh)
       call prepare_inh()
       call hamiltonian_adjoint(hm)
-      call hamiltonian_update(hm, gr%mesh, time = tau)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, tau)
+
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, psolver, stchi, hchi)
       call hamiltonian_not_adjoint(hm)
 
@@ -488,7 +491,7 @@ contains
 
   subroutine td_runge_kutta2(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
+    type(namespace_t),   target,     intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
@@ -534,6 +537,7 @@ contains
     psolver_p => psolver
     tr_p      => tr
     st_p      => st
+    namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
@@ -558,8 +562,9 @@ contains
     if (oct_exchange_enabled(hm%oct_exchange)) then
       call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc, psolver)
     end if
-    call hamiltonian_update(hm, gr%mesh, time = time-dt)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt)
+
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
@@ -611,8 +616,9 @@ contains
         call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
+
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
           call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
@@ -703,7 +709,7 @@ contains
 
   subroutine td_runge_kutta4(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace    
+    type(namespace_t),   target,     intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
@@ -761,6 +767,7 @@ contains
     psolver_p => psolver
     tr_p      => tr
     st_p      => st
+    namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
@@ -812,8 +819,9 @@ contains
         call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - dt + c(1)*dt)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt + c(1)*dt)
+
       vhxc1_op = hm%vhxc
       t_op  = time - dt + c(1) * dt
       rhs1 = M_z0
@@ -849,8 +857,9 @@ contains
         call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - dt + c(2)*dt)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt + c(2)*dt)
+
       vhxc2_op = hm%vhxc
       t_op  = time - dt + c(2) * dt
       rhs2 = M_z0
@@ -1014,8 +1023,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + c(1)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1040,8 +1048,7 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + c(2)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1110,8 +1117,9 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + c(1)*dt_op)
+
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1136,8 +1144,9 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + c(2)*dt_op)
+
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1199,8 +1208,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1295,8 +1303,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, grid_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
