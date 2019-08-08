@@ -20,6 +20,7 @@
 
 module namespace_oct_m
   use global_oct_m
+  use mpi_oct_m
   implicit none
 
   private
@@ -50,6 +51,10 @@ contains
     else
       write(stderr,'(a)') '*** Fatal Error (description follows)'
       write(stderr,'(a,i4,a)') 'Namespaces are limited to ', MAX_NAMESPACE_LEN, ' characters'
+#ifdef HAVE_MPI
+      if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
+#endif
+      stop
     end if
 
   end function namespace_init
