@@ -80,62 +80,62 @@ module casida_oct_m
     integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF |
                     !< CASIDA_VARIATIONAL | CASIDA_CASIDA
 
-    logical           :: states_are_real
-    integer, pointer  :: n_occ(:)       !< number of occupied states
-    integer, pointer  :: n_unocc(:)     !< number of unoccupied states
-    integer           :: nst            !< total number of states
-    integer           :: nik
-    integer           :: sb_dim         !< number of spatial dimensions
-    integer           :: el_per_state
-    character(len=80) :: trandens
-    character(len=80) :: print_exst     !< excited states for which Casida coefficients will be printed
-    FLOAT             :: weight_thresh  !< threshold for the Casida coefficients to be printed
-    logical           :: triplet        !< use triplet kernel?
-    logical           :: calc_forces    !< calculate excited-state forces
-    logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
-    logical           :: calc_forces_scf       !< calculate excited-state forces with SCF forces
-    logical           :: herm_conj      !< use Hermitian conjugate of matrix
-    type(restart_t)   :: restart_load
-    type(restart_t)   :: restart_dump
+    logical              :: states_are_real
+    integer, allocatable :: n_occ(:)       !< number of occupied states
+    integer, allocatable :: n_unocc(:)     !< number of unoccupied states
+    integer              :: nst            !< total number of states
+    integer              :: nik
+    integer              :: sb_dim         !< number of spatial dimensions
+    integer              :: el_per_state
+    character(len=80)    :: trandens
+    character(len=80)    :: print_exst     !< excited states for which Casida coefficients will be printed
+    FLOAT                :: weight_thresh  !< threshold for the Casida coefficients to be printed
+    logical              :: triplet        !< use triplet kernel?
+    logical              :: calc_forces    !< calculate excited-state forces
+    logical              :: calc_forces_kernel    !< calculate excited-state forces with kernel
+    logical              :: calc_forces_scf       !< calculate excited-state forces with SCF forces
+    logical              :: herm_conj      !< use Hermitian conjugate of matrix
+    type(restart_t)      :: restart_load
+    type(restart_t)      :: restart_dump
     
     logical, allocatable :: is_included(:,:,:) !< (i, a, k) is in the basis?
-    integer           :: n_pairs        !< number of pairs to take into account
-    type(states_pair_t), pointer :: pair(:)
-    integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
-    integer, pointer  :: ind(:)         !< ordering in energy of solutions
+    integer              :: n_pairs        !< number of pairs to take into account
+    type(states_pair_t), allocatable :: pair(:)
+    integer, allocatable :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
+    integer, allocatable :: ind(:)         !< ordering in energy of solutions
 
-    FLOAT,   pointer  :: dmat(:,:)      !< general-purpose matrix
-    FLOAT,   pointer  :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
-    CMPLX,   pointer  :: zmat(:,:)      !< general-purpose matrix
-    CMPLX,   pointer  :: zmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
-    FLOAT,   pointer  :: w(:)           !< The excitation energies.
-    FLOAT,   pointer  :: dtm(:, :)      !< The transition matrix elements (between the many-particle states)
-    CMPLX,   pointer  :: ztm(:, :)      !< The transition matrix elements (between the many-particle states)
-    FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
-    FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
+    FLOAT, allocatable   :: dmat(:,:)      !< general-purpose matrix
+    FLOAT, allocatable   :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    CMPLX, allocatable   :: zmat(:,:)      !< general-purpose matrix
+    CMPLX, allocatable   :: zmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    FLOAT, allocatable   :: w(:)           !< The excitation energies.
+    FLOAT, allocatable   :: dtm(:, :)      !< The transition matrix elements (between the many-particle states)
+    CMPLX, allocatable   :: ztm(:, :)      !< The transition matrix elements (between the many-particle states)
+    FLOAT, allocatable   :: f(:)           !< The (dipole) strengths
+    FLOAT, allocatable   :: s(:)           !< The diagonal part of the S-matrix
 
-    FLOAT,   pointer  :: rho(:,:)       !< density
-    FLOAT,   pointer  :: fxc(:,:,:)     !< derivative of xc potential
-    FLOAT             :: kernel_lrc_alpha
+    FLOAT, allocatable   :: rho(:,:)       !< density
+    FLOAT, allocatable   :: fxc(:,:,:)     !< derivative of xc potential
+    FLOAT                :: kernel_lrc_alpha
 
-    FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
-    CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
-    FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
-    CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
-    FLOAT,   pointer  :: forces(:,:,:)  !< excited-state forces
-    FLOAT,   pointer  :: dw2(:)         !< perturbed excitation energies.
-    FLOAT,   pointer  :: zw2(:)         !< perturbed excitation energies.
+    FLOAT, allocatable   :: dmat2(:,:)     !< matrix to diagonalize for forces
+    CMPLX, allocatable   :: zmat2(:,:)     !< matrix to diagonalize for forces
+    FLOAT, allocatable   :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    CMPLX, allocatable   :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    FLOAT, allocatable   :: forces(:,:,:)  !< excited-state forces
+    FLOAT, allocatable   :: dw2(:)         !< perturbed excitation energies.
+    FLOAT, allocatable   :: zw2(:)         !< perturbed excitation energies.
 
     ! variables for momentum-transfer-dependent calculation
-    logical           :: qcalc
-    FLOAT             :: qvector(MAX_DIM)
-    FLOAT,   pointer  :: qf(:)
-    FLOAT,   pointer  :: qf_avg(:)      !< Directionally averaged intensity
-    integer           :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
+    logical              :: qcalc
+    FLOAT                :: qvector(MAX_DIM)
+    FLOAT, allocatable   :: qf(:)
+    FLOAT, allocatable   :: qf_avg(:)      !< Directionally averaged intensity
+    integer              :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
 
-    logical           :: parallel_in_eh_pairs
-    type(mpi_grp_t)   :: mpi_grp
-    logical           :: fromScratch
+    logical              :: parallel_in_eh_pairs
+    type(mpi_grp_t)      :: mpi_grp
+    logical              :: fromScratch
   end type casida_t
 
   type casida_save_pot_t
@@ -143,8 +143,8 @@ module casida_oct_m
     integer :: qi                    !< previous mtxel calculated in K_term
     integer :: qa                    !< previous mtxel calculated in K_term
     integer :: qk                    !< previous mtxel calculated in K_term
-    FLOAT,   pointer  :: dpot(:)     !< previous exchange potential calculated in K_term
-    CMPLX,   pointer  :: zpot(:)     !< previous exchange potential calculated in K_term    
+    FLOAT, allocatable :: dpot(:)    !< previous exchange potential calculated in K_term
+    CMPLX, allocatable :: zpot(:)    !< previous exchange potential calculated in K_term    
   end type casida_save_pot_t
 
   type(profile_t), save :: prof
@@ -602,36 +602,36 @@ contains
 
     PUSH_SUB(casida_type_end)
 
-    ASSERT(associated(cas%pair))
-    SAFE_DEALLOCATE_P(cas%pair)
-    SAFE_DEALLOCATE_P(cas%index)
+    ASSERT(allocated(cas%pair))
+    SAFE_DEALLOCATE_A(cas%pair)
+    SAFE_DEALLOCATE_A(cas%index)
     if(cas%states_are_real) then
-      SAFE_DEALLOCATE_P(cas%dmat)
-      SAFE_DEALLOCATE_P(cas%dtm)
+      SAFE_DEALLOCATE_A(cas%dmat)
+      SAFE_DEALLOCATE_A(cas%dtm)
     else
-      SAFE_DEALLOCATE_P(cas%zmat)
-      SAFE_DEALLOCATE_P(cas%ztm)
+      SAFE_DEALLOCATE_A(cas%zmat)
+      SAFE_DEALLOCATE_A(cas%ztm)
     end if
-    SAFE_DEALLOCATE_P(cas%s)
-    SAFE_DEALLOCATE_P(cas%f)
-    SAFE_DEALLOCATE_P(cas%w)
-    SAFE_DEALLOCATE_P(cas%ind)
+    SAFE_DEALLOCATE_A(cas%s)
+    SAFE_DEALLOCATE_A(cas%f)
+    SAFE_DEALLOCATE_A(cas%w)
+    SAFE_DEALLOCATE_A(cas%ind)
 
     if(cas%qcalc) then
-      SAFE_DEALLOCATE_P(cas%qf)
-      SAFE_DEALLOCATE_P(cas%qf_avg)
+      SAFE_DEALLOCATE_A(cas%qf)
+      SAFE_DEALLOCATE_A(cas%qf_avg)
     end if
 
-    SAFE_DEALLOCATE_P(cas%n_occ)
-    SAFE_DEALLOCATE_P(cas%n_unocc)
+    SAFE_DEALLOCATE_A(cas%n_occ)
+    SAFE_DEALLOCATE_A(cas%n_unocc)
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        SAFE_DEALLOCATE_P(cas%dmat_save)
+        SAFE_DEALLOCATE_A(cas%dmat_save)
       else
-        SAFE_DEALLOCATE_P(cas%zmat_save)
+        SAFE_DEALLOCATE_A(cas%zmat_save)
       end if
-      SAFE_DEALLOCATE_P(cas%forces)
+      SAFE_DEALLOCATE_A(cas%forces)
     end if
 
     call restart_end(cas%restart_dump)
@@ -752,8 +752,8 @@ contains
 
     ! clean up
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-      SAFE_DEALLOCATE_P(cas%fxc)
-      SAFE_DEALLOCATE_P(cas%rho)
+      SAFE_DEALLOCATE_A(cas%fxc)
+      SAFE_DEALLOCATE_A(cas%rho)
     end if
 
     POP_SUB(casida_work)
@@ -918,15 +918,10 @@ contains
     integer,             intent(in) :: ia
     integer,             intent(in) :: jb
 
-    type(states_pair_t), pointer :: pp, qq
-
     PUSH_SUB(isnt_degenerate)
 
-    pp => cas%pair(ia)
-    qq => cas%pair(jb)
-
-    isnt_degenerate = (abs((st%eigenval(pp%a, pp%kk) - st%eigenval(pp%i, pp%kk)) &
-      - (st%eigenval(qq%a, qq%kk) - st%eigenval(qq%i, qq%kk))) > CNST(1e-8))
+    isnt_degenerate = (abs((st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)) &
+      - (st%eigenval(cas%pair(jb)%a, cas%pair(jb)%kk) - st%eigenval(cas%pair(jb)%i, cas%pair(jb)%kk))) > CNST(1e-8))
 
     POP_SUB(isnt_degenerate)
   end function isnt_degenerate
