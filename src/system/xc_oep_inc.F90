@@ -173,7 +173,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
 
-  !vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
   call lalg_copy(gr%mesh%np, vxc, vxc_old)
 
   if(.not. lr_is_allocated(oep%lr)) then
@@ -182,7 +181,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   end if
 
   ! fix xc potential (needed for Hpsi)
-  !vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np, is)
   call lalg_axpy(gr%mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
 
   do iter = 1, oep%scftol%max_iter
@@ -209,17 +207,15 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
 
       ! calculate this funny function ss
-      !ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1))
+      ! ss = ss + 2*dl_psi*psi
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
 
     end do
 
     select case (oep%mixing_scheme)
     case (OEP_MIXING_SCHEME_CONST)
-      !oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
     case (OEP_MIXING_SCHEME_DENS)
-      !oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:)/st%rho(:,is), oep%vxc(:, is))
     case (OEP_MIXING_SCHEME_BB)
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
@@ -232,9 +228,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
         call messages_info(1)
       end if
 
-      !oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
-      !oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
-      !oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
       call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
       call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
@@ -272,7 +265,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   message(2) = ''
   call messages_info(2)
 
-  !vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np)
   call lalg_copy(gr%mesh%np, vxc_old, vxc)
 
   SAFE_DEALLOCATE_A(bb)
