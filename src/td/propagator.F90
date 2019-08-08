@@ -399,6 +399,9 @@ contains
     !%End
     call parse_variable(namespace, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
+
+    call tr%propagation_ops_elec%init()
+
     POP_SUB(propagator_init)
   end subroutine propagator_init
   ! ---------------------------------------------------------
@@ -454,6 +457,8 @@ contains
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
+
+    call tr%propagation_ops_elec%end()
 
     POP_SUB(propagator_end)
   end subroutine propagator_end
@@ -534,8 +539,10 @@ contains
       else
         call td_etrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if
-    case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+    case(PROP_AETRS)
+      call td_aetrs(namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+    case(PROP_CAETRS)
+      call td_caetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
       call exponential_midpoint(hm, psolver, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
