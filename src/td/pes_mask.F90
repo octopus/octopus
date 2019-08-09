@@ -30,7 +30,7 @@ module pes_mask_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
@@ -181,7 +181,7 @@ contains
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_elec_t),      intent(in)  :: st
-    type(hamiltonian_t),      intent(in)  :: hm
+    type(hamiltonian_elec_t),      intent(in)  :: hm
     integer,                  intent(in)  :: max_iter
     FLOAT,                    intent(in)  :: dt
     
@@ -1092,7 +1092,7 @@ contains
         do iz = 1, mask%ll(3)
           KK(3) = mask%Lk(iz + mask%fs_istart(3) - 1, 3)
           ! The k-points have the same sign as the vector potential consistently 
-          ! with what is done to generate the phase (hm%phase) in hamiltonian_update()
+          ! with what is done to generate the phase (hm%phase) in hamiltonian_elec_update()
           vec = sum(( KK(1:mesh%sb%dim) &
                 - kpoint(1:mesh%sb%dim) &
                 - mask%vec_pot(iter,1:mesh%sb%dim)/P_C)**2) / M_TWO

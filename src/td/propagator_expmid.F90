@@ -22,7 +22,7 @@ module propagator_expmid_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -45,18 +45,18 @@ contains
   ! ---------------------------------------------------------
   !> Exponential midpoint
   subroutine exponential_midpoint(hm, psolver, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(namespace_t),               intent(in)    :: namespace
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical,                         intent(in)    :: move_ions
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(namespace_t),                intent(in)    :: namespace
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    FLOAT,                            intent(in)    :: ionic_scale
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in)    :: move_ions
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
 

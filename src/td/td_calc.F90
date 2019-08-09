@@ -24,8 +24,8 @@ module td_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_base_oct_m
+  use hamiltonian_elec_oct_m
   use lasers_oct_m
   use loct_math_oct_m
   use mesh_function_oct_m
@@ -59,13 +59,13 @@ contains
 !!          allowed to move
 ! ---------------------------------------------------------
 subroutine td_calc_tacc(gr, geo, st, hm, psolver, acc, time)
-  type(grid_t),        intent(in)  :: gr
-  type(geometry_t),    intent(in)  :: geo
-  type(states_elec_t), intent(in)  :: st
-  type(hamiltonian_t), intent(in)  :: hm
-  type(poisson_t),     intent(in)  :: psolver
-  FLOAT,               intent(in)  :: time
-  FLOAT,               intent(out) :: acc(MAX_DIM)
+  type(grid_t),             intent(in)  :: gr
+  type(geometry_t),         intent(in)  :: geo
+  type(states_elec_t),      intent(in)  :: st
+  type(hamiltonian_elec_t), intent(in)  :: hm
+  type(poisson_t),          intent(in)  :: psolver
+  FLOAT,                    intent(in)  :: time
+  FLOAT,                    intent(out) :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
   CMPLX, allocatable :: zpsi(:, :), hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
@@ -106,7 +106,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, psolver, acc, time)
 
       call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
       
-      call zhamiltonian_apply(hm, gr%der, psolver, zpsi, hzpsi, ist, ik)
+      call zhamiltonian_elec_apply(hm, gr%der, psolver, zpsi, hzpsi, ist, ik)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -118,7 +118,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, psolver, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, psolver, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply(hm, gr%der, psolver, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
@@ -133,7 +133,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, psolver, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, psolver, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply(hm, gr%der, psolver, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)

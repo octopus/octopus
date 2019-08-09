@@ -38,7 +38,7 @@ module output_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -641,15 +641,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_all(outp, namespace, gr, geo, st, hm, psolver, ks, dir)
-    type(grid_t),         intent(in)    :: gr
-    type(namespace_t),    intent(in)    :: namespace
-    type(geometry_t),     intent(in)    :: geo
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(v_ks_t),         intent(in)    :: ks
-    type(output_t),       intent(in)    :: outp
-    character(len=*),     intent(in)    :: dir
+    type(grid_t),             intent(in)    :: gr
+    type(namespace_t),        intent(in)    :: namespace
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(v_ks_t),             intent(in)    :: ks
+    type(output_t),           intent(in)    :: outp
+    character(len=*),         intent(in)    :: dir
 
     integer :: idir, ierr
     character(len=80) :: fname
@@ -737,7 +737,7 @@ contains
   ! ---------------------------------------------------------
   subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_elec_t),    intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
+    type(hamiltonian_elec_t),    intent(in)    :: hm
     type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: dir
     type(output_t),         intent(in)    :: outp
@@ -854,7 +854,7 @@ contains
   ! ---------------------------------------------------------
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_elec_t),    intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
+    type(hamiltonian_elec_t),    intent(in)    :: hm
     type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
@@ -900,7 +900,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_energy_density(hm, psolver, ks, st, der, dir, outp, geo, gr, namespace, grp)
-    type(hamiltonian_t),       intent(in) :: hm
+    type(hamiltonian_elec_t),  intent(in) :: hm
     type(poisson_t),           intent(in) :: psolver
     type(v_ks_t),              intent(in) :: ks
     type(states_elec_t),       intent(in) :: st
@@ -1187,15 +1187,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, psolver, geo, namespace)
-    type(output_bgw_t),  intent(in)    :: bgw
-    character(len=*),    intent(in)    :: dir
-    type(states_elec_t), intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
-    type(v_ks_t),        intent(in)    :: ks
-    type(hamiltonian_t), intent(inout) :: hm
-    type(poisson_t),     intent(in)    :: psolver
-    type(geometry_t),    intent(in)    :: geo
-    type(namespace_t),   intent(in)    :: namespace
+    type(output_bgw_t),       intent(in)    :: bgw
+    character(len=*),         intent(in)    :: dir
+    type(states_elec_t),      intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(v_ks_t),             intent(in)    :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(geometry_t),         intent(in)    :: geo
+    type(namespace_t),        intent(in)    :: namespace
 
 #ifdef HAVE_BERKELEYGW
     integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3), ngkmax

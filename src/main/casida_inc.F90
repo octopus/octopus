@@ -421,16 +421,16 @@ end subroutine X(casida_lr_hmat2)
 ! -----------------------------------------------------------------------------
 
 subroutine X(casida_get_matrix)(cas, hm, psolver, st, ks, mesh, matrix, xc, restart_file, is_forces)
-  type(casida_t),      intent(inout) :: cas
-  type(hamiltonian_t), intent(in)    :: hm
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(in)    :: st
-  type(v_ks_t),        intent(in)    :: ks
-  type(mesh_t),        intent(in)    :: mesh
-  R_TYPE,              intent(out)   :: matrix(:,:)
-  FLOAT,               intent(in)    :: xc(:,:,:)
-  character(len=*),    intent(in)    :: restart_file
-  logical,   optional, intent(in)    :: is_forces
+  type(casida_t),           intent(inout) :: cas
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(in)    :: st
+  type(v_ks_t),             intent(in)    :: ks
+  type(mesh_t),             intent(in)    :: mesh
+  R_TYPE,                   intent(out)   :: matrix(:,:)
+  FLOAT,                    intent(in)    :: xc(:,:,:)
+  character(len=*),         intent(in)    :: restart_file
+  logical, optional,        intent(in)    :: is_forces
 
   integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp
   integer :: maxcount, actual, counter

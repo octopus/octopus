@@ -24,7 +24,7 @@ module linear_solver_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use mesh_oct_m
@@ -66,15 +66,15 @@ module linear_solver_oct_m
 
   type linear_solver_args_t
     private
-    type(linear_solver_t), pointer :: ls
-    type(hamiltonian_t),   pointer :: hm
-    type(poisson_t),       pointer :: psolver
-    type(grid_t),          pointer :: gr
-    type(states_elec_t),   pointer :: st
-    integer                        :: ist
-    integer                        :: ik
-    FLOAT                          :: dshift
-    CMPLX                          :: zshift
+    type(linear_solver_t),    pointer :: ls
+    type(hamiltonian_elec_t), pointer :: hm
+    type(poisson_t),          pointer :: psolver
+    type(grid_t),             pointer :: gr
+    type(states_elec_t),      pointer :: st
+    integer                           :: ist
+    integer                           :: ik
+    FLOAT                             :: dshift
+    CMPLX                             :: zshift
   end type linear_solver_args_t
 
   type(linear_solver_args_t) :: args

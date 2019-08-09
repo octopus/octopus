@@ -20,7 +20,7 @@
 
 module kdotp_calc_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m

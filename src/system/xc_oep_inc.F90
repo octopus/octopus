@@ -26,16 +26,16 @@
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
 subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st, ex, ec, vxc)
-  type(xc_oep_t),      intent(inout) :: oep
-  type(namespace_t),   intent(in)    :: namespace
-  type(xc_t),          intent(in)    :: xcs
-  logical,             intent(in)    :: apply_sic_pz
-  type(grid_t),        intent(in)    :: gr
-  type(hamiltonian_t), intent(in)    :: hm
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(inout) :: st
-  FLOAT,               intent(inout) :: ex, ec
-  FLOAT, optional,     intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
+  type(xc_oep_t),           intent(inout) :: oep
+  type(namespace_t),        intent(in)    :: namespace
+  type(xc_t),               intent(in)    :: xcs
+  logical,                  intent(in)    :: apply_sic_pz
+  type(grid_t),             intent(in)    :: gr
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(inout) :: st
+  FLOAT,                    intent(inout) :: ex, ec
+  FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
 
   FLOAT :: eig
   integer :: is, ist, ixc, nspin_, isp, idm, jdm
@@ -147,13 +147,13 @@ end subroutine X(xc_OEP_calc)
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
-  type(grid_t),        intent(in)    :: gr
-  type(hamiltonian_t), intent(in)    :: hm
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(in)    :: st
-  integer,             intent(in)    :: is
-  FLOAT,               intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
-  type(xc_oep_t),      intent(inout) :: oep
+  type(grid_t),             intent(in)    :: gr
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: is
+  FLOAT,                    intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
+  type(xc_oep_t),           intent(inout) :: oep
 
   integer :: iter, ist, iter_used
   FLOAT :: vxc_bar, ff, residue

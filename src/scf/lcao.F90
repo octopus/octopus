@@ -28,7 +28,7 @@ module lcao_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -858,14 +858,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_wf(this, st, gr, geo, hm, psolver, namespace, start)
-    type(lcao_t),        intent(inout) :: this
-    type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
-    type(poisson_t),     intent(in)    :: psolver
-    type(namespace_t),   intent(in)    :: namespace
-    integer, optional,   intent(in)    :: start
+    type(lcao_t),             intent(inout) :: this
+    type(states_elec_t),      intent(inout) :: st
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(namespace_t),        intent(in)    :: namespace
+    integer, optional,        intent(in)    :: start
 
     integer :: start_
     type(profile_t), save :: prof

@@ -27,7 +27,7 @@ module system_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -60,12 +60,12 @@ module system_oct_m
     type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
-    type(states_elec_t),      pointer :: st    !< the states
+    type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(namespace_t)            :: namespace
-    type(hamiltonian_t)          :: hm
+    type(hamiltonian_elec_t)     :: hm
     type(poisson_t)              :: psolver
   end type system_t
   
@@ -119,7 +119,7 @@ contains
 
     call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%psolver, sys%st, sys%geo, sys%mc)
 
-    call hamiltonian_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver, sys%ks%theory_level, &
+    call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver, sys%ks%theory_level, &
       sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
     call profiling_out(prof)
@@ -155,7 +155,7 @@ contains
 
     PUSH_SUB(system_end)
 
-    call hamiltonian_end(sys%hm)
+    call hamiltonian_elec_end(sys%hm)
 
     call multicomm_end(sys%mc)
 

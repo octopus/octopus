@@ -23,7 +23,7 @@ module unocc_oct_m
   use eigensolver_oct_m
   use global_oct_m
   use output_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m

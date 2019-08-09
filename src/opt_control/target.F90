@@ -29,7 +29,7 @@ module target_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use ion_dynamics_oct_m
@@ -365,13 +365,13 @@ contains
 
   ! ----------------------------------------------------------------------
   subroutine target_output(tg, namespace, gr, dir, geo, hm, outp)
-    type(target_t),         intent(inout) :: tg
-    type(namespace_t),      intent(in)    :: namespace
-    type(grid_t),           intent(in)    :: gr
-    character(len=*),       intent(in)    :: dir
-    type(geometry_t),       intent(in)    :: geo
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(output_t),         intent(in)    :: outp
+    type(target_t),           intent(inout) :: tg
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    character(len=*),         intent(in)    :: dir
+    type(geometry_t),         intent(in)    :: geo
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(output_t),           intent(in)    :: outp
 
     PUSH_SUB(target_output)
 
@@ -412,14 +412,14 @@ contains
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
   subroutine target_tdcalc(tg, hm, psolver, gr, geo, psi, time, max_time)
-    type(target_t),      intent(inout) :: tg
-    type(hamiltonian_t), intent(inout) :: hm
-    type(poisson_t),     intent(in)    :: psolver
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(states_elec_t), intent(inout) :: psi
-    integer,             intent(in)    :: time
-    integer,             intent(in)    :: max_time
+    type(target_t),           intent(inout) :: tg
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: psi
+    integer,                  intent(in)    :: time
+    integer,                  intent(in)    :: max_time
 
     if(target_mode(tg)  /= oct_targetmode_td) return
 

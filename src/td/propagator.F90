@@ -26,7 +26,7 @@ module propagator_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
   use loct_pointer_oct_m
@@ -467,7 +467,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_run_zero_iter(hm, gr, tr)
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(grid_t),         intent(in)    :: gr
     type(propagator_t),   intent(inout) :: tr
 
@@ -491,22 +491,22 @@ contains
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    integer,                         intent(in)    :: nt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    type(output_t),                  intent(in)    :: outp
-    integer,              optional,  intent(out)   :: scsteps
-    logical,              optional,  intent(in)    :: update_energy
+    type(v_ks_t),                        target, intent(inout) :: ks
+    type(namespace_t),                           intent(in)    :: namespace
+    type(hamiltonian_elec_t),            target, intent(inout) :: hm
+    type(poisson_t),                             intent(in)    :: psolver
+    type(grid_t),                        target, intent(inout) :: gr
+    type(states_elec_t),                 target, intent(inout) :: st
+    type(propagator_t),                  target, intent(inout) :: tr
+    FLOAT,                                       intent(in)    :: time
+    FLOAT,                                       intent(in)    :: dt
+    FLOAT,                                       intent(in)    :: ionic_scale
+    integer,                                     intent(in)    :: nt
+    type(ion_dynamics_t),                        intent(inout) :: ions
+    type(geometry_t),                            intent(inout) :: geo
+    type(output_t),                              intent(in)    :: outp
+    integer,                   optional,         intent(out)   :: scsteps
+    logical,                   optional,         intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
     logical :: generate, update_energy_
@@ -580,7 +580,7 @@ contains
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
-      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = abs(nt*dt))
+      call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, psolver, time = abs(nt*dt))
     end if
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
@@ -590,7 +590,7 @@ contains
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, namespace, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = abs(nt*dt))
+      if(generate) call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, psolver, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
@@ -641,18 +641,18 @@ contains
   ! ---------------------------------------------------------
 
   subroutine propagator_dt_bo(scf, namespace, gr, ks, st, hm, psolver, geo, mc, outp, iter, dt, ions, scsteps)
-    type(scf_t),          intent(inout) :: scf
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(inout) :: gr
-    type(v_ks_t),         intent(inout) :: ks
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(geometry_t),     intent(inout) :: geo
-    type(multicomm_t),    intent(inout) :: mc    !< index and domain communicators
-    type(output_t),       intent(inout) :: outp
-    integer,              intent(in)    :: iter
-    FLOAT,                intent(in)    :: dt
+    type(scf_t),              intent(inout) :: scf
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr
+    type(v_ks_t),             intent(inout) :: ks
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(geometry_t),         intent(inout) :: geo
+    type(multicomm_t),        intent(inout) :: mc    !< index and domain communicators
+    type(output_t),           intent(inout) :: outp
+    integer,                  intent(in)    :: iter
+    FLOAT,                    intent(in)    :: dt
     type(ion_dynamics_t), intent(inout) :: ions
     integer,              intent(inout) :: scsteps
 
@@ -660,7 +660,7 @@ contains
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
-    call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, psolver, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, psolver, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
@@ -674,7 +674,7 @@ contains
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
-    call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, psolver, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
@@ -683,7 +683,7 @@ contains
     call energy_calc_total(hm, psolver, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
-    call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = iter*dt)
+    call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, psolver, time = iter*dt)
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

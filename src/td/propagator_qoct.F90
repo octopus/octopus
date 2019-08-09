@@ -25,7 +25,7 @@ module propagator_qoct_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -50,16 +50,16 @@ contains
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
   subroutine td_qoct_tddft_propagator(hm, psolver, namespace, xc, gr, st, tr, time, dt, ions, geo)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(poisson_t),     intent(in)    :: psolver
-    type(namespace_t),   intent(in)    :: namespace
-    type(xc_t),          intent(in)    :: xc
-    type(grid_t),        intent(inout) :: gr
-    type(states_elec_t), intent(inout) :: st
-    type(propagator_t),  intent(inout) :: tr
-    FLOAT,               intent(in)    :: time, dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(namespace_t),        intent(in)    :: namespace
+    type(xc_t),               intent(in)    :: xc
+    type(grid_t),             intent(inout) :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(propagator_t),       intent(inout) :: tr
+    FLOAT,                    intent(in)    :: time, dt
+    type(ion_dynamics_t),     intent(inout) :: ions
+    type(geometry_t),         intent(inout) :: geo
 
     PUSH_SUB(td_qoct_tddft_propagator)
 

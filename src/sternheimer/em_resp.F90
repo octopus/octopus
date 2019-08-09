@@ -25,7 +25,7 @@ module em_resp_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use output_oct_m
   use io_oct_m
   use kdotp_oct_m
@@ -984,16 +984,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_output(st, namespace, gr, hm, psolver, geo, outp, em_vars, iomega, ifactor)
-    type(states_elec_t),  intent(inout) :: st
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(geometry_t),     intent(inout) :: geo
-    type(output_t),       intent(in)    :: outp
-    type(em_resp_t),      intent(inout) :: em_vars
-    integer,              intent(in)    :: iomega
-    integer,              intent(in)    :: ifactor
+    type(states_elec_t),      intent(inout) :: st
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(geometry_t),         intent(inout) :: geo
+    type(output_t),           intent(in)    :: outp
+    type(em_resp_t),          intent(inout) :: em_vars
+    integer,                  intent(in)    :: iomega
+    integer,                  intent(in)    :: ifactor
     
     integer :: iunit
     character(len=80) :: dirname, str_tmp

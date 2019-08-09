@@ -31,8 +31,8 @@ module forces_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -115,7 +115,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t), intent(in)    :: psi
     type(states_elec_t), intent(in)    :: chi
     FLOAT,               intent(inout) :: f(:, :)
@@ -230,7 +230,7 @@ contains
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
       call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-      call zhamiltonian_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
+      call zhamiltonian_elec_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
@@ -254,7 +254,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(inout) :: hm
+    type(hamiltonian_elec_t), intent(inout) :: hm
     type(states_elec_t), intent(inout) :: st
     type(v_ks_t),        intent(in)      :: ks
     FLOAT,     optional, intent(in)    :: vhxc_old(:,:)
@@ -511,7 +511,7 @@ contains
 subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),            intent(in)    :: hm
   type(states_elec_t),            intent(inout) :: st
   FLOAT,                          intent(out)   :: force_nlcc(:, :)
 
@@ -559,7 +559,7 @@ end subroutine forces_from_nlcc
 subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),            intent(in)    :: hm
   FLOAT,                          intent(out)   :: force_scf(:, :)
   FLOAT,                          intent(in)    :: vhxc_old(:,:)
 

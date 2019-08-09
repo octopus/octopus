@@ -18,17 +18,17 @@
 
 ! ---------------------------------------------------------
 subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converged, ik, diff, tau)
-  type(grid_t),        target, intent(in)    :: gr
-  type(states_elec_t),         intent(inout) :: st
-  type(hamiltonian_t), target, intent(in)    :: hm
-  type(poisson_t),             intent(in)    :: psolver
-  type(exponential_t),         intent(inout) :: te
-  FLOAT,                       intent(in)    :: tol
-  integer,                     intent(inout) :: niter
-  integer,                     intent(inout) :: converged
-  integer,                     intent(in)    :: ik
-  FLOAT,                       intent(out)   :: diff(:) !< (1:st%nst)
-  FLOAT,                       intent(in)    :: tau
+  type(grid_t),             target, intent(in)    :: gr
+  type(states_elec_t),              intent(inout) :: st
+  type(hamiltonian_elec_t), target, intent(in)    :: hm
+  type(poisson_t),                  intent(in)    :: psolver
+  type(exponential_t),              intent(inout) :: te
+  FLOAT,                            intent(in)    :: tol
+  integer,                          intent(inout) :: niter
+  integer,                          intent(inout) :: converged
+  integer,                          intent(in)    :: ik
+  FLOAT,                            intent(out)   :: diff(:) !< (1:st%nst)
+  FLOAT,                            intent(in)    :: tau
 
   integer :: ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), c(:, :), psi(:, :)
@@ -74,7 +74,7 @@ subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converg
     do ist = conv + 1, st%nst
       call states_elec_get_state(st, gr%mesh, ist, ik, psi)
       !TODO: convert these opperations to batched versions 
-      call X(hamiltonian_apply)(hm, gr%der, psolver, psi, hpsi, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, psi, hpsi, ist, ik)
       st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
       diff(ist) = X(states_elec_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 

@@ -27,7 +27,7 @@
 subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(in)    :: gr
   type(states_elec_t),         intent(inout) :: st
-  type(hamiltonian_t),         intent(in)    :: hm
+  type(hamiltonian_elec_t),    intent(in)    :: hm
   type(poisson_t),             intent(in)    :: psolver
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
@@ -178,7 +178,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged,
         end do
       end do
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, vvb, avb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, gr%der, psolver, vvb, avb, ik)
       INCR(matvec, blk)
 
       call batch_end(vvb)

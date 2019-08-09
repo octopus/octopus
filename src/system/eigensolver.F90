@@ -27,7 +27,7 @@ module eigensolver_oct_m
   use exponential_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -427,14 +427,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine eigensolver_run(eigens, gr, st, hm, psolver, iter, conv, nstconv)
-    type(eigensolver_t),  intent(inout) :: eigens
-    type(grid_t),         intent(in)    :: gr
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    integer,              intent(in)    :: iter
-    logical,    optional, intent(out)   :: conv
-    integer,    optional, intent(in)    :: nstconv !< Number of states considered for 
+    type(eigensolver_t),      intent(inout) :: eigens
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    integer,                  intent(in)    :: iter
+    logical,        optional, intent(out)   :: conv
+    integer,        optional, intent(in)    :: nstconv !< Number of states considered for 
                                                    !< the convergence criteria
 
     integer :: maxiter, ik, ist, nstconv_

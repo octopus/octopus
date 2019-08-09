@@ -29,7 +29,7 @@ module lda_u_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use loewdin_oct_m
@@ -549,7 +549,7 @@ contains
   end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
-  ! In case of a laser field, the phase is recomputed in hamiltonian_update
+  ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
     call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
   end if
@@ -563,7 +563,7 @@ contains
    type(lda_u_t),             intent(inout) :: this
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
-   type(hamiltonian_base_t),  intent(in)    :: hm_base 
+   type(hamiltonian_elec_base_t),  intent(in)    :: hm_base 
    type(energy_t),            intent(inout) :: energy
 
    if(this%level == DFT_U_NONE .or. this%freeze_occ) return
@@ -638,7 +638,7 @@ contains
    end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
-  ! In case of a laser field, the phase is recomputed in hamiltonian_update
+  ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
     ASSERT(states_are_complex(st))
     do ik = st%d%kpt%start, st%d%kpt%end

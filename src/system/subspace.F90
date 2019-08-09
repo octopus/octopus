@@ -32,7 +32,7 @@ module subspace_oct_m
   use elpa
 #endif
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use hardware_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
@@ -67,7 +67,7 @@ module subspace_oct_m
     integer :: method
   end type subspace_t
 
-  type(profile_t),     save    :: diagon_prof, hamiltonian_prof
+  type(profile_t),     save    :: diagon_prof, hamiltonian_elec_prof
   
 contains
 

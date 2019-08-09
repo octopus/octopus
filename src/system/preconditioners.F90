@@ -24,7 +24,7 @@ module preconditioners_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m

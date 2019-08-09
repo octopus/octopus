@@ -22,7 +22,7 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
   type(namespace_t),      intent(in) :: namespace
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
-  type(hamiltonian_t),    intent(in) :: hm
+  type(hamiltonian_elec_t),    intent(in) :: hm
   character(len=*),       intent(in) :: dir
   type(output_t),         intent(in) :: outp
 

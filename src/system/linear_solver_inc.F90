@@ -21,20 +21,20 @@
 !! Typically shift = - eigenvalue + omega
 ! ---------------------------------------------------------
 subroutine X(linear_solver_solve_HXeY) (this, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
-  type(linear_solver_t), target, intent(inout) :: this
-  type(hamiltonian_t),   target, intent(in)    :: hm
-  type(poisson_t),       target, intent(in)    :: psolver
-  type(grid_t),          target, intent(in)    :: gr
-  type(states_elec_t),   target, intent(in)    :: st
-  integer,                       intent(in)    :: ist
-  integer,                       intent(in)    :: ik
-  R_TYPE,                        intent(inout) :: x(:,:)   !< x(gr%mesh%np_part, d%dim)
-  R_TYPE,                        intent(in)    :: y(:,:)   !< y(gr%mesh%np, d%dim)
-  R_TYPE,                        intent(in)    :: shift
-  FLOAT,                         intent(in)    :: tol
-  FLOAT,                         intent(out)   :: residue
-  integer,                       intent(out)   :: iter_used
-  logical, optional,             intent(in)    :: occ_response
+  type(linear_solver_t),    target, intent(inout) :: this
+  type(hamiltonian_elec_t), target, intent(in)    :: hm
+  type(poisson_t),          target, intent(in)    :: psolver
+  type(grid_t),             target, intent(in)    :: gr
+  type(states_elec_t),      target, intent(in)    :: st
+  integer,                          intent(in)    :: ist
+  integer,                          intent(in)    :: ik
+  R_TYPE,                           intent(inout) :: x(:,:)   !< x(gr%mesh%np_part, d%dim)
+  R_TYPE,                           intent(in)    :: y(:,:)   !< y(gr%mesh%np, d%dim)
+  R_TYPE,                           intent(in)    :: shift
+  FLOAT,                            intent(in)    :: tol
+  FLOAT,                            intent(out)   :: residue
+  integer,                          intent(out)   :: iter_used
+  logical, optional,                intent(in)    :: occ_response
 
   logical :: occ_response_
   R_TYPE, allocatable :: z(:, :)
@@ -112,19 +112,19 @@ end subroutine X(linear_solver_solve_HXeY)
 ! ---------------------------------------------------------
 
 subroutine X(linear_solver_solve_HXeY_batch) (this, hm, psolver, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
-  type(linear_solver_t), target, intent(inout) :: this
-  type(hamiltonian_t),   target, intent(in)    :: hm
-  type(poisson_t),       target, intent(in)    :: psolver
-  type(grid_t),          target, intent(in)    :: gr
-  type(states_elec_t),   target, intent(in)    :: st
-  integer,                       intent(in)    :: ik
-  type(batch_t),                 intent(inout) :: xb
-  type(batch_t),                 intent(in)    :: yb
-  R_TYPE,                        intent(in)    :: shift(:)
-  FLOAT,                         intent(in)    :: tol
-  FLOAT,                         intent(out)   :: residue(:)
-  integer,                       intent(out)   :: iter_used(:)
-  logical, optional,             intent(in)    :: occ_response
+  type(linear_solver_t),    target, intent(inout) :: this
+  type(hamiltonian_elec_t), target, intent(in)    :: hm
+  type(poisson_t),          target, intent(in)    :: psolver
+  type(grid_t),             target, intent(in)    :: gr
+  type(states_elec_t),      target, intent(in)    :: st
+  integer,                          intent(in)    :: ik
+  type(batch_t),                    intent(inout) :: xb
+  type(batch_t),                    intent(in)    :: yb
+  R_TYPE,                           intent(in)    :: shift(:)
+  FLOAT,                            intent(in)    :: tol
+  FLOAT,                            intent(out)   :: residue(:)
+  integer,                          intent(out)   :: iter_used(:)
+  logical, optional,                intent(in)    :: occ_response
 
   integer :: ii
 
@@ -152,19 +152,19 @@ end subroutine X(linear_solver_solve_HXeY_batch)
 ! ---------------------------------------------------------
 !> Conjugate gradients
 subroutine X(linear_solver_cg) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
-  type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ist
-  integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: shift
-  FLOAT,                 intent(in)    :: tol
-  FLOAT,                 intent(out)   :: residue
-  integer,               intent(out)   :: iter_used
+  type(linear_solver_t),    intent(inout) :: ls
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ist
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: shift
+  FLOAT,                    intent(in)    :: tol
+  FLOAT,                    intent(out)   :: residue
+  integer,                  intent(out)   :: iter_used
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
@@ -280,20 +280,20 @@ end subroutine X(linear_solver_idrs)
 !> BICONJUGATE GRADIENTS STABILIZED
 !! see http://math.nist.gov/iml++/bicgstab.h.txt
 subroutine X(linear_solver_bicgstab) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
-  type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ist
-  integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: shift
-  FLOAT,                 intent(in)    :: tol
-  FLOAT,                 intent(out)   :: residue
-  integer,               intent(out)   :: iter_used
-  logical,               intent(in)    :: occ_response
+  type(linear_solver_t),    intent(inout) :: ls
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ist
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(inout) :: x(:,:)   !< x(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: y(:,:)   !< y(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: shift
+  FLOAT,                    intent(in)    :: tol
+  FLOAT,                    intent(out)   :: residue
+  integer,                  intent(out)   :: iter_used
+  logical,                  intent(in)    :: occ_response
 
   R_TYPE, allocatable :: r(:,:), Hp(:,:), rs(:,:), Hs(:,:), p(:,:), s(:,:), psi(:, :)
   R_TYPE, pointer :: phat(:,:), shat(:,:)
@@ -423,19 +423,19 @@ end subroutine X(linear_solver_bicgstab)
 
 ! ---------------------------------------------------------
 subroutine X(linear_solver_multigrid) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
-  type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ist
-  integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: shift
-  FLOAT,                 intent(in)    :: tol
-  FLOAT,                 intent(out)   :: residue
-  integer,               intent(out)   :: iter_used
+  type(linear_solver_t),    intent(inout) :: ls
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ist
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(inout) :: x(:,:)   ! x(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: y(:,:)   ! y(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: shift
+  FLOAT,                    intent(in)    :: tol
+  FLOAT,                    intent(out)   :: residue
+  integer,                  intent(out)   :: iter_used
 
   R_TYPE, allocatable :: diag(:,:), hx(:,:), res(:,:), psi(:, :)
   integer :: iter
@@ -446,7 +446,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, psolver, gr, st, ist, ik, x, y, s
   SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( res(1:gr%mesh%np, 1:st%d%dim))
 
-  call X(hamiltonian_diagonal)(hm, gr%der, diag, ik)
+  call X(hamiltonian_elec_diagonal)(hm, gr%der, diag, ik)
   diag(1:gr%mesh%np, 1:st%d%dim) = diag(1:gr%mesh%np, 1:st%d%dim) + shift
 
   do iter = 1, ls%max_iter
@@ -519,15 +519,15 @@ end subroutine X(linear_solver_multigrid)
 ! ---------------------------------------------------------
 !> This routine applies the operator hx = [H (+ Q) + shift] x
 subroutine X(linear_solver_operator) (hm, psolver, gr, st, ist, ik, shift, x, hx)
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ist
-  integer,               intent(in)    :: ik
-  R_TYPE,                intent(inout) :: x(:,:)   !<  x(gr%mesh%np_part, st%d%dim)
-  R_TYPE,                intent(out)   :: Hx(:,:)  !< Hx(gr%mesh%np, st%d%dim)
-  R_TYPE,                intent(in)    :: shift
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ist
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(inout) :: x(:,:)   !<  x(gr%mesh%np_part, st%d%dim)
+  R_TYPE,                   intent(out)   :: Hx(:,:)  !< Hx(gr%mesh%np, st%d%dim)
+  R_TYPE,                   intent(in)    :: shift
 
   integer :: idim, jst
   FLOAT   :: alpha_j
@@ -536,7 +536,7 @@ subroutine X(linear_solver_operator) (hm, psolver, gr, st, ist, ik, shift, x, hx
 
   PUSH_SUB(X(linear_solver_operator))
 
-  call X(hamiltonian_apply)(hm, gr%der, psolver, x, Hx, ist, ik)
+  call X(hamiltonian_elec_apply)(hm, gr%der, psolver, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
   do idim = 1, st%d%dim
@@ -573,14 +573,14 @@ end subroutine X(linear_solver_operator)
 
 ! ---------------------------------------------------------
 subroutine X(linear_solver_operator_batch) (hm, psolver, gr, st, ik, shift, xb, hxb)
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ik
-  R_TYPE,                intent(in)    :: shift(:)
-  type(batch_t),         intent(inout) :: xb   
-  type(batch_t),         intent(inout) :: hxb  
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(in)    :: shift(:)
+  type(batch_t),            intent(inout) :: xb   
+  type(batch_t),            intent(inout) :: hxb  
 
   integer :: ii
   R_TYPE, allocatable :: shift_ist_indexed(:)
@@ -589,7 +589,7 @@ subroutine X(linear_solver_operator_batch) (hm, psolver, gr, st, ik, shift, xb, 
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, psolver, xb, hxb, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, gr%der, psolver, xb, hxb, ik)
     
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     
@@ -709,7 +709,7 @@ end subroutine X(linear_solver_preconditioner)
 
 ! ---------------------------------------------------------
 subroutine X(linear_solver_sos) (hm, psolver, gr, st, ist, ik, x, y, shift, residue, iter_used)
-  type(hamiltonian_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   type(poisson_t),                intent(in)    :: psolver
   type(grid_t),                   intent(in)    :: gr
   type(states_elec_t),            intent(in)    :: st
@@ -770,18 +770,18 @@ end subroutine X(linear_solver_sos)
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
 subroutine X(linear_solver_qmr_dotp)(this, hm, psolver, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
-  type(linear_solver_t), intent(inout) :: this
-  type(hamiltonian_t),   intent(in)    :: hm
-  type(poisson_t),       intent(in)    :: psolver
-  type(grid_t),          intent(in)    :: gr
-  type(states_elec_t),   intent(in)    :: st
-  integer,               intent(in)    :: ik
-  type(batch_t),         intent(inout) :: xb
-  type(batch_t),         intent(in)    :: bb
-  R_TYPE,                intent(in)    :: shift(:)
-  integer,               intent(out)   :: iter_used(:) 
-  FLOAT,                 intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
-  FLOAT,                 intent(in)    :: threshold    !< convergence threshold
+  type(linear_solver_t),    intent(inout) :: this
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: ik
+  type(batch_t),            intent(inout) :: xb
+  type(batch_t),            intent(in)    :: bb
+  R_TYPE,                   intent(in)    :: shift(:)
+  integer,                  intent(out)   :: iter_used(:) 
+  FLOAT,                    intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
+  FLOAT,                    intent(in)    :: threshold    !< convergence threshold
 
   type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   FLOAT               :: oldgamma
