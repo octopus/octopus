@@ -76,6 +76,7 @@ module scf_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
   use XC_F90(lib_m)
+  use xc_oep_oct_m
   
   implicit none
 
@@ -588,7 +589,13 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          call v_ks_calc(ks, namespace, hm, st, geo)
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
+            call v_ks_calc(ks, namespace, hm, st, geo)
+          else
+            if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= XC_OEP_FULL) then
+              call v_ks_calc(ks, namespace, hm, st, geo)
+            end if
+          end if
         end if
       end if
 
@@ -599,6 +606,14 @@ contains
           call messages_warning(1)
         else
           call hamiltonian_update(hm, gr%mesh, namespace)
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+            if (ks%oep%level == XC_OEP_FULL) then
+              do is = 1, st%d%nspin
+                ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
+              end do
+              call v_ks_calc(ks, namespace, hm, st, geo)
+            end if
+          end if
         end if
       end if
 
@@ -1353,10 +1368,16 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-         if (scf%conv_abs_force > M_ZERO) then
-           label = 'force_diff'
-           write(iunit, '(1x,a)', advance = 'no') label
-         end if
+        if (scf%conv_abs_force > M_ZERO) then
+          label = 'force_diff'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (ks%oep%level == XC_OEP_FULL) then
+            label = 'OEP norm2ss'
+            write(iunit, '(1x,a)', advance = 'no') label
+          end if
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1382,6 +1403,10 @@ contains
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%rel_ev)
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
+        end if
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (ks%oep%level == XC_OEP_FULL) &
+            write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
         end if
         write(iunit,'(a)') ''
         call io_close(iunit)

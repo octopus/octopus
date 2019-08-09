@@ -120,7 +120,7 @@ module v_ks_oct_m
     integer,                  public :: xc_flags   !< the XC flags
     integer,                  public :: sic_type   !< what kind of self-interaction correction to apply
     type(xc_t),               public :: xc
-    type(xc_OEP_t)                   :: oep
+    type(xc_OEP_t),           public :: oep
     type(xc_ks_inversion_t),  public :: ks_inversion
     type(poisson_t), pointer, public :: psolver
     logical                          :: new_hartree
