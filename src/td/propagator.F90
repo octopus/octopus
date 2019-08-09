@@ -54,6 +54,8 @@ module propagator_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
   use xc_oct_m
+  use hamiltonian_mxll_oct_m
+  use states_mxll_oct_m
 
   implicit none
 
@@ -67,7 +69,8 @@ module propagator_oct_m
     propagator_set_scf_prop,        &
     propagator_remove_scf_prop,     &
     propagator_ions_are_propagated, &
-    propagator_dt_bo
+    propagator_dt_bo,               &
+    propagator_mxll_init
 
 contains
 
@@ -688,6 +691,290 @@ contains
 
 end module propagator_oct_m
 
+  ! ---------------------------------------------------------
+  subroutine propagator_mxll_init(maxwell_gr, maxwell_st, maxwell_hm, maxwell_tr)
+    type(grid_t),                 intent(in)    :: maxwell_gr
+    type(states_mxll_t),          intent(inout) :: maxwell_st
+    type(hamiltonian_mxll_t),     intent(inout) :: maxwell_hm
+    type(propagator_mxll_t),      intent(inout) :: maxwell_tr
+
+    integer :: default_propagator, il, nlines, ncols, icol, idim
+    type(block_t) :: blk
+    character(len=256) :: string
+    logical :: plane_waves_set = .false.
+
+    PUSH_SUB(propagator_mxll_init)
+
+    !%Variable MaxwellTDPropagator
+    !%Type integer
+    !%Default maxwell_etrs
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% There are several time-evolution methods for the Maxwell propagation
+    !% similar to the methods for the time-evolution of Kohn-Sham orbitals.
+    !%Option maxwell_etrs 1
+    !% Enforced time-reversal-symmetry propagation (etrs)
+    !%End
+    default_propagator = OPTION__MAXWELLTDPROPAGATOR__MAXWELL_ETRS
+    call parse_variable('MaxwellTDPropagator', default_propagator, maxwell_tr%maxwell_tr_method)
+    call messages_print_var_option(stdout, 'MaxwellTDPropagator', maxwell_tr%maxwell_tr_method)
+
+    !%Variable MaxwellBoundaryConditions
+    !%Type block
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Follows
+    !%
+    !% Example:
+    !%
+    !% <tt>%UserDefinedMaxwellIncidentWaves
+    !% <br>&nbsp;&nbsp;   maxwell_zero | maxwell_mirror_pec | maxwell_consant 
+    !% <br>%</tt>
+    !%
+    !% Description follows
+    !%
+    !%Option maxwell_zero 0
+    !% follows ...
+    !%Option maxwell_constant 2
+    !% follows ...
+    !%Option maxwell_mirror_pec 3
+    !% follows ...
+    !%Option maxwell_mirror_pmc 4
+    !% follows ...
+    !%Option maxwell_plane_waves 5
+    !% follows ...
+    !%Option maxwell_periodic 6
+    !% follows ...
+    !%Option maxwell_medium 7
+    !% follows ...
+    !%Option maxwell_lossy_layer 8
+    !% follows ...
+    !%End
+    if(parse_block('MaxwellBoundaryConditions', blk) == 0) then
+
+      call messages_print_stress(stdout, trim('Maxwell boundary conditions:'))
+
+      ! find out how many lines (i.e. states) the block has
+      nlines = parse_block_n(blk)
+      if (nlines /= 1) then
+        message(1) = 'MaxwellBoundaryConditions has to consist of one line!'
+        call messages_fatal(1)
+      end if
+      ncols = parse_block_cols(blk, 0)
+      if (ncols /= 3) then
+        message(1) = 'MaxwellBoundaryConditions has to consist of three columns!'
+        call messages_fatal(1)
+      end if
+      do icol=1, ncols
+        call parse_block_integer(blk, 0, icol-1, maxwell_hm%maxwell_bc%bc_type(icol))
+        if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
+          string = 'Zero'
+          maxwell_tr%maxwell_bc_zero = .true.
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT) then
+          string = 'Constant'
+          maxwell_tr%maxwell_bc_constant = .true.
+          maxwell_tr%maxwell_bc_add_ab_region = .true.
+          maxwell_hm%maxwell_bc_constant = .true.
+          maxwell_hm%maxwell_bc_add_ab_region = .true.
+          SAFE_ALLOCATE(maxwell_st%maxwell_rs_state_const(1:maxwell_st%d%dim))
+          maxwell_st%maxwell_rs_state_const = M_z0
+          call maxwell_td_function_init(maxwell_st, maxwell_gr, maxwell_hm)
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
+          string = 'PEC Mirror'
+          maxwell_tr%maxwell_bc_mirror_pec = .true.
+          maxwell_hm%maxwell_bc_mirror_pec = .true.
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PMC) then
+          string = 'PMC Mirror'
+          maxwell_tr%maxwell_bc_mirror_pmc = .true.
+          maxwell_hm%maxwell_bc_mirror_pmc = .true.
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PERIODIC) then
+          string = 'Periodic'
+          maxwell_tr%maxwell_bc_periodic = .true.
+          maxwell_hm%maxwell_bc_periodic = .true.
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PLANE_WAVES) then
+          string = 'Plane waves'
+          plane_waves_set = .true.
+          maxwell_tr%maxwell_bc_plane_waves = .true.
+          maxwell_tr%maxwell_bc_add_ab_region = .true.
+          maxwell_hm%maxwell_plane_waves = .true.
+          maxwell_hm%maxwell_bc_plane_waves = .true.
+          maxwell_hm%maxwell_bc_add_ab_region = .true.
+          SAFE_ALLOCATE(maxwell_st%maxwell_rs_state_plane_waves(1:maxwell_gr%mesh%np_part, 1:maxwell_st%d%dim))
+        else if (maxwell_hm%maxwell_bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
+          string = 'Medium boundary'
+        end if
+        write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
+        call messages_info(1)
+        if (plane_waves_set .and. .not. (parse_is_defined('UserDefinedMaxwellIncidentWaves')) ) then
+          write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "maxwell_plane_waves".'
+          write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
+          call messages_fatal(2)
+        end if
+      end do
+
+      call messages_print_stress(stdout)
+
+    end if
+
+    !%Variable MaxwellMediumBox
+    !%Type block
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Follows
+    !%
+    !% Example:
+    !%
+    !% <tt>%MaxwellMediumBox
+    !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
+    !% <br>%</tt>
+    !%
+    !% Description about MaxwellMediumBox follows
+    !%
+    !%Option edged 1
+    !% Follows
+    !%Option smooth 2
+    !% Follows
+    !%End
+    if(parse_block('MaxwellMediumBox', blk) == 0) then
+
+      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
+      maxwell_hm%maxwell_medium_box = .true.
+
+      ! find out how many lines (i.e. states) the block has
+      nlines = parse_block_n(blk)
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_center(1:3,1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_size(1:3,1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_ep_factor(1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_mu_factor(1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_sigma_e_factor(1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_sigma_m_factor(1:nlines))
+      SAFE_ALLOCATE(maxwell_hm%maxwell_medium_box_shape(1:nlines))
+      do il=1, nlines
+        ncols = parse_block_cols(blk, il-1)
+        if (ncols /= 11) then
+          message(1) = 'MaxwellMedium has to consist of eleven columns!'
+          call messages_fatal(1)
+        end if
+        do idim=1,3
+          call parse_block_float(blk, il-1, idim-1, maxwell_hm%maxwell_medium_box_center(idim,il))
+          call parse_block_float(blk, il-1, idim+2, maxwell_hm%maxwell_medium_box_size(idim,il))
+        end do
+        call parse_block_float(blk, il-1, 6, maxwell_hm%maxwell_medium_box_ep_factor(il))
+        call parse_block_float(blk, il-1, 7, maxwell_hm%maxwell_medium_box_mu_factor(il))
+        call parse_block_float(blk, il-1, 8, maxwell_hm%maxwell_medium_box_sigma_e_factor(il))
+        call parse_block_float(blk, il-1, 9, maxwell_hm%maxwell_medium_box_sigma_m_factor(il))
+        call parse_block_integer(blk, il-1, 10, maxwell_hm%maxwell_medium_box_shape(il))
+        if (il > 1) then
+          write(message(1),'(a)') ""
+          write(message(2),'(a,I1)')    'Medium box number:  ', il
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', maxwell_hm%maxwell_medium_box_center(1,il), ' | ',&
+                maxwell_hm%maxwell_medium_box_center(2,il), ' | ', maxwell_hm%maxwell_medium_box_center(3,il)
+          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', maxwell_hm%maxwell_medium_box_size(1,il), ' | ', &
+                maxwell_hm%maxwell_medium_box_size(2,il), ' | ', maxwell_hm%maxwell_medium_box_size(3,il)
+          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', maxwell_hm%maxwell_medium_box_ep_factor(il)
+          write(message(6),'(a,es9.2)') 'Box mu factor:      ', maxwell_hm%maxwell_medium_box_mu_factor(il)
+          write(message(7),'(a,es9.2)') 'Box electric sigma: ', maxwell_hm%maxwell_medium_box_sigma_e_factor(il)
+          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', maxwell_hm%maxwell_medium_box_sigma_m_factor(il)
+          if (maxwell_hm%maxwell_medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+            write(message(9),'(a,a)')   'Box shape:          ', 'edged'
+          else if (maxwell_hm%maxwell_medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
+            write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
+          end if
+          call messages_info(9)
+        else
+          write(message(1),'(a,I1)')    'Medium box number:  ', il
+          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', maxwell_hm%maxwell_medium_box_center(1,il), ' | ',&
+                maxwell_hm%maxwell_medium_box_center(2,il), ' | ', maxwell_hm%maxwell_medium_box_center(3,il)
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', maxwell_hm%maxwell_medium_box_size(1,il), ' | ', &
+                maxwell_hm%maxwell_medium_box_size(2,il), ' | ', maxwell_hm%maxwell_medium_box_size(3,il)
+          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', maxwell_hm%maxwell_medium_box_ep_factor(il)
+          write(message(5),'(a,es9.2)') 'Box mu factor:      ', maxwell_hm%maxwell_medium_box_mu_factor(il)
+          write(message(6),'(a,es9.2)') 'Box electric sigma: ', maxwell_hm%maxwell_medium_box_sigma_e_factor(il)
+          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', maxwell_hm%maxwell_medium_box_sigma_m_factor(il)
+          if (maxwell_hm%maxwell_medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
+          else if (maxwell_hm%maxwell_medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
+            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
+          end if
+          call messages_info(8)
+        end if
+      end do
+
+      call maxwell_generate_medium_boxes(maxwell_hm, maxwell_gr, nlines)
+
+      call messages_print_stress(stdout)
+
+    end if
+
+    !%Variable MaxwellTDETRSApprox
+    !%Type integer
+    !%Default no
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% follows
+    !%Option no 0
+    !% follows
+    !%Option no_etrs 1
+    !% follows
+    !%Option const_steps 2
+    !% follows
+    !%Option mxll_test 3
+    !% follows
+    !%End
+    call parse_variable('MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, maxwell_tr%maxwell_tr_etrs_approx)
+    call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', maxwell_tr%maxwell_tr_etrs_approx)
+
+    !%Variable MaxwellTDOperatorMethod
+    !%Type integer
+    !%Default maxwell_op_fd
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% The Maxwell Operator e.g. the curl operation can be obtained by
+    !% two different methods, the finid-difference or the fast fourier
+    !% transform.
+    !%Option maxwell_op_fd 1
+    !% Maxwell operator calculated by finite differnce method
+    !%Option maxwell_op_fft 2
+    !% Maxwell operator calculated by fast fourier transform
+    !%End
+    default_propagator = OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FD
+    call parse_variable('MaxwellTDOperatorMethod', default_propagator, maxwell_tr%maxwell_op_method)
+    call messages_print_var_option(stdout, 'MaxwellTDOperatorMethod', maxwell_tr%maxwell_op_method)
+    maxwell_hm%maxwell_op_method = maxwell_tr%maxwell_op_method
+
+    !%Variable MaxwellTDSCFThreshold
+    !%Type float
+    !%Default 1.0e-6
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Since the Maxwell-KS propagator is non-linear, each propagation step
+    !% should be performed self-consistently.  In practice, for most
+    !% purposes this is not necessary, except perhaps in the first
+    !% iterations. This variable holds the number of propagation steps
+    !% for which the propagation is done self-consistently. 
+    !%
+    !% The self consistency has to be measured against some accuracy 
+    !% threshold. This variable controls the value of that Maxwell threshold.
+    !%End
+    call parse_variable('MaxwellTDSCFThreshold', CNST(1.0e-6), maxwell_tr%maxwell_scf_threshold)
+
+    !%Variable MaxwellPlaneWavesInBox
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% Follows
+    !%End
+    call parse_variable('MaxwellPlaneWavesInBox', .false., maxwell_tr%maxwell_plane_waves_in_box)
+    call maxwell_set_medium_rs_state(maxwell_st, maxwell_gr, maxwell_hm)
+
+    call maxwell_derivatives_boundary_mask(maxwell_hm%maxwell_bc, maxwell_gr%mesh, maxwell_hm)
+
+    maxwell_tr%maxwell_te%maxwell_exp = .true.
+    call exponential_init(maxwell_tr%maxwell_te) ! initialize Maxwell propagator
+
+    POP_SUB(propagator_mxll_init)
+  end subroutine propagator_mxll_init
 
 !! Local Variables:
 !! mode: f90

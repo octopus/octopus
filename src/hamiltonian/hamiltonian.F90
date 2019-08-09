@@ -59,6 +59,7 @@ module hamiltonian_oct_m
   use unit_system_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
+  use maxwell_boundary_op_oct_m
 
   implicit none
 

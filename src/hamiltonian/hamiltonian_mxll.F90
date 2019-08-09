@@ -48,12 +48,17 @@ module hamiltonian_mxll_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use states_oct_m
+  use states_mxll_oct_m
   use states_dim_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
   use xyz_adjust_oct_m
+  use hamiltonian_oct_m
+  use xc_oct_m
+  use namespace_oct_m
+  use nl_operator_oct_m
 
   implicit none
 
@@ -73,8 +78,8 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
     maxwell_fft_hamiltonian,                    &
-    get_Efield_at_points,               &
-    get_Bfield_at_points,               &
+!    get_Efield_at_points,               &
+!    get_Bfield_at_points,               &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field, &
     surface_integral_helmholtz_transverse
@@ -98,9 +103,9 @@ module hamiltonian_mxll_oct_m
     type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
 
-    type(maxwell_bc_t)             :: bc
+    type(bc_mxll_t)                :: bc
     type(grid_t), pointer          :: gr
-    type(states_t), pointer        :: st
+    type(states_mxll_t), pointer   :: st
 
     integer                        :: rs_sign
 
@@ -177,7 +182,7 @@ module hamiltonian_mxll_oct_m
     FLOAT                          :: b_energy_trans
     FLOAT                          :: energy_incident_waves
 
-    logical                        :: cpml_hamiltonian_mxll = .false.
+    logical                        :: cpml_hamiltonian = .false.
 
     logical                        :: diamag_current = .false.
 
@@ -189,10 +194,6 @@ module hamiltonian_mxll_oct_m
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
 
   end type hamiltonian_mxll_t
-
-  integer, public, parameter :: &
-    LENGTH     = 1,             &
-    VELOCITY   = 2
 
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
@@ -211,7 +212,7 @@ contains
  
     hm%adjoint = .false.
     
-    hm%hamiltonian_mxll = .false.
+!    hm%hamiltonian_mxll = .false.
     hm%current_density_ext_flag = .false.
 
     nullify(hm%energy_density)
@@ -224,12 +225,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializing the Maxwell Hamiltonian
-  subroutine hamiltonian_mxll_init(hm, parser, gr, geo, st)
+  subroutine hamiltonian_mxll_init(hm, namespace, gr, geo, st)
     type(hamiltonian_mxll_t),                   intent(inout) :: hm
-    type(parser_t),                             intent(in)    :: parser
+    type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
-    type(states_t),                     target, intent(inout) :: st
+    type(states_mxll_t),                target, intent(inout) :: st
 
     integer :: iline, icol, default
     integer :: ncols
@@ -247,11 +248,11 @@ contains
 
     ASSERT(associated(gr%der%lapl))
 
-    hm%operators(1:MAX_DIM) => gr%der%grad(1:MAX_DIM)     ! cross product for Maxwell calculation needs dimension >= 2
+    hm%operators(1:MAX_DIM) => gr%der%grad(1:MAX_DIM)   ! cross product for Maxwell calculation needs dimension >= 2
 
     hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:maxwell_st%d%dim))
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
     SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
     SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
     SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
@@ -281,11 +282,11 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(parser, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%maxwell_operator)
+    call parse_variable(namespace, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%operator)
 
-    if (hm%maxwell_operator == FARADAY_AMPERE_GAUSS) then
+    if (hm%operator == FARADAY_AMPERE_GAUSS) then
       hm%d%dim = hm%d%dim+1
-    else if (hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       hm%d%dim = 2*hm%d%dim
     end if
 
@@ -296,12 +297,12 @@ contains
     !%Description
     !% Description follows
     !%End
-    call parse_variable(parser, 'MaxwellExternalCurrent', .false., hm%current_density_ext_flag)
+    call parse_variable(namespace, 'MaxwellExternalCurrent', .false., hm%current_density_ext_flag)
 
-    maxwell_hm%maxwell_plane_waves_apply = .false.
-    maxwell_hm%maxwell_spatial_constant_apply = .false.
+    hm%plane_waves_apply = .false.
+    hm%spatial_constant_apply = .false.
 
-    maxwell_hm%maxwell_propagation_apply = .false.
+    hm%propagation_apply = .false.
 
     !%Variable MaxwellMediumCalculation
     !%Type integer
@@ -341,10 +342,10 @@ contains
 
     nullify(hm%operators)
 
-    SAFE_DEALLOCATE_P(this%maxwell_energy_density)
-    SAFE_DEALLOCATE_P(this%cube%fft)
+    SAFE_DEALLOCATE_P(hm%energy_density)
+    SAFE_DEALLOCATE_P(hm%cube%fft)
 
-    call bc_end(hm%bc)
+    call maxwell_bc_end(hm%bc)
 
     call states_dim_end(hm%d) 
 
@@ -468,7 +469,7 @@ subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_
   if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', maxwell_hm%current_time
+        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
         call messages_fatal(2)
       endif
     end if
@@ -493,8 +494,10 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
-  R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  !R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+  !R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  FLOAT,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+  FLOAT,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
@@ -519,16 +522,16 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
    if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', maxwell_hm%current_time
+        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
         call messages_fatal(2)
       endif
     end if
 
-    select case (maxwell_hm%maxwell_op_method)
-      case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FD)
-        call maxwell_hamiltonian_apply_fd(maxwell_hm, maxwell_der, psi, oppsi)
+    select case (hm%op_method)
+      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
+        call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
       case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FFT)
-        call maxwell_hamiltonian_apply_fft(maxwell_hm, maxwell_der, psi, oppsi)
+        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
     end select
 
   call profiling_out(prof_hamiltonian)
@@ -542,25 +545,27 @@ subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time)
   type(hamiltonian_mxll_t), intent(inout) :: hm
   type(xc_t),          intent(in)    :: xc
   type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: st
-  type(states_t),      intent(inout) :: hst
+  type(states_mxll_t), intent(inout) :: st
+  type(states_mxll_t), intent(inout) :: hst
   FLOAT, optional,     intent(in)    :: time
 
   integer :: ik, ib, ist
-  R_TYPE, allocatable :: psi(:, :)
+  !R_TYPE, allocatable :: psi(:, :)
+  FLOAT, allocatable :: psi(:, :)
   
   PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
-  if(present(Imtime)) then
+!  if(present(Imtime)) then
+!    do ik = st%d%kpt%start, st%d%kpt%end
+!      do ib = st%group%block_start, st%group%block_end
+!        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
+!      end do
+!    end do
+  !  else
+  if (present(time)) then 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call X(hamiltonian_mxll_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
-      end do
-    end do
-  else
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call X(hamiltonian_mxll_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time)
+        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time)
       end do
     end do
   end if
@@ -596,7 +601,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%maxwell_operator == FARADAY_AMPERE) then
+    if (hm%operator == FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -649,7 +654,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (maxwell_hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
@@ -708,7 +713,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (maxwell_hm%maxwell_operator == FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -740,7 +745,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%maxwell_operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -825,7 +830,7 @@ end subroutine hamiltonian_mxll_apply_all
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation
   subroutine maxwell_pml_hamiltonian_medium(hm, der, psi, dir1, dir2, tmp)
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_mxll_t), intent(in)    :: hm
     type(derivatives_t), intent(in)    :: der
     CMPLX,               intent(inout) :: psi(:,:)
     integer,             intent(in)    :: dir1
@@ -838,7 +843,7 @@ end subroutine hamiltonian_mxll_apply_all
           hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
         call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
-      else if (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
         call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
@@ -864,7 +869,7 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_calculation_via_riemann_silberstein)
 
-    if (hm%maxwell_cpml_hamiltonian) then
+    if (hm%cpml_hamiltonian) then
 
       rs_sign = hm%rs_sign
 
@@ -1003,7 +1008,7 @@ end subroutine hamiltonian_mxll_apply_all
   !> Maxwell Hamiltonian is updated for the PML calculation directly 
   !> via electric and magnetic field with medium inside the box
    subroutine maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, pml_dir, field_dir, pml)
-    type(hamiltonian__mxllt), intent(in)    :: hm
+    type(hamiltonian_mxll_t), intent(in)    :: hm
     type(derivatives_t),      intent(in)    :: der
     integer,                  intent(in)    :: pml_dir
     CMPLX,                    intent(in)    :: psi(:,:)
@@ -1200,8 +1205,8 @@ end subroutine hamiltonian_mxll_apply_all
       SAFE_ALLOCATE(tmp_curl_b(np_part,3))
       call maxwell_get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, hm%st%ep, np_part)
       call maxwell_get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
-      call dderivatives_curl(maxwell_der, tmp_e, tmp_curl_e, set_bc = .false.)
-      call dderivatives_curl(maxwell_der, tmp_b, tmp_curl_b, set_bc = .false.)
+      call dderivatives_curl(der, tmp_e, tmp_curl_e, set_bc = .false.)
+      call dderivatives_curl(der, tmp_b, tmp_curl_b, set_bc = .false.)
       SAFE_DEALLOCATE_A(tmp_e)
       SAFE_DEALLOCATE_A(tmp_b)
       tmp_curl_e(:,1) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,1)
@@ -1265,9 +1270,9 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_fft_hamiltonian)
 
-    if (hm%maxwell_operator == FARADAY_AMPERE) then
+    if (hm%operator == FARADAY_AMPERE) then
       hm_matrix(:,:) = M_z0
-      if (hm%maxwell_bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
+      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
           ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
@@ -1294,7 +1299,7 @@ end subroutine hamiltonian_mxll_apply_all
         hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
         hm_matrix(3,3)   =   M_z0
       end if
-    else if (hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
@@ -1345,102 +1350,102 @@ end subroutine hamiltonian_mxll_apply_all
     POP_SUB(maxwell_fft_hamiltonian)
   end subroutine maxwell_fft_hamiltonian
 
-  !----------------------------------------------------------
-  subroutine get_Efield_at_points(rs_state, gr, st, points_number, points, e_field_points)
-    CMPLX,               intent(inout) :: rs_state(:,:)
-    type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: st
-    integer,             intent(in)    :: points_number
-    FLOAT,               intent(in)    :: points(:,:)
-    FLOAT,               intent(inout) :: e_field_points(:,:)
+!   !----------------------------------------------------------
+!   subroutine get_Efield_at_points(rs_state, gr, st, points_number, points, e_field_points)
+!     CMPLX,               intent(inout) :: rs_state(:,:)
+!     type(grid_t),        intent(in)    :: gr
+!     type(states_mxll_t), intent(in)    :: st
+!     integer,             intent(in)    :: points_number
+!     FLOAT,               intent(in)    :: points(:,:)
+!     FLOAT,               intent(inout) :: e_field_points(:,:)
 
-    integer              :: ig, ip, idim, rankmin_mx, partmin_mx
-    FLOAT                :: dmin_mx
-    integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
-    CMPLX,   allocatable :: ztmp_global(:)
+!     integer              :: ig, ip, idim, rankmin_mx, partmin_mx
+!     FLOAT                :: dmin_mx
+!     integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
+!     CMPLX,   allocatable :: ztmp_global(:)
 
-    PUSH_SUB(get_Efield_at_points)
+!     PUSH_SUB(get_Efield_at_points)
 
-    ! Fist part: get transverse electric field an evaluation point
-    SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
-    SAFE_ALLOCATE(ip_mx_gr_local(1:points_number))
-    SAFE_ALLOCATE(ip_mx_gr_global(1:points_number))
+!     ! Fist part: get transverse electric field an evaluation point
+!     SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
+!     SAFE_ALLOCATE(ip_mx_gr_local(1:points_number))
+!     SAFE_ALLOCATE(ip_mx_gr_global(1:points_number))
 
-    do ig = 1, points_number
-      ip_mx_gr_local(ig)  = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
-      partmin_mx          = rankmin_mx + 1
-      ip_mx_gr_global(ig) = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
-    end do
+!     do ig = 1, points_number
+!       ip_mx_gr_local(ig)  = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
+!       partmin_mx          = rankmin_mx + 1
+!       ip_mx_gr_global(ig) = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
+!     end do
 
-    do ig=1, points_number
-      do idim=1, st%d%dim
-        if (gr%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-          call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
-#endif
-        else
-          ztmp_global = rs_state(:,idim)
-        end if
-        e_field_points(idim,ig) = sqrt(CNST(8.0)*M_PI) * real( ztmp_global(ip_mx_gr_global(ig)) )
-      end do
-    end do
+!     do ig=1, points_number
+!       do idim=1, st%d%dim
+!         if (gr%mesh%parallel_in_domains) then
+! #ifdef HAVE_MPI
+!           call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
+! #endif
+!         else
+!           ztmp_global = rs_state(:,idim)
+!         end if
+!         e_field_points(idim,ig) = sqrt(CNST(8.0)*M_PI) * real( ztmp_global(ip_mx_gr_global(ig)) )
+!       end do
+!     end do
 
-    SAFE_DEALLOCATE_A(ztmp_global)
-    SAFE_DEALLOCATE_A(ip_mx_gr_local)
-    SAFE_DEALLOCATE_A(ip_mx_gr_global)
+!     SAFE_DEALLOCATE_A(ztmp_global)
+!     SAFE_DEALLOCATE_A(ip_mx_gr_local)
+!     SAFE_DEALLOCATE_A(ip_mx_gr_global)
 
-    POP_SUB(get_Efield_at_points)
+!     POP_SUB(get_Efield_at_points)
 
-  end subroutine get_Efield_at_points
+!   end subroutine get_Efield_at_points
 
 
-  !----------------------------------------------------------
-  subroutine get_Bfield_at_points(rs_state, gr, st, points_number, points, b_field_points)
-    CMPLX,               intent(inout) :: rs_state(:,:)
-    type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: st
-    integer,             intent(in)    :: points_number
-    FLOAT,               intent(in)    :: points(:,:)
-    FLOAT,               intent(inout) :: b_field_points(:,:)
+!   !----------------------------------------------------------
+!   subroutine get_Bfield_at_points(rs_state, gr, st, points_number, points, b_field_points)
+!     CMPLX,               intent(inout) :: rs_state(:,:)
+!     type(grid_t),        intent(in)    :: gr
+!     type(states_mxll_t), intent(in)    :: st
+!     integer,             intent(in)    :: points_number
+!     FLOAT,               intent(in)    :: points(:,:)
+!     FLOAT,               intent(inout) :: b_field_points(:,:)
 
-    integer :: ig, ip, idim, rankmin_mx, partmin_mx
-    FLOAT   :: dmin_mx
-    integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
-    CMPLX,   allocatable :: ztmp_global(:)
+!     integer :: ig, ip, idim, rankmin_mx, partmin_mx
+!     FLOAT   :: dmin_mx
+!     integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
+!     CMPLX,   allocatable :: ztmp_global(:)
 
-    PUSH_SUB(get_Bfield_at_points)
+!     PUSH_SUB(get_Bfield_at_points)
 
-    ! Fist part: get transverse electric field an evaluation point
-    SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
-    SAFE_ALLOCATE(ip_mx_gr_local(points_number))
-    SAFE_ALLOCATE(ip_mx_gr_global(points_number))
+!     ! Fist part: get transverse electric field an evaluation point
+!     SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
+!     SAFE_ALLOCATE(ip_mx_gr_local(points_number))
+!     SAFE_ALLOCATE(ip_mx_gr_global(points_number))
 
-    do ig = 1, points_number
-      ip_mx_gr_local(ig)    = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
-      partmin_mx            = rankmin_mx + 1
-      ip_mx_gr_global(ig)   = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
-    end do
+!     do ig = 1, points_number
+!       ip_mx_gr_local(ig)    = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
+!       partmin_mx            = rankmin_mx + 1
+!       ip_mx_gr_global(ig)   = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
+!     end do
 
-    do ig = 1, points_number
-      do idim = 1, st%d%dim
-        if (gr%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-          call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
-#endif
-        else
-          ztmp_global = rs_state(:,idim)
-        end if
-        b_field_points(idim,ig) = sqrt(CNST(8.0)*M_PI)/P_c * real( ztmp_global(ip_mx_gr_global(ig)) )
-      end do
-    end do
+!     do ig = 1, points_number
+!       do idim = 1, st%d%dim
+!         if (gr%mesh%parallel_in_domains) then
+! #ifdef HAVE_MPI
+!           call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
+! #endif
+!         else
+!           ztmp_global = rs_state(:,idim)
+!         end if
+!         b_field_points(idim,ig) = sqrt(CNST(8.0)*M_PI)/P_c * real( ztmp_global(ip_mx_gr_global(ig)) )
+!       end do
+!     end do
 
-    SAFE_DEALLOCATE_A(ztmp_global)
-    SAFE_DEALLOCATE_A(ip_mx_gr_local)
-    SAFE_DEALLOCATE_A(ip_mx_gr_global)
+!     SAFE_DEALLOCATE_A(ztmp_global)
+!     SAFE_DEALLOCATE_A(ip_mx_gr_local)
+!     SAFE_DEALLOCATE_A(ip_mx_gr_global)
 
-    POP_SUB(get_Bfield_at_points)
+!     POP_SUB(get_Bfield_at_points)
 
-  end subroutine get_Bfield_at_points
+!   end subroutine get_Bfield_at_points
 
 
   !----------------------------------------------------------
@@ -1449,8 +1454,8 @@ end subroutine hamiltonian_mxll_apply_all
     type(poisson_t),          intent(in)    :: poisson
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm_mxll
-    type(hamiltonian_elec_t), intent(in)    :: hm_elec
-    type(states_t),           intent(in)    :: st
+    type(hamiltonian_t),      intent(in)    :: hm_elec
+    type(states_mxll_t),      intent(in)    :: st
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 
     integer            :: idim, rankmin, ip_local, ip_global, ii, jj, kk, ip, ip_in
@@ -1541,21 +1546,21 @@ end subroutine hamiltonian_mxll_apply_all
   !> Surface integral of the Helmholtz decomposition to calculate the transverse field
   !> (maybe should be a general math function)
   subroutine surface_integral_helmholtz_transverse(gr, st, pos, field, surface_integral)
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: st
-    FLOAT,             intent(in)    :: pos(:) 
-    CMPLX,             intent(in)    :: field(:,:)
-    CMPLX,             intent(inout) :: surface_integral(:)
+    type(grid_t),        intent(in)    :: gr
+    type(states_mxll_t), intent(in)    :: st
+    FLOAT,               intent(in)    :: pos(:) 
+    CMPLX,               intent(in)    :: field(:,:)
+    CMPLX,               intent(inout) :: surface_integral(:)
 
     integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: xx(3)
     CMPLX               :: tmp_sum(3), normal(3)
     CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)
 
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:maxwell_st%d%dim))
+    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:st%d%dim))
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, maxwell_st%d%dim
+      do idim=1, st%d%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
         call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)
@@ -1565,9 +1570,9 @@ end subroutine hamiltonian_mxll_apply_all
       tmp_global(:,:) = field(:,:)
     end if
 
-    ix_max = st%maxwell_surface_grid_rows_number(1)
-    iy_max = st%maxwell_surface_grid_rows_number(2)
-    iz_max = st%maxwell_surface_grid_rows_number(3)
+    ix_max = st%surface_grid_rows_number(1)
+    iy_max = st%surface_grid_rows_number(2)
+    iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
     SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
@@ -1577,88 +1582,88 @@ end subroutine hamiltonian_mxll_apply_all
 
     do iy=1, iy_max
       do iz=1, iz_max
-        do ip_surf=1, st%maxwell_surface_grid_points_number(1,iy,iz)
+        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
           normal    =  M_z0
           normal(1) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(1,1,iy,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(1,1,iy,iz,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(1) = +M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(2,1,iy,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(2,1,iy,iz,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
         end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%maxwell_surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%maxwell_surface_grid_points_number(1,iy,iz))
+        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
       end do
     end do
     do iy=1, iy_max
       do iz=1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,1,iy,iz,:) * st%maxwell_surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,1,iy,iz,:) * st%maxwell_surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,1,iy,iz,:) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,1,iy,iz,:) * st%surface_grid_element(:)
       end do
     end do
 
     do ix=1, ix_max
       do iz=1, iz_max
-        do ip_surf=1, st%maxwell_surface_grid_points_number(2,ix,iz)
+        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
           normal    =  M_z0
           normal(2) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(1,2,ix,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(1,2,ix,iz,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(2) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(2,2,ix,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(2,2,ix,iz,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%maxwell_surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%maxwell_surface_grid_points_number(2,ix,iz))
+        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
       end do
     end do
     do ix=1, ix_max
       do iz=1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,2,ix,iz,:) * st%maxwell_surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,2,ix,iz,:) * st%maxwell_surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,2,ix,iz,:) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,2,ix,iz,:) * st%surface_grid_element(:)
       end do
     end do
 
     do ix=1, ix_max
       do iy=1, iy_max
-        do ip_surf=1, st%maxwell_surface_grid_points_number(3,ix,iy)
+        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
           normal    =  M_z0
           normal(3) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(1,3,ix,iy,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(1,3,ix,iy,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(3) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%maxwell_surface_grid_points_map(2,3,ix,iy,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:) &
                 * gr%mesh%spacing(:)
           tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-             + zcross_product(normal(:),tmp_global(st%maxwell_surface_grid_points_map(2,3,ix,iy,ip_surf),:)) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%maxwell_surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%maxwell_surface_grid_points_number(3,ix,iy))
+        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
       end do
     end do
     do ix=1, ix_max
       do iy=1, iy_max
-        tmp_sum(:) = tmp_sum(:) - tmp_surf(1,3,ix,iy,:) * st%maxwell_surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,3,ix,iy,:) * st%maxwell_surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) - tmp_surf(1,3,ix,iy,:) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,3,ix,iy,:) * st%surface_grid_element(:)
       end do
     end do
 

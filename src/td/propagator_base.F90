@@ -27,7 +27,8 @@ module propagator_base_oct_m
 
   private
   public ::                            &
-    propagator_t
+     propagator_t,                     &
+     propagator_mxll_t
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -56,6 +57,25 @@ module propagator_base_oct_m
     integer             :: tdsk_size
     FLOAT               :: scf_threshold
   end type propagator_t
+
+  type propagator_mxll_t
+    integer             :: maxwell_tr_method
+    integer             :: maxwell_op_method
+    logical             :: maxwell_bc_add_ab_region  = .false.
+    logical             :: maxwell_bc_zero           = .false.
+    logical             :: maxwell_bc_constant       = .false.
+    logical             :: maxwell_bc_mirror_pec     = .false.
+    logical             :: maxwell_bc_mirror_pmc     = .false.
+    logical             :: maxwell_bc_periodic       = .false.
+    logical             :: maxwell_bc_plane_waves    = .false.
+    logical             :: maxwell_bc_medium         = .false.
+    type(exponential_t) :: maxwell_te
+    FLOAT               :: maxwell_scf_threshold
+    integer             :: maxwell_inter_steps
+    FLOAT               :: maxwell_delay_time
+    logical             :: maxwell_plane_waves_in_box
+    integer             :: maxwell_tr_etrs_approx
+  end type propagator_mxll_t
 
 end module propagator_base_oct_m
 

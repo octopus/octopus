@@ -36,6 +36,7 @@ module maxwell_function_oct_m
   use splines_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use namespace_oct_m
 
   implicit none
 
@@ -92,11 +93,11 @@ contains
 
   !------------------------------------------------------------
   !> This function initializes "f" from the MXFunctions block.
-  subroutine mxf_read(f, parser, function_name, ierr)
-    type(mxf_t),      intent(inout) :: f
-    type(parser_t),   intent(in)    :: parser
-    character(len=*), intent(in)    :: function_name
-    integer,          intent(out)   :: ierr  !< Error code, 0 on success.
+  subroutine mxf_read(f, namespace, function_name, ierr)
+    type(mxf_t),       intent(inout) :: f
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: function_name
+    integer,           intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
     integer :: nrows, ncols, i, function_type, idim, oam, sam
@@ -179,7 +180,7 @@ contains
     !% that defines the field.
     !%End
     ierr = -3
-    if(parse_block(parser, 'MaxwellFunctions', blk) /= 0) then
+    if(parse_block(namespace, 'MaxwellFunctions', blk) /= 0) then
       ierr = -1
       POP_SUB(mxf_read)
       return
