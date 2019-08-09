@@ -131,8 +131,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
           call X(xc_oep_solve)(gr, hm, psolver, st, is, vxc(:,is), oep)
           vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
         end if
-        if (is == nspin_) &
-          first = .false.
+        if (is == nspin_) first = .false.
       end if
     end do spin2
   end if
@@ -194,7 +193,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
       ! evaluate right-hand side
       vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
-      !vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
 
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
@@ -238,7 +236,6 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
         psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
         vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
-        !vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
@@ -271,6 +268,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
   SAFE_DEALLOCATE_A(ss)
   SAFE_DEALLOCATE_A(vxc_old)
   SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(psi2)
 
   POP_SUB(X(xc_oep_solve))
   call profiling_out(C_PROFILING_XC_OEP_FULL)
