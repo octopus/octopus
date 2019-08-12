@@ -99,7 +99,7 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_elec_epot_generate(sys%hm, default_namespace, gr, sys%geo, st, sys%psolver, time=M_ZERO)
+  call hamiltonian_elec_epot_generate(sys%hm, default_namespace, gr, sys%geo, st, time=M_ZERO)
   call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
 
   call states_elec_allocate_wfns(st, gr%mesh)
@@ -223,7 +223,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(sys%hm, sys%ks%xc, gr%der, sys%psolver, st, hm_st)
+      call zhamiltonian_elec_apply_all(sys%hm, sys%ks%xc, gr%der, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

@@ -233,11 +233,10 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, der, hm, psolver, zpsi, ist, ik, deltat, order, vmagnus, imag_time)
+  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time)
     type(exponential_t),      intent(inout) :: te
     type(derivatives_t),      intent(in)    :: der
     type(hamiltonian_elec_t), intent(in)    :: hm
-    type(poisson_t),          intent(in)    :: psolver
     integer,                  intent(in)    :: ist
     integer,                  intent(in)    :: ik
     CMPLX,                    intent(inout) :: zpsi(:, :)
@@ -321,9 +320,9 @@ contains
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
-        call zmagnus(hm, der, psolver, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
+        call zmagnus(hm, der, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
-        call zhamiltonian_elec_apply(hm, der, psolver, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -591,11 +590,10 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psolver, psib, ik, deltat, psib2, deltat2)
+  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, psib2, deltat2)
     type(exponential_t),             intent(inout) :: te
     type(derivatives_t),             intent(inout) :: der
     type(hamiltonian_elec_t),        intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
     integer,                         intent(in)    :: ik
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
@@ -664,7 +662,7 @@ contains
         else
           psi => psib%states(ii)%zpsi
         end if
-        call exponential_apply(te, der, hm, psolver, psi, ist, ik, deltat)
+        call exponential_apply(te, der, hm, psi, ist, ik, deltat)
         if (batch_status(psib) /= BATCH_NOT_PACKED) then
           call batch_set_state(psib, ii, der%mesh%np, psi)
         end if
@@ -676,7 +674,7 @@ contains
           else
             psi2 => psib2%states(ii)%zpsi
           end if
-          call exponential_apply(te, der, hm, psolver, psi2, ist, ik, deltat2)
+          call exponential_apply(te, der, hm, psi2, ist, ik, deltat2)
           if (batch_status(psib2) /= BATCH_NOT_PACKED) then
             call batch_set_state(psib2, ii, der%mesh%np, psi2)
           end if
@@ -732,9 +730,9 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_elec_apply_batch(hm, der, psolver, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_elec_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
         else
-          call zhamiltonian_elec_apply_batch(hm, der, psolver, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_elec_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
         end if
         
         if(zfact_is_real) then
@@ -810,7 +808,7 @@ contains
       do iter = 1, te%exp_order
 
         !to apply the Hamiltonian
-        call zhamiltonian_elec_apply_batch(hm, der, psolver, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply_batch(hm, der, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
 
         if(hm%is_hermitian()) then
           l = max(1, iter - 1)
@@ -883,11 +881,10 @@ contains
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
   !! Hamiltonian hm.
-  subroutine exponential_apply_all(te, der, hm, psolver, xc, st, deltat, order)
+  subroutine exponential_apply_all(te, der, hm, xc, st, deltat, order)
     type(exponential_t),      intent(inout) :: te
     type(derivatives_t),      intent(inout) :: der
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(xc_t),               intent(in)    :: xc
     type(states_elec_t),      intent(inout) :: st
     FLOAT,                    intent(in)    :: deltat
@@ -910,9 +907,9 @@ contains
       zfact = zfact * deltat / i
       
       if (i == 1) then
-        call zhamiltonian_elec_apply_all(hm, xc, der, psolver, st, hst1)
+        call zhamiltonian_elec_apply_all(hm, xc, der, st, hst1)
       else
-        call zhamiltonian_elec_apply_all(hm, xc, der, psolver, st1, hst1)
+        call zhamiltonian_elec_apply_all(hm, xc, der, st1, hst1)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -948,9 +945,9 @@ contains
         zfact = zfact * deltat / (i+1)
       
         if (i == 1) then
-          call zhamiltonian_elec_apply_all(hm, xc, der, psolver, hm%inh_st, hst1)
+          call zhamiltonian_elec_apply_all(hm, xc, der, hm%inh_st, hst1)
         else
-          call zhamiltonian_elec_apply_all(hm, xc, der, psolver, st1, hst1)
+          call zhamiltonian_elec_apply_all(hm, xc, der, st1, hst1)
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end

@@ -72,6 +72,7 @@ module v_ks_oct_m
   public ::             &
     v_ks_t,             &
     v_ks_init,          &
+    v_ks_init_hartree_solver,  &
     v_ks_end,           &
     v_ks_write_info,    &
     v_ks_calc,          &
@@ -138,14 +139,13 @@ module v_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, namespace, gr, psolver, st, geo, mc)
+  subroutine v_ks_init(ks, namespace, gr, st, geo, mc)
     type(v_ks_t),            intent(inout) :: ks
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
-    type(poisson_t), target, intent(in)    :: psolver
     type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(inout) :: geo
-    type(multicomm_t),       intent(in)    :: mc  
+    type(multicomm_t),       intent(in)    :: mc
 
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
@@ -375,7 +375,7 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, psolver)
+        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc)
       end if
 
     end select
@@ -388,16 +388,6 @@ contains
     ks%frozen_hxc = .false.
 
     call v_ks_write_info(ks, stdout)
-
-    ks%new_hartree = .false.
-    nullify(ks%hartree_solver)
-    if (gr%have_fine_mesh) then
-      ks%new_hartree = .true.
-      SAFE_ALLOCATE(ks%hartree_solver)
-      call poisson_init(ks%hartree_solver, namespace, gr%fine%der, mc, label = " (fine mesh)")
-    else
-        ks%hartree_solver => psolver
-    end if
 
     ks%gr => gr
     ks%calc%calculating = .false.
@@ -574,6 +564,28 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
+  subroutine v_ks_init_hartree_solver(ks, namespace, psolver, mc)
+    type(v_ks_t),            intent(inout) :: ks
+    type(namespace_t),       intent(in)    :: namespace
+    type(poisson_t), target, intent(in)    :: psolver
+    type(multicomm_t),       intent(in)    :: mc  
+
+    PUSH_SUB(v_ks_init_hartree_solver)
+
+    ks%new_hartree = .false.
+    nullify(ks%hartree_solver)
+    if (ks%gr%have_fine_mesh) then
+      ks%new_hartree = .true.
+      SAFE_ALLOCATE(ks%hartree_solver)
+      call poisson_init(ks%hartree_solver, namespace, ks%gr%fine%der, mc, label = " (fine mesh)")
+    else
+        ks%hartree_solver => psolver
+    end if
+
+    POP_SUB(v_ks_init_hartree_solver)
+  end subroutine v_ks_init_hartree_solver
+
+  ! ---------------------------------------------------------
   subroutine v_ks_end(ks)
     type(v_ks_t),     intent(inout) :: ks
 
@@ -672,7 +684,7 @@ contains
     call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
-      call energy_calc_eigenvalues(hm, ks%gr%der, ks%hartree_solver, st)
+      call energy_calc_eigenvalues(hm, ks%gr%der, st)
     end if
 
     POP_SUB(v_ks_calc)
@@ -737,8 +749,8 @@ contains
     if(ks%frozen_hxc) then      
       if(ks%calculate_current .and. calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, ks%hartree_solver, st%current, st%current_kpt)
-      end if      
+        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+      end if
 
       POP_SUB(v_ks_calc_start)
       return
@@ -772,7 +784,7 @@ contains
 
     if(ks%calculate_current .and. calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, ks%hartree_solver, st%current, st%current_kpt)
+      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
     nullify(ks%calc%hf_st) 
@@ -800,7 +812,7 @@ contains
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      call magnetic_induced(ks%gr%der, st, ks%hartree_solver, ks%calc%a_ind, ks%calc%b_ind)
+      call magnetic_induced(ks%gr%der, st, hm%psolver, ks%calc%a_ind, ks%calc%b_ind)
     end if
    
     call profiling_out(prof)
@@ -979,7 +991,7 @@ contains
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, namespace, ks%gr, hm, ks%hartree_solver, st, vxc = ks%calc%vxc, &
+          call xc_ks_inversion_calc(ks%ks_inversion, namespace, ks%gr, hm, st, vxc = ks%calc%vxc, &
             time = ks%calc%time)
         end if
       end if
@@ -1052,9 +1064,9 @@ contains
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         if(states_are_real(st)) then
-          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, ks%hartree_solver, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
         else
-          ctmp = zenergy_calc_electronic(hm, ks%gr%der, ks%hartree_solver, st, terms = TERM_DFT_U)
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
           ks%calc%energy%int_dft_u   = real(ctmp)
         end if
 
@@ -1267,7 +1279,7 @@ contains
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
-          potx = M_ZERO    
+          potx = M_ZERO
           kick = M_ZERO
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)

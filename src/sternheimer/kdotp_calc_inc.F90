@@ -64,7 +64,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
-        call X(pert_apply)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, pertpsi(:, :, idir1))
+        call X(pert_apply)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -97,7 +97,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           call pert_setup_dir(perturbation, idir1, idir2)
-          call X(pert_apply_order_2)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, &
+          call X(pert_apply_order_2)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, &
             pertpsi2(1:mesh%np, 1:sys%hm%d%dim))
           eff_mass_inv(idir1, idir2, ist, ik) = &
             eff_mass_inv(idir1, idir2, ist, ik) - R_REAL(X(mf_dotp)(mesh, sys%hm%d%dim, psi, pertpsi2))
@@ -159,7 +159,7 @@ subroutine X(kdotp_add_occ)(sys, pert, kdotp_lr, degen_thres)
 
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
       
-      call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi1, pertpsi)
+      call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi1, pertpsi)
       
       do ist2 = ist + 1, sys%st%nst
 
@@ -218,7 +218,7 @@ subroutine X(kdotp_add_diagonal)(sys, em_pert, kdotp_lr)
 
         call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
-        call X(pert_apply)(em_pert, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, ppsi)
+        call X(pert_apply)(em_pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, ppsi)
         
         expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, ppsi)
         

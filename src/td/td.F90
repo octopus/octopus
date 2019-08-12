@@ -386,7 +386,7 @@ contains
         call lda_u_end(sys%hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-        call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%psolver)
+        call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%hm%psolver)
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
@@ -397,7 +397,7 @@ contains
     end if
 
     if(sys%hm%scdm_EXX) then
-      call scdm_init(st, sys%namespace, gr%der, sys%psolver%cube, sys%hm%scdm, operate_on_scdm = .true.)
+      call scdm_init(st, sys%namespace, gr%der, sys%hm%psolver%cube, sys%hm%scdm, operate_on_scdm = .true.)
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
@@ -423,7 +423,7 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, gr, geo, st, sys%psolver, time = td%iter*td%dt)
+        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, gr, geo, st, time = td%iter*td%dt)
       end if
 
       call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
@@ -483,9 +483,9 @@ contains
       if(iter > 1) then
         if( ((iter-1)*td%dt <= sys%hm%ep%kick%time) .and. (iter*td%dt > sys%hm%ep%kick%time) ) then
           if( .not.sys%hm%pcm%localf ) then
-            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%psolver)
+            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%psolver, pcm = sys%hm%pcm)
+            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
           end if
           call td_write_kick(gr%mesh, sys%hm%ep%kick, sys%outp, geo, iter)
         end if
@@ -497,11 +497,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, sys%psolver, gr, st, td%tr, iter*td%dt, td%dt, &
+        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
           td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, sys%psolver, geo, sys%mc, sys%outp, iter, td%dt, &
+        call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
           td%ions, scsteps)
       end select
 
@@ -512,7 +512,7 @@ contains
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, sys%hm)
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, &
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, &
         sys%ks, iter)
 
       ! write down data
@@ -564,7 +564,7 @@ contains
         if (st%modelmbparticles%nparticle > 0) then
           call modelmb_sym_all_states (gr, st)
         end if
-        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -772,7 +772,7 @@ contains
       call hamiltonian_elec_span(sys%hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
       call states_elec_fermi(st, gr%mesh)
-      call energy_calc_total(sys%hm, sys%psolver, gr, st)
+      call energy_calc_total(sys%hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
       !%Type logical
@@ -829,22 +829,22 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, sys%ks, 0)
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, sys%ks, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       if(abs(sys%hm%ep%kick%time)  <=  M_EPSILON) then
         if( .not.sys%hm%pcm%localf ) then
-          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%psolver)
+          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
         else
-          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%psolver, pcm = sys%hm%pcm)
+          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
         end if
         call td_write_kick(gr%mesh, sys%hm%ep%kick, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler)
-        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, 0)
+        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
       end if
 
       POP_SUB(td_run.td_run_zero_iter)

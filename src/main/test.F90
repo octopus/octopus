@@ -215,7 +215,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys, namespace)
-    call poisson_test(sys%psolver, sys%gr%mesh, namespace, param%repetitions)
+    call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     call system_end(sys)
 
     POP_SUB(test_hartree)
@@ -246,7 +246,7 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
   
    
     !Initialize external potential
@@ -407,7 +407,7 @@ contains
     !Initialize external potential
     call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
-    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%psolver)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
 
@@ -423,10 +423,10 @@ contains
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%psolver, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%psolver, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       end if
     end do

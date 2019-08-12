@@ -49,9 +49,8 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, psolver, namespace, xc, gr, st, tr, time, dt, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, namespace, xc, gr, st, tr, time, dt, ions, geo)
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(namespace_t),        intent(in)    :: namespace
     type(xc_t),               intent(in)    :: xc
     type(grid_t),             intent(inout) :: gr
@@ -79,12 +78,12 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time-dt/M_TWO)
 
-    call exponential_apply_all(tr%te, gr%der, hm, psolver, xc, st, dt)
+    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt)
 
     call density_calc(st, gr, st%rho)
 

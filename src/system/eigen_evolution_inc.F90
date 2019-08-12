@@ -17,11 +17,10 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, diff, tau)
   type(grid_t),             target, intent(in)    :: gr
   type(states_elec_t),              intent(inout) :: st
   type(hamiltonian_elec_t), target, intent(in)    :: hm
-  type(poisson_t),                  intent(in)    :: psolver
   type(exponential_t),              intent(inout) :: te
   FLOAT,                            intent(in)    :: tol
   integer,                          intent(inout) :: niter
@@ -74,7 +73,7 @@ subroutine X(eigensolver_evolution)(gr, st, hm, psolver, te, tol, niter, converg
     do ist = conv + 1, st%nst
       call states_elec_get_state(st, gr%mesh, ist, ik, psi)
       !TODO: convert these opperations to batched versions 
-      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, psi, hpsi, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psi, hpsi, ist, ik)
       st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
       diff(ist) = X(states_elec_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 
@@ -119,7 +118,7 @@ contains
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr%der, hm, psolver, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
+    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
 #if defined(R_TREAL)
     psi(1:gr%mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_DEALLOCATE_P(zpsi)

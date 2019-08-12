@@ -18,12 +18,11 @@
 
 ! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(this, der, st, hm, psolver, ik, eigenval, diff)
+subroutine X(subspace_diag)(this, der, st, hm, ik, eigenval, diff)
   type(subspace_t),            intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
-  type(poisson_t),             intent(in)    :: psolver
   integer,                     intent(in)    :: ik
   FLOAT,                       intent(out)   :: eigenval(:)
   FLOAT, optional,             intent(out)   :: diff(:)
@@ -44,7 +43,7 @@ subroutine X(subspace_diag)(this, der, st, hm, psolver, ik, eigenval, diff)
       call states_elec_get_state(st, der%mesh, ist, ik, psi(:, :, ist))
     end do
 
-    call X(subspace_diag_scalapack)(der, st, hm, psolver, ik, eigenval, psi, diff)
+    call X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
     do ist = st%st_start, st%st_end
       call states_elec_set_state(st, der%mesh, ist, ik, psi(:, :, ist))
@@ -53,7 +52,7 @@ subroutine X(subspace_diag)(this, der, st, hm, psolver, ik, eigenval, diff)
     SAFE_DEALLOCATE_A(psi)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
-    call X(subspace_diag_standard)(der, st, hm, psolver, ik, eigenval, diff)
+    call X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing
@@ -73,11 +72,10 @@ end subroutine X(subspace_diag)
 
 ! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_standard)(der, st, hm, psolver, ik, eigenval, diff)
+subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   type(derivatives_t),         intent(in)    :: der
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
-  type(poisson_t),             intent(in)    :: psolver
   integer,                     intent(in)    :: ik
   FLOAT,                       intent(out)   :: eigenval(:)
   FLOAT, optional,             intent(out)   :: diff(:)
@@ -91,7 +89,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, psolver, ik, eigenval, diff)
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
   
-  call X(subspace_diag_hamiltonian)(der, st, hm, psolver, ik, hmss)
+  call X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   
   ! Diagonalize the Hamiltonian in the subspace.
   ! only half of hmss has the matrix, but this is what Lapack needs
@@ -125,7 +123,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, psolver, ik, eigenval, diff)
       
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
@@ -154,11 +152,10 @@ end subroutine X(subspace_diag_standard)
 !> This routine diagonalises the Hamiltonian in the subspace defined by
 !! the states; this version is aware of parallelization in states but
 !! consumes more memory.
-subroutine X(subspace_diag_scalapack)(der, st, hm, psolver, ik, eigenval, psi, diff)
+subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   type(derivatives_t),      intent(in)    :: der
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   integer,                  intent(in)    :: ik
   FLOAT,                    intent(out)   :: eigenval(:)
   R_TYPE,                   intent(inout) :: psi(:, :, st%st_start:)
@@ -222,7 +219,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, psolver, ik, eigenval, psi, d
     call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
     call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
     
-    call X(hamiltonian_elec_apply_batch)(hm, der, psolver, psib, hpsib, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, der, psib, hpsib, ik)
     
     call batch_end(psib)
     call batch_end(hpsib)
@@ -371,7 +368,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, psolver, ik, eigenval, psi, d
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_elec_apply)(hm, der, psolver, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_elec_apply)(hm, der, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if
@@ -387,11 +384,10 @@ end subroutine X(subspace_diag_scalapack)
 ! ------------------------------------------------------
 
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_hamiltonian)(der, st, hm, psolver, ik, hmss)
+subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   type(derivatives_t),         intent(in)    :: der
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
-  type(poisson_t),             intent(in)    :: psolver
   integer,                     intent(in)    :: ik
   R_TYPE,                      intent(out)   :: hmss(:, :)
 
@@ -408,7 +404,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, psolver, ik, hmss)
   
   do ib = st%group%block_start, st%group%block_end
     call batch_copy(st%group%psib(ib, ik), hpsib(ib))
-    call X(hamiltonian_elec_apply_batch)(hm, der, psolver, st%group%psib(ib, ik), hpsib(ib), ik)
+    call X(hamiltonian_elec_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
   if(st%are_packed() .and. accel_is_enabled()) then

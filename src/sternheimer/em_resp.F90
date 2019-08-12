@@ -983,12 +983,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, namespace, gr, hm, psolver, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_elec_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(geometry_t),         intent(inout) :: geo
     type(output_t),           intent(in)    :: outp
     type(em_resp_t),          intent(inout) :: em_vars
@@ -1478,9 +1477,9 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, psolver, st, &
+            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
             psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, psolver, st, &
+            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
             em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 

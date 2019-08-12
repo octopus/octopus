@@ -44,9 +44,8 @@ contains
   
   ! ---------------------------------------------------------
   !> Exponential midpoint
-  subroutine exponential_midpoint(hm, psolver, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(namespace_t),                intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
@@ -74,14 +73,14 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
             time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, M_HALF*dt, time, save_gf = .true.)
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
 
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt)
 
     !restore to time 'time - dt'
     call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo, move_ions = move_ions)

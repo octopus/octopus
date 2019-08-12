@@ -261,13 +261,12 @@ contains
   end subroutine current_batch_accumulate
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, der, hm, geo, st, psolver, current, current_kpt)
+  subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_elec_t),  intent(inout) :: st
-    type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
@@ -317,14 +316,14 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, der, psolver, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)

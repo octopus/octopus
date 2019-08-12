@@ -60,11 +60,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_etrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -88,7 +87,7 @@ contains
       SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt, dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt, dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -98,14 +97,14 @@ contains
 
     else
 
-      call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
+      call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt)
 
     end if
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
@@ -117,7 +116,7 @@ contains
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
     
     ! propagate dt/2 with H(time - dt)
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_DEALLOCATE_A(vhxc_t1)
@@ -129,11 +128,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
+  subroutine td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -166,7 +164,7 @@ contains
     call messages_info()
 
     !Propagate the states to t+dt/2 and compute the density at t+dt
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt, dt)
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -178,7 +176,7 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                 time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
@@ -204,7 +202,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
-      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
@@ -260,10 +258,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -277,13 +274,13 @@ contains
     PUSH_SUB(td_aetrs)
 
     ! propagate half of the time step with H(time - dt)
-    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
 
     !Get the potentials from the interpolator
     call propagation_ops_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
@@ -293,18 +290,17 @@ contains
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     !Do the time propagation for the second half of the time step
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
 
     POP_SUB(td_aetrs)
   end subroutine td_aetrs
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_caetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_caetrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -342,7 +338,7 @@ contains
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
-    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
 
     call v_ks_calc_finish(ks, hm, namespace)
 
@@ -383,7 +379,7 @@ contains
     call propagation_ops_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
-    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
@@ -429,7 +425,7 @@ contains
         end select
         call profiling_out(phase_prof)
 
-        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
  
       end do

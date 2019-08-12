@@ -232,7 +232,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, namespace, nd, lab, ions_inside, inside, center, gr, st, & 
-                              hm, psolver, ks, geo, kick, iter, l_start, ldoverwrite)
+                              hm, ks, geo, kick, iter, l_start, ldoverwrite)
     type(local_write_t),      intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
     integer,                  intent(in)    :: nd 
@@ -243,7 +243,6 @@ contains
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(v_ks_t),             intent(inout) :: ks
     type(geometry_t),         intent(inout) :: geo
     type(kick_t),             intent(inout) :: kick
@@ -272,11 +271,11 @@ contains
     if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
       call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), namespace, writ%out(LOCAL_OUT_POTENTIAL,:), & 
                                nd, lab, inside, &
-                               gr, geo, st, hm, psolver, ks, iter, writ%how)
+                               gr, geo, st, hm, ks, iter, writ%how)
     
     if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
       call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), namespace, nd, lab, inside, &
-                               gr, geo, st, hm, psolver, ks, iter, l_start, ldoverwrite)
+                               gr, geo, st, hm, ks, iter, l_start, ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
           call write_iter_flush(writ%out(LOCAL_OUT_ENERGY, id)%handle)
@@ -290,7 +289,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_density(out_dens, namespace, out_pot, nd, lab, inside, & 
-                                gr, geo, st, hm, psolver, ks, iter, how)
+                                gr, geo, st, hm, ks, iter, how)
     type(local_write_prop_t), intent(inout) :: out_dens(:)
     type(namespace_t),        intent(in)    :: namespace
     type(local_write_prop_t), intent(inout) :: out_pot(:)
@@ -301,7 +300,6 @@ contains
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(v_ks_t),             intent(inout) :: ks
     integer,                  intent(in) :: iter
     integer(8),               intent(in) :: how
@@ -334,7 +332,7 @@ contains
         if (out_pot(id)%write) then
         !Computes Hartree potential just for n[r], r belongs to id domain.
           tmp_vh = M_ZERO
-          call dpoisson_solve(psolver, tmp_vh, tmp_rho)
+          call dpoisson_solve(hm%psolver, tmp_vh, tmp_rho)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
           call dio_function_output(how, trim(folder), trim(out_name), namespace, &
@@ -357,7 +355,7 @@ contains
     if (any(out_pot(:)%write)) then
       do is = 1, st%d%nspin
       !Computes Hartree potential
-        call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+        call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
         call dio_function_output(how, trim(folder), trim(out_name), namespace, &
@@ -379,7 +377,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_energy(out_energy, namespace, nd, lab, inside, & 
-                                gr, geo, st, hm, psolver, ks, iter, l_start, start)
+                                gr, geo, st, hm, ks, iter, l_start, start)
     type(local_write_prop_t), intent(inout) :: out_energy(:)
     type(namespace_t),        intent(in)    :: namespace
     integer,                  intent(in)    :: nd 
@@ -389,7 +387,6 @@ contains
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     type(v_ks_t),             intent(inout) :: ks
     integer,                  intent(in) :: iter
     integer,                  intent(in) :: l_start
@@ -455,7 +452,7 @@ contains
     ! TODO: Make new files for each nspin value. 
     do is = 1, st%d%nspin
       !Compute Hartree potential
-      call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+      call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
       !Compute XC potential
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
  ! 

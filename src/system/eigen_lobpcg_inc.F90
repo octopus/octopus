@@ -22,11 +22,10 @@
 ! ---------------------------------------------------------
 !> Driver for the LOBPCG eigensolver that performs a per-block,
 !! per-k-point iteration.
-subroutine X(eigensolver_lobpcg)(gr, st, hm, psolver, pre, tol, niter, converged, ik, diff, block_size)
+subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   type(preconditioner_t),   intent(in)    :: pre
   FLOAT,                    intent(in)    :: tol
   integer,                  intent(inout) :: niter
@@ -86,13 +85,13 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, psolver, pre, tol, niter, converged
         call states_elec_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
       end do
     
-      call X(lobpcg)(gr, st, hm, psolver, psi_start, psi_end, psi, constr_start, constr_end, &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
         ik, pre, tol, n_matvec, conv, diff, constr = psi_constr)
 
       SAFE_DEALLOCATE_A(psi_constr)
       
     else
-      call X(lobpcg)(gr, st, hm, psolver, psi_start, psi_end, psi, &
+      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
     end if
 
@@ -138,12 +137,11 @@ end subroutine X(eigensolver_lobpcg)
 !!
 !! There is also a wiki page at
 !! http://octopus-code.org/wiki/Developers:LOBPCG
-subroutine X(lobpcg)(gr, st, hm, psolver, st_start, st_end, psi, constr_start, constr_end,  &
+subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, constr)
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   integer,                  intent(in)    :: st_start
   integer,                  intent(in)    :: st_end
   R_TYPE, target,           intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
@@ -312,7 +310,7 @@ subroutine X(lobpcg)(gr, st, hm, psolver, st_start, st_end, psi, constr_start, c
   call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
-  call X(hamiltonian_elec_apply_batch)(hm, gr%der, psolver, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, gr%der, psib, hpsib, ik)
   
   call batch_end(psib)
   call batch_end(hpsib)
@@ -369,7 +367,7 @@ subroutine X(lobpcg)(gr, st, hm, psolver, st_start, st_end, psi, constr_start, c
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, gr, hm, psolver, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, gr, hm, res(:, :, ist), tmp(:, :, ist))
       call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, ist), res(:, :, ist))
     end do
 
@@ -405,7 +403,7 @@ subroutine X(lobpcg)(gr, st, hm, psolver, st_start, st_end, psi, constr_start, c
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_elec_apply_batch)(hm, gr%der, psolver, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, gr%der, psib, hpsib, ik)
     end if
 
     niter = niter + lnuc
