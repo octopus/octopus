@@ -38,14 +38,13 @@ module basis_set_abst_oct_m
     private
     logical :: time_dependent   !< flag for time-dependent basis sets
   contains
-    private
-    procedure(init),       public, deferred        :: init
-    procedure(end),        public, deferred        :: end
-    procedure(write_info), public, deferred        :: write_info
-    procedure(dump),       public, deferred        :: dump
-    procedure(load),       public, deferred        :: load
-    procedure,             public, non_overridable :: is_time_dependent
-    procedure,             public, non_overridable :: set_time_dependent
+    procedure(init),       deferred        :: init
+    procedure(end),        deferred        :: end
+    procedure(write_info), deferred        :: write_info
+    procedure(dump),       deferred        :: dump
+    procedure(load),       deferred        :: load
+    procedure,             non_overridable :: is_time_dependent
+    procedure,             non_overridable :: set_time_dependent
   end type basis_set_abst_t
 
   abstract interface
