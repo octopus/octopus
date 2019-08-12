@@ -49,7 +49,6 @@ module stress_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
-  use v_ks_oct_m
 
   implicit none
 
@@ -75,12 +74,11 @@ contains
 
   ! ---------------------------------------------------------
   !> This computes the total stress on the lattice
-  subroutine stress_calculate(gr, hm, st, geo, ks )
+  subroutine stress_calculate(gr, hm, st, geo)
     type(grid_t),         intent(inout) :: gr !< grid
     type(hamiltonian_elec_t),  intent(inout) :: hm
     type(states_elec_t),  intent(inout) :: st
     type(geometry_t),     intent(inout) :: geo !< geometry
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
     FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
@@ -90,7 +88,7 @@ contains
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(stress_calculate)
 
-    SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(rho(1:gr%fine%mesh%np, 1:st%d%nspin))
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
       write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
@@ -101,20 +99,20 @@ contains
     stress(:,:) = M_ZERO
 
     call calculate_density()
-    call fourier_space_init(ks%hartree_solver)
-    call density_rs2fs(ks%hartree_solver)
+    call fourier_space_init(hm%psolver_fine)
+    call density_rs2fs(hm%psolver_fine)
     
     ! Stress from kinetic energy of electrons    
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
 
     ! Stress from Hartree energy
-    call stress_from_Hartree(st, hm, ks, stress, stress_Hartree)
+    call stress_from_Hartree(st, hm, stress, stress_Hartree)
 
     ! Stress from exchange-correlation energy
     call stress_from_xc(gr%der, hm, stress, stress_xc)
 
     ! Stress from pseudopotentials
-    call stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
+    call stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     
     ! Stress from Ewald summation
     call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
@@ -148,22 +146,22 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      call states_elec_total_density(st, ks%gr%fine%mesh, rho)
+      call states_elec_total_density(st, gr%fine%mesh, rho)
 
       nullify(rho_total)
 
       if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
          total_density_alloc = .true.
          
-         SAFE_ALLOCATE(rho_total(1:ks%gr%fine%mesh%np))
+         SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
          
-         forall(ip = 1:ks%gr%fine%mesh%np)
+         forall(ip = 1:gr%fine%mesh%np)
             rho_total(ip) = sum(rho(ip, 1:hm%d%spin_channels))
          end forall
          
          ! remove non-local core corrections
          if(associated(st%rho_core)) then
-            forall(ip = 1:ks%gr%fine%mesh%np)
+            forall(ip = 1:gr%fine%mesh%np)
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
             end forall
          end if
@@ -399,10 +397,9 @@ contains
   end subroutine stress_from_kinetic_energy_electron
   
 ! -------------------------------------------------------
-  subroutine stress_from_Hartree(st, hm, ks, stress, stress_Hartree)
+  subroutine stress_from_Hartree(st, hm, stress, stress_Hartree)
     type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     FLOAT,                intent(inout) :: stress(:, :)
     FLOAT,                intent(out)   :: stress_Hartree(3, 3) ! temporal
     FLOAT                               :: stress_l(3, 3)
@@ -411,7 +408,7 @@ contains
     FLOAT :: ss
     type(profile_t), save :: prof
 
-    cube => ks%hartree_solver%cube
+    cube => hm%psolver_fine%cube
     
     call profiling_in(prof, "STRESS_FROM_HARTREE")    
     PUSH_SUB(stress_from_Hartree)
@@ -490,12 +487,11 @@ contains
     POP_SUB(stress_from_xc)
   end subroutine stress_from_xc
   ! -------------------------------------------------------
-  subroutine stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
+  subroutine stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
     type(grid_t),      target,        intent(in) :: gr !< grid
     type(hamiltonian_elec_t),  intent(inout)    :: hm
     type(states_elec_t),    intent(inout) :: st
     type(geometry_t),          intent(in) :: geo !< geometry
-    type(v_ks_t),              intent(in) :: ks !< Kohn-Sham
     type(cube_t),    pointer             :: cube
     type(derivatives_t),  pointer :: der
     FLOAT,                         intent(inout) :: stress(:, :)
@@ -517,7 +513,7 @@ contains
 
     stress_l = M_ZERO
     
-    cube => ks%hartree_solver%cube
+    cube => hm%psolver_fine%cube
     der => gr%der
 
 

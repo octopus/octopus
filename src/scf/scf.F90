@@ -1024,7 +1024,7 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
+    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo) 
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(hm, gr%der, st)

@@ -84,7 +84,7 @@ contains
     end do
     
     ! calculate the Hartree potential
-    call dpoisson_solve(sys%ks%hartree_solver, sys%hm%vhartree, rho)
+    call dpoisson_solve(sys%hm%psolver, sys%hm%vhartree, rho)
 
     do ii = 1, nspin
       sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)

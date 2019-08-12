@@ -209,11 +209,11 @@ contains
         end if
 
         if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-          call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+          call poisson_async_init(sys%hm%psolver, sys%mc)
           ! slave nodes do not call the calculation routine
           if(multicomm_is_slave(sys%mc))then
             !for the moment we only have one type of slave
-            call poisson_slave_work(sys%ks%hartree_solver)
+            call poisson_slave_work(sys%hm%psolver)
           end if
         end if
 
@@ -298,7 +298,7 @@ contains
           call profiling_out(calc_mode_prof)
         end if
 
-        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
 
       class default
         message(1) = "Unknow system type."

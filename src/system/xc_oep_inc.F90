@@ -25,14 +25,13 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, hartree_solver, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
   type(xc_t),               intent(in)    :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: hartree_solver
   type(states_elec_t),      intent(inout) :: st
   FLOAT,                    intent(inout) :: ex, ec
   FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
@@ -83,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, hartree_sol
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, hartree_solver, namespace, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
     end if
     ! calculate uxc_bar for the occupied states
 

@@ -18,10 +18,10 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, gr, hartree_solver, namespace, st, is, oep, ex, ec)
+subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
   type(xc_t),          intent(in)    :: xcs
   type(grid_t),        intent(in)    :: gr
-  type(poisson_t),     intent(in)    :: hartree_solver
+  type(poisson_t),     intent(in)    :: psolver
   type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
   integer,             intent(in)    :: is
@@ -61,7 +61,7 @@ subroutine X(oep_sic) (xcs, gr, hartree_solver, namespace, st, is, oep, ex, ec)
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(gr%fine%der, xcs, st, hartree_solver, namespace, rho, SPIN_POLARIZED, &
+      call xc_get_vxc(gr%fine%der, xcs, st, psolver, namespace, rho, SPIN_POLARIZED, &
         edummy, edummy, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
@@ -71,7 +71,7 @@ subroutine X(oep_sic) (xcs, gr, hartree_solver, namespace, st, is, oep, ex, ec)
 
       ! calculate the Hartree contribution using Poisson equation
       vxc(1:gr%mesh%np, 1) = M_ZERO
-      call dpoisson_solve(hartree_solver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
+      call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &

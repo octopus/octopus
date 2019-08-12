@@ -121,7 +121,8 @@ module hamiltonian_elec_oct_m
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
-    type(poisson_t) :: psolver !< Poisson solver
+    type(poisson_t), pointer :: psolver      !< Poisson solver
+    type(poisson_t), pointer :: psolver_fine !< Poisson solver on the fine grid
     
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
@@ -289,12 +290,21 @@ contains
 
     end if
 
-
     hm%geo => geo
 
-    !Initialize Poisson solver
+    !Initialize Poisson solvers
+    nullify(hm%psolver)
+    SAFE_ALLOCATE(hm%psolver)
     call poisson_init(hm%psolver, namespace, gr%der, mc)
 
+    nullify(hm%psolver_fine)
+    if (gr%have_fine_mesh) then
+      SAFE_ALLOCATE(hm%psolver_fine)
+      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, label = " (fine mesh)")
+    else
+      hm%psolver_fine => hm%psolver
+    end if
+  
     !Initialize external potential
     call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc_family)
 
@@ -437,8 +447,11 @@ contains
 
     kick_present = epot_have_kick(hm%ep)
 
-    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
-    if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
+    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+    if (hm%pcm%run_pcm) then
+      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
+      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh")
+    end if
     
     !%Variable SCDM_EXX
     !%Type logical
@@ -572,8 +585,15 @@ contains
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
+    if (associated(hm%psolver_fine, hm%psolver)) then
+      nullify(hm%psolver_fine)
+    else
+      call poisson_end(hm%psolver_fine)
+      SAFE_DEALLOCATE_P(hm%psolver_fine)
+    end if
     call poisson_end(hm%psolver)
-    
+    SAFE_DEALLOCATE_P(hm%psolver)
+
     call epot_end(hm%ep)
     nullify(hm%geo)
 

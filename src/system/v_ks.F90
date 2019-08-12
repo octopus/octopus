@@ -72,7 +72,6 @@ module v_ks_oct_m
   public ::             &
     v_ks_t,             &
     v_ks_init,          &
-    v_ks_init_hartree_solver,  &
     v_ks_end,           &
     v_ks_write_info,    &
     v_ks_calc,          &
@@ -123,8 +122,6 @@ module v_ks_oct_m
     type(xc_t),               public :: xc
     type(xc_OEP_t),           public :: oep
     type(xc_ks_inversion_t),  public :: ks_inversion
-    type(poisson_t), pointer, public :: hartree_solver
-    logical                          :: new_hartree
     type(grid_t), pointer,    public :: gr
     type(v_ks_calc_t)                :: calc
     logical                          :: calculate_current
@@ -372,7 +369,11 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh")
+
+        call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+      end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, mc)
@@ -564,28 +565,6 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init_hartree_solver(ks, namespace, psolver, mc)
-    type(v_ks_t),            intent(inout) :: ks
-    type(namespace_t),       intent(in)    :: namespace
-    type(poisson_t), target, intent(in)    :: psolver
-    type(multicomm_t),       intent(in)    :: mc  
-
-    PUSH_SUB(v_ks_init_hartree_solver)
-
-    ks%new_hartree = .false.
-    nullify(ks%hartree_solver)
-    if (ks%gr%have_fine_mesh) then
-      ks%new_hartree = .true.
-      SAFE_ALLOCATE(ks%hartree_solver)
-      call poisson_init(ks%hartree_solver, namespace, ks%gr%fine%der, mc, label = " (fine mesh)")
-    else
-        ks%hartree_solver => psolver
-    end if
-
-    POP_SUB(v_ks_init_hartree_solver)
-  end subroutine v_ks_init_hartree_solver
-
-  ! ---------------------------------------------------------
   subroutine v_ks_end(ks)
     type(v_ks_t),     intent(inout) :: ks
 
@@ -610,11 +589,6 @@ contains
     case(HARTREE_FOCK)      
       call xc_end(ks%xc)
     end select
-
-    if(ks%new_hartree) then
-      call poisson_end(ks%hartree_solver)
-      SAFE_DEALLOCATE_P(ks%hartree_solver)
-    end if
 
     POP_SUB(v_ks_end)
   end subroutine v_ks_end
@@ -773,8 +747,8 @@ contains
 
       call calculate_density()
 
-      if(poisson_is_async(ks%hartree_solver)) then
-        call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
+      if(poisson_is_async(hm%psolver_fine)) then
+        call dpoisson_solve_start(hm%psolver_fine, ks%calc%total_density)
       end if
 
       if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(hm)
@@ -900,7 +874,7 @@ contains
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%hartree_solver, namespace, rho, st%d%ispin, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, &
             -minval(st%eigenval(st%nst,:)), qsp(ispin), vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
@@ -911,7 +885,7 @@ contains
       end select
 
       rho(:, 1) = ks%calc%total_density / st%qtot
-      call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
+      call dpoisson_solve(hm%psolver_fine, vh_sic, rho(:,1))
       forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
 
       SAFE_DEALLOCATE_P(vxc_sic)
@@ -955,20 +929,20 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%hartree_solver, namespace, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%hartree_solver, namespace, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%hartree_solver, namespace, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, ks%hartree_solver, namespace, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc)
         end if
       end if
@@ -982,10 +956,10 @@ contains
         if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, ks%hartree_solver, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           else
             call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, ks%hartree_solver, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
         end if
 
@@ -1243,8 +1217,6 @@ contains
 
     PUSH_SUB(v_ks_hartree)
 
-    ASSERT(associated(ks%hartree_solver))
-
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
     else
@@ -1252,22 +1224,24 @@ contains
       pot = M_ZERO
     end if
 
-    if(.not. poisson_is_async(ks%hartree_solver)) then
+    if(.not. poisson_is_async(hm%psolver_fine)) then
       ! solve the Poisson equation
-      call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
+      call dpoisson_solve(hm%psolver_fine, pot, ks%calc%total_density)
     else
       ! The calculation was started by v_ks_calc_start.
-      call dpoisson_solve_finish(ks%hartree_solver, pot)
+      call dpoisson_solve_finish(hm%psolver_fine, pot)
     end if
 
 
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
+      ! Currently this PCM section seems to be inconsistent when one has a fine mesh
 
       !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-      if (hm%pcm%solute) &
-        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, ks%hartree_solver, v_h = pot, time_present = ks%calc%time_present)
-
+      if (hm%pcm%solute) then
+        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_h = pot, time_present = ks%calc%time_present)
+      end if
+        
       !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
       !! For the laser, the latter is only valid in the long-wavelength limit.
       !! Static potentials are included in subroutine hamiltonian_elec_epot_generate (module hamiltonian).
@@ -1291,7 +1265,7 @@ contains
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, ks%hartree_solver, v_ext = potx, kick = -kick_real, &
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, kick = -kick_real, &
             time_present = ks%calc%time_present, kick_time = kick_time )
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
@@ -1302,7 +1276,7 @@ contains
           do ii = 1, hm%ep%no_lasers        
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, ks%hartree_solver, v_ext = potx, time_present = ks%calc%time_present)
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
         else if ( .not.laser_present .and. kick_present ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
@@ -1315,7 +1289,7 @@ contains
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, ks%hartree_solver, kick = -kick_real, &
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, kick = -kick_real, &
             time_present = ks%calc%time_present, kick_time = kick_time)
           SAFE_DEALLOCATE_A(kick)
           SAFE_DEALLOCATE_A(kick_real)

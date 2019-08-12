@@ -117,8 +117,6 @@ contains
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
       sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin), sys%mc)
-
-    call v_ks_init_hartree_solver(sys%ks, sys%namespace, sys%hm%psolver, sys%mc)
     
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
   
