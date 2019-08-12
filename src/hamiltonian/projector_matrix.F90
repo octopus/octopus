@@ -79,8 +79,10 @@ contains
     SAFE_ALLOCATE(this%map(1:npoints))
     if(this%is_cmplx) then
       SAFE_ALLOCATE(this%zprojectors(1:npoints, 1:nprojs))
+      nullify(this%dprojectors)
     else
       SAFE_ALLOCATE(this%dprojectors(1:npoints, 1:nprojs))
+      nullify(this%zprojectors)
     end if
     SAFE_ALLOCATE(this%scal(1:nprojs))
     SAFE_ALLOCATE(this%position(1:3, 1:npoints))
