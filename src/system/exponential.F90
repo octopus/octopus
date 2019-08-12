@@ -65,7 +65,6 @@ module exponential_oct_m
     FLOAT           :: lanczos_tol !< tolerance for the Lanczos method
     integer, public :: exp_order   !< order to which the propagator is expanded
     integer         :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
-    integer         :: tmp_nst, tmp_nst_linear
   end type exponential_t
 
 contains
@@ -188,9 +187,6 @@ contains
       call parse_variable(namespace, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
                               te%arnoldi_gs)
     end if
-
-    te%tmp_nst = -1
-    te%tmp_nst_linear = -1
 
     POP_SUB(exponential_init)
   end subroutine exponential_init
