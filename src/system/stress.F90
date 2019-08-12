@@ -101,8 +101,8 @@ contains
     stress(:,:) = M_ZERO
 
     call calculate_density()
-    call fourier_space_init(ks%psolver)
-    call density_rs2fs(ks%psolver)
+    call fourier_space_init(ks%hartree_solver)
+    call density_rs2fs(ks%hartree_solver)
     
     ! Stress from kinetic energy of electrons    
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
@@ -411,7 +411,7 @@ contains
     FLOAT :: ss
     type(profile_t), save :: prof
 
-    cube => ks%psolver%cube
+    cube => ks%hartree_solver%cube
     
     call profiling_in(prof, "STRESS_FROM_HARTREE")    
     PUSH_SUB(stress_from_Hartree)
@@ -517,7 +517,7 @@ contains
 
     stress_l = M_ZERO
     
-    cube => ks%psolver%cube
+    cube => ks%hartree_solver%cube
     der => gr%der
 
 
