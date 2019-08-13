@@ -54,7 +54,6 @@ module xc_oct_m
     xc_get_fxc,         &
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
-    family_is_gga,      &
     family_is_mgga,     &
     family_is_mgga_with_exc   
 
