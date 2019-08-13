@@ -67,7 +67,7 @@ contains
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
       (.not. oct_exchange_enabled(hm%oct_exchange)) ) then
       !TODO: This does not support complex scaling
-      if(hm%family_is_mgga_with_exc) then
+      if (family_is_mgga_with_exc(hm%xc)) then
         call potential_interpolation_interpolate(tr%vksold, 2, time, dt, time-dt/M_TWO, &
                   hm%vhxc, vtau = hm%vtau)
       else

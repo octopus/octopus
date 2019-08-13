@@ -31,6 +31,7 @@ module propagator_expmid_oct_m
   use propagator_base_oct_m
   use states_elec_oct_m
   use propagation_ops_elec_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -62,7 +63,7 @@ contains
     ASSERT(hm%ep%gfield%with_gauge_field .eqv. .false.)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      if(hm%family_is_mgga_with_exc) then
+      if(family_is_mgga_with_exc(hm%xc)) then
         call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc, vtau = hm%vtau)
       else

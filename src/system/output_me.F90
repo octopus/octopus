@@ -49,6 +49,7 @@ module output_me_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -285,7 +286,7 @@ contains
 
       if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
-      if(hm%family_is_mgga_with_exc) &
+      if (family_is_mgga_with_exc(hm%xc)) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')

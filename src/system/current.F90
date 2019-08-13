@@ -47,6 +47,7 @@ module current_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -373,7 +374,7 @@ contains
 
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
-      if(this%method == CURRENT_GRADIENT_CORR .and. .not. hm%family_is_mgga_with_exc &
+      if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
         .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
 
         ! we can use the packed version
@@ -450,7 +451,7 @@ contains
             if(this%method == CURRENT_GRADIENT_CORR) then
               !A nonlocal contribution from the MGGA potential must be included
               !This must be done first, as this is like a position-dependent mass 
-              if(hm%family_is_mgga_with_exc) then
+              if (family_is_mgga_with_exc(hm%xc)) then
                 do idim = 1, st%d%dim
                   do idir = 1, der%mesh%sb%dim
                     !$omp parallel do
@@ -610,7 +611,7 @@ contains
     
     !A nonlocal contribution from the MGGA potential must be included
     !This must be done first, as this is like a position-dependent mass 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       do idim = 1, hm%d%dim
         do idir = 1, der%mesh%sb%dim
           !$omp parallel do

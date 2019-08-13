@@ -841,7 +841,7 @@ contains
       
       PUSH_SUB(add_adsic)
       
-      if(family_is_mgga(hm%xc_family)) then
+      if (family_is_mgga(hm%xc%family)) then
         call messages_not_implemented('ADSIC with MGGAs')
       end if
       if (st%d%ispin == SPINORS) then
@@ -921,14 +921,14 @@ contains
       ks%calc%vxc = M_ZERO
 
       nullify(ks%calc%vtau)
-      if(hm%family_is_mgga_with_exc) then
+      if (family_is_mgga_with_exc(hm%xc)) then
         SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
         ks%calc%vtau = M_ZERO
       end if
 
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
-        if(hm%family_is_mgga_with_exc) then
+        if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
@@ -938,7 +938,7 @@ contains
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
-        if(hm%family_is_mgga_with_exc) then
+        if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
         else
@@ -1114,7 +1114,7 @@ contains
           hm%vxc => ks%calc%vxc
         end if
 
-        if(hm%family_is_mgga_with_exc) then
+        if (family_is_mgga_with_exc(hm%xc)) then
           do ispin = 1, hm%d%nspin
             call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
           end do

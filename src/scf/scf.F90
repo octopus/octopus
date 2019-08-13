@@ -334,7 +334,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. bitand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc%family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')

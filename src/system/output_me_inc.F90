@@ -335,7 +335,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         !A nonlocal contribution from the MGGA potential must be included
         !This must be done first, as this is like a position-dependent mass 
-        if(hm%family_is_mgga_with_exc) then
+        if (family_is_mgga_with_exc(hm%xc)) then
           do idim = 1, st%d%dim
             !$omp parallel do
             do ip = 1, gr%mesh%np

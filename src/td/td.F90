@@ -303,7 +303,7 @@ contains
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%family_is_mgga_with_exc)
+      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), family_is_mgga_with_exc(sys%ks%xc))
     
     if(sys%hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
@@ -1143,7 +1143,7 @@ contains
     end if
 
     SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np,1:st%d%nspin))
-    if(family_is_mgga(hm%xc_family)) then
+    if(family_is_mgga(hm%xc%family)) then
       SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np,1:st%d%nspin))
       SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np,1:gr%sb%dim,1:st%d%nspin))
       SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np,1:st%d%nspin))

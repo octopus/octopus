@@ -38,6 +38,7 @@ module propagator_cn_oct_m
   use sparskit_oct_m
   use states_elec_oct_m
   use propagation_ops_elec_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -110,7 +111,7 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_interpolate(tr%vksold, 3, &
         time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
     else 

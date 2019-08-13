@@ -130,8 +130,7 @@ module hamiltonian_elec_oct_m
     FLOAT, pointer :: b_ind(:, :)
 
     integer :: theory_level    !< copied from sys%ks
-    integer :: xc_family       !< copied from sys%ks
-    logical :: family_is_mgga_with_exc !< obtained from sys%ks
+    type(xc_t), pointer :: xc  !< pointer to xc object
 
     type(epot_t) :: ep         !< handles the external potential
     type(pcm_t)  :: pcm        !< handles pcm variables
@@ -197,15 +196,14 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc, mc)
+  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
-    integer,                                    intent(in)    :: xc_family
-    logical,                                    intent(in)    :: family_is_mgga_with_exc
+    type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
 
     integer :: iline, icol
@@ -223,8 +221,6 @@ contains
     
     ! make a couple of local copies
     hm%theory_level = theory_level
-    hm%xc_family    = xc_family
-    hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_elec_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
@@ -267,7 +263,11 @@ contains
     call energy_nullify(hm%energy)
 
     call oct_exchange_nullify(hm%oct_exchange)
-    
+
+    !Keep pointers to geometry and xc
+    hm%geo => geo
+    hm%xc => xc
+
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -283,14 +283,12 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(hm%family_is_mgga_with_exc) then
+      if (family_is_mgga_with_exc(hm%xc)) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
 
     end if
-
-    hm%geo => geo
 
     !Initialize Poisson solvers
     nullify(hm%psolver)
@@ -306,7 +304,7 @@ contains
     end if
   
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
@@ -581,7 +579,7 @@ contains
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
     
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
 
@@ -593,6 +591,8 @@ contains
     end if
     call poisson_end(hm%psolver)
     SAFE_DEALLOCATE_P(hm%psolver)
+
+    nullify(hm%xc)
 
     call epot_end(hm%ep)
     nullify(hm%geo)
@@ -1166,7 +1166,7 @@ contains
     if (err /= 0) ierr = ierr + 4
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
-    if (hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       lines(1) = '#     #spin    #nspin    filename'
       lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
@@ -1247,7 +1247,7 @@ contains
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
     err2 = 0
-    if (hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'

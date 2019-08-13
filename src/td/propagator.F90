@@ -472,7 +472,7 @@ contains
 
     PUSH_SUB(propagator_run_zero_iter)
 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
               hm%vhxc, vtau = hm%vtau)   
     else
@@ -515,7 +515,7 @@ contains
 
     update_energy_ = optional_default(update_energy, .true.)
 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc, vtau = hm%vtau)
     else

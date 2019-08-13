@@ -36,6 +36,7 @@ module propagation_ops_elec_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use propagation_ops_abst_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -310,7 +311,7 @@ contains
 
     PUSH_SUB(propagation_ops_elec_interpolate_get)
 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
     else
       call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc)

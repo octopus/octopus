@@ -44,6 +44,7 @@ module propagator_etrs_oct_m
   use types_oct_m
   use v_ks_oct_m
   use propagation_ops_elec_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -322,7 +323,7 @@ contains
     PUSH_SUB(td_caetrs)
 
     SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-    if(hm%family_is_mgga_with_exc) then 
+    if (family_is_mgga_with_exc(hm%xc)) then 
       SAFE_ALLOCATE(vtauold(1:gr%mesh%np, 1:st%d%nspin))
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
       call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold, vtauold)
@@ -341,7 +342,7 @@ contains
 
     call v_ks_calc_finish(ks, hm, namespace)
 
-    if(hm%family_is_mgga_with_exc) then 
+    if (family_is_mgga_with_exc(hm%xc)) then 
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
@@ -363,7 +364,7 @@ contains
 
     ! copy vold to a cl buffer
     if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
-      if(hm%family_is_mgga_with_exc) then
+      if(family_is_mgga_with_exc(hm%xc)) then
         call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
       end if
       pnp = accel_padded_size(gr%mesh%np)

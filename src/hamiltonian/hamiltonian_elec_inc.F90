@@ -162,7 +162,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, der, psib, hpsib, ik, terms, set
     
   end if
 
-  if (bitand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
+  if (bitand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc)) then
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 
