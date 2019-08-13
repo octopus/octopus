@@ -60,7 +60,6 @@ module propagator_rk_oct_m
   type(grid_t),             pointer,     private :: grid_p
   type(hamiltonian_elec_t), pointer,     private :: hm_p
   type(states_elec_t),      pointer,     private :: st_p
-  type(xc_t),               pointer,     private :: xc_p
   type(propagator_t),       pointer,     private :: tr_p
   type(namespace_t),        pointer,     private :: namespace_p
   integer,                               private :: dim_op
@@ -366,7 +365,7 @@ contains
         call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
-      call zhamiltonian_elec_apply_all(hm, ks%xc, gr%der, stphi, hst)
+      call zhamiltonian_elec_apply_all(hm, gr%der, stphi, hst)
     end subroutine f_psi
 
     subroutine f_ions(tau)
@@ -395,7 +394,7 @@ contains
 
       call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, tau)
 
-      call zhamiltonian_elec_apply_all(hm, ks%xc, gr%der, stchi, hchi)
+      call zhamiltonian_elec_apply_all(hm, gr%der, stchi, hchi)
       call hamiltonian_elec_not_adjoint(hm)
 
 
@@ -537,7 +536,6 @@ contains
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
-    xc_p      => ks%xc
 
     SAFE_ALLOCATE(k2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
     SAFE_ALLOCATE(oldk2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
@@ -556,7 +554,7 @@ contains
     end do
 
     if (oct_exchange_enabled(hm%oct_exchange)) then
-      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc, hm%psolver)
+      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver)
     end if
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt)
@@ -1216,7 +1214,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p, hm_p%psolver)
+      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, hm_p%xc, hm_p%psolver)
     end if
 
     j = 1
@@ -1311,7 +1309,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p, hm_p%psolver)
+      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, hm_p%xc, hm_p%psolver)
     end if
 
     j = 1

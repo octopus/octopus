@@ -512,8 +512,7 @@ contains
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, sys%hm)
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, &
-        sys%ks, iter)
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, iter)
 
       ! write down data
       call check_point()
@@ -829,7 +828,7 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, sys%ks, 0)
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong

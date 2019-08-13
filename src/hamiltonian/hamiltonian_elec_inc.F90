@@ -293,9 +293,8 @@ end subroutine X(hamiltonian_elec_rdmft_occ_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_elec_apply_all) (hm, xc, der, st, hst)
+subroutine X(hamiltonian_elec_apply_all) (hm, der, st, hst)
   type(hamiltonian_elec_t), intent(inout) :: hm
-  type(xc_t),               intent(in)    :: xc
   type(derivatives_t),      intent(in)    :: der
   type(states_elec_t),      intent(inout) :: st
   type(states_elec_t),      intent(inout) :: hst
@@ -318,7 +317,7 @@ subroutine X(hamiltonian_elec_apply_all) (hm, xc, der, st, hst)
 
     call states_elec_get_state(st, der%mesh, psiall)
     
-    call oct_exchange_prepare(hm%oct_exchange, der%mesh, psiall, xc, hm%psolver)
+    call oct_exchange_prepare(hm%oct_exchange, der%mesh, psiall, hm%xc, hm%psolver)
 
     SAFE_DEALLOCATE_A(psiall)
     

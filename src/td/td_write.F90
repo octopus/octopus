@@ -761,7 +761,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, namespace, outp, gr, st, hm, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, namespace, outp, gr, st, hm, geo, kick, dt, iter)
     type(td_write_t),         intent(inout) :: writ !< Write object
     type(namespace_t),        intent(in)    :: namespace
     type(output_t),           intent(in)    :: outp
@@ -771,7 +771,6 @@ contains
     type(geometry_t),         intent(inout) :: geo  !< Geometry object
     type(kick_t),             intent(in)    :: kick !< The kick
     FLOAT,                    intent(in)    :: dt   !< Delta T, time interval
-    type(v_ks_t),             intent(in)    :: ks  
     integer,                  intent(in)    :: iter !< Iteration number
 
     type(profile_t), save :: prof
@@ -801,7 +800,7 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, namespace, hm, gr, st, ks, iter)
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, namespace, hm, gr, st, iter)
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
@@ -2601,13 +2600,12 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, namespace, hm, gr, st, ks, iter)
+  subroutine td_write_floquet(out_floquet, namespace, hm, gr, st, iter)
     type(c_ptr),              intent(inout) :: out_floquet
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st !< at iter=0 this is the groundstate
-    type(v_ks_t),             intent(in)    :: ks
     integer,                  intent(in)    :: iter 
 
     CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
@@ -2714,7 +2712,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(hm, ks%xc, gr%der, st, hm_st)
+      call zhamiltonian_elec_apply_all(hm, gr%der, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

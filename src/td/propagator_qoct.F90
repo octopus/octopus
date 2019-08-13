@@ -48,10 +48,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, namespace, xc, gr, st, tr, time, dt, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions, geo)
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(namespace_t),        intent(in)    :: namespace
-    type(xc_t),               intent(in)    :: xc
     type(grid_t),             intent(inout) :: gr
     type(states_elec_t),      intent(inout) :: st
     type(propagator_t),       intent(inout) :: tr
@@ -82,7 +81,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time-dt/M_TWO)
 
-    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt)
+    call exponential_apply_all(tr%te, gr%der, hm, st, dt)
 
     call density_calc(st, gr, st%rho)
 
