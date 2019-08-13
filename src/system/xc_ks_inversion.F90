@@ -33,7 +33,6 @@ module xc_ks_inversion_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m

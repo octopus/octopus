@@ -31,7 +31,6 @@ module phonons_fd_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m

@@ -45,7 +45,6 @@ module propagation_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
   use pert_oct_m
-  use poisson_oct_m
   use propagator_oct_m
   use propagator_base_oct_m
   use profiling_oct_m

@@ -35,7 +35,6 @@ module energy_calc_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use pcm_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m

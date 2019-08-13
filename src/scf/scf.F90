@@ -50,7 +50,6 @@ module scf_oct_m
   use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
-  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m

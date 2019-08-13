@@ -38,7 +38,6 @@ module eigensolver_oct_m
   use mpi_lib_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use states_abst_oct_m

@@ -45,7 +45,6 @@ module target_oct_m
   use opt_control_state_oct_m
   use output_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m

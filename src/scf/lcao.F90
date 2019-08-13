@@ -43,7 +43,6 @@ module lcao_oct_m
   use mpi_debug_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use ps_oct_m
   use quickrnd_oct_m

@@ -31,7 +31,6 @@ module eigen_rmmdiis_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use states_elec_oct_m

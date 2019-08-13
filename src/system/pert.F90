@@ -39,7 +39,6 @@ module pert_oct_m
   use namespace_oct_m
   use parser_oct_m
   use physics_op_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m

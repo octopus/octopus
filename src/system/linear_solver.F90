@@ -33,7 +33,6 @@ module linear_solver_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
   use smear_oct_m

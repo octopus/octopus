@@ -123,7 +123,7 @@ module hamiltonian_elec_oct_m
 
     type(poisson_t), pointer :: psolver      !< Poisson solver
     type(poisson_t), pointer :: psolver_fine !< Poisson solver on the fine grid
-    
+
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)

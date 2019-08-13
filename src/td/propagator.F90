@@ -37,7 +37,6 @@ module propagator_oct_m
   use namespace_oct_m
   use opt_control_state_oct_m
   use output_oct_m
-  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m

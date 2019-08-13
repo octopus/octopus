@@ -31,7 +31,6 @@ module propagation_ops_elec_oct_m
   use lda_u_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use states_elec_oct_m

@@ -36,7 +36,6 @@ module propagator_etrs_oct_m
   use mesh_function_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
