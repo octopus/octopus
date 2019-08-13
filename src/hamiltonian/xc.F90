@@ -358,7 +358,22 @@ contains
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent
+  
+  logical function family_is_mgga_with_exc(xcs)
+    type(xc_t), intent(in) :: xcs
 
+    integer :: ixc  
+
+    PUSH_SUB(family_is_mgga_with_exc)
+
+    family_is_mgga_with_exc = .false.
+    do ixc = 1, 2
+      if ((bitand(xcs%functional(ixc, 1)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+        .and. (bitand(xcs%functional(ixc, 1)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
+    end do
+
+    POP_SUB(family_is_mgga_with_exc)
+  end function family_is_mgga_with_exc
 
 #include "vxc_inc.F90"
 #include "fxc_inc.F90"

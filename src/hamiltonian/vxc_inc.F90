@@ -114,7 +114,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   ! initialize a couple of handy variables
   gga  = family_is_gga(xcs%family)
   mgga = family_is_mgga(xcs%family)
-  mgga_withexc = family_is_mgga_with_exc(xcs, ispin)
+  mgga_withexc = family_is_mgga_with_exc(xcs)
   if(mgga) then
     ASSERT(gga)
   end if
@@ -857,34 +857,6 @@ end subroutine xc_get_vxc
 
     family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
-
-  logical function family_is_mgga_with_exc(xcs, ispin)
-    type(xc_t),    target,  intent(in)    :: xcs
-    integer,                intent(in)    :: ispin
-
-    type(xc_functl_t), pointer :: functl(:)
-    integer :: ixc  
-
-    PUSH_SUB(family_is_mgga_with_exc)
-
-    !Pointer-shortcut for xcs%functional
-    !It helps to remember that for xcs%functional(:,:)
-    ! (1,:) => exchange,    (2,:) => correlation
-    ! (:,1) => unpolarized, (:,2) => polarized
-    if(ispin == UNPOLARIZED) then
-      functl => xcs%functional(:, 1)
-    else
-      functl => xcs%functional(:, 2)
-    end if
-
-    family_is_mgga_with_exc = .false.
-    do ixc = 1, 2
-        if((bitand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
-           .and. (bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
-    end do
-
-    POP_SUB(family_is_mgga_with_exc)
-  end function family_is_mgga_with_exc
 
 ! -----------------------------------------------------
 
