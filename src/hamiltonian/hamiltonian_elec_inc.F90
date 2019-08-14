@@ -145,18 +145,18 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, der, psib, hpsib, ik, terms, set
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree)(hm, der, ik, hm%exx_coef, epsib, hpsib)
+      call X(exchange_operator_hartree)(hm, der, ik, epsib, hpsib)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
-        call X(scdm_exchange_operator)(hm, der, epsib, hpsib, ik, hm%exx_coef)
+        call X(scdm_exchange_operator)(hm, der, epsib, hpsib, ik)
       else
         ! standard HF 
-        call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
+        call X(exchange_operator)(hm, der, ik, epsib, hpsib)
       end if
 
     case(RDMFT)
-      call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
+      call X(exchange_operator)(hm, der, ik, epsib, hpsib)
     end select
     call profiling_out(prof_exx)
     
@@ -341,14 +341,14 @@ end subroutine X(hamiltonian_elec_apply_all)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
+subroutine X(exchange_operator_single)(hm, der, ist, ik, psi, hpsi, exx_coef)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(derivatives_t),      intent(in)    :: der
   integer,                  intent(in)    :: ist
   integer,                  intent(in)    :: ik
-  FLOAT,                    intent(in)    :: exx_coef
   R_TYPE,                   intent(inout) :: psi(:, :)
   R_TYPE,                   intent(inout) :: hpsi(:, :)
+  FLOAT,          optional, intent(in)    :: exx_coef
 
   type(batch_t) :: psib, hpsib
 
@@ -359,7 +359,7 @@ subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+  call X(exchange_operator)(hm, der, ik, psib, hpsib, exx_coef)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -369,17 +369,17 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+subroutine X(exchange_operator)(hm, der, ik, psib, hpsib, exx_coef)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(derivatives_t),      intent(in)    :: der
   integer,                  intent(in)    :: ik
-  FLOAT,                    intent(in)    :: exx_coef
   type(batch_t),            intent(inout) :: psib
   type(batch_t),            intent(inout) :: hpsib
+  FLOAT,          optional, intent(in)    :: exx_coef
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
   type(batch_t), pointer :: psi2b
-  FLOAT                              :: ff
+  FLOAT :: ff, exx_coef_
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
 
   PUSH_SUB(X(exchange_operator))
@@ -387,6 +387,8 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
   ASSERT(associated(hm%hf_st))
 
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+
+  exx_coef_ = optional_default(exx_coef, hm%exx_coef)
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
@@ -434,7 +436,7 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
 
           do idim = 1, hm%hf_st%d%dim
             forall(ip = 1:der%mesh%np)
-              hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
+              hpsi(ip, idim) = hpsi(ip, idim) - exx_coef_*ff*psi2(ip, idim)*pot(ip)
             end forall
           end do
 
@@ -459,11 +461,10 @@ end subroutine X(exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree) (hm, der, ik, exx_coef, psib, hpsib)
+subroutine X(exchange_operator_hartree) (hm, der, ik, psib, hpsib)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(derivatives_t),      intent(in)    :: der
   integer,                  intent(in)    :: ik
-  FLOAT,                    intent(in)    :: exx_coef
   type(batch_t),            intent(inout) :: psib
   type(batch_t),            intent(inout) :: hpsib
 
@@ -510,7 +511,7 @@ subroutine X(exchange_operator_hartree) (hm, der, ik, exx_coef, psib, hpsib)
 
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)
-          hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
+          hpsi(ip, idim) = hpsi(ip, idim) - hm%exx_coef*ff*psi2(ip, idim)*pot(ip)
         end forall
       end do
 
@@ -531,13 +532,12 @@ end subroutine X(exchange_operator_hartree)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
+subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
   integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: exx_coef
 
   integer :: ist, jst, ip, idim, ik2, ibatch
   integer :: ii, jj, kk, ll, count
@@ -618,7 +618,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
 
         ff = hm%hf_st%occ(jst, ik2)
         if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
-
+ 
         do idim = 1, hm%hf_st%d%dim
           ! potential in local box to full H*psi 
           do jj =1, hm%scdm%box_size*2 + 1
@@ -626,7 +626,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
               do ll =1, hm%scdm%box_size*2 + 1
                 ip = (jj - 1)*((hm%scdm%box_size*2 + 1))**2 + (kk - 1)*((hm%scdm%box_size*2 + 1)) + ll
                 temp_state_global(hm%scdm%box(jj, kk, ll, jst), idim) = &
-                  temp_state_global(hm%scdm%box(jj, kk, ll, jst), idim) - exx_coef*ff*hm%scdm%X(psi)(ip, jst)*pot_l(ip)
+                  temp_state_global(hm%scdm%box(jj, kk, ll, jst), idim) - hm%exx_coef*ff*hm%scdm%X(psi)(ip, jst)*pot_l(ip)
               end do
             end do
           end do
