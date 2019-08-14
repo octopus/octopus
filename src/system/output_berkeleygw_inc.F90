@@ -108,7 +108,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:, :) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, psi, xpsi, exx_coef=CNST(1.0))
+          call X(exchange_operator_single)(hm, gr%mesh, ist, ikk, psi, xpsi, exx_coef=CNST(1.0))
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         end if
       end do
@@ -121,7 +121,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, psi, xpsi, exx_coef=CNST(1.0))
+          call X(exchange_operator_single)(hm, gr%mesh, ist, ikk, psi, xpsi, exx_coef=CNST(1.0))
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         end if
       end do

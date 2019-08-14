@@ -2712,7 +2712,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(hm, gr%der, st, hm_st)
+      call zhamiltonian_elec_apply_all(hm, gr%mesh, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

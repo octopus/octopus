@@ -177,7 +177,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
       end do
 
-      call X(hamiltonian_elec_apply_batch)(hm, gr%der, vvb, avb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, vvb, avb, ik)
       INCR(matvec, blk)
 
       call batch_end(vvb)

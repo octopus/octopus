@@ -310,7 +310,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
-  call X(hamiltonian_elec_apply_batch)(hm, gr%der, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
   
   call batch_end(psib)
   call batch_end(hpsib)
@@ -403,7 +403,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_elec_apply_batch)(hm, gr%der, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
     end if
 
     niter = niter + lnuc

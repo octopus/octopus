@@ -238,7 +238,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
     do ik = kstart, kend
       ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply)(hm, gr%der, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs
@@ -645,7 +645,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
         call batch_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi)
 
         call X(submesh_batch_add)(this%sphere(iatom), this%orbitals(iatom), psib)
-        call X(hamiltonian_elec_apply_batch)(hm, gr%der, psib, hpsib, ik)
+        call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
           if(.not. this%calc_atom(jatom)) cycle

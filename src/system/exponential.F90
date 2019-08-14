@@ -319,9 +319,9 @@ contains
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
-        call zmagnus(hm, der, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
+        call zmagnus(hm, der%mesh, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
-        call zhamiltonian_elec_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply(hm, der%mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -620,7 +620,7 @@ contains
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
      !will be treated as a phase correction in the Hamiltonian
       if(phase_correction) then
-        call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., psib)
+        call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np, ik, .false., psib)
       end if
 
       select case(te%exp_method)
@@ -631,9 +631,9 @@ contains
       end select
 
       if(phase_correction) then
-        call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
+        call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np, ik, .true., psib)
         if(present(psib2)) then
-          call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib2)
+          call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np, ik, .true., psib2)
         end if
       end if
     else
@@ -729,9 +729,9 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_elec_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_elec_apply_batch(hm, der%mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
         else
-          call zhamiltonian_elec_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_elec_apply_batch(hm, der%mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction)
         end if
         
         if(zfact_is_real) then
@@ -807,7 +807,7 @@ contains
       do iter = 1, te%exp_order
 
         !to apply the Hamiltonian
-        call zhamiltonian_elec_apply_batch(hm, der, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply_batch(hm, der%mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
 
         if(hm%is_hermitian()) then
           l = max(1, iter - 1)
@@ -905,9 +905,9 @@ contains
       zfact = zfact * deltat / i
       
       if (i == 1) then
-        call zhamiltonian_elec_apply_all(hm, der, st, hst1)
+        call zhamiltonian_elec_apply_all(hm, der%mesh, st, hst1)
       else
-        call zhamiltonian_elec_apply_all(hm, der, st1, hst1)
+        call zhamiltonian_elec_apply_all(hm, der%mesh, st1, hst1)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -943,9 +943,9 @@ contains
         zfact = zfact * deltat / (i+1)
       
         if (i == 1) then
-          call zhamiltonian_elec_apply_all(hm, der, hm%inh_st, hst1)
+          call zhamiltonian_elec_apply_all(hm, der%mesh, hm%inh_st, hst1)
         else
-          call zhamiltonian_elec_apply_all(hm, der, st1, hst1)
+          call zhamiltonian_elec_apply_all(hm, der%mesh, st1, hst1)
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end

@@ -506,7 +506,7 @@ contains
       end select
 
       !Apply mask absorbing boundaries
-      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, sys%hm, st) 
+      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st) 
 
       !Photoelectron stuff 
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &

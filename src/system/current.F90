@@ -316,14 +316,14 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -388,7 +388,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
@@ -407,7 +407,8 @@ contains
 
             if(associated(hm%hm_base%phase)) then
               do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, conjugate = .true., &
+                  psib = commpsib(idir))
               end do
             end if
             

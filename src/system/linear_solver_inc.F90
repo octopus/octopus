@@ -440,7 +440,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
   SAFE_ALLOCATE(  hx(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE( res(1:gr%mesh%np, 1:st%d%dim))
 
-  call X(hamiltonian_elec_diagonal)(hm, gr%der, diag, ik)
+  call X(hamiltonian_elec_diagonal)(hm, gr%mesh, diag, ik)
   diag(1:gr%mesh%np, 1:st%d%dim) = diag(1:gr%mesh%np, 1:st%d%dim) + shift
 
   do iter = 1, ls%max_iter
@@ -529,7 +529,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
 
   PUSH_SUB(X(linear_solver_operator))
 
-  call X(hamiltonian_elec_apply)(hm, gr%der, x, Hx, ist, ik)
+  call X(hamiltonian_elec_apply)(hm, gr%mesh, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
   do idim = 1, st%d%dim
@@ -581,7 +581,7 @@ subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
 
-    call X(hamiltonian_elec_apply_batch)(hm, gr%der, xb, hxb, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, xb, hxb, ik)
     
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     

@@ -230,7 +230,7 @@ contains
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, time = istep*td%dt)
       call energy_calc_total(sys%hm, sys%gr, psi)
 
-      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, sys%hm, psi)
+      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, psi)
 
       ! if td_target
       call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, istep, td%max_iter)

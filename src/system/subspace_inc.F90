@@ -123,7 +123,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
       
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
@@ -219,7 +219,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
     call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
     call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
     
-    call X(hamiltonian_elec_apply_batch)(hm, der, psib, hpsib, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, der%mesh, psib, hpsib, ik)
     
     call batch_end(psib)
     call batch_end(hpsib)
@@ -368,7 +368,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_elec_apply)(hm, der, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_elec_apply)(hm, der%mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(der%mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if
@@ -404,7 +404,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   
   do ib = st%group%block_start, st%group%block_end
     call batch_copy(st%group%psib(ib, ik), hpsib(ib))
-    call X(hamiltonian_elec_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib(ib), ik)
+    call X(hamiltonian_elec_apply_batch)(hm, der%mesh, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
   if(st%are_packed() .and. accel_is_enabled()) then

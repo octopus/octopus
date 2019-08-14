@@ -423,10 +423,10 @@ contains
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       end if
     end do

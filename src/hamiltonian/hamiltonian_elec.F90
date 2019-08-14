@@ -118,6 +118,8 @@ module hamiltonian_elec_oct_m
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
+    type(derivatives_t), pointer :: der !< pointer to derivatives
+    
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
@@ -264,7 +266,8 @@ contains
 
     call oct_exchange_nullify(hm%oct_exchange)
 
-    !Keep pointers to geometry and xc
+    !Keep pointers to derivatives, geometry and xc
+    hm%der => gr%der
     hm%geo => geo
     hm%xc => xc
 
@@ -468,7 +471,7 @@ contains
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%hf_st, namespace, gr%der, hm%psolver%cube, hm%scdm)
+      call scdm_init(hm%hf_st, namespace, hm%der, hm%psolver%cube, hm%scdm)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -1099,7 +1102,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, hm%der, gr%dgrid, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)

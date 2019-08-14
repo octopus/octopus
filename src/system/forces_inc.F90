@@ -204,7 +204,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! set the phase for periodic systems
       if(associated(hm%hm_base%phase)) then
-        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, iq, .false., psib)
       end if
 
       ! calculate the gradient
