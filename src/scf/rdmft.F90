@@ -323,7 +323,7 @@ contains
       call messages_info(2)
 
       call dstates_elec_me_two_body(gr, st, hm%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm, hm, st, gr)
+      call rdm_integrals(rdm, hm, st, gr%mesh)
       call sum_integrals(rdm)
     endif
 
@@ -1264,11 +1264,11 @@ contains
   
   ! --------------------------------------------
   !calculates the one electron integrals in the basis of the initial orbitals
-  subroutine rdm_integrals(rdm, hm, st, gr)
+  subroutine rdm_integrals(rdm, hm, st, mesh)
     type(rdm_t),              intent(inout) :: rdm
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(in)    :: st 
-    type(grid_t),             intent(in)    :: gr
+    type(mesh_t),             intent(in)    :: mesh
     
     FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
@@ -1278,18 +1278,18 @@ contains
  
     nspin_ = min(st%d%nspin, 2)
     
-    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(dpsi(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi(1:mesh%np_part,1:st%d%dim))
 
     !calculate integrals of the one-electron energy term with respect to the initial orbital basis
     do ist = 1, st%nst
-      call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
+      call states_elec_get_state(st, mesh, ist, 1, dpsi)
       do jst = ist, st%nst
-        call states_elec_get_state(st, gr%mesh, jst, 1, dpsi2)
-        call dhamiltonian_elec_apply(hm, gr%mesh, dpsi, hpsi, ist, 1, &
+        call states_elec_get_state(st, mesh, jst, 1, dpsi2)
+        call dhamiltonian_elec_apply(hm, mesh, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
-        rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
+        rdm%eone_int(jst, ist) = dmf_dotp(mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)
       end do
     end do

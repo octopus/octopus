@@ -27,7 +27,6 @@ module subspace_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
   use comm_oct_m
-  use derivatives_oct_m
 #ifdef HAVE_ELPA
   use elpa
 #endif

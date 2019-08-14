@@ -469,9 +469,9 @@ contains
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           else
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
       end if
@@ -489,7 +489,7 @@ contains
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
             eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
+          call deigensolver_evolution(gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -509,7 +509,7 @@ contains
         ! FEAST: subspace diag or not?
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         
@@ -535,7 +535,7 @@ contains
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
+          call zeigensolver_evolution(gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -554,7 +554,7 @@ contains
 
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         

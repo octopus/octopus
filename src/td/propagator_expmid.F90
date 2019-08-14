@@ -78,14 +78,14 @@ contains
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, M_HALF*dt, time, save_gf = .true.)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt*M_HALF)
 
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt)
 
     !restore to time 'time - dt'
     call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo, move_ions = move_ions)
 
-    call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr)
+    call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr%mesh)
 
     POP_SUB(propagator_dt.exponential_midpoint)
   end subroutine exponential_midpoint

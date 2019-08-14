@@ -17,8 +17,8 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, diff, tau)
-  type(grid_t),             target, intent(in)    :: gr
+subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik, diff, tau)
+  type(mesh_t),             target, intent(in)    :: mesh
   type(states_elec_t),              intent(inout) :: st
   type(hamiltonian_elec_t), target, intent(in)    :: hm
   type(exponential_t),              intent(inout) :: te
@@ -38,8 +38,8 @@ subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, d
   maxiter = niter
   matvec = 0
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(hpsi(1:mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(c(1:st%nst, 1:st%nst))
   SAFE_ALLOCATE(eig(1:st%nst))
 
@@ -50,16 +50,16 @@ subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, d
   do iter = 1, maxiter
 
     do ist = conv + 1, st%nst
-      call states_elec_get_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_get_state(st, mesh, ist, ik, psi)
       !TODO: convert this opperation to batched versions 
       call exponentiate(psi, j)
-      call states_elec_set_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_set_state(st, mesh, ist, ik, psi)
       matvec = matvec + j
     end do
 
     ! This is the orthonormalization suggested by Aichinger and Krotschek
     ! [Comp. Mat. Science 34, 188 (2005)]
-    call X(states_elec_calc_overlap)(st, gr%mesh, ik, c)
+    call X(states_elec_calc_overlap)(st, mesh, ik, c)
 
     call lalg_eigensolve(st%nst, c, eig)
 
@@ -67,15 +67,15 @@ subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, d
       c(1:st%nst, i) = c(1:st%nst, i)/sqrt(eig(i))
     end do
 
-    call states_elec_rotate(gr%mesh, st, c, ik)
+    call states_elec_rotate(mesh, st, c, ik)
     
     ! Get the eigenvalues and the residues.
     do ist = conv + 1, st%nst
-      call states_elec_get_state(st, gr%mesh, ist, ik, psi)
+      call states_elec_get_state(st, mesh, ist, ik, psi)
       !TODO: convert these opperations to batched versions 
-      call X(hamiltonian_elec_apply)(hm, gr%mesh, psi, hpsi, ist, ik)
-      st%eigenval(ist, ik) = real(X(mf_dotp)(gr%mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
-      diff(ist) = X(states_elec_residue)(gr%mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
+      call X(hamiltonian_elec_apply)(hm, mesh, psi, hpsi, ist, ik)
+      st%eigenval(ist, ik) = real(X(mf_dotp)(mesh, st%d%dim, psi, hpsi), REAL_PRECISION)
+      diff(ist) = X(states_elec_residue)(mesh, st%d%dim, hpsi, st%eigenval(ist, ik), psi)
 
       if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &
@@ -113,14 +113,14 @@ contains
     PUSH_SUB(X(eigensolver_evolution).exponentiate)
 
 #if defined(R_TREAL)
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:st%d%dim))
-    zpsi(1:gr%mesh%np, 1:st%d%dim) = psi(1:gr%mesh%np, 1:st%d%dim)
+    SAFE_ALLOCATE(zpsi(1:mesh%np_part, 1:st%d%dim))
+    zpsi(1:mesh%np, 1:st%d%dim) = psi(1:mesh%np, 1:st%d%dim)
 #else
     zpsi => psi
 #endif
-    call exponential_apply(te, gr%der, hm, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
+    call exponential_apply(te, mesh, hm, zpsi, ist, ik, -tau, order = order, imag_time = .true.)
 #if defined(R_TREAL)
-    psi(1:gr%mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:gr%mesh%np, 1:st%d%dim))
+    psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
     SAFE_DEALLOCATE_P(zpsi)
 #else
     nullify(zpsi)
