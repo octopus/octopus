@@ -190,7 +190,7 @@ contains
     gs_rho = M_ZERO
 
     call output_init_()
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
     call born_charges_init(Born_charges, sys%namespace, sys%geo, sys%st, sys%gr%mesh%sb%dim)
 
     ! now calculate the dipole without field

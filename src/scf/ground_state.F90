@@ -107,7 +107,7 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
 
     if(fromScratch) then
       call lcao_run(sys, lmm_r = scfv%lmm_r)
@@ -132,7 +132,7 @@ contains
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%ks, fromScratch)
+      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, fromScratch)
       call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
         restart_dump)
       call rdmft_end(rdm)

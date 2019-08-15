@@ -126,16 +126,15 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, conv_force)
-    type(scf_t),          intent(inout) :: scf
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t), target, intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_elec_t),  intent(in)    :: st
-    type(multicomm_t),    intent(in)    :: mc
-    type(hamiltonian_elec_t),  intent(inout) :: hm
-    type(v_ks_t),         intent(in)    :: ks
-    FLOAT,   optional,    intent(in)    :: conv_force
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
+    type(scf_t),              intent(inout) :: scf
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),     target, intent(inout) :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(in)    :: st
+    type(multicomm_t),        intent(in)    :: mc
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    FLOAT,          optional, intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -381,7 +380,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st, ks%xc)
+    call eigensolver_init(scf%eigens, namespace, gr, st)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       SAFE_ALLOCATE(gr%mgrid_prec)

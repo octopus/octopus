@@ -118,7 +118,7 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, conv_force = CNST(1e-8))
 
     if(fromScratch) then
       call lcao_run(sys, lmm_r = g_opt%scfv%lmm_r)

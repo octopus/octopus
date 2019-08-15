@@ -78,8 +78,6 @@ module eigensolver_oct_m
 
     type(subspace_t) :: sdiag
 
-    type(xc_t), pointer, public :: xc
-
     integer :: rmmdiis_minimization_iter
 
     logical :: skip_finite_weight_kpoints
@@ -110,12 +108,11 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, namespace, gr, st, xc, disable_preconditioner)
+  subroutine eigensolver_init(eigens, namespace, gr, st, disable_preconditioner)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
-    type(xc_t), target,  intent(in)    :: xc
     logical, optional,   intent(in)    :: disable_preconditioner
 
     integer :: default_iter, default_es
@@ -397,9 +394,6 @@ contains
     call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
-    ! set KS object
-    eigens%xc => xc
-
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -482,7 +476,7 @@ contains
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
+          call deigensolver_cg2(gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
             eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
@@ -520,13 +514,13 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
+             call zeigensolver_cg2(gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
                ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
                eigens%additional_terms, eigens%energy_change_threshold, &
                shift=eigens%spectrum_shift)
              
            else
-             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
+             call zeigensolver_cg2(gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
                ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
                eigens%additional_terms, eigens%energy_change_threshold)
              
