@@ -248,9 +248,9 @@ end subroutine X(hamiltonian_elec_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_phase)(this, der, np, iqn, conjugate, psib, src)
-  type(hamiltonian_elec_base_t),              intent(in)    :: this
-  type(derivatives_t),                   intent(in)    :: der
+subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, src)
+  type(hamiltonian_elec_base_t),         intent(in)    :: this
+  type(mesh_t),                          intent(in)    :: mesh
   integer,                               intent(in)    :: np
   integer,                               intent(in)    :: iqn
   logical,                               intent(in)    :: conjugate
@@ -269,7 +269,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, der, np, iqn, conjugate, psib, s
 
   call profiling_count_operations(R_MUL*dble(np)*psib%nst_linear)
 
-  ASSERT(np <= der%mesh%np_part)
+  ASSERT(np <= mesh%np_part)
 
   src_ => psib
   if(present(src)) src_ => src
@@ -337,7 +337,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, der, np, iqn, conjugate, psib, s
       call accel_set_kernel_arg(ker_phase, 0, 0_4)
     end if
 
-    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
+    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*mesh%np_part)
     call accel_set_kernel_arg(ker_phase, 2, np)
     call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
     call accel_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
@@ -358,8 +358,9 @@ end subroutine X(hamiltonian_elec_base_phase)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_rashba)(this, der, std, psib, vpsib)
+subroutine X(hamiltonian_elec_base_rashba)(this, mesh, der, std, psib, vpsib)
   type(hamiltonian_elec_base_t),    intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
   type(states_elec_dim_t),     intent(in)    :: std
   type(batch_t), target,       intent(in)    :: psib
@@ -374,22 +375,22 @@ subroutine X(hamiltonian_elec_base_rashba)(this, der, std, psib, vpsib)
     return
   end if
   ASSERT(std%ispin == SPINORS)
-  ASSERT(der%mesh%sb%dim == 2)
+  ASSERT(mesh%sb%dim == 2)
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    call batch_get_state(psib, ist, der%mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_get_state(psib, ist, mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
     if(allocated(this%vector_potential)) then
-      forall(ip = 1:der%mesh%np)
+      forall(ip = 1:mesh%np)
         vpsi(ip, 1) = vpsi(ip, 1) + &
           (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
         vpsi(ip, 2) = vpsi(ip, 2) + &
@@ -397,14 +398,14 @@ subroutine X(hamiltonian_elec_base_rashba)(this, der, std, psib, vpsib)
       end forall
     end if
 
-    forall(ip = 1:der%mesh%np)
+    forall(ip = 1:mesh%np)
       vpsi(ip, 1) = vpsi(ip, 1) - &
         this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
       vpsi(ip, 2) = vpsi(ip, 2) + &
         this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
     end forall
 
-    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_set_state(vpsib, ist, mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
@@ -416,8 +417,9 @@ end subroutine X(hamiltonian_elec_base_rashba)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
+subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, psib, vpsib)
   type(hamiltonian_elec_base_t),    intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
   type(states_elec_dim_t),     intent(in)    :: std
   type(epot_t),                intent(in)    :: ep
@@ -435,43 +437,43 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, der, std, ep, ispin, psib, vp
   call profiling_in(prof_magnetic, "MAGNETIC")
   PUSH_SUB(X(hamiltonian_elec_base_magnetic))
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    call batch_get_state(psib, ist, der%mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_get_state(psib, ist, mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
     if(allocated(this%vector_potential)) then
-      forall (idim = 1:std%dim, ip = 1:der%mesh%np)
+      forall (idim = 1:std%dim, ip = 1:mesh%np)
         vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * &
-          sum(this%vector_potential(1:der%mesh%sb%dim, ip)**2)*psi(ip, idim) &
-          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:der%mesh%sb%dim, ip), grad(ip, 1:der%mesh%sb%dim, idim))
+          sum(this%vector_potential(1:mesh%sb%dim, ip)**2)*psi(ip, idim) &
+          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:mesh%sb%dim, ip), grad(ip, 1:mesh%sb%dim, idim))
       end forall
     end if
 
     if(allocated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
       ! Zeeman term
       cc = M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
-      bb(1:max(der%mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(der%mesh%sb%dim, 3))
-      b2 = sqrt(sum(bb(1:max(der%mesh%sb%dim, 3))**2))
+      bb(1:max(mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(mesh%sb%dim, 3))
+      b2 = sqrt(sum(bb(1:max(mesh%sb%dim, 3))**2))
       b12 = bb(1) - M_ZI*bb(2)
 
       select case (std%ispin)
       case (SPIN_POLARIZED)
         if(is_spin_down(ispin)) cc = -cc
         
-        forall (ip = 1:der%mesh%np)
+        forall (ip = 1:mesh%np)
           vpsi(ip, 1) = vpsi(ip, 1) + cc*b2*psi(ip, 1)
         end forall
         
       case (SPINORS)
-        forall (ip = 1:der%mesh%np)
+        forall (ip = 1:mesh%np)
           vpsi(ip, 1) = vpsi(ip, 1) + cc*(bb(3)*psi(ip, 1) + b12*psi(ip, 2))
           vpsi(ip, 2) = vpsi(ip, 2) + cc*(-bb(3)*psi(ip, 2) + conjg(b12)*psi(ip, 1))
         end forall
@@ -479,7 +481,7 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, der, std, ep, ispin, psib, vp
       end select
     end if
 
-    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_set_state(vpsib, ist, mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)

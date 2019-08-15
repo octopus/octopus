@@ -38,7 +38,6 @@ module current_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use scissor_oct_m
@@ -48,6 +47,7 @@ module current_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -261,13 +261,12 @@ contains
   end subroutine current_batch_accumulate
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, der, hm, geo, st, psolver, current, current_kpt)
+  subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_elec_t),  intent(inout) :: st
-    type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
@@ -317,14 +316,14 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, der, psolver, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -375,7 +374,7 @@ contains
 
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
-      if(this%method == CURRENT_GRADIENT_CORR .and. .not. hm%family_is_mgga_with_exc &
+      if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
         .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
 
         ! we can use the packed version
@@ -389,7 +388,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
@@ -408,7 +407,8 @@ contains
 
             if(associated(hm%hm_base%phase)) then
               do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, conjugate = .true., &
+                  psib = commpsib(idir))
               end do
             end if
             
@@ -452,7 +452,7 @@ contains
             if(this%method == CURRENT_GRADIENT_CORR) then
               !A nonlocal contribution from the MGGA potential must be included
               !This must be done first, as this is like a position-dependent mass 
-              if(hm%family_is_mgga_with_exc) then
+              if (family_is_mgga_with_exc(hm%xc)) then
                 do idim = 1, st%d%dim
                   do idir = 1, der%mesh%sb%dim
                     !$omp parallel do
@@ -612,7 +612,7 @@ contains
     
     !A nonlocal contribution from the MGGA potential must be included
     !This must be done first, as this is like a position-dependent mass 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       do idim = 1, hm%d%dim
         do idir = 1, der%mesh%sb%dim
           !$omp parallel do

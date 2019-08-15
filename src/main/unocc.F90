@@ -248,7 +248,7 @@ contains
     call states_elec_fermi(sys%st, sys%gr%mesh)
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, sys%psolver, 1, converged, sys%st%nst_conv)
+      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
@@ -288,7 +288,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%psolver, sys%ks, dirname)
+        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
       end if
      
       if(converged .or. forced_finish) exit
@@ -318,7 +318,7 @@ contains
     end if
  
 
-    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%psolver, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)

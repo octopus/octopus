@@ -718,11 +718,11 @@ contains
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
-        call dcasida_get_matrix(cas, sys%hm, sys%psolver, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
+        call dcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
         cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
         call dcasida_solve(cas, st)
       else
-        call zcasida_get_matrix(cas, sys%hm, sys%psolver, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
+        call zcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
         call zcasida_solve(cas, st)
       end if

@@ -27,7 +27,6 @@ module subspace_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
   use comm_oct_m
-  use derivatives_oct_m
 #ifdef HAVE_ELPA
   use elpa
 #endif
@@ -42,7 +41,6 @@ module subspace_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pblas_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use scalapack_oct_m
   use states_abst_oct_m

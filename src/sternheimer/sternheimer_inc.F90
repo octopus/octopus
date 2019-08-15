@@ -168,7 +168,7 @@ subroutine X(sternheimer_solve)(                           &
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
-            call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, &
+            call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, &
               st%group%psib(ib, ik), rhsb)
           end if
 
@@ -207,7 +207,7 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%psolver, sys%gr, sys%st, ik, &
+          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
 
@@ -518,7 +518,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
       tmp(ip) = sum(lr_rho(ip, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
-    call X(poisson_solve)(sys%psolver, hartree, tmp, all_nodes = .false.)
+    call X(poisson_solve)(sys%hm%psolver, hartree, tmp, all_nodes = .false.)
 
     SAFE_DEALLOCATE_A(tmp)
   end if
@@ -675,15 +675,15 @@ subroutine X(sternheimer_solve_order2)( &
 
         call states_elec_get_state(st, sys%gr%mesh, ist, ik, psi)
 
-        call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, pert1psi)
-        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
-          call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), &
+          call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), &
             pert1psi2)
         end if
-        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), &
+        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), &
           pert2psi1)
 
         ! derivative of the eigenvalues:

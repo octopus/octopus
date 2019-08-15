@@ -365,7 +365,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
-    call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi(:, :, ist), pert_psi(:, :))
+    call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     end do
@@ -420,10 +420,9 @@ end subroutine X(casida_lr_hmat2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(casida_get_matrix)(cas, hm, psolver, st, ks, mesh, matrix, xc, restart_file, is_forces)
+subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file, is_forces)
   type(casida_t),           intent(inout) :: cas
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   type(states_elec_t),      intent(in)    :: st
   type(v_ks_t),             intent(in)    :: ks
   type(mesh_t),             intent(in)    :: mesh
@@ -606,7 +605,7 @@ contains
         if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
           saved%X(pot)(1:mesh%np) = M_ZERO
           if (hm%theory_level /= INDEPENDENT_PARTICLES) then
-            call X(poisson_solve)(psolver, saved%X(pot), rho_j, all_nodes=.false.)
+            call X(poisson_solve)(hm%psolver, saved%X(pot), rho_j, all_nodes=.false.)
           end if
           saved%qi = qi
           saved%qa = qa
@@ -813,7 +812,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
-        call X(casida_get_matrix)(cas, sys%hm, sys%psolver, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
+        call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
           is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else

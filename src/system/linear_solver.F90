@@ -33,7 +33,6 @@ module linear_solver_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
   use smear_oct_m
@@ -68,7 +67,6 @@ module linear_solver_oct_m
     private
     type(linear_solver_t),    pointer :: ls
     type(hamiltonian_elec_t), pointer :: hm
-    type(poisson_t),          pointer :: psolver
     type(grid_t),             pointer :: gr
     type(states_elec_t),      pointer :: st
     integer                           :: ist

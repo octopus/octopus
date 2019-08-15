@@ -55,7 +55,6 @@ program oct_convert
   character(len=256) :: config_str
   integer :: ierr
   type(namespace_t) :: default_namespace
-  type(poisson_t) :: psolver
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -259,7 +258,7 @@ contains
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -272,11 +271,12 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+  subroutine convert_low(mesh, namespace, geo, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
     subtract_file, ref_name, ref_folder)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
     type(geometry_t),  intent(in)    :: geo
+    type(poisson_t),   intent(in)    :: psolver
     type(multicomm_t), intent(in)   :: mc
     character(len=*),  intent(inout) :: basename       !< File name
     character(len=*),  intent(in)    :: in_folder      !< Folder name

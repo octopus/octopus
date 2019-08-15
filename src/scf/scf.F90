@@ -50,7 +50,6 @@ module scf_oct_m
   use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
-  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -335,7 +334,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. bitand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc%family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')
@@ -528,7 +527,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, namespace, mc, gr, geo, st, ks, hm, psolver, outp, gs_run, verbosity, iters_done, &
+  subroutine scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, &
     restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
     type(namespace_t),         intent(in)    :: namespace
@@ -538,7 +537,6 @@ contains
     type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_elec_t),  intent(inout) :: hm !< Hamiltonian
-    type(poisson_t),           intent(in)    :: psolver
     type(output_t),            intent(in)    :: outp
     logical,         optional, intent(in)    :: gs_run
     integer,         optional, intent(in)    :: verbosity 
@@ -723,13 +721,13 @@ contains
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
-        call lcao_wf(lcao, st, gr, geo, hm, psolver, namespace)
+        call lcao_wf(lcao, st, gr, geo, hm, namespace)
       else
         if(associated(hm%vberry)) then
           ks%frozen_hxc = .true.
           do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, psolver, iter)
+            call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
             call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
@@ -749,7 +747,7 @@ contains
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, psolver, iter)
+          call eigensolver_run(scf%eigens, gr, st, hm, iter)
         end if
       end if
 
@@ -782,7 +780,7 @@ contains
       evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call energy_calc_total(hm, psolver, gr, st, iunit = 0)
+      call energy_calc_total(hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
@@ -957,7 +955,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, gr, geo, st, hm, psolver, ks, dirname)
+        call output_all(outp, namespace, gr, geo, st, hm, ks, dirname)
       end if
 
       ! save information for the next iteration
@@ -1025,10 +1023,10 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
+    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo) 
     
     if(scf%max_iter == 0) then
-      call energy_calc_eigenvalues(hm, gr%der, psolver, st)
+      call energy_calc_eigenvalues(hm, gr%der, st)
       call states_elec_fermi(st, gr%mesh)
       call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
@@ -1036,7 +1034,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, gr, geo, st, hm, psolver, ks, STATIC_DIR)
+      call output_all(outp, namespace, gr, geo, st, hm, ks, STATIC_DIR)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
@@ -1199,7 +1197,7 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(hm, psolver, gr, st, iunit, full = .true.)
+      call energy_calc_total(hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

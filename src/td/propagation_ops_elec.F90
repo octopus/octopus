@@ -29,14 +29,15 @@ module propagation_ops_elec_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
+  use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use propagation_ops_abst_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -84,10 +85,10 @@ contains
   end subroutine
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
+  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, hm, time)
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(inout) :: st
-    type(grid_t),             intent(inout) :: gr
+    type(mesh_t),             intent(in)    :: mesh
     type(hamiltonian_elec_t), intent(inout) :: hm
     FLOAT,                    intent(in)    :: time
 
@@ -97,8 +98,8 @@ contains
 
     call profiling_in(prof, 'ELEC_UPDATE_H')
 
-    call hamiltonian_elec_update(hm, gr%mesh, namespace, time = time)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call hamiltonian_elec_update(hm, mesh, namespace, time = time)
+    call lda_u_update_occ_matrices(hm%lda_u, mesh, st, hm%hm_base, hm%energy)
 
     call profiling_out(prof)
 
@@ -108,11 +109,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_move_ions(wo, gr, hm, psolver, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
+  subroutine propagation_ops_elec_move_ions(wo, gr, hm, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
     class(propagation_ops_elec_t), intent(inout) :: wo
     type(grid_t),                  intent(in)    :: gr
     type(hamiltonian_elec_t),      intent(inout) :: hm
-    type(poisson_t),               intent(in)    :: psolver
     type(states_elec_t),           intent(inout) :: st
     type(namespace_t),             intent(in)    :: namespace
     type(ion_dynamics_t),          intent(inout) :: ions
@@ -133,7 +133,7 @@ contains
         call ion_dynamics_save_state(ions, geo, wo%ions_state)
       end if
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ion_time)
-      call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, psolver, time = time)
+      call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time)
     end if
 
     POP_SUB(propagation_ops_elec_move_ions)
@@ -194,11 +194,11 @@ contains
   end subroutine propagation_ops_elec_propagate_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, gr)
+  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, mesh)
     class(propagation_ops_elec_t), intent(in)    :: wo
     type(namespace_t),             intent(in)    :: namespace
     type(hamiltonian_elec_t),      intent(inout) :: hm
-    type(grid_t),                  intent(in)    :: gr
+    type(mesh_t),                  intent(in)    :: mesh
 
     type(profile_t), save :: prof
 
@@ -209,7 +209,7 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_set_vec_pot(hm%ep%gfield, wo%vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
-      call hamiltonian_elec_update(hm, gr%mesh, namespace)
+      call hamiltonian_elec_update(hm, mesh, namespace)
     end if
 
     call profiling_out(prof)
@@ -219,12 +219,11 @@ contains
   end subroutine propagation_ops_elec_restore_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_exp_apply(te, st, gr, hm, psolver, dt)
+  subroutine propagation_ops_elec_exp_apply(te, st, mesh, hm, dt)
     type(exponential_t),      intent(inout) :: te 
     type(states_elec_t),      intent(inout) :: st
-    type(grid_t),             intent(inout) :: gr
+    type(mesh_t),             intent(in)    :: mesh
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     FLOAT,                    intent(in)    :: dt
 
     integer :: ik, ib
@@ -236,7 +235,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, dt)
+        call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, dt)
       end do
     end do
 
@@ -247,12 +246,11 @@ contains
   end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_fuse_density_exp_apply(te, st, gr, hm, psolver, dt, dt2)
+  subroutine propagation_ops_elec_fuse_density_exp_apply(te, st, gr, hm, dt, dt2)
     type(exponential_t),      intent(inout) :: te
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     FLOAT,                    intent(in)    :: dt
     FLOAT, optional,          intent(in)    :: dt2
 
@@ -275,7 +273,7 @@ contains
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-          call exponential_apply_batch(te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, dt, &
+          call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, &
             psib2 = zpsib_dt, deltat2 = M_TWO*dt)
 
           !use the dt propagation to calculate the density
@@ -291,7 +289,7 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, dt)
+          call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt)
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end do
       end do
@@ -307,17 +305,17 @@ contains
   end subroutine propagation_ops_elec_fuse_density_exp_apply
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_interpolate_get(gr, hm, interp)
-    type(grid_t),                    intent(in)    :: gr
+  subroutine propagation_ops_elec_interpolate_get(mesh, hm, interp)
+    type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     type(potential_interpolation_t), intent(inout) :: interp
 
     PUSH_SUB(propagation_ops_elec_interpolate_get)
 
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
+    if (family_is_mgga_with_exc(hm%xc)) then
+      call potential_interpolation_get(interp, mesh%np, hm%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
     else
-      call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc)
+      call potential_interpolation_get(interp, mesh%np, hm%d%nspin, 0, hm%vhxc)
     end if
 
     POP_SUB(propagation_ops_elec_interpolate_get)

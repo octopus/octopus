@@ -25,14 +25,13 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
   type(xc_t),               intent(in)    :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   type(states_elec_t),      intent(inout) :: st
   FLOAT,                    intent(inout) :: ex, ec
   FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
@@ -75,7 +74,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
       select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (gr%der, psolver, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)
+          call X(oep_x) (gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)
         end do sum_comp
         ex = ex + eig
       end select
@@ -83,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
     end if
     ! calculate uxc_bar for the occupied states
 
@@ -128,7 +127,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st
 
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
-          call X(xc_oep_solve)(gr, hm, psolver, st, is, vxc(:,is), oep)
+          call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
           vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
         end if
         if (is == nspin_) first = .false.
@@ -146,10 +145,9 @@ end subroutine X(xc_OEP_calc)
 
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
+subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(poisson_t),          intent(in)    :: psolver
   type(states_elec_t),      intent(in)    :: st
   integer,                  intent(in)    :: is
   FLOAT,                    intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
@@ -199,7 +197,7 @@ subroutine X(xc_oep_solve) (gr, hm, psolver, st, is, vxc, oep)
 
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
-      call X(linear_solver_solve_HXeY)(oep%solver, hm, psolver, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
+      call X(linear_solver_solve_HXeY)(oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))

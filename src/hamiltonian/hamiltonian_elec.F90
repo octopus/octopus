@@ -40,6 +40,7 @@ module hamiltonian_elec_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
@@ -117,8 +118,13 @@ module hamiltonian_elec_oct_m
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
+    type(derivatives_t), pointer :: der !< pointer to derivatives
+    
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
+
+    type(poisson_t), pointer :: psolver      !< Poisson solver
+    type(poisson_t), pointer :: psolver_fine !< Poisson solver on the fine grid
 
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
@@ -126,8 +132,7 @@ module hamiltonian_elec_oct_m
     FLOAT, pointer :: b_ind(:, :)
 
     integer :: theory_level    !< copied from sys%ks
-    integer :: xc_family       !< copied from sys%ks
-    logical :: family_is_mgga_with_exc !< obtained from sys%ks
+    type(xc_t), pointer :: xc  !< pointer to xc object
 
     type(epot_t) :: ep         !< handles the external potential
     type(pcm_t)  :: pcm        !< handles pcm variables
@@ -193,16 +198,15 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, psolver, theory_level, xc_family, family_is_mgga_with_exc)
+  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
-    type(poisson_t),                            intent(in)    :: psolver
     integer,                                    intent(in)    :: theory_level
-    integer,                                    intent(in)    :: xc_family
-    logical,                                    intent(in)    :: family_is_mgga_with_exc
+    type(xc_t),                         target, intent(in)    :: xc
+    type(multicomm_t),                          intent(in)    :: mc
 
     integer :: iline, icol
     integer :: ncols
@@ -219,8 +223,6 @@ contains
     
     ! make a couple of local copies
     hm%theory_level = theory_level
-    hm%xc_family    = xc_family
-    hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_elec_dim_copy(hm%d, st%d)
 
     !%Variable ParticleMass
@@ -263,7 +265,12 @@ contains
     call energy_nullify(hm%energy)
 
     call oct_exchange_nullify(hm%oct_exchange)
-    
+
+    !Keep pointers to derivatives, geometry and xc
+    hm%der => gr%der
+    hm%geo => geo
+    hm%xc => xc
+
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -279,17 +286,28 @@ contains
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
 
-      if(hm%family_is_mgga_with_exc) then
+      if (family_is_mgga_with_exc(hm%xc)) then
         SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
         hm%vtau=M_ZERO
       end if
 
     end if
 
+    !Initialize Poisson solvers
+    nullify(hm%psolver)
+    SAFE_ALLOCATE(hm%psolver)
+    call poisson_init(hm%psolver, namespace, gr%der, mc)
 
-    hm%geo => geo
+    nullify(hm%psolver_fine)
+    if (gr%have_fine_mesh) then
+      SAFE_ALLOCATE(hm%psolver_fine)
+      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, label = " (fine mesh)")
+    else
+      hm%psolver_fine => hm%psolver
+    end if
+  
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, psolver, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
@@ -403,7 +421,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, psolver)
+      call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
     end if
  
 
@@ -430,8 +448,11 @@ contains
 
     kick_present = epot_have_kick(hm%ep)
 
-    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
-    if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
+    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+    if (hm%pcm%run_pcm) then
+      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
+      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh")
+    end if
     
     !%Variable SCDM_EXX
     !%Type logical
@@ -450,7 +471,7 @@ contains
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%hf_st, namespace, gr%der, psolver%cube, hm%scdm)
+      call scdm_init(hm%hf_st, namespace, hm%der, hm%psolver%cube, hm%scdm)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -561,9 +582,20 @@ contains
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
     
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
+
+    if (associated(hm%psolver_fine, hm%psolver)) then
+      nullify(hm%psolver_fine)
+    else
+      call poisson_end(hm%psolver_fine)
+      SAFE_DEALLOCATE_P(hm%psolver_fine)
+    end if
+    call poisson_end(hm%psolver)
+    SAFE_DEALLOCATE_P(hm%psolver)
+
+    nullify(hm%xc)
 
     call epot_end(hm%ep)
     nullify(hm%geo)
@@ -944,13 +976,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_epot_generate(this, namespace, gr, geo, st, psolver, time)
+  subroutine hamiltonian_elec_epot_generate(this, namespace, gr, geo, st, time)
     type(hamiltonian_elec_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
-    type(poisson_t),          intent(in)    :: psolver
     FLOAT,          optional, intent(in)    :: time
 
     PUSH_SUB(hamiltonian_elec_epot_generate)
@@ -964,17 +995,17 @@ contains
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
      if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, geo = geo)
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, geo = geo)
 
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
       !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
-        call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, psolver, namespace, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_elec_epot_generate)
   end subroutine hamiltonian_elec_epot_generate
@@ -1071,7 +1102,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, namespace, hm%der, gr%dgrid, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)
@@ -1138,7 +1169,7 @@ contains
     if (err /= 0) ierr = ierr + 4
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
-    if (hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       lines(1) = '#     #spin    #nspin    filename'
       lines(2) = '%vtau'
       call restart_write(restart, iunit, lines, 2, err)
@@ -1219,7 +1250,7 @@ contains
 
     ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
     err2 = 0
-    if (hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       do isp = 1, hm%d%nspin
         if (hm%d%nspin == 1) then
           write(filename, fmt='(a)') 'vtau'

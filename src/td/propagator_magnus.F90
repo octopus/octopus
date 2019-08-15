@@ -31,7 +31,6 @@ module propagator_magnus_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -39,6 +38,7 @@ module propagator_magnus_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
   use propagation_ops_elec_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -52,9 +52,8 @@ contains
   
   ! ---------------------------------------------------------
   !> Magnus propagator
-  subroutine td_magnus(hm, psolver, gr, st, tr, namespace, time, dt)
+  subroutine td_magnus(hm, gr, st, tr, namespace, time, dt)
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -77,7 +76,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
         !TODO: There is no complex scaling here
-        if(hm%family_is_mgga_with_exc) then
+        if (family_is_mgga_with_exc(hm%xc)) then
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, &
                hm%vhxc, vtau = hm%vtau)
         else
@@ -117,7 +116,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call states_elec_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%der, hm, psolver, psi, ist, ik, dt, vmagnus = tr%vmagnus)
+        call exponential_apply(tr%te, gr%mesh, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
         call states_elec_set_state(st, gr%mesh, ist, ik, psi)
       end do
     end do
@@ -133,11 +132,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
-  subroutine td_cfmagnus4(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo, iter)
+  subroutine td_cfmagnus4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo, iter)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(poisson_t),                  intent(in)    :: psolver
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -159,7 +157,7 @@ contains
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
-      call td_explicit_runge_kutta4(ks, namespace, hm, psolver, gr, st, time, dt, ions, geo)
+      call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
       POP_SUB(propagator_dt.td_cfmagnus4)
       return
     end if
@@ -181,13 +179,13 @@ contains
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
     call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     ! propagate by dt/2 
-    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
     call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     ! propagate by dt/2
     !TODO: fuse this with density calc
-    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
 
     call density_calc(st, gr, st%rho)
 

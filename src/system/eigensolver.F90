@@ -38,7 +38,6 @@ module eigensolver_oct_m
   use mpi_lib_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use states_abst_oct_m
@@ -426,12 +425,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, hm, psolver, iter, conv, nstconv)
+  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, nstconv)
     type(eigensolver_t),      intent(inout) :: eigens
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(poisson_t),          intent(in)    :: psolver
     integer,                  intent(in)    :: iter
     logical,        optional, intent(out)   :: conv
     integer,        optional, intent(in)    :: nstconv !< Number of states considered for 
@@ -471,9 +469,9 @@ contains
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, psolver, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           else
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, psolver, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
       end if
@@ -482,36 +480,36 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigensolver_cg2_new(gr, st, hm, psolver, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, psolver, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
+          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
             eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
-          call deigensolver_plan(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+          call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
             eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, psolver, eigens%exponential_operator, eigens%tolerance, maxiter, &
+          call deigensolver_evolution(gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call deigensolver_lobpcg(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, &
+          call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
-            call deigensolver_rmmdiis_min(gr, st, hm, psolver, eigens%pre, maxiter, eigens%converged(ik), ik)
+            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
-            call deigensolver_rmmdiis(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, &
+            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
         case(RS_PSD)
-          call deigensolver_rmmdiis_min(gr, st, hm, psolver, eigens%pre, maxiter, eigens%converged(ik), ik)
+          call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         ! FEAST: subspace diag or not?
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, psolver, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         
@@ -519,44 +517,44 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigensolver_cg2_new(gr, st, hm, psolver, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, psolver, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
                ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
                eigens%additional_terms, eigens%energy_change_threshold, &
                shift=eigens%spectrum_shift)
              
            else
-             call zeigensolver_cg2(gr, st, hm, psolver, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
                ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
                eigens%additional_terms, eigens%energy_change_threshold)
              
            end if
         case(RS_PLAN)
-          call zeigensolver_plan(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, &
+          call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, psolver, eigens%exponential_operator, eigens%tolerance, maxiter, &
+          call zeigensolver_evolution(gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call zeigensolver_lobpcg(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, &
+          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
-            call zeigensolver_rmmdiis_min(gr, st, hm, psolver, eigens%pre, maxiter, eigens%converged(ik), ik)
+            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
-            call zeigensolver_rmmdiis(gr, st, hm, psolver, eigens%pre, eigens%tolerance, maxiter, &
+            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if
         case(RS_PSD)
-          call zeigensolver_rmmdiis_min(gr, st, hm, psolver, eigens%pre, maxiter, eigens%converged(ik), ik)
+          call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, psolver, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         
