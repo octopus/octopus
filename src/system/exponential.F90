@@ -643,11 +643,11 @@ contains
 
       select case(te%exp_method)
       case(EXP_TAYLOR)
-        call taylor_series_batch()
+        call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
       case(EXP_LANCZOS) 
-        call lanczos_batch()
+        call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
       case(EXP_CHEBYSHEV)
-        call cheby_batch()
+        call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       end select
 
       if(phase_correction) then
@@ -709,214 +709,239 @@ contains
         end if
       end if
 
-   end if
+    end if
     
-   POP_SUB(exponential_apply_batch)
-
-  contains
-    
-    subroutine taylor_series_batch()
-      CMPLX :: zfact, zfact2
-      integer :: iter
-      logical :: zfact_is_real
-      type(profile_t), save :: prof
-      type(batch_t) :: psi1b, hpsi1b
-
-      PUSH_SUB(exponential_apply_batch.taylor_series_batch)
-      call profiling_in(prof, "EXP_TAYLOR_BATCH")
-
-      call batch_copy(psib, psi1b)
-      call batch_copy(psib, hpsi1b)
-
-      zfact = M_z1
-      zfact2 = M_z1
-      zfact_is_real = .true.
-      
-      if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
-
-      do iter = 1, te%exp_order
-        zfact = zfact*(-M_zI*deltat_)/iter
-        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2_)/iter
-        zfact_is_real = .not. zfact_is_real
-        ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
-        !  in runaway case the problem is really hard to trace back: the positions
-        !  go haywire on the first step of dynamics (often NaN) and with debugging options
-        !  the code stops in ZAXPY below without saying why.
-
-        if(iter /= 1) then
-          call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
-        else
-          call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
-        end if
-        
-        if(zfact_is_real) then
-          call batch_axpy(mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
-        else
-          call batch_axpy(mesh%np, zfact, hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(mesh%np, zfact2, hpsi1b, psib2)
-        end if
-
-        if(iter /= te%exp_order) call batch_copy_data(mesh%np, hpsi1b, psi1b)
-
-      end do
-
-      call batch_end(psi1b)
-      call batch_end(hpsi1b)
-      
-      call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
-      
-      call profiling_out(prof)
-      POP_SUB(exponential_apply_batch.taylor_series_batch)
-    end subroutine taylor_series_batch
-
-
-    ! ---------------------------------------------------------
-    !TODO: Add a reference
-    subroutine lanczos_batch()
-
-      integer ::  iter, l, idim, bind
-      CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
-      FLOAT, allocatable :: beta(:), res(:), norm(:)
-      type(batch_t), allocatable :: vb(:)
-      type(profile_t), save :: prof
-
-      PUSH_SUB(exponential_apply_batch.lanczos_batch)
-      call profiling_in(prof, "EXP_LANCZOS_BATCH")
-
-      SAFE_ALLOCATE(beta(1:psib%nst))
-      SAFE_ALLOCATE(res(1:psib%nst))
-      SAFE_ALLOCATE(norm(1:psib%nst))
-      call mesh_batch_nrm2(mesh, psib, beta) 
-
-      ! If we have a null vector, no need to compute the action of the exponential.
-      if(all(abs(beta) <= CNST(1.0e-12))) then
-        call profiling_out(prof)
-        POP_SUB(exponential_apply_batch.lanczos_batch)
-        return
-      end if
-
-      SAFE_ALLOCATE(vb(1:te%exp_order+1))
-      do iter = 1, te%exp_order+1
-        call batch_copy(psib, vb(iter))
-      end do
-      call batch_copy_data(mesh%np, psib, vb(1))
-      call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
-
-      SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
-      SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
-      hamilt = M_z0
-      expo = M_z0
-
-      ! This is the Lanczos loop...
-      do iter = 1, te%exp_order
-
-        !to apply the Hamiltonian
-        call operate_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
-
-        if(hm%is_hermitian()) then
-          l = max(1, iter - 1)
-        else
-          l = 1
-        end if
-
-         !orthogonalize against previous vectors
-        call zmesh_batch_orthogonalization(mesh, iter - l + 1, vb(l:iter), vb(iter+1), &
-            normalize = .false., overlap = hamilt(l:iter, iter, 1:psib%nst), norm = hamilt(iter + 1, iter, 1:psib%nst), &
-            gs_scheme = te%arnoldi_gs)
-
-        do ii = 1, psib%nst
-          call zlalg_exp(iter, -M_zI*deltat_, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
-
-          res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
-        end do !ii
-
-        if(all(abs(hamilt(iter + 1, iter, :)) < CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
-        !We normalize only if the norm is non-zero
-        ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0 
-        norm = M_ONE
-        do ist = 1, psib%nst
-          if( abs(hamilt(iter + 1, iter, ist)) >= CNST(1.0e4)*M_EPSILON ) then
-            norm(ist) = M_ONE / abs(hamilt(iter + 1, iter, ist))
-          end if
-        end do
-        call batch_scal(mesh%np, norm, vb(iter+1), a_full = .false.)
-
-        if(iter > 3 .and. all(res < te%lanczos_tol)) exit
-
-      end do !iter 
-
-      if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
-        write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
-        call messages_warning(1)
-      end if
-
-      ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
-      call batch_scal(mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
-      !TODO: We should have a routine batch_gemv fro improve performances
-      do ii = 2, iter
-        call batch_axpy(mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
-        !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp
-        !And to recontruct here the exp(i*dt*H) for deltat2
-      end do
-
-      do iter = 1, te%exp_order+1
-        call batch_end(vb(iter))
-      end do
-
-      SAFE_DEALLOCATE_A(hamilt)
-      SAFE_DEALLOCATE_A(expo)
-      SAFE_DEALLOCATE_A(beta)
-      SAFE_DEALLOCATE_A(res)
-      SAFE_DEALLOCATE_A(norm)
-
-      call profiling_out(prof)
-
-      POP_SUB(exponential_apply_batch.lanczos_batch)
-    end subroutine lanczos_batch
-
-    subroutine cheby_batch()
-      integer :: j
-      CMPLX :: zfact
-      type(batch_t) :: psi0, psi1, psi2
-      type(profile_t), save :: prof
-
-      PUSH_SUB(exponential_apply_batch.cheby_batch)
-      call profiling_in(prof, "EXP_CHEBY_BATCH")
-
-      call batch_copy(psib, psi0)
-      call batch_copy(psib, psi1)
-      call batch_copy(psib, psi2)
-      call batch_set_zero(psi0)
-      call batch_set_zero(psi1)
-
-      do j = te%exp_order - 1, 0, -1
-        call batch_copy_data(mesh%np, psi1, psi2)
-        call batch_copy_data(mesh%np, psi0, psi1)
-
-        call operate_batch(hm, mesh, psi1, psi0, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
-        zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
-
-        call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
-        call batch_scal(mesh%np, M_TWO/hm%spectral_half_span, psi0)
-        call batch_axpy(mesh%np, zfact, psib, psi0)
-        call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
-      end do
-
-      call batch_copy_data(mesh%np, psi0, psib)
-      call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
-      call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
-
-      call batch_end(psi0)
-      call batch_end(psi1)
-      call batch_end(psi2)
-
-      call profiling_out(prof)
-
-      POP_SUB(exponential_apply_batch.cheby_batch)
-    end subroutine cheby_batch
-
+    POP_SUB(exponential_apply_batch)
   end subroutine exponential_apply_batch
+
+  ! ---------------------------------------------------------
+  subroutine exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat, set_phase, psib2, deltat2, vmagnus)
+    type(exponential_t),             intent(inout) :: te
+    type(mesh_t),                    intent(in)    :: mesh
+    type(hamiltonian_elec_t),        intent(inout) :: hm
+    type(batch_t),                   intent(inout) :: psib
+    integer,                         intent(in)    :: ik
+    CMPLX,                           intent(in)    :: deltat
+    logical,                         intent(in)    :: set_phase
+    type(batch_t),         optional, intent(inout) :: psib2
+    CMPLX,                 optional, intent(in)    :: deltat2
+    FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+
+    CMPLX :: zfact, zfact2
+    integer :: iter
+    logical :: zfact_is_real
+    type(profile_t), save :: prof
+    type(batch_t) :: psi1b, hpsi1b
+
+    PUSH_SUB(exponential_taylor_series_batch)
+    call profiling_in(prof, "EXP_TAYLOR_BATCH")
+
+    call batch_copy(psib, psi1b)
+    call batch_copy(psib, hpsi1b)
+
+    zfact = M_z1
+    zfact2 = M_z1
+    zfact_is_real = .true.
+
+    if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+
+    do iter = 1, te%exp_order
+      zfact = zfact*(-M_zI*deltat)/iter
+      if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
+      zfact_is_real = .not. zfact_is_real
+      ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
+      !  in runaway case the problem is really hard to trace back: the positions
+      !  go haywire on the first step of dynamics (often NaN) and with debugging options
+      !  the code stops in ZAXPY below without saying why.
+
+      if(iter /= 1) then
+        call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase, vmagnus)
+      else
+        call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase, vmagnus)
+      end if
+
+      if(zfact_is_real) then
+        call batch_axpy(mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
+        if(present(psib2)) call batch_axpy(mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
+      else
+        call batch_axpy(mesh%np, zfact, hpsi1b, psib)
+        if(present(psib2)) call batch_axpy(mesh%np, zfact2, hpsi1b, psib2)
+      end if
+
+      if(iter /= te%exp_order) call batch_copy_data(mesh%np, hpsi1b, psi1b)
+
+    end do
+
+    call batch_end(psi1b)
+    call batch_end(hpsi1b)
+
+    call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
+
+    call profiling_out(prof)
+    POP_SUB(exponential_taylor_series_batch)
+  end subroutine exponential_taylor_series_batch
+
+  ! ---------------------------------------------------------
+  !TODO: Add a reference
+  subroutine exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
+    type(exponential_t),             intent(inout) :: te
+    type(mesh_t),                    intent(in)    :: mesh
+    type(hamiltonian_elec_t),        intent(inout) :: hm
+    integer,                         intent(in)    :: ik
+    type(batch_t),                   intent(inout) :: psib
+    CMPLX,                           intent(in)    :: deltat
+    logical,                         intent(in)    :: set_phase
+    FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+
+    integer ::  iter, l, idim, bind, ii, ist
+    CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
+    FLOAT, allocatable :: beta(:), res(:), norm(:)
+    type(batch_t), allocatable :: vb(:)
+    type(profile_t), save :: prof
+
+    PUSH_SUB(exponential_lanczos_batch)
+    call profiling_in(prof, "EXP_LANCZOS_BATCH")
+
+    SAFE_ALLOCATE(beta(1:psib%nst))
+    SAFE_ALLOCATE(res(1:psib%nst))
+    SAFE_ALLOCATE(norm(1:psib%nst))
+    call mesh_batch_nrm2(mesh, psib, beta)
+
+    ! If we have a null vector, no need to compute the action of the exponential.
+    if(all(abs(beta) <= CNST(1.0e-12))) then
+      call profiling_out(prof)
+      POP_SUB(exponential_lanczos_batch)
+      return
+    end if
+
+    SAFE_ALLOCATE(vb(1:te%exp_order+1))
+    do iter = 1, te%exp_order+1
+      call batch_copy(psib, vb(iter))
+    end do
+    call batch_copy_data(mesh%np, psib, vb(1))
+    call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
+
+    SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
+    SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
+    hamilt = M_z0
+    expo = M_z0
+
+    ! This is the Lanczos loop...
+    do iter = 1, te%exp_order
+
+      !to apply the Hamiltonian
+      call operate_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase, vmagnus)
+
+      if(hm%is_hermitian()) then
+        l = max(1, iter - 1)
+      else
+        l = 1
+      end if
+
+      !orthogonalize against previous vectors
+      call zmesh_batch_orthogonalization(mesh, iter - l + 1, vb(l:iter), vb(iter+1), &
+        normalize = .false., overlap = hamilt(l:iter, iter, 1:psib%nst), norm = hamilt(iter + 1, iter, 1:psib%nst), &
+        gs_scheme = te%arnoldi_gs)
+
+      do ii = 1, psib%nst
+        call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+
+        res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
+      end do !ii
+
+      if(all(abs(hamilt(iter + 1, iter, :)) < CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
+      !We normalize only if the norm is non-zero
+      ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0 
+      norm = M_ONE
+      do ist = 1, psib%nst
+        if( abs(hamilt(iter + 1, iter, ist)) >= CNST(1.0e4)*M_EPSILON ) then
+          norm(ist) = M_ONE / abs(hamilt(iter + 1, iter, ist))
+        end if
+      end do
+      call batch_scal(mesh%np, norm, vb(iter+1), a_full = .false.)
+
+      if(iter > 3 .and. all(res < te%lanczos_tol)) exit
+
+    end do !iter
+
+    if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
+      write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
+      call messages_warning(1)
+    end if
+
+    ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
+    call batch_scal(mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
+    !TODO: We should have a routine batch_gemv fro improve performances
+    do ii = 2, iter
+      call batch_axpy(mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
+      !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp
+      !And to recontruct here the exp(i*dt*H) for deltat2
+    end do
+
+    do iter = 1, te%exp_order+1
+      call batch_end(vb(iter))
+    end do
+
+    SAFE_DEALLOCATE_A(hamilt)
+    SAFE_DEALLOCATE_A(expo)
+    SAFE_DEALLOCATE_A(beta)
+    SAFE_DEALLOCATE_A(res)
+    SAFE_DEALLOCATE_A(norm)
+
+    call profiling_out(prof)
+
+    POP_SUB(exponential_lanczos_batch)
+  end subroutine exponential_lanczos_batch
+
+  subroutine exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
+    type(exponential_t),             intent(inout) :: te
+    type(mesh_t),                    intent(in)    :: mesh
+    type(hamiltonian_elec_t),        intent(inout) :: hm
+    integer,                         intent(in)    :: ik
+    type(batch_t),                   intent(inout) :: psib
+    FLOAT,                           intent(in)    :: deltat
+    logical,                         intent(in)    :: set_phase
+    FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+
+    integer :: j
+    CMPLX :: zfact
+    type(batch_t) :: psi0, psi1, psi2
+    type(profile_t), save :: prof
+
+    PUSH_SUB(exponential_cheby_batch)
+    call profiling_in(prof, "EXP_CHEBY_BATCH")
+
+    call batch_copy(psib, psi0)
+    call batch_copy(psib, psi1)
+    call batch_copy(psib, psi2)
+    call batch_set_zero(psi0)
+    call batch_set_zero(psi1)
+
+    do j = te%exp_order - 1, 0, -1
+      call batch_copy_data(mesh%np, psi1, psi2)
+      call batch_copy_data(mesh%np, psi0, psi1)
+
+      call operate_batch(hm, mesh, psi1, psi0, ik, set_phase, vmagnus)
+      zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
+
+      call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
+      call batch_scal(mesh%np, M_TWO/hm%spectral_half_span, psi0)
+      call batch_axpy(mesh%np, zfact, psib, psi0)
+      call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
+    end do
+
+    call batch_copy_data(mesh%np, psi0, psib)
+    call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
+    call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
+
+    call batch_end(psi0)
+    call batch_end(psi1)
+    call batch_end(psi2)
+
+    call profiling_out(prof)
+
+    POP_SUB(exponential_cheby_batch)
+  end subroutine exponential_cheby_batch
 
 
   subroutine operate_batch(hm, mesh, psib, hpsib, ik, set_phase, vmagnus)
