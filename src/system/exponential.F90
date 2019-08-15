@@ -589,7 +589,7 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2)
+  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, imag_time)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -597,9 +597,11 @@ contains
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
     type(batch_t), target, optional, intent(inout) :: psib2
-    FLOAT, optional,                 intent(in)    :: deltat2
+    FLOAT,                 optional, intent(in)    :: deltat2
+    logical,               optional, intent(in)    :: imag_time
     
     integer :: ii, ist
+    CMPLX :: deltat_, deltat2_
     CMPLX, pointer :: psi(:, :), psi2(:, :)
     logical :: phase_correction
 
@@ -608,7 +610,22 @@ contains
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
 
-    
+    if (optional_default(imag_time, .false.)) then
+      select case(te%exp_method)
+      case(EXP_TAYLOR, EXP_LANCZOS)
+        deltat_ = M_zI*deltat
+        if (present(deltat2)) deltat2_ = M_zI*deltat2
+      case default
+        write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
+        write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
+        write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
+        call messages_fatal(3)
+      end select
+    else
+      deltat_ = TOCMPLX(deltat, M_ZERO)
+      if (present(deltat2)) deltat2_ = TOCMPLX(deltat2, M_ZERO)
+    end if
+
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
@@ -663,7 +680,7 @@ contains
         else
           psi => psib%states(ii)%zpsi
         end if
-        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat)
+        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat, imag_time=imag_time)
         if (batch_status(psib) /= BATCH_NOT_PACKED) then
           call batch_set_state(psib, ii, mesh%np, psi)
         end if
@@ -675,7 +692,7 @@ contains
           else
             psi2 => psib2%states(ii)%zpsi
           end if
-          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2)
+          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2, imag_time=imag_time)
           if (batch_status(psib2) /= BATCH_NOT_PACKED) then
             call batch_set_state(psib2, ii, mesh%np, psi2)
           end if
@@ -722,8 +739,8 @@ contains
       if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
-        zfact = zfact*(-M_zI*deltat)/iter
-        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
+        zfact = zfact*(-M_zI*deltat_)/iter
+        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2_)/iter
         zfact_is_real = .not. zfact_is_real
         ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
         !  in runaway case the problem is really hard to trace back: the positions
@@ -823,7 +840,7 @@ contains
             gs_scheme = te%arnoldi_gs)
 
         do ii = 1, psib%nst
-          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+          call zlalg_exp(iter, -M_zI*deltat_, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
 
           res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
         end do !ii
