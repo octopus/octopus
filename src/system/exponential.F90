@@ -614,9 +614,9 @@ contains
     if(associated(hm%hm_base%phase)) phase_correction = .true.
     if(accel_is_enabled()) phase_correction = .false.
 
-    if (te%exp_method == EXP_TAYLOR .or. &
-          (te%exp_method == EXP_LANCZOS.and..not. hamiltonian_elec_inh_term(hm)&
-           .and..not. present(psib2))) then 
+    if ( te%exp_method == EXP_TAYLOR .or. &
+        (te%exp_method == EXP_CHEBYSHEV .and. .not.present(psib2)) .or. &
+        (te%exp_method == EXP_LANCZOS .and..not. hamiltonian_elec_inh_term(hm) .and..not. present(psib2))) then
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
      !will be treated as a phase correction in the Hamiltonian
       if(phase_correction) then
@@ -628,6 +628,8 @@ contains
         call taylor_series_batch()
       case(EXP_LANCZOS) 
         call lanczos_batch()
+      case(EXP_CHEBYSHEV)
+        call cheby_batch()
       end select
 
       if(phase_correction) then
@@ -873,6 +875,51 @@ contains
 
       POP_SUB(exponential_apply_batch.lanczos_batch)
     end subroutine lanczos_batch
+
+    subroutine cheby_batch()
+      integer :: j
+      CMPLX :: zfact
+      type(batch_t) :: psi0, psi1, psi2
+      type(profile_t), save :: prof
+
+      PUSH_SUB(exponential_apply_batch.cheby_batch)
+      call profiling_in(prof, "EXP_CHEBY_BATCH")
+
+      if(hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_pack(psib)
+      end if
+
+      call batch_copy(psib, psi0)
+      call batch_copy(psib, psi1)
+      call batch_copy(psib, psi2)
+      call batch_set_zero(psi0)
+      call batch_set_zero(psi1)
+
+      do j = te%exp_order - 1, 0, -1
+        call batch_copy_data(mesh%np, psi1, psi2)
+        call batch_copy_data(mesh%np, psi0, psi1)
+
+        call zhamiltonian_elec_apply_batch(hm, mesh, psi1, psi0, ik, set_phase = .not.phase_correction)
+        zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
+
+        call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
+        call batch_scal(mesh%np, M_TWO/hm%spectral_half_span, psi0)
+        call batch_axpy(mesh%np, zfact, psib, psi0)
+        call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
+      end do
+
+      call batch_copy_data(mesh%np, psi0, psib)
+      call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
+      call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
+
+      if(hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_unpack(psib)
+      end if
+
+      call profiling_out(prof)
+
+      POP_SUB(exponential_apply_batch.cheby_batch)
+    end subroutine cheby_batch
 
   end subroutine exponential_apply_batch
 
