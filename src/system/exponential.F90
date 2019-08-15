@@ -912,6 +912,10 @@ contains
       call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
       call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
 
+      call batch_end(psi0)
+      call batch_end(psi1)
+      call batch_end(psi2)
+
       if(hamiltonian_elec_apply_packed(hm, mesh)) then
         call batch_unpack(psib)
       end if
