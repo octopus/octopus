@@ -632,11 +632,9 @@ contains
     if(associated(hm%hm_base%phase)) phase_correction = .true.
     if(accel_is_enabled()) phase_correction = .false.
 
-    if ( te%exp_method == EXP_TAYLOR .or. &
-        (te%exp_method == EXP_CHEBYSHEV .and. .not.present(psib2)) .or. &
-        (te%exp_method == EXP_LANCZOS .and..not. hamiltonian_elec_inh_term(hm) .and..not. present(psib2))) then
-     !We apply the phase only to np points, and the phase for the np+1 to np_part points
-     !will be treated as a phase correction in the Hamiltonian
+    if ( .not. (te%exp_method == EXP_LANCZOS .and. hamiltonian_elec_inh_term(hm))) then
+      !We apply the phase only to np points, and the phase for the np+1 to np_part points
+      !will be treated as a phase correction in the Hamiltonian
       if(phase_correction) then
         call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .false., psib)
       end if
@@ -646,8 +644,16 @@ contains
         call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
       case(EXP_LANCZOS) 
         call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
+        if (present(psib2)) then
+          call batch_copy_data(mesh%np, psib, psib2)
+          call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
+        end if        
       case(EXP_CHEBYSHEV)
         call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
+        if (present(psib2)) then
+          call batch_copy_data(mesh%np, psib, psib2)
+          call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
+        end if
       end select
 
       if(phase_correction) then
