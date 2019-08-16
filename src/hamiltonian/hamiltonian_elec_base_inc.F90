@@ -16,38 +16,38 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
-  type(hamiltonian_base_t),    intent(in)    :: this
+subroutine X(hamiltonian_elec_base_local)(this, mesh, std, ispin, psib, vpsib)
+  type(hamiltonian_elec_base_t),    intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   integer,                     intent(in)    :: ispin
   type(batch_t),               intent(in)    :: psib
   type(batch_t),               intent(inout) :: vpsib
 
-  PUSH_SUB(X(hamiltonian_base_local))
+  PUSH_SUB(X(hamiltonian_elec_base_local))
 
   if(batch_status(psib) == BATCH_DEVICE_PACKED) then
     ASSERT(.not. allocated(this%Impotential))
-    call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
+    call X(hamiltonian_elec_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
   else
     if(allocated(this%Impotential)) then
-      call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
+      call X(hamiltonian_elec_base_local_sub)(this%potential, mesh, std, ispin, &
         psib, vpsib, Impotential = this%Impotential)
     else
-      call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, psib, vpsib)
+      call X(hamiltonian_elec_base_local_sub)(this%potential, mesh, std, ispin, psib, vpsib)
     end if
   end if
 
-  POP_SUB(X(hamiltonian_base_local))
-end subroutine X(hamiltonian_base_local)
+  POP_SUB(X(hamiltonian_elec_base_local))
+end subroutine X(hamiltonian_elec_base_local)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsib, Impotential, potential_opencl)
+subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib, vpsib, Impotential, potential_opencl)
   FLOAT,                        intent(in)    :: potential(:,:)
   type(mesh_t),                 intent(in)    :: mesh
-  type(states_dim_t),           intent(in)    :: std
+  type(states_elec_dim_t),      intent(in)    :: std
   integer,                      intent(in)    :: ispin
   type(batch_t), target,        intent(in)    :: psib
   type(batch_t), target,        intent(inout) :: vpsib
@@ -63,7 +63,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   integer :: pnp, localsize
 
   call profiling_in(prof_vlpsi, "VLPSI")
-  PUSH_SUB(X(hamiltonian_base_local_sub))
+  PUSH_SUB(X(hamiltonian_elec_base_local_sub))
 
   pot_is_cmplx = .false.
   if(present(Impotential)) pot_is_cmplx = .true.
@@ -242,15 +242,15 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   end select
 
   call profiling_out(prof_vlpsi)
-  POP_SUB(X(hamiltonian_base_local_sub))
+  POP_SUB(X(hamiltonian_elec_base_local_sub))
 
-end subroutine X(hamiltonian_base_local_sub)
+end subroutine X(hamiltonian_elec_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
-  type(hamiltonian_base_t),              intent(in)    :: this
-  type(derivatives_t),                   intent(in)    :: der
+subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, src)
+  type(hamiltonian_elec_base_t),         intent(in)    :: this
+  type(mesh_t),                          intent(in)    :: mesh
   integer,                               intent(in)    :: np
   integer,                               intent(in)    :: iqn
   logical,                               intent(in)    :: conjugate
@@ -264,12 +264,12 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   integer :: wgsize
   type(accel_kernel_t), save :: ker_phase
 
-  PUSH_SUB(X(hamiltonian_base_phase))
+  PUSH_SUB(X(hamiltonian_elec_base_phase))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY")
 
   call profiling_count_operations(R_MUL*dble(np)*psib%nst_linear)
 
-  ASSERT(np <= der%mesh%np_part)
+  ASSERT(np <= mesh%np_part)
 
   src_ => psib
   if(present(src)) src_ => src
@@ -337,7 +337,7 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
       call accel_set_kernel_arg(ker_phase, 0, 0_4)
     end if
 
-    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*der%mesh%np_part)
+    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*mesh%np_part)
     call accel_set_kernel_arg(ker_phase, 2, np)
     call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
     call accel_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
@@ -353,43 +353,44 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   end select
 
   call profiling_out(phase_prof)
-  POP_SUB(X(hamiltonian_base_phase))
-end subroutine X(hamiltonian_base_phase)
+  POP_SUB(X(hamiltonian_elec_base_phase))
+end subroutine X(hamiltonian_elec_base_phase)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
-  type(hamiltonian_base_t),    intent(in)    :: this
+subroutine X(hamiltonian_elec_base_rashba)(this, mesh, der, std, psib, vpsib)
+  type(hamiltonian_elec_base_t),    intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   type(batch_t), target,       intent(in)    :: psib
   type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
   R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
-  PUSH_SUB(X(hamiltonian_base_rashba))
+  PUSH_SUB(X(hamiltonian_elec_base_rashba))
 
   if(abs(this%rashba_coupling) < M_EPSILON) then
-    POP_SUB(X(hamiltonian_base_rashba))
+    POP_SUB(X(hamiltonian_elec_base_rashba))
     return
   end if
   ASSERT(std%ispin == SPINORS)
-  ASSERT(der%mesh%sb%dim == 2)
+  ASSERT(mesh%sb%dim == 2)
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    call batch_get_state(psib, ist, der%mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_get_state(psib, ist, mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
     if(allocated(this%vector_potential)) then
-      forall(ip = 1:der%mesh%np)
+      forall(ip = 1:mesh%np)
         vpsi(ip, 1) = vpsi(ip, 1) + &
           (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
         vpsi(ip, 2) = vpsi(ip, 2) + &
@@ -397,29 +398,30 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
       end forall
     end if
 
-    forall(ip = 1:der%mesh%np)
+    forall(ip = 1:mesh%np)
       vpsi(ip, 1) = vpsi(ip, 1) - &
         this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
       vpsi(ip, 2) = vpsi(ip, 2) + &
         this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
     end forall
 
-    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_set_state(vpsib, ist, mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
   SAFE_DEALLOCATE_A(vpsi)
   SAFE_DEALLOCATE_A(psi)
   
-  POP_SUB(X(hamiltonian_base_rashba))
-end subroutine X(hamiltonian_base_rashba)
+  POP_SUB(X(hamiltonian_elec_base_rashba))
+end subroutine X(hamiltonian_elec_base_rashba)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
-  type(hamiltonian_base_t),    intent(in)    :: this
+subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, psib, vpsib)
+  type(hamiltonian_elec_base_t),    intent(in)    :: this
+  type(mesh_t),                     intent(in)    :: mesh
   type(derivatives_t),         intent(in)    :: der
-  type(states_dim_t),          intent(in)    :: std
+  type(states_elec_dim_t),     intent(in)    :: std
   type(epot_t),                intent(in)    :: ep
   integer,                     intent(in)    :: ispin
   type(batch_t), target,       intent(in)    :: psib
@@ -430,48 +432,48 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   FLOAT :: cc, b2, bb(1:MAX_DIM)
   CMPLX :: b12
 
-  if(.not. hamiltonian_base_has_magnetic(this)) return
+  if(.not. hamiltonian_elec_base_has_magnetic(this)) return
 
   call profiling_in(prof_magnetic, "MAGNETIC")
-  PUSH_SUB(X(hamiltonian_base_magnetic))
+  PUSH_SUB(X(hamiltonian_elec_base_magnetic))
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    call batch_get_state(psib, ist, der%mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_get_state(psib, ist, mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
     end do
  
     if(allocated(this%vector_potential)) then
-      forall (idim = 1:std%dim, ip = 1:der%mesh%np)
+      forall (idim = 1:std%dim, ip = 1:mesh%np)
         vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * &
-          sum(this%vector_potential(1:der%mesh%sb%dim, ip)**2)*psi(ip, idim) &
-          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:der%mesh%sb%dim, ip), grad(ip, 1:der%mesh%sb%dim, idim))
+          sum(this%vector_potential(1:mesh%sb%dim, ip)**2)*psi(ip, idim) &
+          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:mesh%sb%dim, ip), grad(ip, 1:mesh%sb%dim, idim))
       end forall
     end if
 
     if(allocated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
       ! Zeeman term
       cc = M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
-      bb(1:max(der%mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(der%mesh%sb%dim, 3))
-      b2 = sqrt(sum(bb(1:max(der%mesh%sb%dim, 3))**2))
+      bb(1:max(mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(mesh%sb%dim, 3))
+      b2 = sqrt(sum(bb(1:max(mesh%sb%dim, 3))**2))
       b12 = bb(1) - M_ZI*bb(2)
 
       select case (std%ispin)
       case (SPIN_POLARIZED)
         if(is_spin_down(ispin)) cc = -cc
         
-        forall (ip = 1:der%mesh%np)
+        forall (ip = 1:mesh%np)
           vpsi(ip, 1) = vpsi(ip, 1) + cc*b2*psi(ip, 1)
         end forall
         
       case (SPINORS)
-        forall (ip = 1:der%mesh%np)
+        forall (ip = 1:mesh%np)
           vpsi(ip, 1) = vpsi(ip, 1) + cc*(bb(3)*psi(ip, 1) + b12*psi(ip, 2))
           vpsi(ip, 2) = vpsi(ip, 2) + cc*(-bb(3)*psi(ip, 2) + conjg(b12)*psi(ip, 1))
         end forall
@@ -479,23 +481,23 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
       end select
     end if
 
-    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
+    call batch_set_state(vpsib, ist, mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
   SAFE_DEALLOCATE_A(vpsi)
   SAFE_DEALLOCATE_A(psi)
   
-  POP_SUB(X(hamiltonian_base_magnetic))
+  POP_SUB(X(hamiltonian_elec_base_magnetic))
   call profiling_out(prof_magnetic)
-end subroutine X(hamiltonian_base_magnetic)
+end subroutine X(hamiltonian_elec_base_magnetic)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projection)
-  type(hamiltonian_base_t), target, intent(in)    :: this
+subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, projection)
+  type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
   type(projection_t),               intent(out)   :: projection
@@ -515,7 +517,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_BRA")
-  PUSH_SUB(X(hamiltonian_base_nlocal_start))
+  PUSH_SUB(X(hamiltonian_elec_base_nlocal_start))
 
   nst = psib%nst_linear
 #ifdef R_TCOMPLEX
@@ -585,7 +587,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     call profiling_out(cl_prof)
 
-    POP_SUB(X(hamiltonian_base_nlocal_start))
+    POP_SUB(X(hamiltonian_elec_base_nlocal_start))
     call profiling_out(prof_vnlpsi_start)
     return
   end if
@@ -684,16 +686,16 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   SAFE_DEALLOCATE_A(ind)
   SAFE_DEALLOCATE_A(lpsi)
 
-  POP_SUB(X(hamiltonian_base_nlocal_start))
+  POP_SUB(X(hamiltonian_elec_base_nlocal_start))
   call profiling_out(prof_vnlpsi_start)
-end subroutine X(hamiltonian_base_nlocal_start)
+end subroutine X(hamiltonian_elec_base_nlocal_start)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
-  type(hamiltonian_base_t), target, intent(in)    :: this
+subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
+  type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(projection_t),       target, intent(inout) :: projection
   type(batch_t),                    intent(inout) :: vpsib
@@ -708,7 +710,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(.not. this%apply_projector_matrices) return
 
   call profiling_in(prof_vnlpsi_finish, "VNLPSI_MAT_KET")
-  PUSH_SUB(X(hamiltonian_base_nlocal_finish))
+  PUSH_SUB(X(hamiltonian_elec_base_nlocal_finish))
 
   nst = vpsib%nst_linear
 #ifdef R_TCOMPLEX
@@ -738,7 +740,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     call finish_opencl()
     call accel_release_buffer(projection%buff_projection)
     
-    POP_SUB(X(hamiltonian_base_nlocal_finish))
+    POP_SUB(X(hamiltonian_elec_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
     return
   end if
@@ -826,7 +828,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   
   SAFE_DEALLOCATE_A(projection%X(projection))
   
-  POP_SUB(X(hamiltonian_base_nlocal_finish))
+  POP_SUB(X(hamiltonian_elec_base_nlocal_finish))
   call profiling_out(prof_vnlpsi_finish)
 
 contains
@@ -838,7 +840,7 @@ contains
     type(accel_kernel_t), pointer :: kernel
     type(accel_mem_t), pointer :: buff_proj
     
-    PUSH_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
+    PUSH_SUB(X(hamiltonian_elec_base_nlocal_finish).finish_opencl)
 
     ! In this case we run one kernel per projector, since all write to
     ! the wave-function. Otherwise we would need to do atomic
@@ -933,18 +935,17 @@ contains
     
     call profiling_out(cl_prof)
 
-    POP_SUB(X(hamiltonian_base_nlocal_finish).finish_opencl)
+    POP_SUB(X(hamiltonian_elec_base_nlocal_finish).finish_opencl)
   end subroutine finish_opencl
 
-end subroutine X(hamiltonian_base_nlocal_finish)
+end subroutine X(hamiltonian_elec_base_nlocal_finish)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1b, psi2b, force)
-  type(hamiltonian_base_t), target, intent(in)    :: this
+subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1b, psi2b, force)
+  type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_t),                   intent(in)    :: st
-  type(geometry_t),                 intent(in)    :: geo
+  type(states_elec_t),              intent(in)    :: st
   integer,                          intent(in)    :: iqn
   integer,                          intent(in)    :: ndim
   type(batch_t),                    intent(in)    :: psi1b
@@ -959,7 +960,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
   if(.not. this%apply_projector_matrices) return
     
   call profiling_in(prof_matelement, "VNLPSI_MAT_ELEM")
-  PUSH_SUB(X(hamiltonian_base_nlocal_force))
+  PUSH_SUB(X(hamiltonian_elec_base_nlocal_force))
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
   ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))
@@ -1089,16 +1090,16 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
 
   SAFE_DEALLOCATE_A(projs)
 
-  POP_SUB(X(hamiltonian_base_nlocal_force))
+  POP_SUB(X(hamiltonian_elec_base_nlocal_force))
   call profiling_out(prof_matelement)
-end subroutine X(hamiltonian_base_nlocal_force)
+end subroutine X(hamiltonian_elec_base_nlocal_force)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, psib, commpsib)
-  type(hamiltonian_base_t), target, intent(in)    :: this
+subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, ik, psib, commpsib)
+  type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
-  type(states_dim_t),               intent(in)    :: std
+  type(states_elec_dim_t),          intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
   type(batch_t),                    intent(inout) :: commpsib(:)
@@ -1116,7 +1117,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 
   if(.not. this%apply_projector_matrices) return
 
-  PUSH_SUB(X(hamiltonian_base_nlocal_position_commutator))
+  PUSH_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
   call profiling_in(prof, "COMMUTATOR")
 
   ASSERT(batch_is_packed(psib))
@@ -1131,7 +1132,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
     call X(commutator_opencl)()
     call profiling_out(prof)
-    POP_SUB(X(hamiltonian_base_nlocal_position_commutator))
+    POP_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
     return
   end if
 
@@ -1288,7 +1289,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   SAFE_DEALLOCATE_A(ind)
 
   call profiling_out(prof)
-  POP_SUB(X(hamiltonian_base_nlocal_position_commutator))
+  POP_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
 
 contains
 
@@ -1426,7 +1427,7 @@ contains
     
   end subroutine X(commutator_opencl)
   
-end subroutine X(hamiltonian_base_nlocal_position_commutator)
+end subroutine X(hamiltonian_elec_base_nlocal_position_commutator)
 
 !! Local Variables:
 !! mode: f90

@@ -19,9 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_spin(tg, parser)
-    type(target_t),   intent(inout) :: tg
-    type(parser_t),   intent(in)    :: parser
+  subroutine target_init_spin(tg, namespace)
+    type(target_t),    intent(inout) :: tg
+    type(namespace_t), intent(in)    :: namespace
         
 
     type(block_t)       :: blk
@@ -40,8 +40,8 @@
     !%Description
     !% (Experimental) Specify the targeted spin as a 3-component vector. It will be normalized.
     !%End
-    if(parse_is_defined(parser, 'OCTTargetSpin')) then
-      if(parse_block(parser, 'OCTTargetSpin', blk) == 0) then
+    if(parse_is_defined(namespace, 'OCTTargetSpin')) then
+      if(parse_block(namespace, 'OCTTargetSpin', blk) == 0) then
         alpha = M_z0
         do jst = 1, parse_block_cols(blk, 0)
           call parse_block_cmplx(blk, 0, jst - 1, alpha(jst))
@@ -75,9 +75,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_spin(tg, gr, psi) result(j1)
-    type(target_t),   intent(in) :: tg
-    type(grid_t),     intent(in) :: gr
-    type(states_t),   intent(in) :: psi
+    type(target_t),      intent(in) :: tg
+    type(grid_t),        intent(in) :: gr
+    type(states_elec_t), intent(in) :: psi
     
     integer :: i, j
     CMPLX, allocatable :: zpsi(:, :)
@@ -86,7 +86,7 @@
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
     
-    call states_get_state(psi, gr%mesh, 1, 1, zpsi)
+    call states_elec_get_state(psi, gr%mesh, 1, 1, zpsi)
     
     j1 = M_ZERO
     do i = 1, 2
@@ -105,10 +105,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_spin(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(target_t),       intent(in)    :: tg
+    type(grid_t),         intent(in)    :: gr
+    type(states_elec_t),  intent(in)    :: psi_in
+    type(states_elec_t),  intent(inout) :: chi_out
     
     integer :: i, j
     CMPLX, allocatable :: zpsi(:, :), zchi(:, :)
@@ -118,7 +118,7 @@
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
     SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
 
-    call states_get_state(psi_in, gr%mesh, 1, 1, zpsi)
+    call states_elec_get_state(psi_in, gr%mesh, 1, 1, zpsi)
     
     zchi(1:gr%mesh%np, 1:tg%st%d%dim) = CNST(0.0)
 
@@ -128,7 +128,7 @@
       end do
     end do
 
-    call states_set_state(chi_out, gr%mesh, 1, 1, zchi)
+    call states_elec_set_state(chi_out, gr%mesh, 1, 1, zchi)
     
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(zchi)

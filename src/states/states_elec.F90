@@ -17,7 +17,7 @@
 !!
 #include "global.h"
 
-module states_oct_m
+module states_elec_oct_m
   use accel_oct_m
   use blacs_proc_grid_oct_m
   use boundaries_oct_m
@@ -40,6 +40,7 @@ module states_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
 #endif
@@ -48,8 +49,9 @@ module states_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_group_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_group_oct_m
+  use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use unit_oct_m
@@ -61,60 +63,43 @@ module states_oct_m
   private
 
   public ::                           &
-    states_t,                         &
-    states_priv_t,                    &
-    states_init,                      &
-    states_look,                      &
-    states_densities_init,            &
-    states_exec_init,                 &
-    states_allocate_wfns,             &
-    states_allocate_current,          &
-    states_deallocate_wfns,           &
-    states_null,                      &
-    states_end,                       &
-    states_copy,                      &
-    states_generate_random,           &
-    states_fermi,                     &
-    states_eigenvalues_sum,           &
-    states_calc_quantities,           &
-    state_is_local,                   &
-    state_kpt_is_local,               &
-    states_distribute_nodes,          &
-    states_wfns_memory,               &
-    states_are_complex,               &
-    states_are_real,                  &
-    states_set_complex,               &
-    states_get_state,                 &
-    states_set_state,                 &
-    states_get_points,                &
-    states_pack,                      &
-    states_unpack,                    &
-    states_are_packed,                &
-    states_write_info,                &
-    states_set_zero,                  &
-    states_block_min,                 &
-    states_block_max,                 &
-    states_block_size,                &
-    states_count_pairs,               &
-    occupied_states,                  &
-    states_type,                      &
-    states_set_phase
+    states_elec_t,                         &
+    states_elec_init,                      &
+    states_elec_look,                      &
+    states_elec_densities_init,            &
+    states_elec_exec_init,                 &
+    states_elec_allocate_wfns,             &
+    states_elec_allocate_current,          &
+    states_elec_deallocate_wfns,           &
+    states_elec_null,                      &
+    states_elec_end,                       &
+    states_elec_copy,                      &
+    states_elec_generate_random,           &
+    states_elec_fermi,                     &
+    states_elec_eigenvalues_sum,           &
+    states_elec_calc_quantities,           &
+    state_is_local,                        &
+    state_kpt_is_local,                    &
+    states_elec_distribute_nodes,          &
+    states_elec_wfns_memory,               &
+    states_elec_get_state,                 &
+    states_elec_set_state,                 &
+    states_elec_get_points,                &
+    states_elec_block_min,                 &
+    states_elec_block_max,                 &
+    states_elec_block_size,                &
+    states_elec_count_pairs,               &
+    occupied_states,                       &
+    states_elec_set_phase
 
-  type states_priv_t
-    private
-    type(type_t) :: wfs_type              !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
-  end type states_priv_t
-
-  type states_t
+  type, extends(states_abst_t) :: states_elec_t
     ! Components are public by default
-    type(states_dim_t)       :: d
-    type(states_priv_t)      :: priv                  !< the private components
-    integer                  :: nst                   !< Number of states in each irreducible subspace
+    type(states_elec_dim_t)  :: d
     integer                  :: nst_conv              !< Number of states to be converged for unocc calc.
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
      
-    type(states_group_t)     :: group
+    type(states_elec_group_t)     :: group
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
@@ -177,10 +162,16 @@ module states_oct_m
     type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
-    logical, private            :: packed
 
     integer                     :: randomization      !< Method used to generate random states
-  end type states_t
+    
+    contains 
+      procedure :: nullify => states_elec_null
+      procedure :: write_info => states_elec_write_info
+      procedure :: pack => states_elec_pack
+      procedure :: unpack => states_elec_unpack
+      procedure :: set_zero => states_elec_set_zero
+  end type states_elec_t
 
   !> Method used to generate random states
   integer, public, parameter :: &
@@ -188,30 +179,30 @@ module states_oct_m
     PAR_DEPENDENT   = 2
 
 
-  interface states_get_state
-    module procedure dstates_get_state1, zstates_get_state1, dstates_get_state2, zstates_get_state2
-    module procedure dstates_get_state3, zstates_get_state3, dstates_get_state4, zstates_get_state4
-  end interface states_get_state
+  interface states_elec_get_state
+    module procedure dstates_elec_get_state1, zstates_elec_get_state1, dstates_elec_get_state2, zstates_elec_get_state2
+    module procedure dstates_elec_get_state3, zstates_elec_get_state3, dstates_elec_get_state4, zstates_elec_get_state4
+  end interface states_elec_get_state
 
-  interface states_set_state
-    module procedure dstates_set_state1, zstates_set_state1, dstates_set_state2, zstates_set_state2
-    module procedure dstates_set_state3, zstates_set_state3, dstates_set_state4, zstates_set_state4
-  end interface states_set_state
+  interface states_elec_set_state
+    module procedure dstates_elec_set_state1, zstates_elec_set_state1, dstates_elec_set_state2, zstates_elec_set_state2
+    module procedure dstates_elec_set_state3, zstates_elec_set_state3, dstates_elec_set_state4, zstates_elec_set_state4
+  end interface states_elec_set_state
 
-  interface states_get_points
-    module procedure dstates_get_points1, zstates_get_points1, dstates_get_points2, zstates_get_points2 
-  end interface states_get_points
+  interface states_elec_get_points
+    module procedure dstates_elec_get_points1, zstates_elec_get_points1, dstates_elec_get_points2, zstates_elec_get_points2 
+  end interface states_elec_get_points
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_null(st)
-    type(states_t), intent(inout) :: st
+  subroutine states_elec_null(st)
+    class(states_elec_t), intent(inout) :: st
 
-    PUSH_SUB(states_null)
+    PUSH_SUB(states_elec_null)
 
-    call states_dim_null(st%d)
-    call states_group_null(st%group)
+    call states_elec_dim_null(st%d)
+    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist)
     
     st%d%orth_method = 0
@@ -220,7 +211,7 @@ contains
     nullify(st%mmb_iyoung)
     nullify(st%mmb_proj)
 
-    st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
+    st%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
     nullify(st%rho, st%current)
     nullify(st%current_kpt)
@@ -237,26 +228,26 @@ contains
 
     st%packed = .false.
 
-    POP_SUB(states_null)
-  end subroutine states_null
+    POP_SUB(states_elec_null)
+  end subroutine states_elec_null
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, parser, gr, geo)
-    type(states_t), target, intent(inout) :: st
-    type(parser_t),         intent(in)    :: parser
-    type(grid_t),           intent(in)    :: gr
-    type(geometry_t),       intent(in)    :: geo
+  subroutine states_elec_init(st, namespace, gr, geo)
+    type(states_elec_t), target, intent(inout) :: st
+    type(namespace_t),           intent(in)    :: namespace
+    type(grid_t),                intent(in)    :: gr
+    type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
     integer :: nempty_conv
     logical :: force
 
-    PUSH_SUB(states_init)
+    PUSH_SUB(states_elec_init)
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
-    call states_null(st)
+    call states_elec_null(st)
 
 
     !%Variable SpinComponents
@@ -280,11 +271,11 @@ contains
     !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
-    call parse_variable(parser, 'SpinComponents', UNPOLARIZED, st%d%ispin)
+    call parse_variable(namespace, 'SpinComponents', UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
-    if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
+    if (st%d%ispin == SPINORS) st%wfs_type = TYPE_CMPLX
 
     if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
@@ -302,7 +293,7 @@ contains
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
-    call parse_variable(parser, 'ExcessCharge', M_ZERO, excess_charge)
+    call parse_variable(namespace, 'ExcessCharge', M_ZERO, excess_charge)
 
     !%Variable CalcEigenvalues
     !%Type logical
@@ -317,7 +308,7 @@ contains
     !%
     !% This mode cannot be used with unoccupied states.    
     !%End
-    call parse_variable(parser, 'CalcEigenvalues', .true., st%calc_eigenval)
+    call parse_variable(namespace, 'CalcEigenvalues', .true., st%calc_eigenval)
     if(.not. st%calc_eigenval) call messages_experimental('CalcEigenvalues = .false.')
     
     !%Variable TotalStates
@@ -334,7 +325,7 @@ contains
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
     !%End
-    call parse_variable(parser, 'TotalStates', 0, ntot)
+    call parse_variable(namespace, 'TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
       call messages_fatal(1)
@@ -356,7 +347,7 @@ contains
     !% an electronic temperature with <tt>Smearing</tt>, or in order to calculate
     !% excited states (including with <tt>CalculationMode = unocc</tt>).
     !%End
-    call parse_variable(parser, 'ExtraStates', 0, nempty)
+    call parse_variable(namespace, 'ExtraStates', 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
@@ -380,7 +371,7 @@ contains
     !% unocc calculation faster.
     !% By default, all extra states need to be converged.
     !%End
-    call parse_variable(parser, 'ExtraStatesToConverge', nempty, nempty_conv)
+    call parse_variable(namespace, 'ExtraStatesToConverge', nempty, nempty_conv)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
       message(2) = '(0 <= ExtraStatesToConverge)'
@@ -393,7 +384,7 @@ contains
     end if
 
     ! For non-periodic systems this should just return the Gamma point
-    call states_choose_kpoints(st%d, gr%sb)
+    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
     call geometry_val_charge(geo, st%val_charge)
 
@@ -472,7 +463,7 @@ contains
 
     ASSERT(default > 0)
 
-    call parse_variable(parser, 'StatesBlockSize', default, st%d%block_size)
+    call parse_variable(namespace, 'StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
       call messages_fatal()
@@ -488,7 +479,7 @@ contains
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
-        st%priv%wfs_type = TYPE_CMPLX
+        st%wfs_type = TYPE_CMPLX
       end if
     end if
 
@@ -501,14 +492,14 @@ contains
     !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
-    call parse_variable(parser, 'OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
+    call parse_variable(namespace, 'OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    if(parse_is_defined(parser, 'UserDefinedStates') .or. parse_is_defined(parser, 'OCTInitialUserdefined') &
-         .or. parse_is_defined(parser, 'OCTTargetUserdefined')) then
+    if(parse_is_defined(namespace, 'UserDefinedStates') .or. parse_is_defined(namespace, 'OCTInitialUserdefined') &
+         .or. parse_is_defined(namespace, 'OCTTargetUserdefined')) then
       SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
       ! initially we mark all 'formulas' as undefined
       st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
@@ -535,11 +526,11 @@ contains
     !%Option par_dependent 2
     !% The randomization depends on the number of taks used in the calculation.
     !%End
-    call parse_variable(parser, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
+    call parse_variable(namespace, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_read_initial_occs(st, parser, excess_charge, gr%sb%kpoints)
-    call states_read_initial_spins(st, parser)
+    call states_elec_read_initial_occs(st, namespace, excess_charge, gr%sb%kpoints)
+    call states_elec_read_initial_spins(st, namespace)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -552,7 +543,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init(st%modelmbparticles, parser, gr)
+    call modelmb_particles_init(st%modelmbparticles, namespace, gr)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
@@ -571,7 +562,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable(parser, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
 #ifdef HAVE_SCALAPACK
@@ -590,19 +581,19 @@ contains
     !% Warning: This variable is designed for testing and
     !% benchmarking and normal users need not use it.
     !%End
-    call parse_variable(parser, 'ForceComplex', .false., force)
+    call parse_variable(namespace, 'ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
 
     st%packed = .false.
 
-    POP_SUB(states_init)
-  end subroutine states_init
+    POP_SUB(states_elec_init)
+  end subroutine states_elec_init
 
   !> Reads the 'states' file in the restart directory, and finds out
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
-  subroutine states_look(restart, nik, dim, nst, ierr)
+  subroutine states_elec_look(restart, nik, dim, nst, ierr)
     type(restart_t), intent(in)  :: restart
     integer,         intent(out) :: nik
     integer,         intent(out) :: dim
@@ -613,7 +604,7 @@ contains
     character(len=20)   :: char
     integer :: iunit
 
-    PUSH_SUB(states_look)
+    PUSH_SUB(states_elec_look)
 
     ierr = 0
 
@@ -626,8 +617,8 @@ contains
     end if
     call restart_close(restart, iunit)
 
-    POP_SUB(states_look)
-  end subroutine states_look
+    POP_SUB(states_elec_look)
+  end subroutine states_elec_look
 
   ! ---------------------------------------------------------
   !> Reads from the input file the initial occupations, if the
@@ -638,11 +629,11 @@ contains
   !! The resulting occupations are placed on the st\%occ variable. The
   !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
-  subroutine states_read_initial_occs(st, parser, excess_charge, kpoints)
-    type(states_t),  intent(inout) :: st
-    type(parser_t),  intent(in)    :: parser
-    FLOAT,           intent(in)    :: excess_charge
-    type(kpoints_t), intent(in)    :: kpoints
+  subroutine states_elec_read_initial_occs(st, namespace, excess_charge, kpoints)
+    type(states_elec_t),  intent(inout) :: st
+    type(namespace_t),    intent(in)    :: namespace
+    FLOAT,                intent(in)    :: excess_charge
+    type(kpoints_t),      intent(in)    :: kpoints
 
     integer :: ik, ist, ispin, nspin, ncols, nrows, el_per_state, icol, start_pos, spin_n
     type(block_t) :: blk
@@ -651,7 +642,7 @@ contains
     FLOAT, allocatable :: read_occs(:, :)
     FLOAT :: charge_in_block
 
-    PUSH_SUB(states_read_initial_occs)
+    PUSH_SUB(states_elec_read_initial_occs)
 
     !%Variable RestartFixedOccupations
     !%Type logical
@@ -662,7 +653,7 @@ contains
     !% if the occupations from the previous calculation had been set via the <tt>Occupations</tt> block,
     !% <i>i.e.</i> fixed. Otherwise, occupations will be determined by smearing.
     !%End
-    call parse_variable(parser, 'RestartFixedOccupations', .false., st%restart_fixed_occ)
+    call parse_variable(namespace, 'RestartFixedOccupations', .false., st%restart_fixed_occ)
     ! we will turn on st%fixed_occ if restart_read is ever called
 
     !%Variable Occupations
@@ -735,7 +726,7 @@ contains
 
     integral_occs = .true.
 
-    occ_fix: if(parse_block(parser, 'Occupations', blk) == 0) then
+    occ_fix: if(parse_block(namespace, 'Occupations', blk) == 0) then
       ! read in occupations
       st%fixed_occ = .true.
 
@@ -860,12 +851,12 @@ contains
     !% according to the order of the expectation values of the restart wavefunctions.
     !%End
     if(st%fixed_occ) then
-      call parse_variable(parser, 'RestartReorderOccs', .false., st%restart_reorder_occs)
+      call parse_variable(namespace, 'RestartReorderOccs', .false., st%restart_reorder_occs)
     else
       st%restart_reorder_occs = .false.
     end if
 
-    call smear_init(st%smear, parser, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
+    call smear_init(st%smear, namespace, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
     unoccupied_states = (st%d%ispin /= SPINORS .and. st%nst*2 > st%qtot) .or. (st%d%ispin == SPINORS .and. st%nst > st%qtot)
     
@@ -895,8 +886,8 @@ contains
       call messages_fatal()
     end if
     
-    POP_SUB(states_read_initial_occs)
-  end subroutine states_read_initial_occs
+    POP_SUB(states_elec_read_initial_occs)
+  end subroutine states_elec_read_initial_occs
 
 
   ! ---------------------------------------------------------
@@ -905,18 +896,18 @@ contains
   !! resulting spins are placed onto the st\%spin pointer. The boolean
   !! st\%fixed_spins is set to true if (and only if) the InitialSpins
   !! block is present.
-  subroutine states_read_initial_spins(st, parser)
-    type(states_t), intent(inout) :: st
-    type(parser_t), intent(in)    :: parser
+  subroutine states_elec_read_initial_spins(st, namespace)
+    type(states_elec_t), intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
 
     integer :: i, j
     type(block_t) :: blk
 
-    PUSH_SUB(states_read_initial_spins)
+    PUSH_SUB(states_elec_read_initial_spins)
 
     st%fixed_spins = .false.
     if(st%d%ispin /= SPINORS) then
-      POP_SUB(states_read_initial_spins)
+      POP_SUB(states_elec_read_initial_spins)
       return
     end if
 
@@ -954,7 +945,7 @@ contains
     !% This constraint must be fulfilled:
     !% <br><math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
     !%End
-    spin_fix: if(parse_block(parser, 'InitialSpins', blk)==0) then
+    spin_fix: if(parse_block(namespace, 'InitialSpins', blk)==0) then
       do i = 1, st%nst
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
@@ -968,30 +959,29 @@ contains
       end do
     end if spin_fix
 
-    POP_SUB(states_read_initial_spins)
-  end subroutine states_read_initial_spins
+    POP_SUB(states_elec_read_initial_spins)
+  end subroutine states_elec_read_initial_spins
 
 
   ! ---------------------------------------------------------
-  !> Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_Left)
-    type(states_t),         intent(inout)   :: st
+  !> Allocates the KS wavefunctions defined within a states_elec_t structure.
+  subroutine states_elec_allocate_wfns(st, mesh, wfs_type)
+    type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    PUSH_SUB(states_allocate_wfns)
+    PUSH_SUB(states_elec_allocate_wfns)
 
     if (present(wfs_type)) then
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
-      st%priv%wfs_type = wfs_type
+      st%wfs_type = wfs_type
     end if
 
-    call states_init_block(st, mesh)
-    call states_set_zero(st)
+    call states_elec_init_block(st, mesh)
+    call states_elec_set_zero(st)
 
-    POP_SUB(states_allocate_wfns)
-  end subroutine states_allocate_wfns
+    POP_SUB(states_elec_allocate_wfns)
+  end subroutine states_elec_allocate_wfns
 
   !---------------------------------------------------------------------
   !> Initializes the data components in st that describe how the states
@@ -1010,16 +1000,16 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_init_block(st, mesh, verbose)
-    type(states_t),           intent(inout) :: st
-    type(mesh_t),             intent(in)    :: mesh
-    logical, optional,        intent(in)    :: verbose
+  subroutine states_elec_init_block(st, mesh, verbose)
+    type(states_elec_t),           intent(inout) :: st
+    type(mesh_t),                  intent(in)    :: mesh
+    logical, optional,             intent(in)    :: verbose
 
     integer :: ib, iqn, ist
     logical :: same_node, verbose_
     integer, allocatable :: bstart(:), bend(:)
 
-    PUSH_SUB(states_init_block)
+    PUSH_SUB(states_elec_init_block)
 
     SAFE_ALLOCATE(bstart(1:st%nst))
     SAFE_ALLOCATE(bend(1:st%nst))
@@ -1139,34 +1129,32 @@ contains
 
     SAFE_DEALLOCATE_A(bstart)
     SAFE_DEALLOCATE_A(bend)
-    POP_SUB(states_init_block)
-  end subroutine states_init_block
+    POP_SUB(states_elec_init_block)
+  end subroutine states_elec_init_block
 
 
   ! ---------------------------------------------------------
-  !> Deallocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_deallocate_wfns(st)
-    type(states_t), intent(inout) :: st
+  !> Deallocates the KS wavefunctions defined within a states_elec_t structure.
+  subroutine states_elec_deallocate_wfns(st)
+    type(states_elec_t), intent(inout) :: st
 
-    integer :: ib, iq
+    PUSH_SUB(states_elec_deallocate_wfns)
 
-    PUSH_SUB(states_deallocate_wfns)
+    call states_elec_group_end(st%group, st%d)
 
-    call states_group_end(st%group, st%d)
-
-    POP_SUB(states_deallocate_wfns)
-  end subroutine states_deallocate_wfns
+    POP_SUB(states_elec_deallocate_wfns)
+  end subroutine states_elec_deallocate_wfns
 
 
   ! ---------------------------------------------------------
-  subroutine states_densities_init(st, gr, geo)
-    type(states_t), target, intent(inout) :: st
-    type(grid_t),           intent(in)    :: gr
-    type(geometry_t),       intent(in)    :: geo
+  subroutine states_elec_densities_init(st, gr, geo)
+    type(states_elec_t), target, intent(inout) :: st
+    type(grid_t),                intent(in)    :: gr
+    type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: fsize
 
-    PUSH_SUB(states_densities_init)
+    PUSH_SUB(states_elec_densities_init)
 
     SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
@@ -1182,15 +1170,15 @@ contains
     call messages_write(fsize, fmt = '(f10.1)', align_left = .true., units = unit_megabytes, print_units = .true.)
     call messages_info()
 
-    POP_SUB(states_densities_init)
-  end subroutine states_densities_init
+    POP_SUB(states_elec_densities_init)
+  end subroutine states_elec_densities_init
 
   !---------------------------------------------------------------------
-  subroutine states_allocate_current(st, gr)
-    type(states_t), target, intent(inout) :: st
-    type(grid_t),           intent(in)    :: gr
+  subroutine states_elec_allocate_current(st, gr)
+    type(states_elec_t), target, intent(inout) :: st
+    type(grid_t),                intent(in)    :: gr
 
-    PUSH_SUB(states_allocate_current)
+    PUSH_SUB(states_elec_allocate_current)
     
     if(.not. associated(st%current)) then
       SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
@@ -1202,22 +1190,22 @@ contains
       st%current_kpt = M_ZERO
     end if
 
-    POP_SUB(states_allocate_current)
-  end subroutine states_allocate_current
+    POP_SUB(states_elec_allocate_current)
+  end subroutine states_elec_allocate_current
 
   !---------------------------------------------------------------------
   !> This subroutine: (i) Fills in the block size (st\%d\%block_size);
   !! (ii) Finds out whether or not to pack the states (st\%d\%pack_states);
   !! (iii) Finds out the orthogonalization method (st\%d\%orth_method).
-  subroutine states_exec_init(st, parser, mc)
-    type(states_t),    intent(inout) :: st
-    type(parser_t),    intent(in)    :: parser
-    type(multicomm_t), intent(in)    :: mc
+  subroutine states_elec_exec_init(st, namespace, mc)
+    type(states_elec_t),  intent(inout) :: st
+    type(namespace_t),    intent(in)    :: namespace
+    type(multicomm_t),    intent(in)    :: mc
 
     integer :: default
     logical :: defaultl
 
-    PUSH_SUB(states_exec_init)
+    PUSH_SUB(states_elec_exec_init)
 
     !%Variable StatesPack
     !%Type logical
@@ -1242,7 +1230,7 @@ contains
     if(accel_is_enabled()) then
       defaultl = .false.
     end if
-    call parse_variable(parser, 'StatesPack', defaultl, st%d%pack_states)
+    call parse_variable(namespace, 'StatesPack', defaultl, st%d%pack_states)
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
@@ -1263,7 +1251,7 @@ contains
     if(accel_is_enabled() .and. .not. st%d%pack_states) then
       defaultl = .true.
     end if
-    call parse_variable(parser, 'StatesMirror', defaultl, st%d%mirror_states)
+    call parse_variable(namespace, 'StatesMirror', defaultl, st%d%mirror_states)
 
     call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
@@ -1303,7 +1291,7 @@ contains
     end if
 #endif
     
-    call parse_variable(parser, 'StatesOrthogonalization', default, st%d%orth_method)
+    call parse_variable(namespace, 'StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
@@ -1322,28 +1310,28 @@ contains
     !% amount of memory in megabytes that would be subtracted from
     !% the total device memory.
     !%End
-    call parse_variable(parser, 'StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
+    call parse_variable(namespace, 'StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
 
-    POP_SUB(states_exec_init)
-  end subroutine states_exec_init
+    POP_SUB(states_elec_exec_init)
+  end subroutine states_elec_exec_init
 
 
   ! ---------------------------------------------------------
-  subroutine states_copy(stout, stin, exclude_wfns, exclude_eigenval)
-    type(states_t), target, intent(inout) :: stout
-    type(states_t),         intent(in)    :: stin
-    logical, optional,      intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
-    logical, optional,      intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
+  subroutine states_elec_copy(stout, stin, exclude_wfns, exclude_eigenval)
+    type(states_elec_t), target, intent(inout) :: stout
+    type(states_elec_t),         intent(in)    :: stin
+    logical, optional,           intent(in)    :: exclude_wfns !< do not copy wavefunctions, densities, node
+    logical, optional,           intent(in)    :: exclude_eigenval !< do not copy eigenvalues, occ, spin
 
     logical :: exclude_wfns_
 
-    PUSH_SUB(states_copy)
+    PUSH_SUB(states_elec_copy)
 
     exclude_wfns_ = optional_default(exclude_wfns, .false.)
 
-    call states_null(stout)
+    call states_elec_null(stout)
 
-    call states_dim_copy(stout%d, stin%d)
+    call states_elec_dim_copy(stout%d, stin%d)
 
     call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
     if (stin%modelmbparticles%nparticle > 0) then
@@ -1352,8 +1340,8 @@ contains
       call loct_pointer_copy(stout%mmb_proj, stin%mmb_proj)
     end if
 
-    stout%priv%wfs_type = stin%priv%wfs_type
-    stout%nst           = stin%nst
+    stout%wfs_type = stin%wfs_type
+    stout%nst      = stin%nst
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
@@ -1415,23 +1403,23 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_wfns_) call states_group_copy(stin%d,stin%group, stout%group)
+    if(.not. exclude_wfns_) call states_elec_group_copy(stin%d,stin%group, stout%group)
 
     stout%packed = stin%packed
 
     stout%randomization = stin%randomization
 
-    POP_SUB(states_copy)
-  end subroutine states_copy
+    POP_SUB(states_elec_copy)
+  end subroutine states_elec_copy
 
 
   ! ---------------------------------------------------------
-  subroutine states_end(st)
-    type(states_t), intent(inout) :: st
+  subroutine states_elec_end(st)
+    type(states_elec_t), intent(inout) :: st
 
-    PUSH_SUB(states_end)
+    PUSH_SUB(states_elec_end)
 
-    call states_dim_end(st%d)
+    call states_elec_dim_end(st%d)
 
     if (st%modelmbparticles%nparticle > 0) then
       SAFE_DEALLOCATE_P(st%mmb_nspindown)
@@ -1441,7 +1429,7 @@ contains
     call modelmb_particles_end(st%modelmbparticles)
 
     ! this deallocates dpsi, zpsi, psib, iblock, iblock
-    call states_deallocate_wfns(st)
+    call states_elec_deallocate_wfns(st)
 
     SAFE_DEALLOCATE_A(st%user_def_states)
 
@@ -1470,20 +1458,20 @@ contains
       SAFE_DEALLOCATE_P(st%ap%schedule)
     end if
 
-    POP_SUB(states_end)
-  end subroutine states_end
+    POP_SUB(states_elec_end)
+  end subroutine states_elec_end
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
-    type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: mesh
-    type(simul_box_t), intent(in)    :: sb
-    integer, optional, intent(in)    :: ist_start_
-    integer, optional, intent(in)    :: ist_end_
-    integer, optional, intent(in)    :: ikpt_start_
-    integer, optional, intent(in)    :: ikpt_end_
-    logical, optional, intent(in)    :: normalized !< whether generate states should have norm 1, true by default
+  subroutine states_elec_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
+    type(states_elec_t),    intent(inout) :: st
+    type(mesh_t),           intent(in)    :: mesh
+    type(simul_box_t),      intent(in)    :: sb
+    integer, optional,      intent(in)    :: ist_start_
+    integer, optional,      intent(in)    :: ist_end_
+    integer, optional,      intent(in)    :: ikpt_start_
+    integer, optional,      intent(in)    :: ikpt_end_
+    logical, optional,      intent(in)    :: normalized !< whether generate states should have norm 1, true by default
     
     integer :: ist, ik, id, ist_start, ist_end, jst, ikpt_start, ikpt_end
     CMPLX   :: alpha, beta
@@ -1491,7 +1479,7 @@ contains
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
     integer :: ikpoint, ip
 
-    PUSH_SUB(states_generate_random)
+    PUSH_SUB(states_elec_generate_random)
  
     ist_start = optional_default(ist_start_, 1)
     ist_end = optional_default(ist_end_, st%nst)
@@ -1507,7 +1495,7 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
-        ikpoint = states_dim_get_kpoint_index(st%d, ik)
+        ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
@@ -1520,9 +1508,9 @@ contains
               forall(ip=1:mesh%np) 
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
               end forall
-              call states_set_state(st, mesh, ist,  ik, zpsi)
+              call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
-              call states_set_state(st, mesh, ist,  ik, dpsi)
+              call states_elec_set_state(st, mesh, ist,  ik, dpsi)
             end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
@@ -1531,7 +1519,7 @@ contains
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end if
         end do
       end do
@@ -1543,7 +1531,7 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
-          ikpoint = states_dim_get_kpoint_index(st%d, ik)
+          ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
@@ -1555,7 +1543,7 @@ contains
               forall(ip=1:mesh%np)
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
               end forall
-              call states_set_state(st, mesh, ist,  ik, zpsi)
+              call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               if(st%randomization == PAR_INDEPENDENT) then
                 call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
@@ -1575,7 +1563,7 @@ contains
             ! of each spinor remain the same.
             SAFE_ALLOCATE(zpsi2(1:mesh%np))
             do jst = ist_start, ist - 1
-              call states_get_state(st, mesh, 1, jst, ik, zpsi2)
+              call states_elec_get_state(st, mesh, 1, jst, ik, zpsi2)
               zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
             SAFE_DEALLOCATE_A(zpsi2)
@@ -1590,7 +1578,7 @@ contains
             end if
             zpsi(1:mesh%np, 1) = alpha*zpsi(1:mesh%np, 1)
             zpsi(1:mesh%np, 2) = beta*zpsi(1:mesh%np, 2)
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
       else
@@ -1604,7 +1592,7 @@ contains
               end if
             end do
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, zpsi)
+            call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
       end if
@@ -1614,20 +1602,20 @@ contains
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
 
-    POP_SUB(states_generate_random)
-  end subroutine states_generate_random
+    POP_SUB(states_elec_generate_random)
+  end subroutine states_elec_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_fermi(st, mesh)
-    type(states_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
+  subroutine states_elec_fermi(st, mesh)
+    type(states_elec_t), intent(inout) :: st
+    type(mesh_t),        intent(in)    :: mesh
 
     !> Local variables.
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
 
-    PUSH_SUB(states_fermi)
+    PUSH_SUB(states_elec_fermi)
 
     call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
@@ -1658,7 +1646,7 @@ contains
       SAFE_ALLOCATE(zpsi(1:mesh%np, st%d%dim))
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
-          call states_get_state(st, mesh, ist, ik, zpsi)
+          call states_elec_get_state(st, mesh, ist, ik, zpsi)
           st%spin(1:3, ist, ik) = state_spin(mesh, zpsi)
         end do
       end do
@@ -1672,20 +1660,20 @@ contains
             
     end if
 
-    POP_SUB(states_fermi)
-  end subroutine states_fermi
+    POP_SUB(states_elec_fermi)
+  end subroutine states_elec_fermi
 
 
   ! ---------------------------------------------------------
   !> function to calculate the eigenvalues sum using occupations as weights
-  function states_eigenvalues_sum(st, alt_eig) result(tot)
-    type(states_t),  intent(in) :: st
-    FLOAT, optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-    FLOAT                       :: tot
+  function states_elec_eigenvalues_sum(st, alt_eig) result(tot)
+    type(states_elec_t),  intent(in) :: st
+    FLOAT,      optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
+    FLOAT                            :: tot
 
     integer :: ik
 
-    PUSH_SUB(states_eigenvalues_sum)
+    PUSH_SUB(states_elec_eigenvalues_sum)
 
     tot = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -1700,17 +1688,17 @@ contains
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
 
-    POP_SUB(states_eigenvalues_sum)
-  end function states_eigenvalues_sum
+    POP_SUB(states_elec_eigenvalues_sum)
+  end function states_elec_eigenvalues_sum
 
 
   ! ---------------------------------------------------------
-  subroutine states_distribute_nodes(st, parser, mc)
-    type(states_t),    intent(inout) :: st
-    type(parser_t),    intent(in)    :: parser
-    type(multicomm_t), intent(in)    :: mc
+  subroutine states_elec_distribute_nodes(st, namespace, mc)
+    type(states_elec_t),    intent(inout) :: st
+    type(namespace_t),      intent(in)    :: namespace
+    type(multicomm_t),      intent(in)    :: mc
 
-    PUSH_SUB(states_distribute_nodes)
+    PUSH_SUB(states_elec_distribute_nodes)
 
     ! Defaults.
     st%node(:)            = 0
@@ -1736,7 +1724,7 @@ contains
     !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
     !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
     !%End
-    call parse_variable(parser, 'ScaLAPACKCompatible', &
+    call parse_variable(namespace, 'ScaLAPACKCompatible', &
       calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
     if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
@@ -1774,58 +1762,19 @@ contains
 
     end if
 
-    POP_SUB(states_distribute_nodes)
-  end subroutine states_distribute_nodes
+    POP_SUB(states_elec_distribute_nodes)
+  end subroutine states_elec_distribute_nodes
 
-
-  ! ---------------------------------------------------------
-  subroutine states_set_complex(st)
-    type(states_t),    intent(inout) :: st
-
-    PUSH_SUB(states_set_complex)
-    st%priv%wfs_type = TYPE_CMPLX
-
-    POP_SUB(states_set_complex)
-  end subroutine states_set_complex
-
-  ! ---------------------------------------------------------
-  pure logical function states_are_complex(st) result (wac)
-    type(states_t),    intent(in) :: st
-
-    wac = (st%priv%wfs_type == TYPE_CMPLX)
-
-  end function states_are_complex
-
-
-  ! ---------------------------------------------------------
-  pure logical function states_are_real(st) result (war)
-    type(states_t),    intent(in) :: st
-
-    war = (st%priv%wfs_type == TYPE_FLOAT)
-
-  end function states_are_real
-
-  ! ---------------------------------------------------------
-
-
-  pure type(type_t) function states_type(st)
-    type(states_t),    intent(in) :: st
-    
-    states_type = st%priv%wfs_type
-    
-  end function states_type
-  
-  
   ! ---------------------------------------------------------
   !
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, nlcc, &
+  subroutine states_elec_calc_quantities(der, st, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, &
     gi_kinetic_energy_density, st_end)
     type(derivatives_t),     intent(in)    :: der
-    type(states_t),          intent(in)    :: st
+    type(states_elec_t),     intent(in)    :: st
     logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
@@ -1849,7 +1798,7 @@ contains
 
     call profiling_in(prof, "STATES_CALC_QUANTITIES")
 
-    PUSH_SUB(states_calc_quantities)
+    PUSH_SUB(states_elec_calc_quantities)
 
     st_end_ = min(st%st_end, optional_default(st_end, st%st_end))
 
@@ -1892,15 +1841,15 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-      is = states_dim_get_spin_index(st%d, ik)
+      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+      is = states_elec_dim_get_spin_index(st%d, ik)
 
       do ist = st%st_start, st_end_
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
         ! all calculations will be done with complex wavefunctions
-        call states_get_state(st, der%mesh, ist, ik, wf_psi)
+        call states_elec_get_state(st, der%mesh, ist, ik, wf_psi)
 
         do st_dim = 1, st%d%dim
           call boundaries_set(der%boundaries, wf_psi(:, st_dim))
@@ -2154,7 +2103,7 @@ contains
     end if
 
 
-    POP_SUB(states_calc_quantities)
+    POP_SUB(states_elec_calc_quantities)
 
     call profiling_out(prof)
 
@@ -2163,7 +2112,7 @@ contains
     subroutine reduce_all(grp)
       type(mpi_grp_t), intent(in)  :: grp
 
-      PUSH_SUB(states_calc_quantities.reduce_all)
+      PUSH_SUB(states_elec_calc_quantities.reduce_all)
 
       if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
 
@@ -2176,10 +2125,10 @@ contains
           call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
       end do
 
-      POP_SUB(states_calc_quantities.reduce_all)
+      POP_SUB(states_elec_calc_quantities.reduce_all)
     end subroutine reduce_all
 
-  end subroutine states_calc_quantities
+  end subroutine states_elec_calc_quantities
 
 
   ! ---------------------------------------------------------
@@ -2204,8 +2153,8 @@ contains
 
   ! ---------------------------------------------------------
   logical function state_is_local(st, ist)
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: ist
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: ist
 
     PUSH_SUB(state_is_local)
 
@@ -2216,9 +2165,9 @@ contains
 
   ! ---------------------------------------------------------
   logical function state_kpt_is_local(st, ist, ik)
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: ist
-    integer,        intent(in) :: ik
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: ist
+    integer,             intent(in) :: ik
 
     PUSH_SUB(state_kpt_is_local)
 
@@ -2231,33 +2180,33 @@ contains
 
   ! ---------------------------------------------------------
 
-  real(8) function states_wfns_memory(st, mesh) result(memory)
-    type(states_t), intent(in) :: st
-    type(mesh_t),   intent(in) :: mesh
+  real(8) function states_elec_wfns_memory(st, mesh) result(memory)
+    type(states_elec_t), intent(in) :: st
+    type(mesh_t),        intent(in) :: mesh
 
-    PUSH_SUB(states_wfns_memory)
+    PUSH_SUB(states_elec_wfns_memory)
     memory = 0.0_8
 
     ! orbitals
     memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
 
-    POP_SUB(states_wfns_memory)
-  end function states_wfns_memory
+    POP_SUB(states_elec_wfns_memory)
+  end function states_elec_wfns_memory
 
   ! ---------------------------------------------------------
 
-  subroutine states_pack(st, copy)
-    type(states_t),    intent(inout) :: st
-    logical, optional, intent(in)    :: copy
+  subroutine states_elec_pack(st, copy)
+    class(states_elec_t),    intent(inout) :: st
+    logical,      optional, intent(in)    :: copy
 
     integer :: iqn, ib
     integer(8) :: max_mem, mem
 
-    PUSH_SUB(states_pack)
+    PUSH_SUB(states_elec_pack)
 
     ! nothing to do, already packed
     if (st%packed) then
-      POP_SUB(states_pack)
+      POP_SUB(states_elec_pack)
       return
     end if
 
@@ -2298,18 +2247,18 @@ contains
       end do
     end do qnloop
 
-    POP_SUB(states_pack)
-  end subroutine states_pack
+    POP_SUB(states_elec_pack)
+  end subroutine states_elec_pack
 
   ! ------------------------------------------------------------
 
-  subroutine states_unpack(st, copy)
-    type(states_t),    intent(inout) :: st
-    logical, optional, intent(in)    :: copy
+  subroutine states_elec_unpack(st, copy)
+    class(states_elec_t),    intent(inout) :: st
+    logical,      optional, intent(in)    :: copy
 
     integer :: iqn, ib
 
-    PUSH_SUB(states_unpack)
+    PUSH_SUB(states_elec_unpack)
 
     if(st%packed) then
       st%packed = .false.
@@ -2321,15 +2270,15 @@ contains
       end do
     end if
 
-    POP_SUB(states_unpack)
-  end subroutine states_unpack
+    POP_SUB(states_elec_unpack)
+  end subroutine states_elec_unpack
 
   ! -----------------------------------------------------------
 
-  subroutine states_write_info(st)
-    type(states_t),    intent(in) :: st
+  subroutine states_elec_write_info(st)
+    class(states_elec_t),    intent(in) :: st
 
-    PUSH_SUB(states_write_info)
+    PUSH_SUB(states_elec_write_info)
 
     call messages_print_stress(stdout, "States")
 
@@ -2340,25 +2289,17 @@ contains
 
     call messages_print_stress(stdout)
 
-    POP_SUB(states_write_info)
-  end subroutine states_write_info
- 
-  ! -----------------------------------------------------------
-
-  logical pure function states_are_packed(st) result(packed)
-    type(states_t),    intent(in) :: st
-
-    packed = st%packed
-  end function states_are_packed
+    POP_SUB(states_elec_write_info)
+  end subroutine states_elec_write_info
 
   ! ------------------------------------------------------------
 
-  subroutine states_set_zero(st)
-    type(states_t),    intent(inout) :: st
+  subroutine states_elec_set_zero(st)
+    class(states_elec_t),    intent(inout) :: st
 
     integer :: iqn, ib
 
-    PUSH_SUB(states_set_zero)
+    PUSH_SUB(states_elec_set_zero)
 
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
@@ -2366,52 +2307,52 @@ contains
       end do
     end do
     
-    POP_SUB(states_set_zero)
-  end subroutine states_set_zero
+    POP_SUB(states_elec_set_zero)
+  end subroutine states_elec_set_zero
 
   ! ------------------------------------------------------------
 
-  integer pure function states_block_min(st, ib) result(range)
-    type(states_t),    intent(in) :: st
-    integer,           intent(in) :: ib
+  integer pure function states_elec_block_min(st, ib) result(range)
+    type(states_elec_t),    intent(in) :: st
+    integer,                intent(in) :: ib
     
     range = st%group%block_range(ib, 1)
-  end function states_block_min
+  end function states_elec_block_min
 
   ! ------------------------------------------------------------
 
-  integer pure function states_block_max(st, ib) result(range)
-    type(states_t),    intent(in) :: st
-    integer,           intent(in) :: ib
+  integer pure function states_elec_block_max(st, ib) result(range)
+    type(states_elec_t),    intent(in) :: st
+    integer,                intent(in) :: ib
     
     range = st%group%block_range(ib, 2)
-  end function states_block_max
+  end function states_elec_block_max
 
   ! ------------------------------------------------------------
 
-  integer pure function states_block_size(st, ib) result(size)
-    type(states_t),    intent(in) :: st
+  integer pure function states_elec_block_size(st, ib) result(size)
+    type(states_elec_t),    intent(in) :: st
     integer,           intent(in) :: ib
     
     size = st%group%block_size(ib)
-  end function states_block_size
+  end function states_elec_block_size
 
   ! ---------------------------------------------------------
   !> number of occupied-unoccipied pairs for Casida
-  subroutine states_count_pairs(st, parser, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
-    type(states_t),    intent(in)  :: st
-    type(parser_t),    intent(in)  :: parser
-    integer,           intent(out) :: n_pairs
-    integer,           intent(out) :: n_occ(:)   !< nik
-    integer,           intent(out) :: n_unocc(:) !< nik
-    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
-    logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
+  subroutine states_elec_count_pairs(st, namespace, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
+    type(states_elec_t),  intent(in)  :: st
+    type(namespace_t),    intent(in)  :: namespace
+    integer,              intent(out) :: n_pairs
+    integer,              intent(out) :: n_occ(:)   !< nik
+    integer,              intent(out) :: n_unocc(:) !< nik
+    logical, allocatable, intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
+    logical,              intent(out) :: is_frac_occ !< are there fractional occupations?
 
     integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
     character(len=80) :: nst_string, default, wfn_list
     FLOAT :: energy_window
 
-    PUSH_SUB(states_count_pairs)
+    PUSH_SUB(states_elec_count_pairs)
 
     is_frac_occ = .false.
     do ik = 1, st%d%nik
@@ -2431,7 +2372,7 @@ contains
     !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
     !%End
 
-    call parse_variable(parser, 'CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
+    call parse_variable(namespace, 'CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -2460,7 +2401,7 @@ contains
     if(energy_window < M_ZERO) then
       write(nst_string,'(i6)') st%nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable(parser, 'CasidaKohnShamStates', default, wfn_list)
+      call parse_variable(namespace, 'CasidaKohnShamStates', default, wfn_list)
 
       write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
       call messages_info(1)
@@ -2501,8 +2442,8 @@ contains
 
     end if
 
-    POP_SUB(states_count_pairs)
-  end subroutine states_count_pairs
+    POP_SUB(states_elec_count_pairs)
+  end subroutine states_elec_count_pairs
 
   ! ---------------------------------------------------------
   !> Returns information about which single-particle orbitals are
@@ -2520,10 +2461,10 @@ contains
   !!   orbitals are, respectively.
   subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
-    type(states_t),    intent(in)  :: st
-    integer,           intent(in)  :: ik
-    integer,           intent(out) :: n_filled, n_partially_filled, n_half_filled
-    integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
+    type(states_elec_t),    intent(in)  :: st
+    integer,                intent(in)  :: ik
+    integer,                intent(out) :: n_filled, n_partially_filled, n_half_filled
+    integer,      optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
 
     integer :: ist
     FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
@@ -2574,16 +2515,16 @@ contains
 
 
   ! ------------------------------------------------------------
-subroutine states_set_phase(st_d, psi, phase, np, conjugate)
-  type(states_dim_t),intent(in)    :: st_d
-  CMPLX,          intent(inout)    :: psi(:, :)
-  CMPLX,             intent(in)    :: phase(:)
-  integer,           intent(in)    :: np
-  logical,           intent(in)    :: conjugate
+subroutine states_elec_set_phase(st_d, psi, phase, np, conjugate)
+  type(states_elec_dim_t),intent(in)    :: st_d
+  CMPLX,               intent(inout)    :: psi(:, :)
+  CMPLX,                  intent(in)    :: phase(:)
+  integer,                intent(in)    :: np
+  logical,                intent(in)    :: conjugate
 
   integer :: idim, ip
 
-  PUSH_SUB(states_set_phase)
+  PUSH_SUB(states_elec_set_phase)
 
   if(conjugate) then
     ! Apply the phase that contains both the k-point and vector-potential terms.
@@ -2605,21 +2546,21 @@ subroutine states_set_phase(st_d, psi, phase, np, conjugate)
     end do
   end if
 
-  POP_SUB(states_set_phase)
+  POP_SUB(states_elec_set_phase)
 
-end subroutine  states_set_phase
+end subroutine  states_elec_set_phase
 
   
 #include "undef.F90"
 #include "real.F90"
-#include "states_inc.F90"
+#include "states_elec_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "states_inc.F90"
+#include "states_elec_inc.F90"
 #include "undef.F90"
 
-end module states_oct_m
+end module states_elec_oct_m
 
 
 !! Local Variables:

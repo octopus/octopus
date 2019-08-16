@@ -59,12 +59,12 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
 
     do ist = sys%st%st_start, sys%st%st_end
 
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
       
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
-        call X(pert_apply)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi(:, :, idir1))
+        call X(pert_apply)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -90,14 +90,15 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
 
 !            orth_mask(ist) = .true. ! projection on unperturbed wfn already removed in Sternheimer eqn
 
-          call X(states_orthogonalize_single)(sys%st, mesh, sys%st%nst, ik, proj_dl_psi, mask = orth_mask)
+          call X(states_elec_orthogonalize_single)(sys%st, mesh, sys%st%nst, ik, proj_dl_psi, mask = orth_mask)
 
           ! contribution from Sternheimer equation
           term = X(mf_dotp)(mesh, sys%st%d%dim, proj_dl_psi, pertpsi(:, :, idir1))
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           call pert_setup_dir(perturbation, idir1, idir2)
-          call X(pert_apply_order_2)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi2(1:mesh%np, 1:sys%hm%d%dim))
+          call X(pert_apply_order_2)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, &
+            pertpsi2(1:mesh%np, 1:sys%hm%d%dim))
           eff_mass_inv(idir1, idir2, ist, ik) = &
             eff_mass_inv(idir1, idir2, ist, ik) - R_REAL(X(mf_dotp)(mesh, sys%hm%d%dim, psi, pertpsi2))
 
@@ -156,13 +157,13 @@ subroutine X(kdotp_add_occ)(sys, pert, kdotp_lr, degen_thres)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = 1, sys%st%nst
 
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
       
-      call X(pert_apply)(pert, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi1, pertpsi)
+      call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi1, pertpsi)
       
       do ist2 = ist + 1, sys%st%nst
 
-        call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi2)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist2, ik, psi2)
         
         ! avoid dividing by zero below; these contributions are arbitrary anyway
         if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
@@ -215,9 +216,9 @@ subroutine X(kdotp_add_diagonal)(sys, em_pert, kdotp_lr)
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
       do ist = 1, sys%st%nst
 
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
-        call X(pert_apply)(em_pert, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, ppsi)
+        call X(pert_apply)(em_pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, ppsi)
         
         expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, ppsi)
         

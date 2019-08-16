@@ -19,12 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_excited(gr, parser, tg, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(parser_t),   intent(in)    :: parser
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(in)    :: restart
+  subroutine target_init_excited(gr, namespace, tg, td, restart)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(restart_t),   intent(in)    :: restart
 
     integer :: ierr, ip
 
@@ -36,7 +36,7 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    call states_look(restart, ip, ip, tg%st%nst, ierr)
+    call states_elec_look(restart, ip, ip, tg%st%nst, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read states information."
       call messages_fatal(1)
@@ -55,16 +55,16 @@
       SAFE_DEALLOCATE_P(tg%st%spin)
       SAFE_ALLOCATE(tg%st%spin(1:3, 1:tg%st%nst, 1:tg%st%d%nik))
     end if
-    call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
+    call states_elec_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     tg%st%node(:)  = 0
 
-    call states_load(restart, parser, tg%st, gr, ierr)
+    call states_elec_load(restart, namespace, tg%st, gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
     end if
 
-    call excited_states_init(tg%est, tg%st, "oct-excited-state-target") 
+    call excited_states_init(tg%est, tg%st, "oct-excited-state-target", namespace) 
 
     POP_SUB(target_init_excited)
   end subroutine target_init_excited
@@ -80,20 +80,20 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_excited(tg, parser, gr, dir, geo, hm, outp)
+  subroutine target_output_excited(tg, namespace, gr, dir, geo, hm, outp)
     type(target_t),      intent(in)  :: tg
-    type(parser_t),      intent(in)  :: parser
+    type(namespace_t),   intent(in)  :: namespace
     type(grid_t),        intent(in)  :: gr
     character(len=*),    intent(in)  :: dir
     type(geometry_t),    intent(in)  :: geo
-    type(hamiltonian_t), intent(in)  :: hm
+    type(hamiltonian_elec_t), intent(in)  :: hm
     type(output_t),      intent(in)  :: outp
 
     PUSH_SUB(target_output_excited)
     
-    call io_mkdir(trim(dir))
-    call output_states(tg%est%st, parser, gr, geo, hm, trim(dir)//'/st', outp)
-    call excited_states_output(tg%est, trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
+    call output_states(tg%est%st, namespace, gr, geo, hm, trim(dir)//'/st', outp)
+    call excited_states_output(tg%est, trim(dir), namespace)
 
     POP_SUB(target_output_excited)
   end subroutine target_output_excited
@@ -105,11 +105,11 @@
   FLOAT function target_j1_excited(tg, gr, psi) result(j1)
     type(target_t), intent(in) :: tg
     type(grid_t),   intent(in) :: gr
-    type(states_t), intent(in) :: psi
+    type(states_elec_t), intent(in) :: psi
 
     PUSH_SUB(target_j1_excited)
 
-    j1 = abs(zstates_mpdotp(gr%mesh, tg%est, psi))**2
+    j1 = abs(zstates_elec_mpdotp(gr%mesh, tg%est, psi))**2
 
     POP_SUB(target_j1_excited)
   end function target_j1_excited
@@ -120,8 +120,8 @@
   subroutine target_chi_excited(tg, gr, psi_in, chi_out)
     type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(states_elec_t),    intent(in)    :: psi_in
+    type(states_elec_t),    intent(inout) :: chi_out
 
     CMPLX :: zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
@@ -143,19 +143,19 @@
     SAFE_ALLOCATE(mk(1:gr%mesh%np_part, 1:psi_in%d%dim))
     SAFE_ALLOCATE(lambda(1:n_pairs, 1:n_pairs))
 
-    call zstates_matrix(gr%mesh, tg%est%st, psi_in, mat)
+    call zstates_elec_matrix(gr%mesh, tg%est%st, psi_in, mat)
 
     do ia = 1, n_pairs
       cI(ia) = tg%est%weight(ia)
-      call zstates_matrix_swap(mat, tg%est%pair(ia))
+      call zstates_elec_matrix_swap(mat, tg%est%pair(ia))
       mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
-      dI(ia) = zstates_mpdotp(gr%mesh, tg%est%st, psi_in, mat)
+      dI(ia) = zstates_elec_mpdotp(gr%mesh, tg%est%st, psi_in, mat)
       if(abs(dI(ia)) > CNST(1.0e-12)) then
         do ik = 1, kpoints
           zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
         end do
       end if
-      call zstates_matrix_swap(mat, tg%est%pair(ia))
+      call zstates_elec_matrix_swap(mat, tg%est%pair(ia))
     end do
 
     do ia = 1, n_pairs
@@ -186,7 +186,7 @@
 
               do jst = 1, nst
                 if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-                call states_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
+                call states_elec_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
 
                 do idim = 1, psi_in%d%dim
                   do ip = 1, gr%mesh%np
@@ -200,7 +200,7 @@
             end do
           end do
 
-          call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+          call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
           
         end do
       end do
@@ -221,7 +221,7 @@
             mk = M_z0
             do jst = 1, nst
               if(jst  ==  tg%est%pair(ib)%i) jj = tg%est%pair(ia)%a
-              call states_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
+              call states_elec_get_state(tg%est%st, gr%mesh, jj, ik, zpsi)
               
               do idim = 1, psi_in%d%dim
                 do ip = 1, gr%mesh%np
@@ -234,7 +234,7 @@
           end do
         end do
 
-        call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
         
       end do
 

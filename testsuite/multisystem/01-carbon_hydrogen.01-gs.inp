@@ -25,3 +25,5 @@ Carbon.ExtraStates = 2
  0 | 0 | 0
 %
 
+# Currently GPU is not supported
+DisableAccel = yes

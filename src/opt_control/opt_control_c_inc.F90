@@ -60,7 +60,7 @@
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-    f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+    f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
 
     SAFE_DEALLOCATE_A(theta)
     SAFE_DEALLOCATE_A(y)
@@ -95,7 +95,7 @@
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
-      call controlfunction_gradient(par_, sys_%parser, par_new, dff)
+      call controlfunction_gradient(par_, sys_%namespace, par_new, dff)
       df = dff
 
       ! Check if the gradient has been computed properly... This should be done only
@@ -142,7 +142,7 @@
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     end if
@@ -211,7 +211,7 @@
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     else

@@ -24,7 +24,7 @@ module output_me_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
@@ -34,18 +34,22 @@ module output_me_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use projector_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
   use scissor_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -80,12 +84,12 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, parser, sb, st, nst)
-    type(output_me_t), intent(out) :: this
-    type(parser_t),    intent(in)  :: parser
-    type(simul_box_t), intent(in)  :: sb
-    type(states_t),    intent(in)  :: st
-    integer,           intent(in)  :: nst
+  subroutine output_me_init(this, namespace, sb, st, nst)
+    type(output_me_t),   intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
+    type(simul_box_t),   intent(in)  :: sb
+    type(states_elec_t), intent(in)  :: st
+    integer,             intent(in)  :: nst
 
     PUSH_SUB(output_me_init)
 
@@ -119,7 +123,7 @@ contains
     !% Not yet supported for spinors.
     !%End
 
-    call parse_variable(parser, 'OutputMatrixElements', 0, this%what)
+    call parse_variable(namespace, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
     end if
@@ -154,7 +158,7 @@ contains
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
-      call parse_variable(parser, 'OutputMEMultipoles', 1, this%ks_multipoles)
+      call parse_variable(namespace, 'OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     !%Variable OutputMEStart
@@ -165,7 +169,7 @@ contains
     !% Specifies the state/band index for starting to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable(parser, 'OutputMEStart', 1, this%st_start)
+    call parse_variable(namespace, 'OutputMEStart', 1, this%st_start)
     ASSERT(this%st_start > 0 .and. this%st_start <= nst)
 
     !%Variable OutputMEEnd
@@ -176,7 +180,7 @@ contains
     !% Specifies the highest state/band index used to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable(parser, 'OutputMEEnd', nst, this%st_end)
+    call parse_variable(namespace, 'OutputMEEnd', nst, this%st_end)
     ASSERT(this%st_end > 0 .and. this%st_end <= nst)
     ASSERT(this%st_start <= this%st_end)
     this%nst = this%st_end - this%st_start +1
@@ -186,13 +190,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm)
-    type(output_me_t),   intent(in)    :: this
-    character(len=*),    intent(in)    :: dir
-    type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
+  subroutine output_me(this, dir, st, gr, geo, hm, namespace)
+    type(output_me_t),        intent(in)    :: this
+    character(len=*),         intent(in)    :: dir
+    type(states_elec_t),      intent(inout) :: st
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(namespace_t),        intent(in)    :: namespace
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
@@ -204,12 +209,12 @@ contains
 
     if(bitand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
-      call output_me_out_momentum(fname, st, gr)
+      call output_me_out_momentum(fname, st, gr, namespace)
     end if
 
     if(bitand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
-      call output_me_out_ang_momentum(fname, st, gr)
+      call output_me_out_ang_momentum(fname, st, gr, namespace)
     end if
 
     if(bitand(this%what, output_me_ks_multipoles) /= 0) then
@@ -223,9 +228,9 @@ contains
               write(fname,'(i4)') id
               write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
               if (states_are_real(st)) then
-                call doutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+                call doutput_me_ks_multipoles(fname, namespace, st, gr, ll, mm, ik)
               else
-                call zoutput_me_ks_multipoles(fname, st, gr, ll, mm, ik)
+                call zoutput_me_ks_multipoles(fname, namespace, st, gr, ll, mm, ik)
               end if
 
               id = id + 1
@@ -236,9 +241,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call doutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
             else
-              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles2d(fname, namespace, st, gr, ll, ik)
             end if
 
             id = id + 1
@@ -249,9 +254,9 @@ contains
             write(fname,'(i4)') id
             write(fname,'(a)') trim(dir)//'/ks_me_multipoles.'//trim(adjustl(fname))
             if (states_are_real(st)) then
-              call doutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call doutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
             else
-              call zoutput_me_ks_multipoles1d(fname, st, gr, ll, ik)
+              call zoutput_me_ks_multipoles1d(fname, namespace, st, gr, ll, ik)
             end if
 
             id = id + 1
@@ -267,9 +272,9 @@ contains
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, st, gr, hm, geo, ik)
+            call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
           else
-            call zoutput_me_dipole(this, fname, st, gr, hm, geo, ik)
+            call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
           end if
       end do
     end if
@@ -281,10 +286,10 @@ contains
 
       if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
-      if(hm%family_is_mgga_with_exc) &
+      if (family_is_mgga_with_exc(hm%xc)) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
-      ! how to do this properly? states_matrix
-      iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+      ! how to do this properly? states_elec_matrix
+      iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')
 
       id = st%nst*(st%nst+1)/2
 
@@ -293,14 +298,14 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
+        call dstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
+        call zstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo
@@ -320,8 +325,8 @@ contains
       ASSERT(.not. st%parallel_in_states)
       if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
-      ! how to do this properly? states_matrix
-      iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+      ! how to do this properly? states_elec_matrix
+      iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
       id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
@@ -332,7 +337,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -342,10 +347,10 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
         else
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint)
         end if
 
@@ -368,10 +373,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_momentum(fname, st, gr)
-    character(len=*), intent(in) :: fname
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+  subroutine output_me_out_momentum(fname, st, gr, namespace)
+    character(len=*),    intent(in)    :: fname
+    type(states_elec_t), intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
@@ -382,9 +388,9 @@ contains
 
     SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:st%nst, 1:st%d%nik))
 
-    call states_calc_momentum(st, gr%der, momentum)
+    call states_elec_calc_momentum(st, gr%der, momentum)
 
-    iunit = io_open(fname, action='write')
+    iunit = io_open(fname, namespace, action='write')
 
     ns = 1
     if(st%d%nspin == 2) ns = 2
@@ -398,7 +404,7 @@ contains
 
     do ik = 1, st%d%nik, ns
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
 
       if(st%d%nik > ns) then
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
@@ -455,10 +461,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me_out_ang_momentum(fname, st, gr)
-    character(len=*), intent(in)    :: fname
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+  subroutine output_me_out_ang_momentum(fname, st, gr, namespace)
+    character(len=*),    intent(in)    :: fname
+    type(states_elec_t), intent(inout) :: st
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
 
     integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin
@@ -476,7 +483,7 @@ contains
     if(st%d%nspin == 2) ns = 2
     ASSERT(gr%sb%dim == 3)
 
-    iunit = io_open(fname, action='write')
+    iunit = io_open(fname, namespace, action='write')
 
     if(mpi_grp_is_root(mpi_world)) then
       write(iunit,'(a)') 'Warning: When non-local pseudopotentials are used '
@@ -494,17 +501,17 @@ contains
     SAFE_ALLOCATE(ang2(1:st%nst, 1:st%d%nik))
 
     if (states_are_real(st)) then
-      call dstates_angular_momentum(st, gr, ang, ang2)
+      call dstates_elec_angular_momentum(st, gr, ang, ang2)
     else
-      call zstates_angular_momentum(st, gr, ang, ang2)
+      call zstates_elec_angular_momentum(st, gr, ang, ang2)
     end if
 
     kstart = st%d%kpt%start
     kend = st%d%kpt%end
     do idir = 1, 3
-      angular(idir) = states_eigenvalues_sum(st, ang(st%st_start:st%st_end, kstart:kend, idir))
+      angular(idir) = states_elec_eigenvalues_sum(st, ang(st%st_start:st%st_end, kstart:kend, idir))
     end do
-    lsquare = states_eigenvalues_sum(st, ang2(st%st_start:st%st_end, kstart:kend))
+    lsquare = states_elec_eigenvalues_sum(st, ang2(st%st_start:st%st_end, kstart:kend))
 
 #if defined(HAVE_MPI)
     if(st%d%kpt%parallel) then
@@ -536,7 +543,7 @@ contains
       if(st%d%nik > ns) then
 
         kpoint = M_ZERO
-        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
         
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
         do idir = 1, gr%sb%dim
