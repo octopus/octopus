@@ -932,9 +932,9 @@ end module propagator_oct_m
     !% The Maxwell Operator e.g. the curl operation can be obtained by
     !% two different methods, the finid-difference or the fast fourier
     !% transform.
-    !%Option maxwell_op_fd 1
+    !%Option op_fd 1
     !% Maxwell operator calculated by finite differnce method
-    !%Option maxwell_op_fft 2
+    !%Option op_fft 2
     !% Maxwell operator calculated by fast fourier transform
     !%End
     default_propagator = OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FD

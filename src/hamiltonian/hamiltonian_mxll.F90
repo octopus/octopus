@@ -98,7 +98,7 @@ module hamiltonian_mxll_oct_m
     
     logical :: time_zero
 
-    type(nl_operator_t), pointer   :: operators 
+    type(nl_operator_t), pointer   :: operators(:) 
 
     type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
@@ -233,7 +233,7 @@ contains
     type(states_mxll_t),                target, intent(inout) :: st
 
     integer :: iline, icol, default
-    integer :: ncols
+    integer :: ncols, default_propagator
     type(block_t) :: blk
     type(profile_t), save :: prof
     character(len=1024) :: string
@@ -282,11 +282,11 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(namespace, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%operator)
+    call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
 
-    if (hm%operator == FARADAY_AMPERE_GAUSS) then
+    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       hm%d%dim = hm%d%dim+1
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       hm%d%dim = 2*hm%d%dim
     end if
 
@@ -318,14 +318,14 @@ contains
     !% Medium calculation via curl of electric field and magnetic field
     !%End
     default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN
-    call parse_variable('MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
+    call parse_variable(namespace, 'MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
 
     hm%rs_state_fft_map     => st%rs_state_fft_map
     hm%rs_state_fft_map_inv => st%rs_state_fft_map_inv
 
-    call parse_variable('StatesPack', .true., hm%apply_packed)
+    call parse_variable(namespace, 'StatesPack', .true., hm%apply_packed)
 
-    call parse_variable('TimeZero', .false., hm%time_zero)
+    call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call profiling_out(prof)
@@ -489,15 +489,15 @@ end subroutine hamiltonian_mxll_apply_batch
 
 ! ---------------------------------------------------------
 !> Applying the Maxwell Hamiltonian on Maxwell states
-subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set_bc)
+subroutine hamiltonian_mxll_apply (hm, der, psi, oppsi, ist, ik, time, terms, set_bc)
   type(hamiltonian_mxll_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
   !R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
   !R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-  FLOAT,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  FLOAT,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  CMPLX,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+  CMPLX,   target,    intent(inout) :: oppsi(:,:) !< (gr%mesh%np, hm%d%dim)
   FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
@@ -530,9 +530,9 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
     select case (hm%op_method)
       case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
         call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
-      case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FFT)
+      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT)
         call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
-    end select
+     end select
 
   call profiling_out(prof_hamiltonian)
 
@@ -565,7 +565,7 @@ subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time)
   if (present(time)) then 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time)
+        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
       end do
     end do
   end if
@@ -601,7 +601,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%operator == FARADAY_AMPERE) then
+    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -654,7 +654,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
@@ -713,7 +713,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -745,7 +745,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -1270,7 +1270,7 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_fft_hamiltonian)
 
-    if (hm%operator == FARADAY_AMPERE) then
+    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
       hm_matrix(:,:) = M_z0
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
@@ -1299,7 +1299,7 @@ end subroutine hamiltonian_mxll_apply_all
         hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
         hm_matrix(3,3)   =   M_z0
       end if
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
