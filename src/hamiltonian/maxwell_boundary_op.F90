@@ -45,8 +45,9 @@ module maxwell_boundary_op_oct_m
   implicit none
 
   private
-  public ::                       &
+  public ::                    &
     bc_mxll_init,              &
+    bc_mxll_end,               &   
     bc_mxll_write_info,        &
     bc_mxll_t
 

@@ -345,7 +345,7 @@ contains
     SAFE_DEALLOCATE_P(hm%energy_density)
     SAFE_DEALLOCATE_P(hm%cube%fft)
 
-    call maxwell_bc_end(hm%bc)
+    call bc_mxll_end(hm%bc)
 
     call states_dim_end(hm%d) 
 
@@ -527,12 +527,12 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, oppsi, ist, ik, time, terms, se
       endif
     end if
 
-    select case (hm%op_method)
-      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
+!    select case (hm%op_method) 
+!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
         call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
-      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT)
-        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
-     end select
+!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT) ! For reviews: seems that this option is no longer needed, should we leave it?
+!        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
+!     end select
 
   call profiling_out(prof_hamiltonian)
 
@@ -922,8 +922,8 @@ end subroutine hamiltonian_mxll_apply_all
       SAFE_ALLOCATE(tmp_b(np_part,3))
       SAFE_ALLOCATE(tmp_partial_b(np_part))
 
-      call maxwell_get_electric_field_state(psi, tmp_e)
-      call maxwell_get_magnetic_field_state(psi, hm%rs_sign, tmp_b)
+      call get_electric_field_state(psi, tmp_e)
+      call get_magnetic_field_state(psi, hm%rs_sign, tmp_b)
       call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:), pml_dir, set_bc = .false.)
       call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:), pml_dir, set_bc = .false.)
       tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
@@ -1030,12 +1030,12 @@ end subroutine hamiltonian_mxll_apply_all
       SAFE_ALLOCATE(tmp_b(np_part,3))
       SAFE_ALLOCATE(tmp_partial_b(np_part,2))
 
-      call maxwell_get_electric_field_state(psi(:,1:3), tmp_e)
-      call maxwell_get_magnetic_field_state(psi(:,1:3), 1, tmp_b)
+      call get_electric_field_state(psi(:,1:3), tmp_e)
+      call get_magnetic_field_state(psi(:,1:3), 1, tmp_b)
       call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,1), pml_dir, set_bc = .false.)
       call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,1), pml_dir, set_bc = .false.)
-      call maxwell_get_electric_field_state(psi(:,4:6), tmp_e)
-      call maxwell_get_magnetic_field_state(psi(:,4:6), -1, tmp_b)
+      call get_electric_field_state(psi(:,4:6), tmp_e)
+      call get_magnetic_field_state(psi(:,4:6), -1, tmp_b)
       call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,2), pml_dir, set_bc = .false.)
       call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,2), pml_dir, set_bc = .false.)
       tmp_partial_e(:,:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:,:)
@@ -1203,8 +1203,8 @@ end subroutine hamiltonian_mxll_apply_all
       SAFE_ALLOCATE(tmp_curl_e(np_part,3))
       SAFE_ALLOCATE(tmp_b(np_part,3))
       SAFE_ALLOCATE(tmp_curl_b(np_part,3))
-      call maxwell_get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, hm%st%ep, np_part)
-      call maxwell_get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
+      call get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, hm%st%ep, np_part)
+      call get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
       call dderivatives_curl(der, tmp_e, tmp_curl_e, set_bc = .false.)
       call dderivatives_curl(der, tmp_b, tmp_curl_b, set_bc = .false.)
       SAFE_DEALLOCATE_A(tmp_e)
@@ -1559,16 +1559,16 @@ end subroutine hamiltonian_mxll_apply_all
 
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:st%d%dim))
 
-    if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
-#if defined(HAVE_MPI)
-        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
-        call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)
-#endif
-      end do
-    else
+!    if (gr%mesh%parallel_in_domains) then
+!      do idim=1, st%d%dim
+!#if defined(HAVE_MPI)
+!        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
+!        call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)
+!#endif
+!      end do
+!    else
       tmp_global(:,:) = field(:,:)
-    end if
+!    end if
 
     ix_max = st%surface_grid_rows_number(1)
     iy_max = st%surface_grid_rows_number(2)
