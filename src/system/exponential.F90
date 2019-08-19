@@ -899,6 +899,24 @@ contains
     POP_SUB(exponential_lanczos_batch)
   end subroutine exponential_lanczos_batch
 
+  ! ---------------------------------------------------------
+  !> Calculates the exponential of the Hamiltonian through an expansion in
+  !! Chebyshev polynomials.
+  !!
+  !! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
+  !! recursive algorithm.
+  !! [1] H. Tal-Ezer and R. Kosloff, J. Chem. Phys 81, 3967 (1984).
+  !! [2] C. W. Clenshaw, MTAC 9, 118 (1955).
+  !! Since I don't have access to MTAC, I copied next Maple algorithm from Dr. F. G. Lether's
+  !! (University of Georgia) homepage: (www.math.uga.edu/~fglether):
+  !! \verbatim
+  !! twot := t + t; u0 := 0; u1 := 0;
+  !!  for k from n to 0 by -1 do
+  !!    u2 := u1; u1 := u0;
+  !!    u0 := twot*u1 - u2 + c[k];
+  !!  od;
+  !!  ChebySum := 0.5*(u0 - u2);
+  !! \endverbatim
   subroutine exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
