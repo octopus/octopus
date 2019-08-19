@@ -20,6 +20,7 @@
 
 module eigensolver_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use derivatives_oct_m
   use eigen_cg_oct_m
   use eigen_lobpcg_oct_m
@@ -32,6 +33,7 @@ module eigensolver_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use mesh_oct_m
+  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
