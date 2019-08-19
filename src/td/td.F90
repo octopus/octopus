@@ -393,7 +393,7 @@ contains
       end if 
     else
       call states_elec_allocate_wfns(st, gr%mesh)
-      call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+      call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
     end if
 
     if(sys%hm%scdm_EXX) then

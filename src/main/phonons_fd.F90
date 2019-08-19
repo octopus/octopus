@@ -152,7 +152,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
+    call scf_init(scf, namespace, gr, geo, st, mc, hm)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO

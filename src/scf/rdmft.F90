@@ -103,12 +103,11 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, ks, fromScratch)
+  subroutine rdmft_init(rdm, namespace, gr, st, fromScratch)
     type(rdm_t),         intent(out) :: rdm
     type(namespace_t),   intent(in)  :: namespace
     type(grid_t),        intent(in)  :: gr  !< grid
     type(states_elec_t), intent(in)  :: st  !< States
-    type(v_ks_t),        intent(in)  :: ks  !< Kohn-Sham
     logical,             intent(in)  :: fromScratch
 
     integer :: ist
@@ -213,7 +212,7 @@ contains
       end do
     else
       ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
-      call eigensolver_init(rdm%eigens, namespace, gr, st, ks%xc, disable_preconditioner=.true.)
+      call eigensolver_init(rdm%eigens, namespace, gr, st, disable_preconditioner=.true.)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -936,7 +935,7 @@ contains
     end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+      call deigensolver_cg2(gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
   
