@@ -310,6 +310,10 @@ contains
 #endif
     case(PROP_MAGNUS)
       call messages_experimental("Magnus propagator")
+      if (family_is_mgga) then
+        message(1) = "Magnus propagator with MGGA"
+        call messages_fatal(1)
+      end if
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call messages_experimental("QOCT+TDDFT propagator")
