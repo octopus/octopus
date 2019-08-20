@@ -63,6 +63,8 @@ contains
 
     PUSH_SUB(propagator_dt.td_magnus)
 
+    ASSERT(.not. hm%family_is_mgga_with_exc)
+
     SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
     atime(1) = (M_HALF-sqrt(M_THREE)/CNST(6.0))*dt
@@ -70,14 +72,7 @@ contains
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
-        !TODO: There is no complex scaling here
-        if(hm%family_is_mgga_with_exc) then
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, &
-               hm%vhxc, vtau = hm%vtau)
-        else
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
-        end if
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+        call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, vaux(:, :, j))
       end do
     else
       vaux = M_ZERO
