@@ -631,12 +631,6 @@ all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 
-include/options.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
 bin_PROGRAMS = octopus
 
 octopus_f_srcs =                             \
@@ -771,7 +765,32 @@ oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_elec
 oct_unfold_LINK = $(FCLINK)
 oct_unfold_LDADD = $(all_LIBS)
 
+utils_f_srcs = \
+	utils/casida_spectrum.F90        \
+	utils/centergeom.F90             \
+	utils/conductivity.F90           \
+	utils/convert.F90                \
+	utils/dielectric_function.F90    \
+	utils/floquet.F90                \
+	utils/harmonic_spectrum.F90      \
+	utils/help.F90                   \
+	utils/infrared.F90               \
+	utils/local_multipoles.F90       \
+	utils/local_write.F90            \
+	utils/Makefile.in                \
+	utils/oscillator_strength.F90    \
+	utils/photoelectron_spectrum.F90 \
+	utils/propagation_spectrum.F90   \
+	utils/unfold.F90                 \
+	utils/vibrational.F90            \
+	utils/xyzanim.F90
 
+
+include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 # debug files from MacOS gcc with -g
 clean-local: clean-fdep
