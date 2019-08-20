@@ -124,7 +124,7 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
         st%eigenval(ist, ik) = R_REAL(zeig(ist))
       end do
 
-      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_unpack(st%group%psib(ib, ik))
+      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_unpack(st%group%psib(ib, ik), copy=.false.)
 
       if (debug%info) then
         do ist = minst, maxst
