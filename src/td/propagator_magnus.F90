@@ -61,7 +61,7 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
 
-    integer :: j, is, ist, ik, i
+    integer :: j, is, ib, ik, i
     FLOAT :: atime(2)
     FLOAT, allocatable :: vaux(:, :, :), pot(:)
     CMPLX, allocatable :: psi(:, :)
@@ -106,17 +106,11 @@ contains
     tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
     tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_elec_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%mesh, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
-        call states_elec_set_state(st, gr%mesh, ist, ik, psi)
+      do ib = st%group%block_start, st%group%block_end
+        call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus = tr%vmagnus)
       end do
     end do
-
-    SAFE_DEALLOCATE_A(psi)
 
     call density_calc(st, gr, st%rho)
 
