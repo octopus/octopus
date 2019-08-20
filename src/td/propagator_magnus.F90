@@ -72,7 +72,7 @@ contains
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
-        call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, vaux(:, :, j))
+        call potential_interpolation_interpolate(tr%vksold, 3, time, dt, time - dt + atime(j), vaux(:, :, j))
       end do
     else
       vaux = M_ZERO
