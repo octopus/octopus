@@ -115,14 +115,10 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
 
       call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hpsib, ik)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))
-      call batch_axpy(mesh%np, -zeig(minst:maxst), st%group%psib(ib, ik), hpsib)
-      call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, res(minst:maxst))
+      st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
+      call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)
+      call mesh_batch_nrm2(mesh, hpsib, diff(minst:maxst))
       call batch_end(hpsib)
-
-      do ist = minst, maxst
-        diff(ist) = sqrt(abs(res(ist)))
-        st%eigenval(ist, ik) = R_REAL(zeig(ist))
-      end do
 
       if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_unpack(st%group%psib(ib, ik), copy=.false.)
 
