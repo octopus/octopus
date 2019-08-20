@@ -777,7 +777,6 @@ utils_f_srcs = \
 	utils/infrared.F90               \
 	utils/local_multipoles.F90       \
 	utils/local_write.F90            \
-	utils/Makefile.in                \
 	utils/oscillator_strength.F90    \
 	utils/photoelectron_spectrum.F90 \
 	utils/propagation_spectrum.F90   \
