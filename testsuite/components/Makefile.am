@@ -76,8 +76,6 @@ dist_share_DATA =                                  \
 	21-hamiltonian_apply.01-Si.inp             \
 	21-hamiltonian_apply.test                  \
         22-density_calc.01-Si.inp                  \
-        22-density_calc.test                       \
-        23-parser_namespace.01.inp                 \
-        23-parser_namespace.test
+        22-density_calc.test
 
 CLEANFILES = *~ *.bak

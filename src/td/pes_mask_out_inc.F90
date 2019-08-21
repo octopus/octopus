@@ -296,7 +296,7 @@ end subroutine pes_mask_pmesh
 !< Build the photoemission map form the restart files
 subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
   type(restart_t),    intent(in) :: restart
-  type(states_t),     intent(in) :: st
+  type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesK(:,:,:,:)
   integer,           intent(in)  :: krng(:) 
@@ -329,7 +329,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
   
   pesK = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_dim_get_spin_index(st%d, ik)
+    ispin = states_elec_dim_get_spin_index(st%d, ik)
     
     do ist = istart, iend
 
@@ -429,12 +429,12 @@ end subroutine pes_mask_map_from_state
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
 subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
-  type(states_t),   intent(in)    :: st
-  type(grid_t),     intent(in)    :: gr
-  type(geometry_t), intent(in)    :: geo
-  character(len=*), intent(in)    :: dir
-  type(output_t),   intent(in)    :: outp
-  type(pes_mask_t), intent(inout) :: mask
+  type(states_elec_t),   intent(in)    :: st
+  type(grid_t),          intent(in)    :: gr
+  type(geometry_t),      intent(in)    :: geo
+  character(len=*),      intent(in)    :: dir
+  type(output_t),        intent(in)    :: outp
+  type(pes_mask_t),      intent(inout) :: mask
 
   integer :: ik, ist, idim, is, ierr
   character(len=80) :: fname
@@ -474,7 +474,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
 
         call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
-        call states_get_state(st, gr%mesh, idim, ist, ik, psi)
+        call states_elec_get_state(st, gr%mesh, idim, ist, ik, psi)
 
         if (mask%mode /= PES_MASK_MODE_PASSIVE) then 
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + psi(:)
@@ -500,7 +500,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, outp%namespace, gr%fine%mesh, &
         RhoAB(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
@@ -526,7 +526,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
               end if
             end if
               
-            call zio_function_output(outp%how, dir, fname, gr%mesh, &
+            call zio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, &
               PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
 
           end do
@@ -553,11 +553,11 @@ end subroutine pes_mask_output_states
 !!\f]
 ! ---------------------------------------------------------
 subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
-  type(pes_mask_t), intent(in)  :: mask
-  type(states_t),   intent(in)  :: st
-  integer,          intent(in)  :: ik  
-  FLOAT, target,    intent(out) :: pesK(:,:,:)
-  CMPLX, optional,  intent(in)  :: wfAk(:,:,:,:,:,:)
+  type(pes_mask_t),    intent(in)  :: mask
+  type(states_elec_t), intent(in)  :: st
+  integer,             intent(in)  :: ik  
+  FLOAT, target,       intent(out) :: pesK(:,:,:)
+  CMPLX, optional,     intent(in)  :: wfAk(:,:,:,:,:,:)
 
   integer :: ist, kx, ky, kz, idim
   FLOAT   :: scale
@@ -773,9 +773,10 @@ end subroutine pes_mask_interpolator_end
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
+subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pmesh)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   FLOAT,             intent(in) :: Lk(:,:)
   integer,           intent(in) :: ll(:)  
   integer,           intent(in) :: how
@@ -792,7 +793,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
 
   PUSH_SUB(pes_mask_output_full_mapM)
 
-  call cube_init(cube, ll, sb)
+  call cube_init(cube, ll, sb, namespace)
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
@@ -827,10 +828,10 @@ subroutine pes_mask_output_full_mapM(pesK, file, Lk, ll, how, sb, pmesh)
     call messages_info(1)
     
     if (present(pmesh)) then          
-      call dvtk_out_cf_structured(filename, 'PES_mapM', ierr, cf, cube,& 
+      call dvtk_out_cf_structured(filename, namespace, 'PES_mapM', ierr, cf, cube,& 
         sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
     else 
-      call dvtk_out_cf(filename, 'PES_mapM', ierr, cf, cube, dk(:),& 
+      call dvtk_out_cf(filename, namespace, 'PES_mapM', ierr, cf, cube, dk(:),& 
         sqrt(units_out%energy)**sb%dim)
     end if        
       
@@ -859,7 +860,7 @@ contains
 
     PUSH_SUB(pes_mask_output_full_mapM.out_ascii)
 
-    iunit = io_open(file, action='write')
+    iunit = io_open(file, namespace, action='write')
 
 
     ll = 1
@@ -894,9 +895,10 @@ end subroutine pes_mask_output_full_mapM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)
   integer,           intent(in) :: dim
   FLOAT,             intent(in) :: pol(3)
@@ -923,7 +925,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
   
-  iunit = io_open(file, action='write')
+  iunit = io_open(file, namespace, action='write')
 
 
   
@@ -1150,15 +1152,16 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, ll, dim, pol, dir, integrat
 end subroutine pes_mask_output_full_mapM_cut
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:,:)
-  integer,          intent(in) :: ll(:)
-  integer,          intent(in) :: dim
-  FLOAT,            intent(in) :: Emax
-  FLOAT,            intent(in) :: Estep
-  FLOAT,            intent(in) :: dir(:) 
+subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, Emax, Estep)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  FLOAT,             intent(in) :: Lk(:,:)
+  integer,           intent(in) :: ll(:)
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: Emax
+  FLOAT,             intent(in) :: Estep
+  FLOAT,             intent(in) :: dir(:) 
 
   FLOAT ::  KK(3)
 
@@ -1257,7 +1260,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
   phiBounds(1) = M_ZERO
   phiBounds(2) = M_TWO * M_PI
 
-  call  pes_mask_write_2D_map(file, pesM, 2, thGrid, eGrid, dir, phiBounds)
+  call  pes_mask_write_2D_map(file, namespace, pesM, 2, thGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
@@ -1269,15 +1272,16 @@ end subroutine pes_mask_output_ar_polar_M
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:,:)
-  integer,          intent(in) :: ll(:)
-  integer,          intent(in) :: dim
-  FLOAT,            intent(in) :: Emax
-  FLOAT,            intent(in) :: Estep
-  FLOAT,            intent(in) :: dir(:) 
+subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, Emax, Estep)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  FLOAT,             intent(in) :: Lk(:,:)
+  integer,           intent(in) :: ll(:)
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: Emax
+  FLOAT,             intent(in) :: Estep
+  FLOAT,             intent(in) :: dir(:) 
 
   integer :: ix, iy
   FLOAT ::  KK(3)
@@ -1388,7 +1392,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
   phiBounds(1) = M_ZERO
   phiBounds(2) = M_TWO * M_PI
   
-  call pes_mask_write_2D_map(file, pesM, 1, eGrid, eGrid, dir, phiBounds)
+  call pes_mask_write_2D_map(file, namespace, pesM, 1, eGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
@@ -1399,16 +1403,17 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, Lk, ll, dim, dir, Emax, Estep)
 end subroutine pes_mask_output_ar_plane_M
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, ll, dim, dir, Emin, Emax, Estep)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:,:)
-  integer,          intent(in) :: ll(:)
-  integer,          intent(in) :: dim
-  FLOAT,            intent(in) :: Emin
-  FLOAT,            intent(in) :: Emax
-  FLOAT,            intent(in) :: Estep
-  FLOAT,            intent(in) :: dir(:) 
+subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim, dir, Emin, Emax, Estep)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  type(namespace_t), intent(in) :: namespace
+  character(len=*),  intent(in) :: file
+  FLOAT,             intent(in) :: Lk(:,:)
+  integer,           intent(in) :: ll(:)
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: Emin
+  FLOAT,             intent(in) :: Emax
+  FLOAT,             intent(in) :: Estep
+  FLOAT,             intent(in) :: dir(:) 
 
   FLOAT ::  KK(3)
 
@@ -1507,7 +1512,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, Lk, ll, dim, dir, Emin
   eBounds(1) = Emin
   eBounds(2) = Emax
 
-  call  pes_mask_write_2D_map(file, pesM, 4, phGrid, thGrid, dir, eBounds)
+  call  pes_mask_write_2D_map(file, namespace, pesM, 4, phGrid, thGrid, dir, eBounds)
 
   SAFE_DEALLOCATE_A(pesM)
 
@@ -1528,14 +1533,15 @@ end subroutine pes_mask_output_ar_spherical_cut_M
 !!  - 4 Spherical cut
 !
 ! ========================================================================
-subroutine pes_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: pesM(:,:)
-  integer,          intent(in) :: mode
-  FLOAT,            intent(in) :: xGrid(:)   !< max min and step for the x axis
-  FLOAT,            intent(in) :: yGrid(:)   !< max min and step for the y axis
-  FLOAT,            intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
-  FLOAT, optional,  intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
+subroutine pes_mask_write_2D_map(file, namespace, pesM, mode, xGrid, yGrid, vv, intSpan)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  FLOAT,             intent(in) :: pesM(:,:)
+  integer,           intent(in) :: mode
+  FLOAT,             intent(in) :: xGrid(:)   !< max min and step for the x axis
+  FLOAT,             intent(in) :: yGrid(:)   !< max min and step for the y axis
+  FLOAT,             intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
+  FLOAT, optional,   intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
 
   integer :: nx,ny, iunit, ix,iy
 
@@ -1544,7 +1550,7 @@ subroutine pes_mask_write_2D_map(file, pesM, mode, xGrid, yGrid, vv, intSpan)
   nx = size(pesM,1)
   ny = size(pesM,2)
 
-  iunit = io_open(file, action='write')
+  iunit = io_open(file, namespace, action='write')
 
   select case (mode)
     case(1)
@@ -1669,15 +1675,16 @@ end subroutine pes_mask_write_2D_map
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_output_power_totalM(pesK, file, Lk, ll, dim, Emax, Estep, interpolate)
-  FLOAT,            intent(in) :: pesK(:,:,:)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: Lk(:,:)
-  integer,          intent(in) :: ll(:)
-  integer,          intent(in) :: dim
-  FLOAT,            intent(in) :: Emax
-  FLOAT,            intent(in) :: Estep
-  logical,          intent(in) :: interpolate
+subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax, Estep, interpolate)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  FLOAT,             intent(in) :: Lk(:,:)
+  integer,           intent(in) :: ll(:)
+  integer,           intent(in) :: dim
+  FLOAT,             intent(in) :: Emax
+  FLOAT,             intent(in) :: Estep
+  logical,           intent(in) :: interpolate
 
   integer :: ii, ix, iy, iz
   FLOAT ::  KK(3),vec
@@ -1799,9 +1806,9 @@ subroutine pes_mask_output_power_totalM(pesK, file, Lk, ll, dim, Emax, Estep, in
 
 
   if (interpolate) then 
-    call pes_mask_write_power_total(file, step, pes)
+    call pes_mask_write_power_total(file, namespace, step, pes)
   else 
-    call pes_mask_write_power_total(file, step, pes, npoints)
+    call pes_mask_write_power_total(file, namespace, step, pes, npoints)
   end if
 
   SAFE_DEALLOCATE_A(pes)
@@ -1814,11 +1821,12 @@ end subroutine pes_mask_output_power_totalM
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_write_power_total(file, step, pes, npoints)
-  character(len=*), intent(in) :: file
-  FLOAT,            intent(in) :: step
-  FLOAT,            intent(in) :: pes(:)
-  FLOAT, optional,  intent(in) :: npoints(:)
+subroutine pes_mask_write_power_total(file, namespace, step, pes, npoints)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  FLOAT,             intent(in) :: step
+  FLOAT,             intent(in) :: pes(:)
+  FLOAT, optional,   intent(in) :: npoints(:)
 
   integer :: nn, iunit, ii
 
@@ -1826,7 +1834,7 @@ subroutine pes_mask_write_power_total(file, step, pes, npoints)
 
   nn = size(pes,1)
 
-  iunit = io_open(file, action='write')
+  iunit = io_open(file, namespace, action='write')
 
   !!Header
   write(iunit, '(a)') '##################################################'
@@ -1862,14 +1870,14 @@ end subroutine pes_mask_write_power_total
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
-  type(pes_mask_t),  intent(inout)    :: mask
-  type(mesh_t),      intent(in)       :: mesh
-  type(states_t),    intent(in)       :: st
-  character(len=*),  intent(in)       :: file
-  type(output_t),    intent(in)       :: outp
-  type(grid_t),      intent(in)       :: gr
-  type(geometry_t),  intent(in)       :: geo
-  integer,           intent(in)       :: iter
+  type(pes_mask_t),    intent(inout)    :: mask
+  type(mesh_t),        intent(in)       :: mesh
+  type(states_elec_t), intent(in)       :: st
+  character(len=*),    intent(in)       :: file
+  type(output_t),      intent(in)       :: outp
+  type(grid_t),        intent(in)       :: gr
+  type(geometry_t),    intent(in)       :: geo
+  integer,             intent(in)       :: iter
 
   CMPLX, allocatable :: wfAk(:,:,:,:,:,:), psi(:)
   FLOAT :: pesK(1:mask%fs_n_global(1),1:mask%fs_n_global(2),1:mask%fs_n_global(3)),pol(3)
@@ -1884,7 +1892,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   call profiling_in(prof, "PESMASK_out")
   
   !Output info for easy post-process
-  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general")
+  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", outp%namespace)
  
 
   !Photoelectron wavefunction and density in real space
@@ -1925,7 +1933,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist =  st%st_start, st%st_end
         do idim = 1, st%d%dim
-          call states_get_state(st, mesh, idim, ist, ik, psi)
+          call states_elec_get_state(st, mesh, idim, ist, ik, psi)
           call pes_mask_mesh_to_cube(mask, psi, cf1)
           cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
           call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
@@ -1957,13 +1965,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
       ! Output the full matrix in binary format for subsequent post-processing 
       if(st%d%nik == 1) then
       write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath(fn), mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), &
-                           pesK, ierr)
+      call io_binary_write(io_workpath(fn, outp%namespace), &
+        mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
                            
          
       ! Total power spectrum 
       write(fn, '(a,a)') trim(dir), '_power.sum'
-      call pes_mask_output_power_totalM(pesK,fn, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+      call pes_mask_output_power_totalM(pesK,fn, outp%namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
                                        mask%energyMax, mask%energyStep, .false.)
       end if
 
@@ -1974,8 +1982,8 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
         write(fn, '(a,a)') trim(dir), '_map.pz=0'
       end if
       pol = (/M_ZERO, M_ZERO, M_ONE/)
-      call pes_mask_output_full_mapM_cut(pesK, fn, mask%ll, mask%mesh%sb%dim, pol = pol, &
-                                     dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
+      call pes_mask_output_full_mapM_cut(pesK, fn, outp%namespace, mask%ll, mask%mesh%sb%dim, &
+        pol = pol, dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
                                      
     end if
   end do
@@ -1992,14 +2000,15 @@ end subroutine pes_mask_output
 ! ---------------------------------------------------------
 !> Read pes info.
 ! ---------------------------------------------------------
-subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
-  character(len=*), intent(in)  :: dir
-  integer,          intent(out) :: dim  
-  FLOAT,            intent(out) :: Emax
-  FLOAT,            intent(out) :: Estep
-  integer,          intent(out) :: ll(:)
-  FLOAT, pointer,   intent(out) :: Lk(:,:)
-  FLOAT, pointer,   intent(out) :: RR(:)
+subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
+  character(len=*),  intent(in)  :: dir
+  type(namespace_t), intent(in)  :: namespace
+  integer,           intent(out) :: dim  
+  FLOAT,             intent(out) :: Emax
+  FLOAT,             intent(out) :: Estep
+  integer,           intent(out) :: ll(:)
+  FLOAT, pointer,    intent(out) :: Lk(:,:)
+  FLOAT, pointer,    intent(out) :: RR(:)
 
 
   character(len=256) :: filename, dummy
@@ -2010,7 +2019,7 @@ subroutine pes_mask_read_info(dir, dim, Emax, Estep, ll, Lk,RR)
 
 
   filename = trim(dir)//'pes'
-  iunit = io_open(filename, action='read', status='old')
+  iunit = io_open(filename, namespace, action='read', status='old')
 
   SAFE_ALLOCATE(RR(1:2))
 
@@ -2050,9 +2059,10 @@ end subroutine pes_mask_read_info
 ! ---------------------------------------------------------
 !> Output pes info
 ! ---------------------------------------------------------
-subroutine pes_mask_write_info(mask, dir)
-  type(pes_mask_t), intent(in) :: mask
-  character(len=*), intent(in) :: dir
+subroutine pes_mask_write_info(mask, dir, namespace)
+  type(pes_mask_t),  intent(in) :: mask
+  character(len=*),  intent(in) :: dir
+  type(namespace_t), intent(in) :: namespace
 
   character(len=256) :: filename
 
@@ -2062,7 +2072,7 @@ subroutine pes_mask_write_info(mask, dir)
 
   filename = trim(dir)//'/pes'
 
-  iunit = io_open(filename, action='write')
+  iunit = io_open(filename, namespace, action='write')
 
   write(iunit, '(a10,2x,i2)') 'dim', mask%mesh%sb%dim
   write(iunit, '(a10,2x,es19.12)') 'Mask R1', mask%mask_R(1)
@@ -2095,10 +2105,10 @@ end subroutine pes_mask_write_info
 !
 ! ---------------------------------------------------------
 subroutine pes_mask_dump(restart, mask, st, ierr)
-  type(restart_t),  intent(in)  :: restart
-  type(pes_mask_t), intent(in)  :: mask
-  type(states_t),   intent(in)  :: st
-  integer,          intent(out) :: ierr
+  type(restart_t),     intent(in)  :: restart
+  type(pes_mask_t),    intent(in)  :: mask
+  type(states_elec_t), intent(in)  :: st
+  integer,             intent(out) :: ierr
 
   character(len=80) :: filename, path, lines(2)
   integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2
@@ -2189,10 +2199,10 @@ end subroutine pes_mask_dump
 
 ! ---------------------------------------------------------
 subroutine pes_mask_load(restart, mask, st, ierr)
-  type(restart_t),  intent(in)    :: restart
-  type(pes_mask_t), intent(inout) :: mask
-  type(states_t),   intent(inout) :: st
-  integer,          intent(out)   :: ierr
+  type(restart_t),     intent(in)    :: restart
+  type(pes_mask_t),    intent(inout) :: mask
+  type(states_elec_t), intent(inout) :: st
+  integer,             intent(out)   :: ierr
 
   character(len=80) :: filename
   integer :: itot, ik, ist, idim , np, err, err2, iunit, ll(3)
@@ -2269,9 +2279,9 @@ end subroutine pes_mask_load
 
 ! ---------------------------------------------------------
 subroutine pes_mask_restart_map(mask, st, RR)
-  type(pes_mask_t), intent(inout) :: mask
-  type(states_t),   intent(inout) :: st
-  FLOAT,            intent(in)    :: RR(2)
+  type(pes_mask_t),    intent(inout) :: mask
+  type(states_elec_t), intent(inout) :: st
+  FLOAT,               intent(in)    :: RR(2)
 
   integer :: ik, ist, idim
   CMPLX, allocatable :: psi(:)
@@ -2296,12 +2306,12 @@ subroutine pes_mask_restart_map(mask, st, RR)
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
         call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
-        call states_get_state(st, mask%mesh, idim, ist, ik, psi)
+        call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
         call pes_mask_mesh_to_cube(mask, psi, cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
         cf1%zRs = cf2%zRs* mask%cM%zRs !modify the orbital in A
         call pes_mask_cube_to_mesh(mask, cf1, psi)
-        call states_set_state(st, mask%mesh, idim, ist, ik, psi)
+        call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
         cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
         call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs

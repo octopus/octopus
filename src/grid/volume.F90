@@ -21,9 +21,10 @@
 
 module volume_oct_m
   use iso_c_binding
-  use parser_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
 
@@ -61,10 +62,10 @@ contains
     SAFE_DEALLOCATE_P(vol%params)
   end subroutine volume_end
 
-  subroutine volume_read_from_block(vol, parser, block_name)
-    type(volume_t),   intent(inout) :: vol
-    type(parser_t),   intent(in)    :: parser
-    character(len=*), intent(in)    :: block_name
+  subroutine volume_read_from_block(vol, namespace, block_name)
+    type(volume_t),    intent(inout) :: vol
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: block_name
 
     type(block_t) :: blk
     integer :: i, j, n_par
@@ -91,7 +92,7 @@ contains
     !%
     !%End
 
-    if(parse_block(parser, block_name, blk, check_varinfo_=.false.) == 0) then
+    if(parse_block(namespace, block_name, blk, check_varinfo_=.false.) == 0) then
       vol%n_elements = parse_block_n(blk)
 
       SAFE_ALLOCATE(vol%join(1:vol%n_elements))

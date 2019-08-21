@@ -22,39 +22,33 @@ module parser_oct_m
   use global_oct_m
   use loct_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use unit_oct_m
   use varinfo_oct_m
 
   implicit none
 
   private
-  public ::                &
-    parser_t,              &
-    block_t,               &
-    parser_init,           &
-    parser_end,            &
-    parser_init_namespace, &
-    parse_init,            &
-    parse_putsym,          &
-    parse_end,             &
-    parse_is_defined,      &
-    parse_variable,        &
-    parse_block,           &
-    parse_block_end,       &
-    parse_block_n,         &
-    parse_block_cols,      &
-    parse_block_integer,   &
-    parse_block_float,     &
-    parse_block_cmplx,     &
-    parse_block_string,    &
-    parse_block_logical,   &
-    parse_expression,      &
+  public ::              &
+    block_t,             &
+    parser_init,         &
+    parser_end,          &
+    parse_init,          &
+    parse_putsym,        &
+    parse_end,           &
+    parse_is_defined,    &
+    parse_variable,      &
+    parse_block,         &
+    parse_block_end,     &
+    parse_block_n,       &
+    parse_block_cols,    &
+    parse_block_integer, &
+    parse_block_float,   &
+    parse_block_cmplx,   &
+    parse_block_string,  &
+    parse_block_logical, &
+    parse_expression,    &
     parse_array
-
-  type :: parser_t
-    private
-    character(len=128) :: namespace
-  end type parser_t
 
   type :: block_t
     private
@@ -276,8 +270,7 @@ module parser_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine parser_init(self)
-    type(parser_t), intent(out) :: self
+  subroutine parser_init()
 
     integer :: ierr
     logical :: file_exists
@@ -332,18 +325,11 @@ contains
     ! parse OCT_ prefixed variables from environment
     call parse_environment("OCT_")
 
-    ! set namespace to empty for the global parser
-    ! TODO: for testing purposes, this is currently set to default
-    ! -> should be removed once multisystem support is implemented
-    ! (there is a test for this)
-    self%namespace = 'default'
-
   end subroutine parser_init
 
 
   ! ---------------------------------------------------------
-  subroutine parser_end(self)
-    type(parser_t), intent(inout) :: self
+  subroutine parser_end()
 
     call sym_output_table(only_unused = 1, mpiv_node = mpi_world%rank)
     call parse_end()
@@ -351,46 +337,27 @@ contains
   end subroutine parser_end
 
   ! ---------------------------------------------------------
-  
-  function parser_init_namespace(global_parser, namespace) result(parser)
-    type(parser_t),   intent(in) :: global_parser
-    character(len=*), intent(in) :: namespace
-    type(parser_t) :: parser
 
-    parser = global_parser
-    if (len(namespace) <= 128) then
-      parser%namespace = namespace
-    else
-      write(stderr,'(a)') '*** Fatal Error (description follows)'
-      write(stderr,'(a)') 'Parser namespaces are limited to 128 characters'
-    end if
+  logical function parse_is_defined(namespace, name) result(isdef)
+    type(namespace_t), intent(in) :: namespace
+    character(len=*),  intent(in) :: name
 
-  end function parser_init_namespace
-
-  ! ---------------------------------------------------------
-
-  logical function parse_is_defined(self, name) result(isdef)
-    type(parser_t), intent(in)   :: self
-    character(len=*), intent(in) :: name
-
-    isdef = parse_isdef(name) /= 0
+    isdef = parse_isdef(parse_get_full_name(namespace, name)) /= 0
 
   end function parse_is_defined
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    integer,          intent(in)    :: def
-    integer,          intent(out)   :: res
+  subroutine parse_integer(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    integer,           intent(in)    :: def
+    integer,           intent(out)   :: res
 
     integer(8) :: res8
-    character(len=len(name)+len(self%namespace)+1) :: full_name
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_int(full_name, int(def, 8), res8)
+    call oct_parse_int(parse_get_full_name(namespace, name), int(def, 8), res8)
 
     res = int(res8)
 
@@ -398,50 +365,42 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer8(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    integer(8),       intent(in)    :: def
-    integer(8),       intent(out)   :: res
-
-    character(len=len(name)+len(self%namespace)+1) :: full_name
+  subroutine parse_integer8(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    integer(8),        intent(in)    :: def
+    integer(8),        intent(out)   :: res
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_int(full_name, def, res)
+    call oct_parse_int(parse_get_full_name(namespace, name), def, res)
 
   end subroutine parse_integer8
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer48(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    integer,          intent(in)    :: def
-    integer(8),       intent(out)   :: res
-
-    character(len=len(name)+len(self%namespace)+1) :: full_name
+  subroutine parse_integer48(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    integer,           intent(in)    :: def
+    integer(8),        intent(out)   :: res
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_int(full_name, int(def, 8), res)
+    call oct_parse_int(parse_get_full_name(namespace, name), int(def, 8), res)
 
   end subroutine parse_integer48
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer84(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    integer(8),       intent(in)    :: def
-    integer,          intent(out)   :: res
+  subroutine parse_integer84(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    integer(8),        intent(in)    :: def
+    integer,           intent(out)   :: res
 
     integer(8) :: res8
-    character(len=len(name)+len(self%namespace)+1) :: full_name
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_int(full_name, def, res8)
+    call oct_parse_int(parse_get_full_name(namespace, name), def, res8)
 
     res = int(res8)
 
@@ -449,69 +408,59 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine parse_string(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    character(len=*), intent(in)    :: def
-    character(len=*), intent(out)   :: res
-
-    character(len=len(name)+len(self%namespace)+1) :: full_name
+  subroutine parse_string(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    character(len=*),  intent(in)    :: def
+    character(len=*),  intent(out)   :: res
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_string(full_name, def, res)
+    call oct_parse_string(parse_get_full_name(namespace, name), def, res)
 
   end subroutine parse_string
 
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
-  subroutine parse_logical(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    logical,          intent(in)    :: def
-    logical,          intent(out)   :: res
+  subroutine parse_logical(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    logical,           intent(in)    :: def
+    logical,           intent(out)   :: res
 
     integer(8) :: idef, ires
-    character(len=len(name)+len(self%namespace)+1) :: full_name
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
 
     idef = 0
     if(def) idef = 1
 
-    call oct_parse_int(full_name, idef, ires)
+    call oct_parse_int(parse_get_full_name(namespace, name), idef, ires)
     res = (ires /= 0)
 
   end subroutine parse_logical
 
   ! ---------------------------------------------------------
 
-  subroutine parse_cmplx(self, name, def, res)
-    type(parser_t),   intent(in)    :: self
-    character(len=*), intent(in)    :: name
-    complex(8),       intent(in)    :: def
-    complex(8),       intent(out)   :: res
-
-    character(len=len(name)+len(self%namespace)+1) :: full_name
+  subroutine parse_cmplx(namespace, name, def, res)
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: name
+    complex(8),        intent(in)    :: def
+    complex(8),        intent(out)   :: res
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
-    call oct_parse_complex(full_name, def, res)
+    call oct_parse_complex(parse_get_full_name(namespace, name), def, res)
 
   end subroutine parse_cmplx
 
   ! ---------------------------------------------------------
 
-  integer function parse_block(self, name, blk, check_varinfo_)
-    type(parser_t),    intent(in)    :: self
+  integer function parse_block(namespace, name, blk, check_varinfo_)
+    type(namespace_t), intent(in)    :: namespace
     character(len=*),  intent(in)    :: name
     type(block_t),     intent(out)   :: blk
     logical, optional, intent(in)    :: check_varinfo_
 
     logical check_varinfo
-    character(len=len(name)+len(self%namespace)+1) :: full_name
-
 
     check_varinfo = .true.
     if(present(check_varinfo_)) check_varinfo = check_varinfo_
@@ -519,8 +468,7 @@ contains
     if(check_varinfo) then
       call parse_check_varinfo(name)
     end if
-    full_name = parse_get_full_name(self, name)
-    parse_block = oct_parse_block(full_name, blk)
+    parse_block = oct_parse_block(parse_get_full_name(namespace, name), blk)
 
   end function parse_block
 
@@ -564,24 +512,22 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double4_unit(self, name, def4, res4, unit)
-    type(parser_t),         intent(in)  :: self
+  subroutine oct_parse_double4_unit(namespace, name, def4, res4, unit)
+    type(namespace_t),      intent(in)  :: namespace
     character(len=*),       intent(in)  :: name
     real(4),                intent(in)  :: def4
     real(4),                intent(out) :: res4
     type(unit_t), optional, intent(in)  :: unit
 
     real(8) :: res8
-    character(len=len(name)+len(self%namespace)+1) :: full_name
 
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
 
     if(present(unit)) then
-      call oct_parse_double(full_name, units_from_atomic(unit, real(def4, 8)), res8)
+      call oct_parse_double(parse_get_full_name(namespace, name), units_from_atomic(unit, real(def4, 8)), res8)
       res4 = real(units_to_atomic(unit, res8), kind=4)
     else
-      call oct_parse_double(full_name, real(def4, 8), res8)
+      call oct_parse_double(parse_get_full_name(namespace, name), real(def4, 8), res8)
       res4 = real(res8, kind=4)
     end if
 
@@ -589,23 +535,20 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double8_unit(self, name, def, res, unit)
-    type(parser_t),   intent(in)  :: self
+  subroutine oct_parse_double8_unit(namespace, name, def, res, unit)
+    type(namespace_t),   intent(in)  :: namespace
     character(len=*), intent(in)  :: name
     real(8),          intent(in)  :: def
     real(8),          intent(out) :: res
     type(unit_t), optional, intent(in)  :: unit
 
-    character(len=len(name)+len(self%namespace)+1) :: full_name
-
     call parse_check_varinfo(name)
-    full_name = parse_get_full_name(self, name)
 
     if(present(unit)) then
-      call oct_parse_double(full_name, units_from_atomic(unit, def), res)
+      call oct_parse_double(parse_get_full_name(namespace, name), units_from_atomic(unit, def), res)
       res = units_to_atomic(unit, res)
     else
-      call oct_parse_double(full_name, def, res)
+      call oct_parse_double(parse_get_full_name(namespace, name), def, res)
     end if
 
   end subroutine oct_parse_double8_unit
@@ -750,14 +693,14 @@ contains
 
   ! this function returns the full name, possibly including the namespace
   ! of the current parser
-  function parse_get_full_name(self, varname) result(full_name)
-    type(parser_t), intent(in) :: self
-    character(len=*), intent(in) :: varname
-    character(len=len(varname)+len(self%namespace)+1) :: full_name
+  function parse_get_full_name(namespace, varname) result(full_name)
+    type(namespace_t), intent(in) :: namespace
+    character(len=*),  intent(in) :: varname
+    character(len=len(varname)+namespace%len()+1) :: full_name
 
     ! try first the variable prefixed by namespace
-    full_name = trim(self%namespace) // "." // trim(varname)
-    if(.not. parse_is_defined(self, full_name)) then
+    full_name = trim(namespace%get()) // "." // trim(varname)
+    if (parse_isdef(full_name) == 0) then
       full_name = varname
     end if
   end function parse_get_full_name

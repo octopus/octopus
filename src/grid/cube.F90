@@ -26,6 +26,7 @@ module cube_oct_m
   use io_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use nfft_oct_m
   use parser_oct_m
   use pfft_oct_m
@@ -88,11 +89,12 @@ module cube_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, fft_type, fft_library, dont_optimize, nn_out, verbose, &
+  subroutine cube_init(cube, nn, sb, namespace, fft_type, fft_library, dont_optimize, nn_out, verbose, &
                        mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
+    type(namespace_t), intent(in)  :: namespace
     integer, optional, intent(in)  :: fft_type  !< Is the cube going to be used to perform FFTs?
     integer, optional, intent(in)  :: fft_library !< What fft library to use
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
@@ -216,7 +218,7 @@ contains
       end if
 
       if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then
-        call fft_init_stage1(cube%fft, cube%Lrs, cube%rs_n_global)
+        call fft_init_stage1(cube%fft, namespace, cube%Lrs, cube%rs_n_global)
         !set local dimensions after stage1 - needed for PNFFT
         call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
              cube%rs_istart, cube%fs_istart)
@@ -245,7 +247,7 @@ contains
       call cube_do_mapping(cube, fs = fft_library_ == FFTLIB_PNFFT)
     end if
 
-    if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
+    if (cube%parallel_in_domains) call cube_partition_messages_debug(cube, namespace)
 
     POP_SUB(cube_init)
   end subroutine cube_init
@@ -629,8 +631,9 @@ contains
   end subroutine cube_partition
 
   ! ---------------------------------------------------------
-  subroutine cube_partition_messages_debug(cube)
-    type(cube_t), intent(in) :: cube
+  subroutine cube_partition_messages_debug(cube, namespace)
+    type(cube_t),      intent(in) :: cube
+    type(namespace_t), intent(in) :: namespace
 
     integer          :: nn, ii, jj, kk ! Counters.
     integer          :: ixyz(3)        ! Current value of xyz 
@@ -646,7 +649,7 @@ contains
       call cube_partition(cube, part)
   
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/cube_partition')
+        call io_mkdir('debug/cube_partition', namespace)
         npart = cube%mpi_grp%size
       
         ! Debug output. Write points of each partition in a different file.
@@ -655,7 +658,7 @@ contains
           write(filenum, '(i3.3)') nn
 
           iunit = io_open('debug/cube_partition/cube_partition.'//filenum, &
-               action='write')
+            namespace, action='write')
           do kk = 1, cube%rs_n_global(3)
             do jj = 1, cube%rs_n_global(2)
               do ii = 1, cube%rs_n_global(1)

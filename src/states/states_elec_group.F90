@@ -18,25 +18,25 @@
 
 #include "global.h"
 
-module states_group_oct_m
+module states_elec_group_oct_m
   use batch_oct_m
   use global_oct_m
   use loct_pointer_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
 
   implicit none
 
   private
 
   public ::                           &
-    states_group_t,                   &
-    states_group_null,                &
-    states_group_end,                 &
-    states_group_copy
+    states_elec_group_t,                   &
+    states_elec_group_null,                &
+    states_elec_group_end,                 &
+    states_elec_group_copy
 
-  type states_group_t
+  type states_elec_group_t
     ! Components are public by default
     type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
@@ -49,15 +49,15 @@ module states_group_oct_m
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
-  end type states_group_t
+  end type states_elec_group_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_group_null(this)
-    type(states_group_t), intent(out)   :: this
+  subroutine states_elec_group_null(this)
+    type(states_elec_group_t), intent(out)   :: this
 
-    PUSH_SUB(states_group_null)
+    PUSH_SUB(states_elec_group_null)
 
     nullify(this%psib)
     nullify(this%iblock)
@@ -67,17 +67,17 @@ contains
 
     this%block_initialized = .false.
 
-    POP_SUB(states_group_null)
-  end subroutine states_group_null
+    POP_SUB(states_elec_group_null)
+  end subroutine states_elec_group_null
 
   ! ---------------------------------------------------------
-  subroutine states_group_end(this, d)
-    type(states_group_t), intent(inout) :: this
-    type(states_dim_t),   intent(in)    :: d
+  subroutine states_elec_group_end(this, d)
+    type(states_elec_group_t), intent(inout) :: this
+    type(states_elec_dim_t),   intent(in)    :: d
 
     integer :: ib, iq
 
-    PUSH_SUB(states_group_end)
+    PUSH_SUB(states_elec_group_end)
 
     if (this%block_initialized) then
       do ib = 1, this%nblocks
@@ -98,22 +98,22 @@ contains
       this%block_initialized = .false.
     end if
 
-    POP_SUB(states_group_end)
-  end subroutine states_group_end
+    POP_SUB(states_elec_group_end)
+  end subroutine states_elec_group_end
 
   !---------------------------------------------------------
 
-  subroutine states_group_copy(d,group_in, group_out, copy_data)
-    type(states_dim_t) :: d
-    type(states_group_t), intent(in)    :: group_in
-    type(states_group_t), intent(out)   :: group_out
+  subroutine states_elec_group_copy(d, group_in, group_out, copy_data)
+    type(states_elec_dim_t),   intent(in)    :: d
+    type(states_elec_group_t), intent(in)    :: group_in
+    type(states_elec_group_t), intent(out)   :: group_out
     logical, optional,    intent(in)    :: copy_data
 
     integer :: qn_start, qn_end, ib, iqn
     
-    PUSH_SUB(states_group_copy)
+    PUSH_SUB(states_elec_group_copy)
 
-    call states_group_null(group_out)
+    call states_elec_group_null(group_out)
 
     
     group_out%nblocks           = group_in%nblocks
@@ -145,10 +145,10 @@ contains
     
     end if
 
-    POP_SUB(states_group_copy)
-  end subroutine states_group_copy
+    POP_SUB(states_elec_group_copy)
+  end subroutine states_elec_group_copy
   
-end module states_group_oct_m
+end module states_elec_group_oct_m
 
 
 !! Local Variables:

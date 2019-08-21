@@ -36,7 +36,7 @@ module projector_oct_m
   use rkb_projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
 
   implicit none
@@ -131,9 +131,8 @@ contains
   end function projector_is
 
   !---------------------------------------------------------
-  subroutine projector_init(p, mesh, atm, dim, reltype)
+  subroutine projector_init(p, atm, dim, reltype)
     type(projector_t),    intent(inout) :: p
-    type(mesh_t),         intent(in)    :: mesh
     type(atom_t), target, intent(in)    :: atm
     integer,              intent(in)    :: dim
     integer,              intent(in)    :: reltype
@@ -185,7 +184,7 @@ contains
   subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
     type(projector_t),             intent(inout) :: this
     type(simul_box_t),             intent(in)    :: sb
-    type(states_dim_t),            intent(in)    :: std
+    type(states_elec_dim_t),       intent(in)    :: std
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -209,7 +208,7 @@ contains
     end do
 
     do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_dim_get_kpoint_index(std, iq)
+      ikpoint = states_elec_dim_get_kpoint_index(std, iq)
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))

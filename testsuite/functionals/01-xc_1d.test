@@ -46,6 +46,6 @@ Input: 01-xc_1d.oep_exx.inp
 match ; OEP EXX Eigenvalue 1 up                  ; GREPFIELD(static/info, '  1   up', 3) ; -0.948877
 match ; OEP EXX Eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; -0.315508
 match ; OEP EXX Eigenvalue 1 dn                  ; GREPFIELD(static/info, '  1   dn', 3) ; -1.071001
-match ; OEP EXX Eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; -0.155395
+match ; OEP EXX Eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; -0.002973
 match ; OEP Exact Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.07717828
 match ; OEP EXX Int[n*v_xc]                      ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.97704512

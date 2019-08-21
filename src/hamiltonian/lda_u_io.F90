@@ -29,11 +29,13 @@ module lda_u_io_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
  
@@ -46,6 +48,7 @@ module lda_u_io_oct_m
        lda_u_write_effectiveU,          &
        lda_u_write_kanamoriU,           &
        lda_u_write_U,                   &
+       lda_u_write_V,                   &
        lda_u_write_magnetization,       &
        lda_u_load,                      &
        lda_u_loadbasis,                 &
@@ -54,17 +57,18 @@ module lda_u_io_oct_m
 contains
 
  !> Prints the occupation matrices at the end of the scf calculation.
- subroutine lda_u_write_occupation_matrices(dir, this, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(states_t),    intent(in)    :: st
+ subroutine lda_u_write_occupation_matrices(dir, this, st, namespace)
+   type(lda_u_t),       intent(in)    :: this
+   character(len=*),    intent(in)    :: dir
+   type(states_elec_t), intent(in)    :: st
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ios, ispin, im, imp
  
    PUSH_SUB(lda_u_write_occupation_matrices)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-   iunit = io_open(trim(dir) // "/occ_matrices", action='write')
+   iunit = io_open(trim(dir) // "/occ_matrices", namespace, action='write')
    write(iunit,'(a)') ' Occupation matrices '
 
    do ios = 1, this%norbsets
@@ -90,7 +94,7 @@ contains
    call io_close(iunit)
 
    if(this%level == DFT_U_ACBN0) then
-     iunit = io_open(trim(dir) // "/renorm_occ_matrices", action='write')
+     iunit = io_open(trim(dir) // "/renorm_occ_matrices", namespace, action='write')
      write(iunit,'(a)') ' Renormalized occupation matrices '
 
      do ios = 1, this%norbsets
@@ -122,16 +126,17 @@ contains
  end subroutine lda_u_write_occupation_matrices
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this)
+ subroutine lda_u_write_effectiveU(dir, this, namespace)
    type(lda_u_t),     intent(in)    :: this
    character(len=*),  intent(in)    :: dir
+   type(namespace_t), intent(in)    :: namespace
 
    integer :: iunit, ios
 
    PUSH_SUB(lda_u_write_effectiveU)
 
    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     iunit = io_open(trim(dir) // "/effectiveU", action='write')
+     iunit = io_open(trim(dir) // "/effectiveU", namespace, action='write')
      call lda_u_write_U(this, iunit)
 
      write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
@@ -208,10 +213,11 @@ contains
  end subroutine lda_u_write_effectiveU
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_kanamoriU(dir, st, this)
-   type(lda_u_t),     intent(in)    :: this
-   type(states_t),    intent(in)    :: st
-   character(len=*),  intent(in)    :: dir
+ subroutine lda_u_write_kanamoriU(dir, st, this, namespace)
+   type(lda_u_t),       intent(in)    :: this
+   type(states_elec_t), intent(in)    :: st
+   character(len=*),    intent(in)    :: dir
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ios
    FLOAT, allocatable :: kanamori(:,:)
@@ -223,7 +229,7 @@ contains
 
      call compute_ACBNO_U_kanamori(this, st, kanamori)
 
-     iunit = io_open(trim(dir) // "/kanamoriU", action='write')
+     iunit = io_open(trim(dir) // "/kanamoriU", namespace, action='write')
 
      write(iunit, '(a,a,a,f7.3,a)') 'Intraorbital U [', &
        trim(units_abbrev(units_out%energy)),']:'
@@ -338,12 +344,13 @@ contains
 
 
  !--------------------------------------------------------- 
- subroutine lda_u_write_magnetization(dir, this, geo, mesh, st)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(geometry_t),  intent(in)    :: geo
-   type(mesh_t),      intent(in)    :: mesh
-   type(states_t),    intent(in)    :: st
+ subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
+   type(lda_u_t),       intent(in)    :: this
+   character(len=*),    intent(in)    :: dir
+   type(geometry_t),    intent(in)    :: geo
+   type(mesh_t),        intent(in)    :: mesh
+   type(states_elec_t), intent(in)    :: st
+   type(namespace_t),   intent(in)    :: namespace
 
    integer :: iunit, ia, ios, im
    FLOAT, allocatable :: mm(:,:)
@@ -352,8 +359,8 @@ contains
 
    PUSH_SUB(lda_u_write_magnetization)
 
-   call io_mkdir(dir)
-    iunit = io_open(trim(dir)//"/magnetization.xsf", action='write', position='asis')
+   call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
       SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))
@@ -431,11 +438,67 @@ contains
    POP_SUB(lda_u_write_U)
  end subroutine lda_u_write_U
 
+ !--------------------------------------------------------- 
+ subroutine lda_u_write_V(this, iunit)
+   type(lda_u_t),     intent(in) :: this
+   integer,           intent(in) :: iunit
+
+   integer :: ios, icopies, ios2
+
+   if(.not. this%intersite) return
+
+   PUSH_SUB(lda_u_write_V)
+
+   if(mpi_grp_is_root(mpi_world)) then
+
+     write(iunit, '(a,a,a,f7.3,a)') 'Effective intersite V [', &
+       trim(units_abbrev(units_out%energy)),']:'
+     write(iunit,'(a,14x,a)') ' Orbital',  'V'
+     do ios = 1, this%norbsets
+       do icopies = 1, this%orbsets(ios)%nneighbors
+         ios2 = this%orbsets(ios)%map_os(icopies)
+         if(this%orbsets(ios)%ndim == 1) then
+           if(this%orbsets(ios)%nn /= 0 ) then
+             write(iunit,'(i4,a10, 2x, i1, a1, i2, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ios2, &
+                                             this%orbsets(ios2)%nn, l_notation(this%orbsets(ios2)%ll), &
+                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           else
+             write(iunit,'(i4,a10, 3x, a1, i2, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                             l_notation(this%orbsets(ios)%ll), ios2, l_notation(this%orbsets(ios2)%ll), &
+                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           end if
+        else
+          if(this%orbsets(ios)%nn /= 0 ) then
+             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                          int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,      &
+                          units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                          units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           else
+             write(iunit,'(i4,a10, 3x, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                  l_notation(this%orbsets(ios)%ll), int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,   &
+                                  units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                  units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           end if
+         end if
+       end do
+
+
+     end do
+   end if
+
+   POP_SUB(lda_u_write_V)
+ end subroutine lda_u_write_V
+ 
+
   ! ---------------------------------------------------------
   subroutine lda_u_dump(restart, this, st, ierr, iter)
     type(restart_t),      intent(in)  :: restart
     type(lda_u_t),        intent(in)  :: this
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     integer,              intent(out) :: ierr
     integer, optional,    intent(in)  :: iter
 
@@ -499,7 +562,7 @@ contains
   subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     integer,              intent(out)   :: ierr
     logical, optional,    intent(in)    :: occ_only
     logical, optional,    intent(in)    :: u_only
@@ -542,16 +605,20 @@ contains
         call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
         if (err /= 0) ierr = ierr + 1
         call dlda_u_set_occupations(this, docc)
-        call dlda_u_update_potential(this, st)
         SAFE_DEALLOCATE_A(docc)
       else
         SAFE_ALLOCATE(zocc(1:occsize))
         call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
         if (err /= 0) ierr = ierr + 1
         call zlda_u_set_occupations(this, zocc)
-        call zlda_u_update_potential(this, st)
         SAFE_DEALLOCATE_A(zocc)
       end if
+    end if
+
+    if (states_are_real(st)) then
+      call dlda_u_update_potential(this, st)
+    else
+      call zlda_u_update_potential(this, st)
     end if
 
     if (debug%info) then
@@ -564,10 +631,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lda_u_loadbasis(lda_u, parser, st, mesh, mc, ierr)
+  subroutine lda_u_loadbasis(lda_u, namespace, st, mesh, mc, ierr)
     type(lda_u_t),        intent(inout) :: lda_u
-    type(parser_t),       intent(in)  :: parser
-    type(states_t),       intent(in)    :: st
+    type(namespace_t),    intent(in)  :: namespace
+    type(states_elec_t),  intent(in)    :: st
     type(mesh_t),         intent(in)    :: mesh
     type(multicomm_t),    intent(in)    :: mc
     integer,              intent(out)   :: ierr
@@ -593,7 +660,7 @@ contains
       call messages_info(1)
     end if
 
-    call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
+    call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
 
     ! open files to read
     wfns_file  = restart_open(restart_gs, 'wfns')
