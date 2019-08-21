@@ -388,7 +388,9 @@ states_f_srcs =                                 \
 	states/states_group.F90                 \
 	states/states_io.F90                    \
 	states/states_parallel.F90              \
-	states/states_restart.F90
+	states/states_restart.F90               \
+	states/states_mxll.F90             \
+	states/states_mxll_restart.F90
 
 states_srcs = $(states_f_srcs)
 
@@ -403,13 +405,6 @@ noinst_HEADERS +=                               \
 	states/states_calc_inc.F90              \
 	states/states_inc.F90                   \
 	states/states_parallel_inc.F90
-
-# Sources in states_mxll
-states_mxll_f_srcs =                            \
-	states_mxll/states_mxll.F90             \
-	states_mxll/states_mxll_restart.F90
-
-states_mxll_srcs = $(states_mxll_f_srcs)
 
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \
@@ -622,7 +617,7 @@ noinst_HEADERS +=                                    \
 all_f_srcs = $(basic_f_srcs) $(basis_set_f_srcs) $(math_f_srcs) $(species_f_srcs) \
 	     $(ions_f_srcs) $(grid_f_srcs) $(poisson_f_srcs) $(states_f_srcs) \
 	     $(hamiltonian_f_srcs) $(system_f_srcs) $(scf_f_srcs) $(td_f_srcs) \
-	     $(opt_control_f_srcs) $(sternheimer_f_srcs) $(states_mxll_f_srcs)
+	     $(opt_control_f_srcs) $(sternheimer_f_srcs)
 
 all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
 	     $(grid_c_srcs) $(poisson_c_srcs) $(hamiltonian_c_srcs)
