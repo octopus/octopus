@@ -140,14 +140,14 @@ module par_vec_oct_m
                                                     !! Global vector; npart elements.
     integer                 :: np_local             !< How many points has running partition? 
                                                     !! Local value.
-    integer, pointer, private :: xlocal_vec(:)      !< Points of partition r start at
+    integer, pointer        :: xlocal_vec(:)      !< Points of partition r start at
                                                     !! xlocal_vec(r) in local. Global start point
                                                     !! of the local index.  
                                                     !! Global vector; npart elements.
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, pointer, private :: local_vec(:)       !< Partition r has points
+    integer, pointer        :: local_vec(:)       !< Partition r has points
                                                     !! local_vec(xlocal_vec(r):
                                                     !! xlocal_vec(r)+np_local_vec(r)-1). 
                                                     !! Global vector; np_global elements    

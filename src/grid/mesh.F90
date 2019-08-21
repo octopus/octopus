@@ -56,6 +56,7 @@ module mesh_oct_m
     mesh_gcutoff,                  &
     mesh_write_info,               &
     mesh_nearest_point,            &
+    mesh_nearest_point_infos,      &
     mesh_periodic_point,           &
     mesh_global_memory,            &
     mesh_local_memory,             &
