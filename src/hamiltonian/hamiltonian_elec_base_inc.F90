@@ -511,6 +511,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
+  CMPLX, allocatable :: tmp_proj(:, :)
 
   integer :: block_size
   
@@ -671,14 +672,29 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
 
     end if
 
-    call blas_gemm('N', 'N', nreal, nprojs, npoints, &
-        M_ONE, lpsi(1, 1), nreal, pmat%projectors(1, 1), npoints, M_ZERO,  projection%X(projection)(1, iprojection + 1), nreal)
-    call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
+    if(pmat%is_cmplx) then
+#ifdef R_TCOMPLEX
+      SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:nst))
+      call blas_gemm('C', 'T', nprojs, nst, npoints, &
+          M_z1, pmat%zprojectors(1, 1), npoints, lpsi(1, 1), nst, M_z0, tmp_proj(1,1), nprojs)
+      do iproj = 1, nprojs
+        do ist = 1, nst
+          projection%X(projection)(ist, iprojection + iproj) = tmp_proj(iproj, ist)
+        end do
+      end do
+      SAFE_DEALLOCATE_A(tmp_proj)
+      call profiling_count_operations(nst*nprojs*M_TWO*npoints)
+#endif
+    else
+      call blas_gemm('N', 'N', nreal, nprojs, npoints, &
+          M_ONE, lpsi(1, 1), nreal, pmat%dprojectors(1, 1), npoints, M_ZERO,  projection%X(projection)(1, iprojection + 1), nreal)
+      call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
+    end if
 
     do iproj = 1, nprojs
       do ist = 1, nst
         projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
-       end do
+      end do
     end do
 
   end do
@@ -701,11 +717,12 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
   type(batch_t),                    intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
-  integer :: npoints, nprojs, nst
+  integer :: npoints, nprojs, nst, iproj, idim
   CMPLX  :: phase
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: reduce_prof
+  CMPLX, allocatable :: tmp_proj(:, :, :)
 
   if(.not. this%apply_projector_matrices) return
 
@@ -754,11 +771,39 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
-    if(allocated(pmat%mix)) then
-      do ist = 1, nst
-        projection%X(projection)(ist, iprojection + 1:iprojection + nprojs) = &
-          matmul(pmat%mix(1:nprojs, 1:nprojs), projection%X(projection)(ist, iprojection + 1:iprojection + nprojs))
+    if(allocated(pmat%zmix)) then
+      SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:vpsib%nst, 1:std%dim))
+
+      do ist = 1, vpsib%nst
+        tmp_proj(1:nprojs, ist, 1) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 1), &
+                   projection%X(projection)((ist-1)*std%dim+1, iprojection + 1:iprojection + nprojs)) &
+                                   + matmul(pmat%zmix(1:nprojs, 1:nprojs, 3), &
+                   projection%X(projection)((ist-1)*std%dim+2, iprojection + 1:iprojection + nprojs))
+        tmp_proj(1:nprojs, ist, 2) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 2), &
+                   projection%X(projection)((ist-1)*std%dim+2, iprojection + 1:iprojection + nprojs)) &
+                                   + matmul(pmat%zmix(1:nprojs, 1:nprojs, 4), &
+                   projection%X(projection)((ist-1)*std%dim+1, iprojection + 1:iprojection + nprojs))
       end do
+
+      do ist = 1, vpsib%nst
+        do idim = 1, std%dim
+          do iproj = 1, nprojs
+            projection%X(projection)((ist-1)*std%dim+idim, iprojection + iproj) = tmp_proj(iproj, ist, idim) 
+          end do
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(tmp_proj)
+
+   else if(allocated(pmat%dmix)) then
+
+     if(allocated(pmat%dmix)) then
+        do ist = 1, nst
+          projection%X(projection)(ist, iprojection + 1:iprojection + nprojs) = &
+            matmul(pmat%dmix(1:nprojs, 1:nprojs), projection%X(projection)(ist, iprojection + 1:iprojection + nprojs))
+        end do
+      end if
+
     end if
     
     if(npoints /=  0) then
@@ -767,9 +812,17 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
 
       ! Matrix-multiply again.
       ! the line below does: psi = matmul(projection, transpose(pmat%projectors))
-      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
-        M_ONE, projection%X(projection)(1, iprojection + 1), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, psi(1, 1), nreal)
+      if(.not.pmat%is_cmplx) then
+        call blas_gemm('N', 'T', nreal, npoints, nprojs, &
+          M_ONE, projection%X(projection)(1, iprojection + 1), nreal, pmat%dprojectors(1, 1), npoints, &
+          M_ZERO, psi(1, 1), nreal)
+      else
+#ifdef R_TCOMPLEX
+        call blas_gemm('N', 'T', nst, npoints, nprojs, &
+          M_z1, projection%X(projection)(1, iprojection + 1), nst, pmat%zprojectors(1, 1), npoints, &
+          M_z0, psi(1, 1), nst)
+#endif
+      end if
       
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
 
@@ -953,9 +1006,10 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   FLOAT,                            intent(inout) :: force(:, :)
 
   integer :: ii, ist, ip, iproj, imat, nreal, iprojection, iatom, idir
-  integer :: npoints, nprojs, nst
+  integer :: npoints, nprojs, nst, idim
   R_TYPE, allocatable :: psi(:, :, :), projs(:, :, :), ff(:)
   type(projector_matrix_t), pointer :: pmat
+  CMPLX, allocatable :: tmp_proj(:, :, :)
 
   if(.not. this%apply_projector_matrices) return
     
@@ -1021,11 +1075,30 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
       call profiling_out(prof_matelement_gather)
       
       ! Now matrix-multiply to calculate the projections. We can do all the matrix multiplications at once
-      call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
-        psi(0, 1, 1), (ndim + 1)*nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, projs(0, 1, iprojection + 1), (ndim + 1)*nreal)
+      if(.not. pmat%is_cmplx) then
+        call blas_gemm('N', 'N', (ndim + 1)*nreal, nprojs, npoints, M_ONE, &
+          psi(0, 1, 1), (ndim + 1)*nreal, pmat%dprojectors(1, 1), npoints, &
+          M_ZERO, projs(0, 1, iprojection + 1), (ndim + 1)*nreal)
       
-      call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints)
+        call profiling_count_operations(nreal*(ndim + 1)*nprojs*M_TWO*npoints)
+      else
+#ifdef R_TCOMPLEX
+        SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:nst*(ndim + 1), 1:1))
+        call blas_gemm('C', 'T', nprojs, (ndim + 1)*nst, npoints, &
+          M_z1, pmat%zprojectors(1, 1), npoints, psi(0, 1, 1), (ndim + 1)*nst, &
+          M_z0, tmp_proj(1,1,1), nprojs)
+        do iproj = 1, nprojs
+          do ist = 1, nst
+            do idir = 0, ndim 
+              projs(idir , ist, iprojection + iproj) = tmp_proj(iproj, (ist-1)*(ndim+1)+idir+1, 1)
+            end do
+          end do
+        end do
+        SAFE_DEALLOCATE_A(tmp_proj)
+
+        call profiling_count_operations(nst*(ndim + 1)*nprojs*M_TWO*npoints)
+#endif
+      end if
 
     else
       
@@ -1054,11 +1127,38 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
           
     iatom = this%projector_to_atom(imat)
 
-    if(allocated(pmat%mix)) then
+    if(allocated(pmat%zmix)) then
+      SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:psi1b%nst, 1:st%d%dim))
+
+      do idir = 1, ndim
+        do ist = 1, psi1b%nst
+          tmp_proj(1:nprojs, ist, 1) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 1), &
+                   projs(idir, (ist-1)*st%d%dim+1, iprojection + 1:iprojection + nprojs)) &
+                                   + matmul(pmat%zmix(1:nprojs, 1:nprojs, 3), &
+                   projs(idir, (ist-1)*st%d%dim+2, iprojection + 1:iprojection + nprojs))
+          tmp_proj(1:nprojs, ist, 2) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 2), &
+                   projs(idir, (ist-1)*st%d%dim+2, iprojection + 1:iprojection + nprojs)) &
+                                   + matmul(pmat%zmix(1:nprojs, 1:nprojs, 4), &
+                   projs(idir, (ist-1)*st%d%dim+1, iprojection + 1:iprojection + nprojs))
+        end do
+
+        do ist = 1, psi1b%nst
+          do idim = 1, st%d%dim
+            do iproj = 1, nprojs
+              projs(idir, (ist-1)*st%d%dim+idim, iprojection + iproj) = tmp_proj(iproj, ist, idim)  
+            end do
+          end do
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(tmp_proj)
+
+    else if(allocated(pmat%dmix)) then
+
       do idir = 1, ndim
         do ist = 1, nst
           projs(idir, ist, iprojection + 1:iprojection + nprojs) = &
-            matmul(pmat%mix(1:nprojs, 1:nprojs), projs(idir, ist, iprojection + 1:iprojection + nprojs))
+            matmul(pmat%dmix(1:nprojs, 1:nprojs), projs(idir, ist, iprojection + 1:iprojection + nprojs))
         end do
       end do
     end if
@@ -1105,7 +1205,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   type(batch_t),                    intent(inout) :: commpsib(:)
 
   integer :: ist, ip, iproj, imat, nreal, iprojection, idir
-  integer :: npoints, nprojs, nst
+  integer :: npoints, nprojs, nst, idim
   integer, allocatable :: ind(:)
   R_TYPE :: aa, bb, cc, dd
   R_TYPE, allocatable :: projections(:, :, :)
@@ -1114,6 +1214,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
+  CMPLX, allocatable :: tmp_proj(:, :, :)
 
   if(.not. this%apply_projector_matrices) return
 
@@ -1163,46 +1264,91 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
     if(.not. allocated(this%projector_phases)) then
       do iproj = 1, nprojs
 
-        do ist = 1, nst
-          aa = CNST(0.0)
-          bb = CNST(0.0)
-          cc = CNST(0.0)
-          dd = CNST(0.0)
-          do ip = 1, npoints
-            aa = aa + pmat%projectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))
-            bb = bb + pmat%projectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-            cc = cc + pmat%projectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-            dd = dd + pmat%projectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-          end do
-          projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-          projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-          projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-          projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-        end do
+        if(pmat%is_cmplx) then
 
+          do ist = 1, nst
+            aa = CNST(0.0)
+            bb = CNST(0.0)
+            cc = CNST(0.0)
+            dd = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))
+              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+            end do
+            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
+          end do
+
+        else
+          do ist = 1, nst
+            aa = CNST(0.0)
+            bb = CNST(0.0)
+            cc = CNST(0.0)
+            dd = CNST(0.0)
+            do ip = 1, npoints
+              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))
+              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+            end do
+            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
+          end do
+
+        end if
       end do
 
     else
 
       do iproj = 1, nprojs
 
-        do ist = 1, nst
-          aa = CNST(0.0)
-          bb = CNST(0.0)
-          cc = CNST(0.0)
-          dd = CNST(0.0)
-          do ip = 1, npoints
-            phase = this%projector_phases(ip, imat, ik)
-            aa = aa + pmat%projectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-            bb = bb + pmat%projectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-            cc = cc + pmat%projectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-            dd = dd + pmat%projectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+        if(pmat%is_cmplx) then
+
+          do ist = 1, nst
+            aa = CNST(0.0)
+            bb = CNST(0.0)
+            cc = CNST(0.0)
+            dd = CNST(0.0)
+            do ip = 1, npoints
+              phase = this%projector_phases(ip, imat, ik)
+              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+            end do
+            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
           end do
-          projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-          projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-          projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-          projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-        end do
+
+        else
+
+          do ist = 1, nst
+            aa = CNST(0.0)
+            bb = CNST(0.0)
+            cc = CNST(0.0)
+            dd = CNST(0.0)
+            do ip = 1, npoints
+              phase = this%projector_phases(ip, imat, ik)
+              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+            end do
+            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
+          end do
+   
+        end if
 
       end do
     end if
@@ -1223,11 +1369,37 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
-    if(allocated(pmat%mix)) then
+    if(allocated(pmat%zmix)) then
+      SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:psib%nst, 1:std%dim))
+
+      do idir = 0, 3
+        do ist = 1, psib%nst
+          tmp_proj(1:nprojs, ist, 1) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 1), &
+                     projections((ist-1)*std%dim+1, iprojection + 1:iprojection + nprojs, idir)) &
+                                     + matmul(pmat%zmix(1:nprojs, 1:nprojs, 3), &
+                     projections((ist-1)*std%dim+2, iprojection + 1:iprojection + nprojs, idir))
+          tmp_proj(1:nprojs, ist, 2) = matmul(pmat%zmix(1:nprojs, 1:nprojs, 2), &
+                     projections((ist-1)*std%dim+2, iprojection + 1:iprojection + nprojs, idir)) &
+                                     + matmul(pmat%zmix(1:nprojs, 1:nprojs, 4), &
+                     projections((ist-1)*std%dim+1, iprojection + 1:iprojection + nprojs, idir))
+        end do
+
+        do ist = 1, psib%nst
+          do idim = 1, std%dim
+            do iproj = 1, nprojs
+              projections((ist-1)*std%dim+idim, iprojection + iproj, idir) = tmp_proj(iproj, ist, idim)
+            end do
+          end do
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(tmp_proj)
+
+   else if(allocated(pmat%dmix)) then
       do idir = 0, 3
         do ist = 1, nst
           projections(ist, iprojection + 1:iprojection + nprojs, idir) = &
-            matmul(pmat%mix(1:nprojs, 1:nprojs), projections(ist, iprojection + 1:iprojection + nprojs, idir))
+            matmul(pmat%dmix(1:nprojs, 1:nprojs), projections(ist, iprojection + 1:iprojection + nprojs, idir))
         end do
       end do
     end if
@@ -1238,23 +1410,25 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
 
       ! Matrix-multiply again.
       ! the line below does: psi = matmul(projection, transpose(pmat%projectors))
-      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
-        M_ONE, projections(1, iprojection + 1, 0), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, psi(1, 1, 0), nreal)
 
-      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
-        M_ONE, projections(1, iprojection + 1, 1), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, psi(1, 1, 1), nreal)
+      if(.not. pmat%is_cmplx) then
+        do idir = 0, 3
+          call blas_gemm('N', 'T', nreal, npoints, nprojs, &
+            M_ONE, projections(1, iprojection + 1, idir), nreal, pmat%dprojectors(1, 1), npoints, &
+            M_ZERO, psi(1, 1, idir), nreal)
+        end do
+        call profiling_count_operations(nreal*nprojs*M_TWO*npoints*4)
 
-      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
-        M_ONE, projections(1, iprojection + 1, 2), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, psi(1, 1, 2), nreal)
-
-      call blas_gemm('N', 'T', nreal, npoints, nprojs, &
-        M_ONE, projections(1, iprojection + 1, 3), nreal, pmat%projectors(1, 1), npoints, &
-        M_ZERO, psi(1, 1, 3), nreal)
-            
-      call profiling_count_operations(nreal*nprojs*M_TWO*npoints*4)
+      else
+ #ifdef R_TCOMPLEX
+        do idir = 0, 3
+          call blas_gemm('N', 'T', nst, npoints, nprojs, &
+            M_z1, projections(1, iprojection + 1, idir), nst, pmat%zprojectors(1, 1), npoints, &
+            M_z0, psi(1, 1, idir), nst)
+        end do 
+#endif
+        call profiling_count_operations(nst*nprojs*M_TWO*npoints*4)
+      end if
 
       if(allocated(this%projector_phases)) then
         do idir = 0, 3
