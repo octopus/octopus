@@ -47,8 +47,8 @@ match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.14590
 Processors : 4
 Input      : 01-propagators.07-magnus.inp
 Precision  : 1.0e-6
-match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.792570054855e-10
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.041742610317e-04
+match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  4.623203248455e-15
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.572485252216e-02
 
 Processors : 4
 Input      : 01-propagators.08-exprk4.inp
