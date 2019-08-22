@@ -96,6 +96,8 @@ module global_oct_m
   FLOAT, public, parameter :: P_c   =  CNST(137.035999679)
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   !< Electron gyromagnetic ratio
   FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
+  FLOAT, public, parameter :: P_ep  =  M_ONE/(M_FOUR*M_Pi)
+  FLOAT, public, parameter :: P_mu  =  M_FOUR*M_PI/(P_c**2)
 
   !> the standard input and output
   integer, public :: stderr, stdin, stdout

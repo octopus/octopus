@@ -27,12 +27,13 @@ module test_oct_m
   use derivatives_oct_m
   use epot_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
@@ -40,9 +41,10 @@ module test_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
@@ -64,15 +66,15 @@ module test_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine test_run(parser)
-    type(parser_t),       intent(in)    :: parser
+  subroutine test_run(namespace)
+    type(namespace_t),       intent(in)    :: namespace
         
     type(test_parameters_t) :: param
     integer :: test_mode
     
     PUSH_SUB(test_run)
 
-    call messages_obsolete_variable(parser, 'WhichTest', 'TestMode')
+    call messages_obsolete_variable(namespace, 'WhichTest', 'TestMode')
 
     !%Variable TestMode
     !%Type integer
@@ -100,10 +102,10 @@ contains
     !%Option density_calc 9
     !%Calculation of the density.
     !%End
-    call parse_variable(parser, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
+    call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
-    call messages_obsolete_variable(parser, 'TestDerivatives', 'TestType')
-    call messages_obsolete_variable(parser, 'TestOrthogonalization', 'TestType')
+    call messages_obsolete_variable(namespace, 'TestDerivatives', 'TestType')
+    call messages_obsolete_variable(namespace, 'TestOrthogonalization', 'TestType')
   
     !%Variable TestType
     !%Type integer
@@ -122,7 +124,7 @@ contains
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
-    call parse_variable(parser, 'TestType', OPTION__TESTTYPE__ALL, param%type)
+    call parse_variable(namespace, 'TestType', OPTION__TESTTYPE__ALL, param%type)
     if(param%type < 1 .or. param%type > 5) then
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
@@ -141,7 +143,7 @@ contains
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
     !%End  
-    call parse_variable(parser, 'TestRepetitions', 1, param%repetitions)
+    call parse_variable(namespace, 'TestRepetitions', 1, param%repetitions)
   
     !%Variable TestMinBlockSize
     !%Type integer
@@ -154,7 +156,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable(parser, 'TestMinBlockSize', 1, param%min_blocksize)
+    call parse_variable(namespace, 'TestMinBlockSize', 1, param%min_blocksize)
 
     !%Variable TestMaxBlockSize
     !%Type integer
@@ -167,7 +169,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable(parser, 'TestMaxBlockSize', 128, param%max_blocksize)
+    call parse_variable(namespace, 'TestMaxBlockSize', 128, param%max_blocksize)
 
     call messages_print_stress(stdout, "Test mode")
     call messages_print_var_option(stdout, "TestMode", test_mode)
@@ -179,32 +181,32 @@ contains
   
     select case(test_mode)
     case(OPTION__TESTMODE__HARTREE)
-      call test_hartree(param, parser)
+      call test_hartree(param, namespace)
     case(OPTION__TESTMODE__DERIVATIVES)
-      call test_derivatives(param, parser)
+      call test_derivatives(param, namespace)
     case(OPTION__TESTMODE__ORTHOGONALIZATION)
-      call test_orthogonalization(param, parser)
+      call test_orthogonalization(param, namespace)
     case(OPTION__TESTMODE__INTERPOLATION)
-      call test_interpolation(param, parser)
+      call test_interpolation(param, namespace)
     case(OPTION__TESTMODE__ION_INTERACTION)
-      call test_ion_interaction(parser)
+      call test_ion_interaction(namespace)
     case(OPTION__TESTMODE__PROJECTOR)
-      call test_projector(param, parser)
+      call test_projector(param, namespace)
     case(OPTION__TESTMODE__DFT_U)
-      call test_dft_u(param, parser)
+      call test_dft_u(param, namespace)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
-      call test_hamiltonian(param, parser)
+      call test_hamiltonian(param, namespace)
     case(OPTION__TESTMODE__DENSITY_CALC)
-      call test_density_calc(param, parser)
+      call test_density_calc(param, namespace)
     end select
   
     POP_SUB(test_run)
   end subroutine test_run
 
   ! ---------------------------------------------------------
-  subroutine test_hartree(param, parser)
+  subroutine test_hartree(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
 
@@ -212,17 +214,17 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys, parser)
-    call poisson_test(sys%gr%mesh, param%repetitions)
+    call system_init(sys, namespace)
+    call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     call system_end(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
 
  ! ---------------------------------------------------------
-  subroutine test_projector(param, parser)
+  subroutine test_projector(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
     type(epot_t) :: ep
@@ -238,13 +240,13 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
   
    
     !Initialize external potential
@@ -264,16 +266,16 @@ contains
 
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_projector)
   end subroutine test_projector
 
   ! ---------------------------------------------------------
-  subroutine test_dft_u(param, parser)
+  subroutine test_dft_u(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
@@ -291,17 +293,17 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%parser)
+    call orbitalbasis_init(basis, sys%namespace)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
                                 .false., .false.)
@@ -353,16 +355,16 @@ contains
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_dft_u)
   end subroutine test_dft_u
 
   ! ---------------------------------------------------------
-  subroutine test_hamiltonian(param, parser)
+  subroutine test_hamiltonian(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
@@ -386,7 +388,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable(parser, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(namespace, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
     if(terms==0) terms = huge(1)
 
 
@@ -397,33 +399,35 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%parser, sys%geo, sys%space)
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
-    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+    call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
 
-    if(hamiltonian_apply_packed(sys%hm, sys%gr%der%mesh)) then
+    if(hamiltonian_elec_apply_packed(sys%hm, sys%gr%der%mesh)) then
       call batch_pack(sys%st%group%psib(1, 1))
       call batch_pack(hpsib, copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+          set_bc = .false.)
       else
-        call zhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+          set_bc = .false.)
       end if
     end do
 
@@ -443,7 +447,7 @@ contains
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_hamiltonian)
@@ -451,9 +455,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine test_density_calc(param, parser)
+  subroutine test_density_calc(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
     integer :: itime
@@ -467,11 +471,11 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
 
     do itime = 1, param%repetitions
       call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -480,7 +484,7 @@ contains
     write(message(1),'(a,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
     call messages_info(1)
 
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_density_calc)
@@ -489,34 +493,34 @@ contains
 
 
 ! ---------------------------------------------------------
-  subroutine test_derivatives(param, parser)
+  subroutine test_derivatives(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
     call messages_info(2)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call dderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call sderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
    
     if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call cderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
@@ -526,9 +530,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_orthogonalization(param, parser)
+  subroutine test_orthogonalization(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
 
@@ -537,7 +541,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -546,13 +550,13 @@ contains
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      call dstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      call zstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     call system_end(sys)
@@ -562,15 +566,15 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_interpolation(param, parser)
+  subroutine test_interpolation(param, namespace)
     type(test_parameters_t), intent(in) :: param
-    type(parser_t),          intent(in) :: parser
+    type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -599,16 +603,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_ion_interaction(parser)
-    type(parser_t),          intent(in) :: parser
+  subroutine test_ion_interaction(namespace)
+    type(namespace_t),        intent(in) :: namespace
     
     type(system_t) :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys, parser)
+    call system_init(sys, namespace)
 
-    call ion_interaction_test(sys%geo, sys%parser, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
 
     call system_end(sys)
 

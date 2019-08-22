@@ -20,9 +20,9 @@
 !
 !> routine for output of model many-body quantities.
 !
-subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
-  type(states_t),         intent(in)    :: st
-  type(parser_t),         intent(in)    :: parser
+subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
+  type(states_elec_t),    intent(in)    :: st
+  type(namespace_t),      intent(in)    :: namespace
   type(grid_t),           intent(in)    :: gr ! may have to revert to intent inout if some subroutine complains
   character(len=*),       intent(in)    :: dir
   type(geometry_t),       intent(in)    :: geo
@@ -45,14 +45,14 @@ subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
   PUSH_SUB(X(output_modelmb))
 
   ! make sure directory exists
-  call io_mkdir(trim(dir))
+  call io_mkdir(trim(dir), namespace)
   ! all model mb stuff should be in this directory
   dirname = trim(dir)//'/modelmb'
-  call io_mkdir(trim(dirname))
+  call io_mkdir(trim(dirname), namespace)
 
   ! open file for Young diagrams and projection info
   write (filename,'(a,a)') trim(dirname), '/youngprojections'
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   ! treat all particle types
   SAFE_ALLOCATE(ndiagrams(1:st%modelmbparticles%ntype_of_particle))
@@ -77,12 +77,12 @@ subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
 
   call modelmb_density_matrix_nullify(denmat)
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
-    call modelmb_density_matrix_init(dirname, parser, st, denmat)
+    call modelmb_density_matrix_init(dirname, namespace, st, denmat)
   end if
 
   do mm = 1, st%nst
 !TODO : check if there is another interface for get_states to avoid trivial slice of wf
-    call states_get_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_get_state(st, gr%mesh, 1, mm, 1, wf)
 
     youngstring = ""
     if (all(st%mmb_nspindown(:,mm) >= 0)) then
@@ -102,14 +102,14 @@ subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .and. symmetries_satisfied) then
-      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+      call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
-      call X(io_function_output)(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
-        fn_unit, ierr, geo = geo)
+      call X(io_function_output)(outp%how, trim(dirname), trim(filename), outp%namespace, &
+        gr%mesh, wf, fn_unit, ierr, geo = geo)
     end if
 
   end do

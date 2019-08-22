@@ -23,6 +23,7 @@ module kpoints_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
@@ -235,9 +236,9 @@ contains
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, parser, symm, dim, rlattice, klattice, only_gamma)
+  subroutine kpoints_init(this, namespace, symm, dim, rlattice, klattice, only_gamma)
     type(kpoints_t),    intent(out) :: this
-    type(parser_t),     intent(in)  :: parser
+    type(namespace_t),  intent(in)  :: namespace
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
@@ -271,7 +272,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_variable(parser, 'KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable(namespace, 'KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -291,7 +292,7 @@ contains
     !%
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
-    call parse_variable(parser, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    call parse_variable(namespace, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = 0
@@ -304,14 +305,14 @@ contains
     end if
 
     !Monkhorst Pack grid
-    if(parse_is_defined(parser, 'KPointsGrid')) then
+    if(parse_is_defined(namespace, 'KPointsGrid')) then
       this%method = this%method + KPOINTS_MONKH_PACK
       
       call read_MP(gamma_only = .false.)
     end if
 
     !User-defined kpoints
-    if(parse_is_defined(parser, 'KPointsReduced').or. parse_is_defined(parser, 'KPoints')) then
+    if(parse_is_defined(namespace, 'KPointsReduced').or. parse_is_defined(namespace, 'KPoints')) then
       this%method = this%method + KPOINTS_USER
 
       if(this%use_symmetries) then
@@ -323,7 +324,7 @@ contains
     end if
 
     !User-defined k-points path
-    if(parse_is_defined(parser, 'KPointsPath')) then
+    if(parse_is_defined(namespace, 'KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
       if(this%use_symmetries) then
@@ -402,7 +403,7 @@ contains
 
       PUSH_SUB(kpoints_init.read_MP)
 
-      call messages_obsolete_variable(parser, 'KPointsMonkhorstPack', 'KPointsGrid')
+      call messages_obsolete_variable(namespace, 'KPointsMonkhorstPack', 'KPointsGrid')
 
       !%Variable KPointsGrid
       !%Type block
@@ -437,7 +438,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block(parser, 'KPointsGrid', blk) /= 0)
+        gamma_only_ = (parse_block(namespace, 'KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
 
@@ -609,7 +610,7 @@ contains
       !%
       !%End
 
-      if(parse_block(parser, 'KPointsPath', blk) /= 0) then
+      if(parse_block(namespace, 'KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
         call messages_fatal(1)
       end if
@@ -730,8 +731,8 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block(parser, 'KPoints', blk) /= 0 ) then
-        if(parse_block(parser, 'KPointsReduced', blk) == 0) then
+      if(parse_block(namespace, 'KPoints', blk) /= 0 ) then
+        if(parse_block(namespace, 'KPointsReduced', blk) == 0) then
           reduced = .true.
         else
           ! This case should really never happen. But why not dying otherwise?!

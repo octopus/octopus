@@ -20,18 +20,18 @@
 ! ---------------------------------------------------------
 !> Multiplication of two blocks of states:
 !! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
-subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
+subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   psi1, psi2, res, xpsi1, xpsi2, symm)
-  type(mesh_t),      intent(in)  :: mesh
-  type(states_t),    intent(in)  :: st
-  integer,           intent(in)  :: psi1_start
-  integer,           intent(in)  :: psi2_start
-  R_TYPE, target,    intent(in)  :: psi1(:, :, psi1_start:)
-  R_TYPE, target,    intent(in)  :: psi2(:, :, psi2_start:)
-  R_TYPE,            intent(out) :: res(:, :)
-  integer, optional, intent(in)  :: xpsi1(:)
-  integer, optional, intent(in)  :: xpsi2(:)
-  logical, optional, intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
+  type(mesh_t),        intent(in)  :: mesh
+  type(states_elec_t), intent(in)  :: st
+  integer,             intent(in)  :: psi1_start
+  integer,             intent(in)  :: psi2_start
+  R_TYPE, target,      intent(in)  :: psi1(:, :, psi1_start:)
+  R_TYPE, target,      intent(in)  :: psi2(:, :, psi2_start:)
+  R_TYPE,              intent(out) :: res(:, :)
+  integer, optional,   intent(in)  :: xpsi1(:)
+  integer, optional,   intent(in)  :: xpsi2(:)
+  logical, optional,   intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
 
   logical              :: symm_
   integer              :: ii
@@ -50,7 +50,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 #endif
 
   call profiling_in(C_PROFILING_BLOCKT, 'BLOCKT')
-  PUSH_SUB(X(states_blockt_mul))
+  PUSH_SUB(X(states_elec_blockt_mul))
 
   symm_ = .false.
   if(present(symm)) then
@@ -78,8 +78,8 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     ! Calculate the index sets per node,
     ! xpsi1_node(1:xpsi1_count(node), node) and
     ! xpsi2_node(1:xpsi2_count(node), node) are the index sets.
-    call states_block_local_idx(st, xpsi1_, psi1_col, xpsi1_count, xpsi1_node)
-    call states_block_local_idx(st, xpsi2_, psi2_col, xpsi2_count, xpsi2_node)
+    call states_elec_block_local_idx(st, xpsi1_, psi1_col, xpsi1_count, xpsi1_node)
+    call states_elec_block_local_idx(st, xpsi2_, psi2_col, xpsi2_count, xpsi2_node)
 
     ! Has to be zero because we use an allreduce on this at the end.
     res = R_TOTYPE(M_ZERO)
@@ -88,7 +88,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     if(.not.mesh%use_curvilinear) then
       SAFE_ALLOCATE(psi1_block(1:mesh%np, 1:st%d%dim, 1:xpsi1_count(rank)))
       call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
-      call X(states_compactify)(st%d%dim, mesh, psi1_start, &
+      call X(states_elec_compactify)(st%d%dim, mesh, psi1_start, &
         xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
       call profiling_out(C_PROFILING_BLOCKT_CP)
     end if
@@ -101,7 +101,7 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
     ! Compact the local block to send away.
     sendcnt = xpsi2_count(rank)
-    call X(states_compactify)(st%d%dim, mesh, psi2_start, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
+    call X(states_elec_compactify)(st%d%dim, mesh, psi2_start, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
 
     ! Get neighbours.
     call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
@@ -207,26 +207,26 @@ subroutine X(states_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   SAFE_DEALLOCATE_P(xpsi1_)
   SAFE_DEALLOCATE_P(xpsi2_)
 
-  POP_SUB(X(states_blockt_mul))
+  POP_SUB(X(states_elec_blockt_mul))
   call profiling_out(C_PROFILING_BLOCKT)
-end subroutine X(states_blockt_mul)
+end subroutine X(states_elec_blockt_mul)
 
 ! ---------------------------------------------------------
 !> Multiplication of block of states by matrix plus block of states
 !! (with the corresponding column indices):
 !! res(xres) <- alpha * psi(xpsi) * matr + beta * res(xres).
-subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
+subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
   psi, matr, beta, res, xpsi, xres)
-  type(mesh_t),      intent(in)    :: mesh
-  type(states_t),    intent(in)    :: st
-  R_TYPE,            intent(in)    :: alpha
-  integer,           intent(in)    :: psi_start
-  integer,           intent(in)    :: res_start
-  R_TYPE,            intent(in)    :: psi(:, :, psi_start:) !< (mesh%np_part, st%d%dim, psi_start:psi_end)
-  R_TYPE,            intent(in)    :: matr(:, :)
-  R_TYPE,            intent(in)    :: beta
-  R_TYPE,            intent(inout) :: res(:, :, res_start:) !< (mesh%np_part, st%d%dim, res_start:res_end)
-  integer, optional, intent(in)    :: xpsi(:), xres(:)
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  R_TYPE,              intent(in)    :: alpha
+  integer,             intent(in)    :: psi_start
+  integer,             intent(in)    :: res_start
+  R_TYPE,              intent(in)    :: psi(:, :, psi_start:) !< (mesh%np_part, st%d%dim, psi_start:psi_end)
+  R_TYPE,              intent(in)    :: matr(:, :)
+  R_TYPE,              intent(in)    :: beta
+  R_TYPE,              intent(inout) :: res(:, :, res_start:) !< (mesh%np_part, st%d%dim, res_start:res_end)
+  integer, optional,   intent(in)    :: xpsi(:), xres(:)
 
   integer              :: res_col, psi_col, matr_col
   integer, pointer     :: xpsi_(:), xres_(:)
@@ -240,7 +240,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
 #endif
 
   call profiling_in(C_PROFILING_BLOCK_MATR, 'BLOCK_MATR')
-  PUSH_SUB(X(states_block_matr_mul_add))
+  PUSH_SUB(X(states_elec_block_matr_mul_add))
 
   ! Calculate global index sets of state block psi and res.
   if(present(xpsi)) then
@@ -268,8 +268,8 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     ! Calculate the index sets per node.
     ! xpsi_node(1:xpsi_count(node), node) and
     ! xres_node(1:xres_count(node), node) are the index sets.
-    call states_block_local_idx(st, xpsi_, psi_col, xpsi_count, xpsi_node)
-    call states_block_local_idx(st, xres_, res_col, xres_count, xres_node)
+    call states_elec_block_local_idx(st, xpsi_, psi_col, xpsi_count, xpsi_node)
+    call states_elec_block_local_idx(st, xres_, res_col, xres_count, xres_node)
 
     ! Take care of beta first, if necessary, and compact res to res_block.
     if(beta /= R_TOTYPE(M_ZERO)) then
@@ -285,7 +285,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     end if
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:xres_count(rank)))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_compactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res, res_block)
+    call X(states_elec_compactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! Allocate send and receive buffers. For some blocks, they are oversized but
@@ -297,7 +297,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     ! Compact the local block to send away.
     sendcnt = xpsi_count(rank)
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_compactify)(st%d%dim, mesh, psi_start, xpsi_node(1:xpsi_count(rank), rank), psi(:, :, :), sendbuf)
+    call X(states_elec_compactify)(st%d%dim, mesh, psi_start, xpsi_node(1:xpsi_count(rank), rank), psi(:, :, :), sendbuf)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! Get neighbours.
@@ -346,7 +346,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
 
     ! Copy result.
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res_block, res)
+    call X(states_elec_uncompactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     SAFE_DEALLOCATE_A(res_block)
@@ -364,12 +364,12 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
     ! Compact everything to pass it to BLAS.
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:res_col))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_compactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res, res_block)
+    call X(states_elec_compactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     SAFE_ALLOCATE(psi_block(1:mesh%np, 1:st%d%dim, 1:psi_col))
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_compactify)(st%d%dim, mesh, psi_start, xpsi_(1:psi_col), psi, psi_block)
+    call X(states_elec_compactify)(st%d%dim, mesh, psi_start, xpsi_(1:psi_col), psi, psi_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! matr_block is needed because matr may be an assumed-shape array.
@@ -381,7 +381,7 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
 
     ! Copy result.
     call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
-    call X(states_uncompactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res_block, res)
+    call X(states_elec_uncompactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
     SAFE_DEALLOCATE_A(res_block)
     SAFE_DEALLOCATE_A(psi_block)
@@ -390,14 +390,14 @@ subroutine X(states_block_matr_mul_add)(mesh, st, alpha, psi_start, res_start, &
   SAFE_DEALLOCATE_P(xpsi_)
   SAFE_DEALLOCATE_P(xres_)
 
-  POP_SUB(X(states_block_matr_mul_add))
+  POP_SUB(X(states_elec_block_matr_mul_add))
   call profiling_out(C_PROFILING_BLOCK_MATR)
-end subroutine X(states_block_matr_mul_add)
+end subroutine X(states_elec_block_matr_mul_add)
 
 
 ! ---------------------------------------------------------
 !> Copy in(:, :, idx) to out out(:, :, 1:ubound(idx, 1)).
-subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
+subroutine X(states_elec_compactify)(dim, mesh, in_start, idx, in, out)
   integer,      intent(in)  :: dim
   type(mesh_t), intent(in)  :: mesh
   integer,      intent(in)  :: in_start
@@ -409,7 +409,7 @@ subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "STATES_COMPACTIFY")
-  PUSH_SUB(X(states_compactify))
+  PUSH_SUB(X(states_elec_compactify))
 
   nn = ubound(idx, 1)
 
@@ -419,16 +419,16 @@ subroutine X(states_compactify)(dim, mesh, in_start, idx, in, out)
     end do
   end do
   
-  POP_SUB(X(states_compactify))
+  POP_SUB(X(states_elec_compactify))
   call profiling_out(prof)
-end subroutine X(states_compactify)
+end subroutine X(states_elec_compactify)
 
 
 ! ---------------------------------------------------------
-!> Undo the effect of X(states_compactify), i.e.
-!! X(states_compactify)(st, mesh, idx, in, out) followed by
-!! X(states_uncompactify)(st, mesh, idx, out, in) is identity.
-subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
+!> Undo the effect of X(states_elec_compactify), i.e.
+!! X(states_elec_compactify)(st, mesh, idx, in, out) followed by
+!! X(states_elec_uncompactify)(st, mesh, idx, out, in) is identity.
+subroutine X(states_elec_uncompactify)(dim, mesh, out_start, idx, in, out)
   integer,      intent(in)  :: dim
   type(mesh_t), intent(in)  :: mesh
   integer,      intent(in)  :: out_start
@@ -440,7 +440,7 @@ subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
   type(profile_t), save :: prof
 
   call profiling_in(prof, "STATES_UNCOMPACTIFY")
-  PUSH_SUB(X(states_uncompactify))
+  PUSH_SUB(X(states_elec_uncompactify))
 
   nn = ubound(idx, 1)
 
@@ -450,9 +450,9 @@ subroutine X(states_uncompactify)(dim, mesh, out_start, idx, in, out)
     end do
   end do
   
-  POP_SUB(X(states_uncompactify))
+  POP_SUB(X(states_elec_uncompactify))
   call profiling_out(prof)
-end subroutine X(states_uncompactify)
+end subroutine X(states_elec_uncompactify)
 
 !! Local Variables:
 !! mode: f90

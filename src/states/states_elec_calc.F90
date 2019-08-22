@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module states_calc_oct_m
+module states_elec_calc_oct_m
   use accel_oct_m
   use accel_blas_oct_m
   use batch_oct_m
@@ -41,7 +41,6 @@ module states_calc_oct_m
   use mesh_function_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
-  use parser_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m
@@ -49,9 +48,10 @@ module states_calc_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
   use singularity_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use types_oct_m
 
   implicit none
@@ -59,83 +59,83 @@ module states_calc_oct_m
   private
 
   public ::                         &
-    states_orthogonalize,           &
-    states_rotate,                  &
-    dstates_calc_orth_test,         &
-    zstates_calc_orth_test,         &
-    dstates_orthogonalization,      &
-    zstates_orthogonalization,      &
-    dstates_orthogonalize_single,   &
-    zstates_orthogonalize_single,   &
-    dstates_orthogonalization_full, &
-    zstates_orthogonalization_full, &
-    dstates_residue,                &
-    zstates_residue,                &
-    states_calc_momentum,           &
-    dstates_angular_momentum,       &
-    zstates_angular_momentum,       &
-    dstates_matrix,                 &
-    zstates_matrix,                 &
-    dstates_calc_overlap,           &
-    zstates_calc_overlap,           &
-    dstates_calc_projections,       &
-    zstates_calc_projections,       &
-    dstates_me_one_body,            &
-    zstates_me_one_body,            &
-    dstates_me_two_body,            &
-    zstates_me_two_body
+    states_elec_orthogonalize,           &
+    states_elec_rotate,                  &
+    dstates_elec_calc_orth_test,         &
+    zstates_elec_calc_orth_test,         &
+    dstates_elec_orthogonalization,      &
+    zstates_elec_orthogonalization,      &
+    dstates_elec_orthogonalize_single,   &
+    zstates_elec_orthogonalize_single,   &
+    dstates_elec_orthogonalization_full, &
+    zstates_elec_orthogonalization_full, &
+    dstates_elec_residue,                &
+    zstates_elec_residue,                &
+    states_elec_calc_momentum,           &
+    dstates_elec_angular_momentum,       &
+    zstates_elec_angular_momentum,       &
+    dstates_elec_matrix,                 &
+    zstates_elec_matrix,                 &
+    dstates_elec_calc_overlap,           &
+    zstates_elec_calc_overlap,           &
+    dstates_elec_calc_projections,       &
+    zstates_elec_calc_projections,       &
+    dstates_elec_me_one_body,            &
+    zstates_elec_me_one_body,            &
+    dstates_elec_me_two_body,            &
+    zstates_elec_me_two_body
 
-  interface states_rotate
-    module procedure dstates_rotate, zstates_rotate
-  end interface states_rotate
+  interface states_elec_rotate
+    module procedure dstates_elec_rotate, zstates_elec_rotate
+  end interface states_elec_rotate
   
 contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_orthogonalize(st, mesh)
-    type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: mesh
+  subroutine states_elec_orthogonalize(st, mesh)
+    type(states_elec_t),  intent(inout) :: st
+    type(mesh_t),         intent(in)    :: mesh
 
     integer :: ik
 
-    PUSH_SUB(states_orthogonalize)
+    PUSH_SUB(states_elec_orthogonalize)
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
-        call dstates_orthogonalization_full(st, mesh, ik)
+        call dstates_elec_orthogonalization_full(st, mesh, ik)
       else
-        call zstates_orthogonalization_full(st, mesh, ik)
+        call zstates_elec_orthogonalization_full(st, mesh, ik)
       end if
     end do
 
-    POP_SUB(states_orthogonalize)
-  end subroutine states_orthogonalize
+    POP_SUB(states_elec_orthogonalize)
+  end subroutine states_elec_orthogonalize
 
   ! -----------------------------------------------------------------------------
 
-  subroutine states_calc_momentum(st, der, momentum)
-    type(states_t),      intent(in)  :: st
+  subroutine states_elec_calc_momentum(st, der, momentum)
+    type(states_elec_t), intent(in)  :: st
     type(derivatives_t), intent(in)  :: der
     FLOAT,               intent(out) :: momentum(:,:,:)
 
     if (states_are_real(st)) then
-      call dstates_calc_momentum(st, der, momentum)
+      call dstates_elec_calc_momentum(st, der, momentum)
     else
-      call zstates_calc_momentum(st, der, momentum)
+      call zstates_elec_calc_momentum(st, der, momentum)
     end if
-  end subroutine states_calc_momentum
+  end subroutine states_elec_calc_momentum
 
 #include "undef.F90"
 #include "real.F90"
-#include "states_calc_inc.F90"
+#include "states_elec_calc_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "states_calc_inc.F90"
+#include "states_elec_calc_inc.F90"
 #include "undef.F90"
 
-end module states_calc_oct_m
+end module states_elec_calc_oct_m
 
 
 !! Local Variables:

@@ -26,6 +26,7 @@ module species_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -222,8 +223,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init_global(parser)
-    type(parser_t),         intent(in)  :: parser
+  subroutine species_init_global(namespace)
+    type(namespace_t),         intent(in)  :: namespace
     
     integer :: ierr
 
@@ -248,7 +249,7 @@ contains
     !% This does not affect Octopus fixed default parameters for the standard
     !% pseudopotential set.
     !%End
-    call parse_variable(parser, 'PseudopotentialAutomaticParameters', .false., automatic)
+    call parse_variable(namespace, 'PseudopotentialAutomaticParameters', .false., automatic)
     
     if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
     
@@ -264,7 +265,7 @@ contains
     !% Note that other quantities of interest might require a
     !% different spacing to be considered converged within a similar threshold.
     !%End
-    call parse_variable(parser, 'PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
+    call parse_variable(namespace, 'PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -324,7 +325,7 @@ contains
     !% (experimental) High-accuracy PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%End
 
-    call parse_variable(parser, 'PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
+    call parse_variable(namespace, 'PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
     call messages_print_var_option(stdout, 'PseudopotentialSet', default_pseudopotential_set_id)
     select case (default_pseudopotential_set_id)
     case (OPTION__PSEUDOPOTENTIALSET__NONE)
@@ -399,9 +400,9 @@ contains
   !! part of it (it has to be completed later with "species_build").
   !! Note that species_read has to be called only after species_init has been called.
   ! ---------------------------------------------------------
-  subroutine species_read(spec, parser)
-    type(species_t), intent(inout) :: spec
-    type(parser_t),  intent(in)    :: parser
+  subroutine species_read(spec, namespace)
+    type(species_t),    intent(inout) :: spec
+    type(namespace_t),  intent(in)    :: namespace
 
     character(len=LABEL_LEN)  :: lab
     integer :: ib, row, n_spec_block, read_data
@@ -602,12 +603,12 @@ contains
     !% as defined in PRB 71, 035105 (2005)
     !%End
 
-    call messages_obsolete_variable(parser, 'SpecieAllElectronSigma', 'Species')
-    call messages_obsolete_variable(parser, 'SpeciesAllElectronSigma', 'Species')
+    call messages_obsolete_variable(namespace, 'SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable(namespace, 'SpeciesAllElectronSigma', 'Species')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    if(parse_block(parser, 'Species', blk) == 0) then
+    if(parse_block(namespace, 'Species', blk) == 0) then
       n_spec_block = parse_block_n(blk)
     end if
 
@@ -724,9 +725,9 @@ contains
   end function get_set_directory
 
   ! ---------------------------------------------------------
-  subroutine species_build(spec, parser, ispin, dim, print_info)
+  subroutine species_build(spec, namespace, ispin, dim, print_info)
     type(species_t),   intent(inout) :: spec
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     integer,           intent(in)    :: ispin
     integer,           intent(in)    :: dim
     logical, optional, intent(in)    :: print_info
@@ -761,9 +762,9 @@ contains
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_pspio_init(spec%ps, namespace, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
-        call ps_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_init(spec%ps, namespace, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
@@ -919,8 +920,9 @@ contains
   !! functions (filtering, etc), some of which depend on the grid
   !! cutoff value.
   ! ---------------------------------------------------------
-  subroutine species_pot_init(this, grid_cutoff, filter)
+  subroutine species_pot_init(this, namespace, grid_cutoff, filter)
     type(species_t),     intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(in)    :: grid_cutoff
     integer,             intent(in)    :: filter
 
@@ -974,8 +976,8 @@ contains
 
       if(debug%info) then
         write(dirname, '(a)') 'debug/geometry'
-        call io_mkdir(dirname)
-        call species_debug(trim(dirname), this)
+        call io_mkdir(dirname, namespace)
+        call species_debug(trim(dirname), this, namespace)
       end if
     end if
 
@@ -1578,9 +1580,10 @@ contains
 ! Private procedures
 
   ! ---------------------------------------------------------
-  subroutine species_debug(dir, spec)
-    character(len=*), intent(in) :: dir
-    type(species_t),  intent(in) :: spec
+  subroutine species_debug(dir, spec, namespace)
+    character(len=*),  intent(in) :: dir
+    type(species_t),   intent(in) :: spec
+    type(namespace_t), intent(in) :: namespace
 
     character(len=256) :: dirname
     integer :: iunit
@@ -1595,9 +1598,9 @@ contains
 
     dirname = trim(dir)//'/'//trim(spec%label)
 
-    call io_mkdir(dirname)
+    call io_mkdir(dirname, namespace)
 
-    iunit = io_open(trim(dirname)//'/info', action='write')
+    iunit = io_open(trim(dirname)//'/info', namespace, action='write')
 
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)
@@ -1627,7 +1630,7 @@ contains
     write(iunit, '(a,f15.2)') 'hubbard_alpha = ', spec%hubbard_alpha
 
     if(species_is_ps(spec)) then
-       if(debug%info) call ps_debug(spec%ps, trim(dirname))
+       if(debug%info) call ps_debug(spec%ps, trim(dirname), namespace)
     end if
 
     call io_close(iunit)

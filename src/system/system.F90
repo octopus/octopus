@@ -27,12 +27,13 @@ module system_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use output_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -40,8 +41,8 @@ module system_oct_m
   use space_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use v_ks_oct_m
   use xc_oct_m
 
@@ -59,21 +60,20 @@ module system_oct_m
     type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
-    type(states_t),      pointer :: st    !< the states
+    type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
-    type(parser_t)               :: parser
-    type(hamiltonian_t)          :: hm
+    type(namespace_t)            :: namespace
+    type(hamiltonian_elec_t)     :: hm
   end type system_t
   
 contains
   
   !----------------------------------------------------------
-  subroutine system_init(sys, parser, name)
-    type(system_t),             intent(out) :: sys
-    type(parser_t),             intent(in)  :: parser
-    character(len=*), optional, intent(in)  :: name
+  subroutine system_init(sys, namespace)
+    type(system_t),    intent(out) :: sys
+    type(namespace_t), intent(in)  :: namespace
 
     type(profile_t), save :: prof
 
@@ -83,23 +83,19 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-    if (present(name)) then
-      sys%parser = parser_init_namespace(parser, name)
-    else
-      sys%parser = parser
-    end if
+    sys%namespace = namespace
 
-    call accel_init(mpi_world, sys%parser)
+    call accel_init(mpi_world, sys%namespace)
 
-    call messages_obsolete_variable(sys%parser, 'SystemName')
+    call messages_obsolete_variable(sys%namespace, 'SystemName')
 
-    call space_init(sys%space, sys%parser)
+    call space_init(sys%space, sys%namespace)
     
-    call geometry_init(sys%geo, sys%parser, sys%space)
-    call grid_init_stage_0(sys%gr, sys%parser, sys%geo, sys%space)
-    call states_init(sys%st, sys%parser, sys%gr, sys%geo)
-    call states_write_info(sys%st)
-    call grid_init_stage_1(sys%gr, sys%parser, sys%geo)
+    call geometry_init(sys%geo, sys%namespace, sys%space)
+    call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
+    call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
+    call sys%st%write_info()
+    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
@@ -108,19 +104,14 @@ contains
 
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
-    call states_distribute_nodes(sys%st, sys%parser, sys%mc)
-    call grid_init_stage_2(sys%gr, sys%parser, sys%mc, sys%geo)
+    call states_elec_distribute_nodes(sys%st, sys%namespace, sys%mc)
+    call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
-    call output_init(sys%outp, sys%parser, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
-    call states_densities_init(sys%st, sys%gr, sys%geo)
-    call states_exec_init(sys%st, sys%parser, sys%mc)
-    call elf_init(sys%parser)
-
-    call poisson_init(psolver, sys%parser, sys%gr%der, sys%mc)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%parser, sys%geo, sys%mc)
-
-    call v_ks_init(sys%ks, sys%parser, sys%gr, sys%st, sys%geo, sys%mc)
+    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
+    call states_elec_densities_init(sys%st, sys%gr, sys%geo)
+    call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
+    call elf_init(sys%namespace)
 
     if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
       if(states_are_real(sys%st)) then
@@ -130,9 +121,13 @@ contains
       end if
     end if
 
-    call hamiltonian_init(sys%hm, parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
 
+    call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+      sys%ks%xc, sys%mc)
+    
+    if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
+  
     call profiling_out(prof)
     POP_SUB(system_init)
 
@@ -152,7 +147,7 @@ contains
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, parser, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
+      call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
         mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(system_init.parallel_init)
@@ -166,18 +161,17 @@ contains
 
     PUSH_SUB(system_end)
 
-    call hamiltonian_end(sys%hm)
+    call hamiltonian_elec_end(sys%hm)
 
     call multicomm_end(sys%mc)
 
-    call poisson_end(psolver)
     call poisson_end(exchange_psolver)
     call v_ks_end(sys%ks)
     
     call output_end(sys%outp)
     
     if(associated(sys%st)) then
-      call states_end(sys%st)
+      call states_elec_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
     end if
 
@@ -208,9 +202,9 @@ contains
     PUSH_SUB(system_h_setup)
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
-    call states_fermi(sys%st, sys%gr%mesh)
+    call states_elec_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       message(1) = "Reordering occupations for restart."
@@ -231,7 +225,7 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    call states_fermi(sys%st, sys%gr%mesh) ! occupations
+    call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
     call energy_calc_total(sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)

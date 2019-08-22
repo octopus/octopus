@@ -27,6 +27,7 @@ module ps_oct_m
   use parser_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_oct_m
   use ps_fhi_oct_m
@@ -144,9 +145,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, parser, label, z, user_lmax, user_llocal, ispin, filename)
+  subroutine ps_init(ps, namespace, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     character(len=10), intent(in)    :: label
     integer,           intent(in)    :: user_lmax
     integer,           intent(in)    :: user_llocal
@@ -170,7 +171,7 @@ contains
     
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
-    call messages_obsolete_variable(parser, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call messages_obsolete_variable(namespace, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float
@@ -189,7 +190,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
-    call parse_variable(parser, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
     ps%file_format = pseudo_detect_format(filename)
@@ -222,7 +223,7 @@ contains
     case(PSEUDO_FORMAT_PSF)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
-      call ps_psf_init(ps_psf, ispin, filename)
+      call ps_psf_init(ps_psf, ispin, filename, namespace)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
@@ -259,10 +260,10 @@ contains
       call valconf_null(ps%conf)
 
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_init(ps_cpi, trim(filename))
+        call ps_cpi_init(ps_cpi, trim(filename), namespace)
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
-        call ps_fhi_init(ps_fhi, trim(filename))
+        call ps_fhi_init(ps_fhi, trim(filename), namespace)
         ps%conf%p      = ps_fhi%ps_grid%no_l_channels
       end if
 
@@ -308,7 +309,7 @@ contains
       ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
-      call hgh_init(ps_hgh, trim(filename))
+      call hgh_init(ps_hgh, trim(filename), namespace)
       call valconf_copy(ps%conf, ps_hgh%conf)
 
       ps%z        = z
@@ -778,9 +779,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_debug(ps, dir)
+  subroutine ps_debug(ps, dir, namespace)
     type(ps_t), intent(in) :: ps
     character(len=*), intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
 
     ! We will plot also some Fourier transforms.
     type(spline_t), allocatable :: fw(:, :)
@@ -792,7 +794,7 @@ contains
     PUSH_SUB(ps_debug)
 
     ! A text file with some basic data.
-    iunit = io_open(trim(dir)//'/pseudo-info', action='write')
+    iunit = io_open(trim(dir)//'/pseudo-info', namespace, action='write')
     write(iunit,'(a,/)')      ps%label
     write(iunit,'(a,a,/)')    'Format  : ', ps_name(ps%file_format)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
@@ -826,22 +828,22 @@ contains
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local', action='write')
+    iunit  = io_open(trim(dir)//'/local', namespace, action='write')
     call spline_print(ps%vl, iunit)
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local_long_range', action='write')
+    iunit  = io_open(trim(dir)//'/local_long_range', namespace, action='write')
     call spline_print(ps%vlr, iunit)
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local_long_range_density', action='write')
+    iunit  = io_open(trim(dir)//'/local_long_range_density', namespace, action='write')
     call spline_print(ps%nlr, iunit)
     call io_close(iunit)
     
     ! Fourier transform of the local part
-    iunit = io_open(trim(dir)//'/local_ft', action='write')
+    iunit = io_open(trim(dir)//'/local_ft', namespace, action='write')
     SAFE_ALLOCATE(fw(1:1, 1:1))
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
@@ -851,15 +853,15 @@ contains
     call io_close(iunit)
 
     ! Kleinman-Bylander projectors
-    iunit = io_open(trim(dir)//'/nonlocal', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal', namespace, action='write')
     call spline_print(ps%kb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_derivative', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal_derivative', namespace, action='write')
     call spline_print(ps%dkb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal_ft', namespace, action='write')
     SAFE_ALLOCATE(fw(0:ps%lmax, 1:ps%kbc))
     call spline_init(fw)
     do k = 0, ps%lmax
@@ -873,24 +875,24 @@ contains
     call io_close(iunit)
 
     ! Pseudo-wavefunctions
-    iunit = io_open(trim(dir)//'/wavefunctions', action='write')
+    iunit = io_open(trim(dir)//'/wavefunctions', namespace, action='write')
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
     ! Density
     if (ps%has_density) then
-      iunit = io_open(trim(dir)//'/density', action='write')
+      iunit = io_open(trim(dir)//'/density', namespace, action='write')
       call spline_print(ps%density, iunit)
       call io_close(iunit)
 
-      iunit = io_open(trim(dir)//'/density_derivative', action='write')
+      iunit = io_open(trim(dir)//'/density_derivative', namespace, action='write')
       call spline_print(ps%density_der, iunit)
       call io_close(iunit)
     end if
 
     ! Non-linear core-corrections
     if(ps_has_nlcc(ps)) then
-      iunit = io_open(trim(dir)//'/nlcc', action='write')
+      iunit = io_open(trim(dir)//'/nlcc', namespace, action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
     end if

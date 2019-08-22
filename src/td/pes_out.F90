@@ -27,6 +27,7 @@ module pes_out_oct_m
   use loct_oct_m
   use math_oct_m
   use messages_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif    
@@ -62,9 +63,10 @@ module pes_out_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map(pesK, file, Lk, ll, how, sb, pmesh)
+  subroutine pes_out_velocity_map(pesK, file, namespace, Lk, ll, how, sb, pmesh)
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
     integer(8),        intent(in) :: how
@@ -80,7 +82,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map)
 
-    call cube_init(cube, ll, sb)
+    call cube_init(cube, ll, sb, namespace)
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
     cf%dRS = pesK
@@ -115,10 +117,10 @@ contains
       call messages_info(1)
     
       if (present(pmesh)) then          
-        call dvtk_out_cf_structured(filename, 'PES_vel_map', ierr, cf, cube,& 
+        call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,& 
           sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
       else 
-        call dvtk_out_cf(filename, 'PES_vel_map', ierr, cf, cube, dk(:),& 
+        call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),& 
           sqrt(units_out%energy)**sb%dim)
       end if        
     end if
@@ -132,7 +134,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_arpes_cut(arpes, file, ll, pmesh, Ekin)
+  subroutine pes_out_arpes_cut(namespace, arpes, file, ll, pmesh, Ekin)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: arpes(:,:,:)
     character(len=*),  intent(in) :: file
     integer,           intent(in) :: ll(:)
@@ -144,7 +147,7 @@ contains
     
     PUSH_SUB(pes_out_arpes_cut)
     
-    iunit = io_open(file, action='write')
+    iunit = io_open(file, namespace, action='write')
     write(iunit, '(a)') '##################################################'
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
                                       str_center("Ppath", 18), &
@@ -190,7 +193,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map_cut(pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+  subroutine pes_out_velocity_map_cut(namespace, pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
     integer,           intent(in) :: ll(:)
@@ -219,7 +223,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map_cut)
 
-    iunit = io_open(file, action='write')
+    iunit = io_open(file, namespace, action='write')
 
 
 

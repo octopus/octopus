@@ -23,16 +23,17 @@ module invert_ks_oct_m
   use density_oct_m
   use eigensolver_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use output_oct_m
   use io_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use states_restart_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use xc_ks_inversion_oct_m
   
@@ -83,13 +84,13 @@ contains
     end do
     
     ! calculate the Hartree potential
-    call dpoisson_solve(sys%ks%hartree_solver, sys%hm%vhartree, rho)
+    call dpoisson_solve(sys%hm%psolver, sys%hm%vhartree, rho)
 
     do ii = 1, nspin
       sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, sys%hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
@@ -100,12 +101,13 @@ contains
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
       call invertks_2part(target_rho, nspin, sys%hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
+             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, &
+             sys%ks%ks_inversion%asymp)
      
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
           sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, sys%parser, nspin, sys%hm, sys%gr, &
+        call invertks_iter(target_rho, sys%namespace, nspin, sys%hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
              sys%ks%ks_inversion%method)
       end if
@@ -113,7 +115,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries)
+    call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, sys%hm, 1)
@@ -133,12 +135,12 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks, STATIC_DIR)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
-    call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
-    call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
+    call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
+    call states_elec_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
       call messages_warning(1)
@@ -172,9 +174,9 @@ contains
       !% Name of the file that contains the density used as the target in the 
       !% inversion of the KS equations.
       !%End
-      call parse_variable(sys%parser, 'InvertKSTargetDensity', "target_density.dat", filename)
+      call parse_variable(sys%namespace, 'InvertKSTargetDensity', "target_density.dat", filename)
 
-      iunit = io_open(filename, action='read', status='old')
+      iunit = io_open(filename, sys%namespace, action='read', status='old')
 
       npoints = 0
       do pass = 1, 2

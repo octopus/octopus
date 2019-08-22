@@ -29,6 +29,7 @@ module pcm_oct_m
   use mesh_oct_m
   use mesh_interpolation_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use pcm_eom_oct_m
@@ -148,6 +149,7 @@ module pcm_oct_m
     integer                          :: calc_method      !< which method should be used to obtain the pcm potential
     integer                          :: tess_nn          !< number of tessera center mesh-point nearest neighbors
     FLOAT, public                    :: dt               !< time-step of propagation
+    type(namespace_t), pointer       :: namespace        !< namespace, needed for output
   end type pcm_t
 
   type pcm_min_t
@@ -188,15 +190,15 @@ contains
 
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
-  subroutine pcm_init(pcm, parser, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
-    type(pcm_t)     , intent(out) :: pcm
-    type(geometry_t), intent(in)  :: geo
-    type(parser_t),   intent(in)  :: parser
-    type(grid_t)    , intent(in)  :: grid
-    FLOAT           , intent(in)  :: qtot
-    FLOAT           , intent(in)  :: val_charge
-    logical         , intent(in)  :: external_potentials_present
-    logical         , intent(in)  :: kick_present
+  subroutine pcm_init(pcm, namespace, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
+    type(pcm_t),               intent(out) :: pcm
+    type(geometry_t),          intent(in)  :: geo
+    type(namespace_t), target, intent(in)  :: namespace
+    type(grid_t),              intent(in)  :: grid
+    FLOAT,                     intent(in)  :: qtot
+    FLOAT,                     intent(in)  :: val_charge
+    logical,                   intent(in)  :: external_potentials_present
+    logical,                   intent(in)  :: kick_present
 
     integer :: ia, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
@@ -226,6 +228,8 @@ contains
     pcm%update_iter = 1
     pcm%kick_like = .false.
 
+    pcm%namespace => namespace
+
     !%Variable PCMCalculation
     !%Type logical
     !%Default no
@@ -238,7 +242,7 @@ contains
     !% At the moment, this option is available only for <tt>TheoryLevel = DFT</tt>.
     !% PCM is tested for CalculationMode = gs, while still experimental for other values (in particular, CalculationMode = td).
     !%End
-    call parse_variable(parser, 'PCMCalculation', .false., pcm%run_pcm)
+    call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       call messages_print_stress(stdout, trim('PCM'))
       if ( (grid%sb%box_shape /= MINIMUM) .or. (grid%sb%dim /= PCM_DIM_SPACE) ) then
@@ -263,7 +267,7 @@ contains
     !% The vdW radii are set from the <tt>share/pseudopotentials/elements</tt> file. These values are obtained from
     !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the <tt>Species</tt> block.
     !%End
-    call parse_variable(parser, 'PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
+    call parse_variable(namespace, 'PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
     call messages_print_var_option(stdout, "PCMVdWRadii", pcm_vdw_type)
 
     select case (pcm_vdw_type)
@@ -281,7 +285,7 @@ contains
     !% The default value depends on the choice of <tt>PCMVdWRadii</tt>:
     !% 1.2 for <tt>pcm_vdw_optimized</tt> and 1.0 for <tt>pcm_vdw_species</tt>.
     !%End
-    call parse_variable(parser, 'PCMRadiusScaling', default_value, pcm%scale_r)
+    call parse_variable(namespace, 'PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
     !%Variable PCMTDLevel
@@ -302,7 +306,7 @@ contains
     !% If PCMTDLevel=eom, solvent polarization charges evolves following an equation of motion, generalizing 'neq' propagation.
     !% The equation of motion used here depends on the value of PCMEpsilonModel.
     !%End
-    call parse_variable(parser, 'PCMTDLevel', PCM_TD_EQ, pcm%tdlevel)
+    call parse_variable(namespace, 'PCMTDLevel', PCM_TD_EQ, pcm%tdlevel)
     call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
     if (pcm%tdlevel /= PCM_TD_EQ .and. (.not. pcm%run_pcm)) then
@@ -319,7 +323,7 @@ contains
     !%Description
     !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
-    call parse_variable(parser, 'PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
+    call parse_variable(namespace, 'PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%epsilon_0)
 
     !%Variable PCMDynamicEpsilon
@@ -330,7 +334,7 @@ contains
     !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 
     !% <math>\varepsilon_d=\varepsilon_0</math> indicate equilibrium with solvent. 
     !%End
-    call parse_variable(parser, 'PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
+    call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
     
     !%Variable PCMEpsilonModel
@@ -344,7 +348,7 @@ contains
     !%Option pcm_drude 2
     !% Drude-Lorentz model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
     !%End
-    call parse_variable(parser, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
+    call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
     if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error('PCMEpsilonModel')
 
@@ -384,7 +388,7 @@ contains
     !% Files should be located in pcm directory and are called ASC_e.dat and ASC_ext.dat, respectively.
     !% The latter files are generated after any PCM run and contain the last values of the polarization charges.
     !%End
-    call parse_variable(parser, 'PCMEoMInitialCharges', 0, pcm%initial_asc)
+    call parse_variable(namespace, 'PCMEoMInitialCharges', 0, pcm%initial_asc)
     call messages_print_var_value(stdout, "PCMEoMInitialCharges", pcm%initial_asc)
 
     if (pcm%initial_asc /= 0) then
@@ -403,7 +407,7 @@ contains
     pcm%deb%eps_d = pcm%epsilon_infty
 
     !< re-parse TDTimeStep to propagate polarization charges
-    call parse_variable(parser, 'TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
+    call parse_variable(namespace, 'TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
 
     !%Variable PCMDebyeRelaxTime
     !%Type float
@@ -413,7 +417,7 @@ contains
     !% Relaxation time of the solvent within Debye model (<math>\tau</math>). Recall Debye dieletric function: 
     !% <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
     !%End
-    call parse_variable(parser, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+    call parse_variable(namespace, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
 
     if (pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_DEBYE_MODEL .and. &
@@ -442,7 +446,7 @@ contains
       !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
       !% Default values of <math>\omega_0</math> guarantee to recover static dielectric constant.   
       !%End
-      call parse_variable(parser, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%epsilon_0 - M_ONE)), pcm%drl%w0)
+      call parse_variable(namespace, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%epsilon_0 - M_ONE)), pcm%drl%w0)
       call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
     end if    
 
@@ -467,7 +471,7 @@ contains
     !% Damping factor of the solvent charges oscillations within Drude-Lorentz model (<math>\gamma</math>).
     !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
     !%End
-    call parse_variable(parser, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+    call parse_variable(namespace, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
     call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
 
     !< Parameter (<math>A</math>) interpolating Drude-Lorentz dielectric function to its static value (<math>\varepsilon_0</math>).
@@ -483,7 +487,7 @@ contains
     !% include a contribution due to the polarization of the solvent. The latter is calculated here within the PCM framework.
     !% See [G. Gil, et al., J. Chem. Theory Comput., 2019, 15 (4), pp 2306–2319].
     !%End
-    call parse_variable(parser, 'PCMLocalField', .false., pcm%localf)
+    call parse_variable(namespace, 'PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
 
     if (pcm%localf .and. ((.not.external_potentials_present) .and. (.not.pcm%kick_is_present))) then
@@ -500,7 +504,7 @@ contains
     !% (Useful for analysis) When external fields are applied, turning off the solvent-molecule interaction (PCMSolute=no) and 
     !% activating the solvent polarization due to the applied field (PCMLocalField=yes) allows to include only local field effects. 
     !%End
-    call parse_variable(parser, 'PCMSolute', .true., pcm%solute)
+    call parse_variable(namespace, 'PCMSolute', .true., pcm%solute)
     call messages_print_var_value(stdout, "PCMSolute", pcm%solute)
 
     if (pcm%run_pcm .and. (.not. pcm%solute)) then
@@ -523,7 +527,7 @@ contains
     !% If .false. ALL           degrees-of-freedom of the solvent follow the kick. The potential due to polarization charges evolves 
     !%  following an equation of motion. When Debye dielectric model is used, just a part of the potential behaves as another kick.
     !%End
-    call parse_variable(parser, 'PCMKick', .false., pcm%kick_like)
+    call parse_variable(namespace, 'PCMKick', .false., pcm%kick_like)
     call messages_print_var_value(stdout, "PCMKick", pcm%kick_like)
 
     if (pcm%kick_like .and. (.not. pcm%run_pcm)) then
@@ -554,7 +558,7 @@ contains
     !%Description
     !% Defines how often the PCM potential is updated during time propagation.
     !%End
-    call parse_variable(parser, 'PCMUpdateIter', 1, pcm%update_iter)
+    call parse_variable(namespace, 'PCMUpdateIter', 1, pcm%update_iter)
     call messages_print_var_value(stdout, "PCMUpdateIter", pcm%update_iter)
 
     !%Variable PCMGamessBenchmark
@@ -565,7 +569,7 @@ contains
     !% If PCMGamessBenchmark is set to "yes", the pcm_matrix is also written in a Gamess format.
     !% for benchamarking purposes.
     !%End
-    call parse_variable(parser, 'PCMGamessBenchmark', .false., gamess_benchmark)
+    call parse_variable(namespace, 'PCMGamessBenchmark', .false., gamess_benchmark)
 
     !%Variable PCMRenormCharges
     !%Type logical
@@ -578,7 +582,7 @@ contains
     !% and <math>Q_M^{e/n}</math> is the nominal electronic/nuclear charge of the system. This can be needed
     !% to treat molecules in weakly polar solvents.
     !%End
-    call parse_variable(parser, 'PCMRenormCharges', .false., pcm%renorm_charges)
+    call parse_variable(namespace, 'PCMRenormCharges', .false., pcm%renorm_charges)
 
     !%Variable PCMQtotTol
     !%Type float
@@ -592,7 +596,7 @@ contains
     !% (printed by the code in the file pcm/pcm_info.out) even, if polarization charges are renormalized, 
     !% the calculated results might be inaccurate or erroneous.
     !%End
-    call parse_variable(parser, 'PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
+    call parse_variable(namespace, 'PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
 
     if (pcm%renorm_charges) then
       message(1) = "Info: Polarization charges will be renormalized"
@@ -609,7 +613,7 @@ contains
     !% the polarization charges on each tessera (arXiv:1507.05471). If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
-    call parse_variable(parser, 'PCMSmearingFactor', M_ONE, pcm%gaussian_width)
+    call parse_variable(namespace, 'PCMSmearingFactor', M_ONE, pcm%gaussian_width)
     call messages_print_var_value(stdout, "PCMSmearingFactor", pcm%gaussian_width)
 
     if (abs(pcm%gaussian_width) <= M_EPSILON) then
@@ -620,7 +624,7 @@ contains
       call messages_info(1)        
     end if
 
-    call io_mkdir('pcm')
+    call io_mkdir('pcm', namespace)
 
     !%Variable PCMCavity
     !%Type string
@@ -636,7 +640,7 @@ contains
     !%  R_sph(1:T)      < Radii of the spheres to which the tesserae belong
     !%  normal(1:T,1:3) < Outgoing unitary vectors at the tesserae surfaces 
     !%End
-    call parse_variable(parser, 'PCMCavity', '', pcm%input_cavity)
+    call parse_variable(namespace, 'PCMCavity', '', pcm%input_cavity)
 
     if (pcm%input_cavity == '') then
 
@@ -647,7 +651,7 @@ contains
       !%Description
       !% If true, spheres centered at the Hydrogens atoms are included to build the solute cavity surface.
       !%End
-      call parse_variable(parser, 'PCMSpheresOnH', .false., add_spheres_h)
+      call parse_variable(namespace, 'PCMSpheresOnH', .false., add_spheres_h)
 
       pcm%n_spheres = 0
       band = .false.
@@ -677,7 +681,7 @@ contains
       end do
 
       if (mpi_grp_is_root(mpi_world)) then
-        pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', action='write')
+        pcm%info_unit = io_open(PCM_DIR//'pcm_info.out', pcm%namespace, action='write')
       
         write(pcm%info_unit, '(A35)') '# Configuration: Molecule + Solvent'
         write(pcm%info_unit, '(A35)') '# ---------------------------------'
@@ -712,7 +716,7 @@ contains
       !% Allows to subdivide further each tessera refining the discretization of the cavity tesselation. 
       !% Can take only two values, 1 or 4. 1 corresponds to 60 tesserae per sphere, while 4 corresponds to 240 tesserae per sphere.
       !%End
-      call parse_variable(parser, 'PCMTessSubdivider', 1, subdivider)
+      call parse_variable(namespace, 'PCMTessSubdivider', 1, subdivider)
 
       SAFE_ALLOCATE(dum2(1:subdivider*N_TESS_SPHERE*pcm%n_spheres))
 
@@ -724,7 +728,7 @@ contains
       !% Minimum distance between tesserae. 
       !% Any two tesserae having smaller distance in the starting tesselation will be merged together. 
       !%End
-      call parse_variable(parser, 'PCMTessMinDistance', CNST(0.1), min_distance)
+      call parse_variable(namespace, 'PCMTessMinDistance', CNST(0.1), min_distance)
       call messages_print_var_value(stdout, "PCMTessMinDistance", min_distance)
 
       !> Counting the number of tesserae and generating the Van der Waals discretized surface of the solute system
@@ -749,7 +753,7 @@ contains
     else
 
       !> The cavity surface will be read from a external file
-      iunit = io_open(trim(pcm%input_cavity), status='old', action='read')
+      iunit = io_open(trim(pcm%input_cavity), pcm%namespace, action='read', status='old')
       read(iunit,*) pcm%n_tesserae
 
       if (pcm%n_tesserae > MXTS) then
@@ -796,7 +800,7 @@ contains
     end if
 
     if (mpi_grp_is_root(mpi_world)) then
-      cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', action='write')
+      cav_unit_test = io_open(PCM_DIR//'cavity_mol.xyz', pcm%namespace, action='write')
 
       write (cav_unit_test,'(2X,I4)') pcm%n_tesserae + geo%natoms
       write (cav_unit_test,'(2X)')
@@ -839,7 +843,7 @@ contains
 
     !>printing out the cavity surface
     if (gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
-      cav_gamess_unit = io_open(PCM_DIR//'geom_cavity_gamess.out', action='write')
+      cav_gamess_unit = io_open(PCM_DIR//'geom_cavity_gamess.out', pcm%namespace, action='write')
 
       write(cav_gamess_unit,*) pcm%n_tesserae
 
@@ -884,7 +888,7 @@ contains
       call pcm_matrix(pcm%epsilon_infty, pcm%tess, pcm%n_tesserae, pcm%matrix_d)
 
       if (gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
-        pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', action='write')
+        pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess_dyn.out', pcm%namespace, action='write')
 
         do jtess = 1, pcm%n_tesserae
           do itess = 1, pcm%n_tesserae
@@ -905,7 +909,7 @@ contains
 
         if (mpi_grp_is_root(mpi_world)) then
           ! only to benchmark
-          pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf.out', action='write')
+          pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf.out', pcm%namespace, action='write')
           do jtess = 1, pcm%n_tesserae
             do itess = 1, pcm%n_tesserae
               write(pcmmat_unit,*) pcm%matrix_lf_d(itess,jtess)
@@ -924,8 +928,9 @@ contains
     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
 
     if (mpi_grp_is_root(mpi_world)) then
-      pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', action='write')
-      if (gamess_benchmark) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', action='write')
+      pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', pcm%namespace, action='write')
+      if (gamess_benchmark) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', &
+        pcm%namespace, action='write')
 
       do jtess = 1, pcm%n_tesserae
         do itess = 1, pcm%n_tesserae
@@ -952,7 +957,7 @@ contains
 
       if (mpi_grp_is_root(mpi_world)) then
         ! only to benchmark
-        pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_static_lf.out', action='write')
+        pcmmat_unit = io_open(PCM_DIR//'pcm_matrix_static_lf.out', pcm%namespace, action='write')
         do jtess = 1, pcm%n_tesserae
           do itess = 1, pcm%n_tesserae
             write(pcmmat_unit,*) pcm%matrix_lf(itess,jtess)
@@ -978,7 +983,7 @@ contains
     !%Option pcm_poisson 2
     !% Solving the Poisson equation for the polarization charge density.
     !%End
-    call parse_variable(parser, 'PCMCalcMethod', PCM_CALC_DIRECT, pcm%calc_method)
+    call parse_variable(namespace, 'PCMCalcMethod', PCM_CALC_DIRECT, pcm%calc_method)
     call messages_print_var_option(stdout, "PCMCalcMethod", pcm%calc_method)
 
 
@@ -1027,7 +1032,7 @@ contains
       !% The default value is such that the neighbor mesh contains points in a radius 
       !% equal to the width used for the gaussian smearing.
       !%End
-      call parse_variable(parser, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
+      call parse_variable(namespace, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
       call messages_print_var_value(stdout, "PCMChargeSmearNN", pcm%tess_nn)
       
       call pcm_poisson_sanity_check(pcm, grid%mesh)
@@ -1098,10 +1103,11 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present, kick_time)
+  subroutine pcm_calc_pot_rs(pcm, mesh, psolver, geo, v_h, v_ext, kick, time_present, kick_time)
     save
     type(pcm_t),                intent(inout) :: pcm
     type(mesh_t),               intent(in)    :: mesh
+    type(poisson_t),            intent(in)    :: psolver
     type(geometry_t), optional, intent(in)    :: geo
     FLOAT,            optional, intent(in)    :: v_h(:)
     FLOAT,            optional, intent(in)    :: v_ext(:)
@@ -1169,7 +1175,7 @@ contains
       call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
                        pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_n)
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
-      call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)
+      call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh, psolver)
     end if
 
     if (calc == PCM_ELECTRONS) then
@@ -1181,10 +1187,10 @@ contains
           select case (pcm%which_eps)
           case (PCM_DRUDE_MODEL)
             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, calc, &
-              PCM_DRUDE_MODEL, this_drl = pcm%drl)
+              PCM_DRUDE_MODEL, pcm%namespace, this_drl = pcm%drl)
           case default
             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, calc, &
-              PCM_DEBYE_MODEL, this_deb = pcm%deb)
+              PCM_DEBYE_MODEL, pcm%namespace, this_deb = pcm%deb)
           end select
           if ((.not. pcm%localf) .and. not_yet_called) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
@@ -1221,7 +1227,7 @@ contains
 
       end if !< END - pcm charges propagation in equilibrium with solute
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
-      call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
+      call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh, psolver)
     end if
 
     if ((calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) .and. .not. pcm%kick_like) then
@@ -1238,10 +1244,10 @@ contains
           select case (pcm%which_eps)
           case(PCM_DRUDE_MODEL)
             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, calc, &
-                                         pcm%which_eps, this_drl=pcm%drl)
+                                         pcm%which_eps, pcm%namespace, this_drl=pcm%drl)
           case default
             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, calc, &
-                                         pcm%which_eps, this_deb=pcm%deb)
+                                         pcm%which_eps, pcm%namespace, this_deb=pcm%deb)
           end select
           if ((.not. pcm%kick_is_present) .and. not_yet_called) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to time-dependent external field
@@ -1271,7 +1277,7 @@ contains
         pcm%qtot_ext_in = pcm%qtot_ext
       end if !< END - pcm charges propagation in equilibrium with external field
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
-      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
+      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh, psolver)
 
     end if
 
@@ -1306,10 +1312,10 @@ contains
           select case (pcm%which_eps)
           case(PCM_DRUDE_MODEL)
             call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, calc, &
-                                         pcm%which_eps, this_drl=pcm%drl)
+                                         pcm%which_eps, pcm%namespace, this_drl=pcm%drl)
           case default
             call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, calc, &
-                                         pcm%which_eps, this_deb=pcm%deb)
+                                         pcm%which_eps, pcm%namespace, this_deb=pcm%deb)
           end select
           if (not_yet_called) call pcm_eom_enough_initial(not_yet_called)
           pcm%qtot_kick  = sum(pcm%q_kick)
@@ -1326,7 +1332,7 @@ contains
       end if
 
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
-      call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
+      call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh, psolver)
       if (.not. pcm%kick_like) then
         if (calc == PCM_EXTERNAL_PLUS_KICK) then
           pcm%q_ext    = pcm%q_ext    + pcm%q_kick
@@ -1345,7 +1351,8 @@ contains
       write (asc_vs_t_unit_format,'(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
   
       if (pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc == PCM_ELECTRONS ) then
-        asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
+        asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', pcm%namespace, &
+          action='write', position='append', form='formatted')
         write(asc_vs_t_unit_e,trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
           (pcm%q_e(ia) , ia = 1,pcm%n_tesserae)
         call io_close(asc_vs_t_unit_e)
@@ -1835,7 +1842,8 @@ contains
       call messages_info()
       
       ! Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm",  mesh, rho, unit_one, ierr)
+      call dio_function_output(io_function_fill_how("VTK"), ".", "rho_pcm", pcm%namespace, &
+        mesh, rho, unit_one, ierr)
     end if  
 
     SAFE_DEALLOCATE_A(pt)
@@ -1849,12 +1857,13 @@ contains
 
   ! -----------------------------------------------------------------------------  
   !> Generates the potential 'v_pcm' in real-space.
-  subroutine pcm_pot_rs(pcm, v_pcm, q_pcm, rho, mesh)
+  subroutine pcm_pot_rs(pcm, v_pcm, q_pcm, rho, mesh, psolver)
     type(pcm_t),     intent(inout) :: pcm 
     FLOAT,           intent(inout) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
     FLOAT,           intent(in)    :: q_pcm(:)!< (1:n_tess)
     FLOAT,           intent(inout) :: rho(:)
     type(mesh_t),    intent(in)    :: mesh
+    type(poisson_t), intent(in)    :: psolver
 
     type(profile_t), save :: prof_init
     integer  :: ierr
@@ -1869,7 +1878,7 @@ contains
       call pcm_pot_rs_direct(v_pcm, q_pcm, pcm%tess, pcm%n_tesserae, mesh, pcm%gaussian_width)
 
     case(PCM_CALC_POISSON)
-      call pcm_pot_rs_poisson(v_pcm, rho)
+      call pcm_pot_rs_poisson(v_pcm, psolver, rho)
 
     case default
       message(1) = "BAD BAD BAD"
@@ -1879,7 +1888,8 @@ contains
     
     if (debug%info) then  
       !   Keep this here for debug purposes.    
-      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm",  mesh, v_pcm, unit_one, ierr)
+      call dio_function_output(io_function_fill_how("VTK"), ".", "v_pcm", pcm%namespace, &
+        mesh, v_pcm, unit_one, ierr)
     end if
 
     call profiling_out(prof_init)
@@ -1889,9 +1899,10 @@ contains
   
   ! -----------------------------------------------------------------------------  
   !> Generates the potential 'v_pcm' in real-space solving the poisson equation for rho
-  subroutine pcm_pot_rs_poisson(v_pcm, rho)
-    FLOAT, intent(inout) :: v_pcm(:)
-    FLOAT, intent(inout) :: rho(:)
+  subroutine pcm_pot_rs_poisson(v_pcm, psolver, rho)
+    FLOAT,           intent(inout) :: v_pcm(:)
+    type(poisson_t), intent(in)    :: psolver
+    FLOAT,           intent(inout) :: rho(:)
       
     PUSH_SUB(pcm_pot_rs_poisson)
     
@@ -3041,11 +3052,11 @@ contains
     PUSH_SUB(pcm_end)
 
     if (pcm%solute .and. pcm%localf) then
-      asc_unit_test     = io_open(PCM_DIR//'ASC.dat', action='write')     
-      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
-      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', action='write')
-      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', action='write')
-      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
+      asc_unit_test     = io_open(PCM_DIR//'ASC.dat', pcm%namespace, action='write')
+      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', pcm%namespace, action='write')
+      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', pcm%namespace, action='write')
+      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', pcm%namespace, action='write')
+      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', pcm%namespace, action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test,*)     pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia) + pcm%q_ext(ia), ia
         write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
@@ -3060,9 +3071,9 @@ contains
       call io_close(asc_unit_test_ext)
 
     else if (pcm%solute .and. .not.pcm%localf) then
-      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', action='write')
-      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', action='write')
-      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', action='write')
+      asc_unit_test_sol = io_open(PCM_DIR//'ASC_sol.dat', pcm%namespace, action='write')
+      asc_unit_test_e   = io_open(PCM_DIR//'ASC_e.dat', pcm%namespace, action='write')
+      asc_unit_test_n   = io_open(PCM_DIR//'ASC_n.dat', pcm%namespace, action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test_sol,*) pcm%tess(ia)%point, pcm%q_e(ia) + pcm%q_n(ia), ia
         write(asc_unit_test_e,*)   pcm%tess(ia)%point, pcm%q_e(ia), ia
@@ -3073,7 +3084,7 @@ contains
       call io_close(asc_unit_test_n)
 
     else if (.not. pcm%solute .and. pcm%localf) then
-      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', action='write')
+      asc_unit_test_ext = io_open(PCM_DIR//'ASC_ext.dat', pcm%namespace, action='write')
       do ia = 1, pcm%n_tesserae
         write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
@@ -3279,16 +3290,16 @@ contains
 
   ! -----------------------------------------------------------------------------
 
-  subroutine pcm_min_input_parsing_for_spectrum(pcm, parser)
-    type(pcm_min_t), intent(out)   :: pcm
-    type(parser_t),  intent(in)    :: parser
+  subroutine pcm_min_input_parsing_for_spectrum(pcm, namespace)
+    type(pcm_min_t),   intent(out)   :: pcm
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(pcm_min_input_parsing_for_spectrum)
 
     ! re-parsing PCM keywords
-    call parse_variable(parser, 'PCMCalculation', .false., pcm%run_pcm)
+    call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     call messages_print_stress(stdout, trim('PCM'))
-    call parse_variable(parser, 'PCMLocalField', .false., pcm%localf)
+    call parse_variable(namespace, 'PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
     if ( pcm%localf ) then
       call messages_experimental("PCM local field effects in the optical spectrum")
@@ -3302,28 +3313,28 @@ contains
       call messages_write('in the nonequilibrium or equation-of-motion TD-PCM propagation schemes.')
       call messages_warning()
     end if
-    call parse_variable(parser, 'PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
+    call parse_variable(namespace, 'PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
     call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
     ! reading dielectric function model parameters
-    call parse_variable(parser, 'PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
+    call parse_variable(namespace, 'PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%deb%eps_0)
     if (pcm%tdlevel == PCM_TD_EOM) then
-      call parse_variable(parser, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
+      call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
       call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
       if (pcm%which_eps == PCM_DEBYE_MODEL) then
-        call parse_variable(parser, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+        call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
         call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
-        call parse_variable(parser, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+        call parse_variable(namespace, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
         call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
       else if (pcm%which_eps == PCM_DRUDE_MODEL) then
-        call parse_variable(parser, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
+        call parse_variable(namespace, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
         call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
-        call parse_variable(parser, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+        call parse_variable(namespace, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
         call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
       end if
     else if (pcm%tdlevel == PCM_TD_NEQ) then
-      call parse_variable(parser, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+      call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
       call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
     end if
 

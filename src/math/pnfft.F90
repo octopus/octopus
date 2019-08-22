@@ -39,6 +39,7 @@ module pnfft_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pfft_oct_m
   use pnfft_params_oct_m
@@ -101,9 +102,9 @@ module pnfft_oct_m
 contains
 
   ! ---------------------------------------------------------  
-  subroutine pnfft_guru_options(pnfft, parser)
+  subroutine pnfft_guru_options(pnfft, namespace)
     type(pnfft_t),     intent(inout) :: pnfft
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(pnfft_guru_options)
 
@@ -115,7 +116,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_variable(parser, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
+    call parse_variable(namespace, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
 
     !%Variable PNFFTOversampling
     !%Type float
@@ -124,7 +125,7 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(parser, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
+    call parse_variable(namespace, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
 
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options
@@ -380,8 +381,9 @@ contains
   ! Set the coordinates for the spatial nodes rescaled to 
   ! the 3D torus [-0.5,0.5)
   ! ---------------------------------------------------------  
-  subroutine pnfft_set_sp_nodes(pnfft, X)
+  subroutine pnfft_set_sp_nodes(pnfft, namespace, X)
     type(pnfft_t),    intent(inout) :: pnfft
+    type(namespace_t),intent(in)    :: namespace
     FLOAT,            intent(in)    :: X(:,:) !X(i, dim)
 
     FLOAT   :: len(3), cc(3), eps,temp, lo(3), up(3), lo_g(3), up_g(3)
@@ -458,7 +460,7 @@ contains
 !     end do
 
 
-    call pnfft_messages_debug(pnfft)
+    call pnfft_messages_debug(pnfft, namespace)
 
 
     SAFE_ALLOCATE( dX(1:maxval(pnfft%M(:))-1, 1:3))
@@ -482,8 +484,9 @@ contains
   end subroutine pnfft_set_sp_nodes
   
   ! ---------------------------------------------------------
-  subroutine pnfft_messages_debug(pnfft)
-    type(pnfft_t), intent(in) :: pnfft 
+  subroutine pnfft_messages_debug(pnfft, namespace)
+    type(pnfft_t),     intent(in) :: pnfft 
+    type(namespace_t), intent(in) :: namespace 
 
     integer          :: nn, i1, i2, i3 
     integer          :: npart, ierr
@@ -495,7 +498,7 @@ contains
     if(debug%info) then
   
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/PNFFT')
+        call io_mkdir('debug/PNFFT', namespace)
       end if
 #ifdef HAVE_MPI
       call MPI_Barrier(mpi_world%comm, ierr)
@@ -505,7 +508,7 @@ contains
       write(filenum, '(i3.3)') nn
 
       iunit = io_open('debug/PNFFT/rs_partition.'//filenum, &
-           action='write')
+           namespace, action='write')
            
       do i1 = 1, pnfft%M(1)
        do i2 = 1, pnfft%M(2)
