@@ -276,6 +276,7 @@ subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
   ! set up poisson solver used for the exchange operator with scdm states
   ! this replicates poisson_kernel_init()
   scdm_poisson%poisson_soft_coulomb_param = M_ZERO
+  scdm%poisson_fft%precalculated_g = .false.
   if (der%mesh%sb%periodic_dim.eq.3) then
     call poisson_fft_init(scdm%poisson_fft, parser, scdm%boxmesh, scdm%boxcube, &
          kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)

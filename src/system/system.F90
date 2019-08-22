@@ -122,8 +122,7 @@ contains
 
     call v_ks_init(sys%ks, sys%parser, sys%gr, sys%st, sys%geo, sys%mc)
 
-    if(sys%ks%theory_level == HARTREE_FOCK .or. &
-        sys%ks%theory_level == RDMFT .or. output_need_exchange(sys%outp)) then
+    if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
       if(states_are_real(sys%st)) then
         call poisson_init(exchange_psolver, parser, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .false.)
       else

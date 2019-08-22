@@ -1612,10 +1612,11 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, parser, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
+subroutine X(states_me_two_body) (gr, parser, solver, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
                  phase, singularity, exc_k)
   type(grid_t),     intent(in)              :: gr
   type(parser_t),   intent(in)              :: parser
+  type(poisson_t),  intent(inout)           :: solver
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
   integer,          intent(out)             :: iindex(:,:)
@@ -1682,7 +1683,7 @@ subroutine X(states_me_two_body) (gr, parser, st, st_min, st_max, iindex, jindex
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(exchange_psolver, parser, qq, &
+        call poisson_kernel_reinit(solver, parser, qq, &
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
@@ -1698,14 +1699,12 @@ subroutine X(states_me_two_body) (gr, parser, st, st_min, st_max, iindex, jindex
       do idim = 2, st%d%dim
         nn(1:gr%mesh%np) = nn(1:gr%mesh%np) + R_CONJ(psii(1:gr%mesh%np, idim))*psij(1:gr%mesh%np, idim)
       end do
-      call X(poisson_solve)(exchange_psolver, vv, nn, all_nodes=.false.)
+      call X(poisson_solve)(solver, vv, nn, all_nodes=.false.)
 
       !We now put back the phase that we treated analytically using the Poisson solver
 #ifdef R_TCOMPLEX
-      do idim = 1, st%d%dim
-        do ip = 1, gr%mesh%np
-          vv(ip) = vv(ip) * exp(M_zI*sum(qq(1:gr%der%dim)*gr%mesh%x(ip, 1:gr%der%dim)))
-        end do
+      do ip = 1, gr%mesh%np
+        vv(ip) = vv(ip) * exp(M_zI*sum(qq(1:gr%der%dim)*gr%mesh%x(ip, 1:gr%der%dim)))
       end do
 #endif
 

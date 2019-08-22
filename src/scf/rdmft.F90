@@ -320,7 +320,7 @@ contains
       write(message(2),'(a)') '--this may take a while--'
       call messages_info(2)
 
-      call dstates_me_two_body(gr, parser, st, 1, st%nst, rdm%i_index, rdm%j_index, &
+      call dstates_me_two_body(gr, parser, psolver, st, 1, st%nst, rdm%i_index, rdm%j_index, &
                                      rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr)
       call sum_integrals(rdm)
