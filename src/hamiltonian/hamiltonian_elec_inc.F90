@@ -717,6 +717,62 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
   POP_SUB(X(magnus))
 end subroutine X(magnus)
 
+subroutine X(hamiltonian_elec_apply_magnus) (hm, mesh, psib, hpsib, ik, vmagnus, set_phase)
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(mesh_t),             intent(in)    :: mesh
+  integer,                  intent(in)    :: ik
+  type(batch_t),            intent(inout) :: psib
+  type(batch_t),            intent(inout) :: hpsib
+  FLOAT,                    intent(in)    :: vmagnus(:, :, :)
+  logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+  integer :: ispin
+  type(batch_t) :: auxpsib, aux2psib
+
+  PUSH_SUB(X(hamiltonian_elec_apply_magnus))
+
+  ! We will assume, for the moment, no spinors.
+  if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors")
+
+  ASSERT(batch_is_ok(psib))
+  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%nst == hpsib%nst)
+
+  ispin = states_elec_dim_get_spin_index(hm%d, ik)
+
+  call batch_copy(hpsib, auxpsib, copy_data=.false.)
+  call batch_copy(hpsib, aux2psib, copy_data=.false.)
+  
+  ! Compute (T + Vnl)|psi> and store it
+  call X(hamiltonian_elec_apply_batch)(hm, mesh, psib, auxpsib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
+    set_phase = set_phase)
+
+  ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders|psi>
+  call batch_copy_data(mesh%np, auxpsib, hpsib)
+  call X(hamiltonian_elec_external)(hm, mesh, psib, hpsib)
+  if (hm%bc%abtype == IMAGINARY_ABSORBING) then
+    call batch_mul(mesh%np, hm%bc%mf(1:mesh%np), psib, aux2psib)
+    call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
+  end if
+  call batch_mul(mesh%np, vmagnus(1:mesh%np, ispin, 2), psib, aux2psib)
+  call batch_axpy(mesh%np, M_ONE, aux2psib, hpsib)
+
+  ! Add first term of the commutator:  - i Vmagnus(t1) (T + Vnl) |psi>
+  call batch_mul(mesh%np, vmagnus(1:mesh%np, ispin, 1), auxpsib, aux2psib)
+  call batch_axpy(mesh%np, -M_zI, aux2psib, hpsib)
+
+  ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
+  call batch_mul(mesh%np, vmagnus(1:mesh%np, ispin, 1), psib, auxpsib)
+  call X(hamiltonian_elec_apply_batch)(hm, mesh, auxpsib, aux2psib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
+    set_phase = set_phase)
+  call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
+
+  call batch_end(auxpsib)
+  call batch_end(aux2psib)
+
+  POP_SUB(X(hamiltonian_elec_apply_magnus))
+end subroutine X(hamiltonian_elec_apply_magnus)
+
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (mesh, hm, psi, hpsi)

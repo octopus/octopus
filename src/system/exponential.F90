@@ -589,7 +589,7 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, imag_time)
+  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -598,6 +598,7 @@ contains
     FLOAT,                           intent(in)    :: deltat
     type(batch_t), target, optional, intent(inout) :: psib2
     FLOAT,                 optional, intent(in)    :: deltat2
+    FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,               optional, intent(in)    :: imag_time
     
     integer :: ii, ist
@@ -680,7 +681,7 @@ contains
         else
           psi => psib%states(ii)%zpsi
         end if
-        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat, imag_time=imag_time)
+        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat, vmagnus=vmagnus, imag_time=imag_time)
         if (batch_status(psib) /= BATCH_NOT_PACKED) then
           call batch_set_state(psib, ii, mesh%np, psi)
         end if
@@ -692,7 +693,7 @@ contains
           else
             psi2 => psib2%states(ii)%zpsi
           end if
-          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2, imag_time=imag_time)
+          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2, vmagnus=vmagnus, imag_time=imag_time)
           if (batch_status(psib2) /= BATCH_NOT_PACKED) then
             call batch_set_state(psib2, ii, mesh%np, psi2)
           end if
@@ -748,9 +749,9 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_elec_apply_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
         else
-          call zhamiltonian_elec_apply_batch(hm, mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
         end if
         
         if(zfact_is_real) then
@@ -826,7 +827,7 @@ contains
       do iter = 1, te%exp_order
 
         !to apply the Hamiltonian
-        call zhamiltonian_elec_apply_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
+        call operate_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
 
         if(hm%is_hermitian()) then
           l = max(1, iter - 1)
@@ -916,7 +917,7 @@ contains
         call batch_copy_data(mesh%np, psi1, psi2)
         call batch_copy_data(mesh%np, psi0, psi1)
 
-        call zhamiltonian_elec_apply_batch(hm, mesh, psi1, psi0, ik, set_phase = .not.phase_correction)
+        call operate_batch(hm, mesh, psi1, psi0, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
         zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
         call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
@@ -944,6 +945,27 @@ contains
 
   end subroutine exponential_apply_batch
 
+
+  subroutine operate_batch(hm, mesh, psib, hpsib, ik, set_phase, vmagnus)
+    type(hamiltonian_elec_t),        intent(inout) :: hm
+    type(mesh_t),                    intent(in)    :: mesh
+    type(batch_t),                   intent(inout) :: psib
+    type(batch_t),                   intent(inout) :: hpsib
+    integer,                         intent(in)    :: ik
+    logical,                         intent(in)    :: set_phase
+    FLOAT,                 optional, intent(in)    :: vmagnus(mesh%np, hm%d%nspin, 2)
+
+    PUSH_SUB(operate_batch)
+
+    if (present(vmagnus)) then
+      call zhamiltonian_elec_apply_magnus(hm, mesh, psib, hpsib, ik, vmagnus, set_phase = set_phase)
+    else
+      call zhamiltonian_elec_apply_batch(hm, mesh, psib, hpsib, ik, set_phase = set_phase)
+    end if
+
+    POP_SUB(operate_batch)
+  end subroutine operate_batch
+  
   ! ---------------------------------------------------------
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
