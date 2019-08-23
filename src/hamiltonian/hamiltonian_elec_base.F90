@@ -300,10 +300,13 @@ contains
       PUSH_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
       
       ! copy the uniform vector potential onto the non-uniform one
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        this%vector_potential(idir, ip) = &
-          this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
-      end forall
+      do idir = 1, mesh%sb%dim
+        !$omp parallel do schedule(static)
+        do ip = 1, mesh%np
+          this%vector_potential(idir, ip) = &
+            this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
+        end do
+      end do
       
       ! and deallocate
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
