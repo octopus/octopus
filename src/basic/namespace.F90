@@ -31,6 +31,7 @@ module namespace_oct_m
   type :: namespace_t
     private
     character(len=MAX_NAMESPACE_LEN) :: name
+    type(namespace_t), pointer :: parent
   contains
     procedure :: get => namespace_get
     procedure :: len => namespace_len
@@ -43,35 +44,74 @@ module namespace_oct_m
 contains
 
   ! ---------------------------------------------------------
-  type(namespace_t) function namespace_init(name)
-    character(len=*), intent(in) :: name
+  type(namespace_t) function namespace_init(name, parent)
+    character(len=*),                    intent(in) :: name
+    type(namespace_t), optional, target, intent(in) :: parent
 
-    if (len(name) <= MAX_NAMESPACE_LEN) then
-      namespace_init%name = name
-    else
+    integer :: total_len
+
+    ! Calculate total length of namespace, including the parent
+    total_len = len_trim(name)
+    if (present(parent)) then
+      if (parent%len() > 0) then
+        total_len = total_len + parent%len() + 1
+      end if
+    end if
+
+    ! If total length is too large, stop and explain the reason
+    if (total_len > MAX_NAMESPACE_LEN) then
       write(stderr,'(a)') '*** Fatal Error (description follows)'
-      write(stderr,'(a,i4,a)') 'Namespaces are limited to ', MAX_NAMESPACE_LEN, ' characters'
+      write(stderr,'(a)') 'Trying to create the following namespace:'
+      if (present(parent)) then
+        if (parent%len() > 0) then
+          write(stderr,'(a)') trim(parent%get()) // "/" // name
+        end if
+      else
+        write(stderr,'(a)') name
+      end if
+      write(stderr,'(a,i4,a)') 'but namespaces are limited to ', MAX_NAMESPACE_LEN, ' characters'
 #ifdef HAVE_MPI
       if(mpi_world%comm /= -1) call MPI_Abort(mpi_world%comm, 999, mpi_err)
 #endif
       stop
     end if
 
+    ! Now initialize the type
+    namespace_init%name = name
+    if (present(parent)) then
+      namespace_init%parent => parent
+    else
+      nullify(namespace_init%parent)
+    end if
+
   end function namespace_init
 
-  function namespace_get(this) result(name)
+  ! ---------------------------------------------------------
+  recursive function namespace_get(this) result(name)
     class(namespace_t), intent(in) :: this
     character(len=MAX_NAMESPACE_LEN) :: name
 
-    name = this%name
+    name = ""
+    if (associated(this%parent)) then
+      if (this%parent%len() > 0) then
+        name = trim(this%parent%get()) // "/"
+      end if
+    end if
+    name = trim(name)//this%name
 
   end function namespace_get
 
-  pure function namespace_len(this)
+  ! ---------------------------------------------------------
+  pure recursive function namespace_len(this)
     class(namespace_t), intent(in) :: this
     integer :: namespace_len
 
-    namespace_len = len(this%name)
+    namespace_len = len_trim(this%name)
+    if (associated(this%parent)) then
+      if (this%parent%len() > 0) then
+        namespace_len = namespace_len + this%parent%len() + 1
+      end if
+    end if
 
   end function namespace_len
 
