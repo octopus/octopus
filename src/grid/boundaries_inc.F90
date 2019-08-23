@@ -265,16 +265,21 @@ contains
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
       call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call accel_finish()
+
     case(BATCH_PACKED)
-      forall(ip = bndry_start:bndry_end) 
-        forall(ist = 1:ffb%nst_linear)
+      !$omp parallel do simd schedule(static)
+      do ip = bndry_start, bndry_end
+        do ist = 1, ffb%nst_linear
           ffb%pack%X(psi)(ist, ip) = R_TOTYPE(M_ZERO)
-        end forall
-      end forall
+        end do
+      end do
 
     case(BATCH_NOT_PACKED)
       do ist = 1, ffb%nst_linear
-        forall (ip = bndry_start:bndry_end) ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+        !$omp parallel do simd schedule(static)
+        do ip = bndry_start, bndry_end
+          ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+        end do
       end do
 
     end select
@@ -377,6 +382,7 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
+          !$omp parallel do private(ip, ip2, ist)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -469,6 +475,7 @@ contains
         if(.not. present(phase_correction)) then
           ! do not apply phase correction; phase is set in another step
           do ipart = 1, npart
+            !$omp parallel do private(ip, ip2, ist)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -481,6 +488,7 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
+            !$omp parallel do private(ip, ip2, ist)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
