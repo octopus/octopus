@@ -227,7 +227,7 @@ contains
 
         !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
-          sqpsi(ip) = abs(fpsi(ip))**2
+          sqpsi(ip) = real(conjg(fpsi(ip))*fpsi(ip), REAL_PRECISION)
         end do
 
         nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
