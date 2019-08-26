@@ -445,7 +445,7 @@ contains
 
     if(td%iter == 0) call td_run_zero_iter()
 
-    if (gauge_field_is_applied(sys%hm%ep%gfield)) call gauge_field_get_force(sys%hm%ep%gfield, gr, st)
+    if (gauge_field_is_applied(sys%hm%ep%gfield)) call gauge_field_get_force(sys%hm%ep%gfield, gr, geo, st)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1

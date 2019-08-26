@@ -21,6 +21,7 @@
 module gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
+  use geometry_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -35,6 +36,7 @@ module gauge_field_oct_m
   use symm_op_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use species_oct_m
 
   implicit none
 
@@ -436,12 +438,13 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine gauge_field_get_force(this, gr, st)
+  subroutine gauge_field_get_force(this, gr, geo, st)
     type(gauge_field_t),  intent(inout) :: this
     type(grid_t),         intent(in)    :: gr
+    type(geometry_t),     intent(in)    :: geo
     type(states_elec_t),  intent(in)    :: st
 
-    integer :: idir,ispin,istot
+    integer :: idir,ispin,istot,iatom
 
     PUSH_SUB(gauge_field_get_force)
 
@@ -453,13 +456,24 @@ contains
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
       istot = 1
       if (st%d%nspin > 1) istot = 2
+
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
+! Electronic contribution to the polarization
         do ispin = 1, istot                      
           this%force(idir) = this%force(idir) - &
                                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
+! Ionic contribution to the polarization
+        do iatom = 1, geo%natoms
+          if(.not. geo%atom(iatom)%move) cycle
+          this%force(idir) = this%force(idir) + &
+            CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*geo%atom(iatom)%v(idir)*species_zval(geo%atom(iatom)%species)
+        end do
+        
       end do
+
+
 
     case default
       ASSERT(.false.)

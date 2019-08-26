@@ -601,7 +601,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_get_force(hm%ep%gfield, gr, st)
+      call gauge_field_get_force(hm%ep%gfield, gr, geo, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
