@@ -324,7 +324,7 @@ contains
 
     this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt * (this%vecpot_acc(1:this%ndim) + &
-      N_HALF * (this%force(1:this%ndim) + this%oldforce(1:this%ndim)))
+      M_HALF * (this%force(1:this%ndim) + this%oldforce(1:this%ndim)))
 
     POP_SUB(gauge_field_propagate_vel)
   end subroutine gauge_field_propagate_vel
