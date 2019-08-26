@@ -382,7 +382,7 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
-          !$omp parallel do private(ip, ip2, ist)
+          !$omp parallel do private(ip2)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -394,7 +394,7 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
-          !$omp parallel do private(ip, ip2, ist)
+          !$omp parallel do private(ip2)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -475,7 +475,7 @@ contains
         if(.not. present(phase_correction)) then
           ! do not apply phase correction; phase is set in another step
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -488,7 +488,7 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -504,7 +504,7 @@ contains
         if(.not. present(phase_correction)) then
           ! do not apply phase correction; phase is set in another step
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -517,7 +517,7 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
