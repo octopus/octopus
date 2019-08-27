@@ -8,9 +8,10 @@ om=1.0
 lam=1.0
 Nelec = 2.0
 
-RDMParamLambda = lam
-RDMParamOmega = om
-RDMNoElectrons = Nelec
+DressedOrbitals = yes
+DressedLambda = lam
+DressedOmega = om
+DressedElectrons = Nelec
 
 # single particle potential for 1d dressed Helium
 # electron coordinate: x     photon coordinate: y

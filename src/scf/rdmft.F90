@@ -692,13 +692,9 @@ contains
 
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     
-!    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-!    where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
-!    where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
-    
-    do ist = 1, st%nst
-      if (ist < 3) occin(ist,1) = 1
-    end do
+    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+    where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
+    where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
 
