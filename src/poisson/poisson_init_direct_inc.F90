@@ -234,11 +234,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   PUSH_SUB(poisson_solve_direct)
 
-  if (this%dressed) then
-    dim = this%der%mesh%sb%dim - 1
-  else
-    dim = this%der%mesh%sb%dim
-  end if
+  dim = this%der%mesh%sb%dim
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
   select case(dim)
@@ -279,10 +275,6 @@ subroutine poisson_solve_direct(this, pot, rho)
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
                         yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx(2)*yy(1) &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*yy(2)*xx(1) &
-              + this%dressed_lambda**2*xx(1)*yy(1))
           end if
         end do
       else
@@ -299,6 +291,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     end do
 
     call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+    
     do ip = 1, this%der%mesh%np_global
       if (part_v(ip) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
