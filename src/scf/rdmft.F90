@@ -193,53 +193,6 @@ contains
     !%End
     call parse_variable(namespace, 'RDMHartreeFock',.false., rdm%hf)
 
-    !%Variable RDMDressedState
-    !%Type logical
-    !%Default no
-    !%Section SCF::RDMFT
-    !%Description
-    !% If true, the dressed electron photon state formalism is applied.
-    !% Only works for 1 mode and 1d electrons. Coordinate 1: electron; coordinate 2: photon.
-    !% WARNING: experimental
-    !%End
-    call parse_variable(namespace, 'RDMDressedState',.false., rdm%dressed)
-
-    !%Variable RDMParamLambda
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::RDMFT
-    !%Description
-    !% Interaction strength in dressed state formalism.
-    !%End
-    call parse_variable(namespace, 'RDMParamLambda', M_ZERO, rdm%dressed_lambda)
-
-    !%Variable RDMParamOmega
-    !%Type float
-    !%Default 0.0
-    !%Section SCF::RDMFT
-    !%Description
-    !% Mode frequency in dressed state formalism.
-    !%End
-    call parse_variable(namespace, 'RDMParamOmega', M_ZERO, rdm%dressed_omega)
-
-    !%Variable RDMNoElectrons
-    !%Type float
-    !%Default 2.0
-    !%Section SCF::RDMFT
-    !%Description
-    !% Number of active electrons as extra variable, necessary in dressed state formalism.
-    !%End
-    call parse_variable(namespace, 'RDMNoElectrons', CNST(2.0), rdm%dressed_electrons)
-
-    !%Variable RDMCoulomb
-    !%Type float
-    !%Default 1.0
-    !%Section SCF::RDMFT
-    !%Description
-    !% Allows to control the prefactor of the electron-electron interaction in the dressed state formalism.
-    !%End
-    call parse_variable(namespace, 'RDMCoulomb', CNST(1.0), rdm%dressed_coulomb)
-
     rdm%nst = st%nst
     if (rdm%do_basis) then
       rdm%n_twoint = rdm%nst*(rdm%nst + 1)*(rdm%nst**2 + rdm%nst + 2)/8
@@ -346,13 +299,6 @@ contains
 
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
-    end if
-
-    if (rdm%dressed) then
-      if (hm%psolver%method .ne. POISSON_DRDMFT) then
-        message(1) = "dressed state formalism needs PoissonSolver = POISSON_DRDMFT"
-        call messages_fatal(1)
-      end if
     end if
 
     ! problem is about k-points for exchange
@@ -558,12 +504,12 @@ contains
           write(iunit, '(1x)')
         end if
         
-        if (rdm%dressed) then
+        if (hm%psolver%dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          write(iunit, '(a,5x,f14.12)') 'RDMParamLambda:', rdm%dressed_lambda
-          write(iunit, '(a,5x,f14.12)') 'RDMParamOmega:', rdm%dressed_omega
-          write(iunit, '(a,5x,f14.12)') 'RDMNoElectrons:', rdm%dressed_electrons
-          write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', rdm%dressed_coulomb
+          write(iunit, '(a,5x,f14.12)') 'RDMParamLambda:', hm%psolver%dressed_lambda
+          write(iunit, '(a,5x,f14.12)') 'RDMParamOmega:', hm%psolver%dressed_omega
+          write(iunit, '(a,5x,f14.12)') 'RDMNoElectrons:', hm%psolver%dressed_electrons
+          write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', hm%psolver%dressed_coulomb
         end if
         write(iunit, '(1x)')
 
@@ -582,7 +528,7 @@ contains
         iunit = 0
       end if
 
-      if (rdm%dressed) then
+      if (hm%psolver%dressed) then
         call calc_photon_number(photon_number_state,photon_number,ekin_state,epot_state)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
@@ -603,7 +549,7 @@ contains
         write(iunit,'(a)') 'Natural occupation numbers:'
         if (rdm%do_basis) then
           ! for do_basis=true, we cannot differentiate between the convergences of different states
-          if (rdm%dressed) then
+          if (hm%psolver%dressed) then
             write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', &
               '1/2w^2q^2'
             do ist = 1, st%nst
@@ -617,7 +563,7 @@ contains
             end do
           end if
         else
-          if (rdm%dressed) then
+          if (hm%psolver%dressed) then
             write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv', 'Mode Occ.', '-1/2d^2/dq^2', &
               '1/2w^2q^2'
             do ist = 1, st%nst
@@ -679,11 +625,11 @@ contains
         ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
         psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)* gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
         q_square_exp = dmf_dotp(gr%mesh, psi(:,1),psi_q_square(:,1))
-        epot_state(ist) = M_HALF * rdm%dressed_omega * rdm%dressed_omega * q_square_exp
+        epot_state(ist) = M_HALF * hm%psolver%dressed_omega * hm%psolver%dressed_omega * q_square_exp
 
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
         !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-        photon_number_state(ist) = -M_HALF*laplace_exp / rdm%dressed_omega + M_HALF * rdm%dressed_omega * q_square_exp
+        photon_number_state(ist) = -M_HALF*laplace_exp / hm%psolver%dressed_omega + M_HALF * hm%psolver%dressed_omega * q_square_exp
         photon_number_state(ist) = photon_number_state(ist) - M_HALF
 
         !! N_phot_total= sum_ist occ_ist*N_phot(ist)
@@ -740,14 +686,19 @@ contains
     type(states_elec_t), intent(inout) :: st
 
     FLOAT, allocatable ::  occin(:,:)
+    integer :: ist
 
     PUSH_SUB(set_occ_pinning)    
 
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     
-    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
-    where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
+!    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+!    where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
+!    where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
+    
+    do ist = 1, st%nst
+      if (ist < 3) occin(ist,1) = 1
+    end do
     
     st%occ = occin
 

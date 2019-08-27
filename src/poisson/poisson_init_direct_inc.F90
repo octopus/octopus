@@ -22,13 +22,13 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: all_nodes_comm
 
-  integer :: maxl, iter
+  integer :: maxl, iter, dim_electronic
   logical :: valid_solver
 
   PUSH_SUB(poisson_kernel_init)
 
   select case(this%method)
-  case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED, POISSON_DRDMFT)
+  case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
   case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF, POISSON_POKE)
     valid_solver = .true.
@@ -106,8 +106,14 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !! since a new grid has to be stored, which may need quite a lot of
   !! memory if you use curvilinear coordinates.
   !!End
-
-  if(this%der%mesh%sb%dim == 1) then
+  
+  if(this%dressed) then
+    dim_electronic = this%der%mesh%sb%dim -1
+  else
+    dim_electronic = this%der%mesh%sb%dim
+  end if
+  
+  if(dim_electronic == 1) then
     !%Variable Poisson1DSoftCoulombParam
     !%Type float
     !%Default 1.0 bohr
@@ -228,7 +234,11 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   PUSH_SUB(poisson_solve_direct)
 
-  dim = this%der%mesh%sb%dim
+  if (this%dressed) then
+    dim = this%der%mesh%sb%dim - 1
+  else
+    dim = this%der%mesh%sb%dim
+  end if
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
   select case(dim)
@@ -243,7 +253,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   end select
 
   if(.not. this%der%mesh%use_curvilinear) then
-    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
+    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/dim))
   end if
 
 #ifdef HAVE_MPI
@@ -268,6 +278,11 @@ subroutine poisson_solve_direct(this, pot, rho)
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
             pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
+                        yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+            pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) + rho(jp)*( &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx(2)*yy(1) &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*yy(2)*xx(1) &
+              + this%dressed_lambda**2*xx(1)*yy(1))
           end if
         end do
       else
@@ -375,205 +390,6 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   POP_SUB(poisson_solve_direct) 
 end subroutine poisson_solve_direct
-
-
-!-----------------------------------------------------------------
-subroutine poisson_solve_drdmft(this, pot, rho)
-  type(poisson_t), intent(in)  :: this
-  FLOAT,           intent(out) :: pot(:)
-  FLOAT,           intent(in)  :: rho(:)
-
-  FLOAT                :: prefactor, aa1, aa2, aa3, aa4
-  integer              :: ip, jp, dim
-  integer, allocatable :: ip_v(:), part_v(:)
-  FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
-#ifdef HAVE_MPI
-  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
-  FLOAT                :: tmp, xg(MAX_DIM)
-  FLOAT, allocatable   :: pvec(:) 
-#endif
-  FLOAT				   :: w , lam
-! WARNING: experimental feature
-! first implementation to integrate the dressed state RDM formalism in octopus
-! MUST BE USED WITH PoissonSolver=POISSON_DRDMFT!!!!!!
-! TODO: 	prefactor?
-!			add soft_coulomb_param
-!			message coordinate distribution: 1-electron, 2-photon
-!           
-
-  PUSH_SUB(poisson_solve_drdmft)
-  
-  w=this%poisson_soft_coulomb_param
-  lam=this%theta
-  
-  dim = this%der%mesh%sb%dim
-  ASSERT(this%method == POISSON_DRDMFT)
-
-  select case(dim)
-  case(3)
-    prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD)
-  case(2)
-    prefactor = M_TWO*sqrt(M_PI)
-  case default
-    message(1) = "Internal error: poisson_solve_drdmft can only be called for 2D or 3D."
-    ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
-    call messages_fatal(1)
-  end select
-
-  if(.not. this%der%mesh%use_curvilinear) then
-    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
-  end if
-
-#ifdef HAVE_MPI
-  if(this%der%mesh%parallel_in_domains) then
-    SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
-    SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
-    SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
-    do ip = 1, this%der%mesh%np_global
-      ip_v(ip) = ip
-    end do
-    call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
-    
-    pot = M_ZERO
-    do ip = 1, this%der%mesh%np_global
-      xg = mesh_x_global(this%der%mesh, ip)
-      xx(1:dim) = xg(1:dim)
-!      if(this%der%mesh%use_curvilinear) then
-!        do jp = 1, this%der%mesh%np
-!          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-!            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-!          else
-!            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-!            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
-!          end if
-!        end do
-!      else
-        do jp = 1, this%der%mesh%np
-!          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-!            pvec(jp) = rho(jp)*prefactor
-!          else
-            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx(2)*yy(1) &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*yy(2)*xx(1) &
-              + this%dressed_lambda**2*xx(1)*yy(1))
-!          end if
-        end do
-!      end if
-      tmp = dmf_integrate(this%der%mesh, pvec)
-
-      if (part_v(ip) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
-      end if
-    end do
-
-    SAFE_DEALLOCATE_A(pvec)
-
-  else ! serial mode
-#endif
-    
-    do ip = 1, this%der%mesh%np - 4 + 1, 4
-
-      xx1(1:dim) = this%der%mesh%x(ip    , 1:dim)
-      xx2(1:dim) = this%der%mesh%x(ip + 1, 1:dim)
-      xx3(1:dim) = this%der%mesh%x(ip + 2, 1:dim)
-      xx4(1:dim) = this%der%mesh%x(ip + 3, 1:dim)
-      
-      if(this%der%mesh%use_curvilinear) then
-
-        aa1 = prefactor*rho(ip    )*this%der%mesh%vol_pp(ip    )**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-
-        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
-        do jp = 1, this%der%mesh%np
-          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-        end do
-
-      else ! equidistant mesh
-
-        aa1 = CNST(0.0)
-        aa2 = CNST(0.0)
-        aa3 = CNST(0.0)
-        aa4 = CNST(0.0)
-
-        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
-        ! 1. coordinate: electron
-        ! 2. coordinate: photon
-        ! lam=this%dressed_lambda
-        ! w=this%dressed_omega
-        ! x1=xxi(1) i=1,2,3,4
-        ! x2=this%der%mesh%x(jp, 1)
-        ! q1=xxi(2)
-        ! q2=this%der%mesh%x(jp, 2)
-        ! v(x1,x2;q1,q2)= rho(jp)/sqrt((x1 - x2)**2 + 1) + rho(jp)*(w**2 q1*q2 - w/sqrt(2)*lam*q1*x2 - w/sqrt(2)*lam*q2*x1 + lam/2*x1*x2) 
-		do jp = 1, this%der%mesh%np
-          aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
-            + this%dressed_lambda**2*xx1(1)*this%der%mesh%x(jp, 1))
-          aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt((xx2(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx2(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx2(1) &
-            + this%dressed_lambda**2*xx2(1)*this%der%mesh%x(jp, 1))
-          aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt((xx3(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx3(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx3(1) &
-            + this%dressed_lambda**2*xx3(1)*this%der%mesh%x(jp, 1))
-          aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt((xx4(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx4(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx4(1) &
-            + this%dressed_lambda**2*xx4(1)*this%der%mesh%x(jp, 1))
-        end do      
-      end if
-
-      pot(ip    ) = this%der%mesh%volume_element*aa1
-      pot(ip + 1) = this%der%mesh%volume_element*aa2
-      pot(ip + 2) = this%der%mesh%volume_element*aa3
-      pot(ip + 3) = this%der%mesh%volume_element*aa4
-      
-   
-    end do
-
-    
-    do ip = ip, this%der%mesh%np
-
-      aa1 = CNST(0.0)
-
-      xx1(1:dim) = this%der%mesh%x(ip,1:dim)
-      if(this%der%mesh%use_curvilinear) then
-        do jp = 1, this%der%mesh%np
-          aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) &
-            + rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) &
-            - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
-            + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1))
-        end do
-      else
-        do jp = 1, this%der%mesh%np
-          aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) &
-            + rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) &
-            - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
-            + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1))
-        end do
-      end if
-
-      pot(ip) = this%der%mesh%volume_element*aa1
-      
-      
-    end do
-    
-#ifdef HAVE_MPI
-  end if
-#endif
-
-  POP_SUB(poisson_solve_drdmft) 
-end subroutine poisson_solve_drdmft
 
 !! Local Variables:
 !! mode: f90

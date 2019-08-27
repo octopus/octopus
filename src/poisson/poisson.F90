@@ -104,11 +104,11 @@ module poisson_oct_m
     POISSON_ISF           =  8,         &
     POISSON_LIBISF        = 10,         &
     POISSON_POKE          = 11,         &
-    POISSON_DRDMFT        = 12,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
   type poisson_t
+  
     private
     type(derivatives_t), pointer, public :: der
     integer, public           :: method = POISSON_NULL
@@ -126,10 +126,11 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    FLOAT :: dressed_lambda
-    FLOAT :: dressed_omega
-    FLOAT :: dressed_electrons
-    FLOAT :: dressed_coulomb
+    logical, public :: dressed
+    FLOAT, public :: dressed_lambda
+    FLOAT, public :: dressed_omega
+    FLOAT, public :: dressed_electrons
+    FLOAT, public :: dressed_coulomb
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -197,6 +198,23 @@ contains
 
     call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
 #endif
+    
+    !%Variable DressedOrbitals
+    !%Type logical
+    !%Default false
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% Allows for the calculation of coupled elecron-photon problems
+    !% by applying the dressed orbital approach. Details can be found in
+    !% https://arxiv.org/abs/1812.05562
+    !% At the moment, N electrons in d (<=3) spatial dimensions, coupled
+    !% to one photon mode can be described. The photon mode is included by
+    !% raising the orbital dimension to d+1 and changing the particle interaction
+    !% kernel and the local potential, where the former is included automatically,
+    !% but the latter needs to by added by hand as a user_defined_potential!
+    !% Coordinate 1-d: electron; coordinate d+1: photon.
+    !%End
+    call parse_variable(namespace, 'DressedOrbitals', .false., this%dressed)
 
     !%Variable PoissonSolver
     !%Type integer
@@ -240,8 +258,6 @@ contains
     !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
     !%Option poke 11
     !% (Experimental) Solver from the Poke library.
-    !%Option drdmft 12
-    !%The poisson solver for electron-photon rdmft
     !%End
 
     default_solver = POISSON_FFT
@@ -268,6 +284,8 @@ contains
     end if
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
+    
+    if (this%dressed) default_solver = POISSON_DIRECT_SUM 
 
     if(.not.present(solver)) then
       call parse_variable(namespace, 'PoissonSolver', default_solver, this%method)
@@ -276,56 +294,57 @@ contains
     end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
 
-    if (this%method == POISSON_DRDMFT) then
-      !%Variable RDMParamLambda
-      !%Type float
-      !%Default 1e-7 Ha !!needs to be changed!
-      !%Section SCF::RDMFT
-      !%Description
-      !% interaction strength in dressed state formalism.
-      !%End
-      call parse_variable(namespace, 'RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
 
-      !%Variable RDMParamOmega
+    if (this%dressed) then
+      !%Variable DressedLambda
       !%Type float
-      !%Default 1e-7 Ha !!needs to be changed!
-      !%Section SCF::RDMFT
+      !%Default 1.0e-2 Ha
+      !%Section Hamiltonian::Poisson
       !%Description
-      !% mode frequency in dressed state formalism.
+      !% interaction strength in dressed orbital formalism.
       !%End
-      call parse_variable(namespace, 'RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+      call parse_variable(namespace, 'DressedLambda', CNST(1.0e-2), this%dressed_lambda)
 
-      !%Variable RDMNoElectrons
+      !%Variable DressedOmega
+      !%Type float
+      !%Default 1.0 Ha
+      !%Section Hamiltonian::Poisson
+      !%Description
+      !% mode frequency in dressed orbital formalism.
+      !%End
+      call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%dressed_omega)
+
+      !%Variable DressedElectrons
       !%Type float
       !%Default 2.0
-      !%Section SCF::RDMFT
+      !%Section Hamiltonian::Poisson
       !%Description
-      !% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
+      !% number of electrons as extra variable, necessary in dressed orbital formalism. Defined as float
       !% for better usage later
       !%End
-      call parse_variable(namespace, 'RDMNoElectrons', CNST(2.0), this%dressed_electrons)
+      call parse_variable(namespace, 'DressedElectrons', CNST(2.0), this%dressed_electrons)
 
-      !%Variable RDMCoulomb
+      !%Variable DressedCoulomb
       !%Type float
       !%Default 1.0
-      !%Section SCF::RDMFT
+      !%Section Hamiltonian::Poisson
       !%Description
       !% allows to control the prefactor of the electron electron interaction
       !%End
-      call parse_variable(namespace, 'RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+      call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
 
-      write(message(1),'(a,1x,f14.12)') 'RDMParamLambda', this%dressed_lambda
-      write(message(2),'(a,1x,f14.12)') 'RDMParamOmega', this%dressed_omega
-      write(message(3),'(a,1x,f14.12)') 'RDMNoElectrons', this%dressed_electrons
-      write(message(4),'(a,1x,f14.12)') 'RDMCoulomb', this%dressed_coulomb
-      call messages_info(4)
+      write(message(1), '(a)')'Dressed Orbital calculation'
+      write(message(2),'(a,1x,f14.12)') 'DressedLambda', this%dressed_lambda
+      write(message(3),'(a,1x,f14.12)') 'DressedParamOmega', this%dressed_omega
+      write(message(4),'(a,1x,f14.12)') 'DressedNoElectrons', this%dressed_electrons
+      write(message(5),'(a,1x,f14.12)') 'DressedCoulomb', this%dressed_coulomb
+      call messages_info(5)
     end if
+
    
     select case(this%method)
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
-    case (POISSON_DRDMFT)
-      str = "direct sum with dressed state interaction"
     case (POISSON_FMM)
       str = "fast multipole method"
     case (POISSON_FFT)
@@ -408,7 +427,7 @@ contains
 
     end if
 
-    !We assume the developr knows what he is doing by providing the solver option
+    !We assume the developer knows what he is doing by providing the solver option
     if(.not. present(solver)) then 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
         message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
@@ -458,8 +477,8 @@ contains
 
       case(2)
 
-        if ((this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) .and. (this%method /= POISSON_DRDMFT)) then
-          message(1) = 'A 2D system may only use fft, direct_sum, or drdmft Poisson solvers.'
+        if ((this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
+          message(1) = 'A 2D system may only use fft or direct_sum solvers.'
           call messages_fatal(1)
         end if
 
@@ -654,6 +673,17 @@ contains
 #endif
     end if
     
+    ! dressed orbital implementation works currently only ifor an electronic 1d system (=2d orbitals) and with direct sum 
+    if(this%dressed .and. .not.this%method==POISSON_DIRECT_SUM) then
+      write(message(1), '(a)')'Dressed Orbital calculation currently only possible with direct sum.'
+      call messages_fatal(1)
+    end if
+    
+    if(this%dressed .and. der%mesh%sb%dim /= 2) then
+      write(message(1), '(a)')'Dressed Orbital calculation currently only implemented for electronic 1d (=2d dressed) systems.'
+      call messages_fatal(1)
+    end if
+    
     call poisson_kernel_init(this, namespace, mc%master_comm)
 
     POP_SUB(poisson_init)
@@ -836,6 +866,7 @@ contains
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
+    integer               :: dim_electronic
     type(profile_t), save :: prof
 
     call profiling_in(prof, 'POISSON_SOLVE')
@@ -857,7 +888,8 @@ contains
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      select case(this%der%mesh%sb%dim)
+      if(this%dressed) dim_electronic = this%der%mesh%sb%dim - 1
+      select case(dim_electronic)
       case(1)
         call dpoisson1d_solve_direct(this, pot, rho)
       case(2)
@@ -868,9 +900,6 @@ contains
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end select
-
-    case(POISSON_DRDMFT)
-	  call poisson_solve_drdmft(this, pot, rho)
 
     case(POISSON_FMM)
       call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)

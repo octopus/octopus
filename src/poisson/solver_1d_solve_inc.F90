@@ -26,7 +26,7 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
   !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
-  FLOAT               :: xx, yy
+  FLOAT               :: xx, yy, qq, pp
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
   FLOAT               :: xg(1:MAX_DIM)
@@ -57,10 +57,24 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
     do ip = 1, this%der%mesh%np_global
       xg = mesh_x_global(this%der%mesh, ip)
       xx = xg(1)
-      do jp = 1, this%der%mesh%np
-        yy = this%der%mesh%x(jp, 1)
-        pvec(jp) = rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
-      end do
+      if (.not.this%dressed) then
+        do jp = 1, this%der%mesh%np
+          yy = this%der%mesh%x(jp, 1)
+          pvec(jp) = rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
+        end do
+      else ! dressed orbitals
+        qq = xg(2)
+        do jp = 1, this%der%mesh%np
+          yy = this%der%mesh%x(jp, 1)
+          pp = this%der%mesh%x(jp, 2)
+          pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2) &
+            + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
+            + this%dressed_lambda**2*xx*yy)
+        end do
+      end if
+      
       tmp = X(mf_integrate)(this%der%mesh, pvec, reduce = .false.) 
     end do
 
@@ -81,14 +95,35 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
     pot = M_ZERO
     do ip = 1, this%der%mesh%np
       xx = this%der%mesh%x(ip, 1)
-      do jp = 1, this%der%mesh%np
-        yy = this%der%mesh%x(jp, 1)
-        if(this%der%mesh%use_curvilinear) then
-          pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp)
-        else
-          pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
-        end if
-      end do
+      if (.not.this%dressed) then
+        do jp = 1, this%der%mesh%np
+          yy = this%der%mesh%x(jp, 1)
+          if(this%der%mesh%use_curvilinear) then
+            pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp)
+          else
+            pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
+          end if
+        end do
+      else ! dressed orbitals
+        qq = this%der%mesh%x(ip, 2)
+        do jp = 1, this%der%mesh%np
+          yy = this%der%mesh%x(jp, 1)
+          pp = this%der%mesh%x(jp, 2)
+          if(this%der%mesh%use_curvilinear) then
+            pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp) &
+            + rho(jp)*this%der%mesh%vol_pp(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
+            + this%dressed_lambda**2*xx*yy)
+          else
+            pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2) &
+            + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
+            + this%dressed_lambda**2*xx*yy)
+          end if
+        end do
+      end if
     end do
     if(.not. this%der%mesh%use_curvilinear) pot(:) = pot(:) * this%der%mesh%volume_element
 #ifdef HAVE_MPI
