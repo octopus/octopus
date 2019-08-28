@@ -114,7 +114,7 @@ contains
     type(mesh_t),         intent(in)    :: mesh
     CMPLX,                intent(in)    :: psi(:, :, :, :)
     type(xc_t),           intent(in)    :: xc
-    type(poisson_t),      intent(in)    :: psolver
+    type(poisson_t),      intent(inout) :: psolver
 
     integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)

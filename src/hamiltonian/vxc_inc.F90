@@ -21,7 +21,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
-  type(poisson_t),      intent(in)    :: psolver
+  type(poisson_t),      intent(inout) :: psolver
   type(namespace_t),    intent(in)    :: namespace
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
@@ -863,7 +863,7 @@ end subroutine xc_get_vxc
 subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
   type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
+  type(poisson_t),     intent(inout) :: psolver
   type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)

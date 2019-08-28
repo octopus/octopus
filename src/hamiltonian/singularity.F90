@@ -31,16 +31,16 @@ module singularity_oct_m
   use messages_oct_m
   use mpi_oct_m
   use par_vec_oct_m
-  use parser_oct_m
+  use namespace_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use scdm_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use xc_oct_m
@@ -80,10 +80,10 @@ contains
     POP_SUB(singularity_nullify)
   end subroutine singularity_nullify
  
-  subroutine singularity_init(this, parser, st, sb)
+  subroutine singularity_init(this, namespace, st, sb)
     type(singularity_t),       intent(inout) :: this
-    type(parser_t),            intent(in)    :: parser
-    type(states_t),            intent(in)    :: st
+    type(namespace_t),         intent(in)    :: namespace
+    type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
 
     PUSH_SUB(singularity_init)
@@ -113,11 +113,11 @@ contains
       !%Option spherical_bz 3
       !% The divergence in q=0 is treated analytically assuming a spherical Brillouin zone
       !%End
-      call parse_variable(parser, 'HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
+      call parse_variable(namespace, 'HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
-        call singularity_correction(this, parser, st, sb)
+        call singularity_correction(this, namespace, st, sb)
       end if
     end if
 
@@ -136,10 +136,10 @@ contains
 
   !This routine implements the general tratment of the singularity for periodic solids,
   !as described in Carrier et al. PRB 75, 205126 (2007)
-  subroutine singularity_correction(this, parser, st, sb)
+  subroutine singularity_correction(this, namespace, st, sb)
     type(singularity_t),       intent(inout) :: this
-    type(parser_t),            intent(in)    :: parser
-    type(states_t),            intent(in)    :: st
+    type(namespace_t),         intent(in)    :: namespace
+    type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
 
     integer :: ik, ik2, ikpoint, Nk, Nsteps
@@ -155,7 +155,7 @@ contains
     ASSERT(sb%dim == 3)
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      ikpoint = states_dim_get_kpoint_index(st%d, ik)
+      ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
       kpoint = M_ZERO
       kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpoint, absolute_coordinates = .false.) 
 
@@ -182,7 +182,7 @@ contains
       !% of the auxiliary function f(q). See PRB 75, 205126 (2007) for more details. 
       !% Only for HFSingularity=general.
       !%End
-      call parse_variable(parser, 'HFSingularity_Nk', 60, Nk)
+      call parse_variable(namespace, 'HFSingularity_Nk', 60, Nk)
       if(abs(Nk/M_THREE-nint(Nk/M_THREE)) > M_EPSILON) then
         message(1) = 'HFSingularity_Nk must be a multiple of 3.'
         call messages_fatal(1)
@@ -196,7 +196,7 @@ contains
       !% Number of grid refinement steps in the numerical integration of the auxiliary function f(q).
       !% See PRB 75, 205126 (2007) for more details. Only for HFSingularity=general.
       !%End
-      call parse_variable(parser, 'HFSingularity_Nsteps', 7, Nsteps)
+      call parse_variable(namespace, 'HFSingularity_Nsteps', 7, Nsteps)
 
       this%FF = M_ZERO
       length = M_ONE

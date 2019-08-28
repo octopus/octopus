@@ -191,7 +191,7 @@ contains
       !% among the parallelization-in-domains groups.
       !%End
 
-      call parse_variable(parser, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+      call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
     else
       this%all_nodes_default = .false.
     end if
@@ -974,10 +974,10 @@ contains
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
   subroutine poisson_test(this, mesh, namespace, repetitions)
-    type(poisson_t),   intent(in) :: this
-    type(mesh_t),      intent(in) :: mesh
-    type(namespace_t), intent(in) :: namespace
-    integer,           intent(in) :: repetitions
+    type(poisson_t),   intent(inout) :: this
+    type(mesh_t),      intent(in)    :: mesh
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)    :: repetitions
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &

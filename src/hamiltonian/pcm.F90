@@ -1107,7 +1107,7 @@ contains
     save
     type(pcm_t),                intent(inout) :: pcm
     type(mesh_t),               intent(in)    :: mesh
-    type(poisson_t),            intent(in)    :: psolver
+    type(poisson_t),            intent(inout) :: psolver
     type(geometry_t), optional, intent(in)    :: geo
     FLOAT,            optional, intent(in)    :: v_h(:)
     FLOAT,            optional, intent(in)    :: v_ext(:)
@@ -1863,7 +1863,7 @@ contains
     FLOAT,           intent(in)    :: q_pcm(:)!< (1:n_tess)
     FLOAT,           intent(inout) :: rho(:)
     type(mesh_t),    intent(in)    :: mesh
-    type(poisson_t), intent(in)    :: psolver
+    type(poisson_t), intent(inout) :: psolver
 
     type(profile_t), save :: prof_init
     integer  :: ierr
@@ -1901,7 +1901,7 @@ contains
   !> Generates the potential 'v_pcm' in real-space solving the poisson equation for rho
   subroutine pcm_pot_rs_poisson(v_pcm, psolver, rho)
     FLOAT,           intent(inout) :: v_pcm(:)
-    type(poisson_t), intent(in)    :: psolver
+    type(poisson_t), intent(inout) :: psolver
     FLOAT,           intent(inout) :: rho(:)
       
     PUSH_SUB(pcm_pot_rs_poisson)

@@ -218,7 +218,7 @@ contains
   subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_elec_t),  intent(inout) :: st
-    type(poisson_t),      intent(in)    :: psolver
+    type(poisson_t),      intent(inout) :: psolver
     FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)

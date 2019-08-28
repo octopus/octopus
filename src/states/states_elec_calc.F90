@@ -41,6 +41,7 @@ module states_elec_calc_oct_m
   use mesh_function_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use namespace_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m

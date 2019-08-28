@@ -748,7 +748,7 @@ contains
   subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
-    type(poisson_t),      intent(in)    :: psolver
+    type(poisson_t),      intent(inout) :: psolver
     type(pcm_t),          intent(inout) :: pcm
     CMPLX,                intent(out)   :: kick_pcm_function(:)
     FLOAT, optional,      intent(in)    :: theta
@@ -793,7 +793,7 @@ contains
     type(ion_dynamics_t),  intent(in)    :: ions
     type(geometry_t),      intent(inout) :: geo
     type(kick_t),          intent(in)    :: kick
-    type(poisson_t),       intent(in)    :: psolver
+    type(poisson_t),       intent(inout) :: psolver
     FLOAT, optional,       intent(in)    :: theta
     type(pcm_t), optional, intent(inout) :: pcm
 

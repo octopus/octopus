@@ -1613,21 +1613,21 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (gr, parser, solver, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
+subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
                  phase, singularity, exc_k)
-  type(grid_t),     intent(in)              :: gr
-  type(parser_t),   intent(in)              :: parser
-  type(poisson_t),  intent(inout)           :: solver
-  type(states_elec_t), intent(in)              :: st
-  integer,          intent(in)              :: st_min, st_max
-  integer,          intent(out)             :: iindex(:,:)
-  integer,          intent(out)             :: jindex(:,:)
-  integer,          intent(out)             :: kindex(:,:)
-  integer,          intent(out)             :: lindex(:,:)
-  R_TYPE,           intent(out)             :: twoint(:)  !
-  CMPLX, optional,  intent(in)              :: phase(:,:)
+  type(grid_t),      intent(in)             :: gr
+  type(namespace_t), intent(in)             :: namespace
+  type(poisson_t),   intent(inout)          :: solver
+  type(states_elec_t), intent(in)           :: st
+  integer,           intent(in)             :: st_min, st_max
+  integer,           intent(out)            :: iindex(:,:)
+  integer,           intent(out)            :: jindex(:,:)
+  integer,           intent(out)            :: kindex(:,:)
+  integer,           intent(out)            :: lindex(:,:)
+  R_TYPE,            intent(out)            :: twoint(:)  !
+  CMPLX, optional,   intent(in)             :: phase(:,:)
   type(singularity_t), optional,intent(in)  :: singularity
-  logical, optional,intent(in)              :: exc_k
+  logical, optional, intent(in)             :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
@@ -1668,14 +1668,14 @@ subroutine X(states_elec_me_two_body) (gr, parser, solver, st, st_min, st_max, i
   do ist_global = 1, nst_tot
     ist = mod(ist_global-1, nst) +1
     ikpt = (ist_global-ist)/nst+1
-    ikpoint = states_dim_get_kpoint_index(st%d, ikpt)
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
     call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global-1, nst) +1
       jkpt = (jst_global-jst)/nst+1
-      jkpoint = states_dim_get_kpoint_index(st%d, jkpt)
+      jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
 
       if(exc_k_ .and. ist /= jst) cycle
 
@@ -1684,7 +1684,7 @@ subroutine X(states_elec_me_two_body) (gr, parser, solver, st, st_min, st_max, i
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(solver, parser, qq, &
+        call poisson_kernel_reinit(solver, namespace, qq, &
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
@@ -1716,13 +1716,9 @@ subroutine X(states_elec_me_two_body) (gr, parser, solver, st, st_min, st_max, i
         kst = mod(kst_global-1, nst) +1
         kkpt = (kst_global-kst)/nst+1
 
-<<<<<<< HEAD:src/states/states_calc_inc.F90
         if(exc_k_ .and. kkpt /= jkpt) cycle
 
-        call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
-=======
         call states_elec_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
->>>>>>> develop:src/states/states_elec_calc_inc.F90
 #ifdef R_TCOMPLEX
         if(present(phase)) then
            call states_elec_set_phase(st%d, psik, phase(1:gr%mesh%np, kkpt), gr%mesh%np, .false.)
