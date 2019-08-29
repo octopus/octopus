@@ -68,7 +68,6 @@ module gauge_field_oct_m
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
-    FLOAT   :: oldforce(1:MAX_DIM)
     FLOAT   :: wp2
     integer :: ndim
     logical, public :: with_gauge_field
@@ -104,7 +103,6 @@ contains
     this%vecpot_acc = M_ZERO
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
-    this%oldforce = M_ZERO
     this%ndim = sb%dim
 
     !%Variable GaugeFieldDynamics
@@ -298,7 +296,6 @@ contains
 
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * this%force(1:this%ndim)
-    this%oldforce(1:this%ndim) = this%force(1:this%ndim)
 
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
@@ -323,8 +320,7 @@ contains
     PUSH_SUB(gauge_field_propagate_vel)
 
     this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
-      M_HALF * dt * (this%vecpot_acc(1:this%ndim) + &
-      M_HALF * (this%force(1:this%ndim) + this%oldforce(1:this%ndim)))
+      M_HALF * dt * (this%vecpot_acc(1:this%ndim) + this%force(1:this%ndim))
 
     POP_SUB(gauge_field_propagate_vel)
   end subroutine gauge_field_propagate_vel
