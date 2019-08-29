@@ -41,6 +41,7 @@ module system_oct_m
   use space_oct_m
   use simul_box_oct_m
   use sort_oct_m
+  use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use v_ks_oct_m
@@ -115,9 +116,9 @@ contains
 
     if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
       if(states_are_real(sys%st)) then
-        call poisson_init(exchange_psolver, parser, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .false.)
+        call poisson_init(exchange_psolver, sys%namespace, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .false.)
       else
-        call poisson_init(exchange_psolver, parser, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .true.)
+        call poisson_init(exchange_psolver, sys%namespace, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .true.)
       end if
     end if
 

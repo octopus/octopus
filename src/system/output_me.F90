@@ -195,16 +195,6 @@ contains
 
 
   ! ---------------------------------------------------------
-<<<<<<< HEAD
-  subroutine output_me(this, parser, dir, st, gr, geo, hm)
-    type(output_me_t),   intent(in)    :: this
-    type(parser_t),      intent(in)    :: parser
-    character(len=*),    intent(in)    :: dir
-    type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
-=======
   subroutine output_me(this, dir, st, gr, geo, hm, namespace)
     type(output_me_t),        intent(in)    :: this
     character(len=*),         intent(in)    :: dir
@@ -213,7 +203,6 @@ contains
     type(geometry_t),         intent(in)    :: geo
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(namespace_t),        intent(in)    :: namespace
->>>>>>> develop
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
@@ -350,7 +339,7 @@ contains
         if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body_exc_k with states parallelization")
         if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body_exc_k with k-points parallelization")
         ! how to do this properly? states_matrix
-        iunit = io_open(trim(dir)//'/output_me_two_body_density', action='write')
+        iunit = io_open(trim(dir)//'/output_me_two_body_density', namespace, action='write')
         write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k2|n2-k2, n2-k1)'
       end if
 
@@ -366,7 +355,7 @@ contains
       end if
 
       if(states_are_complex(st)) then
-        call singularity_init(singul, parser, st, gr%sb)
+        call singularity_init(singul, namespace, st, gr%sb)
       end if
       SAFE_ALLOCATE(iindex(1:2, 1:id))
       SAFE_ALLOCATE(jindex(1:2, 1:id))
@@ -375,7 +364,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(gr, parser, exchange_psolver, st, this%st_start, this%st_end, &
+        call dstates_elec_me_two_body(gr, namespace, exchange_psolver, st, this%st_start, this%st_end, &
                                       iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
@@ -386,11 +375,11 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(gr, parser, exchange_psolver, st, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(gr, namespace, exchange_psolver, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, singularity = singul, &
                      exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         else
-          call zstates_elec_me_two_body(gr, parser, exchange_psolver, st, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(gr, namespace, exchange_psolver, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, &
                      exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if

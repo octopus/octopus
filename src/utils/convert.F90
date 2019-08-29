@@ -276,7 +276,7 @@ contains
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
     type(geometry_t),  intent(in)    :: geo
-    type(poisson_t),   intent(in)    :: psolver
+    type(poisson_t),   intent(inout) :: psolver
     type(multicomm_t), intent(in)   :: mc
     character(len=*),  intent(inout) :: basename       !< File name
     character(len=*),  intent(in)    :: in_folder      !< Folder name

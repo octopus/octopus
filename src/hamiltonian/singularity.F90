@@ -21,7 +21,7 @@
 module singularity_oct_m
   use comm_oct_m
   use global_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_base_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -30,6 +30,7 @@ module singularity_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use parser_oct_m
   use par_vec_oct_m
   use namespace_oct_m
   use poisson_oct_m

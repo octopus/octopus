@@ -21,7 +21,7 @@
 subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
   type(xc_t),          intent(in)    :: xcs
   type(grid_t),        intent(in)    :: gr
-  type(poisson_t),     intent(in)    :: psolver
+  type(poisson_t),     intent(inout) :: psolver
   type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
   integer,             intent(in)    :: is

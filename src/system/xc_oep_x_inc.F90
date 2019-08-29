@@ -38,7 +38,7 @@
 
 subroutine X(oep_x) (der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
   type(derivatives_t),         intent(in)    :: der
-  type(poisson_t),             intent(in)    :: psolver
+  type(poisson_t),             intent(inout) :: psolver
   type(states_elec_t), target, intent(in)    :: st
   integer,                     intent(in)    :: is
   integer,                     intent(in)    :: jdm

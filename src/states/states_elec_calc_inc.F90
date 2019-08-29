@@ -1695,7 +1695,7 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 #endif
       ijst=ijst+1
 
-      call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
+      call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
 
       
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
