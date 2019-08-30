@@ -210,9 +210,9 @@
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_trans_matrix(par, parser)
+  subroutine controlfunction_trans_matrix(par, namespace)
     type(controlfunction_t), intent(inout) :: par
-    type(parser_t),          intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det, w1, dt

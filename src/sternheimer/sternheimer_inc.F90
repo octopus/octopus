@@ -20,11 +20,10 @@
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
-  this, sys, hm, lr, nsigma, omega, perturbation,       &
+  this, sys, lr, nsigma, omega, perturbation,       &
   restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
@@ -48,7 +47,7 @@ subroutine X(sternheimer_solve)(                           &
   type(batch_t) :: rhsb, dlpsib, orhsb
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
-  type(states_t), pointer :: st
+  type(states_elec_t), pointer :: st
   integer :: total_iter, idim, ip, ispin, ib, total_iter_reduced
   logical :: calculate_rho
 #ifdef HAVE_MPI
@@ -145,12 +144,12 @@ subroutine X(sternheimer_solve)(                           &
 
     do ik = st%d%kpt%start, st%d%kpt%end
       !now calculate response for each state
-      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
         
-        sst = states_block_min(st, ib)
-        est = states_block_max(st, ib)
+        sst = states_elec_block_min(st, ib)
+        est = states_elec_block_max(st, ib)
         
         do sigma = 1, nsigma
 
@@ -169,7 +168,8 @@ subroutine X(sternheimer_solve)(                           &
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
-            call X(pert_apply_batch)(perturbation, sys%parser, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
+            call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, &
+              st%group%psib(ib, ik), rhsb)
           end if
 
           call batch_end(rhsb)
@@ -183,7 +183,7 @@ subroutine X(sternheimer_solve)(                           &
             end do
 
             if(calculate_rho) then
-              call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+              call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
               do idim = 1, st%d%dim
                 rhs(1:mesh%np, idim, ii) = rhs(1:mesh%np, idim, ii) - hvar(1:mesh%np, ispin, sigma)*psi(1:mesh%np, idim)
               end do
@@ -207,7 +207,7 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
+          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
 
@@ -222,7 +222,7 @@ subroutine X(sternheimer_solve)(                           &
             if (this%preorthogonalization) then 
               ! should remove degenerate states here too
               if (this%occ_response) then
-                call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+                call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
                 proj = X(mf_dotp)(mesh, st%d%dim, psi, lr(sigma)%X(dl_psi)(:, :, ist, ik))
                 do idim = 1, st%d%dim
                   call lalg_axpy(mesh%np, -proj, psi(:, idim), lr(sigma)%X(dl_psi)(:, idim, ist, ik))
@@ -295,7 +295,7 @@ subroutine X(sternheimer_solve)(                           &
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
 
       call restart_open_dir(restart, wfs_tag_sigma(wfs_tag, sigma_alt), err)
-      if (err == 0) call states_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
+      if (err == 0) call states_elec_dump(restart, st, sys%gr, err, iter = iter, lr = lr(sigma))
       if (err /= 0) then
         message(1) = "Unable to write response wavefunctions."
         call messages_warning(1)
@@ -450,7 +450,7 @@ subroutine X(sternheimer_add_occ)(sys, lr_psi, rhs, sst, est, ik, omega_sigma, d
       ! the unoccupied subspace was handled by the Sternheimer equation
       if(sys%st%occ(ist2, ik) < M_HALF) cycle
 
-      call states_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist2, ik, psi)
       mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
 
       lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) = lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist) + &
@@ -518,7 +518,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
       tmp(ip) = sum(lr_rho(ip, 1:sys%st%d%nspin))
     end do
     hartree(1:np) = R_TOTYPE(M_ZERO)
-    call X(poisson_solve)(psolver, hartree, tmp, all_nodes = .false.)
+    call X(poisson_solve)(sys%hm%psolver, hartree, tmp, all_nodes = .false.)
 
     SAFE_DEALLOCATE_A(tmp)
   end if
@@ -608,14 +608,13 @@ end subroutine X(sternheimer_set_inhomog)
 
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
-     sh1, sh2, sh_2ndorder, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
+     sh1, sh2, sh_2ndorder, sys, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
      lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
      give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
   type(sternheimer_t),    intent(inout) :: sh_2ndorder
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr1(:) 
   type(lr_t),             intent(inout) :: lr2(:) 
   integer,                intent(in)    :: nsigma 
@@ -639,7 +638,7 @@ subroutine X(sternheimer_solve_order2)( &
     pert1psi2(:,:), pert2psi1(:,:), pert1psi(:,:), pert2psi(:,:)
   R_TYPE, allocatable :: psi(:, :)
   type(mesh_t), pointer :: mesh
-  type(states_t), pointer :: st
+  type(states_elec_t), pointer :: st
 
   PUSH_SUB(X(sternheimer_solve_order2))
 
@@ -671,19 +670,21 @@ subroutine X(sternheimer_solve_order2)( &
 
     do ik = st%d%kpt%start, st%d%kpt%end
 
-      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
       do ist = st%st_start, st%st_end
 
-        call states_get_state(st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(st, sys%gr%mesh, ist, ik, psi)
 
-        call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert1psi)
-        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
-          call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+          call X(pert_apply)(pert1, sys%namespace, sys%gr, sys%geo, sys%hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), &
+            pert1psi2)
         end if
-        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
+        call X(pert_apply)(pert2, sys%namespace, sys%gr, sys%geo, sys%hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), &
+          pert2psi1)
 
         ! derivative of the eigenvalues:
         ! bare perturbation
@@ -722,7 +723,7 @@ subroutine X(sternheimer_solve_order2)( &
 
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
-  call X(sternheimer_solve)(sh_2ndorder, sys, hm, lr_2ndorder, nsigma, &
+  call X(sternheimer_solve)(sh_2ndorder, sys, lr_2ndorder, nsigma, &
     omega1 + omega2, pert_2ndorder, restart, rho_tag, wfs_tag, &
     have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)

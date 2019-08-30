@@ -25,8 +25,9 @@ module curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use lalg_adv_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use unit_oct_m
@@ -65,9 +66,9 @@ module curvilinear_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_init(cv, parser, sb, geo, spacing)
+  subroutine curvilinear_init(cv, namespace, sb, geo, spacing)
     type(curvilinear_t), intent(out) :: cv
-    type(parser_t),      intent(in)  :: parser
+    type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
@@ -99,7 +100,7 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
     !%End
-    call parse_variable(parser, 'CurvMethod', CURV_METHOD_UNIFORM, cv%method)
+    call parse_variable(namespace, 'CurvMethod', CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error('CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 
@@ -108,11 +109,11 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, parser, sb, geo)
+      call curv_gygi_init(cv%gygi, namespace, sb, geo)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(cv%briggs, parser, sb)
+      call curv_briggs_init(cv%briggs, namespace, sb)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, parser, sb, geo, spacing)
+      call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
     end select
 
     POP_SUB(curvilinear_init)

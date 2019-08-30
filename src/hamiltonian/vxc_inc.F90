@@ -16,10 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+    vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(poisson_t),      intent(in)    :: psolver
+  type(namespace_t),    intent(in)    :: namespace
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
@@ -111,7 +114,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! initialize a couple of handy variables
   gga  = family_is_gga(xcs%family)
   mgga = family_is_mgga(xcs%family)
-  mgga_withexc = family_is_mgga_with_exc(xcs, ispin)
+  mgga_withexc = family_is_mgga_with_exc(xcs)
   if(mgga) then
     ASSERT(gga)
   end if
@@ -136,9 +139,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   ! Get the gradient and the Laplacian of the density and the kinetic-energy density
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
-  ! avoid calling the subroutine states_calc_quantities twice
+  ! avoid calling the subroutine states_elec_calc_quantities twice
   if((gga .and. (.not. mgga)) .or. xcs%xc_density_correction == LR_X) then
-    ! get gradient of the density (this is faster than calling states_calc_quantities)
+    ! get gradient of the density (this is faster than calling states_elec_calc_quantities)
     do isp = 1, spin_channels 
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
@@ -155,10 +158,10 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     end if
 
     if (xcs%use_gi_ked) then
-      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
                                   density_gradient = gdens, density_laplacian = ldens)
     else
-      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
+      call states_elec_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
  density_gradient = gdens, density_laplacian = ldens)
     end if
 
@@ -399,7 +402,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   if(present(deltaxc)) deltaxc = M_ZERO
 
   if(xcs%xc_density_correction == LR_X) then
-    call xc_density_correction_calc(xcs, der, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
+    call xc_density_correction_calc(xcs, der, psolver, namespace, spin_channels, &
+      rho, vx, dedd, deltaxc = deltaxc)
 
     if(calc_energy) then
       ! correct the energy density from Levy-Perdew, note that vx now
@@ -854,39 +858,13 @@ end subroutine xc_get_vxc
     family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
 
-  logical function family_is_mgga_with_exc(xcs, ispin)
-    type(xc_t),    target,  intent(in)    :: xcs
-    integer,                intent(in)    :: ispin
-
-    type(xc_functl_t), pointer :: functl(:)
-    integer :: ixc  
-
-    PUSH_SUB(family_is_mgga_with_exc)
-
-    !Pointer-shortcut for xcs%functional
-    !It helps to remember that for xcs%functional(:,:)
-    ! (1,:) => exchange,    (2,:) => correlation
-    ! (:,1) => unpolarized, (:,2) => polarized
-    if(ispin == UNPOLARIZED) then
-      functl => xcs%functional(:, 1)
-    else
-      functl => xcs%functional(:, 2)
-    end if
-
-    family_is_mgga_with_exc = .false.
-    do ixc = 1, 2
-        if((bitand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
-           .and. (bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
-    end do
-
-    POP_SUB(family_is_mgga_with_exc)
-  end function family_is_mgga_with_exc
-
 ! -----------------------------------------------------
 
-subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, deltaxc)
+subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
   type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
+  type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
   FLOAT,               intent(inout) :: refvx(:)
@@ -915,9 +893,12 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
+      der%mesh, density(:, 1), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
+      der%mesh, refvx(:), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
 
   if(xcs%xcd_optimize_cutoff) then
@@ -931,7 +912,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     if(debug%info) then
       if(mpi_world%rank == 0) then
         write(number, '(i4)') iter
-        iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
+        iunit = io_open('qxc.'//trim(adjustl(number)), namespace, action='write')
       end if
     end if
     do
@@ -1011,7 +992,8 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   
     if(mpi_world%rank == 0) then
       print*, "Iter",    iter, ncutoff, qxcfin
@@ -1027,12 +1009,18 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end if
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
 
   forall(ip = 1:der%mesh%np) 
@@ -1054,9 +1042,12 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
   
   dd = dmf_integrate(der%mesh, lrvxc)/vol
@@ -1070,7 +1061,8 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
   
   call profiling_out(prof)

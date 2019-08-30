@@ -38,3 +38,6 @@ match ; Two-body (cccc) Im ; LINEFIELD(static/output_me_two_body, 7, 10); 0.0000
 match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 116, 9); 0.107633E-01
 match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 116, 10); 0.767005E-20
 
+match ; Direct gap ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0506
+match ; Indirect gap ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0199
+

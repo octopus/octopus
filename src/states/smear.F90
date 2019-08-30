@@ -25,6 +25,7 @@ module smear_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
@@ -73,13 +74,13 @@ module smear_oct_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, parser, ispin, fixed_occ, integral_occs, kpoints)
-    type(smear_t),   intent(out) :: this
-    type(parser_t),  intent(in)    :: parser
-    integer,         intent(in)  :: ispin
-    logical,         intent(in)  :: fixed_occ
-    logical,         intent(in)  :: integral_occs
-    type(kpoints_t), intent(in)  :: kpoints
+  subroutine smear_init(this, namespace, ispin, fixed_occ, integral_occs, kpoints)
+    type(smear_t),     intent(out) :: this
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)  :: ispin
+    logical,           intent(in)  :: fixed_occ
+    logical,           intent(in)  :: integral_occs
+    type(kpoints_t),   intent(in)  :: kpoints
 
     PUSH_SUB(smear_init)
 
@@ -111,7 +112,7 @@ contains
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
     else
-      call parse_variable(parser, 'SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
+      call parse_variable(namespace, 'SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call messages_input_error('SmearingFunction')
       call messages_print_var_option(stdout, 'SmearingFunction', this%method)
     end if
@@ -127,10 +128,10 @@ contains
     !%End
     this%dsmear = CNST(1e-14)
     if(this%method /= SMEAR_SEMICONDUCTOR .and. this%method /= SMEAR_FIXED_OCC) then
-      call parse_variable(parser, 'Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
+      call parse_variable(namespace, 'Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
-    call messages_obsolete_variable(parser, 'ElectronicTemperature', 'Smearing')
+    call messages_obsolete_variable(namespace, 'ElectronicTemperature', 'Smearing')
 
     this%el_per_state = 1
     if(ispin == 1) & ! unpolarized
@@ -160,7 +161,7 @@ contains
       !%Description
       !% Sets the order of the Methfessel-Paxton smearing function.
       !%End
-      call parse_variable(parser, 'SmearingMPOrder', 1, this%MP_n)
+      call parse_variable(namespace, 'SmearingMPOrder', 1, this%MP_n)
     end if
 
     POP_SUB(smear_init)

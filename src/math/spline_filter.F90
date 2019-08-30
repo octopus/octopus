@@ -23,6 +23,7 @@ module spline_filter_oct_m
   use io_oct_m
   use splines_oct_m
   use messages_oct_m
+  use namespace_oct_m
 
   implicit none
 
@@ -97,13 +98,15 @@ contains
 
 
   !----------------------------------------------------------------------------
-  subroutine spline_filter_mask_init()
+  subroutine spline_filter_mask_init(namespace)
+    type(namespace_t), intent(in) :: namespace
 
     integer :: iunit, i
 
     PUSH_SUB(spline_filter_mask_init)
 
-    iunit = io_open(trim(conf%share)//"/filter_mask.data", action='read', status='old', die=.true.)
+    iunit = io_open(trim(conf%share)//"/filter_mask.data", namespace, action='read', &
+      status='old', die=.true.)
 
     do i = 1, mask_n
       read(iunit, *) mask_x(i), mask_y(i)

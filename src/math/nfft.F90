@@ -25,6 +25,7 @@ module nfft_oct_m
   use, intrinsic :: iso_c_binding
   use loct_math_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use varinfo_oct_m
   implicit none
@@ -94,9 +95,9 @@ contains
 
   ! ---------------------------------------------------------
   ! GURU options
-  subroutine nfft_guru_options(nfft, parser)
-    type(nfft_t),     intent(inout) :: nfft
-    type(parser_t),   intent(in)    :: parser
+  subroutine nfft_guru_options(nfft, namespace)
+    type(nfft_t),      intent(inout) :: nfft
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(nfft_guru_options)
 
@@ -107,7 +108,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_variable(parser, 'NFFTGuruInterface',  .false., nfft%guru)
+    call parse_variable(namespace, 'NFFTGuruInterface',  .false., nfft%guru)
 
 
     !%Variable NFFTCutoff
@@ -118,7 +119,7 @@ contains
     !% Cut-off parameter of the window function.
     !% See NFFT manual for details.
     !%End
-    call parse_variable(parser, 'NFFTCutoff', 6, nfft%mm)
+    call parse_variable(namespace, 'NFFTCutoff', 6, nfft%mm)
 
 
     !%Variable NFFTOversampling
@@ -128,7 +129,7 @@ contains
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(parser, 'NFFTOversampling', M_TWO, nfft%sigma)
+    call parse_variable(namespace, 'NFFTOversampling', M_TWO, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -146,7 +147,7 @@ contains
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
-    call parse_variable(parser, 'NFFTPrecompute', NFFT_PRE_PSI, nfft%precompute)
+    call parse_variable(namespace, 'NFFTPrecompute', NFFT_PRE_PSI, nfft%precompute)
      if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 

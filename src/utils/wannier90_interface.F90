@@ -42,6 +42,7 @@ program wannier90_interface
   use messages_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2 
   use multicomm_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -51,10 +52,10 @@ program wannier90_interface
   use system_oct_m
   use space_oct_m
   use string_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_io_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_io_oct_m
+  use states_elec_restart_oct_m
   use submesh_oct_m
   use types_oct_m
   use unit_oct_m
@@ -72,8 +73,7 @@ program wannier90_interface
 
   type(restart_t)      :: restart
   type(system_t)       :: sys
-  type(states_t)       :: st
-  type(parser_t)       :: parser
+  type(states_elec_t)  :: st
   logical              :: w90_setup, w90_output, w90_wannier, w90_scdm
   logical              :: w90_spinors, scdm_proj
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
@@ -99,23 +99,26 @@ program wannier90_interface
   FLOAT                :: scdm_mu, scdm_sigma, smear,  kvec(MAX_DIM)
   integer :: ist, jst, ik
 
-  call global_init()
-  call parser_init(parser)
+  type(namespace_t) :: namespace
 
-  call messages_init(parser)
-  call io_init(parser)
+  call global_init()
+  call parser_init()
+  namespace = namespace_t("")
+
+  call messages_init(namespace)
+  call io_init(namespace)
 
   call calc_mode_par_init()
 
-  call profiling_init(parser)
+  call profiling_init(namespace)
 
-  call restart_module_init(parser)
+  call restart_module_init(namespace)
 
-  call fft_all_init(parser)
-  call unit_system_init(parser)
+  call fft_all_init(namespace)
+  call unit_system_init(namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, parser)
+  call system_init(sys, namespace)
 
   !%Variable wannier90_prefix
   !%Type string
@@ -124,7 +127,7 @@ program wannier90_interface
   !%Description
   !% Prefix for wannier90 files
   !%End
-  call parse_variable(parser, 'wannier90_prefix', 'w90', w90_prefix)
+  call parse_variable(namespace, 'wannier90_prefix', 'w90', w90_prefix)
   if(w90_prefix=='w90') then
     message(1) = "Did not find wannier90_prefix keyword, will use default: w90"
     call  messages_warning(1)
@@ -152,7 +155,7 @@ program wannier90_interface
   !%Option w90_scdm bit(4)
   !% use scdm method to generate *.amn file for wannier90
   !%End
-  call parse_variable(parser, 'wannier90_mode', 0, w90_what)
+  call parse_variable(namespace, 'wannier90_mode', 0, w90_what)
   w90_setup = iand(w90_what, OPTION__WANNIER90_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__WANNIER90_MODE__W90_OUTPUT) /= 0
   w90_wannier = iand(w90_what, OPTION__WANNIER90_MODE__W90_WANNIER) /= 0
@@ -180,7 +183,7 @@ program wannier90_interface
   !% Eigenvalues. See Wannier90 documentation for more details.
   !%End
   w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN + OPTION__WANNIER90_FILES__W90_EIG
-  call parse_variable(parser, 'wannier90_files', w90_what, w90_what)
+  call parse_variable(namespace, 'wannier90_files', w90_what, w90_what)
 
 
   ! sanity checks
@@ -211,7 +214,7 @@ program wannier90_interface
     call messages_fatal(1)
   end if
 
-  call states_init(st, parser, sys%gr, sys%geo)
+  call states_elec_init(st, namespace, sys%gr, sys%geo)
 
   if(st%d%ispin /= UNPOLARIZED) then
     call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized") 
@@ -229,15 +232,15 @@ program wannier90_interface
 
     ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
-    call states_distribute_nodes(st, parser, sys%mc)
-    call states_exec_init(st, parser, sys%mc)
-    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, &
+    call states_elec_distribute_nodes(st, namespace, sys%mc)
+    call states_elec_exec_init(st, namespace, sys%mc)
+    call states_elec_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
     if(ierr == 0) then
-      call states_look(restart, nik, dim, nst, ierr)
+      call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-         call states_load(restart, parser, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+         call states_elec_load(restart, namespace, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -252,7 +255,7 @@ program wannier90_interface
       !%Description
       !% Broadening of SCDM smearing function
       !%End                                                                                                                                                                       
-      call parse_variable(parser, 'scdm_sigma', CNST(0.2), scdm_sigma)
+      call parse_variable(namespace, 'scdm_sigma', CNST(0.2), scdm_sigma)
 
       !%Variable scdm_mu
       !%Type float
@@ -260,7 +263,7 @@ program wannier90_interface
       !%Description
       !% Energy range up to which states are considered for SCDM 
       !%End
-      call parse_variable(parser, 'scdm_mu', M_HUGE, scdm_mu)
+      call parse_variable(namespace, 'scdm_mu', M_HUGE, scdm_mu)
 
       nik = w90_num_kpts
       SAFE_ALLOCATE(jpvt(1:sys%gr%der%mesh%np_global))
@@ -293,7 +296,7 @@ program wannier90_interface
       do ik=1,nik
         kvec(:) = sys%gr%sb%kpoints%reduced%point(:,ik)
         do ist=1,w90_num_bands
-          call states_get_state(st, sys%gr%der%mesh, ist, ik, psi)
+          call states_elec_get_state(st, sys%gr%der%mesh, ist, ik, psi)
           smear=M_HALF*loct_erfc((st%eigenval(ist, ik)-scdm_mu)/scdm_sigma)
           ! NOTE: here check for domain parallelization
           do jst=1,w90_num_bands
@@ -357,15 +360,15 @@ program wannier90_interface
 
    ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
-    call states_distribute_nodes(st, parser, sys%mc)
-    call states_exec_init(st, parser, sys%mc)
-    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, &
+    call states_elec_distribute_nodes(st, namespace, sys%mc)
+    call states_elec_exec_init(st, namespace, sys%mc)
+    call states_elec_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
     if(ierr == 0) then
-      call states_look(restart, nik, dim, nst, ierr)
+      call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-        call states_load(restart, parser, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+        call states_elec_load(restart, namespace, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -382,9 +385,9 @@ program wannier90_interface
   call system_end(sys)
   call fft_all_end()
   call io_end()
-  call profiling_end()
+  call profiling_end(namespace)
   call messages_end()
-  call parser_end(parser)
+  call parser_end()
   call global_end()
 
 contains
@@ -400,7 +403,7 @@ contains
 
     ! open win file
     filename = trim(adjustl(w90_prefix)) //'.win'
-    w90_win = io_open(trim(filename), action='write')
+    w90_win = io_open(trim(filename), namespace, action='write')
 
     write(w90_win,'(a)') '# this file has been created by the Octopus wannier90 utility'
     write(w90_win,'(a)') ' '
@@ -440,7 +443,7 @@ contains
       write(w90_win,'(a)')  'gamma_only = .true.'
       write(w90_win,'(a)') ' '
     else
-      if(.not.parse_is_defined(parser, 'KPointsGrid')) then
+      if(.not.parse_is_defined(namespace, 'KPointsGrid')) then
         message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
         call messages_fatal(1)
       end if
@@ -492,7 +495,7 @@ contains
        call messages_fatal(2)
     end if
 
-    w90_nnkp = io_open(trim(filename), action='read')
+    w90_nnkp = io_open(trim(filename), namespace, action='read')
 
     ! check number of k-points
     do while(.true.)
@@ -509,7 +512,7 @@ contains
     end do
    call io_close(w90_nnkp)
 
-   w90_nnkp = io_open(trim(filename), action='read')
+   w90_nnkp = io_open(trim(filename), namespace, action='read')
    ! read from nnkp file
    ! find the nnkpts block
    do while(.true.)
@@ -574,7 +577,7 @@ contains
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
       ! parse file again for definitions of projections
-      w90_nnkp = io_open(trim(filename), action='read')
+      w90_nnkp = io_open(trim(filename), namespace, action='read')
 
       do while(.true.)
         read(w90_nnkp,*,end=201) dummy, dummy1
@@ -692,7 +695,7 @@ contains
 
 
     filename = './'// trim(adjustl(w90_prefix))//'.mmn'
-    w90_mmn = io_open(trim(filename), action='write')
+    w90_mmn = io_open(trim(filename), namespace, action='write')
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
@@ -721,7 +724,7 @@ contains
        ! loop over bands
        do jst = 1, st%nst
          if(exclude_list(jst) == 0) cycle
-         call states_get_state(st, mesh, jst, iknn, psin)
+         call states_elec_get_state(st, mesh, jst, iknn, psin)
 
          !Do not apply the phase if the phase factor is null
          if(any(G(1:3) /= 0)) then
@@ -749,7 +752,7 @@ contains
              end do
            !Not properly done at the moment
            case(BATCH_PACKED, BATCH_DEVICE_PACKED)
-             call states_get_state(st, mesh, ist, ik, psim)
+             call states_elec_get_state(st, mesh, ist, ik, psim)
              overlap(band_index(ist)) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
            end select
          end do
@@ -800,7 +803,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       filename = './'//trim(adjustl(w90_prefix))//'.eig'
-      w90_eig = io_open(trim(filename), action='write')
+      w90_eig = io_open(trim(filename), namespace, action='write')
       do ik = 1, w90_num_kpts
         do ist = 1, st%nst
           if(exclude_list(ist) == 0) cycle
@@ -844,7 +847,7 @@ contains
 
     SAFE_ALLOCATE(psi(1:mesh%np))
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, verbose = .false., &
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, verbose = .false., &
                      need_partition=.not.mesh%parallel_in_domains)
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf)
@@ -853,7 +856,7 @@ contains
       do ispin = 1, st%d%dim
         if(mpi_grp_is_root(mpi_world)) then
           write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
-          unk_file = io_open(trim(filename), action='write',form='unformatted')
+          unk_file = io_open(trim(filename), namespace, action='write',form='unformatted')
           ! write header
           write(unk_file) mesh%idx%ll(1:mesh%idx%dim), ik,  w90_num_bands
         end if
@@ -861,7 +864,7 @@ contains
         ! states
         do ist = 1, st%nst
           if(exclude_list(ist) == 0) cycle
-          call states_get_state(st, mesh, ispin, ist, ik, psi)
+          call states_elec_get_state(st, mesh, ispin, ist, ik, psi)
 
           ! put the density in the cube
           ! Note: At the moment this does not work for domain parallelization
@@ -916,7 +919,7 @@ contains
     end if
 
     filename = './'// trim(adjustl(w90_prefix))//'.amn'
-    w90_amn = io_open(trim(filename), action='write')
+    w90_amn = io_open(trim(filename), namespace, action='write')
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
@@ -946,7 +949,7 @@ contains
       call messages_info(1)
       
       !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
-      call parse_variable(parser, 'AOThreshold', CNST(0.01), threshold)
+      call parse_variable(namespace, 'AOThreshold', CNST(0.01), threshold)
       
       SAFE_ALLOCATE(orbitals(1:w90_nproj))
       ! precompute orbitals
@@ -1011,7 +1014,7 @@ contains
       
         do ist = 1, st%nst
           if(exclude_list(ist) == 0) cycle
-          call states_get_state(st, mesh, ist, ik, psi)
+          call states_elec_get_state(st, mesh, ist, ik, psi)
           do idim = 1, st%d%dim
             !The minus sign is here is for the wrong convention of Octopus
             forall(ip=1:mesh%np)
@@ -1086,7 +1089,7 @@ contains
       call messages_fatal(2)
     end if
 
-    w90_xyz = io_open(trim(trim(adjustl(w90_prefix))//'_centres.xyz'), action='read')
+    w90_xyz = io_open(trim(trim(adjustl(w90_prefix))//'_centres.xyz'), namespace, action='read')
     SAFE_ALLOCATE(centers(1:3, 1:w90_num_wann))
     !Skip two lines
     read(w90_xyz, *)
@@ -1109,7 +1112,7 @@ contains
       write(message(2),'(a)') 'Please run wannier90.x with "write_u_matrices=.true." in '// trim(adjustl(w90_prefix)) // '.'
       call messages_fatal(2)
     end if
-    w90_u_mat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), action='read')    
+    w90_u_mat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), namespace, action='read')    
 
     !To be read later
     w90_num_wann = w90_num_bands
@@ -1137,9 +1140,9 @@ contains
     call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
-    call io_function_read_how(sb, parser, how)
+    call io_function_read_how(sb, namespace, how)
 
-    call io_mkdir('wannier')
+    call io_mkdir('wannier', namespace)
 
     !Computing the Wannier states in the primitive cell, from the U matrices
     SAFE_ALLOCATE(zwn(1:mesh%np))
@@ -1157,7 +1160,7 @@ contains
 
         do iw2 = 1, st%nst
           if(exclude_list(iw2) == 0) cycle
-          call states_get_state(st, mesh, iw2, ik, psi)
+          call states_elec_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
             zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
@@ -1184,7 +1187,7 @@ contains
         dwn(ip) = real(zwn(ip), REAL_PRECISION)
       end forall
         
-      call dio_function_output(how, 'wannier', trim(fname), mesh, &
+      call dio_function_output(how, 'wannier', trim(fname), namespace, mesh, &
           dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
 
@@ -1264,7 +1267,7 @@ contains
       end do
     end do
  
-    call states_write_bandstructure('.', parser, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
+    call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
  
     SAFE_DEALLOCATE_A(eigk)
     SAFE_DEALLOCATE_A(hk_eigenval)

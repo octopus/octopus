@@ -27,24 +27,27 @@ module current_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
+  use lalg_basic_oct_m
   use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use projector_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -71,10 +74,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this, parser, sb)
+  subroutine current_init(this, namespace)
     type(current_t),   intent(out)   :: this
-    type(parser_t),    intent(in)    :: parser
-    type(simul_box_t), intent(in)    :: sb
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(current_init)
 
@@ -97,7 +99,7 @@ contains
     !% Hamiltonian with the position operator. (Experimental)
     !%End
 
-    call parse_variable(parser, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
+    call parse_variable(namespace, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
@@ -120,14 +122,14 @@ contains
   ! ---------------------------------------------------------
 
   subroutine current_batch_accumulate(st, der, ik, ib, psib, gpsib, current, current_kpt)
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(derivatives_t), intent(inout) :: der
     integer,             intent(in)    :: ik
     integer,             intent(in)    :: ib
     type(batch_t),       intent(in)    :: psib
     type(batch_t),       intent(in)    :: gpsib(:)
     FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ist, idir, ii, ip, idim, wgsize
     CMPLX, allocatable :: psi(:, :), gpsi(:, :)
@@ -147,7 +149,7 @@ contains
     if(st%d%ispin == SPINORS .or. (batch_status(psib) == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
-        do ist = states_block_min(st, ib), states_block_max(st, ib)
+        do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
           if(abs(ww) <= M_EPSILON) cycle
@@ -225,7 +227,7 @@ contains
     else
 
       do ii = 1, psib%nst
-        ist = states_block_min(st, ib) + ii - 1
+        ist = states_elec_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
@@ -262,9 +264,9 @@ contains
   subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
@@ -275,7 +277,7 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     type(batch_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_current = .false.
+    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -284,7 +286,7 @@ contains
 
     ! spin not implemented or tested
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
-    ASSERT(all(ubound(current_kpt) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(ubound(current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
     ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
@@ -303,7 +305,7 @@ contains
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
+        ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -314,16 +316,16 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_apply_batch(hm, der, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
 
-            do ist = states_block_min(st, ib), states_block_max(st, ib)
+            do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
               if(ww <= M_EPSILON) cycle
 
@@ -372,13 +374,13 @@ contains
 
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
-      if(this%method == CURRENT_GRADIENT_CORR .and. .not. hm%family_is_mgga_with_exc &
+      if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
         .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
 
         ! we can use the packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_dim_get_spin_index(st%d, ik)
+          ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
 
             call batch_pack(st%group%psib(ib, ik), copy = .true.)
@@ -386,7 +388,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
@@ -401,11 +403,12 @@ contains
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 
-            call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
 
             if(associated(hm%hm_base%phase)) then
               do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, conjugate = .true., &
+                  psib = commpsib(idir))
               end do
             end if
             
@@ -426,20 +429,20 @@ contains
         ! use the slow non-packed version
         
         do ik = st%d%kpt%start, st%d%kpt%end
-          ispin = states_dim_get_spin_index(st%d, ik)
+          ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ist = st%st_start, st%st_end
 
             ww = st%d%kweights(ik)*st%occ(ist, ik)
             if(abs(ww) <= M_EPSILON) cycle
 
-            call states_get_state(st, der%mesh, ist, ik, psi)
+            call states_elec_get_state(st, der%mesh, ist, ik, psi)
 
             do idim = 1, st%d%dim
               call boundaries_set(der%boundaries, psi(:, idim))
             end do
 
             if(associated(hm%hm_base%phase)) then 
-              call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+              call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
             end if
 
             do idim = 1, st%d%dim
@@ -449,7 +452,7 @@ contains
             if(this%method == CURRENT_GRADIENT_CORR) then
               !A nonlocal contribution from the MGGA potential must be included
               !This must be done first, as this is like a position-dependent mass 
-              if(hm%family_is_mgga_with_exc) then
+              if (family_is_mgga_with_exc(hm%xc)) then
                 do idim = 1, st%d%dim
                   do idir = 1, der%mesh%sb%dim
                     !$omp parallel do
@@ -514,20 +517,15 @@ contains
     if(st%d%ispin /= SPINORS) then
       !We sum the current over k-points
       do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
+        ispin = states_elec_dim_get_spin_index(st%d, ik)
         do idir = 1, der%mesh%sb%dim
-          !$omp parallel do
-          do ip = 1, der%mesh%np
-            current(ip, idir, ispin) = current(ip, idir, ispin) + current_kpt(ip, idir, ik)
-          end do
-          !$omp end parallel do
+          call lalg_axpy(der%mesh%np, M_ONE, current_kpt(:, idir, ik), current(1:der%mesh%np, idir, ispin))
         end do
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
@@ -564,7 +562,7 @@ contains
   
   subroutine current_calculate_mel(der, hm, geo, psi_i, psi_j, ik,  cmel)
     type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     CMPLX,                intent(in)    :: psi_i(:,:)
     CMPLX,                intent(in)    :: psi_j(:,:)
@@ -583,7 +581,7 @@ contains
 
     cmel = M_z0
 
-    ispin = states_dim_get_spin_index(hm%d, ik)
+    ispin = states_elec_dim_get_spin_index(hm%d, ik)
     ppsi_i(:,:) = M_z0        
     ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
     ppsi_j(:,:) = M_z0        
@@ -614,7 +612,7 @@ contains
     
     !A nonlocal contribution from the MGGA potential must be included
     !This must be done first, as this is like a position-dependent mass 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       do idim = 1, hm%d%dim
         do idir = 1, der%mesh%sb%dim
           !$omp parallel do
@@ -662,11 +660,10 @@ contains
   end subroutine current_calculate_mel
 
   ! ---------------------------------------------------------
-  subroutine current_heat_calculate(der, hm, geo, st, current)
+  subroutine current_heat_calculate(der, hm, st, current)
     type(derivatives_t),  intent(in)    :: der
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(hamiltonian_elec_t),  intent(in)    :: hm
+    type(states_elec_t),  intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
     integer :: ik, ist, idir, idim, ip, ispin, ndim
@@ -690,18 +687,18 @@ contains
     
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_dim_get_spin_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
 
         if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
         
-        call states_get_state(st, der%mesh, ist, ik, psi)
+        call states_elec_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim
           call boundaries_set(der%boundaries, psi(:, idim))
         end do
 
         if(associated(hm%hm_base%phase)) then 
-          call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+          call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
         end if
 
         do idim = 1, st%d%dim
@@ -709,7 +706,8 @@ contains
         end do
         do idir = 1, ndim
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
+            call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, &
+              conjugate = .true.)
           end if
             
           !do idim = 1, st%d%dim
@@ -721,7 +719,7 @@ contains
           end do
             
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
+            call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
                                   der%mesh%np_part,  conjugate = .false.)
           end if
             

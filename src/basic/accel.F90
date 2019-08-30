@@ -43,6 +43,7 @@ module accel_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use types_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -255,9 +256,9 @@ contains
 
   ! ------------------------------------------
 
-  subroutine accel_init(base_grp, parser)
-    type(mpi_grp_t),  intent(inout) :: base_grp
-    type(parser_t),   intent(in)    :: parser
+  subroutine accel_init(base_grp, namespace)
+    type(mpi_grp_t),     intent(inout) :: base_grp
+    type(namespace_t),   intent(in)    :: namespace
     
     logical  :: disable, default, run_benchmark
     integer  :: idevice, iplatform
@@ -286,13 +287,13 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-    call messages_obsolete_variable(parser, 'DisableOpenCL', 'DisableAccel')
+    call messages_obsolete_variable(namespace, 'DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
     default = .true.
 #endif
-    call parse_variable(parser, 'DisableAccel', default, disable)
+    call parse_variable(namespace, 'DisableAccel', default, disable)
     accel%enabled = .not. disable
     
 #ifndef HAVE_ACCEL
@@ -327,9 +328,9 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_variable(parser, 'AccelPlatform', 0, iplatform)
+    call parse_variable(namespace, 'AccelPlatform', 0, iplatform)
 
-    call messages_obsolete_variable(parser, 'OpenCLPlatform', 'AccelPlatform')
+    call messages_obsolete_variable(namespace, 'OpenCLPlatform', 'AccelPlatform')
     
     !%Variable AccelDevice
     !%Type integer
@@ -352,9 +353,9 @@ contains
     !% Octopus will use the default device specified by the implementation.
     !% implementation.
     !%End
-    call parse_variable(parser, 'AccelDevice', OPENCL_GPU, idevice)
+    call parse_variable(namespace, 'AccelDevice', OPENCL_GPU, idevice)
 
-    call messages_obsolete_variable(parser, 'OpenCLDevice', 'AccelDevice')
+    call messages_obsolete_variable(namespace, 'OpenCLDevice', 'AccelDevice')
     
     if(idevice < OPENCL_DEFAULT) then
       call messages_write('Invalid AccelDevice')
@@ -588,9 +589,9 @@ contains
     !% If this variable is set to yes, Octopus will run some
     !% routines to benchmark the performance of the accelerator device.
     !%End
-    call parse_variable(parser, 'AccelBenchmark', .false., run_benchmark)
+    call parse_variable(namespace, 'AccelBenchmark', .false., run_benchmark)
 
-    call messages_obsolete_variable(parser, 'OpenCLBenchmark', 'AccelBenchmark')
+    call messages_obsolete_variable(namespace, 'OpenCLBenchmark', 'AccelBenchmark')
     
     if(run_benchmark) then
       call opencl_check_bandwidth()
