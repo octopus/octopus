@@ -1026,8 +1026,10 @@ contains
             idim = 1
             if(w90_spinors) idim = w90_spin_proj_component(iw)
       
+            !At the moemnt the orbitals do not depend on idim
+            !The idim index for eorb_mesh would be for a spin-resolved orbital like j=1/2
             projection(iw) = zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                        orbitals(iw)%eorb_mesh(1:mesh%np,1,idim,ik), reduce = .false.)
+                                        orbitals(iw)%eorb_mesh(1:mesh%np,1,1,ik), reduce = .false.)
           end do
       
           if(mesh%parallel_in_domains) then
