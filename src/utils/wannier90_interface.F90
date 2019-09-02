@@ -433,6 +433,10 @@ contains
     write(w90_win,'(a9,i4)') 'num_wann ', st%nst
     write(w90_win,'(a)') ' '
 
+    if(st%d%ispin == SPINORS) then
+       write(w90_win,'(a)') 'spinors = .true.'
+    end if
+
     !This is for convenience. This is needed for plotting the Wannier states, if requested.
     write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)')  'translate_home_cell = .true.'
@@ -586,8 +590,19 @@ contains
 
           if(dummy1 == 'spinor_projections') then
             w90_spinors = .true.
+            if(st%d%ispin /= SPINORS) then
+              message(1) = 'oct-wannier90: Spinor = .true. is only valid with spinors wavefunctions.'
+              call messages_fatal(1)
+            end if
+
             message(1) = 'oct-wannier90: Spinor interface incomplete. Note there is no quantization axis implemented'
             call messages_warning(1)
+          else
+            if(st%d%ispin == SPINORS) then
+              message(1) = 'oct-wannier90: Octopus has pinors wavefunctions but spinor_projections is not define.'
+              message(2) = 'oct-wannier90: Please check the input file for wannier 90.'
+              call messages_fatal(2)
+            end if
           end if
 
           read(w90_nnkp,*) w90_nproj
