@@ -99,7 +99,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
           weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
 #endif
         else
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%V_ij(inn, 0)/el_per_state
         end if
 
         do ibatch = 1, psib%nst

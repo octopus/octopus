@@ -87,16 +87,13 @@ contains
     type(periodic_copy_t) :: pc
     FLOAT :: xat(1:MAX_DIM), xi(1:MAX_DIM)
     FLOAT :: rr
-    integer :: inn, nnn, ist, jst, ntodo
-    integer :: norbs, np_sphere, ip, idone, ios
+    integer :: inn, ist, jst
+    integer :: np_sphere, ip, ios
     type(submesh_t) :: sm
     FLOAT, allocatable :: tmp(:), vv(:), nn(:)
     FLOAT, allocatable :: orb(:,:,:)
     FLOAT, parameter :: TOL_INTERSITE = CNST(1.e-5)
     type(distributed_t) :: dist
-
-    integer :: ierr
-    type(unit_t) :: fn_unit
 
     PUSH_SUB(orbitalset_init_intersite)
 
@@ -201,6 +198,9 @@ contains
 
         SAFE_ALLOCATE(tmp(1:sm%np))
 
+        !Build information needed for the direct Poisson solver on the submesh
+        call submesh_build_global(sm)
+
         call poisson_init_sm(this%poisson, psolver, der, sm)
         np_sphere = sm%np
 
@@ -239,6 +239,11 @@ contains
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
       end do !inn
+
+      if(der%mesh%parallel_in_domains) then
+        call comm_allreduce(der%mesh%mpi_grp%comm, this%coulomb_IIJJ)
+      end if
+ 
 
       if(dist%parallel) then
         call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)

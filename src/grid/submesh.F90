@@ -137,6 +137,8 @@ contains
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
+    call submesh_null(this)
+
     this%mesh => mesh
 
     this%center(1:sb%dim) = center(1:sb%dim)
@@ -316,8 +318,6 @@ contains
     
     PUSH_SUB(submesh_merge)
     call profiling_in(prof, "SUBMESH_MERGE")
-
-    ASSERT(.not.mesh%parallel_in_domains)
 
     this%mesh => mesh
 
