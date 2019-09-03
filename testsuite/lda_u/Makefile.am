@@ -44,6 +44,7 @@ dist_share_DATA =                                \
             07-noncollinear.test                 \
 	    08-loewdin.01-Si.inp                 \
 	    08-loewdin.02-intersite.inp          \
+            08-loewdin.03-intersite_domains.inp  \
 	    08-loewdin.test                      \
 	    09-basis_from_states.01-lda.inp      \
 	    09-basis_from_states.02-acbn0.inp    \

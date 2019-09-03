@@ -1,0 +1,42 @@
+FromScratch=yes
+CalculationMode = gs
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+
+a = 10.2
+BoxShape = parallelepiped
+Spacing = 0.6
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ 0.  | 0.5 | 0.5
+ 0.5 | 0.  | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" |   0.0    | 0.0     | 0.0
+ "Si" |   1/4    | 1/4     | 1/4
+%
+
+%KPointsGrid
+ 3 | 3 | 3
+%
+
+ParDomains = auto
+ParKPoints = no
+
+DFTULevel = dft_u_acbn0
+DFTUDoubleCounting = dft_u_amf
+SCFCalculateForces = no
+AOLoewdin = yes
+UseAllAtomicOrbitals = yes
+OutputLDA_U = occ_matrices + effectiveU
+AOThreshold = 0.1
+MaximumIter = 1
+
+ACBN0IntersiteInteraction = yes
+ACBN0IntersiteCutoff = 7

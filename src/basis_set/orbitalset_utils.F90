@@ -165,12 +165,16 @@ contains
 
       call distributed_nullify(dist, this%nneighbors)
 #ifdef HAVE_MPI
-      call distributed_init(dist, this%nneighbors, MPI_COMM_WORLD, 'orbs')
+      if(.not. der%mesh%parallel_in_domains) then
+        call distributed_init(dist, this%nneighbors, MPI_COMM_WORLD, 'orbs')
+      end if
 #endif
 
       do inn = dist%start, dist%end
 
         ios = this%map_os(inn)
+
+        call submesh_null(sm)
 
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
@@ -235,6 +239,8 @@ contains
         SAFE_DEALLOCATE_A(nn)
         SAFE_DEALLOCATE_A(vv)
         SAFE_DEALLOCATE_A(tmp)
+
+        call submesh_end_global(sm)
 
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
