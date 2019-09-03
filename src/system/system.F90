@@ -114,6 +114,8 @@ contains
     call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
     call elf_init(sys%namespace)
 
+    call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
+
     if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
       if(states_are_real(sys%st)) then
         call poisson_init(exchange_psolver, sys%namespace, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .false.)
@@ -121,8 +123,6 @@ contains
         call poisson_init(exchange_psolver, sys%namespace, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .true.)
       end if
     end if
-
-    call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
       sys%ks%xc, sys%mc)

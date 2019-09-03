@@ -1031,7 +1031,7 @@ contains
 
     average_to_zero_ = .false.
     if (present(average_to_zero)) average_to_zero_ = average_to_zero
-    average = M_ZERO !this avoids a non-initialized warning
+    average = M_z0 !this avoids a non-initialized warning
 
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))

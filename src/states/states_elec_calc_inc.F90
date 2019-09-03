@@ -1666,15 +1666,15 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
   if(present(exc_k)) exc_k_ = exc_k
 
   do ist_global = 1, nst_tot
-    ist = mod(ist_global-1, nst) +1
-    ikpt = (ist_global-ist)/nst+1
+    ist = mod(ist_global - 1, nst) + 1
+    ikpt = (ist_global - ist)/nst + 1
     ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
     call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
 
     do jst_global = 1, nst_tot
-      jst = mod(jst_global-1, nst) +1
-      jkpt = (jst_global-jst)/nst+1
+      jst = mod(jst_global - 1, nst) + 1
+      jkpt = (jst_global - jst)/nst + 1
       jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
 
       if(exc_k_ .and. ist /= jst) cycle
@@ -1713,8 +1713,8 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 
       klst=0
       do kst_global = 1, nst_tot
-        kst = mod(kst_global-1, nst) +1
-        kkpt = (kst_global-kst)/nst+1
+        kst = mod(kst_global - 1, nst) + 1
+        kkpt = (kst_global - kst)/nst + 1
 
         if(exc_k_ .and. kkpt /= jkpt) cycle
 
@@ -1726,11 +1726,11 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 #endif
 
         do lst_global = 1, nst_tot
-          lst = mod(lst_global-1, nst) +1
-          lkpt = (lst_global-lst)/nst+1
-          klst=klst+1
+          lst = mod(lst_global - 1, nst) + 1
+          lkpt = (lst_global - lst)/nst + 1
 #ifndef R_TCOMPLEX
           if(lst_global > kst_global) cycle
+          klst=klst+1
           if(klst > ijst) cycle
 #endif
 
