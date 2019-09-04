@@ -241,7 +241,7 @@ contains
       if(this%drive_ions) then
         call messages_write('You cannot use a Thermostat and IonsConstantVelocity or IonsTimeDependentDisplacements')
         call messages_write('at the same time.')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
 
       call messages_experimental('Thermostat')
@@ -263,7 +263,7 @@ contains
       if(ierr /= 0) then
         message(1) = "You have enabled a thermostat but Octopus could not find"
         message(2) = "the '"//trim(temp_function_name)//"' function in the TDFunctions block."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       if(this%thermostat == THERMO_NH) then
@@ -413,7 +413,7 @@ contains
 
         if(geo%natoms /= xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         ! copy information and adjust units
@@ -481,12 +481,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_propagate(this, sb, geo, time, dt)
+  subroutine ion_dynamics_propagate(this, sb, geo, time, dt, namespace)
     type(ion_dynamics_t), intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(in)    :: dt
+    type(namespace_t),    intent(in)    :: namespace
 
     integer :: iatom
     FLOAT   :: DR(1:3)
@@ -510,7 +511,7 @@ contains
           units_from_atomic(unit_kelvin, this%current_temperature), " ", units_abbrev(unit_kelvin), &
           ") at time ", &
           units_from_atomic(units_out%time, time), " ", trim(units_abbrev(units_out%time)), "."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     else
       this%current_temperature = CNST(0.0)
@@ -564,7 +565,7 @@ contains
 
     end if
 
-    call simul_box_atoms_in_box(sb, geo, .false.)
+    call simul_box_atoms_in_box(sb, geo, namespace, .false.)
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate

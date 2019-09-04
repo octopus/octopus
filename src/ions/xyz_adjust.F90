@@ -140,7 +140,7 @@ contains
         call axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)

@@ -277,7 +277,7 @@ contains
       end do
       if(.not. found_identity) then
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     
       if(is_supercell) then

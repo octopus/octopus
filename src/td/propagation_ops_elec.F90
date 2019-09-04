@@ -131,7 +131,7 @@ contains
       if (optional_default(save_pos, .false.)) then
         call ion_dynamics_save_state(ions, geo, wo%ions_state)
       end if
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, ion_time)
+      call ion_dynamics_propagate(ions, gr%sb, geo, time, ion_time, namespace)
       call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time)
     end if
 

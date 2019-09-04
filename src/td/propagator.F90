@@ -572,7 +572,7 @@ contains
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt, namespace)
         generate = .true.
       end if
     end if
@@ -660,7 +660,7 @@ contains
     PUSH_SUB(propagator_dt_bo)
 
     ! move the hamiltonian to time t
-    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
+    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt, namespace)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, &

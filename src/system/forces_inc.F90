@@ -82,7 +82,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x, namespace) .and. ep%ignore_external_ions) then
       cycle
     end if
     
