@@ -189,14 +189,14 @@ contains
         SAFE_ALLOCATE(vv(1:sm%np))
 
         do ist = 1, this%norbs
-          call datomic_orbital_get_submesh(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
+          call datomic_orbital_get_submesh_safe(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
                           1, orb(1:sm%np, ist,1))
         end do
          
         call submesh_shift_center(sm, sb, this%V_ij(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
 
         do ist = 1, os(ios)%norbs
-          call datomic_orbital_get_submesh(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
+          call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
                 1, orb(1:sm%np, ist,2))
         end do
 

@@ -38,12 +38,14 @@ module atomic_orbital_oct_m
 
   private
 
-  public ::                             &
-           atomic_orbital_get_radius,   &
-           datomic_orbital_get_submesh, &
-           zatomic_orbital_get_submesh, &
-           dget_atomic_orbital,         &
-           zget_atomic_orbital,         &
+  public ::                                  &
+           atomic_orbital_get_radius,        &
+           datomic_orbital_get_submesh,      &
+           zatomic_orbital_get_submesh,      &
+           datomic_orbital_get_submesh_safe, &
+           zatomic_orbital_get_submesh_safe, &
+           dget_atomic_orbital,              &
+           zget_atomic_orbital,              &
            l_notation
 
   character(len=1), parameter :: &
