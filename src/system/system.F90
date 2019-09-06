@@ -85,8 +85,6 @@ contains
 
     sys%namespace = namespace
 
-    call accel_init(mpi_world, sys%namespace)
-
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
@@ -171,8 +169,6 @@ contains
     call grid_end(sys%gr)
 
     call space_end(sys%space)
-
-    call accel_end()
 
     SAFE_DEALLOCATE_P(sys%gr)
 
