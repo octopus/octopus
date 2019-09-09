@@ -68,6 +68,7 @@ basic_f_srcs =                                 \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
 	basic/namespace.F90                    \
+	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
@@ -89,6 +90,7 @@ basic_c_srcs =                                 \
 	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
+	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
 	basic/oct_gdlib_f.c                    \
 	basic/recipes.c                        \
