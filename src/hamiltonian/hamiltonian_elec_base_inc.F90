@@ -973,7 +973,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, ik, proj
         else
           ! and copy the points from the local buffer to its position
           if(batch_is_packed(vpsib)) then
-            !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
+            !$omp parallel do private(ip, ist, phase, phase_pq, phase_mq) if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               phase = conjg(this%projector_phases(ip, imat, 1, ik))
               phase_pq = conjg(this%projector_phases(ip, imat, 2, ik))
