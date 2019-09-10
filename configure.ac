@@ -123,6 +123,11 @@ fi
 
 
 
+AC_ARG_ENABLE(nvtx, AS_HELP_STRING([--enable-nvtx], [NVTX profiling support for Cuda version]))
+if test x"${enable_nvtx}" == x"yes" ; then
+  AC_DEFINE(HAVE_NVTX, 1, [defined if nvtx support is enabled])
+fi
+
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
 if test x"${enable_cuda}" == x"yes" ; then
@@ -428,6 +433,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile

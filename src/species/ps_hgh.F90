@@ -28,6 +28,7 @@ module ps_hgh_oct_m
   use loct_math_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -45,12 +46,14 @@ module ps_hgh_oct_m
   !!   (a) the pseudopotential parameters, as read from a *.hgh file,
   !!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
   type ps_hgh_t
+    ! Components are public by default
+
     !< HGH parameters.
-    character(len=5) :: atom_name
+    character(len=5), private :: atom_name
     integer          :: z_val
-    FLOAT            :: rlocal
-    FLOAT            :: rc(0:3)
-    FLOAT            :: c(1:4)
+    FLOAT, private   :: rlocal
+    FLOAT, private   :: rc(0:3)
+    FLOAT, private   :: c(1:4)
     FLOAT            :: h(0:3, 1:3, 1:3)
     FLOAT            :: k(0:3, 1:3, 1:3)
 
@@ -60,7 +63,8 @@ module ps_hgh_oct_m
     FLOAT, pointer   :: vlocal(:) !< Local potential
     FLOAT, pointer   :: kb(:,:,:) !< KB projectors
     FLOAT, pointer   :: kbr(:)    !< KB radii
-    FLOAT, pointer   :: rphi(:,:), eigen(:)
+    FLOAT, pointer   :: rphi(:,:)
+    FLOAT, pointer, private :: eigen(:)
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g
@@ -79,15 +83,16 @@ module ps_hgh_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hgh_init(psp, filename)
-    type(ps_hgh_t),   intent(inout) :: psp
-    character(len=*), intent(in)    :: filename
+  subroutine hgh_init(psp, filename, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit, i
 
     PUSH_SUB(hgh_init)
 
-    iunit = io_open(trim(filename), action='read', form='formatted', status='old')
+    iunit = io_open(trim(filename), namespace, action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
@@ -651,9 +656,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_debug(psp, dir)
-    type(ps_hgh_t),   intent(in) :: psp
-    character(len=*), intent(in) :: dir
+  subroutine hgh_debug(psp, dir, namespace)
+    type(ps_hgh_t),    intent(in) :: psp
+    character(len=*),  intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
 
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
@@ -662,12 +668,12 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir(trim(dir))
-    hgh_unit = io_open(trim(dirname)//'/hgh', action='write')
-    loc_unit = io_open(trim(dirname)//'/local', action='write')
-    dat_unit = io_open(trim(dirname)//'/info', action='write')
-    kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
-    wav_unit = io_open(trim(dirname)//'/wave', action='write')
+    call io_mkdir(trim(dir), namespace)
+    hgh_unit = io_open(trim(dirname)//'/hgh', namespace, action='write')
+    loc_unit = io_open(trim(dirname)//'/local', namespace, action='write')
+    dat_unit = io_open(trim(dirname)//'/info', namespace, action='write')
+    kbp_unit = io_open(trim(dirname)//'/nonlocal', namespace, action='write')
+    wav_unit = io_open(trim(dirname)//'/wave', namespace, action='write')
 
     ! Writes down the input file, to be checked against SHARE_DIR/pseudopotentials/HGH/ATOM_NAME.hgh
     write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

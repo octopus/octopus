@@ -164,7 +164,7 @@ contains
     PUSH_SUB(partition_dump)
 
     ierr = 0
-    full_filename = trim(io_workpath(dir))//'/'//trim(filename)
+    full_filename = trim(dir)//'/'//trim(filename)
 
 #ifdef HAVE_MPI2
     ! Calculate displacements for writing
@@ -248,7 +248,7 @@ contains
     PUSH_SUB(partition_load)
     
     ierr = 0
-    full_filename = trim(io_workpath(dir))//'/'//trim(filename)
+    full_filename = trim(dir)//'/'//trim(filename)
     
     ! This is a writing to avoid an optimization of gfortran with -O3
     write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)

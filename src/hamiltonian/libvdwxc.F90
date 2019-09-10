@@ -18,6 +18,7 @@ module libvdwxc_oct_m
   use mesh_cube_parallel_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pfft_oct_m
   use profiling_oct_m
@@ -44,13 +45,15 @@ module libvdwxc_oct_m
     libvdwxc_end
 
   type libvdwxc_t
+    private
     integer, pointer               :: libvdwxc_ptr
     type(mesh_t)                   :: mesh
     type(cube_t)                   :: cube
+    type(namespace_t), pointer     :: namespace
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     integer                        :: functional
     logical                        :: debug
-    FLOAT                          :: energy
+    FLOAT, public                  :: energy
     FLOAT                          :: vdw_factor
   end type libvdwxc_t
 
@@ -60,9 +63,10 @@ module libvdwxc_oct_m
 
 contains
 
-  subroutine libvdwxc_init(libvdwxc, functional)
-    type(libvdwxc_t), intent(out) :: libvdwxc
-    integer,          intent(in)  :: functional
+  subroutine libvdwxc_init(libvdwxc, namespace, functional)
+    type(libvdwxc_t),          intent(out) :: libvdwxc
+    type(namespace_t), target, intent(in)  :: namespace
+    integer,                   intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
 #ifdef HAVE_LIBVDWXC
@@ -73,13 +77,14 @@ contains
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
+    libvdwxc%namespace => namespace
     !%Variable libvdwxcDebug
     !%Type logical
     !%Section Hamiltonian::XC
     !%Description
     !% Dump libvdwxc inputs and outputs to files.
     !%End
-    call parse_variable('libvdwxcDebug', .false., libvdwxc%debug)
+    call parse_variable(namespace, 'libvdwxcDebug', .false., libvdwxc%debug)
     POP_SUB(libvdwxc_init)
 
     !%Variable libvdwxcVDWFactor
@@ -90,7 +95,7 @@ contains
     !% Setting a prefactor other than one is wrong, but useful
     !% for debugging.
     !%End
-    call parse_variable('libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
+    call parse_variable(namespace, 'libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
   end subroutine libvdwxc_init
 
   subroutine libvdwxc_print(this)
@@ -120,9 +125,10 @@ contains
     POP_SUB(libvdwxc_write_info)
   end subroutine libvdwxc_write_info
 
-  subroutine libvdwxc_set_geometry(this, mesh)
-    type(libvdwxc_t), intent(inout) :: this
-    type(mesh_t),     intent(inout) :: mesh
+  subroutine libvdwxc_set_geometry(this, namespace, mesh)
+    type(libvdwxc_t),  intent(inout) :: this
+    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),      intent(inout) :: mesh
 
     integer :: blocksize
     integer :: libvdwxc_mode
@@ -153,7 +159,7 @@ contains
     !%Option libvdwxc_mode_mpi 3
     !% Run with fftw3-mpi.  Works only if Octopus is compiled with MPI.
     !%End
-    call parse_variable('libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
+    call parse_variable(namespace, 'libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
 
     if(libvdwxc_mode == LIBVDWXC_MODE_AUTO) then
       if(mesh%mpi_grp%size == 1) then
@@ -171,10 +177,10 @@ contains
     end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb)
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace)
     else
 #ifdef HAVE_MPI
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb, mpi_grp = mesh%mpi_grp, &
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace, mpi_grp = mesh%mpi_grp, &
         need_partition = .true., blocksize = blocksize)
       call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
 #endif
@@ -376,7 +382,7 @@ contains
         integer :: ierr
 
         call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
-          fname, this%mesh, arr, unit_one, ierr)
+          fname, this%namespace, this%mesh, arr, unit_one, ierr)
       end subroutine libvdwxc_write_array
 
     end subroutine libvdwxc_calculate

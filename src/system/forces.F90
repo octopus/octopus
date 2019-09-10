@@ -31,8 +31,8 @@ module forces_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -44,14 +44,17 @@ module forces_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symm_op_oct_m
   use symmetrizer_oct_m
   use unit_oct_m
@@ -83,12 +86,12 @@ contains
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
   subroutine total_force_calculate(gr, geo, ep, st, x, lda_u)
-    type(grid_t),     intent(in)    :: gr
-    type(geometry_t), intent(in)    :: geo
-    type(epot_t),     intent(in)    :: ep
-    type(states_t),   intent(in)    :: st
-    FLOAT,            intent(inout) :: x(MAX_DIM)
-    integer,          intent(in)    :: lda_u
+    type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(in)    :: geo
+    type(epot_t),        intent(in)    :: ep
+    type(states_elec_t), intent(in)    :: st
+    FLOAT,               intent(inout) :: x(MAX_DIM)
+    integer,             intent(in)    :: lda_u
 
     type(profile_t), save :: forces_prof
 
@@ -108,12 +111,13 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
+  subroutine forces_costate_calculate(gr, namespace, geo, hm, psi, chi, f, q)
     type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(in)    :: hm
-    type(states_t),      intent(in)    :: psi
-    type(states_t),      intent(in)    :: chi
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(states_elec_t), intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: chi
     FLOAT,               intent(inout) :: f(:, :)
     FLOAT,               intent(in)    :: q(:, :)
 
@@ -127,7 +131,7 @@ contains
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
 
-    ! FIXME: is the next section not basically the same as the routine ion_interaction_calculate?
+    ! FIXME: is the next section not basically the same as the routine ion_internamespace, action_calculate?
 
     f = M_ZERO
     do iatom = 1, geo%natoms
@@ -163,7 +167,7 @@ contains
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
         derpsi = M_z0
-        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
         call zderivatives_grad(gr%der, zpsi(:, 1), derpsi(:, :, 1))
         do iatom = 1, geo%natoms
           do j = 1, gr%sb%dim
@@ -225,8 +229,8 @@ contains
       SAFE_ALLOCATE(viapsi(1:gr%mesh%np_part, 1:psi%d%dim))
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
       viapsi = M_z0
-      call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-      call zhamiltonian_apply_atom (hm, geo, gr, iatom, zpsi, viapsi)
+      call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call zhamiltonian_elec_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
@@ -234,7 +238,7 @@ contains
       end do
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
 
-      call states_get_state(chi, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
       pdot3 = real(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
       geo%atom(iatom)%x(j) = qold
 
@@ -246,11 +250,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, hm, st, ks, vhxc_old, t, dt)
+  subroutine forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old, t, dt)
     type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(states_elec_t), intent(inout) :: st
     type(v_ks_t),        intent(in)      :: ks
     FLOAT,     optional, intent(in)    :: vhxc_old(:,:)
     FLOAT,     optional, intent(in)    :: t
@@ -285,7 +290,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
     ! if we use vdw TS, we need to compute it now
     if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
-      call vdw_ts_force_calculate(ks%vdw_ts, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
     end if
 
     do iatom = 1, geo%natoms
@@ -312,9 +317,9 @@ contains
     SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
+      call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
+      call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
     if(associated(st%rho_core)) then
@@ -323,7 +328,7 @@ contains
       force_nlcc(:, :) = M_ZERO
     end if
     if(present(vhxc_old)) then
-      call forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
+      call forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
     else
       force_scf = M_ZERO
     end if
@@ -438,11 +443,12 @@ contains
 
  ! ----------------------------------------------------------------------
 
-  subroutine forces_write_info(iunit, geo, sb, dir)
+  subroutine forces_write_info(iunit, geo, sb, dir, namespace)
     integer,             intent(in)    :: iunit
     type(geometry_t),    intent(in)    :: geo
     type(simul_box_t),   intent(in)    :: sb
     character(len=*),    intent(in)    :: dir
+    type(namespace_t),   intent(in)    :: namespace
 
     integer :: iatom, idir, ii, iunit2
     FLOAT:: rr(1:3), ff(1:3), torque(1:3)
@@ -477,7 +483,7 @@ contains
     end if
 
 
-    iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
+    iunit2 = io_open(trim(dir)//'/forces', namespace, action='write', position='asis')
     write(iunit2,'(a)') &
       ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z)' // &
       ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'
@@ -505,8 +511,8 @@ contains
 subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(inout) :: st
+  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(states_elec_t),            intent(inout) :: st
   FLOAT,                          intent(out)   :: force_nlcc(:, :)
 
   integer :: is, iatom, idir
@@ -550,11 +556,10 @@ end subroutine forces_from_nlcc
  ! from the pseudopotential.  
  ! NTD : No idea if this is good or bad, but this is easy to implement 
  !       and works well in practice
-subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
+subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(inout) :: st
+  type(hamiltonian_elec_t),            intent(in)    :: hm
   FLOAT,                          intent(out)   :: force_scf(:, :)
   FLOAT,                          intent(in)    :: vhxc_old(:,:)
 

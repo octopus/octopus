@@ -25,9 +25,10 @@ module lasers_oct_m
   use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use unit_oct_m
@@ -197,10 +198,10 @@ contains
   !! zero carrier frequency).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+    type(laser_t),   intent(inout)  :: laser
+    FLOAT,           intent(in)     :: dt
+    integer,         intent(in)     :: max_iter
+    FLOAT,           intent(in)     :: omegamax
 
     integer :: iter
     FLOAT   :: tt, fj, phi
@@ -228,14 +229,15 @@ contains
   !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+    type(laser_t),   intent(inout) :: laser
+    FLOAT,           intent(in)    :: dt
+    integer,         intent(in)    :: max_iter
+    FLOAT,           intent(in)    :: omegamax
+    
     PUSH_SUB(lasers_to_numerical)
 
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
-    call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%phi,  max_iter, dt, omegamax)
 
     POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
@@ -243,9 +245,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_init(no_l, lasers, mesh)
+  subroutine laser_init(lasers, namespace, no_l, mesh)
+    type(laser_t),       pointer     :: lasers(:)
+    type(namespace_t),   intent(in)  :: namespace
     integer,             intent(out) :: no_l
-    type(laser_t), pointer           :: lasers(:)
     type(mesh_t),        intent(in)  :: mesh
 
     type(block_t)     :: blk
@@ -257,7 +260,7 @@ contains
 
     PUSH_SUB(laser_init)
 
-    call messages_obsolete_variable("TDLasers", "TDExternalFields")
+    call messages_obsolete_variable(namespace, "TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
     !%Type block
     !%Section Time-Dependent
@@ -347,7 +350,7 @@ contains
     !%End
 
     no_l = 0
-    if(parse_block('TDExternalFields', blk) == 0) then
+    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
 
@@ -373,12 +376,12 @@ contains
         lasers(il)%omega = omega0
      
         call parse_block_string(blk, il-1, jj+2, envelope_expression)
-        call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
+        call tdf_read(lasers(il)%f, namespace, trim(envelope_expression), ierr)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, phase_expression)
-          call tdf_read(lasers(il)%phi, trim(phase_expression), ierr)
+          call tdf_read(lasers(il)%phi, namespace, trim(phase_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'

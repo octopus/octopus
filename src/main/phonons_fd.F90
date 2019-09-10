@@ -24,17 +24,18 @@ module phonons_fd_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use output_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -49,9 +50,8 @@ module phonons_fd_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys, hm)
+  subroutine phonons_run(sys)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
 
     type(vibrations_t) :: vib
     integer :: ierr
@@ -71,8 +71,8 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
+    call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_elec_load(gs_restart, sys%namespace, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -82,9 +82,9 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys)
 
-    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd")
+    call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
 
     !%Variable Displacement
     !%Type float
@@ -96,10 +96,10 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call parse_variable('Displacement', CNST(0.01), vib%disp, units_inp%length)
+    call parse_variable(sys%namespace, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
 
     call vibrations_output(vib)
     
@@ -114,7 +114,7 @@ contains
     subroutine init_()
 
       PUSH_SUB(phonons_run.init_)
-      call states_allocate_wfns(sys%st, sys%gr%mesh)
+      call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       POP_SUB(phonons_run.init_)
     end subroutine init_
@@ -123,7 +123,7 @@ contains
     subroutine end_()
 
       PUSH_SUB(phonons_run.end_)
-      call states_deallocate_wfns(sys%st)
+      call states_elec_deallocate_wfns(sys%st)
 
       POP_SUB(phonons_run.end_)
     end subroutine end_
@@ -132,15 +132,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, mc, geo, st, ks, hm, outp, vib)
-    type(grid_t), target, intent(inout) :: gr
-    type(multicomm_t),    intent(in)    :: mc
-    type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
-    type(v_ks_t),         intent(inout) :: ks
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(output_t),       intent(in)    :: outp
-    type(vibrations_t),   intent(inout) :: vib
+  subroutine get_dyn_matrix(gr, namespace, mc, geo, st, ks, hm, outp, vib)
+    type(grid_t),     target, intent(inout) :: gr
+    type(namespace_t),        intent(in)    :: namespace
+    type(multicomm_t),        intent(in)    :: mc
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(output_t),           intent(in)    :: outp
+    type(vibrations_t),       intent(inout) :: vib
 
     type(scf_t)               :: scf
     type(mesh_t),     pointer :: mesh
@@ -151,7 +152,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, gr, geo, st, mc, hm, ks)
+    call scf_init(scf, namespace, gr, geo, st, mc, hm)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO
@@ -170,12 +171,12 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
-        call hamiltonian_epot_generate(hm, gr, geo, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
@@ -186,12 +187,12 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call hamiltonian_epot_generate(hm, gr, geo, st)
+        call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do

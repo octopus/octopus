@@ -19,10 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_tdlocal(gr, tg, td)
-    type(grid_t),   intent(in)    :: gr
-    type(target_t), intent(inout) :: tg
-    type(td_t),     intent(in)    :: td
+  subroutine target_init_tdlocal(gr, namespace, tg, td)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
 
     type(block_t)       :: blk
     PUSH_SUB(target_init_tdlocal)
@@ -39,7 +40,7 @@
     !% definition of the time-dependent local target, <i>i.e.</i> a function of x,y,z and t that 
     !% is to be maximized along the evolution.
     !%End
-    if(parse_block('OCTTdTarget', blk)==0) then
+    if(parse_block(namespace, 'OCTTdTarget', blk)==0) then
       call parse_block_string(blk, 0, 0, tg%td_local_target)
       call conv_to_C_string(tg%td_local_target)
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
@@ -78,10 +79,10 @@
     integer :: ierr
     PUSH_SUB(target_output_tdlocal)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'td_local_target', outp%namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 
@@ -111,7 +112,7 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_tdlocal(chi_out)
-    type(states_t), intent(inout) :: chi_out
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_tdlocal)
@@ -134,7 +135,7 @@
   subroutine target_tdcalc_tdlocal(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :), zpsi(:, :)
@@ -153,7 +154,7 @@
       opsi = M_z0
       do ist  = psi%st_start, psi%st_end
 
-        call states_get_state(psi, gr%mesh, ist, 1, zpsi)
+        call states_elec_get_state(psi, gr%mesh, ist, 1, zpsi)
         
         do ip = 1, gr%mesh%np
           opsi(ip, 1) = tg%rho(ip)*zpsi(ip, 1)

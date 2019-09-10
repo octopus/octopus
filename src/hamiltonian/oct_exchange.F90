@@ -25,8 +25,8 @@ module oct_exchange_oct_m
   use messages_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use xc_oct_m
 
   implicit none
@@ -43,8 +43,9 @@ module oct_exchange_oct_m
     zoct_exchange_operator
 
   type oct_exchange_t
+    private
     logical :: oct_exchange
-    type(states_t), pointer :: oct_st
+    type(states_elec_t), pointer :: oct_st
     FLOAT, pointer :: oct_fxc(:, :, :)
     FLOAT, pointer :: oct_pot(:, :)
     FLOAT, pointer :: oct_rho(:, :)
@@ -79,9 +80,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_exchange_set(this, st, mesh)
-    type(oct_exchange_t), intent(inout) :: this
-    type(states_t), target, intent(in) :: st
-    type(mesh_t),        intent(in)    :: mesh
+    type(oct_exchange_t),     intent(inout) :: this
+    type(states_elec_t), target, intent(in) :: st
+    type(mesh_t),             intent(in)    :: mesh
 
     integer :: np, nspin
 
@@ -108,11 +109,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_exchange_prepare(this, mesh, psi, xc)
+  subroutine oct_exchange_prepare(this, mesh, psi, xc, psolver)
     type(oct_exchange_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    CMPLX,               intent(in)    :: psi(:, :, :, :)
-    type(xc_t),          intent(in)    :: xc
+    type(mesh_t),         intent(in)    :: mesh
+    CMPLX,                intent(in)    :: psi(:, :, :, :)
+    type(xc_t),           intent(in)    :: xc
+    type(poisson_t),      intent(in)    :: psolver
 
     integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)
@@ -128,7 +130,7 @@ contains
       this%oct_pot = M_ZERO
       this%oct_rho = M_ZERO
       do jst = 1, this%oct_st%nst
-        call states_get_state(this%oct_st, mesh, jst, 1, psi2)
+        call states_elec_get_state(this%oct_st, mesh, jst, 1, psi2)
         forall (ip = 1:mesh%np)
           this%oct_rho(ip, 1) = this%oct_rho(ip, 1) + this%oct_st%occ(jst, 1)*aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, 1))
         end forall
@@ -142,7 +144,7 @@ contains
       this%oct_rho = M_ZERO
       do ik = 1, 2
         do jst = 1, this%oct_st%nst
-          call states_get_state(this%oct_st, mesh, jst, ik, psi2)
+          call states_elec_get_state(this%oct_st, mesh, jst, ik, psi2)
           forall (ip = 1:mesh%np)
             this%oct_rho(ip, ik) = this%oct_rho(ip, ik) + this%oct_st%occ(jst, ik) * aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, ik))
           end forall

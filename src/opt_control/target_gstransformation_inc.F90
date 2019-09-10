@@ -19,11 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, tg, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(inout) :: restart
+  subroutine target_init_gstransformation(gr, namespace, tg, td, restart)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(restart_t),   intent(inout) :: restart
 
     PUSH_SUB(target_init_gstransformation)
 
@@ -45,9 +46,9 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call transform_states(tg%st, restart, gr, prefix = "OCTTarget")
+    call transform_states(tg%st, namespace, restart, gr, prefix = "OCTTarget")
 
-    if(.not. parse_is_defined('OCTTargetTransformStates')) then
+    if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
       message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
       call messages_fatal(2)
@@ -69,17 +70,18 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
     PUSH_SUB(target_output_gstransformation)
     
-    call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation
@@ -90,9 +92,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_gstransformation(tg, gr, psi) result(j1)
-    type(target_t), intent(in) :: tg
-    type(grid_t),   intent(in) :: gr
-    type(states_t), intent(in) :: psi
+    type(target_t),      intent(in) :: tg
+    type(grid_t),        intent(in) :: gr
+    type(states_elec_t), intent(in) :: psi
 
     integer :: ik, ist
 
@@ -107,8 +109,8 @@
     do ik = 1, psi%d%nik
       do ist = psi%st_start, psi%st_end
 
-        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
         
         j1 = j1 + abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
         
@@ -125,10 +127,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_gstransformation(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ist
     CMPLX :: olap
@@ -143,13 +145,13 @@
     do ik = 1, psi_in%d%nik
       do ist = psi_in%st_start, psi_in%st_end
 
-        call states_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
         
         olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
         zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
         
-        call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
 
       end do
     end do

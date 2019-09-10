@@ -23,7 +23,7 @@ module photon_mode_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_adv_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
@@ -31,11 +31,12 @@ module photon_mode_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
   use xc_oct_m
@@ -55,7 +56,7 @@ module photon_mode_oct_m
     FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
     FLOAT, pointer        :: pol_array(:,:)                   ! polarization of the photon field
     FLOAT, pointer        :: pol_dipole_array(:,:)            ! polarization*dipole operator
-    FLOAT                 :: ex                               ! photon exchange energy
+    FLOAT, public         :: ex                               ! photon exchange energy
     FLOAT                 :: pt_number            ! number of photons in mode
     FLOAT, pointer        :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
     type(lr_t)            :: lr                   !< to solve the equation H psi = b
@@ -64,8 +65,9 @@ module photon_mode_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine photon_mode_init(this, gr)
+  subroutine photon_mode_init(this, namespace, gr)
     type(photon_mode_t),  intent(out)   :: this
+    type(namespace_t),    intent(in)    :: namespace 
     type(grid_t),         intent(inout) :: gr
 
     type(block_t)         :: blk
@@ -88,7 +90,7 @@ contains
     !% polarization of the cavity mode in (x,y,z) direction
 
     this%nmodes = 0
-    if(parse_block('PhotonModes', blk) == 0) then
+    if(parse_block(namespace, 'PhotonModes', blk) == 0) then
 
        this%nmodes = parse_block_n(blk)
        SAFE_ALLOCATE(this%omega_array(1:this%nmodes))

@@ -21,8 +21,8 @@
 subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   type(mesh_t),   intent(in)      :: mesh
   type(grid_t),   intent(in)      :: gr
-  type(hamiltonian_t), intent(in) :: hm
-  type(states_t), intent(in)      :: st
+  type(hamiltonian_elec_t), intent(in) :: hm
+  type(states_elec_t), intent(in)      :: st
   integer,        intent(in)      :: is
   type(xc_oep_t), intent(inout)   :: oep
   logical,        intent(in)      :: first
@@ -69,7 +69,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   end if
 
   do ist = st%st_start, st%st_end
-    call states_get_state(st, mesh, ist, is, psi)
+    call states_elec_get_state(st, mesh, ist, is, psi)
     sqphi(1:mesh%np, 1:st%d%dim, ist) = abs(psi(1:mesh%np, 1:st%d%dim))**2
   end do
 
@@ -92,7 +92,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   oep%vxc(1:mesh%np, 1) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
-    call states_get_state(st, mesh, ist, is, psi)
+    call states_elec_get_state(st, mesh, ist, is, psi)
     if (oep%has_photons) then
       if (ist>(oep%eigen_n + 1)) EXIT ! included to guarantee that the photonic KLI finishes correctly but the parallel in states feature of the normal KLI works still
       bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)

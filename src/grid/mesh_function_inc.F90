@@ -19,10 +19,11 @@
 
 ! ---------------------------------------------------------
 !> integrates a function
-R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
+R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: ff(:)  !< (mesh%np)
   logical, optional, intent(in) :: mask(:)
+  logical, optional, intent(in) :: reduce
 
   integer :: ip
 
@@ -46,7 +47,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   dd = dd*mesh%volume_element
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(C_PROFILING_MF_REDUCE)

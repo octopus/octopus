@@ -19,6 +19,7 @@
 #include "global.h"
 
 module mesh_oct_m
+  use basis_set_abst_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -29,6 +30,7 @@ module mesh_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
   use profiling_oct_m
@@ -73,7 +75,8 @@ module mesh_oct_m
   !! - np, np_part
   !! - x, vol_pp
   !! These four are defined for all the points the node is responsible for.
-  type mesh_t
+  type, extends(basis_set_abst_t) :: mesh_t
+    ! Components are public by default
     type(simul_box_t),   pointer :: sb  !< simulation box
     type(curvilinear_t), pointer :: cv  
     type(index_t)                :: idx 
@@ -103,6 +106,12 @@ module mesh_oct_m
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
+  contains
+    procedure :: load => mesh_load
+    procedure :: dump => mesh_dump
+    procedure :: end => mesh_end
+    procedure :: init => mesh_init
+    procedure :: write_info => mesh_write_info
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 
@@ -114,6 +123,7 @@ module mesh_oct_m
   !!   x_{i,j} = origin + i*spacing*u + j*spacing*v,
   !! for nu <= i <= mu and nv <= j <= mv
   type mesh_plane_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM), v(MAX_DIM)
     FLOAT :: origin(MAX_DIM)
@@ -124,6 +134,7 @@ module mesh_oct_m
   !> This data type defines a line, and a regular grid defined on this
   !! line (or rather, on a portion of this line).
   type mesh_line_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM)
     FLOAT :: origin(MAX_DIM)
@@ -135,7 +146,17 @@ module mesh_oct_m
   
 contains
 
-  ! ---------------------------------------------------------
+  subroutine mesh_init(this)
+    class(mesh_t), intent(inout) :: this
+
+    PUSH_SUB(mesh_init)
+
+    call this%set_time_dependent(.false.)
+
+    POP_SUB(mesh_init)
+  end subroutine mesh_init
+
+! ---------------------------------------------------------
   !> finds the dimension of a box doubled in the non-periodic dimensions
   subroutine mesh_double_box(sb, mesh, alpha, db)
     type(simul_box_t), intent(in)  :: sb
@@ -162,8 +183,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_write_info(mesh, unit)
-    type(mesh_t), intent(in) :: mesh
+  subroutine mesh_write_info(this, unit)
+    class(mesh_t), intent(in) :: this
     integer,      intent(in) :: unit
     
     integer :: ii
@@ -174,18 +195,18 @@ contains
     PUSH_SUB(mesh_write_info)
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
-    do ii = 1, mesh%sb%dim
+    do ii = 1, this%sb%dim
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
-      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, mesh%spacing(ii))
+      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, this%spacing(ii))
     end do
     write(message(1), '(5a,f12.5)') trim(message(1)), ') ', &
-         '   volume/point [', trim(units_abbrev(units_out%length**mesh%sb%dim)), '] = ',      &
-         units_from_atomic(units_out%length**mesh%sb%dim, mesh%vol_pp(1))
+         '   volume/point [', trim(units_abbrev(units_out%length**this%sb%dim)), '] = ',      &
+         units_from_atomic(units_out%length**this%sb%dim, this%vol_pp(1))
     
-    write(message(2),'(a, i10)') '  # inner mesh = ', mesh%np_global
-    write(message(3),'(a, i10)') '  # total mesh = ', mesh%np_part_global
+    write(message(2),'(a, i10)') '  # inner mesh = ', this%np_global
+    write(message(3),'(a, i10)') '  # total mesh = ', this%np_part_global
     
-    cutoff = mesh_gcutoff(mesh)**2 / M_TWO
+    cutoff = mesh_gcutoff(this)**2 / M_TWO
     write(message(4),'(3a,f12.6,a,f12.6)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
       units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * M_TWO
     call messages_info(4, unit)
@@ -383,11 +404,12 @@ contains
   
   
   ! -------------------------------------------------------------- 
-  subroutine mesh_dump(mesh, dir, filename, mpi_grp, ierr)
-    type(mesh_t),     intent(in)  :: mesh
+  subroutine mesh_dump(this, dir, filename, mpi_grp, namespace, ierr)
+    class(mesh_t),    intent(in)  :: this
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t), intent(in)  :: namespace
     integer,          intent(out) :: ierr
     
     integer :: iunit, err
@@ -396,21 +418,22 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
+      position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
-      message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
+      message(1) = "Unable to open file '"//io_workpath(trim(dir)//"/"//trim(filename), namespace)//"'."
       call messages_warning(1)
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
-        write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
+        write(iunit, '(a20,1i10)')  'np_global=          ', this%np_global
+        write(iunit, '(a20,1i10)')  'np_part_global=     ', this%np_part_global
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
 
-    call index_dump(mesh%idx, dir, filename, mpi_grp, err)
+    call index_dump(this%idx, dir, filename, mpi_grp, namespace, err)
     if (err /= 0) ierr = ierr + 2
 
     POP_SUB(mesh_dump)
@@ -419,12 +442,13 @@ contains
   
   ! -------------------------------------------------------------- 
   !> Read the mesh parameters from file that were written by mesh_dump.
-  subroutine mesh_load(mesh, dir, filename, mpi_grp, ierr)
-    type(mesh_t),     intent(inout) :: mesh
-    character(len=*), intent(in)    :: dir
-    character(len=*), intent(in)    :: filename
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: ierr
+  subroutine mesh_load(this, dir, filename, mpi_grp, namespace, ierr)
+    class(mesh_t),     intent(inout) :: this
+    character(len=*),  intent(in)    :: dir
+    character(len=*),  intent(in)    :: filename
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(out)   :: ierr
 
     integer :: iunit, err
     character(len=20)  :: str
@@ -432,11 +456,12 @@ contains
 
     PUSH_SUB(mesh_load)
 
-    ASSERT(mesh%sb%dim > 0 .and. mesh%sb%dim <= MAX_DIM)
+    ASSERT(this%sb%dim > 0 .and. this%sb%dim <= MAX_DIM)
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status="old", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
+      status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -451,16 +476,16 @@ contains
         if (err /= 0) then
           ierr = ierr + 4
         else
-          read(lines(3), '(a20,1i10)') str, mesh%np_global
-          read(lines(4), '(a20,1i10)') str, mesh%np_part_global
-          mesh%parallel_in_domains = .false.
+          read(lines(3), '(a20,1i10)') str, this%np_global
+          read(lines(4), '(a20,1i10)') str, this%np_part_global
+          this%parallel_in_domains = .false.
         end if
       end if
 
       call io_close(iunit, grp=mpi_grp)
     end if
 
-    call index_load(mesh%idx, dir, filename, mpi_grp, err)
+    call index_load(this%idx, dir, filename, mpi_grp, namespace, err)
     if (err /= 0) ierr = ierr + 8
 
     POP_SUB(mesh_load)
@@ -468,11 +493,12 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, ierr)
+  subroutine mesh_write_fingerprint(mesh, dir, filename, mpi_grp, namespace, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: ierr
 
     integer :: iunit
@@ -481,7 +507,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
+      die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
       call messages_warning(1)
@@ -508,11 +535,12 @@ contains
   !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored.
   !! fingerprint cannot be read, it returns ierr /= 0.
-  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
+  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: read_np_part
     integer,          intent(out) :: read_np
     integer,          intent(out) :: ierr
@@ -529,7 +557,8 @@ contains
     read_np_part = 0
     read_np = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='read', status='old', die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='read', &
+      status='old', die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -578,10 +607,11 @@ contains
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, ierr)
+  subroutine mesh_check_dump_compatibility(mesh, dir, filename, namespace, mpi_grp, grid_changed, grid_reordered, map, ierr)
     type(mesh_t),         intent(in)  :: mesh
     character(len=*),     intent(in)  :: dir
     character(len=*),     intent(in)  :: filename
+    type(namespace_t),    intent(in)  :: namespace
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
@@ -600,7 +630,7 @@ contains
     grid_reordered = .false.
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, err)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, namespace, read_np_part, read_np, err)
     if (err /= 0) then
       ierr = ierr + 1
       message(1) = "Unable to read mesh fingerprint from '"//trim(dir)//"/"//trim(filename)//"'."
@@ -623,7 +653,7 @@ contains
         ! the grid is different, so we read the coordinates.
         SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
         ASSERT(allocated(mesh%idx%lxyz))
-        call io_binary_read(trim(io_workpath(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
+        call io_binary_read(trim(io_workpath(dir, namespace))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."
@@ -655,29 +685,29 @@ contains
 
 
   ! --------------------------------------------------------------
-  recursive subroutine mesh_end(mesh)
-    type(mesh_t), intent(inout)   :: mesh
+  recursive subroutine mesh_end(this)
+    class(mesh_t), intent(inout)   :: this
 
     PUSH_SUB(mesh_end)
 
-    call mesh_cube_map_end(mesh%cube_map)
+    call mesh_cube_map_end(this%cube_map)
 
-    if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
+    if(this%idx%is_hypercube) call hypercube_end(this%idx%hypercube)
 
-    SAFE_DEALLOCATE_A(mesh%resolution)
-    SAFE_DEALLOCATE_A(mesh%idx%lxyz)
-    SAFE_DEALLOCATE_A(mesh%idx%lxyz_inv)
-    SAFE_DEALLOCATE_A(mesh%x)
-    SAFE_DEALLOCATE_A(mesh%vol_pp)
+    SAFE_DEALLOCATE_A(this%resolution)
+    SAFE_DEALLOCATE_A(this%idx%lxyz)
+    SAFE_DEALLOCATE_A(this%idx%lxyz_inv)
+    SAFE_DEALLOCATE_A(this%x)
+    SAFE_DEALLOCATE_A(this%vol_pp)
 
-    if(mesh%parallel_in_domains) then
+    if(this%parallel_in_domains) then
 #if defined(HAVE_MPI)
-      call vec_end(mesh%vp)
+      call vec_end(this%vp)
       ! this is true if MeshUseTopology = false
-      if(mesh%mpi_grp%comm /= mesh%vp%comm) &
-        call MPI_Comm_free(mesh%vp%comm, mpi_err)
-      call partition_end(mesh%inner_partition)
-      call partition_end(mesh%bndry_partition)
+      if(this%mpi_grp%comm /= this%vp%comm) &
+        call MPI_Comm_free(this%vp%comm, mpi_err)
+      call partition_end(this%inner_partition)
+      call partition_end(this%bndry_partition)
 #endif
     end if
     

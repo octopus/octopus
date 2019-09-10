@@ -48,6 +48,7 @@ module atomic_oct_m
   integer, parameter :: VALCONF_STRING_LENGTH = 80
 
   type valconf_t
+    ! Components are public by default
     integer           :: z
     character(len=3)  :: symbol
     integer           :: type     !< 0 for the most normal valence configuration, 1 for semicore.

@@ -29,9 +29,10 @@ module linear_response_oct_m
   use profiling_oct_m
   use restart_oct_m
   use smear_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
 
   implicit none
 
@@ -62,7 +63,8 @@ module linear_response_oct_m
 
 
   type lr_t
-    logical :: is_allocated, is_allocated_rho
+    ! Components are public by default
+    logical, private :: is_allocated, is_allocated_rho
      
     !> the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     !< response of the density
@@ -103,10 +105,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_allocate(lr, st, mesh, allocate_rho)
-    type(lr_t),     intent(inout) :: lr
-    type(states_t), intent(in)    :: st
-    type(mesh_t),   intent(in)    :: mesh
-    logical, optional, intent(in) :: allocate_rho
+    type(lr_t),          intent(inout) :: lr
+    type(states_elec_t), intent(in)    :: st
+    type(mesh_t),        intent(in)    :: mesh
+    logical, optional,      intent(in) :: allocate_rho
 
     PUSH_SUB(lr_allocate)
 
@@ -133,8 +135,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_zero(lr, st)
-    type(lr_t),     intent(inout) :: lr
-    type(states_t), intent(in)    :: st
+    type(lr_t),          intent(inout) :: lr
+    type(states_elec_t), intent(in)    :: st
 
     PUSH_SUB(lr_zero)
 
@@ -178,10 +180,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_copy(st, mesh, src, dest)
-    type(states_t),    intent(in) :: st
-    type(mesh_t),      intent(in) :: mesh
-    type(lr_t),        intent(in) :: src
-    type(lr_t),     intent(inout) :: dest
+    type(states_elec_t), intent(in) :: st
+    type(mesh_t),        intent(in) :: mesh
+    type(lr_t),          intent(in) :: src
+    type(lr_t),       intent(inout) :: dest
 
     integer :: ik, idim, ist
 
@@ -237,9 +239,9 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function lr_alpha_j(st, jst, ik) 
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: jst
-    integer,        intent(in) :: ik
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: jst
+    integer,             intent(in) :: ik
 
     FLOAT :: dsmear
 

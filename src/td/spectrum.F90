@@ -30,6 +30,7 @@ module spectrum_oct_m
   use math_oct_m
   use messages_oct_m
   use minimizer_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
   use profiling_oct_m
@@ -98,7 +99,7 @@ module spectrum_oct_m
     integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
     integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
-    logical :: sigma_diag          !< diagonalize sigma tensor
+    logical, private :: sigma_diag          !< diagonalize sigma tensor
   end type spectrum_t
 
   !> Module variables, necessary to compute the function hsfunction, called by
@@ -112,8 +113,9 @@ module spectrum_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine spectrum_init(spectrum, default_energy_step, default_max_energy)
+  subroutine spectrum_init(spectrum, namespace, default_energy_step, default_max_energy)
     type(spectrum_t),           intent(inout) :: spectrum
+    type(namespace_t),          intent(in)    :: namespace
     FLOAT,            optional, intent(in)    :: default_energy_step
     FLOAT,            optional, intent(in)    :: default_max_energy
 
@@ -139,7 +141,7 @@ contains
     !% Rotatory strength spectrum.
     !%End
 
-    call parse_variable('PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
+    call parse_variable(namespace, 'PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
 
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) then
       call messages_input_error('PropagationSpectrumType')
@@ -157,7 +159,7 @@ contains
     !%Option compressed_sensing 2
     !% (Experimental) Uses the compressed sensing technique.
     !%End
-    call parse_variable('SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
+    call parse_variable(namespace, 'SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
       call messages_input_error('SpectrumMethod')
     end if
@@ -175,7 +177,7 @@ contains
       !% time-dependent dipole in this case, is assumed to have some
       !% noise that is given by this dimensionless quantity.
       !%End
-      call parse_variable('SpectrumSignalNoise', CNST(0.0), spectrum%noise)
+      call parse_variable(namespace, 'SpectrumSignalNoise', CNST(0.0), spectrum%noise)
       call messages_print_var_value(stdout, 'SpectrumSignalNoise', spectrum%noise)
     end if
  
@@ -200,7 +202,7 @@ contains
     default = SPECTRUM_DAMP_POLYNOMIAL
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING) default = SPECTRUM_DAMP_NONE
 
-    call parse_variable('PropagationSpectrumDampMode', default, spectrum%damp)
+    call parse_variable(namespace, 'PropagationSpectrumDampMode', default, spectrum%damp)
 
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) then
       call messages_input_error('PropagationSpectrumDampMode')
@@ -228,7 +230,7 @@ contains
     !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
     !% This is the only allowed choice for complex scaling.
     !%End
-    call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
+    call parse_variable(namespace, 'PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
       call messages_input_error('PropagationSpectrumTransform')
     end if
@@ -242,7 +244,7 @@ contains
     !% Processing is done for the given function in a time-window that starts at the
     !% value of this variable.
     !%End
-    call parse_variable('PropagationSpectrumStartTime',  M_ZERO, spectrum%start_time, units_inp%time)
+    call parse_variable(namespace, 'PropagationSpectrumStartTime',  M_ZERO, spectrum%start_time, units_inp%time)
     call messages_print_var_value(stdout, 'PropagationSpectrumStartTime', spectrum%start_time, unit = units_out%time)
 
     !%Variable PropagationSpectrumEndTime
@@ -254,7 +256,7 @@ contains
     !% value of this variable. If set to a negative value, the maximum value from 
     !% the corresponding multipole file will used.
     !%End
-    call parse_variable('PropagationSpectrumEndTime', -M_ONE, spectrum%end_time, units_inp%time)
+    call parse_variable(namespace, 'PropagationSpectrumEndTime', -M_ONE, spectrum%end_time, units_inp%time)
     call messages_print_var_value(stdout, 'PropagationSpectrumEndTime', spectrum%end_time, unit = units_out%time)
 
     !%Variable PropagationSpectrumEnergyStep
@@ -267,7 +269,7 @@ contains
     !%End
     fdefault = CNST(0.01)/(M_TWO*P_Ry)
     if(present(default_energy_step)) fdefault = default_energy_step
-    call parse_variable('PropagationSpectrumEnergyStep', fdefault, spectrum%energy_step, units_inp%energy)
+    call parse_variable(namespace, 'PropagationSpectrumEnergyStep', fdefault, spectrum%energy_step, units_inp%energy)
     call messages_print_var_value(stdout, 'PropagationSpectrumEnergyStep', spectrum%energy_step, unit = units_out%energy)
 
     !%Variable PropagationSpectrumMinEnergy
@@ -277,7 +279,7 @@ contains
     !%Description
     !% The Fourier transform is calculated for energies larger than this value.
     !%End
-    call parse_variable('PropagationSpectrumMinEnergy', M_ZERO, spectrum%min_energy, units_inp%energy)
+    call parse_variable(namespace, 'PropagationSpectrumMinEnergy', M_ZERO, spectrum%min_energy, units_inp%energy)
     call messages_print_var_value(stdout, 'PropagationSpectrumMinEnergy', spectrum%min_energy, unit = units_out%energy)
 
     
@@ -290,7 +292,7 @@ contains
     !%End
     fdefault = CNST(20.0)/(M_TWO*P_Ry)
     if(present(default_max_energy)) fdefault = default_max_energy
-    call parse_variable('PropagationSpectrumMaxEnergy', fdefault, spectrum%max_energy, units_inp%energy)
+    call parse_variable(namespace, 'PropagationSpectrumMaxEnergy', fdefault, spectrum%max_energy, units_inp%energy)
     call messages_print_var_value(stdout, 'PropagationSpectrumMaxEnergy', spectrum%max_energy, unit = units_out%energy)
 
     !%Variable PropagationSpectrumDampFactor
@@ -302,7 +304,7 @@ contains
     !% is fixed through this variable.
     !% Default value ensure that the damping function adquires a 0.0001 value at the end of the propagation time.
     !%End
-    call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
+    call parse_variable(namespace, 'PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
 
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
@@ -314,7 +316,7 @@ contains
     !% If <tt>PropagationSpectrumSigmaDiagonalization = yes</tt>, the polarizability tensor is diagonalizied.
     !% This variable is only used if the cross_section_tensor is computed. 
     !%End
-    call parse_variable('PropagationSpectrumSigmaDiagonalization', .false., spectrum%sigma_diag)
+    call parse_variable(namespace, 'PropagationSpectrumSigmaDiagonalization', .false., spectrum%sigma_diag)
     call messages_print_var_value(stdout, 'PropagationSpectrumSigmaDiagonalization', spectrum%sigma_diag)
 
     call messages_print_stress(stdout)
@@ -324,10 +326,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_cross_section_tensor(spectrum, out_file, in_file)
-    type(spectrum_t), intent(inout) :: spectrum
-    integer,          intent(in)    :: out_file
-    integer,          intent(in)    :: in_file(:)
+  subroutine spectrum_cross_section_tensor(spectrum, namespace, out_file, in_file)
+    type(spectrum_t),  intent(inout) :: spectrum
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)    :: out_file
+    integer,           intent(in)    :: in_file(:)
 
     integer :: nspin, energy_steps, ie, is, equiv_axes, n_files, trash
     FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
@@ -471,7 +474,7 @@ contains
 
     ! Diagonalize sigma tensor
     if (spectrum%sigma_diag) then
-      call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, spectrum%min_energy, energy_steps, kick)
+      call spectrum_sigma_diagonalize(sigma, namespace, nspin, spectrum%energy_step, spectrum%min_energy, energy_steps, kick)
     end if
 
     SAFE_DEALLOCATE_A(sigma)
@@ -601,7 +604,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_cross_section(in_file, out_file, spectrum, ref_file)
+  subroutine spectrum_cross_section(namespace, in_file, out_file, spectrum, ref_file)
+    type(namespace_t), intent(in)    :: namespace
     integer,           intent(in)    :: in_file
     integer,           intent(in)    :: out_file
     type(spectrum_t),  intent(inout) :: spectrum
@@ -664,11 +668,11 @@ contains
     end if
 
     ! parsing and re-printing to output useful PCM data
-    call pcm_min_input_parsing_for_spectrum(pcm)
+    call pcm_min_input_parsing_for_spectrum(pcm, namespace)
 
     ! adding the dipole generated by the PCM polarization charges due solute
     if(pcm%localf) &
-      call spectrum_add_pcm_dipole(dipole, time_steps, dt, nspin)
+      call spectrum_add_pcm_dipole(namespace, dipole, time_steps, dt, nspin)
 
     ! Now subtract the initial dipole.
     if(present(ref_file)) then
@@ -827,11 +831,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine spectrum_add_pcm_dipole(dipole, time_steps, dt, nspin)
-    FLOAT,   intent(inout) :: dipole(0:, :, :)
-    integer, intent(in)    :: time_steps
-    FLOAT,   intent(in)    :: dt
-    integer, intent(in)    :: nspin
+  subroutine spectrum_add_pcm_dipole(namespace, dipole, time_steps, dt, nspin)
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(inout) :: dipole(0:, :, :)
+    integer,           intent(in)    :: time_steps
+    FLOAT,             intent(in)    :: dt
+    integer,           intent(in)    :: nspin
 
     type(pcm_t) :: pcm
     FLOAT :: dipole_pcm(1:3)
@@ -853,7 +858,7 @@ contains
     ! reading PCM cavity from standard output file in two steps
 
     ! first step - counting tesserae
-    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
+    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', namespace, action='read')
     pcm%n_tesserae = 0
     iocheck = 1
     do while( iocheck >= 0 )
@@ -869,8 +874,8 @@ contains
 
     ! second step - reading of PCM tessellation arrays from standard output file
     !               writing the cavity to debug-purpose file
-    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
-    cavity_unit = io_open(PCM_DIR//'cavity_check.xyz', action='write')
+    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', namespace, action='read')
+    cavity_unit = io_open(PCM_DIR//'cavity_check.xyz', namespace, action='write')
     write(cavity_unit,'(I3)') pcm%n_tesserae
     write(cavity_unit,*)
     do ia = 1, pcm%n_tesserae
@@ -890,12 +895,12 @@ contains
     ! N.B. we assume nuclei fixed in time
 
     ! opening time-dependent PCM charges standard and debug-purpose file
-    asc_vs_t_unit = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='read', form='formatted')
-    asc_vs_t_unit_check = io_open(PCM_DIR//'ASC_e_vs_t_check.dat', action='write', form='formatted')
+    asc_vs_t_unit = io_open(PCM_DIR//'ASC_e_vs_t.dat', namespace, action='read', form='formatted')
+    asc_vs_t_unit_check = io_open(PCM_DIR//'ASC_e_vs_t_check.dat', namespace, action='write', form='formatted')
 
     ! opening time-dependent PCM and total dipole debug-purpose files
-    dipole_vs_t_unit_check = io_open(PCM_DIR//'dipole_e_vs_t_check.dat', action='write', form='formatted')
-    dipole_vs_t_unit_check1 = io_open(PCM_DIR//'dipole_e_vs_t_check1.dat', action='write', form='formatted')
+    dipole_vs_t_unit_check = io_open(PCM_DIR//'dipole_e_vs_t_check.dat', namespace, action='write', form='formatted')
+    dipole_vs_t_unit_check1 = io_open(PCM_DIR//'dipole_e_vs_t_check1.dat', namespace, action='write', form='formatted')
 
     ! reading PCM charges for the zeroth-iteration - not used - pcm%q_e_in is only auxiliary here
     read(asc_vs_t_unit,trim(adjustl(asc_vs_t_unit_format))) aux_float1, ( pcm%q_e_in(ia) , ia=1,pcm%n_tesserae )
@@ -1415,10 +1420,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_init(dt, is, ie, niter, acc)
-    FLOAT,   intent(in)           :: dt
-    integer, intent(in)           :: is, ie, niter
-    CMPLX,   intent(in)           :: acc(:)
+  subroutine spectrum_hsfunction_init(dt, namespace, is, ie, niter, acc)
+    FLOAT,             intent(in)    :: dt
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)    :: is, ie, niter
+    CMPLX,             intent(in)    :: acc(:)
 
     integer :: nn(3), j, optimize_parity(3)
     logical :: optimize(3)
@@ -1612,11 +1618,12 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_ar_from_acc(out_file, spectrum, vec, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t), intent(inout) :: spectrum
-    FLOAT,            intent(in)    :: vec(:)
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs_ar_from_acc(out_file, namespace, spectrum, vec, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    FLOAT,             intent(in)    :: vec(:)
+    FLOAT,  optional,  intent(in)    :: w0
 
     integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, ierr, jj
     FLOAT :: dt, dump, aa(MAX_DIM)
@@ -1629,7 +1636,7 @@ contains
 
     PUSH_SUB(spectrum_hs_ar_from_acc)
 
-    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', namespace, iunit, time_steps, dt)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! load dipole from file
@@ -1665,9 +1672,9 @@ contains
 
     ! Try to get the trajectory from multipole file
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open('multipoles', namespace, action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open('td.general/multipoles', namespace, action='read', status='old')
     end if
     if (.not.(iunit < 0)) then
       call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
@@ -1705,7 +1712,7 @@ contains
     end do
 
     call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, pos, tret)
-    call spectrum_hs(out_file, spectrum, 'a', w0)
+    call spectrum_hs(out_file, namespace, spectrum, 'a', w0)
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(acc)
@@ -1719,11 +1726,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_ar_from_mult(out_file, spectrum, vec, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t), intent(inout) :: spectrum
-    FLOAT,            intent(in)    :: vec(:)
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs_ar_from_mult(out_file, namespace, spectrum, vec, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    FLOAT,             intent(in)    :: vec(:)
+    FLOAT,  optional,  intent(in)    :: w0
 
     integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax
     FLOAT :: dt, dump
@@ -1736,9 +1744,9 @@ contains
     PUSH_SUB(spectrum_hs_ar_from_mult)
 
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open('multipoles', namespace, action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open('td.general/multipoles', namespace, action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
@@ -1796,7 +1804,7 @@ contains
 
 
     call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, dipole,tret)
-    call spectrum_hs(out_file, spectrum, 'a', w0)
+    call spectrum_hs(out_file, namespace, spectrum, 'a', w0)
     call spectrum_hsfunction_end()
 
     SAFE_DEALLOCATE_A(dipole)
@@ -1811,12 +1819,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_mult(out_file, spectrum, pol, vec, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t), intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    FLOAT,            intent(in)    :: vec(:)
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs_from_mult(out_file, namespace, spectrum, pol, vec, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    character,         intent(in)    :: pol
+    FLOAT,             intent(in)    :: vec(:)
+    FLOAT,   optional, intent(in)    :: w0
 
     integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie
     FLOAT :: dt, dump, vv(MAX_DIM)  
@@ -1829,9 +1838,9 @@ contains
 
     PUSH_SUB(spectrum_hs_from_mult)
 
-    iunit = io_open('multipoles', action='read', status='old', die=.false.)
+    iunit = io_open('multipoles', namespace, action='read', status='old', die=.false.)
     if(iunit < 0) then
-      iunit = io_open('td.general/multipoles', action='read', status='old')
+      iunit = io_open('td.general/multipoles', namespace, action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
@@ -1881,8 +1890,8 @@ contains
 
     if(present(w0)) then
 
-      call spectrum_hsfunction_init(dt, istart, iend, time_steps, ddipole)
-      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_init(dt, namespace, istart, iend, time_steps, ddipole)
+      call spectrum_hs(out_file, namespace, spectrum, pol, w0)
       call spectrum_hsfunction_end()
 
     else
@@ -1913,7 +1922,7 @@ contains
         sps(ie) = (sps(ie)**2 + spc(ie)**2)
       end do
 
-      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+      call spectrum_hs_output(out_file, namespace, spectrum, pol, no_e, sps)   
 
       call batch_end(acc_batch)
       call batch_end(sps_batch)
@@ -1932,12 +1941,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_acc(out_file, spectrum, pol, vec, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t),     intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    FLOAT,            intent(in)    :: vec(:)
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs_from_acc(out_file, namespace, spectrum, pol, vec, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    character,         intent(in)    :: pol
+    FLOAT,             intent(in)    :: vec(:)
+    FLOAT,   optional, intent(in)    :: w0
 
     integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr, no_e, ie
     FLOAT :: dt, aa(MAX_DIM),vv(MAX_DIM)
@@ -1947,7 +1957,7 @@ contains
 
     PUSH_SUB(spectrum_hs_from_acc)
 
-    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', namespace, iunit, time_steps, dt)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -1987,8 +1997,8 @@ contains
 
     if(present(w0)) then
 
-      call spectrum_hsfunction_init(dt, istart, iend, time_steps, acc)
-      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_init(dt, namespace, istart, iend, time_steps, acc)
+      call spectrum_hs(out_file, namespace, spectrum, pol, w0)
       call spectrum_hsfunction_end()
 
     else
@@ -2021,7 +2031,7 @@ contains
         sps(ie) = (sps(ie)**2 + spc(ie)**2)
       end do
 
-      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+      call spectrum_hs_output(out_file, namespace, spectrum, pol, no_e, sps)   
 
       call batch_end(acc_batch)
       call batch_end(sps_batch)
@@ -2037,12 +2047,13 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs_from_current(out_file, spectrum, pol, vec, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t),     intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    FLOAT,            intent(in)    :: vec(:)
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs_from_current(out_file, namespace, spectrum, pol, vec, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    character,         intent(in)    :: pol
+    FLOAT,             intent(in)    :: vec(:)
+    FLOAT,   optional, intent(in)    :: w0
 
     integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr, no_e, ie
     FLOAT :: dt, cc(MAX_DIM),vv(MAX_DIM)
@@ -2052,7 +2063,7 @@ contains
 
     PUSH_SUB(spectrum_hs_from_current)
 
-    call spectrum_tdfile_info('total_current', iunit, time_steps, dt)
+    call spectrum_tdfile_info('total_current', namespace, iunit, time_steps, dt)
     call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -2092,8 +2103,8 @@ contains
 
     if(present(w0)) then
 
-      call spectrum_hsfunction_init(dt, istart, iend, time_steps, cur)
-      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_init(dt, namespace, istart, iend, time_steps, cur)
+      call spectrum_hs(out_file, namespace, spectrum, pol, w0)
       call spectrum_hsfunction_end()
 
     else
@@ -2124,7 +2135,7 @@ contains
         sps(ie) = (sps(ie)**2 + spc(ie)**2) * ((ie-1) * spectrum%energy_step + spectrum%min_energy)**2
       end do
 
-      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+      call spectrum_hs_output(out_file, namespace, spectrum, pol, no_e, sps)   
 
       call batch_end(cur_batch)
       call batch_end(sps_batch)
@@ -2140,11 +2151,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hs(out_file, spectrum, pol, w0)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t), intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    FLOAT,  optional, intent(in)    :: w0
+  subroutine spectrum_hs(out_file, namespace, spectrum, pol, w0)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    character,         intent(in)    :: pol
+    FLOAT,  optional,  intent(in)    :: w0
 
     integer :: iunit, no_e, ie
     FLOAT   :: omega, hsval, xx
@@ -2154,7 +2166,7 @@ contains
 
     if(present(w0)) then
 
-      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+      iunit = io_open(trim(out_file) // "." // trim(pol), namespace, action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
       write(iunit, '(a1,a20,a20)') '#', &
         str_center('['//trim(units_abbrev(units_out%energy)) // ']', 20), &
@@ -2184,7 +2196,7 @@ contains
         sp(ie) = -sp(ie)
       end do
 
-      call spectrum_hs_output(out_file, spectrum, pol, no_e, sp)
+      call spectrum_hs_output(out_file, namespace, spectrum, pol, no_e, sp)
 
       SAFE_DEALLOCATE_A(sp)
 
@@ -2195,12 +2207,13 @@ contains
   ! ---------------------------------------------------------
 
 
-  subroutine spectrum_hs_output(out_file, spectrum, pol, no_e, sp)
-    character(len=*), intent(in)    :: out_file
-    type(spectrum_t), intent(inout) :: spectrum
-    character,        intent(in)    :: pol
-    integer,          intent(in)    :: no_e
-    FLOAT,            intent(in)    :: sp(:)
+  subroutine spectrum_hs_output(out_file, namespace, spectrum, pol, no_e, sp)
+    character(len=*),  intent(in)    :: out_file
+    type(namespace_t), intent(in)    :: namespace
+    type(spectrum_t),  intent(inout) :: spectrum
+    character,         intent(in)    :: pol
+    integer,           intent(in)    :: no_e
+    FLOAT,             intent(in)    :: sp(:)
 
     integer :: iunit, ie
 
@@ -2208,7 +2221,7 @@ contains
 
       ! output
     if(trim(out_file) /= '-') then
-      iunit = io_open(trim(out_file) // "." // trim(pol), action='write')
+      iunit = io_open(trim(out_file) // "." // trim(pol), namespace, action='write')
       write(iunit, '(a1,a20,a20)') '#', str_center("w", 20), str_center("H(w)", 20)
        
       write(iunit, '(a1,a20,a20)') &
@@ -2342,8 +2355,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_tdfile_info(fname, iunit, time_steps, dt)
-    character(len=*), intent(in) :: fname
+  subroutine spectrum_tdfile_info(fname, namespace, iunit, time_steps, dt)
+    character(len=*),  intent(in) :: fname
+    type(namespace_t), intent(in) :: namespace
     integer, intent(out) :: iunit, time_steps
     FLOAT,   intent(out) :: dt
 
@@ -2357,11 +2371,11 @@ contains
 
     ! open files
     filename = trim('td.general/')//trim(fname)
-    iunit = io_open(filename, action='read', status='old', die=.false.)
+    iunit = io_open(filename, namespace, action='read', status='old', die=.false.)
 
     if(iunit < 0) then
       filename = trim('./')//trim(fname)
-      iunit = io_open(filename, action='read', status='old')
+      iunit = io_open(filename, namespace, action='read', status='old')
     end if
 
 
@@ -2637,8 +2651,9 @@ contains
   end subroutine spectrum_fourier_transform
 
   ! ---------------------------------------------------------
-  subroutine spectrum_sigma_diagonalize(sigma, nspin, energy_step, min_energy, energy_steps, kick)
+  subroutine spectrum_sigma_diagonalize(sigma, namespace, nspin, energy_step, min_energy, energy_steps, kick)
     FLOAT,                  intent(in) :: sigma(:, :, :, :) !< (3, 3, energy_steps, nspin) already converted to units
+    type(namespace_t),      intent(in) :: namespace
     integer,                intent(in) :: nspin
     FLOAT,                  intent(in) :: energy_step, min_energy
     integer,                intent(in) :: energy_steps
@@ -2665,7 +2680,7 @@ contains
     !% symmetrized before its diagonalizied.
     !% This variable is only used if the cross_section_tensor is computed. 
     !%End
-    call parse_variable('PropagationSpectrumSymmetrizeSigma', .false., symmetrize)
+    call parse_variable(namespace, 'PropagationSpectrumSymmetrizeSigma', .false., symmetrize)
     call messages_print_var_value(stdout, 'PropagationSpectrumSymmetrizeSigma', symmetrize)
 
     spins_singlet = .true.
@@ -2681,10 +2696,10 @@ contains
     end if
     
     if (spins_singlet .and. spins_triplet) then
-      out_file = io_open('cross_section_diagonal-sigma_s', action='write')
-      out_file_t = io_open('cross_section_diagonal-sigma_t', action='write')
+      out_file = io_open('cross_section_diagonal-sigma_s', namespace, action='write')
+      out_file_t = io_open('cross_section_diagonal-sigma_t', namespace, action='write')
     else
-      out_file = io_open('cross_section_diagonal-sigma', action='write')
+      out_file = io_open('cross_section_diagonal-sigma', namespace, action='write')
     end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)

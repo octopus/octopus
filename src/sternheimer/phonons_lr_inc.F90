@@ -19,7 +19,7 @@
 subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, infrared)
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
-  type(states_t),       intent(in)    :: st
+  type(states_elec_t),  intent(in)    :: st
   type(lr_t),           intent(in)    :: lr
   type(lr_t),           intent(in)    :: kdotp_lr(:) !< (ndim)
   integer,              intent(in)    :: imat
@@ -56,9 +56,10 @@ end subroutine X(phonons_lr_infrared)
 
 ! ---------------------------------------------------------
 !> calculate the wavefunction associated with each normal mode
-subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_dump)
+subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load, restart_dump)
   type(lr_t),         intent(inout) :: lr
-  type(states_t),     intent(inout) :: st !< not changed, just because of restart_read intent
+  type(namespace_t),  intent(in)    :: namespace
+  type(states_elec_t),intent(inout) :: st !< not changed, just because of restart_read intent
   type(grid_t),       intent(in)    :: gr
   type(vibrations_t), intent(in)    :: vib
   type(restart_t),    intent(inout) :: restart_load
@@ -82,7 +83,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_du
         imat = vibrations_get_index(vib, iatom, idir)
 
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_load(restart_load, st, gr, ierr, lr = lrtmp)
+        if (ierr == 0) call states_elec_load(restart_load, namespace, st, gr, ierr, lr = lrtmp)
         call restart_close_dir(restart_load)
 
         if(ierr /= 0) then
@@ -105,7 +106,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, st, gr, vib, restart_load, restart_du
     end do
 
     call restart_open_dir(restart_dump, phn_nm_wfs_tag(inm), ierr)
-    if (ierr == 0) call states_dump(restart_dump, st, gr, ierr, lr = lr)
+    if (ierr == 0) call states_elec_dump(restart_dump, st, gr, ierr, lr = lr)
     if (ierr /= 0) then
       message(1) = "Unable to write response wavefunctions to '"//trim(phn_nm_wfs_tag(inm))//"'."
       call messages_warning(1)

@@ -1,0 +1,34 @@
+CalculationMode = td
+fromScratch = yes
+
+%Systems
+ "Carbon"   | electronic
+ "Hydrogen" | electronic
+%
+
+%Carbon.Coordinates
+"C" | 0 | 0 | 0
+%
+
+%Hydrogen.Coordinates
+"H" | 0 | 0 | 0
+%
+
+spacing = 0.3
+radius = 5.0
+
+SpinComponents = polarized
+
+Carbon.ExtraStates = 2
+%Carbon.Occupations
+ 2/3 | 2/3 | 2/3
+ 0 | 0 | 0
+%
+
+TDMaxSteps = 20
+TDTimeStep = 0.01
+
+TDDeltaStrength = 0.01
+TDPolarizationDirection = 1
+
+TDEnergyUpdateIter = 1

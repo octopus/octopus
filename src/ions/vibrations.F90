@@ -25,6 +25,7 @@ module vibrations_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
@@ -51,28 +52,31 @@ module vibrations_oct_m
     vibrations_get_suffix
   
   type vibrations_t
-    integer :: num_modes
-    integer :: ndim
-    integer :: natoms
-    FLOAT, pointer :: dyn_matrix(:,:)
-    FLOAT, pointer :: infrared(:,:)
-    FLOAT, pointer :: normal_mode(:,:)
-    FLOAT, pointer :: freq(:)
-    FLOAT :: disp
+    private
+    integer,        public :: num_modes
+    integer,        public :: ndim
+    integer,        public :: natoms
+    FLOAT, pointer, public :: dyn_matrix(:,:)
+    FLOAT, pointer, public :: infrared(:,:)
+    FLOAT, pointer, public :: normal_mode(:,:)
+    FLOAT, pointer, public :: freq(:)
+    FLOAT,          public :: disp
     FLOAT :: total_mass
     character (len=2) :: suffix
     character (len=80) :: filename_dynmat
     type(unit_t) :: unit_dynmat
+    type(namespace_t), pointer :: namespace
   end type vibrations_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine vibrations_init(this, geo, sb, suffix)
-    type(vibrations_t), intent(out) :: this
-    type(geometry_t),   intent(in)  :: geo
-    type(simul_box_t),  intent(in)  :: sb
-    character (len=2),  intent(in)  :: suffix
+  subroutine vibrations_init(this, geo, sb, suffix, namespace)
+    type(vibrations_t),        intent(out) :: this
+    type(geometry_t),          intent(in)  :: geo
+    type(simul_box_t),         intent(in)  :: sb
+    character (len=2),         intent(in)  :: suffix
+    type(namespace_t), target, intent(in)  :: namespace
 
     integer :: iatom
 
@@ -81,6 +85,7 @@ contains
     this%ndim = sb%dim
     this%natoms = geo%natoms
     this%num_modes = geo%natoms*sb%dim
+    this%namespace => namespace
     SAFE_ALLOCATE(this%dyn_matrix(1:this%num_modes, 1:this%num_modes))
     SAFE_ALLOCATE(this%infrared(1:this%num_modes, 1:this%ndim))
     SAFE_ALLOCATE(this%normal_mode(1:this%num_modes, 1:this%num_modes))
@@ -98,8 +103,8 @@ contains
     this%suffix = suffix
     this%filename_dynmat = VIB_MODES_DIR//'dynamical_matrix_'//trim(this%suffix)
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(VIB_MODES_DIR)
-      call io_rm(this%filename_dynmat)
+      call io_mkdir(VIB_MODES_DIR, namespace)
+      call io_rm(this%filename_dynmat, namespace)
       call vibrations_out_dyn_matrix_header(this)
     end if
 
@@ -220,7 +225,7 @@ contains
     iatom = vibrations_get_atom(this, imat)
     idir  = vibrations_get_dir (this, imat)
 
-    iunit = io_open(this%filename_dynmat, action='write', position='append')
+    iunit = io_open(this%filename_dynmat, this%namespace, action='write', position='append')
 
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
@@ -244,7 +249,7 @@ contains
 
     PUSH_SUB(vibrations_out_dyn_matrix_header)
 
-    iunit = io_open(this%filename_dynmat, action='write') ! start at the beginning
+    iunit = io_open(this%filename_dynmat, namespace=this%namespace, action='write') ! start at the beginning
     write(iunit, '(2(a8, a6), a25)') 'atom', 'dir', 'atom', 'dir', &
       '[' // trim(units_abbrev(this%unit_dynmat)) // ']'
     call io_close(iunit)
@@ -329,14 +334,14 @@ contains
     PUSH_SUB(vibrations_output)
 
     ! output frequencies and eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), action='write')
+    iunit = io_open(VIB_MODES_DIR//'normal_frequencies_'//trim(this%suffix), this%namespace, action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6,f17.8)') imat, units_from_atomic(unit_invcm, this%freq(imat))
     end do
     call io_close(iunit)
 
     ! output eigenvectors
-    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), action='write')
+    iunit = io_open(VIB_MODES_DIR//'normal_modes_'//trim(this%suffix), this%namespace, action='write')
     do imat = 1, this%num_modes
       write(iunit, '(i6)', advance='no') imat
       do jmat = 1, this%num_modes

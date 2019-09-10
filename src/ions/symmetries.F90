@@ -24,6 +24,7 @@ module symmetries_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -47,8 +48,9 @@ module symmetries_oct_m
     symmetries_write_info
 
   type symmetries_t
-    type(symm_op_t), allocatable :: ops(:)
-    integer                  :: nops
+    private
+    type(symm_op_t), allocatable, public :: ops(:)
+    integer, public          :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
     logical                  :: any_non_spherical
@@ -87,8 +89,9 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
+  subroutine symmetries_init(this, namespace, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
@@ -139,7 +142,7 @@ contains
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
     !%End
-    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
+    call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
     if(this%symmetries_compute .and. dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')
@@ -298,7 +301,7 @@ contains
 
       this%breakdir(1:3) = M_ZERO
 
-      if(parse_block('SymmetryBreakDir', blk) == 0) then
+      if(parse_block(namespace, 'SymmetryBreakDir', blk) == 0) then
 
         do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))

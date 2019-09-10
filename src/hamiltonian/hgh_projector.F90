@@ -48,11 +48,12 @@ module hgh_projector_oct_m
   
 
   type hgh_projector_t
-    integer        :: n_s         !< number of points inside the sphere
-    FLOAT, pointer :: dp(:, :)    !< projectors
-    CMPLX, pointer :: zp(:, :)
-    FLOAT          :: h(3, 3)     !< parameters
-    FLOAT          :: k(3, 3)     !< spin-orbit parameters
+    private
+    integer                :: n_s         !< number of points inside the sphere
+    FLOAT, pointer, public :: dp(:, :)    !< projectors
+    CMPLX, pointer, public :: zp(:, :)
+    FLOAT,          public :: h(3, 3)     !< parameters
+    FLOAT,          public :: k(3, 3)     !< spin-orbit parameters
   end type hgh_projector_t
 
 

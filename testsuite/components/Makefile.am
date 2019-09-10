@@ -74,6 +74,8 @@ dist_share_DATA =                                  \
 	20-dft_u.01-NiO.inp                        \
 	20-dft_u.test                              \
 	21-hamiltonian_apply.01-Si.inp             \
-	21-hamiltonian_apply.test
+	21-hamiltonian_apply.test                  \
+        22-density_calc.01-Si.inp                  \
+        22-density_calc.test
 
 CLEANFILES = *~ *.bak
