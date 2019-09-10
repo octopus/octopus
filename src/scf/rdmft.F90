@@ -97,12 +97,6 @@ module rdmft_oct_m
     integer, allocatable :: j_index(:,:)
     integer, allocatable :: k_index(:,:)
     integer, allocatable :: l_index(:,:)
-
-    logical  :: dressed
-    FLOAT    :: dressed_omega
-    FLOAT    :: dressed_lambda
-    FLOAT    :: dressed_electrons
-    FLOAT    :: dressed_coulomb
   end type rdm_t
 
   type(rdm_t), pointer :: rdm_ptr
@@ -506,7 +500,7 @@ contains
         
         if (hm%psolver%dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          write(iunit, '(a,5x,f14.12)') 'RDMParamLambda:', hm%psolver%dressed_lambda
+          write(iunit, '(a,5x,f14.12,f14.12,f14.12)') 'RDMParamLambda:', hm%psolver%dressed_lambda_x, hm%psolver%dressed_lambda_y, hm%psolver%dressed_lambda_z
           write(iunit, '(a,5x,f14.12)') 'RDMParamOmega:', hm%psolver%dressed_omega
           write(iunit, '(a,5x,f14.12)') 'RDMNoElectrons:', hm%psolver%dressed_electrons
           write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', hm%psolver%dressed_coulomb

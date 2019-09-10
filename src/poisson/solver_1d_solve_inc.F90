@@ -69,9 +69,9 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
           pp = this%der%mesh%x(jp, 2)
           pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2) &
             + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
-            + this%dressed_lambda**2*xx*yy)
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*pp*xx &
+            + this%dressed_lambda_x**2*xx*yy)
         end do
       end if
       
@@ -112,15 +112,15 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
           if(this%der%mesh%use_curvilinear) then
             pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)*this%der%mesh%vol_pp(jp) &
             + rho(jp)*this%der%mesh%vol_pp(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
-            + this%dressed_lambda**2*xx*yy)
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*pp*xx &
+            + this%dressed_lambda_x**2*xx*yy)
           else
             pot(ip) = pot(ip) + rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2) &
             + rho(jp)*( &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*qq*yy &
-            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*pp*xx &
-            + this%dressed_lambda**2*xx*yy)
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*qq*yy &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda_x*pp*xx &
+            + this%dressed_lambda_x**2*xx*yy)
           end if
         end do
       end if

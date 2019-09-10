@@ -127,7 +127,7 @@ module poisson_oct_m
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
     logical, public :: dressed
-    FLOAT, public :: dressed_lambda
+    FLOAT, public :: dressed_lambda_x, dressed_lambda_y, dressed_lambda_z
     FLOAT, public :: dressed_omega
     FLOAT, public :: dressed_electrons
     FLOAT, public :: dressed_coulomb
@@ -296,14 +296,32 @@ contains
 
 
     if (this%dressed) then
-      !%Variable DressedLambda
+      !%Variable DressedLambdaX
       !%Type float
-      !%Default 1.0e-2 Ha
+      !%Default 0 Ha
       !%Section Hamiltonian::Poisson
       !%Description
-      !% interaction strength in dressed orbital formalism.
+      !% X component of polarization vector including the interaction strength in dressed orbital formalism.
       !%End
-      call parse_variable(namespace, 'DressedLambda', CNST(1.0e-2), this%dressed_lambda)
+      call parse_variable(namespace, 'DressedLambdaX', CNST(0.0), this%dressed_lambda_x)
+      
+      !%Variable DressedLambdaY
+      !%Type float
+      !%Default 0 Ha
+      !%Section Hamiltonian::Poisson
+      !%Description
+      !% Y component of polarization vector including the interaction strength in dressed orbital formalism.
+      !%End
+      call parse_variable(namespace, 'DressedLambdaY', CNST(0.0), this%dressed_lambda_y)
+      
+      !%Variable DressedLambdaZ
+      !%Type float
+      !%Default 0 Ha
+      !%Section Hamiltonian::Poisson
+      !%Description
+      !% Z component of polarization vector including the interaction strength in dressed orbital formalism.
+      !%End
+      call parse_variable(namespace, 'DressedLambdaZ', CNST(0.0), this%dressed_lambda_z)
 
       !%Variable DressedOmega
       !%Type float
@@ -334,7 +352,7 @@ contains
       call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
 
       write(message(1), '(a)')'Dressed Orbital calculation'
-      write(message(2),'(a,1x,f14.12)') 'DressedLambda', this%dressed_lambda
+      write(message(2),'(a,1x,f14.12,f14.12,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z
       write(message(3),'(a,1x,f14.12)') 'DressedParamOmega', this%dressed_omega
       write(message(4),'(a,1x,f14.12)') 'DressedNoElectrons', this%dressed_electrons
       write(message(5),'(a,1x,f14.12)') 'DressedCoulomb', this%dressed_coulomb
@@ -675,7 +693,7 @@ contains
     
     ! dressed orbital implementation works currently only ifor an electronic 1d system (=2d orbitals) and with direct sum 
     if(this%dressed .and. .not.this%method==POISSON_DIRECT_SUM) then
-      write(message(1), '(a)')'Dressed Orbital calculation currently only possible with direct sum.'
+      write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum.'
       call messages_fatal(1)
     end if
     
