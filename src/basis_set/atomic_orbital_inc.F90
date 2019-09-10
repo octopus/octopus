@@ -283,6 +283,7 @@ end subroutine X(get_atomic_orbital)
     type(submesh_t) :: tmp_sm
     R_TYPE, allocatable :: phi_tmp(:)
     FLOAT :: threshold
+    type(ps_t), pointer :: ps
 
     if(submesh%np == 0) return
 
@@ -290,7 +291,8 @@ end subroutine X(get_atomic_orbital)
 
     safe = .true.
     if(species_is_ps(species)) then
-      threshold = spline_range_max(species_ps(species)%ur(ii, ispin))
+      ps => species_ps(species)
+      threshold = spline_range_max(ps%ur(ii, ispin))
       if(any(submesh%x(1:submesh%np, 0) > threshold)) safe = .false.
     end if
 
@@ -300,7 +302,8 @@ end subroutine X(get_atomic_orbital)
 
     else
       ASSERT(species_is_ps(species))
-      threshold = spline_range_max(species_ps(species)%ur(ii, ispin))
+      ps => species_ps(species)
+      threshold = spline_range_max(ps%ur(ii, ispin))
 
       is = 0
       do ip = 1, submesh%np
