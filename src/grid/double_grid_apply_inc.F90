@@ -72,7 +72,7 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 #endif
 
     !$omp critical
-    SAFE_ALLOCATE(vs(0:sm%np_part))
+    SAFE_ALLOCATE(vs(1:sm%np_part))
     !$omp end critical
 
     vs = M_ZERO

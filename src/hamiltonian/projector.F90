@@ -22,30 +22,22 @@ module projector_oct_m
   use atom_oct_m
   use batch_oct_m
   use comm_oct_m
-  use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hgh_projector_oct_m
-  use io_oct_m
   use kb_projector_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use math_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multicomm_oct_m
   use profiling_oct_m
   use ps_oct_m
   use rkb_projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -89,22 +81,23 @@ module projector_oct_m
   !! - relativistic Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    integer :: type = PROJ_NONE
-    integer :: nprojections
-    integer :: lmax
-    integer :: lloc
-    integer :: nik
-    integer :: reltype
+    private
+    integer, public :: type = PROJ_NONE
+    integer         :: nprojections
+    integer, public :: lmax
+    integer, public :: lloc
+    integer         :: nik
+    integer         :: reltype
 
-    type(submesh_t)  :: sphere
+    type(submesh_t), public  :: sphere
     
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
-    type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
-    type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
-    CMPLX,                 pointer :: phase(:, :) => null()
+    type(hgh_projector_t), pointer, public :: hgh_p(:, :) => null()
+    type(kb_projector_t),  pointer, public :: kb_p(:, :)  => null()
+    type(rkb_projector_t), pointer         :: rkb_p(:, :) => null()
+    CMPLX,                 pointer, public :: phase(:, :) => null()
   end type projector_t
 
 contains
@@ -138,9 +131,8 @@ contains
   end function projector_is
 
   !---------------------------------------------------------
-  subroutine projector_init(p, mesh, atm, dim, reltype)
+  subroutine projector_init(p, atm, dim, reltype)
     type(projector_t),    intent(inout) :: p
-    type(mesh_t),         intent(in)    :: mesh
     type(atom_t), target, intent(in)    :: atm
     integer,              intent(in)    :: dim
     integer,              intent(in)    :: reltype
@@ -192,13 +184,14 @@ contains
   subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
     type(projector_t),             intent(inout) :: this
     type(simul_box_t),             intent(in)    :: sb
-    type(states_dim_t),            intent(in)    :: std
+    type(states_elec_dim_t),       intent(in)    :: std
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
+    FLOAT, allocatable :: diff(:,:) 
 
     PUSH_SUB(projector_init_phases)
 
@@ -209,8 +202,13 @@ contains
       SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
     end if
 
+    SAFE_ALLOCATE(diff(1:ndim, 1:ns))
+    do is = 1, ns
+      diff(1:ndim, is) = this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)
+    end do
+
     do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_dim_get_kpoint_index(std, iq)
+      ikpoint = states_elec_dim_get_kpoint_index(std, iq)
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))
@@ -222,11 +220,10 @@ contains
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
         
-        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+        kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
 
         if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*diff(1:ndim, is))
         end if
 
         if(present(vec_pot_var)) then
@@ -237,6 +234,8 @@ contains
       end do
 
     end do
+
+    SAFE_DEALLOCATE_A(diff)
 
     POP_SUB(projector_init_phases)
 

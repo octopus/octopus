@@ -31,7 +31,6 @@ module stencil_star_oct_m
   private
   public ::                        &
     stencil_star_size_lapl,        &
-    stencil_star_extent,           &
     stencil_star_get_lapl,         &
     stencil_star_polynomials_lapl, &
     stencil_star_coeff_lapl,       &
@@ -54,21 +53,6 @@ contains
     POP_SUB(stencil_star_size_lapl)
   end function stencil_star_size_lapl
 
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given discretization order.
-  integer function stencil_star_extent(dir, order)
-    integer, intent(in) :: dir
-    integer, intent(in) :: order
-
-    PUSH_SUB(stencil_star_extent)
-
-    stencil_star_extent = order
-
-    POP_SUB(stencil_star_extent)
-  end function stencil_star_extent
-  
 
   ! ---------------------------------------------------------
   subroutine stencil_star_get_lapl(this, dim, order)
@@ -148,18 +132,18 @@ contains
     morder = 2*order
     SAFE_ALLOCATE(cc(0:morder, 0:morder, 0:2))
     call weights(2, morder, cc)
-    lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:dim)**2)
+    lapl%w(1,:) = cc(0, morder, 2)*sum(1/h(1:dim)**2)
 
     k = 1
     do i = 1, dim
       do j = -order, -1
         k = k + 1
-        lapl%w_re(k,:) = cc(-2*j-1, morder, 2) / h(i)**2
+        lapl%w(k,:) = cc(-2*j-1, morder, 2) / h(i)**2
       end do
 
       do j = 1, order
         k = k + 1
-        lapl%w_re(k,:) = cc( 2*j,   morder, 2) / h(i)**2
+        lapl%w(k,:) = cc( 2*j,   morder, 2) / h(i)**2
       end do
     end do
 
@@ -245,15 +229,15 @@ contains
 
     k = 1
     do j = -order, -1
-      grad%w_re(k,:) = cc(-2*j-1, morder, 1) / h
+      grad%w(k,:) = cc(-2*j-1, morder, 1) / h
       k = k + 1
     end do
 
-    grad%w_re(k,:) = cc(0, morder, 1) / h
+    grad%w(k,:) = cc(0, morder, 1) / h
 
     do j = 1, order
       k = k + 1
-      grad%w_re(k,:) = cc(2*j, morder, 1) / h
+      grad%w(k,:) = cc(2*j, morder, 1) / h
     end do
 
     SAFE_DEALLOCATE_A(cc)

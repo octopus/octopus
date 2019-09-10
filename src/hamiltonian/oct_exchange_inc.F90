@@ -17,9 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(oct_exchange_operator)(this, der, hpsi, ist, ik)
+subroutine X(oct_exchange_operator)(this, mesh, hpsi, ist, ik)
   type(oct_exchange_t), intent(in)   :: this
-  type(derivatives_t), intent(in)    :: der
+  type(mesh_t),         intent(in)    :: mesh
   R_TYPE,              intent(inout) :: hpsi(:, :)
   integer,             intent(in)    :: ist
   integer,             intent(in)    :: ik
@@ -30,24 +30,24 @@ subroutine X(oct_exchange_operator)(this, der, hpsi, ist, ik)
 
   PUSH_SUB(X(oct_exchange_operator))
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:this%oct_st%d%dim))
-  SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:this%oct_st%d%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:this%oct_st%d%dim))
+  SAFE_ALLOCATE(psi2(1:mesh%np, 1:this%oct_st%d%dim))
 
   select case(this%oct_st%d%ispin)
   case(UNPOLARIZED)
     ASSERT(this%oct_st%d%nik  ==  1)
-    call states_get_state(this%oct_st, der%mesh, ist, 1, psi2)
-    forall(ip = 1:der%mesh%np)
+    call states_elec_get_state(this%oct_st, mesh, ist, 1, psi2)
+    forall(ip = 1:mesh%np)
       hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(this%oct_pot(ip, 1) + this%oct_fxc(ip, 1, 1)*this%oct_rho(ip, 1))
     end forall
 
   case(SPIN_POLARIZED)
     ASSERT(this%oct_st%d%nik  ==  2)
 
-    call states_get_state(this%oct_st, der%mesh, ist, ik, psi2)
+    call states_elec_get_state(this%oct_st, mesh, ist, ik, psi2)
 
     do ik2 = 1, 2
-      forall(ip = 1:der%mesh%np)
+      forall(ip = 1:mesh%np)
         hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * this%oct_st%occ(ist, ik) * &
           psi2(ip, 1) * (this%oct_pot(ip, ik2) + this%oct_fxc(ip, ik, ik2)*this%oct_rho(ip, ik2))
        end forall

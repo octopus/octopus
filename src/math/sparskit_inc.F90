@@ -77,7 +77,8 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 
   ! Start iterative solution of the linear system
   solver_iter: do iter = 1, sk%maxiter
-    
+
+#ifdef HAVE_SPARSKIT    
     select case(sk%solver_type)
     case(SK_CG)
       call cg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
@@ -107,7 +108,6 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
     end select
     !write(*, *) 'ITER = ', iter, sk%fpar(5)
 
-    
     ! Evaluate reverse communication protocol
     select case(sk%ipar(1))
     case(1)
@@ -169,10 +169,9 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
         call messages_info(1)
       end if
     end if
-      
+#endif    
+
   end do solver_iter
-
-
 
   if(iter  > sk%maxiter) then
 !    message(1) = 'Maxiter reached'

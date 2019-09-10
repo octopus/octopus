@@ -20,7 +20,9 @@ match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -51
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -34.26008614
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -4.76230915
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 88.52863377
+Precision: 0.00011
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -316.47911276
+Precision: 0.0001
 
 match ; Eigenvalue 1 up; GREPFIELD(static/info, ' 1   up', 3) ; -14.461727
 match ; Eigenvalue 1 dn; GREPFIELD(static/info, ' 1   dn', 3) ; -11.750136
@@ -34,7 +36,7 @@ match ; Eigenvalue 4 dn; GREPFIELD(static/info, ' 4   dn', 3) ; -3.682145
 match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 2.00000
 
 Input: 21-lobpcg.02-spinors.inp
-Precision : 0.00011
+Precision : 0.00012
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -141.78882842
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000

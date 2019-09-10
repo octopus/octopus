@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[selene],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -122,6 +122,11 @@ if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
 fi
 
 
+
+AC_ARG_ENABLE(nvtx, AS_HELP_STRING([--enable-nvtx], [NVTX profiling support for Cuda version]))
+if test x"${enable_nvtx}" == x"yes" ; then
+  AC_DEFINE(HAVE_NVTX, 1, [defined if nvtx support is enabled])
+fi
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -268,6 +273,7 @@ dnl ===================================================================
 dnl now we search for libraries
 
 ACX_LIBXC
+ACX_LIBVDWXC
 
 dnl check for BLAS
 ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))
@@ -427,6 +433,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile

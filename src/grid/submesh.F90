@@ -20,7 +20,6 @@
   
 module submesh_oct_m
   use batch_oct_m
-  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -32,8 +31,6 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
     
   implicit none
   private 
@@ -42,6 +39,8 @@ module submesh_oct_m
     submesh_t,                   &
     submesh_null,                &
     submesh_init,                &
+    submesh_merge,               &
+    submesh_shift_center,        &
     submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
@@ -69,6 +68,7 @@ module submesh_oct_m
     submesh_end
 
   type submesh_t
+    ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
@@ -76,7 +76,6 @@ module submesh_oct_m
     integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
-    logical               :: has_points
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
     
     integer               :: np_global      !< total number of points in the entire mesh
@@ -271,8 +270,6 @@ contains
 
     end if
 
-    this%has_points = (this%np > 0)
-    
     ! now order points for better locality
     
     SAFE_ALLOCATE(order(1:this%np_part))
@@ -302,6 +299,104 @@ contains
   end subroutine submesh_init
 
   ! --------------------------------------------------------------
+  !This routine takes two submeshes and merge them into a bigger submesh
+  !The grid is centered on the first center
+  subroutine submesh_merge(this, sb, mesh, sm1, sm2, shift)
+    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(simul_box_t),    intent(in)     :: sb
+    type(mesh_t), target, intent(in)     :: mesh
+    type(submesh_t),      intent(in)     :: sm1
+    type(submesh_t),      intent(in)     :: sm2
+    FLOAT, optional,      intent(in)     :: shift(:) !< If present, shifts the center of sm2
+    
+    FLOAT :: r2 
+    integer :: ip, is
+    type(profile_t), save :: prof
+    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM)
+    
+    PUSH_SUB(submesh_merge)
+    call profiling_in(prof, "SUBMESH_MERGE")
+
+    ASSERT(.not.mesh%parallel_in_domains)
+
+    this%mesh => mesh
+
+    this%center(1:sb%dim)  = sm1%center(1:sb%dim)
+    this%radius = sm1%radius
+
+    diff_centers(1:sb%dim) = sm1%center(1:sb%dim)-sm2%center(1:sb%dim)
+    if(present(shift)) diff_centers(1:sb%dim) = diff_centers(1:sb%dim) - shift(1:sb%dim)
+
+    !As we take the union of the two submeshes, we know that we have all the points from the first one included.
+    !The extra points from the second submesh are those which are not included in the first one
+    !At the moment np_part extra points are not included
+    is = sm1%np
+    do ip = 1, sm2%np
+      !sm2%x contains points coordinates defined with respect to sm2%center
+      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim)-diff_centers(1:sb%dim)
+      !If the point is not in sm1, we add it
+      if(sum(xx(1:sb%dim)**2) > sm1%radius**2) is = is + 1
+    end do 
+
+    this%np = is
+    this%np_part = this%np
+
+    SAFE_ALLOCATE(this%map(1:this%np_part))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+    this%map(1:sm1%np) = sm1%map(1:sm1%np)
+    this%x(1:sm1%np, 0:sb%dim) = sm1%x(1:sm1%np, 0:sb%dim)
+
+    !iterate again to fill the tables
+    is = sm1%np
+    do ip = 1, sm2%np
+      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
+      r2 = sum(xx(1:sb%dim)**2)
+      if(r2 > sm1%radius**2) then
+        is = is + 1
+        this%map(is) = sm2%map(ip)
+        this%x(is, 0) = sqrt(r2)
+        this%x(is, 1:sb%dim) = xx(1:sb%dim)
+      end if
+    end do
+
+    call profiling_out(prof)
+    POP_SUB(submesh_merge)
+  end subroutine submesh_merge
+
+  ! --------------------------------------------------------------
+  !This routine shifts the center of a submesh, without changing the grid points
+  subroutine submesh_shift_center(this, sb, newcenter)
+    type(submesh_t),      intent(inout)  :: this 
+    type(simul_box_t),    intent(in)     :: sb
+    FLOAT,                intent(in)     :: newcenter(:)
+    
+    FLOAT :: r2
+    integer :: ip
+    type(profile_t), save :: prof
+    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM), oldcenter(1:MAX_DIM)
+    
+    PUSH_SUB(submesh_shift_center)
+    call profiling_in(prof, "SUBMESH_SHIFT")
+
+    oldcenter(1:sb%dim) = this%center(1:sb%dim)
+    this%center(1:sb%dim)  = newcenter(1:sb%dim)
+   
+
+    diff_centers(1:sb%dim) = newcenter(1:sb%dim)-oldcenter(1:sb%dim)
+
+    do ip = 1, this%np
+      xx(1:sb%dim) = this%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
+      r2 = sum(xx(1:sb%dim)**2)
+      this%x(ip, 0) = sqrt(r2)
+      this%x(ip, 1:sb%dim) = xx(1:sb%dim)
+    end do
+
+    call profiling_out(prof)
+    POP_SUB(submesh_shift_center)
+  end subroutine submesh_shift_center
+
+
+  ! --------------------------------------------------------------
 
   subroutine submesh_broadcast(this, mesh, center, radius, root, mpi_grp)
     type(submesh_t),      intent(inout)  :: this
@@ -311,7 +406,7 @@ contains
     integer,              intent(in)     :: root
     type(mpi_grp_t),      intent(in)     :: mpi_grp
 
-    integer :: nparray(1:2)
+    integer :: nparray(1:3)
     type(profile_t), save :: prof
 
     PUSH_SUB(submesh_broadcast)
@@ -325,16 +420,25 @@ contains
 
     if(mpi_grp%size > 1) then
 
-      if(root == mpi_grp%rank) nparray = (/this%np, this%np_part/)
+      if(root == mpi_grp%rank) then
+        nparray(1) = this%np
+        nparray(2) = this%np_part
+        if(this%overlap) then 
+          nparray(3) = 1
+        else
+          nparray(3) = 0
+        end if
+      end if
+
 #ifdef HAVE_MPI
-      call MPI_Bcast(nparray, 2, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
+      call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
       call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
+      this%overlap = (nparray(3) == 1)
 
       if(root /= mpi_grp%rank) then
-        this%has_points = (this%np > 0)
         SAFE_ALLOCATE(this%map(1:this%np_part))
         SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
       end if
@@ -418,15 +522,47 @@ contains
 
   ! --------------------------------------------------------------
 
-  logical pure function submesh_overlap(sm1, sm2) result(overlap)
+  logical function submesh_overlap(sm1, sm2) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
     
+    integer :: ii, jj, dd
     FLOAT :: distance
 
-    distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
-    overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
+    !no PUSH_SUB, called too often
 
+    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+      !first check the distance
+      distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
+      overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
+      
+      ! if they are very far, no need to check in detail
+      if(.not. overlap) return
+    end if
+    
+    ! Otherwise check whether they have the some point in common. We
+    ! can make the comparison faster using that the arrays are sorted.
+    overlap = .false.
+    ii = 1
+    jj = 1
+    do while(ii <= sm1%np_part .and. jj <= sm2%np_part)
+      dd = sm1%map(ii) - sm2%map(jj)
+      if(dd < 0) then
+        ii = ii + 1
+      else if(dd > 0) then
+        jj = jj + 1
+      else
+        overlap = .true.
+        exit
+      end if
+    end do
+
+#ifdef HAVE_MPI
+    if(sm1%mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
+    
   end function submesh_overlap
 
   ! -------------------------------------------------------------
@@ -440,7 +576,7 @@ contains
     PUSH_SUB(submesh_build_global)
 
     if(.not. this%mesh%parallel_in_domains) then
-      POP_SUB(submesh_build global)
+      POP_SUB(submesh_build_global)
       return
     end if 
 

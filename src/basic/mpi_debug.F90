@@ -22,7 +22,6 @@
 
 module mpi_debug_oct_m
   use global_oct_m
-  use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
 

@@ -21,25 +21,23 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-  use comm_oct_m 
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
   use hirshfeld_oct_m
-  use ion_interaction_oct_m
   use io_oct_m
   use io_function_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use mpi_oct_m
-  use parser_oct_m 
+  use namespace_oct_m
+  use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use simul_box_oct_m 
+  use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   
@@ -56,6 +54,7 @@ module vdw_ts_oct_m
     vdw_ts_calculate
   
   type vdw_ts_t
+    private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
@@ -71,8 +70,9 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, geo, der)
+  subroutine vdw_ts_init(this, namespace, geo, der)
     type(vdw_ts_t),      intent(out)   :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     
@@ -89,7 +89,7 @@ contains
     !% Set the value of the cutoff (unit of length) for the VDW correction in periodic system 
     !% in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
     !%End
-    call parse_variable('VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
+    call parse_variable(namespace, 'VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
 
 
     !%Variable VDW_TS_damping
@@ -100,7 +100,7 @@ contains
     !% Set the value of the damping function (in unit of 1/length) steepness for the VDW correction in the 
     !% Tkatchenko-Scheffler scheme. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
     !%End
-    call parse_variable('VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
+    call parse_variable(namespace, 'VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
 
     !%Variable VDW_TS_sr
     !%Type float
@@ -112,7 +112,7 @@ contains
     !% This parameter depends on the xc functional used. 
     !% The default value is 0.94, which holds for PBE. For PBE0, a value of 0.96 should be used.
     !%End
-    call parse_variable('VDW_TS_sr', CNST(0.94), this%sr)
+    call parse_variable(namespace, 'VDW_TS_sr', CNST(0.94), this%sr)
 
 
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
@@ -160,20 +160,21 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, sb, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, geo, der, sb, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
     FLOAT,               intent(out)   :: force(:, :)
 
- interface
-     subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, vol_ratio, &
-       energy, force, derivative_coeff)
+    interface
+      subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, vol_ratio, &
+        energy, force, derivative_coeff)
         integer, intent(in)  :: natoms
         real(8), intent(in)  :: dd
         real(8), intent(in)  :: sr
@@ -187,8 +188,8 @@ contains
     end interface
 
     type(periodic_copy_t) :: pc
-    integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
-    FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
+    integer :: iatom, jatom, ispecies, jspecies, jcopy, ip 
+    FLOAT :: rr, rr2, rr6, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
     FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
@@ -205,7 +206,7 @@ contains
     energy=M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
     this%derivative_coeff(1:geo%natoms) = M_ZERO
-    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
 
     do iatom = 1, geo%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
@@ -300,7 +301,7 @@ contains
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, der%mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)
@@ -316,20 +317,21 @@ contains
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, force_vdw, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, geo, der, sb, st, density)
     type(vdw_ts_t),      intent(in)    :: this
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: force_vdw(:,:)
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
     type(hirshfeld_t) :: hirshfeld
     type(periodic_copy_t) :: pc
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
 
     PUSH_SUB(vdw_ts_force_calculate)
@@ -352,7 +354,7 @@ contains
     vol_ratio(1:geo%natoms) = M_ZERO
 
 
-    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
 
 
     do iatom = 1, geo%natoms
@@ -438,18 +440,19 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, geo, dir, fname)
+  subroutine vdw_ts_write_c6ab(this, geo, dir, fname, namespace)
      type(vdw_ts_t)  , intent(inout) :: this
      type(geometry_t),    intent(in) :: geo
      character(len=*), intent(in)    :: dir, fname
+     type(namespace_t),   intent(in) :: namespace
  
      integer :: iunit, iatom, jatom
 
      PUSH_SUB(vdw_ts_write_c6ab)
 
      if(mpi_grp_is_root(mpi_world)) then  
-       call io_mkdir(dir)
-       iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
+       call io_mkdir(dir, namespace)
+       iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 

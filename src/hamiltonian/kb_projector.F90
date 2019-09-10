@@ -22,17 +22,12 @@ module kb_projector_oct_m
   use atom_oct_m
   use comm_oct_m
   use double_grid_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use mpi_oct_m
-  use multicomm_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
 
@@ -53,10 +48,11 @@ module kb_projector_oct_m
        kb_projector_end
 
   type kb_projector_t
-    integer          :: n_s       !< number of points inside the sphere
-    integer          :: n_c       !< number of components per projector
-    FLOAT,   pointer :: p(:,:)    !< projectors
-    FLOAT            :: e(2)      !< KB energies
+    private
+    integer                  :: n_s       !< number of points inside the sphere
+    integer,          public :: n_c       !< number of components per projector
+    FLOAT,   pointer, public :: p(:,:)    !< projectors
+    FLOAT,            public :: e(2)      !< KB energies
   end type kb_projector_t
 
 

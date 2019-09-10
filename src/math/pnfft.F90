@@ -24,11 +24,11 @@ module pnfft_params_oct_m
   use,intrinsic :: iso_c_binding
   use pfft_params_oct_m
   implicit none
-
 #ifdef HAVE_PNFFT
   include "pnfft.f03"
 #endif
 end module pnfft_params_oct_m
+
  
 !> The low level module to work with the PNFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
@@ -39,6 +39,7 @@ module pnfft_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pfft_oct_m
   use pnfft_params_oct_m
@@ -48,17 +49,6 @@ module pnfft_oct_m
 
   private
 
-#ifndef HAVE_PNFFT
-
-  public ::               &
-    pnfft_t     
-
-  type pnfft_t
-    FLOAT                 :: norm  
-  end type pnfft_t
-
-
-#else
   public ::               &
     pnfft_t,              &      
     pnfft_write_info,     &
@@ -67,6 +57,7 @@ module pnfft_oct_m
     pnfft_init_procmesh,  &
     pnfft_end,            &
     pnfft_set_sp_nodes,   &
+    pnfft_guru_options,   &
     zpnfft_forward,       &
     zpnfft_backward,      &
     dpnfft_forward,       &
@@ -74,21 +65,22 @@ module pnfft_oct_m
     
  
   type pnfft_t
+    private
   
 ! Parameters
-    integer               :: np(3)           !> Processes
-    integer(C_INTPTR_T)   :: N_local(3)     !> Number of Fourier coefficients
-    integer(C_INTPTR_T)   :: N(3)            !> Number of Fourier coefficients local
-    integer(C_INTPTR_T)   :: Nos(3)          !> FFT grid size
-    integer(C_INTPTR_T)   :: M(3)
-    integer               :: M_istart(3)
-    integer(C_INTPTR_T)   :: local_M         !> Local number of nodes per process
-    integer               :: mm              !> Real space cut-off
-    FLOAT                 :: sigma           !> oversampling factor
-    integer               :: flags           !> PNFFT initialization options 
-    logical               :: set_defaults = .false. !> set default values from the code
+    integer                       :: np(3)           !> Processes
+    integer(C_INTPTR_T)           :: N_local(3)     !> Number of Fourier coefficients
+    integer(C_INTPTR_T)           :: N(3)            !> Number of Fourier coefficients local
+    integer(C_INTPTR_T)           :: Nos(3)          !> FFT grid size
+    integer(C_INTPTR_T), public   :: M(3)
+    integer                       :: M_istart(3)
+    integer(C_INTPTR_T)           :: local_M         !> Local number of nodes per process
+    integer                       :: mm              !> Real space cut-off
+    FLOAT,               public   :: sigma           !> oversampling factor
+    integer                       :: flags           !> PNFFT initialization options 
+    logical,             public   :: set_defaults = .false. !> set default values from the code
 
-    FLOAT                 :: norm       !> Normalization  
+    FLOAT,               public   :: norm       !> Normalization  
 
 
 ! Data 
@@ -109,10 +101,10 @@ module pnfft_oct_m
 
 contains
 
-
-! ---------------------------------------------------------  
-  subroutine pnfft_guru_options(pnfft)
-    type(pnfft_t), intent(inout) :: pnfft
+  ! ---------------------------------------------------------  
+  subroutine pnfft_guru_options(pnfft, namespace)
+    type(pnfft_t),     intent(inout) :: pnfft
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(pnfft_guru_options)
 
@@ -124,8 +116,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_variable('PNFFTCutoff', pnfft%mm, pnfft%mm)
-
+    call parse_variable(namespace, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
 
     !%Variable PNFFTOversampling
     !%Type float
@@ -134,16 +125,15 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable('PNFFTOversampling', pnfft%sigma, pnfft%sigma)
-
-
+    call parse_variable(namespace, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
 
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options
 
   ! ---------------------------------------------------------
-  subroutine pnfft_init_params(pnfft, nn, optimize)
+  subroutine pnfft_init_params(pnfft, pnfft_options, nn, optimize)
     type(pnfft_t),     intent(inout) :: pnfft
+    type(pnfft_t),     intent(in)    :: pnfft_options
     integer,           intent(in)    :: nn(3) !> pnfft bandwidths 
     logical, optional, intent(in)    :: optimize
 
@@ -157,12 +147,10 @@ contains
 
     if(.not. pnfft%set_defaults) then
       !Set defaults
-      pnfft%mm = 6 
-      pnfft%sigma = M_TWO
+      pnfft%mm = pnfft_options%mm 
+      pnfft%sigma = pnfft_options%sigma
     end if
     
-    call pnfft_guru_options(pnfft)
-
     my_nn = 0
     do ii = 1, 3
       my_nn(ii) = nn(ii)*pnfft%sigma
@@ -171,11 +159,10 @@ contains
     
     pnfft%Nos(1:3) = my_nn(1:3)
 
+#ifdef HAVE_PNFFT
     pnfft%flags = PNFFT_MALLOC_X + PNFFT_MALLOC_F_HAT + PNFFT_MALLOC_F + &
                   PNFFT_WINDOW_KAISER_BESSEL
-
-
-
+#endif
 
     POP_SUB(pnfft_init_params)
   end subroutine pnfft_init_params
@@ -191,21 +178,24 @@ contains
 
     PUSH_SUB(pnfft_init_procmesh)
 
-        call pnfft_init()
-      
-        pnfft%np(1:3) = 1
-
-        call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
-            
-        ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
-
-        if (ierror /= 0) then
-          message(1) = "The number of rows and columns in PNFFT processor grid is not equal to "
-          message(2) = "the number of processor in the MPI communicator."
-          message(3) = "Please check it."
-          call messages_fatal(3)
-        end if
- 
+#ifdef HAVE_PNFFT
+    call pnfft_init()
+    
+    pnfft%np(1:3) = 1
+    
+    call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
+    
+    
+    ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
+#endif
+    
+    if (ierror /= 0) then
+      message(1) = "The number of rows and columns in PNFFT processor grid is not equal to "
+      message(2) = "the number of processor in the MPI communicator."
+      message(3) = "Please check it."
+      call messages_fatal(3)
+    end if
+        
     POP_SUB(pnfft_init_procmesh)
   end subroutine pnfft_init_procmesh
 
@@ -221,8 +211,7 @@ contains
     out%mm = in%mm
     out%sigma = in%sigma
     out%set_defaults = in%set_defaults       
-  
- 
+   
     POP_SUB(pnfft_copy_params)
   end subroutine pnfft_copy_params
 
@@ -265,24 +254,20 @@ contains
       if(idir < 3) call messages_write(" x ")
     end do
     call messages_info()
-
-
-
  
     POP_SUB(pnfft_write_info)
   end subroutine pnfft_write_info
 
-
-
   ! ---------------------------------------------------------
-  subroutine pnfft_init_plan(pnfft, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
-    type(pnfft_t), intent(inout) :: pnfft
-    integer,         intent(in)  :: mpi_comm         !< MPI comunicator
-    integer,         intent(in)  :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
-    integer,         intent(out) :: fs_n(1:3)        !< Local number of elements in each direction in Fourier space
-    integer,         intent(out) :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
-    integer,         intent(out) :: rs_n(1:3)        !< Local number of elements in each direction in real space
-    integer,         intent(out) :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
+  subroutine pnfft_init_plan(pnfft, pnfft_options, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
+    type(pnfft_t),   intent(inout) :: pnfft
+    type(pnfft_t),   intent(inout) :: pnfft_options
+    integer,         intent(in)    :: mpi_comm         !< MPI comunicator
+    integer,         intent(in)    :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
+    integer,         intent(out)   :: fs_n(1:3)        !< Local number of elements in each direction in Fourier space
+    integer,         intent(out)   :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
+    integer,         intent(out)   :: rs_n(1:3)        !< Local number of elements in each direction in real space
+    integer,         intent(out)   :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
 
     real(C_DOUBLE) :: lower_border(3), upper_border(3)
     real(C_DOUBLE) :: x_max(3)
@@ -294,13 +279,15 @@ contains
 
     pnfft%N(1:3) = fs_n_global(1:3)
     
-    call pnfft_init_params(pnfft, fs_n_global(1:3), optimize = .true.)
+    call pnfft_init_params(pnfft, pnfft_options, fs_n_global(1:3), optimize = .true.)
     
     x_max(:) = CNST(0.4)
-         
+
+#ifdef HAVE_PNFFT         
     call pnfft_local_size_guru(3, pnfft%N, pnfft%Nos, x_max, pnfft%mm, mpi_comm, &
          PNFFT_TRANSPOSED_F_HAT, local_N, local_N_start, lower_border, upper_border)
-
+#endif
+    
     pnfft%lower_border = lower_border
     pnfft%upper_border = upper_border
     pnfft%N_local(1:3)   = local_N(1:3) 
@@ -327,17 +314,20 @@ contains
     
     pnfft%M_istart(:) = rs_istart(:)
     
-
+#ifdef HAVE_PNFFT
     pnfft%plan = pnfft_init_guru(3, pnfft%N, pnfft%Nos, x_max, local_M, pnfft%mm, &
                  pnfft%flags, PFFT_ESTIMATE, mpi_comm)
-
+#endif
+    
     pnfft%local_M=local_M
-     
+
+#ifdef HAVE_PNFFT
     ! Get data pointers in C format
     cf_hat = pnfft_get_f_hat(pnfft%plan)
     cf     = pnfft_get_f(pnfft%plan)
     cx     = pnfft_get_x(pnfft%plan)
-
+#endif
+    
     ! Convert data pointers to Fortran format
     call c_f_pointer(cf_hat, pnfft%f_hat, [local_N(1),local_N(3),local_N(2)])
     call c_f_pointer(cf,     pnfft%f_lin, [pnfft%local_M])
@@ -372,9 +362,11 @@ contains
 
     PUSH_SUB(pnfft_end)
 
+#ifdef HAVE_PNFFT
     call pnfft_finalize(pnfft%plan, PNFFT_FREE_X + PNFFT_FREE_F_HAT + PNFFT_FREE_F)
     call pnfft_cleanup()
-   
+#endif
+    
     nullify(pnfft%f_lin)
     nullify(pnfft%f)
     nullify(pnfft%f_hat)
@@ -389,8 +381,9 @@ contains
   ! Set the coordinates for the spatial nodes rescaled to 
   ! the 3D torus [-0.5,0.5)
   ! ---------------------------------------------------------  
-  subroutine pnfft_set_sp_nodes(pnfft, X)
+  subroutine pnfft_set_sp_nodes(pnfft, namespace, X)
     type(pnfft_t),    intent(inout) :: pnfft
+    type(namespace_t),intent(in)    :: namespace
     FLOAT,            intent(in)    :: X(:,:) !X(i, dim)
 
     FLOAT   :: len(3), cc(3), eps,temp, lo(3), up(3), lo_g(3), up_g(3)
@@ -467,7 +460,7 @@ contains
 !     end do
 
 
-    call pnfft_messages_debug(pnfft)
+    call pnfft_messages_debug(pnfft, namespace)
 
 
     SAFE_ALLOCATE( dX(1:maxval(pnfft%M(:))-1, 1:3))
@@ -491,8 +484,9 @@ contains
   end subroutine pnfft_set_sp_nodes
   
   ! ---------------------------------------------------------
-  subroutine pnfft_messages_debug(pnfft)
-    type(pnfft_t), intent(in) :: pnfft 
+  subroutine pnfft_messages_debug(pnfft, namespace)
+    type(pnfft_t),     intent(in) :: pnfft 
+    type(namespace_t), intent(in) :: namespace 
 
     integer          :: nn, i1, i2, i3 
     integer          :: npart, ierr
@@ -504,15 +498,17 @@ contains
     if(debug%info) then
   
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir('debug/PNFFT')
-      end if      
+        call io_mkdir('debug/PNFFT', namespace)
+      end if
+#ifdef HAVE_MPI
       call MPI_Barrier(mpi_world%comm, ierr)
-
+#endif
+      
       nn = mpi_world%rank
       write(filenum, '(i3.3)') nn
 
       iunit = io_open('debug/PNFFT/rs_partition.'//filenum, &
-           action='write')
+           namespace, action='write')
            
       do i1 = 1, pnfft%M(1)
        do i2 = 1, pnfft%M(2)
@@ -540,9 +536,6 @@ contains
 
   end function pnfft_idx_3to1
 
-
-
-
   #include "undef.F90"
   #include "real.F90"
   #include "pnfft_inc.F90"
@@ -550,9 +543,6 @@ contains
   #include "undef.F90"
   #include "complex.F90"
   #include "pnfft_inc.F90"
-
-
-#endif
 
 end module pnfft_oct_m
 

@@ -44,6 +44,7 @@ Usage: oct-run_regression_test.pl [options]
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
     -r        print a report into a YAML files
+    -G        deviceID offset for CUDA run
 
 Exit codes:
     0         all tests passed
@@ -89,7 +90,7 @@ if (not @ARGV) { usage; }
 
 $opt_f = "";
 $opt_r = "";
-getopts("nlvhD:c:f:spm:r:");
+getopts("nlvhD:c:f:spm:r:G:");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -160,6 +161,14 @@ $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
+
+# Handle GPU offset
+$offset_GPU = defined $opt_G ? $opt_G : -1;
+if($offset_GPU >= 0) {
+    $command_env = "OCT_PARSE_ENV=1 OCT_AccelDevice=$offset_GPU";
+} else {
+    $command_env = "";
+}
 
 # This variable counts the number of failed testcases.
 $failures = 0;
@@ -310,8 +319,8 @@ while ($_ = <TESTSUITE>) {
         }
       
 
-        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
-            $np = "serial";
+        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
             if( ! -x "$command") {
                 $command = "$exec_directory/../utils/$1";
@@ -383,9 +392,9 @@ while ($_ = <TESTSUITE>) {
                         $specify_np = "-n $np";
                         $my_nslots = "";
                     }
-                    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
                 } else {
-                    $command_line = "cd $workdir; $aexec $command > out ";
+                    $command_line = "cd $workdir; $command_env $aexec $command > out ";
                 }
 
                 # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
@@ -514,7 +523,7 @@ sub run_match_new {
     $params =~ s/\\,/_COMMA_/g;
     my @par = split(/,/, $params);
     for ($params=0; $params <= $#par; $params++) {
-        $par[$params] =~ s/_COMMA_/,/g;
+        $par[$params] =~ s/_COMMA_/\\,/g;
         $par[$params] =~ s/^\s*//;
         $par[$params] =~ s/\s*$//;
     }

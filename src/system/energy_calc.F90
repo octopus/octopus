@@ -28,23 +28,20 @@ module energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
-  use io_oct_m
-  use lalg_basic_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use pcm_oct_m
+  use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -62,11 +59,11 @@ contains
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
   subroutine energy_calc_total(hm, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    integer, optional,   intent(in)    :: iunit
-    logical, optional,   intent(in)    :: full
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    integer, optional,        intent(in)    :: iunit
+    logical, optional,        intent(in)    :: full
 
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
@@ -77,7 +74,7 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    hm%energy%eigenvalues = states_eigenvalues_sum(st)
+    hm%energy%eigenvalues = states_elec_eigenvalues_sum(st)
 
     evxctau = M_ZERO
     if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
@@ -214,9 +211,9 @@ contains
   ! --------------------------------------------------------------------
   
   subroutine energy_calc_eigenvalues(hm, der, st)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(inout) :: der
-    type(states_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(derivatives_t),      intent(in)    :: der
+    type(states_elec_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)
 

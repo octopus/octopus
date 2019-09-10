@@ -111,13 +111,28 @@ dist_share_DATA = \
 	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
-        29-pcm_chlorine_anion.01-ground_state.inp \
-        29-pcm_chlorine_anion.02-td_prop.inp      \
+        29-pcm_chlorine_anion.01-ground_state-n60.inp \
+        29-pcm_chlorine_anion.02-td_prop-n60.inp      \
+        29-pcm_chlorine_anion.03-ground_state-n60-poisson.inp \
+        29-pcm_chlorine_anion.04-ground_state-n240.inp \
         29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.02-multipoles.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \
-	31-acetylene_b3lyp.01-gs.inp
+	31-acetylene_b3lyp.01-gs.inp \
+	32-tdpcm_methane.test \
+	32-tdpcm_methane.01-ground_state.inp \
+        32-tdpcm_methane.02-td_prop_neq.inp      \
+        32-tdpcm_methane.03-td_prop_eom.inp \
+	33-cg.test \
+	33-cg.01-orthogonalize_all.inp \
+	33-cg.02-additional_terms.inp \
+	33-cg.03-cg_direction.inp \
+	34-walltime.01-gs_walltime.inp \
+	34-walltime.02-restart_gs.inp \
+	34-walltime.03-td_walltime.inp \
+	34-walltime.04-restart_td.inp \
+	34-walltime.test
 
 CLEANFILES = *~ *.bak

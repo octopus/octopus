@@ -20,9 +20,10 @@
 
 module xc_functl_oct_m
   use global_oct_m
-  use parser_oct_m
   use libvdwxc_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -45,9 +46,6 @@ module xc_functl_oct_m
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation
-    XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
-    XC_LB94_XC_CMPLX = 703,     &  !< complex-scaled LB94 exchange and correlation
     XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
     XC_VDW_C_VDWDF = 918,       &  !< vdw-df correlation from libvdwxc
     XC_VDW_C_VDWDF2 = 919,      &  !< vdw-df2 correlation from libvdwxc
@@ -66,6 +64,7 @@ module xc_functl_oct_m
 #endif
 
   type xc_functl_t
+    ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
     integer         :: type              !< exchange, correlation, or exchange-correlation
     integer         :: id                !< identifier
@@ -73,9 +72,9 @@ module xc_functl_oct_m
     integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
     integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
-    type(XC_F90(pointer_t)) :: info         !< information about the functional
-    type(libvdwxc_t)        :: libvdwxc     !< libvdwxc data for van der Waals functionals
+    type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
+    type(XC_F90(pointer_t)), private :: info         !< information about the functional
+    type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
 
     integer         :: LB94_modified     !< should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    !< needs to be handled specially
@@ -101,8 +100,9 @@ contains
 
   ! ---------------------------------------------------------
 
- subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
+ subroutine xc_functl_init_functl(functl, namespace, id, ndim, nel, spin_channels)
+   type(xc_functl_t),  intent(out) :: functl
+   type(namespace_t),  intent(in)  :: namespace
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     FLOAT,             intent(in)  :: nel
@@ -135,20 +135,10 @@ contains
           functl%family = XC_FAMILY_OEP
         else if (functl%id == XC_KS_INVERSION) then
           functl%family = XC_FAMILY_KS_INVERSION
-        else if (functl%id == XC_LDA_XC_CMPLX) then
-          call messages_experimental("complex-scaled LDA exchange and correlation")
-          functl%family = XC_FAMILY_LDA
         else if(functl%id == XC_HALF_HARTREE) then
           call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_PBE_XC_CMPLX) then
-          call messages_experimental("complex-scaled PBE exchange and correlation")
-          functl%family = XC_FAMILY_GGA
-        else if(functl%id == XC_LB94_XC_CMPLX) then
-          call messages_experimental("complex-scaled LB94 exchange and correlation")
-          functl%family = XC_FAMILY_GGA
         else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
-          call messages_experimental("van der Waals functionals from libvdwxc")
           functl%family = XC_FAMILY_LIBVDWXC
           !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
         else if (functl%id == XC_RDMFT_XC_M) then
@@ -170,11 +160,7 @@ contains
       functl%type = XC_F90(info_kind)(functl%info)
       functl%flags = XC_F90(info_flags)(functl%info)
       ! Convert Octopus code for functional into corresponding libvdwxc code:
-      call libvdwxc_init(functl%libvdwxc, functl%id - XC_VDW_C_VDWDF + 1)
-    else if(functl%id == XC_LDA_XC_CMPLX &
-      .or. functl%id == XC_PBE_XC_CMPLX &
-      .or. functl%id == XC_LB94_XC_CMPLX) then
-      functl%type = XC_EXCHANGE_CORRELATION
+      call libvdwxc_init(functl%libvdwxc, namespace, functl%id - XC_VDW_C_VDWDF + 1)
 
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
@@ -250,7 +236,7 @@ contains
       !% The parameter of the Slater X<math>\alpha</math> functional. Applies only for
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
-      call parse_variable('Xalpha', M_ONE, alpha)
+      call parse_variable(namespace, 'Xalpha', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = alpha
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
@@ -273,8 +259,8 @@ contains
       !%Option interaction_soft_coulomb 1
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable('Interaction1D', INT_SOFT_COULOMB, interact_1d)
+      call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1D')
+      call parse_variable(namespace, 'Interaction1D', INT_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
       !%Type float
@@ -284,8 +270,8 @@ contains
       !% Defines the screening parameter <math>\alpha</math> of the softened Coulomb interaction
       !% when running in 1D.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
-      call parse_variable('Interaction1DScreening', M_ONE, alpha)
+      call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
+      call parse_variable(namespace, 'Interaction1DScreening', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = real(interact_1d, REAL_PRECISION)
       parameters(2) = alpha
@@ -315,7 +301,7 @@ contains
       !%Description
       !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_modified', .false., lb94_modified)
+      call parse_variable(namespace, 'LB94_modified', .false., lb94_modified)
       if(lb94_modified) then
         functl%LB94_modified = 1
       else
@@ -330,7 +316,7 @@ contains
       !%Description
       !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
+      call parse_variable(namespace, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
       
     end select
     
@@ -344,10 +330,8 @@ contains
 
     PUSH_SUB(xc_functl_end)
 
-    if(functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
-      functl%family /= XC_FAMILY_KS_INVERSION .and. &
-      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE .and. &
-      functl%id /= XC_PBE_XC_CMPLX .and. functl%id /= XC_LB94_XC_CMPLX) then
+    if (functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
+        functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -366,7 +350,7 @@ contains
 
     character(len=120) :: s1, s2
     integer :: ii
-#ifndef HAVE_LIBXC3
+#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
     type(XC_F90(pointer_t)) :: str
 #endif
     
@@ -394,26 +378,9 @@ contains
     else if(functl%family == XC_FAMILY_LIBVDWXC) then
       call libvdwxc_write_info(functl%libvdwxc, iunit)
 
-    else if(functl%id == XC_LDA_XC_CMPLX) then
-      ! this is handled separately for the moment
-      ! we will include it in libxc when done with the tests
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LDA'
-      call messages_info(2, iunit)
-
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_PBE_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled PBE'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_LB94_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LB94'
       call messages_info(2, iunit)
       
     else if(functl%family /= XC_FAMILY_NONE) then ! all the other families

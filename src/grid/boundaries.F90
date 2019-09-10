@@ -39,6 +39,7 @@ module boundaries_oct_m
   private
 
   type boundaries_t
+    private
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
@@ -55,7 +56,6 @@ module boundaries_oct_m
 
   public ::                        &
     boundaries_t,                  &
-    boundaries_nullify,            &
     boundaries_init,               &
     boundaries_end,                &
     boundaries_set
@@ -114,22 +114,6 @@ module boundaries_oct_m
   end interface boundaries_set
 
 contains
-  
-  ! ---------------------------------------------------------
-  elemental subroutine boundaries_nullify(this)
-    type(boundaries_t), intent(out) :: this
-
-    nullify(this%mesh)
-    this%nper = 0
-    nullify(this%per_points, this%per_send, this%per_recv)
-    nullify(this%nsend, this%nrecv)
-    call accel_mem_nullify(this%buff_per_points)
-    call accel_mem_nullify(this%buff_per_send)
-    call accel_mem_nullify(this%buff_per_recv)
-    call accel_mem_nullify(this%buff_nsend)
-    call accel_mem_nullify(this%buff_nrecv)
-
-  end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
   subroutine boundaries_init(this, mesh)

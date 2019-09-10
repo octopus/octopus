@@ -20,11 +20,10 @@
   
 module kpoints_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
@@ -57,9 +56,15 @@ module kpoints_oct_m
     kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
     kpoints_get_kpoint_method,    &
-    kpoints_get_path_coord
+    kpoints_get_path_coord,       &
+    kpoints_grid_init,            &
+    kpoints_path_generate,        &
+    kpoints_to_reduced,           & 
+    kpoints_fold_to_1BZ,          &
+    kpoints_grid_end
 
   type kpoints_grid_t
+    ! Components are public by default
     FLOAT, pointer   :: point(:, :)
     FLOAT, pointer   :: point1BZ(:, :)
     FLOAT, pointer   :: red_point(:, :)
@@ -71,6 +76,7 @@ module kpoints_oct_m
   end type kpoints_grid_t
 
   type kpoints_t
+    ! Components are public by default
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
@@ -81,14 +87,12 @@ module kpoints_oct_m
     integer              :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer              :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
-    integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
+    integer                   :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer, pointer, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, pointer, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
-    FLOAT, pointer       :: klattice(:, :)
- 
     !> For the output of a band-structure
-    FLOAT, pointer       :: coord_along_path(:)
+    FLOAT, pointer            :: coord_along_path(:)
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -227,14 +231,14 @@ contains
     this%nik_skip = 0
     this%nik_axis = 0
     nullify(this%symmetry_ops, this%num_symmetry_ops)
-    nullify(this%klattice)
     nullify(this%coord_along_path)
 
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, symm, dim, rlattice, klattice, only_gamma)
+  subroutine kpoints_init(this, namespace, symm, dim, rlattice, klattice, only_gamma)
     type(kpoints_t),    intent(out) :: this
+    type(namespace_t),  intent(in)  :: namespace
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
@@ -250,9 +254,6 @@ contains
     ASSERT(dim <= MAX_DIM)
 
     call kpoints_nullify(this)
-
-    SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
-    this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
 
     !%Variable KPointsUseSymmetries
     !%Type logical
@@ -271,7 +272,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_variable('KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable(namespace, 'KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -291,7 +292,7 @@ contains
     !%
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
-    call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    call parse_variable(namespace, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = 0
@@ -304,14 +305,14 @@ contains
     end if
 
     !Monkhorst Pack grid
-    if(parse_is_defined('KPointsGrid')) then
+    if(parse_is_defined(namespace, 'KPointsGrid')) then
       this%method = this%method + KPOINTS_MONKH_PACK
       
       call read_MP(gamma_only = .false.)
     end if
 
     !User-defined kpoints
-    if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+    if(parse_is_defined(namespace, 'KPointsReduced').or. parse_is_defined(namespace, 'KPoints')) then
       this%method = this%method + KPOINTS_USER
 
       if(this%use_symmetries) then
@@ -323,7 +324,7 @@ contains
     end if
 
     !User-defined k-points path
-    if(parse_is_defined('KPointsPath')) then
+    if(parse_is_defined(namespace, 'KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
       if(this%use_symmetries) then
@@ -402,7 +403,7 @@ contains
 
       PUSH_SUB(kpoints_init.read_MP)
 
-      call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
+      call messages_obsolete_variable(namespace, 'KPointsMonkhorstPack', 'KPointsGrid')
 
       !%Variable KPointsGrid
       !%Type block
@@ -437,7 +438,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block('KPointsGrid', blk) /= 0)
+        gamma_only_ = (parse_block(namespace, 'KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
 
@@ -609,7 +610,7 @@ contains
       !%
       !%End
 
-      if(parse_block('KPointsPath', blk) /= 0) then
+      if(parse_block(namespace, 'KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
         call messages_fatal(1)
       end if
@@ -642,6 +643,8 @@ contains
             call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
         end do
       end do
+
+      call parse_block_end(blk)
 
       !We do not use axis
       this%nik_axis(1:MAX_DIM) = 1
@@ -728,8 +731,8 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block('KPoints', blk) /= 0 ) then
-        if(parse_block('KPointsReduced', blk) == 0) then
+      if(parse_block(namespace, 'KPoints', blk) /= 0 ) then
+        if(parse_block(namespace, 'KPointsReduced', blk) == 0) then
           reduced = .true.
         else
           ! This case should really never happen. But why not dying otherwise?!
@@ -830,7 +833,6 @@ contains
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
-    SAFE_DEALLOCATE_P(this%klattice)
     SAFE_DEALLOCATE_P(this%symmetry_ops)
     SAFE_DEALLOCATE_P(this%num_symmetry_ops)
     SAFE_DEALLOCATE_P(this%coord_along_path) 
@@ -897,9 +899,6 @@ contains
     kout%use_time_reversal = kin%use_time_reversal
 
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
-
-    SAFE_ALLOCATE(kout%klattice(1:kin%full%dim, kin%full%dim))
-    kout%klattice(1:kin%full%dim, kin%full%dim) = kin%klattice(1:kin%full%dim, kin%full%dim)
 
     if(associated(kin%coord_along_path)) then
       SAFE_ALLOCATE(kout%coord_along_path(1:kin%full%npoints))
@@ -1085,7 +1084,7 @@ contains
      
       vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
       length = sqrt(sum(vec(1:dim)**2)) 
-      total_length = total_length + length
+      if(resolution(is) > 0) total_length = total_length + length
     end do 
 
     accumulated_length = M_ZERO
@@ -1105,7 +1104,7 @@ contains
         coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
         kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
       end do
-      accumulated_length = accumulated_length + length
+      if(resolution(is) > 0) accumulated_length = accumulated_length + length
     end do
     !We add the last point
     kpt_ind = kpt_ind +1

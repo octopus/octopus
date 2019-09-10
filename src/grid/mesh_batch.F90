@@ -22,15 +22,13 @@ module mesh_batch_oct_m
   use accel_oct_m
   use accel_blas_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use blas_oct_m
   use iso_c_binding
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
-  use index_oct_m
   use lalg_basic_oct_m
-  use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -51,11 +49,11 @@ module mesh_batch_oct_m
     zmesh_batch_dotp_vector,        &
     dmesh_batch_dotp_self,          &
     zmesh_batch_dotp_self,          &
-    dmesh_batch_rotate,             &
-    zmesh_batch_rotate,             &
     dmesh_batch_exchange_points,    &
     zmesh_batch_exchange_points,    &
-    mesh_batch_nrm2
+    mesh_batch_nrm2,                &
+    dmesh_batch_orthogonalization,  &
+    zmesh_batch_orthogonalization
 
 contains
 

@@ -20,7 +20,7 @@
 
 module kdotp_calc_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -28,9 +28,8 @@ module kdotp_calc_oct_m
   use mpi_oct_m
   use pert_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use sternheimer_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
   use system_oct_m
   use utils_oct_m
 
@@ -67,9 +66,8 @@ contains
 ! ---------------------------------------------------------
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
-subroutine zcalc_band_velocity(sys, hm, pert, velocity)
+subroutine zcalc_band_velocity(sys, pert, velocity)
   type(system_t),      intent(inout) :: sys
-  type(hamiltonian_t), intent(inout) :: hm
   type(pert_t),        intent(inout) :: pert
   FLOAT,               intent(out)   :: velocity(:,:,:)
 
@@ -89,11 +87,11 @@ subroutine zcalc_band_velocity(sys, hm, pert, velocity)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
 
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, sys%gr, sys%geo, hm, ik, psi, pertpsi)
+        call zpert_apply(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
         velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
       end do
     end do
@@ -145,7 +143,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
 
       do ist = 1, sys%st%nst
 
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
         do idim = 1, sys%st%d%dim
           term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))

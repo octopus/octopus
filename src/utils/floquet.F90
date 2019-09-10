@@ -19,50 +19,35 @@
 #include "global.h"
 
 program oct_floquet
-  use atom_oct_m
-  use basins_oct_m
-  use box_oct_m
-  use box_union_oct_m
+  use blas_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
-  use command_line_oct_m
   use density_oct_m
   use fft_oct_m
-  use fftw_params_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
-  use io_binary_oct_m
-  use io_function_oct_m
-  use kick_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
-!  use local_write_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
+  use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use space_oct_m
-  use species_oct_m
-  use species_pot_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
   use v_ks_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -71,8 +56,7 @@ program oct_floquet
 
   type(system_t) :: sys
   type(simul_box_t) :: sb
-  type(hamiltonian_t) :: hm
-  type(states_t) :: st
+  type(states_elec_t) :: st
   type(grid_t)   :: gr
   CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
   CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
@@ -84,59 +68,61 @@ program oct_floquet
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
-
+  type(namespace_t) :: default_namespace
+  
   ! the usual initializations
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
-  call messages_init()
+  call parser_init()
+  default_namespace = namespace_t("")
+  
+  call messages_init(default_namespace)
 
-  call io_init()
-  call profiling_init()
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
 
   call print_header()
   call messages_print_stress(stdout, "Non-interacting Floquet")
   call messages_print_stress(stdout)
 
   call messages_experimental("oct-floquet utility")
-  call fft_all_init()
-  call unit_system_init()
-  call restart_module_init()
+  call fft_all_init(default_namespace)
+  call unit_system_init(default_namespace)
+  call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
-  call simul_box_init(sb, sys%geo, sys%space)
+  call system_init(sys, default_namespace)
+  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, &
-              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-  call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+  call hamiltonian_elec_epot_generate(sys%hm, default_namespace, gr, sys%geo, st, time=M_ZERO)
+  call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
 
-  call states_allocate_wfns(st, gr%mesh)
+  call states_elec_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
-  if (gauge_field_is_applied(hm%ep%gfield)) then
+  if (gauge_field_is_applied(sys%hm%ep%gfield)) then
      !if the gauge field is applied, we need to tell v_ks to calculate the current
      call v_ks_calculate_current(sys%ks, .true.)
 
      ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+     call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
   end if
 
-  call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-  if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
+  call restart_init(restart, default_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+  if(ierr == 0) call states_elec_load(restart, default_namespace, st, gr, ierr, label = ": gs")
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'
      call messages_fatal(1)
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+  call v_ks_calc(sys%ks, default_namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
 
   call floquet_init()
 
@@ -148,15 +134,15 @@ program oct_floquet
   call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-  call hamiltonian_end(hm)
   call simul_box_end(sb)
   call fft_all_end()
   call system_end(sys)
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+
+  call parser_end()
   call global_end()
 
 contains
@@ -170,7 +156,7 @@ contains
       ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
 
       ! variables documented in td/td_write.F90
-      call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+      call parse_variable(default_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
       call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
       if(abs(omega)<=M_EPSILON) then
          message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -180,11 +166,11 @@ contains
       ! get time of one cycle
       Tcycle=M_TWO*M_PI/omega
 
-      call parse_variable('TDFloquetSample',20 ,nt)
+      call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
       dt = Tcycle/real(nT)
 
-      call parse_variable('TDFloquetDimension',-1,Forder)
+      call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
       if(Forder.ge.0) then
         call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
         !Dimension of multiphoton Floquet-Hamiltonian
@@ -205,7 +191,7 @@ contains
 
   !---------------------------------------------------
   subroutine floquet_solve_non_interacting()	
-    type(states_t) :: hm_st
+    type(states_elec_t) :: hm_st
 
     PUSH_SUB(floquet_solve_non_interacting)
 
@@ -218,7 +204,7 @@ contains
     SAFE_ALLOCATE(temp_state1(1:mesh%np,1:st%d%dim))
 
     ! this is used to initialize the local state object
-    call states_copy(hm_st, st)
+    call states_elec_copy(hm_st, st)
 
     ! we are only interested for k-point with zero weight
     nik=gr%sb%kpoints%nik_skip
@@ -235,9 +221,9 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=Tcycle+it*dt)
+      call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_apply_all(hm, sys%ks%xc, gr%der, st, hm_st)
+      call zhamiltonian_elec_apply_all(sys%hm, gr%mesh, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0
@@ -250,11 +236,11 @@ contains
 
         do ist=st%st_start,st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
-            call states_get_state(st, mesh, ist, ik,temp_state1 )
+            call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
             do idim=1,st%d%dim
               psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
             end do
-            call states_get_state(hm_st, mesh, ist, ik,temp_state1 )
+            call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
             do idim=1,st%d%dim
               hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
             end do
@@ -384,7 +370,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=M_ZERO)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

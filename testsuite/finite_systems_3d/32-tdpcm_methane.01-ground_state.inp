@@ -14,7 +14,6 @@ CH = 1.097*angstrom
 %
 
 PCMCalculation = true
-PCMCalcMethod = pcm_direct
 PCMStaticEpsilon = 78.39
 
 FromScratch = yes

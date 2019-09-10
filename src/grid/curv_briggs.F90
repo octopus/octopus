@@ -25,8 +25,9 @@
 
 module curv_briggs_oct_m
   use global_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use simul_box_oct_m
 
   implicit none
@@ -40,6 +41,7 @@ module curv_briggs_oct_m
     curv_briggs_jacobian_inv
 
   type curv_briggs_t
+    private
     FLOAT :: L(MAX_DIM)  !< size of the box
     FLOAT :: beta        !< adjustable parameter between 0 and 1 that controls the degree of scaling
   end type curv_briggs_t
@@ -47,14 +49,15 @@ module curv_briggs_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init(cv, sb)
+  subroutine curv_briggs_init(cv, namespace, sb)
     type(curv_briggs_t), intent(out) :: cv
+    type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
-    call parse_variable('CurvBriggsBeta', M_HALF, cv%beta)
+    call parse_variable(namespace, 'CurvBriggsBeta', M_HALF, cv%beta)
 
     if(cv%beta<M_ZERO.or.cv%beta>M_ONE) then
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'

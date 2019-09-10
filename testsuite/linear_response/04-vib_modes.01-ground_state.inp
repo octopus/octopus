@@ -2,7 +2,8 @@
 
 CalculationMode = gs
 fromScratch = yes
-ConvRelDens = 1e-6
+ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 
 BoxShape = minimum
 Spacing = 0.4

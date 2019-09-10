@@ -21,24 +21,18 @@
 module batch_ops_oct_m
   use accel_oct_m
   use batch_oct_m
-  use blas_oct_m
   use iso_c_binding
   use global_oct_m
-  use hardware_oct_m
-  use lalg_adv_oct_m
   use lalg_basic_oct_m
-  use parser_oct_m
   use math_oct_m
   use messages_oct_m
   use profiling_oct_m
   use types_oct_m
-  use varinfo_oct_m
 
   implicit none
 
   private
   public ::                         &
-    batch_set,                      &
     batch_set_zero,                 &
     batch_axpy,                     &
     batch_scal,                     &
@@ -49,11 +43,6 @@ module batch_ops_oct_m
     batch_set_points,               &
     batch_points_block_size,        &
     batch_mul
-
-  interface batch_set
-    module procedure dbatch_set
-    module procedure zbatch_set
-  end interface batch_set
 
   interface batch_axpy
     module procedure dbatch_axpy_const
@@ -122,13 +111,11 @@ contains
     type(batch_t),     intent(inout) :: this
 
     type(profile_t), save :: prof
-    integer :: ist_linear
+    integer :: ist_linear, ist, ip
 
     PUSH_SUB(batch_set_zero)
 
     call profiling_in(prof, "BATCH_SET_ZERO")
-
-    call batch_pack_was_modified(this)
 
     select case(batch_status(this))
     case(BATCH_DEVICE_PACKED)
@@ -136,12 +123,23 @@ contains
 
     case(BATCH_PACKED)
       if(batch_type(this) == TYPE_FLOAT) then
-        this%pack%dpsi = M_ZERO
+        !$omp parallel do schedule(static)
+        do ip = 1, this%pack%size(2)
+          do ist = 1, this%pack%size(1)
+            this%pack%dpsi(ist, ip) = M_ZERO
+          end do
+        end do
       else
-        this%pack%zpsi = M_z0
+        !$omp parallel do schedule(static)
+        do ip = 1, this%pack%size(2)
+          do ist = 1, this%pack%size(1)
+            this%pack%zpsi(ist, ip) = M_z0
+          end do
+        end do
       end if
 
     case(BATCH_NOT_PACKED)
+      !$omp parallel do schedule(static)
       do ist_linear = 1, this%nst_linear
         if(associated(this%states_linear(ist_linear)%dpsi)) then
           this%states_linear(ist_linear)%dpsi = M_ZERO
@@ -219,8 +217,6 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_set_points_cl)
   call profiling_in(set_points_prof, "SET_POINTS")
 
-  call batch_pack_was_modified(this)
-
   select case(batch_status(this))
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
@@ -260,7 +256,6 @@ integer pure function batch_points_block_size(this) result(block_size)
 
 end function batch_points_block_size
 
-
 #include "real.F90"
 #include "batch_ops_inc.F90"
 #include "undef.F90"
@@ -268,7 +263,6 @@ end function batch_points_block_size
 #include "complex.F90"
 #include "batch_ops_inc.F90"
 #include "undef.F90"
-
 
 end module batch_ops_oct_m
 

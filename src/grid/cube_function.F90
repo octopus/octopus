@@ -23,7 +23,6 @@ module cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
   use global_oct_m
-  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
@@ -31,7 +30,6 @@ module cube_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use parser_oct_m
   use partition_transfer_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -60,6 +58,7 @@ module cube_function_oct_m
     zcube_function_allgather
 
   type cube_function_t
+    ! Components are public by default
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid

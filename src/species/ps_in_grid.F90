@@ -40,6 +40,7 @@ module ps_in_grid_oct_m
     first_point_extrapolate
 
   type ps_in_grid_t
+    ! Components are public by default
     type(logrid_t) :: g                !< log grid where the pseudos are defined
 
     FLOAT          :: zval             !< valence charge
@@ -48,15 +49,15 @@ module ps_in_grid_oct_m
     FLOAT, pointer :: vps(:, :)        !< the pseudopotential (l=0 .. no_l_channels-1)
     FLOAT, pointer :: KB(:,:)          !< Kleinman-Bylander projectors
     FLOAT, pointer :: dkbcos(:)        !< Kleinman-Bylander cosine
-    FLOAT, pointer :: dknorm(:)        !< Kleinman-Bylander norm
+    FLOAT, pointer, private :: dknorm(:)        !< Kleinman-Bylander norm
     FLOAT, pointer :: kb_radius(:)     !< radius of KB projectors
 
     integer        :: so_no_l_channels
     FLOAT, pointer :: so_vps(:,:)      !< spin-orbit components (l=1 .. so_no_l_channels)
-    FLOAT, pointer :: so_KB(:,:)       !< Kleinman-Bylander projectors
-    FLOAT, pointer :: so_dkbcos(:)     !< Kleinman-Bylander cosine
-    FLOAT, pointer :: so_dknorm(:)     !< Kleinman-Bylander norm
-    FLOAT, pointer :: so_kb_radius(:)  !< radius of KB projectors
+    FLOAT, pointer, private :: so_KB(:,:)       !< Kleinman-Bylander projectors
+    FLOAT, pointer, private :: so_dkbcos(:)     !< Kleinman-Bylander cosine
+    FLOAT, pointer, private :: so_dknorm(:)     !< Kleinman-Bylander norm
+    FLOAT, pointer, private :: so_kb_radius(:)  !< radius of KB projectors
     
     FLOAT, pointer :: vlocal(:)        !< local part of the pseudopotential
     FLOAT, pointer :: rphi(:, :,:)     !< pseudo wavefunctions

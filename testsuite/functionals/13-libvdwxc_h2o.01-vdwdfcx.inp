@@ -1,0 +1,8 @@
+XCFunctional = vdw_c_vdwdfcx + gga_x_lv_rpw86
+ExperimentalFeatures = yes
+
+%Coordinates
+ 'O' | 0.0 |    0.0            |  0.119 * angstrom
+ 'H' | 0.0 |  0.763 * angstrom | -0.477 * angstrom
+ 'H' | 0.0 | -0.763 * angstrom | -0.477 * angstrom
+%

@@ -24,33 +24,29 @@ module subspace_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use comm_oct_m
-  use derivatives_oct_m
 #ifdef HAVE_ELPA
   use elpa
 #endif
   use global_oct_m
-  use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use hardware_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pblas_oct_m
-  use preconditioners_oct_m
   use profiling_oct_m
   use scalapack_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_parallel_oct_m
   use types_oct_m
   use varinfo_oct_m
 
@@ -65,17 +61,19 @@ module subspace_oct_m
     zsubspace_diag
 
   type subspace_t
+    private
     integer :: method
   end type subspace_t
 
-  type(profile_t),     save    :: diagon_prof, hamiltonian_prof
+  type(profile_t),     save    :: diagon_prof, hamiltonian_elec_prof
   
 contains
 
-  subroutine subspace_init(this, st, no_sd)
-    type(subspace_t),  intent(out) :: this
-    type(states_t),    intent(in)  :: st
-    logical,           intent(in)  :: no_sd
+  subroutine subspace_init(this, namespace, st, no_sd)
+    type(subspace_t),    intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
+    type(states_elec_t), intent(in)  :: st
+    logical,             intent(in)  :: no_sd
 
     integer :: default
 
@@ -111,7 +109,7 @@ contains
       if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
 
-      call parse_variable('SubspaceDiagonalization', default, this%method)
+      call parse_variable(namespace, 'SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
     end if

@@ -24,8 +24,9 @@ module lda_u_mixer_oct_m
   use messages_oct_m
   use mix_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use types_oct_m  
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use types_oct_m
  
   implicit none
 
@@ -42,6 +43,7 @@ module lda_u_mixer_oct_m
        lda_u_mixer_get_vnew
 
   type lda_u_mixer_t
+    private
     integer :: occsize
     logical :: realstates
     logical :: apply = .false.
@@ -60,7 +62,7 @@ contains
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
    type(mix_t),         intent(inout) :: smix
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    integer :: dim1
 
@@ -98,7 +100,7 @@ contains
  subroutine lda_u_mixer_init(this, mixer, st)
    type(lda_u_t),       intent(in)    :: this
    type(lda_u_mixer_t), intent(inout) :: mixer
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    if(this%level == DFT_U_NONE) return
    PUSH_SUB(lda_u_mixer_init)
@@ -112,18 +114,12 @@ contains
 
    if(states_are_real(st)) then
      SAFE_ALLOCATE(mixer%dtmp_occ(1:mixer%occsize, 1))
-     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
-     call mixfield_set_vin(mixer%mixfield_occ, mixer%dtmp_occ)
    else
      SAFE_ALLOCATE(mixer%ztmp_occ(1:mixer%occsize, 1))
-     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
-     call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
    if(this%level == DFT_U_ACBN0) then
      SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets, 1))
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
-     call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
 
    POP_SUB(lda_u_mixer_init)
@@ -213,7 +209,7 @@ contains
  subroutine lda_u_mixer_get_vnew(this, mixer, st)
    type(lda_u_t),       intent(inout) :: this
    type(lda_u_mixer_t), intent(in)    :: mixer
-   type(states_t),      intent(in)    :: st
+   type(states_elec_t), intent(in)    :: st
 
    if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_get_vnew)

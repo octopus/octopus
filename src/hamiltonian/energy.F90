@@ -22,7 +22,6 @@
 module energy_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 
@@ -34,6 +33,7 @@ module energy_oct_m
     energy_copy
 
   type energy_t
+    ! Components are public by default
     ! Energies
     FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
                          !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]

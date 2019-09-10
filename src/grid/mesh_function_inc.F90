@@ -19,10 +19,11 @@
 
 ! ---------------------------------------------------------
 !> integrates a function
-R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
+R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: ff(:)  !< (mesh%np)
   logical, optional, intent(in) :: mask(:)
+  logical, optional, intent(in) :: reduce
 
   integer :: ip
 
@@ -46,7 +47,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   dd = dd*mesh%volume_element
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(C_PROFILING_MF_REDUCE)
@@ -65,7 +66,7 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   FLOAT, optional, intent(out)   :: norm
 
   FLOAT   :: norm_
-  integer :: idim, ip
+  integer :: idim
 
   PUSH_SUB(X(mf_normalize))
 
@@ -688,66 +689,6 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
 
   POP_SUB(X(mf_local_multipoles))
 end subroutine X(mf_local_multipoles)
-
-
-!--------------------------------------------------------------
-!> add some part of the function in mesh1 to mesh2 (index-based, so same spacing is assumed)
-subroutine X(mf_add)(mesh1, start1, end1, func1, mesh2, start2, end2, func2, per_dim, include_bounds)
-  type(mesh_t),      intent(in)    :: mesh1
-  integer,           intent(in)    :: start1(1:3)    !< starting point in mesh1
-  integer,           intent(in)    :: end1(1:3)      !< end point in mesh1
-  R_TYPE,            intent(in)    :: func1(:)       !< copy from this
-  type(mesh_t),      intent(in)    :: mesh2
-  integer,           intent(in)    :: start2(1:3)    !< starting point in mesh2
-  integer,           intent(in)    :: end2(1:3)      !< end point in mesh2
-  R_TYPE,            intent(inout) :: func2(:)       !< add to this
-  integer,           intent(in)    :: per_dim        !< the periodic dimension
-  logical, optional, intent(in)    :: include_bounds !< also use the points outside the box?
-
-  integer :: np1, np2, ip1, ip2, ix2, iy2, iz2
-  integer :: ix1(1:3)
-
-  PUSH_SUB(X(mf_add))
-
-  if (optional_default(include_bounds, .false.)) then
-    ASSERT(per_dim == 0)
-    np1 = mesh1%np_part
-    np2 = mesh2%np_part
-  else
-    np1 = mesh1%np
-    np2 = mesh2%np
-  end if
-
-  ix1(1) = start1(1)
-  do ix2 = start2(1), end2(1)
-
-    ix1(2) = start1(2)
-    do iy2 = start2(2), end2(2)
-
-      ix1(3) = start1(3)
-      do iz2 = start2(3), end2(3)
-
-        ip1 = mesh1%idx%lxyz_inv(ix1(1), ix1(2), ix1(3))
-        ip2 = mesh2%idx%lxyz_inv(ix2, iy2, iz2)
-
-        if(ip2 > 0 .and. ip2 <= np2 .and. ip1 > 0 .and. ip1 <= np1) then
-          func2(ip2) = func2(ip2) + func1(ip1)
-        end if
-
-        INCR(ix1(3), 1)
-        if(per_dim == 3 .and. ix1(3) > end1(3)) ix1(3) = start1(3)
-      end do
-
-      INCR(ix1(2), 1)
-      if(per_dim >= 2 .and. ix1(2) > end1(2)) ix1(2) = start1(2)
-    end do
-
-    INCR(ix1(1), 1)
-    if(per_dim >= 1 .and. ix1(1) > end1(1)) ix1(1) = start1(1)
-  end do
-
-  POP_SUB(X(mf_add))
-end subroutine X(mf_add)
 
 
 !! Local Variables:

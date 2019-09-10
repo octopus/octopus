@@ -24,7 +24,6 @@ module orbitalset_oct_m
   use blas_oct_m
   use comm_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hardware_oct_m
   use kpoints_oct_m
@@ -32,12 +31,12 @@ module orbitalset_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
  
   implicit none
 
@@ -60,6 +59,7 @@ module orbitalset_oct_m
        orbitalset_set_jln
 
   type orbitalset_t
+    ! Components are public by default
     integer             :: nn, ll, ii
     FLOAT               :: jj
     integer             :: norbs
@@ -71,6 +71,13 @@ module orbitalset_oct_m
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
     FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
+    integer             :: nneighbors         !> Number of neighbouring atoms on which the intersite
+                                              !> interaction is considered
+    FLOAT, allocatable  :: V_ij(:,:)          !> The list of intersite interaction parameters
+    FLOAT, allocatable  :: coulomb_IIJJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
+    integer, allocatable:: map_os(:)
+    CMPLX, allocatable  :: phase_shift(:,:)
+
     FLOAT               :: radius
     type(species_t), pointer :: spec          
 
@@ -99,7 +106,6 @@ contains
   nullify(this%eorb_mesh)
 
   call submesh_null(this%sphere)
-
   call orbitalset_init(this)
 
   POP_SUB(orbitalset_nullify)
@@ -111,6 +117,8 @@ contains
 
   PUSH_SUB(orbitalset_init)
 
+  this%iatom = -1
+  this%nneighbors = 0
   this%nn = 0
   this%ll = 0
   this%jj = M_ONE
@@ -140,6 +148,11 @@ contains
    SAFE_DEALLOCATE_P(this%eorb_mesh)
    nullify(this%spec)
    call submesh_end(this%sphere)
+
+   SAFE_DEALLOCATE_A(this%V_ij)
+   SAFE_DEALLOCATE_A(this%coulomb_IIJJ)
+   SAFE_DEALLOCATE_A(this%map_os)
+   SAFE_DEALLOCATE_A(this%phase_shift)
    
    POP_SUB(orbitalset_end)
  end subroutine orbitalset_end
@@ -171,6 +184,7 @@ contains
     integer :: ns, iq, is, ikpoint, im, idim
     FLOAT   :: kr, kpoint(1:MAX_DIM), dx(1:MAX_DIM)
     integer :: ndim
+    integer :: inn
 
     PUSH_SUB(orbitalset_update_phase)
 
@@ -194,7 +208,7 @@ contains
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)
+        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim) + os%sphere%center(1:ndim)
         kr = sum(kpoint(1:ndim)*dx(1:ndim))
         if(present(vec_pot)) then
           if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
@@ -227,7 +241,27 @@ contains
           end do
         end do
       endif
+
+
+      if(os%nneighbors > 0) then
+        do inn = 1, os%nneighbors       
+          dx(1:ndim) = os%V_ij(inn,1:ndim)
+          kr = sum(kpoint(1:ndim)*dx(1:ndim))
+          if(present(vec_pot)) then
+            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
+          end if
+    
+          !At the moment the uniform vector potential is in vec_pot_var
+          if(present(vec_pot_var)) then
+            if(allocated(vec_pot_var))  kr = kr + sum(vec_pot_var(1:ndim, 1)*dx(1:ndim))
+          end if
+
+          !The sign is different as this is applied on the wavefunction and not the orbitals
+          os%phase_shift(inn, iq) = exp(-M_zI*kr)
+        end do
+      end if
     end do
+
 
     POP_SUB(orbitalset_update_phase)
   end subroutine orbitalset_update_phase

@@ -95,6 +95,8 @@ dist_share_DATA =                      \
         15-crank_nicolson.test                 \
         15-crank_nicolson.01-gs.inp            \
         15-crank_nicolson.02-kick.inp          \
+	15-crank_nicolson.03-freeze_domains.inp\
+	15-crank_nicolson.04-freeze_states.inp\
         17-absorption-spin_symmetry.01-gs.inp \
         17-absorption-spin_symmetry.02-td.inp \
         17-absorption-spin_symmetry.03-spectrum.inp \
@@ -109,6 +111,9 @@ dist_share_DATA =                      \
         19-td_move_ions.test              \
         19-td_move_ions.01-gs.inp         \
         19-td_move_ions.02-td.inp         \
-        19-td_move_ions.03-td_restart.inp
+        19-td_move_ions.03-td_restart.inp \
+        20-pcm-local-field-absorption.01-gs.inp        \
+        20-pcm-local-field-absorption.02-td_prop_eom.inp   \
+        20-pcm-local-field-absorption.test
 
 CLEANFILES = *~ *.bak

@@ -36,6 +36,7 @@ include "mpif.h"
 
   !> This is defined even when running serial
   type mpi_grp_t
+    ! Components are public by default
     integer :: comm !< copy of the mpi communicator
     integer :: size !< size of comm (defined also in serial mode)
     integer :: rank !< rank of comm (defined also in serial mode)
@@ -58,6 +59,7 @@ contains
 #endif
 #ifdef HAVE_SCALAPACK
     integer :: iam, nprocs
+    integer :: blacs_default_system_context !< for blacs/openmpi bug workaround
 #endif
 
     if(is_serial) then
@@ -88,6 +90,16 @@ contains
       call blacs_setup(iam, mpi_world%size)
     end if
 
+    !> ensure there was at least one call to blacs_gridinit() or blacs_gridmap()
+    !> without it, blacs_exit() triggers an error
+    !>
+    !> *** An error occurred in MPI_Type_free
+    !> *** MPI_ERR_TYPE: invalid datatype
+    !>
+    !> in openmpi
+    call blacs_get(-1,0, blacs_default_system_context)
+    call blacs_gridinit(blacs_default_system_context, 'R', 1, 1)
+
 #endif
   end subroutine mpi_mod_init
 
@@ -96,7 +108,7 @@ contains
   subroutine mpi_mod_end()
 
 #ifdef HAVE_SCALAPACK
-    call blacs_exit(1)
+    if(mpi_world%comm /= -1) call blacs_exit(1)
 #endif
 
 #if defined(HAVE_MPI)

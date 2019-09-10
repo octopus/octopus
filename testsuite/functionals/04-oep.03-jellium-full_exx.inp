@@ -35,25 +35,14 @@ Spacing = 0.75
 
 XCFunctional = oep_x
 OEPLevel = oep_full
-OEPMixing = 30
 
-LRTolFinalTol = 1e-6
-LRConvAbsDens = 1e-6
-
-ConvRelDens = 8e-10
-
-EigenSolverTolerance = 1e-6
-
-Preconditioner = no
+ConvRelDens = 1e-6
+EigenSolverTolerance = 1e-7
 
 LinearSolver = cg
-MaximumIter = 20
+Preconditioner = no
+LRMaximumIter = 20
+
+MixingScheme = linear
 
 ExperimentalFeatures = yes
-
-FilterPotentials = filter_none
-
-%RestartOptions
-  restart_gs | "restart" | restart_states+restart_rho+restart_vhxc
-%
-MixingScheme = linear

@@ -21,7 +21,6 @@
 module ps_fhi_file_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 
@@ -33,22 +32,24 @@ module ps_fhi_file_oct_m
 
   ! First, the contents of the file.
   type ps_fhi_file_t
+    ! Components are public by default
+
     ! This is the general ABINIT header
-    character(len=256) :: title
-    FLOAT              :: znucl  ! charge of the nucleus
-    FLOAT              :: zion   ! valence charge
-    integer            :: pspdat ! date of creation of PP (DDMMYY)
-    integer            :: pspcod ! code for the pseudopotential (6 for .fhi)
-    integer            :: pspxc  ! exchange-correlation used to generate the psp
-    integer            :: lmax   ! Maximum l to use
-    integer            :: lloc   ! local part of the pseudo to use
-    integer            :: mmax   ! Maximum number of points in real space grid
-    FLOAT              :: r2well ! ??
+    character(len=256), private :: title
+    FLOAT,              private :: znucl  ! charge of the nucleus
+    FLOAT,              private :: zion   ! valence charge
+    integer,            private :: pspdat ! date of creation of PP (DDMMYY)
+    integer,            private :: pspcod ! code for the pseudopotential (6 for .fhi)
+    integer,            private :: pspxc  ! exchange-correlation used to generate the psp
+    integer                     :: lmax   ! Maximum l to use
+    integer                     :: lloc   ! local part of the pseudo to use
+    integer,            private :: mmax   ! Maximum number of points in real space grid
+    FLOAT,              private :: r2well ! ??
 
     ! this is specific for FHI
-    FLOAT              :: rchrg  ! The core charge becomes zero beyond rchrg
-    FLOAT              :: fchrg  !
-    FLOAT              :: qchrg  !
+    FLOAT,              private :: rchrg  ! The core charge becomes zero beyond rchrg
+    FLOAT,              private :: fchrg  !
+    FLOAT,              private :: qchrg  !
   end type ps_fhi_file_t
   
 contains

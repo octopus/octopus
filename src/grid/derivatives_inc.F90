@@ -333,8 +333,9 @@ end subroutine X(derivatives_curl)
 
 ! ----------------------------------------------------------
 
-subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
+subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_blocksize)
   type(derivatives_t), intent(in) :: this
+  type(namespace_t),   intent(in) :: namespace    
   integer,             intent(in) :: repetitions
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
@@ -348,7 +349,7 @@ subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
   real(8) :: stime, etime
   character(len=20) :: type
 
-  call parse_variable('StatesPack', .true., packstates)
+  call parse_variable(namespace, 'StatesPack', .true., packstates)
 
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
@@ -414,7 +415,6 @@ subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
     etime = (loct_clock() - stime)/dble(repetitions)
 
     if(packstates) then
-      call batch_unpack(ffb, copy = .false.)
       call batch_unpack(opffb)
     end if
 

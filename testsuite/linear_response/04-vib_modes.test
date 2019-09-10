@@ -15,17 +15,17 @@ Precision : 0.00011
 match ; Dipole Moment  ; GREPFIELD(static/info, '<z>', 3) ;            2.24560
 
 Input: 04-vib_modes.02-vib_modes.inp
-Precision : 1.5e-5
-match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ;  1420.92427139
-Precision : 1e-5
-match ; Infrared Intensity      ; LINEFIELD(vib_modes/infrared, 2, 5) ;                  0.30478642
-Precision : 1.5e-8
-match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5)  ;     -0.180425859034E-01
+Precision: 6.0e-05
+match ;  Vibrational Frequency    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.925148345
+Precision: 6.0e-09
+match ;  Infrared Intensity       ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.304785695
+Precision: 5.0e-08
+match ;  Dynamical Matrix Entry   ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.01804332173065
 
 Input: 04-vib_modes.022-vib_modes_restart.inp
-Precision : 1.5e-5
-match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.92427139
-Precision : 1e-5
-match ; Infrared Intensity      ; LINEFIELD(vib_modes/infrared, 2, 5) ;                 0.30478642
-Precision : 1.5e-8
-match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5)  ;    -0.180425859034E-01
+Precision: 6.0e-05
+match ;  Vibrational Frequency    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.925148345
+Precision: 1e-08
+match ;  Infrared Intensity       ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.304785695
+Precision: 5.0e-08
+match ;  Dynamical Matrix Entry   ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.01804332173065

@@ -212,7 +212,7 @@ namespace pseudopotential {
 	if(ixc_ >= 2 && ixc_ <= 9) return pseudopotential::exchange::LDA;
 	if(ixc_ == 11 || ixc_ == 12) return pseudopotential::exchange::PBE;
       }	else {
-	return pseudopotential::exchange(-ixc_);
+	return pseudopotential::exchange((-ixc_ +ixc_%1000)/1000);
       }
       
       return pseudopotential::exchange::UNKNOWN;
@@ -228,7 +228,7 @@ namespace pseudopotential {
 	if(ixc_ == 11) return pseudopotential::correlation::PBE;
 	if(ixc_ == 12) return pseudopotential::correlation::NONE;
       }	else {
-	return pseudopotential::correlation(-ixc_/1000);
+	return pseudopotential::correlation(-ixc_%1000);
       }
       
       return pseudopotential::correlation::UNKNOWN;
