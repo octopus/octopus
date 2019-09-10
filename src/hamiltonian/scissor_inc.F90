@@ -44,7 +44,7 @@ subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
     call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
     
     do ist = 1, this%gs_st%nst
-      call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
+      call states_elec_get_state(this%gs_st, mesh, ist, ik, gspsi )
 
       dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi(:,:), psi) &
          * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state
@@ -82,7 +82,7 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
    
    tmpstate(1:mesh%np, 1:this%gs_st%d%dim) = R_TOTYPE(M_ZERO)
    do ist = 1, this%gs_st%nst
-     call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
+     call states_elec_get_state(this%gs_st, mesh, ist, ik, gspsi )
      !<gpsi|psi>
      dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi) &
            * this%gs_st%occ(ist, ik)/ this%gs_st%smear%el_per_state
@@ -104,7 +104,7 @@ subroutine X(scissor_commute_r)(this, mesh, ik, psi, gpsi)
      end do
      tmpstate(1:mesh%np,:) = R_TOTYPE(M_ZERO)
      do ist = 1, this%gs_st%nst
-       call states_get_state(this%gs_st, mesh, ist, ik, gspsi )
+       call states_elec_get_state(this%gs_st, mesh, ist, ik, gspsi )
        ! <gspsi|r|psi>
        dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi, psi_r) &
          * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state

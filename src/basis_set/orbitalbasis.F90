@@ -26,6 +26,7 @@ module orbitalbasis_oct_m
   use io_oct_m
   use messages_oct_m
   use mesh_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -95,9 +96,9 @@ contains
 
  end subroutine orbitalbasis_nullify
 
- subroutine orbitalbasis_init(this, parser)
+ subroutine orbitalbasis_init(this, namespace)
    type(orbitalbasis_t),    intent(inout) :: this
-   type(parser_t),          intent(in)    :: parser
+   type(namespace_t),       intent(in)    :: namespace
 
   PUSH_SUB(orbitalbasis_init)
 
@@ -119,7 +120,7 @@ contains
   !% The radius of the orbitals are restricted to the radius of the non-local part of the pseudopotential 
   !% of the corresponding atom.
   !%End
-  call parse_variable(parser, 'AOTruncation', OPTION__AOTRUNCATION__AO_FULL, this%truncation)
+  call parse_variable(namespace, 'AOTruncation', OPTION__AOTRUNCATION__AO_FULL, this%truncation)
   call messages_print_var_option(stdout, 'AOTruncation', this%truncation)
 
   !%Variable AOThreshold
@@ -133,7 +134,7 @@ contains
   !% This value should be converged to be sure that results do not depend on this value. 
   !% However increasing this value increases the number of grid points covered by the orbitals and directly affect performances.
   !%End
-  call parse_variable(parser, 'AOThreshold', CNST(0.01), this%threshold)
+  call parse_variable(namespace, 'AOThreshold', CNST(0.01), this%threshold)
   if(this%threshold <= M_ZERO) call messages_input_error('AOThreshold')
   call messages_print_var_value(stdout, 'AOThreshold', this%threshold)
 
@@ -144,7 +145,7 @@ contains
   !%Description
   !% If set to yes, Octopus will normalize the atomic orbitals
   !%End
-  call parse_variable(parser, 'AONormalize', .true., this%normalize)
+  call parse_variable(namespace, 'AONormalize', .true., this%normalize)
   call messages_print_var_value(stdout, 'AONormalize', this%normalize)
 
   !%Variable AOSubmeshForPeriodic
@@ -157,7 +158,7 @@ contains
   !% periodic systems, but becomes advantageous for large supercells.
   !% At the moment this option is not compatible with Loewdin orthogonalization
   !%End
-  call parse_variable(parser, 'AOSubmeshForPeriodic', .false., this%submeshforperiodic)
+  call parse_variable(namespace, 'AOSubmeshForPeriodic', .false., this%submeshforperiodic)
   call messages_print_var_value(stdout, 'AOSubmeshForPeriodic', this%submeshforperiodic)
 
   !%Variable AOLoewdin
@@ -170,7 +171,7 @@ contains
   !% The default is set to no for the moment as this option is
   !% not yet implemented for isolated systems, and seems to lead to important egg-box effect
   !%End
-  call parse_variable(parser, 'AOLoewdin', .false., this%orthogonalization)
+  call parse_variable(namespace, 'AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
   if(this%orthogonalization) call messages_experimental("AOLoewdin")
 
@@ -179,7 +180,7 @@ contains
 
   if(debug%info) then
     write(this%debugdir, '(a)') 'debug/ao_basis'
-    call io_mkdir(this%debugdir)
+    call io_mkdir(this%debugdir, namespace)
   end if
 
   POP_SUB(orbitalbasis_init)

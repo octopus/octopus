@@ -27,6 +27,7 @@ module derivatives_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -166,9 +167,9 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, parser, sb, use_curvilinear, order)
+  subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
-    type(parser_t),              intent(in)  :: parser
+    type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
     integer, optional,           intent(in)  :: order
@@ -208,14 +209,14 @@ contains
     if(use_curvilinear) default_stencil = DER_STARPLUS
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
-    call parse_variable(parser, 'DerivativesStencil', default_stencil, der%stencil_type)
+    call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_variable(parser, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+      call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -237,7 +238,7 @@ contains
     !% in 2D and 24 in 3D.
     !% </ul>
     !%End
-    call parse_variable(parser, 'DerivativesOrder', 4, der%order)
+    call parse_variable(namespace, 'DerivativesOrder', 4, der%order)
     ! overwrite order if given as argument
     if(present(order)) then
       der%order = order
@@ -256,13 +257,13 @@ contains
     !% Communication is based on non-blocking point-to-point communication.
     !%End
     
-    call parse_variable(parser, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
+    call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call messages_input_error('ParallelizationOfDerivatives')
     end if
 
-    call messages_obsolete_variable(parser, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init
@@ -406,22 +407,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_update(der, parser, mesh)
+  subroutine derivatives_update(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
-    type(parser_t),         intent(in)    :: parser
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
     
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
     
-    call derivatives_build(der, parser, mesh)
+    call derivatives_build(der, namespace, mesh)
     
   end subroutine derivatives_update
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, parser, mesh)
+  subroutine derivatives_build(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
-    type(parser_t),         intent(in)    :: parser
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -434,7 +435,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, parser, mesh)
+    call boundaries_init(der%boundaries, namespace, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)

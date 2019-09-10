@@ -18,20 +18,20 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_density(gr, parser, tg, stin, td, restart)
-    type(grid_t),     intent(in)    :: gr
-    type(parser_t),   intent(in)    :: parser
-    type(target_t),   intent(inout) :: tg
-    type(states_t),   intent(inout) :: stin 
-    type(td_t),       intent(in)    :: td
-    type(restart_t),  intent(inout) :: restart
+  subroutine target_init_density(gr, namespace, tg, stin, td, restart)
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
+    type(target_t),      intent(inout) :: tg
+    type(states_elec_t), intent(inout) :: stin 
+    type(td_t),          intent(in)    :: td
+    type(restart_t),     intent(inout) :: restart
 
     integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
     FLOAT               :: psi_re, psi_im, xx(MAX_DIM), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
     CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
-    type(states_t)      :: tmp_st
+    type(states_elec_t) :: tmp_st
     character(len=1024) :: expression
 
     PUSH_SUB(target_init_density)
@@ -69,18 +69,18 @@
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
 
-    if(parse_is_defined(parser, 'OCTTargetDensity')) then
+    if(parse_is_defined(namespace, 'OCTTargetDensity')) then
       tg%density_weight = M_ONE
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
-      call parse_variable(parser, 'OCTTargetDensity', "0", expression)
+      call parse_variable(namespace, 'OCTTargetDensity', "0", expression)
 
       if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
-        if(parse_block(parser, 'OCTTargetDensityFromState', blk) == 0) then
-          call states_copy(tmp_st, tg%st)
-          call states_deallocate_wfns(tmp_st)
-          call states_look_and_load(restart, parser, tmp_st, gr)
+        if(parse_block(namespace, 'OCTTargetDensityFromState', blk) == 0) then
+          call states_elec_copy(tmp_st, tg%st)
+          call states_elec_deallocate_wfns(tmp_st)
+          call states_elec_look_and_load(restart, namespace, tmp_st, gr)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 
@@ -99,21 +99,21 @@
           do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
             
             if(states_are_real(tg%st)) then
-              call states_rotate(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
+              call states_elec_rotate(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
             else
-              call states_rotate(gr%mesh, tmp_st, rotation_matrix, iqn)
+              call states_elec_rotate(gr%mesh, tmp_st, rotation_matrix, iqn)
             end if
 
             do ist = tg%st%st_start, tg%st%st_end 
-              call states_get_state(tmp_st, gr%mesh, ist, iqn, psi)
-              call states_set_state(tg%st, gr%mesh, ist, iqn, psi)
+              call states_elec_get_state(tmp_st, gr%mesh, ist, iqn, psi)
+              call states_elec_set_state(tg%st, gr%mesh, ist, iqn, psi)
             end do
 
           end do
             
           SAFE_DEALLOCATE_A(rotation_matrix)
           SAFE_DEALLOCATE_A(psi)
-          call states_end(tmp_st)
+          call states_elec_end(tmp_st)
 
           call density_calc(tg%st, gr, tg%st%rho)
           do ip = 1, gr%mesh%np
@@ -224,7 +224,7 @@
       !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
       !%End
 
-    call parse_variable(parser, 'OCTCurrentFunctional', oct_no_curr, tg%curr_functional)
+    call parse_variable(namespace, 'OCTCurrentFunctional', oct_no_curr, tg%curr_functional)
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
@@ -234,13 +234,13 @@
       end if
     end select
 
-    call parse_variable(parser, 'OCTCurrentWeight', M_ZERO, tg%curr_weight)
+    call parse_variable(namespace, 'OCTCurrentWeight', M_ZERO, tg%curr_weight)
     write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', tg%curr_functional
     write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  tg%curr_weight
     call messages_info(2)
 
     if (target_mode(tg)  ==  oct_targetmode_td) then
-      call parse_variable(parser, 'OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
+      call parse_variable(namespace, 'OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
       if (tg%strt_iter_curr_tg  <  0) then
         message(1) = 'OCTStartIterCurrTg must be positive.'
         call messages_fatal(1)
@@ -258,8 +258,8 @@
       tg%strt_iter_curr_tg = 0
     end if
 
-    if(parse_is_defined(parser, 'OCTSpatialCurrWeight')) then
-      if(parse_block(parser, 'OCTSpatialCurrWeight', blk) == 0) then
+    if(parse_is_defined(namespace, 'OCTSpatialCurrWeight')) then
+      if(parse_block(namespace, 'OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
         SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
@@ -350,10 +350,10 @@
     integer :: ierr
     PUSH_SUB(target_output_density)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', gr%mesh, &
+        call dio_function_output(outp%how, trim(dir), 'density_target', outp%namespace, gr%mesh, &
           tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     end if
@@ -366,9 +366,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_density(gr, tg, psi) result(j1)
-    type(grid_t),   intent(in) :: gr
-    type(target_t), intent(in) :: tg
-    type(states_t), intent(in) :: psi
+    type(grid_t),        intent(in) :: gr
+    type(target_t),      intent(in) :: tg
+    type(states_elec_t), intent(in) :: psi
 
     integer :: ip, maxiter
     FLOAT :: currfunc_tmp
@@ -414,10 +414,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_density(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: no_electrons, ip, ist, ib, ik
     CMPLX, allocatable :: zpsi(:, :)
@@ -442,18 +442,18 @@
 
       if(no_electrons  ==  1) then
 
-        call states_get_state(psi_in, gr%mesh, 1, 1, zpsi)
+        call states_elec_get_state(psi_in, gr%mesh, 1, 1, zpsi)
 
         do ip = 1, gr%mesh%np
           zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), real(zpsi(ip, 1))))
         end do
 
-        call states_set_state(chi_out, gr%mesh, 1, 1, zpsi)
+        call states_elec_set_state(chi_out, gr%mesh, 1, 1, zpsi)
         
       else
         do ist = psi_in%st_start, psi_in%st_end
 
-          call states_get_state(psi_in, gr%mesh, ist, 1, zpsi)
+          call states_elec_get_state(psi_in, gr%mesh, ist, 1, zpsi)
           
           do ip = 1, gr%mesh%np
             if(psi_in%rho(ip, 1) > CNST(1.0e-8)) then
@@ -463,7 +463,7 @@
             end if
           end do
 
-          call states_set_state(chi_out, gr%mesh, ist, 1, zpsi)
+          call states_elec_set_state(chi_out, gr%mesh, ist, 1, zpsi)
           
         end do
       end if
@@ -494,7 +494,7 @@
   subroutine target_tdcalc_density(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
 
     PUSH_SUB(target_tdcalc_density)
@@ -513,9 +513,9 @@
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
   FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t), intent(in) :: tg
-    type(grid_t),   intent(in) :: gr
-    type(states_t), intent(in) :: psi
+    type(target_t),      intent(in) :: tg
+    type(grid_t),        intent(in) :: gr
+    type(states_elec_t), intent(in) :: psi
 
     integer :: ip
     FLOAT, allocatable :: semilocal_function(:)
@@ -532,13 +532,13 @@
       semilocal_function = M_ZERO
 
     case(oct_curr_square,oct_curr_square_td)
-      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
+      call states_elec_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
       do ip = 1, gr%mesh%np
         semilocal_function(ip) =  sum(psi%current(ip, 1:gr%sb%dim, 1)**2)  
       end do
       
     case(oct_max_curr_ring)
-      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
+      call states_elec_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
 
       if(gr%sb%dim /= M_TWO) then
         call messages_not_implemented('Target for dimension != 2')
@@ -573,11 +573,11 @@
   ! Calculates current-specific boundary condition
   !-----------------------------------------------------------------------
  subroutine chi_current(tg, gr, factor, psi_in, chi)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    FLOAT,             intent(in)    :: factor
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi
+    type(target_t),       intent(in)    :: tg
+    type(grid_t),         intent(in)    :: gr
+    FLOAT,                intent(in)    :: factor
+    type(states_elec_t),  intent(in)    :: psi_in
+    type(states_elec_t),  intent(inout) :: chi
 
     CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)
     FLOAT, allocatable :: div_curr_psi_in(:,:)   
@@ -588,7 +588,7 @@
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
     if(target_mode(tg) == oct_targetmode_td ) then 
-      call states_calc_quantities(gr%der, psi_in, .false., paramagnetic_current=psi_in%current) 
+      call states_elec_calc_quantities(gr%der, psi_in, .false., paramagnetic_current=psi_in%current) 
     end if
 
     select case(tg%curr_functional)
@@ -616,8 +616,8 @@
       ! the boundary condition  
       do ist = psi_in%st_start, psi_in%st_end
 
-        call states_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
-        call states_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
+        call states_elec_get_state(chi, gr%der%mesh, ist, 1, zchi)
         
         call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim,1))
 
@@ -629,7 +629,7 @@
           end do
         end do
 
-        call states_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_set_state(chi, gr%der%mesh, ist, 1, zchi)
         
       end do
       
@@ -644,8 +644,8 @@
       
       do ist = psi_in%st_start, psi_in%st_end
         
-        call states_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
-        call states_get_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_get_state(psi_in, gr%der%mesh, ist, 1, zpsi)
+        call states_elec_get_state(chi, gr%der%mesh, ist, 1, zchi)
         
         call zderivatives_grad(gr%der, zpsi(:, 1), grad_psi_in(:, :, 1))
         
@@ -665,7 +665,7 @@
           
         end if
         
-        call states_set_state(chi, gr%der%mesh, ist, 1, zchi)
+        call states_elec_set_state(chi, gr%der%mesh, ist, 1, zchi)
         
       end do
       

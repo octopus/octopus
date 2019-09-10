@@ -25,10 +25,11 @@ module elf_oct_m
   use grid_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
 
   implicit none
 
@@ -40,8 +41,8 @@ module elf_oct_m
 
 contains
 
-  subroutine elf_init(parser)
-    type(parser_t),    intent(in)    :: parser
+  subroutine elf_init(namespace)
+    type(namespace_t),    intent(in)    :: namespace
     
     PUSH_SUB(elf_init)
 
@@ -55,7 +56,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call parse_variable(parser, 'ELFWithCurrentTerm', .true., with_current_term)
+    call parse_variable(namespace, 'ELFWithCurrentTerm', .true., with_current_term)
 
     POP_SUB(elf_init)
   end subroutine elf_init
@@ -64,8 +65,8 @@ contains
   !> (time-dependent) electron localization function, (TD)ELF.
   ! ---------------------------------------------------------
   subroutine elf_calc(st, gr, elf, de)
-    type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(in)    :: gr
+    type(states_elec_t),   intent(inout) :: st
+    type(grid_t),          intent(in)    :: gr
     !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
     !! On output, it should contain the global ELF if st%d%ispin = 1,
     !! otherwise elf(:, 3) contains the global ELF, and 
@@ -96,7 +97,7 @@ contains
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
+    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
                                 paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities

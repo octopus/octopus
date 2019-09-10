@@ -28,6 +28,7 @@ module boundaries_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -142,9 +143,9 @@ contains
   end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
-  subroutine boundaries_init(this, parser, mesh)
+  subroutine boundaries_init(this, namespace, mesh)
     type(boundaries_t),   intent(out)   :: this
-    type(parser_t),       intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
@@ -174,10 +175,10 @@ contains
       !% The momentum of the spin spiral is defined by the variable 
       !% <tt>TDMomentumTransfer</tt> 
       !%End
-      call parse_variable(parser, 'SpiralBoundaryCondition', .false., this%spiralBC)
+      call parse_variable(namespace, 'SpiralBoundaryCondition', .false., this%spiralBC)
       if(this%spiralBC) then
-        if(parse_is_defined(parser, 'TDMomentumTransfer')) then
-          if(parse_block(parser, 'TDMomentumTransfer', blk)==0) then
+        if(parse_is_defined(namespace, 'TDMomentumTransfer')) then
+          if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
             do idir = 1, MAX_DIM
              call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))
              this%spiral_q(idir) = units_to_atomic(unit_one / units_inp%length, this%spiral_q(idir))

@@ -29,7 +29,7 @@ module lcao_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -42,6 +42,7 @@ module lcao_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -50,10 +51,11 @@ module lcao_oct_m
   use scalapack_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
-  use states_io_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_io_oct_m
   use submesh_oct_m
   use system_oct_m
   use unit_oct_m
@@ -129,12 +131,12 @@ contains
 !#define LCAO_DEBUG
 
   ! ---------------------------------------------------------
-  subroutine lcao_init(this, parser, gr, geo, st)
+  subroutine lcao_init(this, namespace, gr, geo, st)
     type(lcao_t),         intent(out) :: this
-    type(parser_t),       intent(in)  :: parser
+    type(namespace_t),    intent(in)  :: namespace
     type(grid_t),         intent(in)  :: gr
     type(geometry_t),     intent(in)  :: geo
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
     integer :: ii, ll, mm
@@ -220,7 +222,7 @@ contains
     !% less optimal starting point, but it is faster and uses less
     !% memory than other methods.
     !%End
-    call parse_variable(parser, 'LCAOStart', mode_default, this%mode)
+    call parse_variable(namespace, 'LCAOStart', mode_default, this%mode)
     if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error('LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
@@ -243,7 +245,7 @@ contains
     !% alternative (and experimental) implementation. It is faster for
     !% large systems and parallel in states. It is not working for spinors, however.
     !%End
-    call parse_variable(parser, 'LCAOAlternative', .false., this%alternative)
+    call parse_variable(namespace, 'LCAOAlternative', .false., this%alternative)
     ! DAS: For spinors, you will always get magnetization in (1, 0, 0) direction, and the
     ! eigenvalues will be incorrect. This is due to confusion between spins and spinors in the code.
     if(st%d%ispin == SPINORS .and. this%alternative) then
@@ -268,7 +270,7 @@ contains
     !%End
 
     if(states_are_complex(st)) then
-      call parse_variable(parser, 'LCAOComplexYlms', .false., this%complex_ylms)
+      call parse_variable(namespace, 'LCAOComplexYlms', .false., this%complex_ylms)
     else
       this%complex_ylms = .false.
     end if
@@ -283,12 +285,12 @@ contains
     !!% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
     !!%End
 #ifdef LCAO_DEBUG
-    call parse_variable(parser, 'LCAODebug', .false., this%debug)
+    call parse_variable(namespace, 'LCAODebug', .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
 
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', action='write')
+      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
 #endif
@@ -303,7 +305,7 @@ contains
       !% The coordinates of the atomic orbitals used by the LCAO
       !% procedure will be rescaled by the value of this variable. 1.0 means no rescaling.
       !%End
-      call parse_variable(parser, 'LCAOScaleFactor', CNST(1.0), this%orbital_scale_factor)
+      call parse_variable(namespace, 'LCAOScaleFactor', CNST(1.0), this%orbital_scale_factor)
       call messages_print_var_value(stdout, 'LCAOScaleFactor', this%orbital_scale_factor)
 
       !%Variable LCAOMaximumOrbitalRadius
@@ -314,7 +316,7 @@ contains
       !% The LCAO procedure will ignore orbitals that have an
       !% extent greater that this value.
       !%End
-      call parse_variable(parser, 'LCAOMaximumOrbitalRadius', CNST(20.0), max_orb_radius, unit = units_inp%length)
+      call parse_variable(namespace, 'LCAOMaximumOrbitalRadius', CNST(20.0), max_orb_radius, unit = units_inp%length)
       call messages_print_var_value(stdout, 'LCAOMaximumOrbitalRadius', max_orb_radius, units_out%length)
 
       ! count the number of orbitals available
@@ -450,7 +452,7 @@ contains
       !% reduced. If you want to use the largest possible number, set
       !% <tt>LCAODimension</tt> to a negative number.
       !%End
-      call parse_variable(parser, 'LCAODimension', 0, n)
+      call parse_variable(namespace, 'LCAODimension', 0, n)
 
       if(n > 0 .and. n <= st%nst .and. st%nst <= this%maxorbs) then
         ! n was made too small
@@ -510,7 +512,7 @@ contains
       !% that is required to store the orbitals.
       !%
       !%End
-      call parse_variable(parser, 'LCAOKeepOrbitals', .true., this%keep_orb)
+      call parse_variable(namespace, 'LCAOKeepOrbitals', .true., this%keep_orb)
 
       !%Variable LCAOExtraOrbitals
       !%Type logical
@@ -527,7 +529,7 @@ contains
       !% some lower-lying states which correspond to higher angular momenta instead
       !% of higher principal quantum number.
       !%End
-      call parse_variable(parser, 'LCAOExtraOrbitals', .false., this%derivative)
+      call parse_variable(namespace, 'LCAOExtraOrbitals', .false., this%derivative)
 
       ! DAS: if you calculate the Na atom this way, spin-polarized, with just one unoccupied state,
       ! you will obtain states (up and down) which are actually the 10th states if you start with
@@ -551,7 +553,7 @@ contains
       !% Only applies if <tt>LCAOAlternative = true</tt>.
       !% The tolerance for the diagonalization of the LCAO Hamiltonian.
       !%End
-      call parse_variable(parser, 'LCAODiagTol', CNST(1e-10), this%diag_tol)
+      call parse_variable(namespace, 'LCAODiagTol', CNST(1e-10), this%diag_tol)
 
       if(this%derivative) then
         this%mult = 2
@@ -704,7 +706,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
@@ -715,14 +717,14 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, sys%parser, sys%gr, sys%geo, sys%st)
+    call lcao_init(lcao, sys%namespace, sys%gr, sys%geo, sys%st)
 
     if(lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE) then
       call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
     end if
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%parser, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call lcao_guess_density(lcao, sys%namespace, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
 
       if(sys%st%d%ispin > UNPOLARIZED) then
@@ -736,7 +738,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -755,17 +757,17 @@ contains
 
       if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
         if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
         else
-          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
         end if
       else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
-        call states_fermi(sys%st, sys%gr%mesh)
-        call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+        call states_elec_fermi(sys%st, sys%gr%mesh)
+        call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
@@ -793,18 +795,18 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_orthogonalize(sys%st, sys%gr%mesh)
+      call states_elec_orthogonalize(sys%st, sys%gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
-          call states_fermi(sys%st, sys%gr%mesh) ! occupations
+          call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
 
       end if
@@ -814,7 +816,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_orthogonalize(sys%st, sys%gr%mesh)
+        call states_elec_orthogonalize(sys%st, sys%gr%mesh)
       end if
 
     end if
@@ -855,13 +857,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(this, st, gr, geo, hm, start)
-    type(lcao_t),        intent(inout) :: this
-    type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
-    integer, optional,   intent(in)    :: start
+  subroutine lcao_wf(this, st, gr, geo, hm, namespace, start)
+    type(lcao_t),             intent(inout) :: this
+    type(states_elec_t),      intent(inout) :: st
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(namespace_t),        intent(in)    :: namespace
+    integer, optional,        intent(in)    :: start
 
     integer :: start_
     type(profile_t), save :: prof
@@ -876,15 +879,15 @@ contains
 
     if(this%alternative) then
       if (states_are_real(st)) then
-        call dlcao_alt_wf(this, st, gr, geo, hm, start_)
+        call dlcao_alt_wf(this, st, gr, geo, hm, namespace, start_)
       else
-        call zlcao_alt_wf(this, st, gr, geo, hm, start_)
+        call zlcao_alt_wf(this, st, gr, geo, hm, namespace, start_)
       end if
     else
       if (states_are_real(st)) then
-        call dlcao_wf(this, st, gr, geo, hm, start_)
+        call dlcao_wf(this, st, gr, geo, hm, namespace, start_)
       else
-        call zlcao_wf(this, st, gr, geo, hm, start_)
+        call zlcao_wf(this, st, gr, geo, hm, namespace, start_)
       end if
     end if
     POP_SUB(lcao_wf)
@@ -958,10 +961,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, parser, st, gr, sb, geo, iatom, spin_channels, rho)
+  subroutine lcao_atom_density(this, namespace, st, gr, sb, geo, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
-    type(parser_t),           intent(in)    :: parser
-    type(states_t),           intent(in)    :: st
+    type(namespace_t),        intent(in)    :: namespace
+    type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(simul_box_t),        intent(in)    :: sb
     type(geometry_t), target, intent(in)    :: geo
@@ -1054,7 +1057,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%fine%mesh, parser, sb, geo%atom(iatom), spin_channels, rho)
+      call species_atom_density(gr%fine%mesh, namespace, sb, geo%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)
@@ -1062,16 +1065,16 @@ contains
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, parser, st, gr, sb, geo, qtot, nspin, spin_channels, rho)
-    type(lcao_t),      intent(inout) :: this
-    type(parser_t),    intent(in)    :: parser
-    type(states_t),    intent(in)    :: st
-    type(grid_t),      intent(in)    :: gr
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
-    FLOAT,             intent(in)    :: qtot  !< the total charge of the system
-    integer,           intent(in)    :: nspin, spin_channels
-    FLOAT,             intent(out)   :: rho(:, :)
+  subroutine lcao_guess_density(this, namespace, st, gr, sb, geo, qtot, nspin, spin_channels, rho)
+    type(lcao_t),        intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(in)    :: st
+    type(grid_t),        intent(in)    :: gr
+    type(simul_box_t),   intent(in)    :: sb
+    type(geometry_t),    intent(in)    :: geo
+    FLOAT,               intent(in)    :: qtot  !< the total charge of the system
+    integer,             intent(in)    :: nspin, spin_channels
+    FLOAT,               intent(out)   :: rho(:, :)
 
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
@@ -1112,7 +1115,7 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call parse_variable(parser, 'GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
+      call parse_variable(namespace, 'GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
       if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error('GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
@@ -1125,7 +1128,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, spin_channels, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, spin_channels, atom_rho)
         rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh%np, 1:spin_channels) + &
                                                   atom_rho(1:gr%fine%mesh%np, 1:spin_channels)
       end do
@@ -1143,14 +1146,14 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
+        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
         rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
       do ia = 1, geo%natoms
-        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -1198,7 +1201,7 @@ contains
       !% than the number of valence electrons in the atom, it will be rescaled
       !% to this number, which is the maximum possible magnetization.
       !%End
-      if(parse_block(parser, 'AtomsMagnetDirection', blk) < 0) then
+      if(parse_block(namespace, 'AtomsMagnetDirection', blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
         call messages_fatal(1)
       end if
@@ -1223,7 +1226,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho)
+        call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%fine%mesh, atom_rho(:, 1))
@@ -1340,7 +1343,7 @@ contains
 
   subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     integer, optional,   intent(in)    :: start

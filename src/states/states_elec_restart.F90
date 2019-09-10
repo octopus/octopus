@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module states_restart_oct_m
+module states_elec_restart_oct_m
   use global_oct_m
   use grid_oct_m
   use io_function_oct_m
@@ -32,13 +32,15 @@ module states_restart_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use string_oct_m
   use types_oct_m
 
@@ -47,42 +49,42 @@ module states_restart_oct_m
   type(profile_t), save :: prof_read, prof_write
 
   private
-  public ::                         &
-    states_look_and_load,           &
-    states_dump,                    &
-    states_load,                    &
-    states_dump_rho,                &
-    states_load_rho,                &
-    states_read_user_def_orbitals,  &
-    states_dump_spin,               &
-    states_load_spin,               &
-    states_dump_frozen,             &
-    states_load_frozen
+  public ::                              &
+    states_elec_look_and_load,           &
+    states_elec_dump,                    &
+    states_elec_load,                    &
+    states_elec_dump_rho,                &
+    states_elec_load_rho,                &
+    states_elec_dump_spin,               &
+    states_elec_load_spin,               &
+    states_elec_dump_frozen,             &
+    states_elec_load_frozen,             &
+    states_elec_read_user_def_orbitals
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_look_and_load(restart, parser, st, gr, is_complex)
-    type(restart_t),            intent(in)    :: restart
-    type(parser_t),             intent(in)    :: parser
-    type(states_t),     target, intent(inout) :: st
-    type(grid_t),               intent(in)    :: gr
-    logical,          optional, intent(in)    :: is_complex
+  subroutine states_elec_look_and_load(restart, namespace, st, gr, is_complex)
+    type(restart_t),             intent(in)    :: restart
+    type(namespace_t),           intent(in)    :: namespace
+    type(states_elec_t), target, intent(inout) :: st
+    type(grid_t),                intent(in)    :: gr
+    logical,           optional, intent(in)    :: is_complex
 
     integer :: kpoints, dim, nst, ierr
     FLOAT, pointer :: new_occ(:,:)
 
-    PUSH_SUB(states_look_and_load)
+    PUSH_SUB(states_elec_look_and_load)
 
     !check how many wfs we have
-    call states_look(restart, kpoints, dim, nst, ierr)
+    call states_elec_look(restart, kpoints, dim, nst, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read states information."
       call messages_fatal(1)
     end if
 
     if(st%parallel_in_states) then
-      message(1) = "Internal error: cannot use states_look_and_load when parallel in states."
+      message(1) = "Internal error: cannot use states_elec_look_and_load when parallel in states."
       call messages_fatal(1)
     end if
 
@@ -111,13 +113,13 @@ contains
 
     if (present(is_complex)) then
       if ( is_complex ) then
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       else
-        call states_allocate_wfns(st, gr%mesh, TYPE_FLOAT)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_FLOAT)
       end if
     else
-      ! allow states_allocate_wfns to decide for itself whether complex or real needed
-      call states_allocate_wfns(st, gr%mesh)
+      ! allow states_elec_allocate_wfns to decide for itself whether complex or real needed
+      call states_elec_allocate_wfns(st, gr%mesh)
     end if
 
     if(st%d%ispin == SPINORS) then
@@ -126,20 +128,20 @@ contains
     end if
 
     ! load wavefunctions
-    call states_load(restart, parser, st, gr, ierr)
+    call states_elec_load(restart, namespace, st, gr, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
     end if
 
-    POP_SUB(states_look_and_load)
-  end subroutine states_look_and_load
+    POP_SUB(states_elec_look_and_load)
+  end subroutine states_elec_look_and_load
 
 
   ! ---------------------------------------------------------
-  subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
+  subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     integer,              intent(out) :: ierr
     integer,    optional, intent(in)  :: iter
@@ -158,14 +160,14 @@ contains
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
 
-    PUSH_SUB(states_dump)
+    PUSH_SUB(states_elec_dump)
 
     verbose_ = optional_default(verbose, .true.)
 
     ierr = 0
 
     if(restart_skip(restart)) then
-      POP_SUB(states_dump)
+      POP_SUB(states_elec_dump)
       return
     end if
 
@@ -225,7 +227,8 @@ contains
     err2 = 0
     do ik = 1, st%d%nik
       kpoint = M_ZERO
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+      kpoint(1:gr%sb%dim) = &
+        kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
 
       do ist = 1, st%nst
         do idim = 1, st%d%dim
@@ -255,10 +258,10 @@ contains
             if (.not. present(lr)) then
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
-                  call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
+                  call states_elec_get_state(st, gr%mesh, idim, ist, ik, dpsi)
                   call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err, root = root)
                 else
-                  call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+                  call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
                   call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
                 end if
               else
@@ -314,9 +317,9 @@ contains
     call restart_unblock_signals()
 
     call profiling_out(prof_write)
-    POP_SUB(states_dump)
+    POP_SUB(states_elec_dump)
     return
-  end subroutine states_dump
+  end subroutine states_elec_dump
 
 
   ! ---------------------------------------------------------
@@ -324,10 +327,10 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, parser, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
+  subroutine states_elec_load(restart, namespace, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
-    type(parser_t),             intent(in)    :: parser
-    type(states_t),             intent(inout) :: st
+    type(namespace_t),          intent(in)    :: namespace
+    type(states_elec_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
     integer,          optional, intent(out)   :: iter
@@ -336,7 +339,7 @@ contains
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
 
-    integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim
+    integer              :: states_elec_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
@@ -358,7 +361,7 @@ contains
     integer, allocatable :: lowest_missing_tmp(:, :)
 #endif
     
-    PUSH_SUB(states_load)
+    PUSH_SUB(states_elec_load)
 
     ierr = 0
 
@@ -368,7 +371,7 @@ contains
 
     if (restart_skip(restart)) then
       ierr = -1
-      POP_SUB(states_load)
+      POP_SUB(states_elec_load)
       return
     end if
 
@@ -425,12 +428,12 @@ contains
       ASSERT(lr_allocated)
     end if
 
-    states_file  = restart_open(restart, 'states')
+    states_elec_file  = restart_open(restart, 'states')
     ! sanity check on spin/k-points. Example file 'states':
     ! nst=                         2
     ! dim=                         1
     ! nik=                         2
-    call restart_read(restart, states_file, lines, 3, err)
+    call restart_read(restart, states_elec_file, lines, 3, err)
     if (err /= 0) then
       ierr = ierr - 2
     else
@@ -453,7 +456,7 @@ contains
       end if
       ! We will check that they are the right k-points later, so we do not need to put a specific error here.
     end if
-    call restart_close(restart, states_file)
+    call restart_close(restart, states_elec_file)
 
 
     ! open files to read
@@ -485,7 +488,7 @@ contains
       call restart_close(restart, wfns_file)
       call restart_close(restart, occ_file)
       call profiling_out(prof_read)
-      POP_SUB(states_load)
+      POP_SUB(states_elec_load)
       return
     end if
 
@@ -541,7 +544,7 @@ contains
         end if
 
         kpoint(1:gr%sb%dim) = &
-          kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+          kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
         ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
         if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
           ! write only once for each k-point so as not to be too verbose
@@ -576,7 +579,7 @@ contains
 
     if (st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
-      call smear_init(st%smear, parser, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
+      call smear_init(st%smear, namespace, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
     end if
 
 
@@ -614,13 +617,13 @@ contains
 
           if(states_are_real(st)) then
             if(.not. present(lr)) then
-              call states_set_state(st, gr%mesh, idim, ist, ik, dpsi)
+              call states_elec_set_state(st, gr%mesh, idim, ist, ik, dpsi)
             else
               call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
             end if
           else
             if(.not. present(lr)) then
-              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
+              call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi)
             else
               call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
             end if
@@ -700,13 +703,13 @@ contains
     if(verbose_) call print_date(trim(message(1))//' ')
 
     call profiling_out(prof_read)
-    POP_SUB(states_load)
+    POP_SUB(states_elec_load)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine fill_random() !< Put random function in orbitals that could not be read.
-      PUSH_SUB(states_load.fill_random)
+      PUSH_SUB(states_elec_load.fill_random)
 
       do ik = st%d%kpt%start, st%d%kpt%end
 
@@ -714,18 +717,18 @@ contains
           do idim = 1, st%d%dim
             if(filled(idim, ist, ik)) cycle
 
-            call states_generate_random(st, gr%mesh, gr%sb, ist, ist, ik, ik)
+            call states_elec_generate_random(st, gr%mesh, gr%sb, ist, ist, ik, ik)
           end do
         end do
       end do
 
-      POP_SUB(states_load.fill_random)
+      POP_SUB(states_elec_load.fill_random)
     end subroutine fill_random
 
     ! ---------------------------------------------------------
 
     logical function index_is_wrong() !< .true. if the index (idim, ist, ik) is not present in st structure...
-      PUSH_SUB(states_load.index_is_wrong)
+      PUSH_SUB(states_elec_load.index_is_wrong)
 
       if(idim > st%d%dim .or. idim < 1 .or.   &
         ist   > st%nst   .or. ist  < 1 .or.   &
@@ -735,15 +738,15 @@ contains
         index_is_wrong = .false.
       end if
 
-      POP_SUB(states_load.index_is_wrong)
+      POP_SUB(states_elec_load.index_is_wrong)
     end function index_is_wrong
 
-  end subroutine states_load
+  end subroutine states_elec_load
 
 
-  subroutine states_dump_rho(restart, st, gr, ierr, iter)
+  subroutine states_elec_dump_rho(restart, st, gr, ierr, iter)
     type(restart_t),      intent(in)    :: restart
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
     integer,    optional, intent(in)    :: iter
@@ -753,12 +756,12 @@ contains
     character(len=300) :: lines(2)
     FLOAT, pointer :: rho(:), rho_fine(:)
 
-    PUSH_SUB(states_dump_rho)
+    PUSH_SUB(states_elec_dump_rho)
 
     ierr = 0
 
     if (restart_skip(restart)) then
-      POP_SUB(states_dump_rho)
+      POP_SUB(states_elec_dump_rho)
       return
     end if
 
@@ -827,28 +830,28 @@ contains
       call messages_info(1)
     end if
 
-    POP_SUB(states_dump_rho)
-  end subroutine states_dump_rho
+    POP_SUB(states_elec_dump_rho)
+  end subroutine states_elec_dump_rho
 
 
   ! ---------------------------------------------------------
-  subroutine states_load_rho(restart, st, gr, ierr)
-    type(restart_t), intent(in)    :: restart
-    type(states_t),  intent(inout) :: st
-    type(grid_t),    intent(in)    :: gr
-    integer,         intent(out)   :: ierr
+  subroutine states_elec_load_rho(restart, st, gr, ierr)
+    type(restart_t),      intent(in)    :: restart
+    type(states_elec_t),  intent(inout) :: st
+    type(grid_t),         intent(in)    :: gr
+    integer,              intent(out)   :: ierr
 
     integer              :: err, err2, isp
     character(len=12)    :: filename
     FLOAT, allocatable   :: rho_coarse(:)
 
-    PUSH_SUB(states_load_rho)
+    PUSH_SUB(states_elec_load_rho)
 
     ierr = 0
 
     if (restart_skip(restart)) then
       ierr = -1
-      POP_SUB(states_load_rho)
+      POP_SUB(states_elec_load_rho)
       return
     end if
 
@@ -859,7 +862,7 @@ contains
 
     ! skip for now, since we know what the files are going to be called
     !read the densities
-!    iunit_rho = io_open(trim(dir)//'/density', action='write')
+!    iunit_rho = io_open(trim(dir)//'/density', restart%namespace, action='write')
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !    call iopar_read(st%dom_st_kpt_mpi_grp, iunit_rho, line, err)
 !   we could read the iteration 'iter' too, not sure if that is useful.
@@ -898,12 +901,12 @@ contains
       call messages_info(1)
     end if
 
-    POP_SUB(states_load_rho)
-  end subroutine states_load_rho
+    POP_SUB(states_elec_load_rho)
+  end subroutine states_elec_load_rho
 
-  subroutine states_dump_frozen(restart, st, gr, ierr)
+  subroutine states_elec_dump_frozen(restart, st, gr, ierr)
     type(restart_t),      intent(in)    :: restart
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
 
@@ -911,14 +914,14 @@ contains
     character(len=80) :: filename
     character(len=300) :: lines(2)
 
-    PUSH_SUB(states_dump_frozen)
+    PUSH_SUB(states_elec_dump_frozen)
 
     ierr = 0
 
     ASSERT(associated(st%frozen_rho))
 
     if (restart_skip(restart)) then
-      POP_SUB(states_dump_frozen)
+      POP_SUB(states_elec_dump_frozen)
       return
     end if
 
@@ -983,21 +986,21 @@ contains
       call messages_info(1)
     end if
 
-    POP_SUB(states_dump_frozen)
-  end subroutine states_dump_frozen
+    POP_SUB(states_elec_dump_frozen)
+  end subroutine states_elec_dump_frozen
 
 
   ! ---------------------------------------------------------
-  subroutine states_load_frozen(restart, st, gr, ierr)
-    type(restart_t), intent(in)    :: restart
-    type(states_t),  intent(inout) :: st
-    type(grid_t),    intent(in)    :: gr
-    integer,         intent(out)   :: ierr
+  subroutine states_elec_load_frozen(restart, st, gr, ierr)
+    type(restart_t),      intent(in)    :: restart
+    type(states_elec_t),  intent(inout) :: st
+    type(grid_t),         intent(in)    :: gr
+    integer,              intent(out)   :: ierr
 
     integer              :: err, err2, isp, idir
     character(len=80)    :: filename
 
-    PUSH_SUB(states_load_frozen)
+    PUSH_SUB(states_elec_load_frozen)
 
     ASSERT(associated(st%frozen_rho))
 
@@ -1005,7 +1008,7 @@ contains
 
     if (restart_skip(restart)) then
       ierr = -1
-      POP_SUB(states_load_frozen)
+      POP_SUB(states_elec_load_frozen)
       return
     end if
 
@@ -1064,17 +1067,17 @@ contains
       call messages_info(1)
     end if
 
-    POP_SUB(states_load_frozen)
-  end subroutine states_load_frozen
+    POP_SUB(states_elec_load_frozen)
+  end subroutine states_elec_load_frozen
 
 
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions
   !! from the input file and fills the respective orbitals
-  subroutine states_read_user_def_orbitals(mesh, parser, st)
-    type(mesh_t),   intent(in)    :: mesh
-    type(parser_t), intent(in)    :: parser
-    type(states_t), intent(inout) :: st
+  subroutine states_elec_read_user_def_orbitals(mesh, namespace, st)
+    type(mesh_t),        intent(in)    :: mesh
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(inout) :: st
 
     type(block_t) :: blk
     integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
@@ -1089,7 +1092,7 @@ contains
       NORMALIZE_YES       = 1,      &
       NORMALIZE_NO        = 0
 
-    PUSH_SUB(states_read_user_def_orbitals)
+    PUSH_SUB(states_elec_read_user_def_orbitals)
 
     !%Variable UserDefinedStates
     !%Type block
@@ -1138,7 +1141,7 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals.
     !%End
-    if(parse_block(parser, 'UserDefinedStates', blk) == 0) then
+    if(parse_block(namespace, 'UserDefinedStates', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 
@@ -1212,7 +1215,7 @@ contains
                 call messages_info(3)
 
                 ! finally read the state
-                call zio_function_input(filename, mesh, zpsi(:, 1), ierr)
+                call zio_function_input(filename, namespace, mesh, zpsi(:, 1), ierr)
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
@@ -1225,7 +1228,7 @@ contains
                 call messages_fatal(2)
               end select
 
-              call states_set_state(st, mesh, id, is, ik, zpsi(:, 1))
+              call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
 
               ! normalize orbital
               if(parse_block_cols(blk, ib - 1)  ==  6) then
@@ -1236,9 +1239,9 @@ contains
               select case(normalize)
               case(NORMALIZE_NO)
               case(NORMALIZE_YES)
-                call states_get_state(st, mesh, is, ik, zpsi)
+                call states_elec_get_state(st, mesh, is, ik, zpsi)
                 call zmf_normalize(mesh, st%d%dim, zpsi)
-                call states_set_state(st, mesh, is, ik, zpsi)
+                call states_elec_set_state(st, mesh, is, ik, zpsi)
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'
                 message(2) = '"normalize_yes" or "normalize_no"'
@@ -1261,13 +1264,13 @@ contains
       call messages_fatal(1)
     end if
 
-    POP_SUB(states_read_user_def_orbitals)
-  end subroutine states_read_user_def_orbitals
+    POP_SUB(states_elec_read_user_def_orbitals)
+  end subroutine states_elec_read_user_def_orbitals
 
   ! ---------------------------------------------------------
-  subroutine states_dump_spin(restart, st, gr, ierr)
+  subroutine states_elec_dump_spin(restart, st, gr, ierr)
     type(restart_t),      intent(in)  :: restart
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     integer,              intent(out) :: ierr
 
@@ -1275,7 +1278,7 @@ contains
     integer :: err, err2(2), ik, idir, ist
     character(len=300) :: lines(3)
 
-    PUSH_SUB(states_dump_spin)
+    PUSH_SUB(states_elec_dump_spin)
 
     ierr = 0
 
@@ -1312,8 +1315,8 @@ contains
     call restart_unblock_signals()
 
     call profiling_out(prof_write)
-    POP_SUB(states_dump_spin)
-  end subroutine states_dump_spin
+    POP_SUB(states_elec_dump_spin)
+  end subroutine states_elec_dump_spin
 
 
 
@@ -1323,9 +1326,9 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load_spin(restart, st, gr, ierr)
+  subroutine states_elec_load_spin(restart, st, gr, ierr)
     type(restart_t),            intent(in)    :: restart
-    type(states_t),             intent(inout) :: st
+    type(states_elec_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
 
@@ -1335,7 +1338,7 @@ contains
     character(len=1)     :: char
 
     
-    PUSH_SUB(states_load_spin)
+    PUSH_SUB(states_elec_load_spin)
 
     ierr = 0
 
@@ -1383,10 +1386,10 @@ contains
     call restart_close(restart, spin_file)
 
     call profiling_out(prof_read)
-    POP_SUB(states_load_spin)
- end subroutine states_load_spin
+    POP_SUB(states_elec_load_spin)
+ end subroutine states_elec_load_spin
 
-end module states_restart_oct_m
+end module states_elec_restart_oct_m
 
 
 !! Local Variables:

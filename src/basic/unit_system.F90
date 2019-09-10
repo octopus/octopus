@@ -32,6 +32,7 @@ module unit_system_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use unit_oct_m
   use varinfo_oct_m
@@ -82,8 +83,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine unit_system_init(parser)
-    type(parser_t),             intent(in) :: parser
+  subroutine unit_system_init(namespace)
+    type(namespace_t), intent(in) :: namespace
     
     integer :: cc, cinp, cout, xyz_units
 
@@ -151,19 +152,19 @@ contains
     !% units are derived from these and <math>\hbar=1</math>.
     !%End
 
-    if(parse_is_defined(parser, 'Units') .or. parse_is_defined(parser, 'Units')) then
+    if(parse_is_defined(namespace, 'Units') .or. parse_is_defined(namespace, 'Units')) then
       call messages_write("The 'Units' variable is obsolete. Now Octopus always works in atomic", new_line = .true.)
       call messages_write("units. For different units you can use values like 'angstrom', 'eV' ", new_line = .true.)
       call messages_write("and others in the input file.")
       call messages_fatal()
     end if
 
-    call messages_obsolete_variable(parser, 'Units')
-    call messages_obsolete_variable(parser, 'UnitsInput')
+    call messages_obsolete_variable(namespace, 'Units')
+    call messages_obsolete_variable(namespace, 'UnitsInput')
 
     cinp = UNITS_ATOMIC
     
-    call parse_variable(parser, 'UnitsOutput', UNITS_ATOMIC, cc)
+    call parse_variable(namespace, 'UnitsOutput', UNITS_ATOMIC, cc)
     if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
     cout = cc
 
@@ -236,7 +237,7 @@ contains
     !% coordinates in Angstrom.
     !%End
 
-    call parse_variable(parser, 'UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
+    call parse_variable(namespace, 'UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
 
     if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
 
@@ -379,9 +380,10 @@ contains
   !! \todo  Although it seems to work in most cases, it is obviously
   !! a very weak code.
   ! ---------------------------------------------------------
-  subroutine unit_system_from_file(uu, fname, ierr)
+  subroutine unit_system_from_file(uu, fname, namespace, ierr)
     type(unit_system_t), intent(inout) :: uu
     character(len=*),    intent(in)    :: fname
+    type(namespace_t),   intent(in)    :: namespace
     integer,             intent(inout) :: ierr
 
     integer            :: iunit, ios
@@ -389,7 +391,7 @@ contains
 
     PUSH_SUB(unit_system_from_file)
 
-    iunit = io_open(file = trim(fname), action = 'read', status = 'old', die = .false.)
+    iunit = io_open(trim(fname), namespace, action='read', status='old', die=.false.)
     if(iunit < 0) then
       ierr = -2
       POP_SUB(unit_system_from_file)

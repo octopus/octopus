@@ -19,11 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhg(tg, parser, td, w0)
-    type(target_t),   intent(inout) :: tg
-    type(parser_t),   intent(in)    :: parser
-    type(td_t),       intent(in)    :: td
-    FLOAT,            intent(in)    :: w0
+  subroutine target_init_hhg(tg, namespace, td, w0)
+    type(target_t),    intent(inout) :: tg
+    type(namespace_t), intent(in)    :: namespace
+    type(td_t),        intent(in)    :: td
+    FLOAT,             intent(in)    :: w0
 
     integer       :: jj
     type(block_t) :: blk
@@ -64,8 +64,8 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_is_defined(parser, 'OCTOptimizeHarmonicSpectrum')) then
-      if(parse_block(parser, 'OCTOptimizeHarmonicSpectrum', blk) == 0) then
+    if(parse_is_defined(namespace, 'OCTOptimizeHarmonicSpectrum')) then
+      if(parse_block(namespace, 'OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
         SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
@@ -98,13 +98,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhgnew(gr, parser, tg, td, geo, ep)
-    type(grid_t),     intent(in)    :: gr
-    type(parser_t),   intent(in)    :: parser
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(geometry_t), intent(in)    :: geo
-    type(epot_t),     intent(in)    :: ep
+  subroutine target_init_hhgnew(gr, namespace, tg, td, geo, ep)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(geometry_t),  intent(in)    :: geo
+    type(epot_t),      intent(in)    :: ep
 
     integer :: ist, jst, iunit, jj, nn(3), optimize_parity(3)
     logical :: optimize(3)
@@ -139,7 +139,7 @@
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, 1, vl)
+    call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
     forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
       tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
@@ -165,12 +165,12 @@
     !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
     !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
-    call parse_variable(parser, 'OCTHarmonicWeight', '1', tg%plateau_string)
+    call parse_variable(namespace, 'OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
 
-    iunit = io_open('.alpha', action = 'write')
+    iunit = io_open('.alpha', namespace, action='write')
     dw = (M_TWO * M_PI) / (td%max_iter * tg%dt)
     do jj = 0, td%max_iter - 1
       ww = jj * dw
@@ -203,19 +203,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, parser, gr, dir, geo, hm, outp)
+  subroutine target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
-    type(parser_t),      intent(in) :: parser
+    type(namespace_t),   intent(in) :: namespace
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_hhg)
     
-    call io_mkdir(trim(dir))
-    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -244,9 +244,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg, parser) result(j1)
-    type(target_t), intent(in) :: tg
-    type(parser_t), intent(in) :: parser
+  FLOAT function target_j1_hhg(tg, namespace) result(j1)
+    type(target_t),    intent(in) :: tg
+    type(namespace_t), intent(in) :: namespace
     
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
@@ -258,7 +258,7 @@
     ddipole = M_z0
     ddipole = tg%td_fitness
 
-    call spectrum_hsfunction_init(tg%dt, parser, 0, maxiter, maxiter, ddipole)
+    call spectrum_hsfunction_init(tg%dt, namespace, 0, maxiter, maxiter, ddipole)
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0
@@ -296,9 +296,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_hhg(gr, chi_out)
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: chi_out
+  subroutine target_chi_hhg(chi_out)
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_hhg)
@@ -320,7 +319,7 @@
   subroutine target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -344,7 +343,7 @@
       acc = M_ZERO
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
-          call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+          call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
           do idim = 1, gr%sb%dim
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
             acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
@@ -388,12 +387,12 @@
   !> 
   !!
   subroutine target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
-    type(target_t),      intent(in)    :: tg
-    type(hamiltonian_t), intent(in)    :: hm
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(in)    :: psi
-    integer,             intent(in)    :: time
+    type(target_t),           intent(in)    :: tg
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(in)    :: psi
+    integer,                  intent(in)    :: time
 
     FLOAT :: acc(MAX_DIM)
     PUSH_SUB(target_tdcalc_hhg)

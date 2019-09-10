@@ -21,8 +21,9 @@
 module filter_oct_m  
   use global_oct_m
   use io_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use string_oct_m
   use tdfunction_oct_m
@@ -55,11 +56,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_init(steps, parser, dt, filter)    
-    integer,          intent(in)  :: steps
-    type(parser_t),   intent(in)  :: parser
-    FLOAT,            intent(in)  :: dt
-    type(filter_t), intent(inout) :: filter
+  subroutine filter_init(steps, namespace, dt, filter)    
+    integer,           intent(in)  :: steps
+    type(namespace_t), intent(in)  :: namespace
+    FLOAT,             intent(in)  :: dt
+    type(filter_t),    intent(inout) :: filter
 
     type(block_t) :: blk
     integer :: i, no_f
@@ -106,7 +107,7 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( parse_block(parser, 'OCTFilter', blk) == 0 ) then
+    if( parse_block(namespace, 'OCTFilter', blk) == 0 ) then
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
@@ -236,8 +237,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_write(filter)
-    type(filter_t), intent(in) :: filter
+  subroutine filter_write(filter, namespace)
+    type(filter_t),    intent(in) :: filter
+    type(namespace_t), intent(in) :: namespace
 
     integer :: kk, iunit, i, max_iter
     character(len=80) :: filename
@@ -253,7 +255,7 @@ contains
     do kk = 1, filter%no_filters
       write(filename,'(a,i2.2)') OCT_DIR//'filter', kk
       max_iter = tdf_niter(filter%f(kk))
-      iunit = io_open(filename, action='write')
+      iunit = io_open(filename, namespace, action='write')
       SAFE_ALLOCATE(wgrid(1:max_iter/2+1))
       call tdf_fourier_grid(filter%f(kk), wgrid)
       do i = 1, max_iter/2+1

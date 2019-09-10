@@ -24,19 +24,21 @@ module dos_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -62,10 +64,10 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, parser, st)
-    type(dos_t),    intent(out)   :: this
-    type(parser_t), intent(in)    :: parser
-    type(states_t), intent(in)    :: st
+  subroutine dos_init(this, namespace, st)
+    type(dos_t),         intent(out)   :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(in)    :: st
 
     FLOAT :: evalmin, evalmax, eextend
 
@@ -83,7 +85,7 @@ contains
     !% Lower bound for the energy mesh of the DOS.
     !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
-    call parse_variable(parser, 'DOSEnergyMin', evalmin - eextend, this%emin, units_inp%energy)
+    call parse_variable(namespace, 'DOSEnergyMin', evalmin - eextend, this%emin, units_inp%energy)
 
     !%Variable DOSEnergyMax
     !%Type float
@@ -92,7 +94,7 @@ contains
     !% Upper bound for the energy mesh of the DOS.
     !% The default is the highest eigenvalue, plus a quarter of the total range of eigenvalues.
     !%End
-    call parse_variable(parser, 'DOSEnergyMax', evalmax + eextend, this%emax, units_inp%energy)
+    call parse_variable(namespace, 'DOSEnergyMax', evalmax + eextend, this%emax, units_inp%energy)
 
     !%Variable DOSEnergyPoints
     !%Type integer
@@ -102,7 +104,7 @@ contains
     !% Determines how many energy points <tt>Octopus</tt> should use for 
     !% the DOS energy grid.
     !%End
-    call parse_variable(parser, 'DOSEnergyPoints', 500, this%epoints)
+    call parse_variable(namespace, 'DOSEnergyPoints', 500, this%epoints)
 
     !%Variable DOSGamma
     !%Type float
@@ -111,7 +113,7 @@ contains
     !%Description
     !% Determines the width of the Lorentzian which is used for the DOS sum.
     !%End
-    call parse_variable(parser, 'DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
+    call parse_variable(namespace, 'DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
     this%gamma = units_to_atomic(units_inp%energy, this%gamma)
 
     !%Variable DOSComputePDOS
@@ -121,7 +123,7 @@ contains
     !%Description
     !% Determines if projected dos are computed or not.
     !%End
-    call parse_variable(parser, 'DOSComputePDOS', .false., this%computepdos)
+    call parse_variable(namespace, 'DOSComputePDOS', .false., this%computepdos)
 
     ! spacing for energy mesh
     this%de = (this%emax - this%emin) / (this%epoints - 1)
@@ -141,15 +143,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, boundaries)
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, boundaries, namespace)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
-    type(states_t),           intent(in) :: st
+    type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
-    type(hamiltonian_t),      intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     type(boundaries_t),       intent(in) :: boundaries
+    type(namespace_t),        intent(in) :: namespace
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -186,7 +189,7 @@ contains
           else
             write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
           end if
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
         end do
@@ -217,7 +220,7 @@ contains
       if(st%d%nspin > 1) then    
         do is = 0, ns-1
           write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
 
@@ -237,7 +240,7 @@ contains
       end if
 
 
-      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', namespace, action='write')    
       write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
       
       ! compute total density of states
@@ -258,7 +261,7 @@ contains
 
 
       ! write Fermi file
-      iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', namespace, action='write')
       write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
         '] in a format compatible with total-dos.dat'
 
@@ -351,14 +354,14 @@ contains
 
           if(mpi_grp_is_root(mpi_world)) then
             if(os%nn /= 0 ) then
-              write(filename,'(a, i3.3, a1, a2, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+              write(filename,'(a, i3.3, a1, a, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
                            os%nn, l_notation(os%ll), '.dat'
             else
-              write(filename,'(a,  i3.3, a1, a2, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+              write(filename,'(a,  i3.3, a1, a, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
                             l_notation(os%ll), '.dat'
             end if
  
-            iunit(0) = io_open(trim(dir)//'/'//trim(filename), action='write')
+            iunit(0) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
             ! write header
             write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], projected DOS'
           end if
@@ -375,7 +378,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
             if(states_are_real(st)) then
-              call states_get_state(st, mesh, ist, ik, dpsi )
+              call states_elec_get_state(st, mesh, ist, ik, dpsi )
               call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -383,7 +386,7 @@ contains
                 end do
               end do
             else
-              call states_get_state(st, mesh, ist, ik, zpsi )
+              call states_elec_get_state(st, mesh, ist, ik, zpsi )
               if(associated(hm%hm_base%phase)) then
               ! Apply the phase that contains both the k-point and vector-potential terms.
                 do idim = 1, st%d%dim

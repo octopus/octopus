@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: magnetic.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
@@ -32,8 +31,9 @@ module magnetic_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -54,10 +54,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_density(mesh, st, rho, md)
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:) !< (np, st%d%nspin)
-    FLOAT,          intent(out) :: md(:,:)  !< (np, 3)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    FLOAT,               intent(in)  :: rho(:,:) !< (np, st%d%nspin)
+    FLOAT,               intent(out) :: md(:,:)  !< (np, 3)
 
     PUSH_SUB(magnetic_density)
 
@@ -81,14 +81,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_moment(mesh, st, rho, mm)
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:)
-    FLOAT,          intent(out) :: mm(3)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    FLOAT,               intent(in)  :: rho(:,:)
+    FLOAT,               intent(out) :: mm(3)
 
     FLOAT, allocatable :: md(:,:)
 
-    PUSH_SUB(states_magnetic_moment)
+    PUSH_SUB(states_elec_magnetic_moment)
 
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
     call magnetic_density(mesh, st, rho, md)
@@ -103,18 +103,18 @@ contains
 
     SAFE_DEALLOCATE_A(md)
 
-    POP_SUB(states_magnetic_moment)
+    POP_SUB(states_elec_magnetic_moment)
   end subroutine magnetic_moment
 
 
   ! ---------------------------------------------------------
   subroutine write_magnetic_moments(iunit, mesh, st, geo, boundaries, lmm_r)
-    integer,          intent(in) :: iunit
-    type(mesh_t),     intent(in) :: mesh
-    type(states_t),   intent(in) :: st
-    type(geometry_t), intent(in) :: geo
-    type(boundaries_t), intent(in) :: boundaries
-    FLOAT,            intent(in) :: lmm_r
+    integer,             intent(in) :: iunit
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(geometry_t),    intent(in) :: geo
+    type(boundaries_t),  intent(in) :: boundaries
+    FLOAT,               intent(in) :: lmm_r
     
     integer :: ia
     FLOAT :: mm(max(mesh%sb%dim, 3))
@@ -158,13 +158,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_local_moments(mesh, st, geo, boundaries, rho, rr, lmm)
-    type(mesh_t),     intent(in)  :: mesh
-    type(states_t),   intent(in)  :: st
-    type(geometry_t), intent(in)  :: geo
-    type(boundaries_t), intent(in) :: boundaries
-    FLOAT,            intent(in)  :: rho(:,:)
-    FLOAT,            intent(in)  :: rr
-    FLOAT,            intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
+    type(mesh_t),         intent(in)  :: mesh
+    type(states_elec_t),  intent(in)  :: st
+    type(geometry_t),     intent(in)  :: geo
+    type(boundaries_t),   intent(in) :: boundaries
+    FLOAT,                intent(in)  :: rho(:,:)
+    FLOAT,                intent(in)  :: rr
+    FLOAT,                intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
 
     integer :: ia, idir, is
     FLOAT, allocatable :: md(:, :)
@@ -218,11 +218,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_total_magnetization(mesh, st, boundaries, qq, trans_mag)
-    type(mesh_t),       intent(in)  :: mesh
-    type(states_t),     intent(in)  :: st
-    type(boundaries_t), intent(in)  :: boundaries
-    FLOAT,              intent(in)  :: qq(:)
-    CMPLX,              intent(out) :: trans_mag(6)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    type(boundaries_t),  intent(in)  :: boundaries
+    FLOAT,               intent(in)  :: qq(:)
+    CMPLX,               intent(out) :: trans_mag(6)
 
     integer :: ip
     CMPLX, allocatable :: tmp(:,:)
@@ -269,13 +269,13 @@ contains
   !TODO: We should remove this routine and use st%current. NTD
   subroutine calc_physical_current(der, st, jj)
     type(derivatives_t),  intent(in)    :: der
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     FLOAT,                intent(out)   :: jj(:,:,:)
 
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -288,9 +288,10 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
+    type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
@@ -311,7 +312,7 @@ contains
     end if
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then

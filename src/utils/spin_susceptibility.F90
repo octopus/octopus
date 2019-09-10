@@ -28,6 +28,7 @@ program spin_susceptibility
   use lalg_adv_oct_m
   use loct_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -46,7 +47,7 @@ program spin_susceptibility
   type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
-  type(parser_t)    :: parser
+  type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
   FLOAT :: delta_strength
@@ -60,19 +61,21 @@ program spin_susceptibility
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
-  call parser_init(parser)
+  call parser_init()
+  namespace = namespace_t("")
 
-  call messages_init(parser)
 
-  call io_init(parser)
+  call messages_init(namespace)
 
-  call unit_system_init(parser)
+  call io_init(namespace)
 
-  call spectrum_init(spectrum, parser)
+  call unit_system_init(namespace)
 
-  call parse_variable(parser, 'TDDeltaStrength', M_ZERO, delta_strength )
+  call spectrum_init(spectrum, namespace)
 
-  if(parse_block(parser, 'TDEasyAxis', blk)==0) then
+  call parse_variable(namespace, 'TDDeltaStrength', M_ZERO, delta_strength )
+
+  if(parse_block(namespace, 'TDEasyAxis', blk)==0) then
     n_rows = parse_block_n(blk)
 
     do idir = 1, 3
@@ -107,9 +110,9 @@ program spin_susceptibility
   kick%trans_vec(3,2) = kick%easy_axis(1) * kick%trans_vec(2,1) - kick%easy_axis(2) * kick%trans_vec(1,1)
 
 
-  in_file = io_open('td.general/total_magnetization', action='read', status='old', die=.false.)
+  in_file = io_open('td.general/total_magnetization', namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then 
-    message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization'))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization', namespace))//"'"
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
@@ -174,14 +177,14 @@ program spin_susceptibility
   SAFE_DEALLOCATE_A(m_cart)
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath('td.general/total_magnetization'))//"'"
+    trim(io_workpath('td.general/total_magnetization', namespace))//"'"
   call messages_info(1)
 
   write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
             'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
             'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
 
-  out_file = io_open('td.general/tranverse_magnetization', action='write')
+  out_file = io_open('td.general/tranverse_magnetization', namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, time_steps
     write(out_file, '(9e15.6)') (kk - 1)*dt, (magnetization(kk,ii), ii = 1, 8)
@@ -243,7 +246,7 @@ program spin_susceptibility
             'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
             'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
 
-  out_file = io_open('td.general/spin_susceptibility', action='write')
+  out_file = io_open('td.general/spin_susceptibility', namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
@@ -256,7 +259,7 @@ program spin_susceptibility
 
   call io_end()
   call messages_end()
-  call parser_end(parser)
+  call parser_end()
   call global_end()
 
 end program spin_susceptibility

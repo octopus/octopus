@@ -111,7 +111,7 @@ contains
     type(batch_t),     intent(inout) :: this
 
     type(profile_t), save :: prof
-    integer :: ist_linear
+    integer :: ist_linear, ist, ip
 
     PUSH_SUB(batch_set_zero)
 
@@ -123,12 +123,23 @@ contains
 
     case(BATCH_PACKED)
       if(batch_type(this) == TYPE_FLOAT) then
-        this%pack%dpsi = M_ZERO
+        !$omp parallel do schedule(static)
+        do ip = 1, this%pack%size(2)
+          do ist = 1, this%pack%size(1)
+            this%pack%dpsi(ist, ip) = M_ZERO
+          end do
+        end do
       else
-        this%pack%zpsi = M_z0
+        !$omp parallel do schedule(static)
+        do ip = 1, this%pack%size(2)
+          do ist = 1, this%pack%size(1)
+            this%pack%zpsi(ist, ip) = M_z0
+          end do
+        end do
       end if
 
     case(BATCH_NOT_PACKED)
+      !$omp parallel do schedule(static)
       do ist_linear = 1, this%nst_linear
         if(associated(this%states_linear(ist_linear)%dpsi)) then
           this%states_linear(ist_linear)%dpsi = M_ZERO

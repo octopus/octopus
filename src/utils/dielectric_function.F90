@@ -26,6 +26,7 @@ program dielectric_function
   use io_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -51,7 +52,7 @@ program dielectric_function
   character(len=120) :: header
   FLOAT :: start_time
   character(len=MAX_PATH_LEN) :: ref_filename
-  type(parser_t) :: parser
+  type(namespace_t) :: default_namespace
   
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -60,23 +61,24 @@ program dielectric_function
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
-  call parser_init(parser)
-  
-  call messages_init(parser)
+  call parser_init()
+  default_namespace = namespace_t("")
 
-  call io_init(parser)
+  call messages_init(default_namespace)
 
-  call unit_system_init(parser)
+  call io_init(default_namespace)
 
-  call spectrum_init(spectrum, parser)
+  call unit_system_init(default_namespace)
 
-  call space_init(space, parser)
-  call geometry_init(geo, parser, space)
-  call simul_box_init(sb, parser, geo, space)
+  call spectrum_init(spectrum, default_namespace)
+
+  call space_init(space, default_namespace)
+  call geometry_init(geo, default_namespace, space)
+  call simul_box_init(sb, default_namespace, geo, space)
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
+  if(parse_block(default_namespace, 'GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
@@ -100,17 +102,17 @@ program dielectric_function
   call messages_warning(4)
 
   start_time = spectrum%start_time
-  call parse_variable(parser, 'GaugeFieldDelay', start_time, spectrum%start_time )
+  call parse_variable(default_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
-  in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
+  in_file = io_open('td.general/gauge_field', default_namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then 
-    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
-  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
+  if(parse_is_defined(default_namespace, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."
@@ -124,10 +126,11 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable(parser, 'TransientAbsorptionReference', '.', ref_filename)
-    ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
+    call parse_variable(default_namespace, 'TransientAbsorptionReference', '.', ref_filename)
+    ref_file = io_open(trim(ref_filename)//'/gauge_field', default_namespace, action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"// &
+        trim(io_workpath(trim(ref_filename)//'/gauge_field', default_namespace))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
@@ -157,7 +160,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
+  if(parse_is_defined(default_namespace, 'TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)
@@ -173,7 +176,7 @@ program dielectric_function
   end if
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath('td.general/gauge_field'))//"'"
+    trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
   call messages_info(1)
 
 
@@ -250,7 +253,7 @@ program dielectric_function
 
   write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
 
-  out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  out_file = io_open('td.general/inverse_dielectric_function', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
@@ -261,7 +264,7 @@ program dielectric_function
   end do
   call io_close(out_file)
  
-  out_file = io_open('td.general/dielectric_function', action='write')
+  out_file = io_open('td.general/dielectric_function', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
@@ -272,7 +275,7 @@ program dielectric_function
   end do
   call io_close(out_file)
 
-  out_file = io_open('td.general/chi', action='write')
+  out_file = io_open('td.general/chi', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
@@ -299,7 +302,7 @@ program dielectric_function
   call io_end()
   call messages_end()
 
-  call parser_end(parser)
+  call parser_end()
   call global_end()
 
 end program dielectric_function

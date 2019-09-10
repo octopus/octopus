@@ -19,10 +19,10 @@
 
 ! ---------------------------------------------------------
 subroutine X(xc_KLI_solve) (mesh, st, is, oep)
-  type(mesh_t),   intent(in)    :: mesh
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: is
-  type(xc_oep_t), intent(inout) :: oep
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  integer,             intent(in)    :: is
+  type(xc_oep_t),      intent(inout) :: oep
 
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
@@ -39,7 +39,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
   do ist = st%st_start, st%st_end
-    call states_get_state(st, mesh, ist, is, psi)
+    call states_elec_get_state(st, mesh, ist, is, psi)
     sqphi(1:mesh%np, 1:st%d%dim, ist) = abs(psi(1:mesh%np, 1:st%d%dim))**2
   end do
 
@@ -62,7 +62,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   oep%vxc(1:mesh%np, 1) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
-    call states_get_state(st, mesh, ist, is, psi)
+    call states_elec_get_state(st, mesh, ist, is, psi)
     
     do ip = 1, mesh%np
       oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))

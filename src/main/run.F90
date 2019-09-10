@@ -25,7 +25,7 @@ module run_oct_m
   use geom_opt_oct_m
   use global_oct_m
   use ground_state_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use invert_ks_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -33,6 +33,7 @@ module run_oct_m
   use memory_oct_m
   use multicomm_oct_m
   use multisystem_oct_m
+  use namespace_oct_m
   use opt_control_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -84,8 +85,8 @@ module run_oct_m
 contains
 
   ! ---------------------------------------------------------
-  integer function get_resp_method(parser)
-    type(parser_t),    intent(in)    :: parser
+  integer function get_resp_method(namespace)
+    type(namespace_t),    intent(in)    :: namespace
 
     PUSH_SUB(get_resp_method)
     
@@ -111,7 +112,7 @@ contains
     !% mainly because it is simple and useful for testing purposes.
     !%End
     
-    call parse_variable(parser, 'ResponseMethod', LR, get_resp_method)
+    call parse_variable(namespace, 'ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call messages_input_error('ResponseMethod')
@@ -121,9 +122,9 @@ contains
   end function get_resp_method
   
   ! ---------------------------------------------------------
-  subroutine run(parser, cm)
-    type(parser_t), intent(in) :: parser
-    integer,        intent(in) :: cm
+  subroutine run(namespace, cm)
+    type(namespace_t), intent(in) :: namespace
+    integer,           intent(in) :: cm
 
     type(linked_list_t) :: systems
     class(*), pointer :: sys
@@ -146,15 +147,15 @@ contains
       return
     end if
 
-    call restart_module_init(parser)
+    call restart_module_init(namespace)
 
     ! initialize FFTs
-    call fft_all_init(parser)
+    call fft_all_init(namespace)
 
-    call unit_system_init(parser)
+    call unit_system_init(namespace)
 
     if(calc_mode_id == CM_TEST) then
-      call test_run(parser)
+      call test_run(namespace)
       call fft_all_end()
 #ifdef HAVE_MPI
       call mpi_debug_statistics()
@@ -164,7 +165,7 @@ contains
     end if
 
     ! Initialize systems
-    call multisystem_init(systems, parser)
+    call multisystem_init(systems, namespace)
 
     ! Loop over systems
     call systems%rewind()
@@ -202,17 +203,17 @@ contains
         if(calc_mode_id /= CM_DUMMY) then
           message(1) = "Info: Generating external potential"
           call messages_info(1)
-          call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
           message(1) = "      done."
           call messages_info(1)
         end if
 
         if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-          call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+          call poisson_async_init(sys%hm%psolver, sys%mc)
           ! slave nodes do not call the calculation routine
           if(multicomm_is_slave(sys%mc))then
             !for the moment we only have one type of slave
-            call poisson_slave_work(sys%ks%hartree_solver)
+            call poisson_slave_work(sys%hm%psolver)
           end if
         end if
 
@@ -231,7 +232,7 @@ contains
           !% information.
           !%End
 
-          call parse_variable(parser, 'FromScratch', .false., fromScratch)
+          call parse_variable(namespace, 'FromScratch', .false., fromScratch)
 
           call profiling_in(calc_mode_prof, "CALC_MODE")
 
@@ -247,7 +248,7 @@ contains
           case(CM_LR_POL)
             if(sys%gr%sb%kpoints%use_symmetries) &
               call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
-            select case(get_resp_method(sys%parser))
+            select case(get_resp_method(sys%namespace))
             case(FD)
               call static_pol_run(sys, fromScratch)
             case(LR)
@@ -264,7 +265,7 @@ contains
           case(CM_PHONONS_LR)
             if(sys%gr%sb%kpoints%use_symmetries) &
               call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
-            select case(get_resp_method(sys%parser))
+            select case(get_resp_method(sys%namespace))
             case(FD)
               call phonons_run(sys)
             case(LR)
@@ -297,7 +298,7 @@ contains
           call profiling_out(calc_mode_prof)
         end if
 
-        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
 
       class default
         message(1) = "Unknow system type."

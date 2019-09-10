@@ -52,6 +52,7 @@ module multicomm_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
 #if defined(HAVE_OPENMP)
   use omp_lib
 #endif
@@ -163,9 +164,9 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, parser, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
+  subroutine multicomm_init(mc, namespace, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     type(mpi_grp_t),   intent(inout) :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
@@ -182,8 +183,8 @@ contains
 
     call messages_print_stress(stdout, "Parallelization")
 
-    call messages_obsolete_variable(parser, 'ParallelizationStrategy')
-    call messages_obsolete_variable(parser, 'ParallelizationGroupRanks')
+    call messages_obsolete_variable(namespace, 'ParallelizationStrategy')
+    call messages_obsolete_variable(namespace, 'ParallelizationGroupRanks')
     
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO
@@ -212,7 +213,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable(parser, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
+    call parse_variable(namespace, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
 
     !%Variable ParStates
     !%Type integer
@@ -235,7 +236,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable(parser, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
+    call parse_variable(namespace, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
 
     !%Variable ParKPoints
     !%Type integer
@@ -256,7 +257,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable(parser, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
+    call parse_variable(namespace, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
 
     !%Variable ParOther
     !%Type integer
@@ -281,7 +282,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable(parser, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
+    call parse_variable(namespace, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
 
     do ipar = 1, P_STRATEGY_MAX
       if(parse(ipar) == PAR_NO) parse(ipar) = 1
@@ -319,7 +320,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization.
       !%End
-      call parse_variable(parser, 'ParallelizationNumberSlaves', 0, num_slaves)
+      call parse_variable(namespace, 'ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
@@ -997,12 +998,15 @@ contains
     SAFE_ALLOCATE(lsize(1:nthreads))
     call multicomm_divide_range(nobjs, nthreads, istart, ifinal, lsize)
     rank   = 1 + omp_get_thread_num()
-#endif
     ini    = istart(rank)
     nobjs_loc = lsize(rank)
     SAFE_DEALLOCATE_A(istart)
     SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
+#else
+    ini = 1
+    nobjs_loc = nobjs
+#endif
 
   end subroutine multicomm_divide_range_omp
 

@@ -22,6 +22,7 @@ module multisystem_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
@@ -38,9 +39,9 @@ module multisystem_oct_m
   
 contains
 
-  subroutine multisystem_init(systems, parser)
-    type(parser_t), intent(in) :: parser
+  subroutine multisystem_init(systems, global_namespace)
     type(linked_list_t), intent(out) :: systems
+    type(namespace_t),   intent(in)  :: global_namespace
 
     integer :: isys, system_type
     character(len=128) :: system_name
@@ -48,9 +49,9 @@ contains
     type(system_t) :: system_elec
     class(*), allocatable :: system
     class(*), pointer :: sys_ptr
-
-    PUSH_SUB(multisystem_init)
     
+    PUSH_SUB(multisystem_init)
+
     !%Variable Systems
     !%Type block
     !%Section System
@@ -64,7 +65,7 @@ contains
     !%Option maxwell 2
     !% A maxwell system.
     !%End
-    if(parse_block(parser, 'Systems', blk) == 0) then
+    if(parse_block(global_namespace, 'Systems', blk) == 0) then
       do isys = 1, parse_block_n(blk)
         call parse_block_integer(blk, isys - 1, 1, system_type)
         select case (system_type)
@@ -83,7 +84,7 @@ contains
         sys_ptr => systems%current()
         select type (sys_ptr)
         type is (system_t)
-          call system_init(sys_ptr, parser, system_name)
+          call system_init(sys_ptr, namespace_t(system_name))
         end select
         call systems%next()
       end do
@@ -94,7 +95,7 @@ contains
       sys_ptr => systems%current()
       select type (sys_ptr)
       type is (system_t)
-        call system_init(sys_ptr, parser)
+        call system_init(sys_ptr, global_namespace)
       end select
     end if
 

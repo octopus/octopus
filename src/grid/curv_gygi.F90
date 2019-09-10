@@ -25,8 +25,9 @@ module curv_gygi_oct_m
   use geometry_oct_m
   use global_oct_m
   use loct_pointer_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use root_solver_oct_m
   use simul_box_oct_m
@@ -62,9 +63,9 @@ module curv_gygi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv, parser, sb, geo)
+  subroutine curv_gygi_init(cv, namespace, sb, geo)
     type(curv_gygi_t), intent(out) :: cv
-    type(parser_t),    intent(in)  :: parser
+    type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
 
@@ -83,7 +84,7 @@ contains
     !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys.
     !% Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_variable(parser, 'CurvGygiA', M_HALF, cv%A)
+    call parse_variable(namespace, 'CurvGygiA', M_HALF, cv%A)
 
     !%Variable CurvGygiAlpha
     !%Type float
@@ -97,7 +98,7 @@ contains
     !% It must be larger than zero.
     !%End
 
-    call parse_variable(parser, 'CurvGygiAlpha', M_TWO, cv%alpha, units_inp%length)
+    call parse_variable(namespace, 'CurvGygiAlpha', M_TWO, cv%alpha, units_inp%length)
     !%Variable CurvGygiBeta
     !%Type float
     !%Default 4.0 a.u.
@@ -107,7 +108,7 @@ contains
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
     !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_variable(parser, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
+    call parse_variable(namespace, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
     if(cv%a<=M_ZERO)     call messages_input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call messages_input_error('CurvGygiAlpha')

@@ -33,6 +33,7 @@ module epot_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -42,10 +43,9 @@ module epot_oct_m
   use species_oct_m
   use species_pot_oct_m
   use spline_filter_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
-  use symmetrizer_oct_m
   use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -135,11 +135,12 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, parser, gr, geo, ispin, nik, xc_family)
+  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
-    type(parser_t),                     intent(in)    :: parser
+    type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
+    type(poisson_t),  target,           intent(in)    :: psolver
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
@@ -170,16 +171,16 @@ contains
     !%Option filter_BSB 3
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
-    call parse_variable(parser, 'FilterPotentials', PS_FILTER_TS, filter)
+    call parse_variable(namespace, 'FilterPotentials', PS_FILTER_TS, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
       call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
 
-    if(filter == PS_FILTER_TS) call spline_filter_mask_init()
+    if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
     do ispec = 1, geo%nspecies
-      call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
+      call species_pot_init(geo%species(ispec), namespace, mesh_gcutoff(gr%mesh), filter)
     end do
 
     SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
@@ -209,7 +210,7 @@ contains
       !%  Classical charges are treated as Gaussian distributions. 
       !%  Smearing widths are hard-coded by species (experimental).
       !%End
-      call parse_variable(parser, 'ClassicalPotential', 0, ep%classical_pot)
+      call parse_variable(namespace, 'ClassicalPotential', 0, ep%classical_pot)
       if(ep%classical_pot  ==  CLASSICAL_GAUSSIAN) then
         call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
@@ -226,12 +227,12 @@ contains
     end if
 
     ! lasers
-    call laser_init(ep%lasers, parser, ep%no_lasers, gr%mesh)
+    call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, parser, gr%mesh%sb, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+    call kick_init(ep%kick, namespace, gr%mesh%sb, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
 
     ! No more "UserDefinedTDPotential" from this version on.
-    call messages_obsolete_variable(parser, 'UserDefinedTDPotential', 'TDExternalFields')
+    call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
 
     !%Variable StaticElectricField
     !%Type block
@@ -246,7 +247,7 @@ contains
     !% the single-point Berry phase.
     !%End
     nullify(ep%E_field, ep%v_static)
-    if(parse_block(parser, 'StaticElectricField', blk)==0) then
+    if(parse_block(namespace, 'StaticElectricField', blk)==0) then
       SAFE_ALLOCATE(ep%E_field(1:gr%sb%dim))
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
@@ -306,7 +307,7 @@ contains
     !% <math>1.7152553 \times 10^3</math> Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
-    if(parse_block(parser, 'StaticMagneticField', blk) == 0) then
+    if(parse_block(namespace, 'StaticMagneticField', blk) == 0) then
 
       !%Variable StaticMagneticField2DGauge
       !%Type integer
@@ -321,7 +322,7 @@ contains
       !% Linear gauge with <math>A = \frac{1}{c} \left( -y, 0 \right) B_z</math>. Can be used for <tt>PeriodicDimensions = 1</tt>
       !% but not <tt>PeriodicDimensions = 2</tt>.
       !%End
-      call parse_variable(parser, 'StaticMagneticField2DGauge', 0, gauge_2d)
+      call parse_variable(namespace, 'StaticMagneticField2DGauge', 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
         call messages_input_error('StaticMagneticField2DGauge')
 
@@ -404,7 +405,7 @@ contains
     !% you calculate a 2D electron gas, in which case you have an effective
     !% gyromagnetic factor that depends on the material.
     !%End
-    call parse_variable(parser, 'GyromagneticRatio', P_g, ep%gyromagnetic_ratio)
+    call parse_variable(namespace, 'GyromagneticRatio', P_g, ep%gyromagnetic_ratio)
 
     !%Variable RelativisticCorrection
     !%Type integer
@@ -420,7 +421,7 @@ contains
     !%Option spin_orbit 1
     !% Spin-orbit.
     !%End
-    call parse_variable(parser, 'RelativisticCorrection', NOREL, ep%reltype)
+    call parse_variable(namespace, 'RelativisticCorrection', NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
@@ -438,7 +439,7 @@ contains
     !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
     if (ep%reltype == SPIN_ORBIT) then
-      call parse_variable(parser, 'SOStrength', M_ONE, ep%so_strength)
+      call parse_variable(namespace, 'SOStrength', M_ONE, ep%so_strength)
     else
       ep%so_strength = M_ONE
     end if
@@ -455,7 +456,7 @@ contains
     !% This feature is only available for finite systems; if the system is periodic in any dimension, 
     !% this variable cannot be set to "yes".
     !%End
-    call parse_variable(parser, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
+    call parse_variable(namespace, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
       if(gr%sb%periodic_dim > 0) call messages_input_error('IgnoreExternalIons')
     end if
@@ -468,7 +469,7 @@ contains
     !% (Experimental) If this variable is set to "yes", then the sum
     !% of the total forces will be enforced to be zero.
     !%End
-    call parse_variable(parser, 'ForceTotalEnforce', .false., ep%force_total_enforce)
+    call parse_variable(namespace, 'ForceTotalEnforce', .false., ep%force_total_enforce)
     if(ep%force_total_enforce) call messages_experimental('ForceTotalEnforce')
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
@@ -506,7 +507,7 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction, parser)
+    call ion_interaction_init(ep%ion_interaction, namespace)
 
     !%Variable TDGlobalForce
     !%Type string
@@ -519,12 +520,12 @@ contains
     !% does not affect the electrons directly.
     !%End
 
-    if(parse_is_defined(parser, 'TDGlobalForce')) then
+    if(parse_is_defined(namespace, 'TDGlobalForce')) then
 
       ep%global_force = .true.
 
-      call parse_variable(parser, 'TDGlobalForce', 'none', function_name)
-      call tdf_read(ep%global_force_function, parser, trim(function_name), ierr)
+      call parse_variable(namespace, 'TDGlobalForce', 'none', function_name)
+      call tdf_read(ep%global_force_function, namespace, trim(function_name), ierr)
 
       if(ierr /= 0) then
         call messages_write("You have enabled the GlobalForce option but Octopus could not find")
@@ -594,12 +595,12 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, parser, gr, geo, st)
+  subroutine epot_generate(ep, namespace, gr, geo, st)
     type(epot_t),             intent(inout) :: ep
-    type(parser_t),           intent(in)    :: parser
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(in)    :: geo
-    type(states_t),           intent(inout) :: st
+    type(states_elec_t),      intent(inout) :: st
 
     integer :: ia, ip
     type(atom_t),      pointer :: atm
@@ -610,7 +611,6 @@ contains
     FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
-    type(symmetrizer_t) :: symmetrizer
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -628,10 +628,10 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
-        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
+        call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
       else
-        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
+        call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
       end if
     end do
 
@@ -668,7 +668,7 @@ contains
       if(.not. species_is_ps(atm%species)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), atm, st%d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
@@ -712,18 +712,16 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, parser, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
+  subroutine epot_local_potential(ep, namespace, der, dgrid, geo, iatom, vpsl, rho_core, density)
     type(epot_t),             intent(in)    :: ep
-    type(parser_t),           intent(in)    :: parser
+    type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
-    FLOAT,          optional, intent(inout) :: Imvpsl(:)
     FLOAT,          optional, pointer       :: rho_core(:)
     FLOAT,          optional, intent(inout) :: density(:) !< If present, the ionic density will be added here.
-    FLOAT,          optional, intent(inout) :: Imdensity(:) !< ...and here, for complex scaling
 
     integer :: ip
     FLOAT :: radius
@@ -746,7 +744,7 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%species, parser, geo%atom(iatom)%x, der%mesh, der%boundaries, rho)
+        call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, der%boundaries, rho)
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
@@ -768,7 +766,8 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:der%mesh%np))
-        call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
+        call species_get_local(geo%atom(iatom)%species, der%mesh, namespace, &
+          geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
       end if
 
       if(allocated(vl)) then
@@ -854,11 +853,11 @@ contains
   end subroutine epot_generate_classical
 
   ! ---------------------------------------------------------
-  subroutine epot_precalc_local_potential(ep, parser, gr, geo)
-    type(epot_t),     intent(inout) :: ep
-    type(parser_t),   intent(in)    :: parser
-    type(grid_t),     intent(in)    :: gr
-    type(geometry_t), intent(in)    :: geo
+  subroutine epot_precalc_local_potential(ep, namespace, gr, geo)
+    type(epot_t),      intent(inout) :: ep
+    type(namespace_t), intent(in)    :: namespace
+    type(grid_t),      intent(in)    :: gr
+    type(geometry_t),  intent(in)    :: geo
 
     integer :: iatom
     FLOAT, allocatable :: tmp(:)
@@ -876,7 +875,7 @@ contains
     
     do iatom = 1, geo%natoms
       tmp(1:gr%mesh%np) = M_ZERO
-      call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
+      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
       ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
     end do
     ep%local_potential_precalculated = .true.

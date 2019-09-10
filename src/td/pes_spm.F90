@@ -21,18 +21,19 @@
 module pes_spm_oct_m
   use comm_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lasers_oct_m
   use mesh_interpolation_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -79,12 +80,12 @@ module pes_spm_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init(this, parser, mesh, st, save_iter)
-    type(pes_spm_t), intent(out) :: this
-    type(parser_t),  intent(in)  :: parser
-    type(mesh_t),    intent(in)  :: mesh
-    type(states_t),  intent(in)  :: st
-    integer,         intent(in)  :: save_iter
+  subroutine pes_spm_init(this, namespace, mesh, st, save_iter)
+    type(pes_spm_t),      intent(out) :: this
+    type(namespace_t),    intent(in)  :: namespace
+    type(mesh_t),         intent(in)  :: mesh
+    type(states_elec_t),  intent(in)  :: st
+    integer,              intent(in)  :: save_iter
 
     type(block_t) :: blk
     integer       :: stst, stend, kptst, kptend, sdim, mdim
@@ -119,9 +120,9 @@ contains
     !% <br>%
     !% </tt>
     !%End
-    call messages_obsolete_variable(parser, 'PhotoElectronSpectrumPoints', 'PES_spm_points')
+    call messages_obsolete_variable(namespace, 'PhotoElectronSpectrumPoints', 'PES_spm_points')
     this%sphgrid = .false.
-    if (parse_block(parser, 'PES_spm_points', blk) < 0) then
+    if (parse_block(namespace, 'PES_spm_points', blk) < 0) then
       this%sphgrid = .true.
     end if
 
@@ -145,7 +146,7 @@ contains
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
-    call parse_variable(parser, 'PES_spm_recipe', M_PHASE, this%recipe)
+    call parse_variable(namespace, 'PES_spm_recipe', M_PHASE, this%recipe)
     if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
       call messages_input_error('PES_spm_recipe')
     call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
@@ -159,7 +160,7 @@ contains
     !% time-propagation, evaluated by the PES_spm method. <tt>PES_spm_OmegaMax</tt> is then the maximum frequency
     !% (approximate kinetic energy) and <tt>PES_spm_DeltaOmega</tt> the spacing in frequency domain of the spectrum.
     !%End
-    call parse_variable(parser, 'PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
+    call parse_variable(namespace, 'PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
     this%onfly = .false.
     if(this%omegamax > M_ZERO) then
       this%onfly = .true.
@@ -175,7 +176,7 @@ contains
     !% The spacing in frequency domain for the photoelectron spectrum (if <tt>PES_spm_OmegaMax > 0</tt>).
     !% The default is <tt>PES_spm_OmegaMax/500</tt>.
     !%End
-    call parse_variable(parser, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
+    call parse_variable(namespace, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
     if(this%onfly) then
       if(this%delomega <= M_ZERO) call messages_input_error('PES_spm_DeltaOmega')
       call messages_print_var_value(stdout, "PES_spm_DeltaOmega", this%delomega)
@@ -189,7 +190,7 @@ contains
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable(parser, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
+    call parse_variable(namespace, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
     if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
 
     !%Variable PES_spm_StepsPhiR
@@ -200,7 +201,7 @@ contains
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable(parser, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
+    call parse_variable(namespace, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
       if(this%nstepsphir < 0)  call messages_input_error('PES_spm_StepsPhiR')
       if(this%nstepsphir == 0) this%nstepsphir = 1
@@ -214,8 +215,8 @@ contains
     !% are given).
     !%End
     if(this%sphgrid) then
-      if(parse_is_defined(parser, 'PES_spm_Radius')) then
-        call parse_variable(parser, 'PES_spm_Radius', M_ZERO, radius)
+      if(parse_is_defined(namespace, 'PES_spm_Radius')) then
+        call parse_variable(namespace, 'PES_spm_Radius', M_ZERO, radius)
         if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else
@@ -349,11 +350,11 @@ contains
   ! ---------------------------------------------------------
   subroutine pes_spm_calc(this, st, mesh, dt, iter, hm)
     type(pes_spm_t),     intent(inout) :: this
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim
@@ -395,7 +396,7 @@ contains
     do ik = kptst, kptend 
       do ist = stst, stend
         do isdim = 1, sdim
-          call states_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
+          call states_elec_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
           call mesh_interpolation_evaluate(this%interp, this%nspoints, psistate(1:mesh%np_part), &
             this%rcoords(1:mdim, 1:this%nspoints), interp_values(1:this%nspoints))
           this%wf(ist, isdim, ik, :, itstep) = st%occ(ist, ik) * interp_values(:)
@@ -442,12 +443,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_output(this, mesh, st, iter, dt)
-    type(pes_spm_t), intent(in) :: this
-    type(mesh_t),    intent(in) :: mesh
-    type(states_t),  intent(in) :: st
-    integer,         intent(in) :: iter
-    FLOAT,           intent(in) :: dt
+  subroutine pes_spm_output(this, mesh, st, namespace, iter, dt)
+    type(pes_spm_t),     intent(in) :: this
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
+    integer,             intent(in) :: iter
+    FLOAT,               intent(in) :: dt
 
     integer            :: ist, ik, isdim
     integer            :: ii, jj
@@ -552,8 +554,8 @@ contains
       ! OUTPUT FOR SPHERICAL GRID 
       ! -----------------------------------------------------------------
       if(this%sphgrid) then
-        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', action='write', position='rewind')
-        iunitone = io_open('td.general/'//'PES_spm.power.sum', action='write', position='rewind')
+        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', namespace, action='write', position='rewind')
+        iunitone = io_open('td.general/'//'PES_spm.power.sum', namespace, action='write', position='rewind')
         write(iunitone, '(a23)') '# omega, total spectrum'
    
         select case(mdim)
@@ -661,7 +663,8 @@ contains
               write(*,*) 'TEST', itot
               write(filenr, '(i10.10)') itot
    
-              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write', position='append')
+              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', &
+                namespace, action='write', position='append')
      
               do ii = 1, save_iter - mod(iter, save_iter)
                 jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -686,7 +689,8 @@ contains
                 itot = ist + (ik-1) * st%nst + (isdim-1) * st%nst*st%d%kpt%nglobal
                 write(filenr, '(i10.10)') itot
    
-                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', action='write', position='rewind')
+                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', &
+                  namespace, action='write', position='rewind')
                 write(iunitone, '(a48)') '# frequency, orbital spectrum at sampling points'
    
                 do iom = 1, this%nomega 
@@ -711,7 +715,7 @@ contains
         if(this%recipe == M_PHASE) then
           do isp = 1, this%nspoints
             write(filenr, '(i10.10)') isp
-            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write', position='append')
+            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write', position='append')
       
             do ii = 1, save_iter - mod(iter, save_iter)
               jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -726,7 +730,7 @@ contains
         end if
 
         if(this%onfly) then
-          iunitone = io_open('td.general/'//'PES_spm.total.out', action='write', position='rewind')
+          iunitone = io_open('td.general/'//'PES_spm.total.out', namespace, action='write', position='rewind')
           write(iunitone, '(a46)') '# frequency, total spectrum at sampling points'
           do iom = 1, this%nomega
             omega = iom*this%delomega
@@ -750,10 +754,11 @@ contains
   end subroutine pes_spm_output
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init_write(this, mesh, st)
-    type(PES_spm_t), intent(in) :: this
-    type(mesh_t),    intent(in) :: mesh
-    type(states_t),  intent(in) :: st
+  subroutine pes_spm_init_write(this, mesh, st, namespace)
+    type(PES_spm_t),     intent(in) :: this
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
 
     integer           :: ist, ik, isdim
     integer           :: isp
@@ -769,7 +774,7 @@ contains
         do isp = 1, this%nspoints
           write(filenr, '(i10.10)') isp
    
-          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write')
+          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', namespace, action='write')
           xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, isp)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
@@ -791,7 +796,7 @@ contains
           call io_close(iunit)
    
           if(this%recipe == M_PHASE) then
-            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write')
+            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write')
             write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
             call io_close(iunit)
           end if
@@ -804,10 +809,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_spm_dump(restart, this, st, ierr)
-    type(restart_t), intent(in)  :: restart    
-    type(pes_spm_t), intent(in)  :: this
-    type(states_t),  intent(in)  :: st
-    integer,         intent(out) :: ierr
+    type(restart_t),     intent(in)  :: restart    
+    type(pes_spm_t),     intent(in)  :: this
+    type(states_elec_t), intent(in)  :: st
+    integer,             intent(out) :: ierr
     
     integer :: err, iunit
     
@@ -849,10 +854,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_spm_load(restart, this, st, ierr)
-    type(restart_t), intent(in)    :: restart    
-    type(pes_spm_t), intent(inout) :: this
-    type(states_t),  intent(inout) :: st
-    integer,         intent(out)   :: ierr
+    type(restart_t),     intent(in)    :: restart    
+    type(pes_spm_t),     intent(inout) :: this
+    type(states_elec_t), intent(inout) :: st
+    integer,             intent(out)   :: ierr
     
     integer :: err, iunit
     
@@ -897,7 +902,7 @@ contains
   subroutine pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
     type(pes_spm_t),     intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
