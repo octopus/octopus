@@ -88,6 +88,11 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
     call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
+  !Apply the spiral BC if needed
+  if(hm%der%boundaries%spiral .and. apply_phase) then
+    call X(hamiltonian_elec_base_phase_spiral)(hm%hm_base, hm%der, epsib, ik)
+  end if
+
   if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
     call profiling_in(prof_kinetic_start, "KINETIC_START")
