@@ -1231,6 +1231,13 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
+        if (ks%oep%has_photons) then
+          write(iunit, '(a)') 'Pt-Observable:'
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_number = ', ks%oep%pt%pt_number
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_exchange = ', ks%oep%pt%ex
+          write(iunit,'(1x)')
+        end if
+
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
 
         if(scf%calc_stress) then

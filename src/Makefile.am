@@ -489,6 +489,7 @@ system_f_srcs =                                 \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
+	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/stress.F90                       \
 	system/subspace.F90                     \
@@ -521,6 +522,7 @@ noinst_HEADERS +=                               \
 	system/xc_kli_inc.F90                   \
 	system/xc_kli_pauli_inc.F90             \
 	system/xc_oep_inc.F90                   \
+	system/xc_oep_qed_inc.F90               \
 	system/xc_oep_sic_inc.F90               \
 	system/xc_oep_x_inc.F90
 

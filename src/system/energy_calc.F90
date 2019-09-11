@@ -133,7 +133,8 @@ contains
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-        + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic
+                             + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic &
+                             + hm%energy%pt_exchange
 
    end select 
     
@@ -172,8 +173,9 @@ contains
       write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
-      call messages_info(10, iunit)
-      
+      write(message(11), '(6x,a, f18.8)')'Pt-Exchange = ', units_from_atomic(units_out%energy, hm%energy%pt_exchange)
+      call messages_info(11, iunit)
+
       if (hm%pcm%run_pcm) then
           write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
                                                                                                   hm%energy%int_en_pcm + &
