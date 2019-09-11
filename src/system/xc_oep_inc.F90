@@ -53,9 +53,6 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
   SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
-  if ((.not.st%fromscratch).and.(first)) &
-    first = .false.
-
   ! this part handles the (pure) orbital functionals
   oep%X(lxc) = M_ZERO
   spin: do is = 1, nspin_
@@ -197,7 +194,6 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   ! fix xc potential (needed for Hpsi)
   call lalg_axpy(gr%mesh%np, M_ONE, vxc_old(:), oep%vxc(:, is))
 
-
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
@@ -265,7 +261,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
     end select
 
-    do ist = 1, oep%noccst
+    do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
         psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)

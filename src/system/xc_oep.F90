@@ -388,8 +388,8 @@ contains
     oep%noccst = 0
     do ist = 1, st%nst
       if(st%occ(ist, is) > M_EPSILON) oep%noccst = ist
-    end do
-
+    end do    
+    
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)
     POP_SUB(xc_oep_AnalyzeEigen)
