@@ -2284,13 +2284,9 @@ contains
       SAFE_DEALLOCATE_A(gspsi)
       SAFE_DEALLOCATE_A(psi)
 
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
-
-      if(st%d%kpt%parallel) then
-        call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
-      end if
-
-      call distribute_projections(st, gs_st, projections)
+#ifdef HAVE_MPI
+      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
+#endif
 
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
@@ -2457,44 +2453,13 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  projections)
-    if(st%d%kpt%parallel) then
-      call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
-    end if
+    #ifdef HAVE_MPI
+      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
+    #endif
 
-    call distribute_projections(st, gs_st, projections)
 
     POP_SUB(calc_projections)
   end subroutine calc_projections
-
-   ! ------------------------------------------------
-    subroutine distribute_projections(st, gs_st, projections)
-      implicit none
-      
-      type(states_elec_t),    intent(in) :: st
-      type(states_elec_t),    intent(in) :: gs_st
-      CMPLX,                  intent(inout) :: projections(1:st%nst, &
-                                          gs_st%st_start:gs_st%nst, 1:st%d%nik)
-
-#if defined(HAVE_MPI)
-      integer :: k, ik, ist, uist
-
-      if(.not.st%parallel_in_states) return
-
-      PUSH_SUB(distribute_projections)
-      
-      do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          k = st%node(ist)
-          do uist = gs_st%st_start, gs_st%nst
-            call MPI_Bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%mpi_grp%comm, mpi_err)
-          end do
-        end do
-      end do
-
-      POP_SUB(distribute_projections)
-#endif
-    end subroutine distribute_projections
 
 
   subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
