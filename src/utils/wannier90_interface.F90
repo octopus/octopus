@@ -40,7 +40,7 @@ program wannier90_interface
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2 
+  use mpi_oct_m  
   use multicomm_oct_m
   use namespace_oct_m
   use orbitalset_oct_m
