@@ -271,47 +271,47 @@ program wannier90_interface
       SAFE_ALLOCATE(occ_temp(1:w90_num_bands))
 
       ! smear the states at gamma
-      do ist=1,w90_num_bands
-         occ_temp(ist)= st%occ(ist,1) 
-         st%occ(ist,1)=M_HALF*loct_erfc((st%eigenval(ist, 1)-scdm_mu)/scdm_sigma)
+      do ist = 1, w90_num_bands
+         occ_temp(ist)= st%occ(ist, 1) 
+         st%occ(ist, 1)=M_HALF*loct_erfc((st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(st,scdm, sys%gr%der%mesh, w90_num_bands,.true.,1, jpvt)
-      print *,'SCDM: pivot points', jpvt(1:w90_num_bands)
+      call zscdm_rrqr(st,scdm, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
+
       ! reset occupations at gamma
-      do ist=1,w90_num_bands
-         st%occ(ist,1) = occ_temp(ist)
+      do ist = 1, w90_num_bands
+         st%occ(ist, 1) = occ_temp(ist)
       end do
 
-      SAFE_ALLOCATE(uk(1:w90_num_bands,1:w90_num_bands,1:nik))
+      SAFE_ALLOCATE(uk(1:w90_num_bands, 1:w90_num_bands, 1:nik))
 
       ! auxiliary arrays for scdm procedure
-      SAFE_ALLOCATE(chi(1:w90_num_bands,1:w90_num_bands))
-      SAFE_ALLOCATE(chi_diag(1:w90_num_bands,1:w90_num_bands))
-      SAFE_ALLOCATE(chi2(1:w90_num_bands,1:w90_num_bands))
+      SAFE_ALLOCATE(chi(1:w90_num_bands, 1:w90_num_bands))
+      SAFE_ALLOCATE(chi_diag(1:w90_num_bands, 1:w90_num_bands))
+      SAFE_ALLOCATE(chi2(1:w90_num_bands, 1:w90_num_bands))
       SAFE_ALLOCATE(chi_eigenval(1:w90_num_bands))
 
-      chi(1:w90_num_bands,1:w90_num_bands) = M_ZERO
+      chi(1:w90_num_bands, 1:w90_num_bands) = M_ZERO
 
-      do ik=1,nik
-        kvec(:) = sys%gr%sb%kpoints%reduced%point(:,ik)
-        do ist=1,w90_num_bands
+      do ik = 1, nik
+        kvec(:) = sys%gr%sb%kpoints%reduced%point(:, ik)
+        do ist=1, w90_num_bands
           call states_elec_get_state(st, sys%gr%der%mesh, ist, ik, psi)
-          smear=M_HALF*loct_erfc((st%eigenval(ist, ik)-scdm_mu)/scdm_sigma)
+          smear=M_HALF * loct_erfc((st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
-          do jst=1,w90_num_bands
-             chi(ist,jst) = smear*CONJG(psi(jpvt(jst),1))*exp(M_zI*dot_product(sys%gr%der%mesh%x(jpvt(jst),1:3),kvec(1:3)))
+          do jst = 1, w90_num_bands
+             chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
           end do
         end do
 
         ! loewdin orhtogonalization of chi.chi
         ! this can also be done with SVD, which might be more stable!?
-        chi_diag=matmul(CONJG(transpose(chi)),chi)
+        chi_diag = matmul(conjg(transpose(chi)), chi)
         call lalg_eigensolve(w90_num_bands, chi_diag, chi_eigenval)
-        chi2 = CONJG(transpose(chi_diag))
+        chi2 = conjg(transpose(chi_diag))
         
         !we need the eigenvalues to be >0
-        if( any(chi_eigenval(:).lt.M_ZERO)) then
+        if( any(chi_eigenval(:) .lt. M_ZERO) ) then
            message(1) = 'SCDM Wannierization failed because chi matrix is'
            message(2) = 'ill conditioned. Try increasingin scdm_sigma and/or'
            message(3) = 'change scdm_mu.'
@@ -319,12 +319,12 @@ program wannier90_interface
         end if
 
         do ist = 1, w90_num_bands
-          chi_eigenval(ist) = M_ONE/sqrt(chi_eigenval(ist))
-          chi2(ist, 1:w90_num_bands) = chi_eigenval(ist)* chi2(ist, 1:w90_num_bands)
+          chi_eigenval(ist) = M_ONE / sqrt(chi_eigenval(ist))
+          chi2(ist, 1:w90_num_bands) = chi_eigenval(ist) * chi2(ist, 1:w90_num_bands)
         end do
         ! the loewdin result would be: matmul(chi_diag,chi2)
         ! to get the wannier gauge U(k) we multiply this with the original chi
-        uk(:,:,ik) = matmul(chi,matmul(chi_diag,chi2))
+        uk(:,:,ik) = matmul(chi, matmul(chi_diag,chi2))
 
       end do
       
