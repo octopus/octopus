@@ -969,7 +969,7 @@ contains
     type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-     integer,      optional, intent(in)      :: skip(:)
+    integer,      optional, intent(in)      :: skip(:)
 
     PUSH_SUB(states_elec_allocate_wfns)
 
