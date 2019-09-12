@@ -178,6 +178,8 @@ module hamiltonian_elec_oct_m
 
     logical, private :: time_zero
 
+    type(namespace_t), pointer :: namespace
+
   contains
   
     procedure :: is_hermitian => hamiltonian_elec_hermitian
@@ -203,7 +205,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
-    type(namespace_t),                          intent(in)    :: namespace
+    type(namespace_t),                  target, intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -227,6 +229,8 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
+
+    hm%namespace => namespace
 
     !%Variable ParticleMass
     !%Type float
@@ -619,6 +623,8 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(hm%energy)
+
+    nullify(hm%namespace)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
     POP_SUB(hamiltonian_elec_end)

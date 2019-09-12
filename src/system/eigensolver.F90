@@ -179,7 +179,7 @@ contains
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
       message(2) = "Please use the lobpcg, psd, or rmmdiis eigensolvers."
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) then

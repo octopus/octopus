@@ -98,7 +98,7 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=hm%namespace)
 
   end select
 

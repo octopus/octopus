@@ -159,7 +159,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
   POP_SUB(X(bgw_vxc_dat))

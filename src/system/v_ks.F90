@@ -459,13 +459,13 @@ contains
 
         if(ks%gr%sb%dim /= 3) then
           call messages_write('vdw_d3 can only be used in 3-dimensional systems')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
         
         do iatom = 1, geo%natoms
           if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
             call messages_write('vdw_d3 is not implemented when non-atomic species are present')
-            call messages_fatal()
+            call messages_fatal(namespace=namespace)
           end if
         end do
          
@@ -509,7 +509,7 @@ contains
           call messages_write('XCFunctional.  Please select a different XCFunctional, or select a')
           call messages_new_line()
           call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
 
         if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
@@ -797,7 +797,7 @@ contains
           call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
           call messages_new_line()
           call messages_write("or disable acceleration using 'DisableAccel = yes'.")
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
         call states_elec_parallel_remote_access_start(ks%calc%hf_st)
       end if

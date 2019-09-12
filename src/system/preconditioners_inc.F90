@@ -60,7 +60,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   case default
    write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
-   call messages_fatal(1)
+   call messages_fatal(1, namespace=hm%namespace)
 
   end select
 

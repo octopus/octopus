@@ -127,7 +127,7 @@ contains
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
       call messages_input_error('InvertKSmethod')
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable KSInversionLevel
@@ -428,7 +428,7 @@ contains
     call parse_variable(namespace, 'InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable InvertKSMaxIter

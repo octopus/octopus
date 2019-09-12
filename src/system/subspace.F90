@@ -120,11 +120,11 @@ contains
     if(this%method == OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK) then
 #ifndef HAVE_MPI
       message(1) = 'The scalapack subspace diagonalization can only be used in parallel.'
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 #else
 #ifndef HAVE_SCALAPACK
       message(1) = 'The scalapack subspace diagonalization requires scalapack.'
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 #endif
       if(st%dom_st_mpi_grp%size == 1) then
         message(1) = 'The scalapack subspace diagonalization is designed to be used with domain or state parallelization.'

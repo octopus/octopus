@@ -282,7 +282,7 @@ contains
             'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
           write(message(3), '(a)') &
             'Taylor expansion ("TDExponentialMethod = taylor") method.'
-          call messages_fatal(3)
+          call messages_fatal(3, namespace=hm%namespace)
         end select
       end if
     end if
@@ -642,7 +642,7 @@ contains
         write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
         write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
         write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=hm%namespace)
       end select
     else
       deltat_ = TOCMPLX(deltat, M_ZERO)

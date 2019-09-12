@@ -421,14 +421,14 @@ contains
         norm = sqrt(sum(outp%plane%u(1:3)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%plane%u(1:3) = outp%plane%u(1:3) / norm
 
         norm = sqrt(sum(outp%plane%v(1:3)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%plane%v(1:3) = outp%plane%v(1:3) / norm
 
@@ -449,7 +449,7 @@ contains
         norm = sqrt(sum(outp%line%u(1:2)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%line%u(1:2) = outp%line%u(1:2) / norm
 
@@ -528,7 +528,7 @@ contains
     call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable OutputDuringSCF
@@ -555,7 +555,7 @@ contains
     call parse_variable(namespace, 'RestartWriteInterval', 50, outp%restart_write_interval)
     if(outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! these kinds of Output do not have a how
@@ -991,7 +991,7 @@ contains
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
   
     !%Variable BerkeleyGW_NumberBands
@@ -1007,7 +1007,7 @@ contains
     ! these cannot be checked earlier, since output is initialized before unocc determines nst
     if(bgw%nbands > nst) then
       message(1) = "BerkeleyGW_NumberBands must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     !%Variable BerkeleyGW_Vxc_diag_nmin
@@ -1022,7 +1022,7 @@ contains
 
     if(bgw%vxc_diag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
     
     !%Variable BerkeleyGW_Vxc_diag_nmax
@@ -1037,7 +1037,7 @@ contains
 
     if(bgw%vxc_diag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmax must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     if(bgw%vxc_diag_nmin <= 0 .or. bgw%vxc_diag_nmax <= 0) then
@@ -1057,7 +1057,7 @@ contains
     
     if(bgw%vxc_offdiag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     !%Variable BerkeleyGW_Vxc_offdiag_nmax
@@ -1072,7 +1072,7 @@ contains
 
     if(bgw%vxc_offdiag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmax must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     if(bgw%vxc_offdiag_nmin <= 0 .or. bgw%vxc_offdiag_nmax <= 0) then
@@ -1147,14 +1147,14 @@ contains
 
         if(idir <= periodic_dim .and. abs(bgw%vmtxel_polarization(idir)) > M_EPSILON) then
           message(1) = "You cannot calculate vmtxel with polarization in a periodic direction. Use WFNq_fi instead."
-          call messages_fatal(1, only_root_writes = .true.)
+          call messages_fatal(1, only_root_writes = .true., namespace=namespace)
         end if
       end do
       call parse_block_end(blk)
       norm = sum(abs(bgw%vmtxel_polarization(1:3))**2)
       if(norm < M_EPSILON) then
         message(1) = "A non-zero value must be set for BerkeleyGW_VmtxelPolarization when BerkeleyGW_CalcDipoleMtxels = yes."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / sqrt(norm)
     end if
@@ -1214,7 +1214,7 @@ contains
 
     if(gr%mesh%sb%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(st%d%ispin == SPINORS) &
@@ -1254,7 +1254,7 @@ contains
       fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
@@ -1372,7 +1372,7 @@ contains
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
     POP_SUB(output_berkeleygw)
