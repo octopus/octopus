@@ -86,7 +86,7 @@ program wannier90_interface
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
   integer              :: w90_num_exclude
-  integer, allocatable :: exclude_list(:)                          ! list of excluded bands
+  logical, allocatable :: exclude_list(:)                          ! list of excluded bands
   integer, allocatable :: band_index(:)                            ! band index after exclusion
 
   ! scdm variables
@@ -541,14 +541,14 @@ contains
    ! find the exclude block
    SAFE_ALLOCATE(exclude_list(1:st%nst))
    !By default we use all the bands
-   exclude_list(1:st%nst) = 1
+   exclude_list(1:st%nst) = .false.
    do while(.true.)
      read(w90_nnkp,*,end=102) dummy, dummy1
      if(dummy =='begin' .and. dummy1 == 'exclude_bands' ) then
        read(w90_nnkp,*) w90_num_exclude
        do ii=1,w90_num_exclude
          read(w90_nnkp,*) itemp
-         exclude_list(itemp) = 0
+         exclude_list(itemp) = .true.
        end do
        !make sure we are at the end of the block
        read(w90_nnkp,*) dummy
@@ -574,7 +574,7 @@ contains
     SAFE_ALLOCATE(band_index(1:st%nst))
     itemp = 0
     do ii = 1, st%nst
-      if(exclude_list(ii) == 0) cycle
+      if(exclude_list(ii)) cycle
       itemp = itemp + 1
       band_index(ii) = itemp
     end do
@@ -738,7 +738,7 @@ contains
 
        ! loop over bands
        do jst = 1, st%nst
-         if(exclude_list(jst) == 0) cycle
+         if(exclude_list(jst)) cycle
          call states_elec_get_state(st, mesh, jst, iknn, psin)
 
          !Do not apply the phase if the phase factor is null
@@ -754,7 +754,7 @@ contains
 
          !See Eq. (25) in PRB 56, 12847 (1997)
          do ist = 1, st%nst
-           if(exclude_list(ist) == 0) cycle
+           if(exclude_list(ist)) cycle
 
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
            select case(batch_status(batch))
@@ -781,7 +781,7 @@ contains
          ! write to W90 file
          if(mpi_grp_is_root(mpi_world)) then
            do ist = 1, st%nst
-             if(exclude_list(ist) == 0) cycle
+             if(exclude_list(ist)) cycle
              write(w90_mmn,'(e13.6,2x,e13.6)') overlap(band_index(ist))
            end do
          end if
@@ -821,7 +821,7 @@ contains
       w90_eig = io_open(trim(filename), namespace, action='write')
       do ik = 1, w90_num_kpts
         do ist = 1, st%nst
-          if(exclude_list(ist) == 0) cycle
+          if(exclude_list(ist)) cycle
           write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
                              units_from_atomic(unit_eV, st%eigenval(ist, ik))
         end do
@@ -878,7 +878,7 @@ contains
 
         ! states
         do ist = 1, st%nst
-          if(exclude_list(ist) == 0) cycle
+          if(exclude_list(ist)) cycle
           call states_elec_get_state(st, mesh, ispin, ist, ik, psi)
 
           ! put the density in the cube
@@ -949,7 +949,7 @@ contains
 
       do ik = 1, w90_num_kpts
         do ist = 1, st%nst
-          if(exclude_list(ist) == 0) cycle
+          if(exclude_list(ist)) cycle
           if(mpi_grp_is_root(mpi_world)) then
             do iw = 1, w90_nproj
               write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') band_index(ist), iw, ik, uk(band_index(ist),iw,ik) 
@@ -1028,7 +1028,7 @@ contains
         end forall
       
         do ist = 1, st%nst
-          if(exclude_list(ist) == 0) cycle
+          if(exclude_list(ist)) cycle
           call states_elec_get_state(st, mesh, ist, ik, psi)
           do idim = 1, st%d%dim
             !The minus sign is here is for the wrong convention of Octopus
@@ -1176,7 +1176,7 @@ contains
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik, absolute_coordinates=.true.)
 
         do iw2 = 1, st%nst
-          if(exclude_list(iw2) == 0) cycle
+          if(exclude_list(iw2)) cycle
           call states_elec_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)

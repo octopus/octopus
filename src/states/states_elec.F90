@@ -969,7 +969,7 @@ contains
     type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
-    integer,      optional, intent(in)      :: skip(:)
+    logical,      optional, intent(in)      :: skip(:)
 
     PUSH_SUB(states_elec_allocate_wfns)
 
@@ -1005,7 +1005,7 @@ contains
     type(states_elec_t),           intent(inout) :: st
     type(mesh_t),                  intent(in)    :: mesh
     logical, optional,             intent(in)    :: verbose
-    integer, optional,             intent(in)    :: skip(:)
+    logical, optional,             intent(in)    :: skip(:)
 
     integer :: ib, iqn, ist, istmin, istmax
     logical :: same_node, verbose_
@@ -1025,7 +1025,7 @@ contains
     istmin = 1
     if(present(skip)) then
       do ist = 1, st%nst
-        if(skip(ist) == 1) then
+        if(.not.skip(ist)) then
           istmin = ist
           exit
         end if  
@@ -1035,7 +1035,7 @@ contains
     istmax = st%nst
     if(present(skip)) then
       do ist = st%nst, istmin, -1
-        if(skip(ist) == 1) then
+        if(.not.skip(ist)) then
           istmax = ist
           exit
         end if
