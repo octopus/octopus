@@ -704,11 +704,7 @@ contains
 
     ASSERT(.not. any(abs(this%qq(:))>CNST(1e-8)))
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     SAFE_ALLOCATE(aux1(1:der%mesh%np))
     SAFE_ALLOCATE(aux2(1:der%mesh%np))
@@ -745,11 +741,7 @@ contains
 
     PUSH_SUB(zpoisson_solve)
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     ASSERT(ubound(pot, dim = 1) == this%der%mesh%np_part .or. ubound(pot, dim = 1) == this%der%mesh%np)
     ASSERT(ubound(rho, dim = 1) == this%der%mesh%np_part .or. ubound(rho, dim = 1) == this%der%mesh%np)
@@ -833,11 +825,7 @@ contains
     ASSERT(ubound(rho, dim = 1) == der%mesh%np_part .or. ubound(rho, dim = 1) == der%mesh%np)
 
     ! Check optional argument and set to default if necessary.
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     ASSERT(this%method /= POISSON_NULL)
       
