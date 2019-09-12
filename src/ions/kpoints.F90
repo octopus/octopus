@@ -958,7 +958,7 @@ contains
                                                       !< running from 0 to naxis(1:3).
   
     FLOAT :: dx(1:MAX_DIM), maxcoord
-    integer :: ii, jj, kk, divisor, ik, idir, npoints, is
+    integer :: ii, jj, divisor, ik, idir, npoints, is
     integer, allocatable :: ix(:), lk123_(:,:),idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
 
