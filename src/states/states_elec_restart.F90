@@ -336,7 +336,7 @@ contains
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
-    integer,          optional, intent(in)    :: skip(:) !< A mask for reading (1) or skipping(0) the states. For expert use only.
+    logical,          optional, intent(in)    :: skip(:) !< A mask for reading or skipping the states. For expert use only.
 
     integer              :: states_elec_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo
@@ -605,7 +605,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         if(present(skip)) then
-          if(skip(ist) == 0) cycle
+          if(skip(ist)) cycle
         end if
 
         do idim = 1, st%d%dim
