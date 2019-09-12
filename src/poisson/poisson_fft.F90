@@ -992,7 +992,7 @@ contains
     call dfourier_space_op_apply(this%coulb, cube, cf)
 
     !now the cube has the potential
-    if(average_to_zero_) average = cube_function_surface_average(cube, cf)
+    if(average_to_zero_) average = dcube_function_surface_average(cube, cf)
 
     ! move the potential back to the mesh
     if (cube%parallel_in_domains) then
@@ -1051,7 +1051,7 @@ contains
     call zfourier_space_op_apply(this%coulb, cube, cf)
 
     !now the cube has the potential
-    if(average_to_zero_) average = cube_function_surface_average(cube, cf)
+    if(average_to_zero_) average = zcube_function_surface_average(cube, cf)
 
     ! move the potential back to the mesh
     if (cube%parallel_in_domains) then

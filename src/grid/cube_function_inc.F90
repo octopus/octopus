@@ -539,6 +539,55 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   POP_SUB(X(cube_to_mesh_parallel))
 end subroutine X(cube_to_mesh_parallel)
 
+  ! ---------------------------------------------------------
+  !> This function calculates the surface average of any function.
+  !! \warning Some more careful testing should be done on this.
+  R_TYPE function X(cube_function_surface_average)(cube, cf) result(x)
+    type(cube_t),          intent(in) :: cube
+    type(cube_function_t), intent(in) :: cf
+
+    integer :: ii, jj, kk, ix, iy, iz, npoints
+    R_TYPE :: tmp_x
+
+    ASSERT(.not. cf%in_device_memory)
+
+    PUSH_SUB(X(cube_function_surface_average))
+
+    tmp_x = M_ZERO
+    do ii = 1, cube%rs_n(1)
+      do jj = 1, cube%rs_n(2)
+        do kk = 1, cube%rs_n(3)
+          ix = ii + cube%rs_istart(1) - 1
+          iy = jj + cube%rs_istart(2) - 1
+          iz = kk + cube%rs_istart(3) - 1
+          if ( (ix == 1 .or. ix == cube%rs_n_global(1) ) .or. &
+               ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
+               ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
+                 iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
+            tmp_x = tmp_x + cf%X(RS)(ii, jj, kk)
+          end if
+        end do
+      end do
+    end do
+
+
+    if (cube%parallel_in_domains) then
+#ifdef HAVE_MPI
+      call MPI_Allreduce(tmp_x, x, 1, R_MPITYPE, MPI_SUM, cube%mpi_grp%comm, mpi_err)
+#endif
+    else
+      x = tmp_x
+    end if
+
+    npoints = 2*(cube%rs_n_global(1)-2)**2 + 4*(cube%rs_n_global(1)-2) + &
+              2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
+              2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
+    x = x/npoints
+
+    POP_SUB(X(cube_function_surface_average))
+  end function X(cube_function_surface_average)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
