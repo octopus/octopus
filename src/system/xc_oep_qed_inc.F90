@@ -29,12 +29,15 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
   integer :: ist, kst, iter_used
   FLOAT :: rhs_kkbar, residue, kkopii
   R_TYPE, allocatable :: rhs(:,:), psiii(:, :), psikk(:, :)
+  FLOAT, allocatable :: rhs2(:)
 
   PUSH_SUB(X(xc_oep_pt_phi))
 
   SAFE_ALLOCATE(rhs(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(psiii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psikk(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(rhs2(1:gr%mesh%np))
+  
   if (is == 1) then !only initialize for first spin channel
     oep%pt%pt_number = M_ZERO
     oep%pt%correlator = M_ZERO
@@ -48,17 +51,14 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
     do kst = st%st_start, oep%noccst
       call states_elec_get_state(st, gr%mesh, kst, is, psikk)
       rhs_kkbar = X(mf_dotp)(gr%mesh, R_CONJ(psikk(:,1)), rhs(:,1))
-      rhs(:,1) = rhs(:,1) - rhs_kkbar * psikk(:,1)
-      !axpy
+      call lalg_axpy(gr%mesh%np, -rhs_kkbar, psikk(:,1), rhs(:,1))
     end do
 
-!    call X(lr_orth_vector) (gr%mesh, st, rhs, ist, is, R_TOTYPE(M_ZERO))
     call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, rhs, normalize = .false.)
 
     call X(linear_solver_solve_HXeY)(oep%solver, hm, gr, st, ist, is, oep%pt%lr%X(dl_psi)(:,:, ist, is), rhs, &
            R_TOTYPE(-st%eigenval(ist, is)) + R_REAL(oep%pt%omega_array(1)), oep%scftol%final_tol, residue, iter_used)
 
-!    call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
     call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
       oep%pt%lr%X(dl_psi)(:,:, ist, is), normalize = .false.)
 
@@ -84,12 +84,13 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
     end do
 
     ! calculate correlator function
-    oep%pt%correlator(:,1) = oep%pt%correlator(:,1) + st%occ(ist, is)*psiii(:,1)*phi1(:, 1, ist)
-    !axpy
+    rhs2(:) = psiii(:,1)*phi1(:, 1, ist)
+    call lalg_axpy(gr%mesh%np, st%occ(ist, is), rhs2(:), oep%pt%correlator(:,1))
 
   end do
 
   SAFE_DEALLOCATE_A(rhs)
+  SAFE_DEALLOCATE_A(rhs2)
   SAFE_DEALLOCATE_A(psiii)
   SAFE_DEALLOCATE_A(psikk)
   POP_SUB(X(xc_oep_pt_phi))
@@ -119,29 +120,23 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
 
   aa(:,1) = M_HALF*oep%pt%lambda_array(1)**2*oep%pt%pol_dipole_array(:,1)**2 &
             *R_CONJ(psiii(:,1))
-  !axpy
-  aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
-            *R_CONJ(phi1(:, 1, ist))
-  !axpy
+  call lalg_axpy(gr%mesh%np, sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1), &
+    oep%pt%pol_dipole_array(:,1)*R_CONJ(phi1(:, 1, ist)), aa(:,1))
 
   do kst = st%st_start, oep%noccst
     call states_elec_get_state(st, gr%mesh, kst, is, psikk)
     kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
       oep%pt%pol_dipole_array(:,1)*psikk(:,1))
-    aa(:,1) = aa(:,1) - oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1)*kkopii*R_CONJ(psikk(:,1))
-    !axpy
-    aa(:,1) = aa(:,1) - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii*R_CONJ(phi1(:, 1, kst))
-    !axpy
+    call lalg_axpy(gr%mesh%np, - oep%pt%lambda_array(1)*kkopii, oep%pt%pol_dipole_array(:,1)*R_CONJ(psikk(:,1)), aa(:,1))
+    call lalg_axpy(gr%mesh%np, - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii, R_CONJ(phi1(:, 1, kst)), aa(:,1))
   end do
 
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
     abar = X(mf_dotp)(gr%mesh,  aa(:,1), psiii(:,1))
-    aa(:,1) = aa(:,1) - abar*R_CONJ(psiii(:,1))
-    !axpy
+    call lalg_axpy(gr%mesh%np, -abar, R_CONJ(psiii(:,1)), aa(:,1))
   end if
 
-  rhs = rhs + aa
-  !axpy
+  call lalg_axpy(gr%mesh%np, M_ONE, aa(:,1), rhs(:,1))
 
   SAFE_DEALLOCATE_A(aa)
   SAFE_DEALLOCATE_A(psiii)
@@ -162,19 +157,22 @@ subroutine X(xc_oep_pt_inhomog) (gr, st, is, oep, phi1, ist, ss)
 
   FLOAT :: phi_bar
   R_TYPE, allocatable :: psiii(:, :)
+  FLOAT, allocatable  :: rhs(:)
 
   PUSH_SUB(X(xc_oep_pt_inhomog))
 
   SAFE_ALLOCATE(psiii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(rhs(1:gr%mesh%np))
 
   call states_elec_get_state(st, gr%mesh, ist, is, psiii)
 
   phi_bar = X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
                 phi1(:, 1, ist))
-  ss = ss - (phi1(:,1,ist)*phi1(:, 1, ist) - phi_bar*(R_CONJ(psiii(:,1))*psiii(:,1)))  !or /2 + c.c. 
-  !axpy
+  rhs = phi1(:, 1, ist)*phi1(:, 1, ist) - phi_bar*(R_CONJ(psiii(:,1))*psiii(:,1))
+  call lalg_axpy(gr%mesh%np, -M_ONE, rhs, ss)
   
   SAFE_DEALLOCATE_A(psiii)
+  SAFE_DEALLOCATE_A(rhs)
   POP_SUB(X(xc_oep_pt_inhomog))
 end subroutine X(xc_oep_pt_inhomog)
 
