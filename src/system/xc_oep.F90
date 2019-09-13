@@ -158,8 +158,10 @@ contains
         call messages_experimental("Photons = yes")
         call photon_mode_init(oep%pt, namespace, gr)
         if (oep%pt%nmodes > 1) then
-          call messages_write('Photon OEP is only working for a single photon mode!')
-          call messages_fatal()
+          call messages_not_implemented('Photon OEP for more with more than one photon mode.')
+        end if
+        if (st%d%nspin /= UNPOLARIZED) then
+          call messages_not_implemented('Spin-polarized calculations with photon OEP.')
         end if
       end if
 

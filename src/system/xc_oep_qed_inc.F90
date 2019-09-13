@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 !> This file handles the evaluation of the photon-OEP potential,
-!! as described in J. Flick et al. arXiv:1710.07999 [quant-ph] (2017))
+!! as described in J. Flick et al. ACS Photonics 2018, 5, 3, 992-1005
 ! ---------------------------------------------------------
 subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
   type(grid_t),        intent(in)    :: gr
@@ -49,6 +49,7 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
       call states_elec_get_state(st, gr%mesh, kst, is, psikk)
       rhs_kkbar = X(mf_dotp)(gr%mesh, R_CONJ(psikk(:,1)), rhs(:,1))
       rhs(:,1) = rhs(:,1) - rhs_kkbar * psikk(:,1)
+      !axpy
     end do
 
 !    call X(lr_orth_vector) (gr%mesh, st, rhs, ist, is, R_TOTYPE(M_ZERO))
@@ -84,6 +85,7 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
 
     ! calculate correlator function
     oep%pt%correlator(:,1) = oep%pt%correlator(:,1) + st%occ(ist, is)*psiii(:,1)*phi1(:, 1, ist)
+    !axpy
 
   end do
 
@@ -117,23 +119,29 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
 
   aa(:,1) = M_HALF*oep%pt%lambda_array(1)**2*oep%pt%pol_dipole_array(:,1)**2 &
             *R_CONJ(psiii(:,1))
+  !axpy
   aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
             *R_CONJ(phi1(:, 1, ist))
+  !axpy
 
   do kst = st%st_start, oep%noccst
     call states_elec_get_state(st, gr%mesh, kst, is, psikk)
     kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
       oep%pt%pol_dipole_array(:,1)*psikk(:,1))
     aa(:,1) = aa(:,1) - oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1)*kkopii*R_CONJ(psikk(:,1))
+    !axpy
     aa(:,1) = aa(:,1) - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii*R_CONJ(phi1(:, 1, kst))
+    !axpy
   end do
 
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
     abar = X(mf_dotp)(gr%mesh,  aa(:,1), psiii(:,1))
     aa(:,1) = aa(:,1) - abar*R_CONJ(psiii(:,1))
+    !axpy
   end if
 
   rhs = rhs + aa
+  !axpy
 
   SAFE_DEALLOCATE_A(aa)
   SAFE_DEALLOCATE_A(psiii)
@@ -164,7 +172,8 @@ subroutine X(xc_oep_pt_inhomog) (gr, st, is, oep, phi1, ist, ss)
   phi_bar = X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
                 phi1(:, 1, ist))
   ss = ss - (phi1(:,1,ist)*phi1(:, 1, ist) - phi_bar*(R_CONJ(psiii(:,1))*psiii(:,1)))  !or /2 + c.c. 
-
+  !axpy
+  
   SAFE_DEALLOCATE_A(psiii)
   POP_SUB(X(xc_oep_pt_inhomog))
 end subroutine X(xc_oep_pt_inhomog)
