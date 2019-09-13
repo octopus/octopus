@@ -1231,11 +1231,15 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if (ks%oep%has_photons) then
-          write(iunit, '(a)') 'Pt-Observable:'
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_number = ', ks%oep%pt%pt_number
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_exchange = ', ks%oep%pt%ex
-          write(iunit,'(1x)')
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (ks%oep%level == XC_OEP_FULL) then
+            if (ks%oep%has_photons) then
+              write(iunit, '(a)') 'Pt-Observable:'
+              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_number = ', ks%oep%pt%pt_number
+              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_exchange = ', ks%oep%pt%ex
+              write(iunit,'(1x)')
+            end if
+          end if
         end if
 
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
