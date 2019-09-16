@@ -1487,14 +1487,14 @@ end subroutine hamiltonian_mxll_apply_all
           normal    =  M_z0
           normal(1) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(1) = +M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
@@ -1516,14 +1516,14 @@ end subroutine hamiltonian_mxll_apply_all
           normal    =  M_z0
           normal(2) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(2) =  M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
@@ -1545,14 +1545,14 @@ end subroutine hamiltonian_mxll_apply_all
           normal    =  M_z0
           normal(3) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
           normal    =  M_z0
           normal(3) =  M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:) &
-                * gr%mesh%spacing(:)
+                * gr%mesh%spacing(1:3)
           tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
              + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
