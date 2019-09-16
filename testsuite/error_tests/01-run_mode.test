@@ -8,7 +8,7 @@ Enabled    : Yes
 
 
 FailingInput: 01-run_mode.01-one_shot.inp
-errormatch ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
+match ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
 
 
 Input: 01-run_mode.02-one_shot.inp

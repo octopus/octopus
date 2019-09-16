@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright (C) 2005-2014 H. Appel, M. Marques, X. Andrade, D. Strubbe
+# Copyright (C) 2005-2019 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ sub usage {
 
     print <<EndOfUsage;
 
- Copyright (C) 2005-2016 H. Appel, M. Marques, X. Andrade, D. Strubbe
+ Copyright (C) 2005-2019 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders
 
 Usage: oct-run_regression_test.pl [options]
 
@@ -182,6 +182,73 @@ if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
 set_precision("default");
+
+# Define the parser for the if..elseif..else..endif structures:
+
+# Conditional elements are defined through the if..[elseif..else]..endif structure.
+# The conditions are specified as argument (in parenthesis) of the if [or elseif].
+#
+# Conditions can be of the form: (avail[able] COND1 [(and|,) COND2 ...])
+
+
+my @conditions= ();
+my $if_level = 0;
+my @if_done = ();
+
+sub parse_condition {
+
+
+    my $condition = $_[0];
+    my @required = @{$_[1]};
+
+    if ($condition =~ /\s*avail\w*\s*(\w*)\s*$/i ) {
+        parse_condition($1, $_[1]);
+    }
+
+    elsif ($condition =~ /\b(\w*)\b\s+and\s+(.*)$/i ) {
+        push(@{$_[1]}, $1);
+        parse_condition($2, $_[1]);
+    }
+
+    elsif ($condition =~ /\b(\w*)\b\s+,\s+(.*)$/i ) {
+        push(@{$_[1]}, $1);
+        parse_condition($2, $_[1]);
+    }
+
+    elsif ($condition =~ /^(\w*)$/ ) {
+        push(@{$_[1]}, $1);
+    }
+
+    else {
+        die255( "Ill-formed option condition.\n" );
+    }
+}
+
+sub check_conditions {
+
+    # This is a combined test to determine whether a certain step in the test needs to be executed.
+    # This check takes into account:
+    # - the level of the if blocks
+    # - whether a if-block already has been satisfied
+    # - whether prerequisits for a run are fulfilled.
+
+    my @required_options = ();
+    my $result=1;
+
+    if($if_level>0) {
+        foreach(@{$_[0]}) {
+            parse_condition($_, \@required_options);
+        }
+    
+        foreach(@required_options) {
+            $result = $result * ($options_available =~ /$_/i);
+        }
+    }
+    return ((not $if_done[$if_level]) and $result);
+}
+
+
+# Ser test_succeeded flag to 'TRUE'. Only change to 'FALSE' if a test fails.
 $test_succeeded = 1;
 
 $pwd = get_env("PWD");
@@ -266,6 +333,9 @@ while ($_ = <TESTSUITE>) {
         $report{$testname}{"options"} = $options_required;
         
     } elsif ( $_ =~ /^Options_skip\s*:\s*(.*)\s*$/) {
+
+        # This should become obsolete when Options_arguments are working.
+
         $options_skip = $1;
         # note: we could implement Options by baking this into the script via configure...
         $report{$testname}{"options_skip"} = $options_skip;
@@ -302,15 +372,15 @@ while ($_ = <TESTSUITE>) {
             $options_required = $options_required_mpi;
         }
 
+        # options_required should become obsolete
         if(length($options_required) > 0) {
             # check if the executable was compiled with the required options
             foreach my $option (split(/;/, $options_required)){
+
                 if(" $options_available " !~ " $option ") {
 
-                # instead of skipping, we should switch to the alternative matching rules
                     $expect_error = 1;
 
-                    # print "\nSkipping test: executable does not have the required option '$option'";
                     print "\nChanging rules: executable does not have the required option '$option'";
                     if($options_are_mpi) {
                         print " for MPI";
@@ -338,6 +408,7 @@ while ($_ = <TESTSUITE>) {
             }
         }
 
+        # options_skip should become obsolete
         if(length($options_skip) > 0) {
             # check if the executable was compiled with the required options
             foreach my $option (split(/;/, $options_skip)){
@@ -367,7 +438,6 @@ while ($_ = <TESTSUITE>) {
             die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
         }
       
-
         if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
             if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
@@ -399,136 +469,194 @@ while ($_ = <TESTSUITE>) {
             $np = $1;
         }
 
-        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/  || $_ =~ /^FailingInput\s*:\s*(.*)\s*$/  ) {
-            $input_base = $1;
-            $input_file = dirname($opt_f) . "/" . $input_base;
+        elsif ( $_ =~ /^if\s*\((.*)\)\s*;\s*then\s*$/i ) {
+    
+            # Entering an IF region
+            push(@conditions,$1);
+            $if_level += 1;
+            $if_done[$if_level] = 0;
+    
+        }
+    
+        elsif ( $_ =~ /^elseif\s\((.*)\)\s*;\s*then\s*$/i ) {
+    
+            pop(@conditions);
+            push(@conditions,$1);
+    
+        }
+    
+        elsif ( $_ =~ /^else\s*$/i ) {
 
-            # as we are starting a new input file, we need to check whether the last one had unresolved error_matches:
-            check_error_resolved();
+            pop(@conditions);
+        }
+    
+        elsif ( $_ =~ /^endif\s*$/i ) {
+    
+            if ($if_level==0) { die255("Ill-formed test file (unpaired endif.)\n"); }
+            # Exiting IF region
+            pop(@conditions);
+            $if_done[$if_level] = undef;
+            $if_level -= 1;
+    
+        }
 
-            my %input_report;
-            $r_input_report = \%input_report;          
-            $report{$testname}{"input"}{basename($input_file)} = \%input_report;
 
-            if( $_ =~ /^Failing/) {
-                $expect_error = 1;
-            }
-            $input_report{"expected_failure"} = $expect_error?"Yes":"No";
+        elsif ( $_ =~ /^\w*Input\s*:\s*(.*)\s*$/  ) {
 
-            my @matches_array;
-            $r_matches_array = \@matches_array;
-            $input_report{"matches"} = \@matches_array;
-            if($is_parallel) {
-                $input_report{"processors"} = $np;
-            } else {
-                $input_report{"processors"} = 1;
-            }
-      
-            if ( $opt_m ) {
-                print "\n\nFor input file : $input_file\n\n";
-                $return_value = 0;
-                # FIXME: this works from outer directory, but not in archived subdirectories.
-                $matchdir = "$workdir/$input_base";
-            } else {
-                if( -f $input_file ) {
-                    print "\nUsing input file : $input_file\n";
-                    $cp_return = system("cp $input_file $workdir/inp");
-                    if($cp_return != 0) {
-                        die255("Copy failed (cp $input_file $workdir/inp)\n");
-                    }
-                    # Ensure that the input file is writable so that it can
-                    # be overwritten by the next test.
-                    $mode = (stat "$workdir/inp")[2];
-                    chmod $mode|S_IWUSR, "$workdir/inp";
+            if( check_conditions(\@conditions, $available_options)) {
+
+                check_error_resolved();
+
+                $input_base = $1;
+                $input_file = dirname($opt_f) . "/" . $input_base;
+
+                my %input_report;
+                $r_input_report = \%input_report;          
+                $report{$testname}{"input"}{basename($input_file)} = \%input_report;
+
+
+                # The FailingInput is not really necessary, but can be used to make it explicit in the test file that an error is expected due to deliberate input errors.
+
+                if( $_ =~ /^FailingInput/) {
+                    $expect_error = 1;
+                }
+                $input_report{"expected_failure"} = $expect_error?"Yes":"No";
+
+                my @matches_array;
+                $r_matches_array = \@matches_array;
+                $input_report{"matches"} = \@matches_array;
+                if($is_parallel) {
+                    $input_report{"processors"} = $np;
                 } else {
-                    die255("Could not find input file '$input_file'.");
+                    $input_report{"processors"} = 1;
                 }
-      
-                # serial or MPI run?
-                if ( $is_parallel && $np ne "serial") {
-                    if("$global_np" ne "") {
-                        $np = $global_np;
-                    }
-                    if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
-                        $specify_np = "";
-                        $my_nslots = "MY_NSLOTS=$np";
-                    } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
-                        $specify_np = "--np $np --exe";
-                        $my_nslots = "";
-                    } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
-                        $specify_np = ""; 
-                        $my_nslots = "MP_PROCS=$np"; 
-                    } else { # for mpirun and Cray's aprun
-                        $specify_np = "-n $np";
-                        $my_nslots = "";
-                    }
-                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command ";
+
+                if ( $opt_m ) {
+                    print "\n\nFor input file : $input_file\n\n";
+                    $return_value = 0;
+                    # FIXME: this works from outer directory, but not in archived subdirectories.
+                    $matchdir = "$workdir/$input_base";
                 } else {
-                    $command_line = "cd $workdir; $command_env $aexec $command ";
-                }
-
-                # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
-                if($np ne "serial") {
-                    if($np > 4) {
-                        print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
-                    }
-                }
-
-                $command_line = $command_line." > out 2> err";
-
-                print "Executing: " . $command_line . "\n";
-
-                if ( !$opt_n ) {
-                    $test_start = [gettimeofday];
-                    $return_value = system("$command_line");
-                    $test_end   = [gettimeofday];
-
-                    $elapsed = tv_interval($test_start, $test_end);
-                    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
-
-                    if($return_value == 0) {
-                        printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
-                        $input_report{"execution"} = "success";
-                        $error_match_done = 1;
-              
+                    if( -f $input_file ) {
+                        print "\nUsing input file : $input_file\n";
+                        $cp_return = system("cp $input_file $workdir/inp");
+                        if($cp_return != 0) {
+                            die255("Copy failed (cp $input_file $workdir/inp)\n");
+                        }
+                        # Ensure that the input file is writable so that it can
+                        # be overwritten by the next test.
+                        $mode = (stat "$workdir/inp")[2];
+                        chmod $mode|S_IWUSR, "$workdir/inp";
                     } else {
-                        print "Test run failed with exit code $return_value.\n";
-                        print "These are the last lines of output:\n\n";
-                        print "----------------------------------------\n";
-                        system("tail -20 $workdir/out");
-                        print "----------------------------------------\n\n";
-                        print "These are the last lines of stderr:\n\n";
-                        print "----------------------------------------\n";
-                        system("tail -20 $workdir/err");
-                        print "----------------------------------------\n\n";
+                        die255("Could not find input file '$input_file'.");
+                    }
 
-                        if($expect_error) {
-                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expected Fail) $color_end{green} ] \n\n";
-                            $input_report{"execution"} = "success";
-                            $match_error = 1;
-                            $test_succeeded = 1;  
-                            $error_match_done = 0;
+                    # serial or MPI run?
+                    if ( $is_parallel && $np ne "serial") {
+                        if("$global_np" ne "") {
+                            $np = $global_np;
+                        }
+                        if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
+                            $specify_np = "";
+                            $my_nslots = "MY_NSLOTS=$np";
+                        } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
+                            $specify_np = "--np $np --exe";
+                            $my_nslots = "";
+                        } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
+                            $specify_np = ""; 
+                            $my_nslots = "MP_PROCS=$np"; 
+                        } else { # for mpirun and Cray's aprun
+                            $specify_np = "-n $np";
+                            $my_nslots = "";
+                        }
+                        $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command ";
+                    } else {
+                        $command_line = "cd $workdir; $command_env $aexec $command ";
+                    }
 
-                        } else {
-                            printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
-                            $input_report{"execution"} = "fail";
-
-                            $failures++;
-                            $test_succeeded = 0;  
+                    # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
+                    if($np ne "serial") {
+                        if($np > 4) {
+                            print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
                         }
                     }
-                    $test{"run"} = 1;
-                }
 
-                # copy all files of this run to archive directory with the name of the
-                # current input file
-                mkdir "$workdir/$input_base";
-                @wfiles = `ls -d $workdir/* | grep -v inp`;
-                $workfiles = join("",@wfiles);
-                $workfiles =~ s/\n/ /g;
-                $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-                if($cp_return != 0) {
-                    die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+                    $command_line = $command_line." > out 2> err";
+
+                    print "Executing: " . $command_line . "\n";
+
+                    if ( !$opt_n ) {
+                        $test_start = [gettimeofday];
+                        $return_value = system("$command_line");
+                        $test_end   = [gettimeofday];
+
+                        $elapsed = tv_interval($test_start, $test_end);
+                        printf("\tElapsed time: %8.1f s\n\n", $elapsed);
+
+                        if($return_value == 0) {
+                            printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+                            $input_report{"execution"} = "success";
+
+                            # Set $error_match_done to TRUE to indicate that no error match needs to be done.
+                            $error_match_done = 1;
+
+                        } else {
+
+                            # In case of non-zero return value, we will not immediately mark the run as failling, but set a flag that a test for
+                            # the correct error message is obligatory.
+                            #
+                            # If that match was successful (i.e. the correct error message has been printed), we count it as success (passed).
+                            # If that match was unsuccessful or no match has been performed, we mark it as failed.
+
+
+                            print "Test run failed with exit code $return_value.\n";
+                            print "These are the last lines of output:\n\n";
+                            print "----------------------------------------\n";
+                            system("tail -20 $workdir/out");
+                            print "----------------------------------------\n\n";
+                            print "These are the last lines of stderr:\n\n";
+                            print "----------------------------------------\n";
+                            system("tail -20 $workdir/err");
+                            print "----------------------------------------\n\n";
+
+                            $error_match_done = 0;
+
+    #                        if($expect_error) {
+    #
+    #                            # An error is expected. In this case, the execution will be marked 'success', but matching of the error message will be marked as obligatory.
+    #
+    #                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expected Fail) $color_end{green} ] \n\n";
+    #                            $input_report{"execution"} = "success";
+    #                            $match_error = 1;
+    #                            $test_succeeded = 1;  
+    #
+    #                            # Set $error_match_done to FALSE to indicate that this test is obligatory.
+    #                            $error_match_done = 0;
+    #
+    #                        } else {
+    #
+    #                            # No error was expected, but the code crashed with non-zero return value. This will be registered as execution failure and no further matches are required.
+    #
+    #                            printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+    #                            $input_report{"execution"} = "fail";
+    #
+    #                            $failures++;
+    #                            $test_succeeded = 0;  
+    #                        }
+                        }
+                        $test{"run"} = 1;
+                    }
+
+                    # copy all files of this run to archive directory with the name of the
+                    # current input file
+                    mkdir "$workdir/$input_base";
+                    @wfiles = `ls -d $workdir/* | grep -v inp`;
+                    $workfiles = join("",@wfiles);
+                    $workfiles =~ s/\n/ /g;
+                    $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+                    if($cp_return != 0) {
+                        die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+                    }
                 }
             }
         }
@@ -545,43 +673,29 @@ while ($_ = <TESTSUITE>) {
         elsif ( $_ =~ /^match/ ) {
             # matches results when execution was successful
 
-            my %match_report;
-            $r_match_report = \%match_report;
-          
-            if (!$opt_n && ($return_value == 0) ) {
-                push( @{$r_matches_array}, $r_match_report);
-                if(run_match_new($_)){
-                    printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-                    if ($opt_v) { print_hline(); }
-                } else {
-                    printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-                    print_hline();
-                    $test_succeeded = 0;
-                    $failures++;
-                }
-            }
-        } 
-        
-        elsif ( $_ =~ /^errormatch/ ) {
-            # perform matches for error messages when execution failed?
+            if( check_conditions(\@conditions, $available_options)) {
 
-            my %match_report;
-            $r_match_report = \%match_report;
+                my %match_report;
+                $r_match_report = \%match_report;
 
-            if (!$opt_n && ($match_error && $return_value != 0) ) {
-                push( @{$r_matches_array}, $r_match_report);
-                if(run_match_new($_)){
-                    printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-                    if ($opt_v) { print_hline(); }
-                } else {
-                    printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-                    print_hline();
-                    $test_succeeded = 0;
-                    $failures++;
+                # Mark this match-line as error match if it contains "error" in the name.
+                my $error_match = ($_ =~ /error/i);
+
+                if (!$opt_n && ($error_match xor ($return_value == 0) )  ) {
+                    push( @{$r_matches_array}, $r_match_report);
+                    if(run_match_new($_)){
+                        printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+                        if ($opt_v) { print_hline(); }
+                        if ($error_match) { $error_match_done = 1; }
+                    } else {
+                        printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+                        print_hline();
+                        $test_succeeded = 0;
+                        $failures++;
+                    }
                 }
-            }
-            $error_match_done = 1;
-        }        
+            } 
+        }
 
         else {
             die255("Unknown command '$_'.");
@@ -821,6 +935,7 @@ sub skip_exit {
 sub check_error_resolved {
     if (!$opt_n && !$error_match_done) { 
         print "No error check performed!\n";
+        $input_report{"execution"} = "fail";
         $failures++; 
     }
 }
