@@ -67,7 +67,7 @@ module maxwell_function_oct_m
 
   type mxf_t
     integer :: mode       = MXF_EMPTY
-    FLOAT   :: k_vector(3)= M_ZERO
+    FLOAT   :: k_vector(MAX_DIM) = M_ZERO
     FLOAT   :: r0(3)      = M_ZERO  !< vector at the maximum of the pulse
     FLOAT   :: width      = M_ZERO  !< the width of the pulse
     FLOAT   :: a0         = M_ZERO
