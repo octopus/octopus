@@ -8,10 +8,12 @@ Enabled    : Yes
 
 Input : 08-gdlib.01-gs.inp
 
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.50252348
-match ; Eigenvalue   ; GREPFIELD(static/info, ' 1   --', 3) ; 0.502523
-match ; Dipole x     ; GREPFIELD(static/info, '<x> =', 3) ; 1.03804E+00
-match ; Dipole y     ; GREPFIELD(static/info, '<y> =', 3) ; -1.02525E+00
-
-errormatch; Error; GREPCOUNT(err, 'GD library support'); 1
+if (available gdlib); then
+    match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+    match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.50252348
+    match ; Eigenvalue   ; GREPFIELD(static/info, ' 1   --', 3) ; 0.502523
+    match ; Dipole x     ; GREPFIELD(static/info, '<x> =', 3) ; 1.03804E+00
+    match ; Dipole y     ; GREPFIELD(static/info, '<y> =', 3) ; -1.02525E+00
+else
+    match; Error; GREPCOUNT(err, 'GD library support'); 1
+endif
