@@ -29,7 +29,7 @@ Spacing = 0.4
  2 | 2 | 2
 %
 
-ExtraStates = 2
+ExtraStates = 3
 RestartFixedOccupations = yes
 
 SpinComponents = spinors
