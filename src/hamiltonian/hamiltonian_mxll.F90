@@ -248,7 +248,7 @@ contains
 
     ASSERT(associated(gr%der%lapl))
 
-    hm%operators(1:MAX_DIM) => gr%der%grad(1:MAX_DIM)   ! cross product for Maxwell calculation needs dimension >= 2
+    hm%operators(1:3) => gr%der%grad(1:3) ! cross product for Maxwell calculation needs dimension >= 2
 
     hm%rs_sign = st%rs_sign
 
@@ -581,12 +581,11 @@ end subroutine hamiltonian_mxll_apply_all
     CMPLX,                    intent(inout) :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
-    FLOAT              :: kk(MAX_DIM), aa_e(MAX_DIM), aa_m(MAX_DIM), bb_e(MAX_DIM), bb_m(MAX_DIM)
     FLOAT              :: aux_ep(3), aux_mu(3), cc, pml_c(3), pml_aux_ep(3,3), pml_aux_mu(3,3), pml_g_e(3), pml_g_m(3)
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_curl_e(:,:), tmp_curl_b(:,:), tmp_partial_e(:,:), tmp_partial_b(:,:)
     FLOAT, pointer     :: mx_rho(:,:)
     CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
-    CMPLX              :: ff_plus(MAX_DIM), ff_minus(MAX_DIM), sigma_e, sigma_m
+    CMPLX              :: ff_plus(3), ff_minus(3), sigma_e, sigma_m
     CMPLX, allocatable :: tmp(:,:)
     CMPLX, pointer     :: kappa_psi(:,:)
     integer            :: np, np_part, ip, ip_in, array_length_1, array_length_2, idim, il, ii, rs_sign

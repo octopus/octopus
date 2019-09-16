@@ -162,7 +162,7 @@ contains
     logical, optional,        intent(in)    :: add_ab_region
 
     integer             :: ip, ip_in, ip_bd, idim, ab_shape_dim, point_info, nlines, icol, ncols 
-    FLOAT               :: dd, bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
+    FLOAT               :: dd, bounds(1:2,3), ab_bounds(1:2,3)
     FLOAT               :: mask_width, pml_width, zero_width
     type(block_t)       :: blk
     character(len=1024) :: string
@@ -1085,8 +1085,8 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
  
-    integer :: ii, jj, ip_surf, rankmin, ip_local, ip_global, np_surf(MAX_DIM), max_np_surf
-    FLOAT   :: rr(MAX_DIM), dmin
+    integer :: ii, jj, ip_surf, rankmin, ip_local, ip_global, np_surf(3), max_np_surf
+    FLOAT   :: rr(3), dmin
 
     PUSH_SUB(maxwell_surface_points_mapping) 
 
@@ -1239,7 +1239,7 @@ contains
     FLOAT, optional,    intent(in)    :: dt
 
     integer :: ip, ip_in, idim
-    FLOAT   :: width(MAX_DIM), kappa(MAX_DIM), sigma_max(MAX_DIM), ddv(MAX_DIM), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
+    FLOAT   :: width(3), kappa(3), sigma_max(3), ddv(3), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(bc_mxll_generate_pml)
@@ -1360,7 +1360,7 @@ contains
     FLOAT,              intent(in)    :: bounds(:,:)
 
     integer :: ip, ip_in, idim, ip_in_max
-    FLOAT   :: ddv(MAX_DIM), tmp(MAX_DIM), width(MAX_DIM)
+    FLOAT   :: ddv(3), tmp(3), width(3)
     FLOAT, allocatable :: mask(:)
 
     PUSH_SUB(bc_mxll_generate_mask)
@@ -1411,7 +1411,7 @@ contains
     FLOAT,              intent(in)    :: bounds(:,:)
 
     integer :: ip, ip_in, ip_in_max, idim, iidim
-    FLOAT   :: ddv(MAX_DIM), tmp(MAX_DIM), width(MAX_DIM)
+    FLOAT   :: ddv(3), tmp(3), width(3)
 
     PUSH_SUB(bc_mxll_generate_zero)
 
@@ -1459,7 +1459,7 @@ contains
     type(states_mxll_t),intent(inout) :: st
 
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
-    FLOAT   :: width(MAX_DIM), dd, dd_min, dd_max, dd_dim(3), xx(3), xxp(3)
+    FLOAT   :: width(3), dd, dd_min, dd_max, dd_dim(3), xx(3), xxp(3)
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(bc_mxll_generate_medium)
@@ -1569,8 +1569,8 @@ contains
 
     type(block_t)        :: blk
     integer              :: ip, ip_global, il, nlines, ncols, bp, default, k_dim, ierr
-    integer              :: ip_1, ip_2, ip_3, limit(2,MAX_DIM), ip_in, oam, sam
-    FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
+    integer              :: ip_1, ip_2, ip_3, limit(2,3), ip_in, oam, sam
+    FLOAT                :: k_vector(3), e_field(3), vv(3), xx(3), rr, dummy(3), test, test_limit!, angle, sigma
     character(len=1024)  :: k_string(3), e_string(3), width_string(3), shift_string(3), omega_string(3)
     character(len=1024)  :: mxf_expression, phase_expression
 
@@ -1620,10 +1620,10 @@ contains
 
       bc%plane_waves_number = nlines
       SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field_string(MAX_DIM,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM,nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field_string(3,nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field(3,nlines))
+      SAFE_ALLOCATE(bc%plane_waves_k_vector(3,nlines))
+      SAFE_ALLOCATE(bc%plane_waves_v_vector(3,nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
       SAFE_ALLOCATE(bc%plane_waves(nlines))
@@ -1885,13 +1885,11 @@ contains
     integer,             intent(out)   :: point_info
  
 
-    FLOAT   :: rr, dd, xx(MAX_DIM), ddv(1:MAX_DIM), width(MAX_DIM)
+    FLOAT   :: rr, dd, xx(3), ddv(1:3), width(3)
     integer :: dir
-    logical :: xx_in(MAX_DIM)
-
+    
     point_info = 0
-    xx_in(:) = .false.
-
+    
     width(:) = bounds(2,:) - bounds(1,:)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
@@ -1951,9 +1949,8 @@ contains
     integer,             intent(out)   :: pi_edge
     integer,             intent(out)   :: pi_vertex
 
-    FLOAT   :: rr, dd, xx(MAX_DIM), ddv(1:MAX_DIM), width(MAX_DIM)
+    FLOAT   :: rr, dd, xx(3), ddv(1:3), width(3)
     integer :: dir
-    logical :: xx_in(MAX_DIM)
 
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
@@ -2015,12 +2012,10 @@ contains
     integer,             intent(out)   :: boundary_info
  
 
-    FLOAT   :: dd, xx(MAX_DIM)
+    FLOAT   :: dd, xx(3)
     integer :: dir
-    logical :: xx_in(MAX_DIM)
 
     boundary_info = 0
-    xx_in(:) = .false.
 
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
