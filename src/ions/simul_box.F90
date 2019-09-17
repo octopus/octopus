@@ -221,7 +221,7 @@ contains
         call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
         call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
         call messages_write('of total energy and forces.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       !%Variable MultiResolutionArea
@@ -468,13 +468,13 @@ contains
           sb%lsize(1:sb%dim) = sb%lsize(1)
         else
           message(1) = "Lsize was not found in input file. Continuing anyway."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
       else
         ! if not a compatible box-shape
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           message(1) = "Ignoring lattice vectors from XSF file."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
       end if
 
@@ -835,7 +835,7 @@ contains
           ! FIXME: This could fail for partial periodicity systems
           ! because simul_box_in_box is too strict with atoms close to
           ! the upper boundary to the cell.
-          if(warn_if_not) call messages_warning(1)
+          if(warn_if_not) call messages_warning(1, namespace=namespace)
           if(die_if_not_) call messages_fatal(1, namespace=namespace)
         end if
       end if
@@ -924,7 +924,7 @@ contains
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
       message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
       volume = M_ONE
       do ii = 1, dim
         kv(ii, ii) = M_ONE/rv(ii,ii)
@@ -1302,7 +1302,7 @@ contains
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     else
       !Only root writes
       if (mpi_grp_is_root(mpi_grp)) then
@@ -1373,7 +1373,7 @@ contains
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     else
       ! Find the dump tag.
       call iopar_find_line(mpi_grp, iunit, dump_tag, err)
@@ -1560,7 +1560,7 @@ contains
       write(message(2), '(a)') "Please review your input files and the output geometry (in 'static/')."
       write(message(3), '(a, f12.6, 1x, a)') "Minimum distance = ", &
         units_from_atomic(units_out%length, mindist), trim(units_abbrev(units_out%length))
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
 
       ! then write out the geometry, whether asked for or not in Output variable
       call io_mkdir(STATIC_DIR, namespace)

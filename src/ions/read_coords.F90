@@ -322,7 +322,7 @@ contains
       read(iunit, '(a256)') str
       if(str(1:7) /= 'PRIMVEC') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       if(nsteps > 0) then
         read(str(8:), *) istep
@@ -350,7 +350,7 @@ contains
       read(iunit, '(a256)') str
       if(str(1:9) /= 'PRIMCOORD') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       if(nsteps > 0) then
         read(str(10:), *) istep
@@ -367,7 +367,7 @@ contains
       end if
       if(int_one /= 1) then
         write(message(1),'(a,i6,a)') 'Number in file was ', int_one, ' instead of 1.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 

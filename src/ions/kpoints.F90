@@ -318,7 +318,7 @@ contains
 
       if(this%use_symmetries) then
         write(message(1), '(a)') "User-defined k-points are not compatible with KPointsUseSymmetries=yes."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       call read_user_kpoints()
@@ -330,7 +330,7 @@ contains
        
       if(this%use_symmetries) then
         write(message(1), '(a)') "KPointsPath is not compatible with KPointsUseSymmetries=yes."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       call read_path() 
     end if
@@ -339,7 +339,7 @@ contains
     if(this%method == 0) then
       write(message(1), '(a)') "Unable to determine the method for defining k-points."
       write(message(2), '(a)') "Octopus will continue assuming a Monkhorst Pack grid."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       this%method = KPOINTS_MONKH_PACK
       call read_MP(gamma_only = .false.)
     end if
@@ -775,7 +775,7 @@ contains
       if(any(user_kpoints_grid%weight(:) < M_EPSILON)) then
         call messages_experimental('K-points with zero weight')
         message(1) = "Found k-points with zero weight. They are excluded from density calculation"
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ! count k-points with zero weight and  make sure the points are given in
         ! a block after all regular k-points. This is for convenience, so they can be skipped
         ! easily and not a big restraint for the user who has to provide the k-points

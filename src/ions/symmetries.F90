@@ -226,7 +226,7 @@ contains
       
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
 
         do iatom = 1, geo%natoms
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &

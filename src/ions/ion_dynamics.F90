@@ -187,7 +187,7 @@ contains
         call tdf_read(this%td_displacements(iatom)%fx, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
         
@@ -195,14 +195,14 @@ contains
         call tdf_read(this%td_displacements(iatom)%fy, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
         call parse_block_string(blk, i-1, 3, expression)
         call tdf_read(this%td_displacements(iatom)%fz, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
       end do
