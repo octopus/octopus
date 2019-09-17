@@ -196,11 +196,10 @@
             st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
-      end do
-        message(1) = 'No current density output for real states since it is identically zero.'
-        call messages_warning(1)
+        end do
       else
-
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1, namespace=hm%namespace)
       endif
     end if
    
@@ -225,7 +224,7 @@
         SAFE_DEALLOCATE_A(current_kpt)
       else
         message(1) = 'No current density output for real states since it is identically zero.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=hm%namespace)
       endif
     end if
 

@@ -346,7 +346,7 @@ contains
       call messages_write('This is not a good idea as it might slow down convergence, even for', new_line = .true.)
       call messages_write('independent particles, as subspace diagonalization will not be used', new_line = .true.)
       call messages_write('often enough.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then

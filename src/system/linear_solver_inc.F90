@@ -222,7 +222,7 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
 
   if(.not. conv) then 
     write(message(1), '(a)') "CG solver not converged!"
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
   end if
 
   SAFE_DEALLOCATE_A(r)
@@ -271,7 +271,7 @@ subroutine X(linear_solver_idrs) (ls, gr, st, x, y, tol, residue, iter_used)
   if(residue > tol .or. info .ne. 0) then
     write(message(1), '(a)')     "IDRS solver failed."
     write(message(2), '(a,i3)')  "Flag =,", info
-    call messages_warning(2)
+    call messages_warning(2, namespace=st%namespace)
   end if
 
   SAFE_DEALLOCATE_A(x0)
@@ -409,7 +409,7 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
 
   if(.not. conv) then 
     write(message(1), '(a)') "BiCGSTAB solver not converged!"
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
   end if
 
   SAFE_DEALLOCATE_A(r)
@@ -483,7 +483,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
 
   if(residue > tol) then 
     write(message(1), '(a)') "Multigrid solver not converged!"
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
   end if
 
   POP_SUB(X(linear_solver_multigrid))
@@ -999,19 +999,19 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
     case(QMR_NOT_CONVERGED)
       write(message(1), '(a)') "QMR solver not converged!"
       write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-      call messages_warning(2)
+      call messages_warning(2, namespace=hm%namespace)
     case(QMR_BREAKDOWN_PB)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
-      call messages_warning(1)
+      call messages_warning(1, namespace=hm%namespace)
     case(QMR_BREAKDOWN_VZ)
       write(message(1), '(a)') "QMR breakdown, cannot continue: v^T*z is zero!"
-      call messages_warning(1)
+      call messages_warning(1, namespace=hm%namespace)
     case(QMR_BREAKDOWN_QP)
       write(message(1), '(a)') "QMR breakdown, cannot continue: q^T*p is zero!"
-      call messages_warning(1)
+      call messages_warning(1, namespace=hm%namespace)
     case(QMR_BREAKDOWN_GAMMA)
       write(message(1), '(a)') "QMR breakdown, cannot continue: gamma is zero!"
-      call messages_warning(1)
+      call messages_warning(1, namespace=hm%namespace)
     end select
 
   end do

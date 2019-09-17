@@ -274,7 +274,7 @@ contains
       (c_id /= pseudo_c_functional .and. pseudo_c_functional /= PSEUDO_EXCHANGE_ANY)) then
       call messages_write('The XCFunctional that you selected does not match the one used', new_line = .true.)
       call messages_write('to generate the pseudopotentials.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
 
     ! FIXME: we rarely need this. We should only parse when necessary.
@@ -516,7 +516,7 @@ contains
           call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
           call messages_new_line()
           call messages_write('to be periodic in three dimensions.')
-          call messages_warning()
+          call messages_warning(namespace=namespace)
         end if
           
         call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
@@ -552,7 +552,7 @@ contains
 
         if(xf == PSEUDO_EXCHANGE_UNKNOWN .or. cf == PSEUDO_CORRELATION_UNKNOWN) then
           call messages_write("Unknown XC functional for species '"//trim(species_label(geo%species(ispecies)))//"'")
-          call messages_warning()
+          call messages_warning(namespace=namespace)
           cycle
         end if
 
@@ -561,7 +561,7 @@ contains
         else
           if(xf /= x_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
-            call messages_warning()
+            call messages_warning(namespace=namespace)
             warned_inconsistent = .true.
           end if
         end if
@@ -571,7 +571,7 @@ contains
         else
           if(cf /= c_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
-            call messages_warning()
+            call messages_warning(namespace=namespace)
             warned_inconsistent = .true.
           end if
         end if

@@ -93,7 +93,7 @@ contains
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
       write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
       write(message(2), '(a)') "Stress might not be correct."
-      call messages_warning(2)
+      call messages_warning(2, namespace=hm%namespace)
     end if
   
     stress(:,:) = M_ZERO

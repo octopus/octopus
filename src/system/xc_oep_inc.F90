@@ -250,7 +250,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   if(ff > oep%scftol%conv_abs_dens) then
     write(message(1), '(a)') "OEP did not converge."
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
 
     ! otherwise the number below will be one too high
     iter = iter - 1

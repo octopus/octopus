@@ -303,7 +303,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
   end if
 
   ! Get initial Ritz-values and -vectors.
@@ -325,7 +325,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: Rayleigh-Ritz procedure for initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=hm%namespace)
   end if
   call X(block_matr_mul)(psi, ritz_vec, tmp, xpsi = all_ev, xres = all_ev)
   call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
@@ -385,7 +385,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       message(1) = 'Big problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
       write(message(3), '(a,i6)') 'in iteration #', iter
-      call messages_warning(3)
+      call messages_warning(3, namespace=hm%namespace)
       exit iteration
     end if
 
@@ -424,7 +424,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       if(no_bof) then
         message(1) = 'Problem: orthonormalization of conjugate directions failed'
         write(message(2), '(a,i6)') 'in iteration #', iter
-        call messages_warning(2)
+        call messages_warning(2, namespace=hm%namespace)
         ! Set directions to zero.
         ! FIXME: they should not be included in the subspace at all in this case.
         ! (the code has to be cleaned up anyway, so this can be done then).
@@ -517,7 +517,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     if(no_bof) then
       message(1) = 'Problem: Rayleigh-Ritz procedure failed'
       write(message(2), '(a,i6)') 'in iteration #', iter
-      call messages_warning(2)
+      call messages_warning(2, namespace=hm%namespace)
       exit iteration
     end if
 

@@ -237,7 +237,7 @@ contains
 
     if(any(target_rho(:,:) < -M_EPSILON)) then
       write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
     
     do jj = 1, nspin

@@ -308,7 +308,7 @@ contains
        if(sb%dim /= 2 .and. sb%dim /= 3) then
          outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call messages_warning(1)
+         call messages_warning(1, namespace=namespace)
        end if
     end if
 
@@ -1438,7 +1438,7 @@ contains
       if(any(gr%sb%kpoints%nik_axis(1:3) == 0)) then
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"
         message(2) = "or this WFN will only be usable in BerkeleyGW's inteqp."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       POP_SUB(output_berkeleygw.bgw_setup_header)

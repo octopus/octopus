@@ -511,7 +511,7 @@ contains
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
           write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
-          call messages_warning(1)
+          call messages_warning(1, namespace=hm%namespace)
         end if
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
@@ -565,7 +565,7 @@ contains
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
             write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
-            call messages_warning(1)
+            call messages_warning(1, namespace=hm%namespace)
           end if
 
           do idim = 1, hm%d%dim
@@ -888,7 +888,7 @@ contains
 
     if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
       write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
-      call messages_warning(1)
+      call messages_warning(1, namespace=hm%namespace)
     end if
 
     if (present(inh_psib)) then
