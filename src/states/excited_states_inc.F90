@@ -147,11 +147,11 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(s
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
 
       SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
@@ -211,11 +211,11 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(s
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
 
       if(i1 > 0) then
@@ -311,11 +311,11 @@ R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp_g'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
 
       SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
@@ -350,11 +350,11 @@ R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
       call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
       if(i1 /= i2) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st1%namespace)
       end if
 
       if(i1 > 0) then

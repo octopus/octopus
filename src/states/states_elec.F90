@@ -164,6 +164,8 @@ module states_elec_oct_m
     logical                     :: symmetrize_density
 
     integer                     :: randomization      !< Method used to generate random states
+
+    type(namespace_t), pointer  :: namespace
     
     contains 
       procedure :: nullify => states_elec_null
@@ -226,6 +228,8 @@ contains
     nullify(st%node)
     nullify(st%ap%schedule)
 
+    nullify(st%namespace)
+
     st%packed = .false.
 
     POP_SUB(states_elec_null)
@@ -235,7 +239,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_elec_init(st, namespace, gr, geo)
     type(states_elec_t), target, intent(inout) :: st
-    type(namespace_t),           intent(in)    :: namespace
+    type(namespace_t), target,   intent(in)    :: namespace
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
 
@@ -249,6 +253,7 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_elec_null(st)
 
+    st%namespace => namespace
 
     !%Variable SpinComponents
     !%Type integer
@@ -280,7 +285,7 @@ contains
     if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
       message(2) = "Use KPointsUseTimeReversal = no."
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
       
 
@@ -328,7 +333,7 @@ contains
     call parse_variable(namespace, 'TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable ExtraStates
@@ -351,12 +356,12 @@ contains
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(ntot > 0 .and. nempty > 0) then
       message(1) = 'You cannot set TotalStates and ExtraStates at the same time.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable ExtraStatesToConverge
@@ -375,12 +380,12 @@ contains
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
       message(2) = '(0 <= ExtraStatesToConverge)'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(nempty_conv > nempty) then
       message(1) = 'You cannot set ExtraStatesToConverge to an higer value than ExtraStates.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! For non-periodic systems this should just return the Gamma point
@@ -393,7 +398,7 @@ contains
     if(st%qtot < -M_EPSILON) then
       write(message(1),'(a,f12.6,a)') 'Total charge = ', st%qtot, ' < 0'
       message(2) = 'Check Species and ExcessCharge.'
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     endif
 
     select case(st%d%ispin)
@@ -420,7 +425,7 @@ contains
     if(ntot > 0) then
       if(ntot < st%nst) then
         message(1) = 'TotalStates is smaller than the number of states required by the system.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       st%nst = ntot
@@ -430,7 +435,7 @@ contains
     st%nst = st%nst + nempty
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable StatesBlockSize
@@ -466,7 +471,7 @@ contains
     call parse_variable(namespace, 'StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     st%d%block_size = min(st%d%block_size, st%nst)
@@ -785,7 +790,7 @@ contains
         message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
         write(message(2),'(a,i6,a)') "number ", start_pos, " but there are too many columns for the number of states."
         write(message(3),'(a,i6,a)') "Solution: set ExtraStates = ", start_pos + ncols - st%nst
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=namespace)
       end if
 
       do ik = 1, st%d%nik
@@ -875,7 +880,7 @@ contains
     if(abs(charge - st%qtot) > CNST(1e-6)) then
       message(1) = "Initial occupations do not integrate to total charge."
       write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     end if
 
     st%uniform_occ = smear_is_semiconducting(st%smear) .and. .not. unoccupied_states
@@ -883,7 +888,7 @@ contains
     if(.not. st%calc_eigenval .and. .not. st%uniform_occ) then
       call messages_write('Calculation of the eigenvalues is required with unoccupied states', new_line = .true.)
       call messages_write('or smearing.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
     POP_SUB(states_elec_read_initial_occs)
@@ -1442,6 +1447,8 @@ contains
 
     stout%randomization = stin%randomization
 
+    stout%namespace => stin%namespace
+
     POP_SUB(states_elec_copy)
   end subroutine states_elec_copy
 
@@ -1667,7 +1674,7 @@ contains
       call messages_warning(2)
       if(charge < M_EPSILON) then
         message(1) = "There don't seem to be any electrons at all!"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st%namespace)
       end if
     end if
 
@@ -1782,7 +1789,7 @@ contains
       if(st%nst < st%mpi_grp%size) then
         message(1) = "Have more processors than necessary"
         write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
@@ -2525,7 +2532,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=st%namespace)
          end if
       end do
     case(SPIN_POLARIZED, SPINORS)
@@ -2538,7 +2545,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=st%namespace)
          end if
       end do
     end select

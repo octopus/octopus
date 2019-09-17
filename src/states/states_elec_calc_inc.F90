@@ -54,7 +54,7 @@ subroutine X(states_elec_orthogonalization_full)(st, mesh, ik)
   case default
     write(message(1),'(a,i6)') "Internal error from states_elec_orthogonalization_full: orth_method has illegal value ", &
       st%d%orth_method
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=st%namespace)
   end select
 
   call profiling_out(prof)
@@ -114,11 +114,11 @@ contains
 ! some checks
 #ifndef HAVE_MPI
     message(1) = 'The cholesky_parallel orthogonalizer can only be used in parallel.'
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=st%namespace)
 #else
 #ifndef HAVE_SCALAPACK
     message(1) = 'The cholesky_parallel orthogonalizer requires ScaLAPACK.'
-    call messages_fatal(1, only_root_writes = .true.)
+    call messages_fatal(1, only_root_writes = .true., namespace=st%namespace)
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
       message(1) = 'The cholesky_parallel orthogonalizer is designed to be used with domain or state parallelization.'
@@ -147,7 +147,7 @@ contains
     if(info /= 0) then
       write(message(1),'(3a,i6)') "descinit for psi failed in ", TOSTRING(X(states_elec_orthogonalization_full)), &
         ".cholesky_parallel with error ", info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
 
     nbl = min(32, st%nst)
@@ -161,7 +161,7 @@ contains
     if(info /= 0) then
       write(message(1),'(3a,i6)') "descinit for ss failed in ", TOSTRING(X(states_elec_orthogonalization_full)), &
         ".cholesky_parallel with error ", info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
 
     ss = M_ZERO
@@ -181,7 +181,7 @@ contains
     if(info /= 0) then
       write(message(1),'(3a,i6)') "cholesky_parallel orthogonalization with ", TOSTRING(pX(potrf)), &
         " failed with error ", info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
 
     call profiling_in(prof_trsm, "SCALAPACK_TRSM")
@@ -211,7 +211,7 @@ contains
 
     if(st%parallel_in_states) then
       message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=st%namespace)
     end if
 
     SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
@@ -1055,7 +1055,7 @@ subroutine X(states_elec_matrix)(mesh, st1, st2, aa)
       end do
 #else
       write(message(1), '(a)') 'Internal error at Xstates_elec_matrix'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st1%namespace)
 #endif
 
     else
@@ -1494,7 +1494,7 @@ subroutine X(states_elec_calc_projections)(mesh, st, gs_st, ik, proj, gs_nst)
 
   if(st%are_packed() .and. accel_is_enabled()) then
    message(1) = "states_elec_calc_projections is not implemented with packed states or accel."
-   call messages_fatal(1) 
+   call messages_fatal(1, namespace=st%namespace)
   else
 
 #ifdef R_TREAL  

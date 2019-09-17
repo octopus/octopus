@@ -61,6 +61,8 @@ module smear_oct_m
     integer         :: fermi_count  !< The number of occupied states at the fermi level
     integer         :: nik_factor   !< denominator, for treating k-weights as integers
     integer         :: nspins       !< = 2 if spin_polarized, else 1.
+
+    type(namespace_t), pointer :: namespace
   end type smear_t
 
   integer, parameter, public ::       &
@@ -75,16 +77,18 @@ contains
 
   !--------------------------------------------------
   subroutine smear_init(this, namespace, ispin, fixed_occ, integral_occs, kpoints)
-    type(smear_t),     intent(out) :: this
-    type(namespace_t), intent(in)    :: namespace
-    integer,           intent(in)  :: ispin
-    logical,           intent(in)  :: fixed_occ
-    logical,           intent(in)  :: integral_occs
-    type(kpoints_t),   intent(in)  :: kpoints
+    type(smear_t),             intent(out) :: this
+    type(namespace_t), target, intent(in)  :: namespace
+    integer,                   intent(in)  :: ispin
+    logical,                   intent(in)  :: fixed_occ
+    logical,                   intent(in)  :: integral_occs
+    type(kpoints_t),           intent(in)  :: kpoints
 
     PUSH_SUB(smear_init)
 
     this%integral_occs = integral_occs
+
+    this%namespace => namespace
 
     !%Variable SmearingFunction
     !%Type integer
@@ -148,7 +152,7 @@ contains
 
       if(this%nik_factor == 0) then
         message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers for semiconducting smearing."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -183,6 +187,7 @@ contains
     to%MP_n         = from%MP_n
     to%fermi_count  = from%fermi_count
     to%nik_factor   = from%nik_factor
+    to%namespace    => from%namespace
 
     POP_SUB(smear_copy)
   end subroutine smear_copy
@@ -211,7 +216,7 @@ contains
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,i10)')'(total charge = ', qtot, &
         ' max charge = ', maxq
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=this%namespace)
     end if
 
     conv = .true.
@@ -304,7 +309,7 @@ contains
 
       if(.not.conv) then
         message(1) = 'Fermi: did not converge.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=this%namespace)
       end if
 
     end if
@@ -424,7 +429,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_delta_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=this%namespace)
 
     case(SMEAR_SEMICONDUCTOR)
       if(abs(xx) <= M_EPSILON) &
@@ -483,7 +488,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_step_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=this%namespace)
 
     case(SMEAR_SEMICONDUCTOR)
       if(xx > M_ZERO) then
@@ -556,7 +561,7 @@ contains
     select case(this%method)
     case(SMEAR_FIXED_OCC)
       message(1) = "smear_entropy_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=this%namespace)
 
     case(SMEAR_SEMICONDUCTOR)
 

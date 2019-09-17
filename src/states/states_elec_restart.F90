@@ -78,12 +78,12 @@ contains
     call states_elec_look(restart, kpoints, dim, nst, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read states information."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(st%parallel_in_states) then
       message(1) = "Internal error: cannot use states_elec_look_and_load when parallel in states."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! Resize st%occ, retaining information there
@@ -129,7 +129,7 @@ contains
     call states_elec_load(restart, namespace, st, gr, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(states_elec_look_and_load)
@@ -1170,7 +1170,7 @@ contains
         if(ncols  <  5 .or. ncols > 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         call parse_block_integer(blk, ib - 1, 0, idim)
@@ -1232,13 +1232,13 @@ contains
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
-                  call messages_fatal(2)
+                  call messages_fatal(2, namespace=namespace)
                 end if
 
               case default
                 message(1) = 'Wrong entry in UserDefinedStates, column 4.'
                 message(2) = 'You may state "formula" or "file" here.'
-                call messages_fatal(2)
+                call messages_fatal(2, namespace=namespace)
               end select
 
               call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
@@ -1258,7 +1258,7 @@ contains
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'
                 message(2) = '"normalize_yes" or "normalize_no"'
-                call messages_fatal(2)
+                call messages_fatal(2, namespace=namespace)
               end select
 
             end do
@@ -1274,7 +1274,7 @@ contains
 
     else
       message(1) = "'UserDefinedStates' has to be specified as block."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(states_elec_read_user_def_orbitals)
