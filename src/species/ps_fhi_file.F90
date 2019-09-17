@@ -21,6 +21,7 @@
 module ps_fhi_file_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
 
   implicit none
 
@@ -55,9 +56,10 @@ module ps_fhi_file_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_fhi_file_read(unit, psf)
+  subroutine ps_fhi_file_read(unit, psf, namespace)
     integer,             intent(in)    :: unit
     type(ps_fhi_file_t), intent(inout) :: psf
+    type(namespace_t),   intent(in)    :: namespace
 
     character(len=3) :: line
 
@@ -70,7 +72,7 @@ contains
     if(psf%pspcod /= 6) then
       message(1) = "Inconsistency in pseudopotential file:"
       write(message(2),'(a,i2)') "  expecting pspcod = 6, but found ", psf%pspcod
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
     
     read(unit, '(a3)') line

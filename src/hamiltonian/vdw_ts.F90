@@ -126,7 +126,7 @@ contains
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
         this%c6free(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
-      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)))
+      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)), namespace)
     end do
 
     do ispecies = 1, geo%nspecies

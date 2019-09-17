@@ -81,7 +81,7 @@ contains
 
     if(.not. found) then
       message(1) = "Pseudopotential file '" // trim(fullpath) // " not found"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     
     if(ascii) then
@@ -93,7 +93,7 @@ contains
     call io_close(iunit)
 
     ! Fills the valence configuration data.
-    call build_valconf(pstm%psf_file, ispin, pstm%conf)
+    call build_valconf(pstm%psf_file, ispin, pstm%conf, namespace)
 
     ! Hack
     if(mod(pstm%psf_file%nr, 2) == 0) pstm%psf_file%nr = pstm%psf_file%nr - 1
@@ -119,10 +119,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine build_valconf(psf_file, ispin, conf)
+  subroutine build_valconf(psf_file, ispin, conf, namespace)
     type(ps_psf_file_t), intent(in)  :: psf_file
     integer,             intent(in)  :: ispin
     type(valconf_t),     intent(out) :: conf
+    type(namespace_t),   intent(in)  :: namespace
 
     character(len=1)   :: char1(6), char2
     character(len=256) :: r_fmt
@@ -159,7 +160,7 @@ contains
       case('f'); conf%l(l) = 3
       case default
         message(1) = 'Error reading pseudopotential file.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
     end do
 
@@ -206,15 +207,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_process(ps_psf, lmax, lloc)
-    type(ps_psf_t), intent(inout) :: ps_psf
-    integer,        intent(in)    :: lmax, lloc
+  subroutine ps_psf_process(ps_psf, namespace, lmax, lloc)
+    type(ps_psf_t),    intent(inout) :: ps_psf
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)    :: lmax, lloc
 
     PUSH_SUB(psf_process)
 
     ! get the pseudoatomic eigenfunctions
     SAFE_ALLOCATE(ps_psf%eigen(1:ps_psf%psf_file%npotd, 1:3))
-    call solve_schroedinger(ps_psf%psf_file, ps_psf%ps_grid%g, &
+    call solve_schroedinger(ps_psf%psf_file, namespace, ps_psf%ps_grid%g, &
       ps_psf%conf, ps_psf%ispin, ps_psf%ps_grid%rphi, ps_psf%eigen)
 
     ! check norm of rphi
@@ -259,8 +261,9 @@ contains
   end subroutine ps_psf_get_eigen
     
   ! ---------------------------------------------------------
-  subroutine solve_schroedinger(psf_file, g, conf, ispin, rphi, eigen)
+  subroutine solve_schroedinger(psf_file, namespace, g, conf, ispin, rphi, eigen)
     type(ps_psf_file_t), intent(inout) :: psf_file
+    type(namespace_t),   intent(in)    :: namespace
     type(logrid_t),      intent(in)    :: g
     type(valconf_t),     intent(in)    :: conf
     integer,             intent(in)    :: ispin
@@ -340,7 +343,7 @@ contains
         write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
         write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
         write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=namespace)
       end if
       eigen(l, 1) = e
 
@@ -384,7 +387,7 @@ contains
               write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
               write(message(2),'(a)') 'do its job. The program will terminate, since the wavefunctions'
               write(message(3),'(a)') 'are needed. Change the pseudopotential or improve the code.'
-              call messages_fatal(3)
+              call messages_fatal(3, namespace=namespace)
             end if
             eigen(l, 1 + is) = e
 

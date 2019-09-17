@@ -51,7 +51,7 @@
 
         if (idir == size(psp_dir)) then
           message(1) = "Pseudopotential file '" // trim(filename) // " not found"
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end do
     end if
@@ -108,7 +108,7 @@
 
 #else
     message(1) = 'PSPIO selected for pseudopotential parsing, but the code was compiled witout PSPIO support.'
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
     POP_SUB(ps_pspio_init)
@@ -149,7 +149,7 @@
     if(any(abs(r_tmp(2:ps%g%nrval)) < M_EPSILON)) then
       ! only the first point is allowed to be zero
       message(1) = "Illegal zero values in PSPIO radial grid"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     if (abs(r_tmp(1)) <= M_EPSILON) then
       ip = 1
@@ -363,7 +363,7 @@
     PUSH_SUB(ps_pspio_read_potentials)
 
     message(1) = "Not yet implemented"
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
     POP_SUB(ps_pspio_read_potentials)
   end subroutine ps_pspio_read_potentials
@@ -417,7 +417,7 @@
     if (ierr /= PSPIO_SUCCESS) then
       call fpspio_error_flush()
       message(1) = "PSPIO error"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
   end subroutine check_error

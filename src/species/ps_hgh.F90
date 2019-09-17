@@ -96,7 +96,7 @@ contains
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     call io_close(iunit)
 

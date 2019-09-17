@@ -70,11 +70,11 @@ contains
 
     if(.not.found) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
-    call ps_fhi_file_read(iunit, ps_fhi%fhi_file)
+    call ps_fhi_file_read(iunit, ps_fhi%fhi_file, namespace)
     call ps_cpi_file_read(iunit, ps_fhi%cpi_file)
     call io_close(iunit)
 

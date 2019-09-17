@@ -197,14 +197,14 @@ contains
 
     if(ps%file_format == PSEUDO_FORMAT_FILE_NOT_FOUND) then
       call messages_write("Cannot open pseudopotential file '"//trim(filename)//"'.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
                           new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     ps%label   = label
@@ -237,7 +237,7 @@ contains
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
                        " is larger than number available in pseudopotential."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -251,7 +251,7 @@ contains
         ps%llocal = user_llocal
       end if
       
-      call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
+      call ps_psf_process(ps_psf, namespace, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
@@ -284,7 +284,7 @@ contains
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
                        " is larger than number available in pseudopotential."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -327,7 +327,7 @@ contains
         xml_warned = .true.
       end if
       
-      call ps_xml_init(ps_xml, trim(filename), ps%file_format, ierr)
+      call ps_xml_init(ps_xml, namespace, trim(filename), ps%file_format, ierr)
 
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
@@ -1437,8 +1437,9 @@ contains
   end function ps_has_nlcc
   
   !---------------------------------------
-  FLOAT function ps_density_volume(ps) result(volume)
-    type(ps_t), intent(in) :: ps
+  FLOAT function ps_density_volume(ps, namespace) result(volume)
+    type(ps_t),        intent(in) :: ps
+    type(namespace_t), intent(in) :: namespace
 
     integer :: ip, ispin
     FLOAT :: rr
@@ -1449,7 +1450,7 @@ contains
     
     if (.not. ps_has_density(ps)) then
        message(1) = "The pseudopotential does not contain an atomic density"
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
