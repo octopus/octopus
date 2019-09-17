@@ -16,14 +16,14 @@ Enabled    : Yes
 Input: 04-box.01-ground_state.inp
 if (available nlopt); then
 # skip
-elseif
+else
     match ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 endif
 
 Input: 04-box.02-unocc.inp
 if (available nlopt); then
 # skip 
-elseif
+else
     match ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 endif
 
@@ -33,7 +33,7 @@ endif
 Input: 13-box-nlopt.03-bobyqa.inp
 if (available nlopt); then
     match ; J last iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.60582990
-elseif
+else
     match ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 endif
 
@@ -41,6 +41,6 @@ endif
 Input: 13-box-nlopt.04-lbfgs.inp
 if (available nlopt); then
     match ; J last iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.67344994
-elseif
+else
     match ; Error ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 endif
