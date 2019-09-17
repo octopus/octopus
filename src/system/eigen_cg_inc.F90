@@ -124,7 +124,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
     fxc = M_ZERO
-    call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
+    call xc_get_fxc(xc, gr%mesh, st%namespace, st%rho, st%d%ispin, fxc)
   end if
 
   ! Set the diff to zero, since it is intent(out)

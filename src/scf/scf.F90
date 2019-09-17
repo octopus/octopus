@@ -1153,7 +1153,7 @@ contains
           write(iunit,'(1x)')
         end if
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
 
         ! scf information
         if(finish) then

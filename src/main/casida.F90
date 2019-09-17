@@ -695,13 +695,13 @@ contains
         rho_spin(:, 1) = M_HALF * cas%rho(:, 1)
         rho_spin(:, 2) = M_HALF * cas%rho(:, 1)
 
-        call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc_spin)
+        call xc_get_fxc(sys%ks%xc, mesh, sys%namespace, rho_spin, SPIN_POLARIZED, fxc_spin)
         cas%fxc(:, 1, 1) = M_HALF * (fxc_spin(:, 1, 1) - fxc_spin(:, 1, 2))
 
         SAFE_DEALLOCATE_A(rho_spin)
         SAFE_DEALLOCATE_A(fxc_spin)
       else
-        call xc_get_fxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, cas%fxc)
+        call xc_get_fxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, cas%fxc)
       end if
 
       if (sys%ks%sic_type == SIC_ADSIC) then
@@ -820,7 +820,7 @@ contains
       fxc_sic = M_ZERO
       rho = cas%rho/st%qtot
 
-      call xc_get_fxc(ks%xc, mesh, rho, 1, fxc_sic)
+      call xc_get_fxc(ks%xc, mesh, st%namespace, rho, 1, fxc_sic)
 
       cas%fxc = cas%fxc - fxc_sic/st%qtot
 

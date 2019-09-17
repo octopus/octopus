@@ -379,10 +379,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_atom_density_derivative(mesh, sb, atom, spin_channels, drho)
+  subroutine species_atom_density_derivative(mesh, sb, atom, namespace, spin_channels, drho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
@@ -416,7 +417,7 @@ contains
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-          call species_atom_density_derivative_np(mesh, atom, pos, spin_channels,  drho)
+          call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
   
         call periodic_copy_end(pp)
@@ -430,9 +431,10 @@ contains
     POP_SUB(species_atom_density_derivative)
   end subroutine species_atom_density_derivative
 
-  subroutine species_atom_density_derivative_np(mesh, atom, pos, spin_channels,  drho)
+  subroutine species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
     type(mesh_t),         intent(in)    :: mesh
     type(atom_t),         intent(in)    :: atom
+    type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:)
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
@@ -463,7 +465,7 @@ contains
       call messages_write('The pseudopotential for')
       call messages_write(species_label(atom%species))
       call messages_write(' does not contain the density.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     POP_SUB(species_atom_density_derivative_np)
@@ -472,10 +474,11 @@ contains
 
   ! ---------------------------------------------------------
   ! Gradient of the atomic density, if available
-  subroutine species_atom_density_grad(mesh, sb, atom, spin_channels, drho)
+  subroutine species_atom_density_grad(mesh, sb, atom, namespace, spin_channels, drho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
@@ -531,7 +534,7 @@ contains
         call messages_write('The pseudopotential for')
         call messages_write(species_label(species))
         call messages_write(' does not contain the density.')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
       
     case default
@@ -690,7 +693,7 @@ contains
 
       if(.not.conv) then
         write(message(1),'(a)') 'Internal error in species_get_density.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ! we want a charge of -Z
@@ -953,7 +956,7 @@ contains
         if(err /= 0) then
           write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
           write(message(2), '(a,i4)') 'Error code returned = ', err
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
       case(SPECIES_JELLIUM)

@@ -247,7 +247,7 @@ contains
       call messages_print_stress(stdout, trim('PCM'))
       if ( (grid%sb%box_shape /= MINIMUM) .or. (grid%sb%dim /= PCM_DIM_SPACE) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     else
       POP_SUB(pcm_init)
@@ -434,7 +434,7 @@ contains
     if (abs(pcm%epsilon_0 - M_ONE) <= M_EPSILON ) then
       if (pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_DRUDE_MODEL) then
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     else
       !%Variable PCMDrudeLOmega
@@ -459,7 +459,7 @@ contains
         pcm%drl%w0 = sqrt(M_ONE/(pcm%epsilon_0 - M_ONE))
       else
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -492,7 +492,7 @@ contains
 
     if (pcm%localf .and. ((.not.external_potentials_present) .and. (.not.pcm%kick_is_present))) then
       message(1) = "Sorry, you have set PCMLocalField = yes, but you have not included any external potentials."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable PCMSolute
@@ -512,7 +512,7 @@ contains
       call messages_warning()
       if (.not. pcm%localf) then
         message(1) = "You have activated a PCM run without polarization effects. Octopus will halt."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -532,17 +532,17 @@ contains
 
     if (pcm%kick_like .and. (.not. pcm%run_pcm)) then
       message(1) = "PCMKick option can only be activated when PCMCalculation = yes. Octopus will halt."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if (pcm%kick_like .and. (.not. pcm%localf)) then
       message(1) = "PCMKick option can only be activated when a PCMLocalField = yes. Octopus will halt."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     endif
 
     if (pcm%kick_like .and. (.not. pcm%kick_is_present)) then
       message(1) = "Sorry, you have set PCMKick = yes, but you have not included any kick."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     endif
 
     if (pcm%kick_is_present .and. pcm%run_pcm .and. (.not. pcm%localf)) then
@@ -676,7 +676,7 @@ contains
         pcm%spheres(pcm%n_spheres)%y = geo%atom(ia)%x(2)
         pcm%spheres(pcm%n_spheres)%z = geo%atom(ia)%x(3)
 
-        vdw_radius = pcm_get_vdw_radius(geo%atom(ia)%species, pcm_vdw_type)
+        vdw_radius = pcm_get_vdw_radius(geo%atom(ia)%species, pcm_vdw_type, namespace)
         pcm%spheres(pcm%n_spheres)%r = vdw_radius*pcm%scale_r     
       end do
 
@@ -1452,7 +1452,7 @@ contains
     if (pcm%localf .and. ( (.not.present(E_int_e_ext)) .or. &
                            (.not.present(E_int_n_ext))      ) ) then
       message(1) = "pcm_elect_energy: There are lacking terms in subroutine call."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=pcm%namespace)
     else if (pcm%localf .and. ( present(E_int_e_ext) .and. &
                                 present(E_int_n_ext)       ) ) then
       E_int_e_ext = M_ZERO
@@ -1882,7 +1882,7 @@ contains
 
     case default
       message(1) = "BAD BAD BAD"
-      call messages_fatal(1,only_root_writes = .true.)
+      call messages_fatal(1,only_root_writes = .true., namespace=pcm%namespace)
 
     end select
     
@@ -2848,7 +2848,7 @@ contains
     do while(.not.(band_iter))
       if (m_iter > 1000) then
         message(1) = "Too many iterations inside subrotuine inter"
-        call messages_fatal(1)     
+        call messages_fatal(1)
       end if
 
       band_iter = .true.
@@ -3160,9 +3160,10 @@ contains
 
   ! -----------------------------------------------------------------------------
   !> get the vdw radius
-  FLOAT function pcm_get_vdw_radius(species, pcm_vdw_type)  result(vdw_r)
-    type(species_t), intent(in) :: species
-    integer,         intent(in) :: pcm_vdw_type
+  FLOAT function pcm_get_vdw_radius(species, pcm_vdw_type, namespace)  result(vdw_r)
+    type(species_t),   intent(in) :: species
+    integer,           intent(in) :: pcm_vdw_type
+    type(namespace_t), intent(in) :: namespace
   
     integer            :: ia
     integer, parameter :: UPTO_XE = 54
@@ -3200,7 +3201,7 @@ contains
       if (species_z(species) > UPTO_XE) then
         write(message(1),'(a,a)') "The van der Waals radius is missing for element ", trim(species_label(species))
         write(message(2),'(a)') "Use PCMVdWRadii = pcm_vdw_species, for other vdw radii values" 
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
       ia = species_z(species)
       vdw_r = vdw_radii(ia)*P_Ang
@@ -3211,7 +3212,7 @@ contains
         call messages_write('The default vdW radius for species '//trim(species_label(species))//':')
         call messages_write(' is not defined. ')
         call messages_write(' Add a positive vdW radius value in %Species block. ')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
     end select
 

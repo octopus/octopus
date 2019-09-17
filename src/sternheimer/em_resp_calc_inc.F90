@@ -541,7 +541,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
     SAFE_ALLOCATE(rho(1:np, 1:st%d%nspin))
     call states_elec_total_density(st, mesh, rho)
     
-    call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
+    call xc_get_kxc(sys%ks%xc, mesh, sys%namespace, rho, st%d%ispin, kxc)
     SAFE_DEALLOCATE_A(rho)
     SAFE_ALLOCATE(hpol_density(1:np))
   end if

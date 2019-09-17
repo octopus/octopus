@@ -333,7 +333,7 @@ contains
        call parse_variable(namespace, 'ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
        if(abs(this%intersite_radius) < M_EPSILON) then
          call messages_write("ACBN0IntersiteCutoff must be greater than 0")
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
      end if
 
@@ -410,7 +410,7 @@ contains
        this%maxnorbs = parse_block_n(blk) 
        if(this%maxnorbs <1) then
          write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
        SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
        do is = 1, this%maxnorbs
@@ -419,7 +419,7 @@ contains
        call parse_block_end(blk)
      else
        write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
      end if
 
      if (states_are_real(st)) then

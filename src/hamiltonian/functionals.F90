@@ -185,37 +185,37 @@ contains
       if(bitand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
         message(1) = 'Specified functional does not have XC potential available.'
         message(2) = 'Cannot run calculations. Choose another XCFunctional.'
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==1.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 1D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_2D) /= 0
       if((ndim /= 2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==2.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 2D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_3D) /= 0
       if((ndim /= 3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==3.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 3D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
     
@@ -344,9 +344,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_write_info(functl, iunit)
+  subroutine xc_functl_write_info(functl, iunit, namespace)
     type(xc_functl_t), intent(in) :: functl
     integer,           intent(in) :: iunit
+    type(namespace_t), intent(in) :: namespace
 
     character(len=120) :: s1, s2
     integer :: ii
@@ -395,7 +396,7 @@ contains
         call messages_not_implemented("kinetic-energy functionals")
       case default
         write(message(1), '(a,i6,a,i6)') "Unknown functional type ", functl%type, ' for functional ', functl%id
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       call XC_F90(info_name)  (functl%info, s1)

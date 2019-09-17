@@ -73,7 +73,7 @@ contains
     call vdwxc_new(functional, libvdwxc%libvdwxc_ptr)
 #else
     message(1) = "Octopus not compiled with libvdwxc"
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
@@ -213,7 +213,7 @@ contains
 #else
       message(1) = "libvdwxc was not compiled with MPI"
       message(2) = "Recompile libvdwxc with MPI for vdW with domain decomposition"
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
 #endif
     end if
     call vdwxc_print(this%libvdwxc_ptr)

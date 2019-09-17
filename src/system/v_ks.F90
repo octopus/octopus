@@ -409,7 +409,7 @@ contains
 
     ks%frozen_hxc = .false.
 
-    call v_ks_write_info(ks, stdout)
+    call v_ks_write_info(ks, stdout, namespace)
 
     ks%gr => gr
     ks%calc%calculating = .false.
@@ -618,9 +618,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_write_info(ks, iunit)
-    type(v_ks_t), intent(in) :: ks
-    integer,      intent(in) :: iunit
+  subroutine v_ks_write_info(ks, iunit, namespace)
+    type(v_ks_t),      intent(in) :: ks
+    integer,           intent(in) :: iunit
+    type(namespace_t), intent(in) :: namespace
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
@@ -632,11 +633,11 @@ contains
     select case(ks%theory_level)
     case(HARTREE_FOCK)
       write(iunit, '(1x)')
-      call xc_write_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit, namespace)
 
     case(KOHN_SHAM_DFT)
       write(iunit, '(1x)')
-      call xc_write_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit, namespace)
 
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)

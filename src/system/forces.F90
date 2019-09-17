@@ -585,7 +585,7 @@ subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
       if(ps_has_density(species_ps(geo%atom(iatom)%species))) then
 
         call species_atom_density_grad(gr%mesh, gr%mesh%sb, geo%atom(iatom), &
-                 hm%d%spin_channels, drho)
+                 hm%namespace, hm%d%spin_channels, drho)
 
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels

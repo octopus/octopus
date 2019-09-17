@@ -103,13 +103,13 @@ contains
   call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
-     call messages_fatal(1)
+     call messages_fatal(1, namespace=namespace)
   end if
 
   call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
   call restart_end(restart_gs)
 

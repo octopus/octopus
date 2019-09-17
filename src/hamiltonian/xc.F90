@@ -93,9 +93,10 @@ module xc_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_write_info(xcs, iunit)
-    type(xc_t), intent(in) :: xcs
-    integer,    intent(in) :: iunit
+  subroutine xc_write_info(xcs, iunit, namespace)
+    type(xc_t),        intent(in) :: xcs
+    integer,           intent(in) :: iunit
+    type(namespace_t), intent(in) :: namespace
 
     integer :: ifunc
 
@@ -105,7 +106,7 @@ contains
     call messages_info(1, iunit)
 
     do ifunc = FUNC_X, FUNC_C
-      call xc_functl_write_info(xcs%functional(ifunc, 1), iunit)
+      call xc_functl_write_info(xcs%functional(ifunc, 1), iunit, namespace)
     end do
     
     if(xcs%exx_coef /= M_ZERO) then
@@ -173,7 +174,7 @@ contains
       if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       if(periodic_dim == ndim) &

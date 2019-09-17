@@ -481,7 +481,7 @@ contains
 
         call grid_write_info(gr, geo, iunit)
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
         
         if (rdm%do_basis) then
           write(iunit, '(a)')'Orbital optimization with [basis set]'

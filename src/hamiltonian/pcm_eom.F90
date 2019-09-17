@@ -154,7 +154,7 @@ contains
         which_eom /= PCM_EXTERNAL_PLUS_KICK .and. which_eom /= PCM_KICK) then
       message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons"
       message(2) = "or external potential (including the kick)."
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if (firsttime) then
@@ -162,7 +162,7 @@ contains
       nts_act = size(this_cts_act)
       if (size(q_t) /= nts_act) then
         message(1) = "pcm_charges_propagation: Number of tesserae do not coincide with size of PCM charges array."
-        call messages_fatal(1)     
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(cts_act(1:nts_act))
@@ -175,23 +175,23 @@ contains
           deb = this_deb
         else
           message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       case (PCM_DRUDE_MODEL)
         if (present(this_drl)) then
           drl = this_drl
         else
           message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       case default
         message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       if( abs(deb%tau) <= M_EPSILON ) then
         message(1) = "pcm_charges_propagation: EOM-PCM error. Debye EOM-PCM require a non-null Debye relaxation time."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       firsttime = .false.
     end if
@@ -207,7 +207,7 @@ contains
         return
       case default
         message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
     end if
 

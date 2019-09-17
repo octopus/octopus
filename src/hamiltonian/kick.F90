@@ -106,22 +106,25 @@ module kick_oct_m
     !> In case we use a general function
     integer           :: function_mode
     character(len=200), private:: user_defined_function
+    type(namespace_t), pointer :: namespace
   end type kick_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine kick_init(kick, namespace, nspin, dim, periodic_dim)
-    type(kick_t),      intent(out) :: kick
-    type(namespace_t), intent(in)  :: namespace
-    integer,           intent(in)  :: nspin
-    integer,           intent(in)  :: dim
-    integer,           intent(in)  :: periodic_dim
+    type(kick_t),              intent(out) :: kick
+    type(namespace_t), target, intent(in)  :: namespace
+    integer,                   intent(in)  :: nspin
+    integer,                   intent(in)  :: dim
+    integer,                   intent(in)  :: periodic_dim
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir
 
     PUSH_SUB(kick_init)
+
+    kick%namespace => namespace
 
     !%Variable TDDeltaKickTime
     !%Type float
@@ -354,7 +357,7 @@ contains
 
       if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
         message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       !%Variable TDPolarizationWprime
@@ -485,6 +488,8 @@ contains
     kick_out%function_mode = kick_in%function_mode
     kick_out%user_defined_function = kick_in%user_defined_function
 
+    kick_out%namespace => kick_in%namespace
+
     POP_SUB(kick_copy)
   end subroutine kick_copy
 
@@ -506,6 +511,8 @@ contains
     end if
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
+
+    nullify(kick%namespace)
 
     POP_SUB(kick_end)
   end subroutine kick_end
@@ -562,7 +569,7 @@ contains
 
     if(kick%function_mode < 0) then
       message(1) = "No kick could be read from file."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=kick%namespace)
     end if
 
     POP_SUB(kick_read)

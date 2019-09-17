@@ -118,10 +118,10 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   if (info /= 0) then
     if (info < 0) then
       write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     else
       message(1) = 'Fail of Cholesky, not pos-semi-def '
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
     stop
   end if
@@ -210,7 +210,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     do idim=1,3
       if(out_of_index_range(idim).and.idim > mesh%sb%periodic_dim) then
         message(1) = 'SCDM box out of index range in non-periodic dimension'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=st%namespace)
       end if
     end do
 
@@ -229,7 +229,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
           ! can only be out of mesh in periodic direction
           if(idim > mesh%sb%periodic_dim ) then
             message(1) = 'SCDM box out of mesh in non-periodic dimension'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=st%namespace)
           end if
         end if
       end do
@@ -292,7 +292,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! check that box is well defined now
     if(minval(temp_box) <= 0.or.maxval(temp_box) > mesh%np_global ) then
       message(1) = 'SCDM box mapping failed'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
 
     scdm%box(:,:,:,vv) = temp_box(:,:,:)
@@ -495,7 +495,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
      
     if(blacs_info /= 0) then
        write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=st%namespace)
     end if
     
     nref = min(nst, total_np)
@@ -517,7 +517,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
     
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
      
     wsize = nint(R_REAL(tmp))
@@ -535,7 +535,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
 
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=st%namespace)
     end if
     SAFE_DEALLOCATE_A(work)
      
@@ -604,7 +604,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
       endif
       if (info /= 0) then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=st%namespace)
       end if
 
       wsize = work(1)
@@ -621,7 +621,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
       endif
       if (info /= 0)then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=st%namespace)
       end if
       SAFE_DEALLOCATE_A(work)
     endif

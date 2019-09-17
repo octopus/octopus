@@ -201,7 +201,7 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
   !check if scdm is not bigger than fft-grid of full simualtion cell  
   if (scdm%full_box > der%mesh%np_global) then
     message(1) = 'SCDM box larger than mesh, no point in using it'
-    call messages_fatal(1,only_root_writes = .true.)
+    call messages_fatal(1,only_root_writes = .true., namespace=namespace)
   end if
   dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)

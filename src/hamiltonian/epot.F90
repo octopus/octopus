@@ -336,7 +336,7 @@ contains
       case(2)
         if(gr%sb%periodic_dim == 2) then
           message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
       case(3)
@@ -345,10 +345,10 @@ contains
         ! 1D-periodic: only Bx. 2D-periodic or 3D-periodic: not allowed. Other gauges could allow 2D-periodic case.
         if(gr%sb%periodic_dim >= 2) then
           message(1) = "In 3D, StaticMagneticField cannot be applied when the system is 2D- or 3D-periodic."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         else if(gr%sb%periodic_dim == 1 .and. any(abs(ep%B_field(2:3)) > M_ZERO)) then
           message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the y- and z-directions."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end select
       call parse_block_end(blk)
@@ -366,7 +366,7 @@ contains
           if(gr%sb%periodic_dim == 1) then
             message(1) = "For 2D system, 1D-periodic, StaticMagneticField can only be "
             message(2) = "applied for StaticMagneticField2DGauge = linear_y."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
           do ip = 1, gr%mesh%np
             grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
@@ -425,7 +425,7 @@ contains
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
@@ -530,7 +530,7 @@ contains
       if(ierr /= 0) then
         call messages_write("You have enabled the GlobalForce option but Octopus could not find")
         call messages_write("the '"//trim(function_name)//"' function in the TDFunctions block.")
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
 
     else

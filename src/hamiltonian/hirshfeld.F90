@@ -324,7 +324,7 @@ contains
 
       pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), &
+      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), this%st%namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 

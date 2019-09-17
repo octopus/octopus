@@ -258,7 +258,7 @@ contains
     if(parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       call messages_experimental('RashbaSpinOrbitCoupling')
     end if
@@ -486,7 +486,7 @@ contains
       call messages_experimental('Hartree-Fock parallel in states')
 #else
       call messages_write('Hartree-Fock parallel in states required MPI 2')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
 #endif
     end if
 

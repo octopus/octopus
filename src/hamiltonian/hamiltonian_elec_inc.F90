@@ -317,7 +317,7 @@ subroutine X(hamiltonian_elec_apply_all) (hm, mesh, st, hst)
 
     call states_elec_get_state(st, mesh, psiall)
     
-    call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver)
+    call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver, hm%namespace)
 
     SAFE_DEALLOCATE_A(psiall)
     

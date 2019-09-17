@@ -292,7 +292,7 @@ contains
 
     SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
     call states_elec_total_density(st, mesh, rho)
-    call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
+    call xc_get_fxc(ks%xc, mesh, st%namespace, rho, st%d%ispin, this%fxc)
     SAFE_DEALLOCATE_A(rho)
 
     POP_SUB(sternheimer_build_fxc)
@@ -317,7 +317,7 @@ contains
 
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       call states_elec_total_density(st, mesh, rho)
-      call xc_get_kxc(ks%xc, mesh, rho, st%d%ispin, this%kxc)
+      call xc_get_kxc(ks%xc, mesh, st%namespace, rho, st%d%ispin, this%kxc)
       SAFE_DEALLOCATE_A(rho)
     end if
 
