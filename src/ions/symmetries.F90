@@ -337,7 +337,7 @@ contains
 
     end if
 
-    call symmetries_write_info(this, dim, periodic_dim, stdout)
+    call symmetries_write_info(this, namespace, dim, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -482,8 +482,9 @@ contains
   end function symmetries_identity_index
 
   ! ---------------------------------------------------------
-  subroutine symmetries_write_info(this, dim, periodic_dim, iunit)
+  subroutine symmetries_write_info(this, namespace, dim, periodic_dim, iunit)
     type(symmetries_t),    intent(in) :: this
+    type(namespace_t),     intent(in) :: namespace
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
@@ -491,18 +492,18 @@ contains
  
     PUSH_SUB(symmetries_write_info)
     
-    call messages_print_stress(iunit, 'Symmetries')
+    call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
     end if
 
     if(.not. this%symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
       POP_SUB(symmetries_write_info)
       return
     end if
@@ -541,7 +542,7 @@ contains
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
       call messages_info(iunit = iunit)
     end if
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(symmetries_write_info)
   end subroutine symmetries_write_info

@@ -228,13 +228,13 @@ contains
     ispin = min(2, ispin)
 
     if(print_info_) then
-      call messages_print_stress(stdout, "Species")
+      call messages_print_stress(stdout, "Species", namespace=namespace)
     end if
     do i = 1, geo%nspecies
       call species_build(geo%species(i), namespace, ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     !%Variable SpeciesTimeDependent

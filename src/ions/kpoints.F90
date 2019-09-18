@@ -1292,8 +1292,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_write_info(this, iunit, absolute_coordinates)
+  subroutine kpoints_write_info(this, namespace, iunit, absolute_coordinates)
     type(kpoints_t),    intent(in) :: this
+    type(namespace_t),  intent(in) :: namespace
     integer,            intent(in) :: iunit
     logical, optional,  intent(in) :: absolute_coordinates
     
@@ -1303,7 +1304,7 @@ contains
     
     PUSH_SUB(kpoints_write_info)
     
-    call messages_print_stress(iunit, 'Brillouin zone sampling')
+    call messages_print_stress(iunit, 'Brillouin zone sampling', namespace=namespace)
 
     if(this%method == KPOINTS_MONKH_PACK) then
 
@@ -1363,7 +1364,7 @@ contains
 
     call messages_info(iunit = iunit)
 
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(kpoints_write_info)
   end subroutine kpoints_write_info
