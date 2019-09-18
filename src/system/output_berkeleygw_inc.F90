@@ -310,7 +310,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
       field_g(:,:) = field_g(:,:) / sqrt(norm)
       if(abs(norm - M_ONE) > CNST(0.01)) then
         write(message(1), '(a,f12.6)') 'Wavefunction norm within G-sphere (before renormalization) is only ', norm
-        call messages_warning(1, namespace=namespace)
+        call messages_warning(1)
       end if
     end if
 
