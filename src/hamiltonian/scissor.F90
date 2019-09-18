@@ -87,7 +87,7 @@ contains
   ASSERT(.not. this%apply)
   ASSERT(.not. states_are_real(st))
 
-  call messages_print_stress(stdout, "TDScissor")
+  call messages_print_stress(stdout, "TDScissor", namespace=namespace)
 
   if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
@@ -141,7 +141,7 @@ contains
     SAFE_DEALLOCATE_A(phase)
   end if
 
-  call messages_print_stress(stdout) 
+  call messages_print_stress(stdout, namespace=namespace)
 
   POP_SUB(scissor_init)
  end subroutine scissor_init

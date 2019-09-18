@@ -214,7 +214,7 @@ contains
 
    ASSERT(.not. (level == DFT_U_NONE))
 
-   call messages_print_stress(stdout, "DFT+U")
+   call messages_print_stress(stdout, "DFT+U", namespace=namespace)
    if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
    this%level = level
 
@@ -447,7 +447,7 @@ contains
 
    end if
 
-   call messages_print_stress(stdout)
+   call messages_print_stress(stdout, namespace=namespace)
 
    POP_SUB(lda_u_init)
  end subroutine lda_u_init

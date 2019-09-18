@@ -244,7 +244,7 @@ contains
     !%End
     call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
-      call messages_print_stress(stdout, trim('PCM'))
+      call messages_print_stress(stdout, trim('PCM'), namespace=namespace)
       if ( (grid%sb%box_shape /= MINIMUM) .or. (grid%sb%dim /= PCM_DIM_SPACE) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
         call messages_fatal(1, namespace=namespace)
@@ -1039,7 +1039,7 @@ contains
       
     end if
     
-    if (pcm%run_pcm) call messages_print_stress(stdout)
+    if (pcm%run_pcm) call messages_print_stress(stdout, namespace=namespace)
 
     if (pcm%calc_method == PCM_CALC_POISSON) then
       SAFE_ALLOCATE(pcm%rho_n(1:grid%mesh%np_part))
@@ -3299,7 +3299,7 @@ contains
 
     ! re-parsing PCM keywords
     call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
-    call messages_print_stress(stdout, trim('PCM'))
+    call messages_print_stress(stdout, trim('PCM'), namespace=namespace)
     call parse_variable(namespace, 'PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
     if ( pcm%localf ) then

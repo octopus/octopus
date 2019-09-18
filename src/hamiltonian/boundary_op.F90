@@ -111,7 +111,7 @@ contains
 
     if(this%abtype /= NOT_ABSORBING) then
       write(str, '(a,i5)') 'Absorbing Boundaries'
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
 
       !%Variable ABCapHeight
       !%Type float
