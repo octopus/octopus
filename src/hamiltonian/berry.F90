@@ -138,7 +138,7 @@ contains
     PUSH_SUB(berry_phase_matrix)
 
     if(st%parallel_in_states) then
-      call messages_not_implemented("Berry phase parallel in states")
+      call messages_not_implemented("Berry phase parallel in states", namespace=st%namespace)
     end if
 
     SAFE_ALLOCATE(tmp(1:mesh%np))

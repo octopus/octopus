@@ -38,7 +38,8 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
   PUSH_SUB(compute_complex_coulomb_integrals)
 
   ASSERT(.not. st%parallel_in_states)
-  if(mesh%parallel_in_domains) call messages_not_implemented("Coulomb integrals parallel in domains")
+  if(mesh%parallel_in_domains) &
+    call messages_not_implemented("Coulomb integrals parallel in domains", namespace=st%namespace)
 
   SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))

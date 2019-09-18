@@ -386,7 +386,7 @@ subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
 
   ASSERT(associated(hm%hf_st))
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=hm%namespace)
 
   exx_coef_ = optional_default(exx_coef, hm%exx_coef)
 
@@ -474,8 +474,8 @@ subroutine X(exchange_operator_hartree) (hm, mesh, ik, psib, hpsib)
 
   PUSH_SUB(X(exchange_operator))
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
-  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=hm%namespace)
+  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states", namespace=hm%namespace)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:hm%d%dim))
@@ -548,7 +548,7 @@ subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
   
   call profiling_in(prof_exx_scdm, 'SCDM_EXX_OPERATOR')
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=hm%namespace)
   
   ! make sure scdm is localized
   call X(scdm_localize)(hm%hf_st, mesh, hm%scdm)
@@ -684,7 +684,7 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
 
   ! We will assume, for the moment, no spinors.
   if(hm%d%dim /= 1) &
-    call messages_not_implemented("Magnus with spinors")
+    call messages_not_implemented("Magnus with spinors", namespace=hm%namespace)
 
   SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
   SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
@@ -732,7 +732,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, mesh, psib, hpsib, ik, vmagnus,
   PUSH_SUB(X(hamiltonian_elec_apply_magnus))
 
   ! We will assume, for the moment, no spinors.
-  if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors")
+  if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=hm%namespace)
 
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))

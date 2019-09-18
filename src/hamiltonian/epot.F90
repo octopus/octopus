@@ -176,7 +176,7 @@ contains
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
-      call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
+      call messages_not_implemented("FilterPotentials different from filter_none with MGGA", namespace=namespace)
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
     do ispec = 1, geo%nspecies
@@ -192,7 +192,7 @@ contains
     if(geo%ncatoms > 0) then
 
       if(simul_box_is_periodic(gr%mesh%sb)) &
-        call messages_not_implemented("classical atoms in periodic systems")
+        call messages_not_implemented("classical atoms in periodic systems", namespace=namespace)
       
       !%Variable ClassicalPotential
       !%Type integer
@@ -353,7 +353,7 @@ contains
       end select
       call parse_block_end(blk)
 
-      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3')
+      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3', namespace=namespace)
 
       ! Compute the vector potential
       SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))

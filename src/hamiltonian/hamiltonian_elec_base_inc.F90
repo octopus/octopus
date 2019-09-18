@@ -1028,7 +1028,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
   ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))
   
-  if(batch_is_packed(psi1b) .and. accel_is_enabled()) call messages_not_implemented('Accel non-local force')
+  if(batch_is_packed(psi1b) .and. accel_is_enabled()) &
+    call messages_not_implemented('Accel non-local force', namespace=st%namespace)
   
   nst = psi1b%nst_linear
 #ifdef R_TCOMPLEX

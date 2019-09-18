@@ -134,9 +134,9 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
     return
   end if
   
-  if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling")
+  if (st%d%nik > 1) call messages_not_implemented("SCDM with k-point sampling", namespace=namespace)
   if (der%mesh%sb%periodic_dim > 0 .and. der%mesh%sb%periodic_dim /= 3) &
-       call messages_not_implemented("SCDM with mixed-periodicity")  
+       call messages_not_implemented("SCDM with mixed-periodicity", namespace=namespace)
   
   ! determine whether we are applying the scdm exchange operator to scdm states
   ! NOTE: this should be always the case, but for now only in td

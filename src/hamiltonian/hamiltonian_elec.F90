@@ -457,8 +457,8 @@ contains
 
     call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
     if (hm%pcm%run_pcm) then
-      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
-      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh")
+      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
     end if
     
     !%Variable SCDM_EXX
@@ -473,7 +473,7 @@ contains
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
+        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)", namespace=namespace)
       end if
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)

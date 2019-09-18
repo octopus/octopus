@@ -393,7 +393,7 @@ contains
       case(XC_EXCHANGE_CORRELATION)
         write(message(1), '(2x,a)') 'Exchange-correlation'
       case(XC_KINETIC)
-        call messages_not_implemented("kinetic-energy functionals")
+        call messages_not_implemented("kinetic-energy functionals", namespace=namespace)
       case default
         write(message(1), '(a,i6,a,i6)') "Unknown functional type ", functl%type, ' for functional ', functl%id
         call messages_fatal(1, namespace=namespace)

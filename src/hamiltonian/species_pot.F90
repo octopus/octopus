@@ -299,10 +299,11 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, sb, atom, pos,  spin_channels, rho)
+ subroutine species_atom_density_np(mesh, sb, atom, namespace, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
+    type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:) !< (Max dim)
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
@@ -369,7 +370,7 @@ contains
 
       end if
     case default
-      call messages_not_implemented('species_atom_density_np for non-pseudopotential species')
+      call messages_not_implemented('species_atom_density_np for non-pseudopotential species', namespace=namespace)
 
     end select
 
@@ -424,7 +425,7 @@ contains
       end if
        
     case default
-      call messages_not_implemented('species_atom_density_derivative for non-pseudopotential species')
+      call messages_not_implemented('species_atom_density_derivative for non-pseudopotential species', namespace=namespace)
 
     end select
 
@@ -538,7 +539,7 @@ contains
       end if
       
     case default
-      call messages_not_implemented('species_atom_density_grad for non-pseudopotential species')
+      call messages_not_implemented('species_atom_density_grad for non-pseudopotential species', namespace=namespace)
 
     end select
 

@@ -89,8 +89,8 @@ contains
 
   call messages_print_stress(stdout, "TDScissor")
 
-  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains")
+  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
   this%gap = real(gap)

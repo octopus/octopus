@@ -388,7 +388,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         else
           call compute_ACBNO_U_noncollinear(this, ios, st%namespace)
           if(this%intersite) then
-            call messages_not_implemented("Intersite interaction with spinors orbitals.")
+            call messages_not_implemented("Intersite interaction with spinors orbitals.", namespace=st%namespace)
           end if
         end if
       end do
@@ -1259,10 +1259,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
- subroutine X(lda_u_commute_r)(this, mesh, d, ik, psi, gpsi, has_phase)
+ subroutine X(lda_u_commute_r)(this, mesh, d, namespace, ik, psi, gpsi, has_phase)
    type(lda_u_t),           intent(in) :: this
    type(mesh_t),            intent(in) :: mesh
    type(states_elec_dim_t), intent(in) :: d
+   type(namespace_t),       intent(in) :: namespace
    R_TYPE,                  intent(in) :: psi(:,:)
    integer,                 intent(in) :: ik
    R_TYPE,               intent(inout) :: gpsi(:, :, :)
@@ -1279,11 +1280,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
    PUSH_SUB(lda_u_commute_r)
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting and commutator [r,V_u]")
+    call messages_not_implemented("AMF double couting and commutator [r,V_u]", namespace=namespace)
    end if
 
    if(this%intersite .and. d%ispin == SPINORS) then
-     call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]")
+     call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]", namespace=namespace)
    end if
 
    if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
@@ -1560,7 +1561,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%basisfromstates) return
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting with forces")
+    call messages_not_implemented("AMF double couting with forces", namespace=st%namespace)
    end if
 
    PUSH_SUB(X(lda_u_force))

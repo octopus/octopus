@@ -49,7 +49,8 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
-  if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
+  if (st%d%nik /= 1 .or. st%d%dim /= 1) &
+    call messages_not_implemented("SCDM with k-points or dims", namespace=st%namespace)
 
   SAFE_ALLOCATE(JPVT(1:mesh%np_global))
   call X(scdm_rrqr)(st,scdm, mesh, nval,scdm%root,1, jpvt)

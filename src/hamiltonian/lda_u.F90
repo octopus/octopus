@@ -249,7 +249,7 @@ contains
    call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
    if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
    if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
-     call messages_not_implemented("AMF double couting with spinors.")
+     call messages_not_implemented("AMF double couting with spinors.", namespace=namespace)
    end if
 
    if( this%level == DFT_U_ACBN0 ) then
@@ -299,7 +299,7 @@ contains
      call parse_variable(namespace, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
      call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
      if(this%rot_inv .and. st%d%ispin == SPINORS ) then
-       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.", namespace=namespace)
      end if
 
      !%Variable ACBN0IntersiteInteraction
@@ -320,7 +320,7 @@ contains
        !This is a non local operator. To make this working, one probably needs to apply the 
        ! symmetries to the generalized occupation matrices 
        if(gr%sb%kpoints%use_symmetries) then
-         call messages_not_implemented("Intersite interaction with kpoint symmetries")
+         call messages_not_implemented("Intersite interaction with kpoint symmetries", namespace=namespace)
        end if
  
        !%Variable ACBN0IntersiteCutoff

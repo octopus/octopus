@@ -421,7 +421,7 @@ contains
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        call hirshfeld_position_derivative(hirshfeld, der, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         force_vdw(1:sb%dim, jatom)= force_vdw(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do

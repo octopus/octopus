@@ -354,7 +354,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
-          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, ik, psii, gpsii, &
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, st%namespace, ik, psii, gpsii, &
                             associated(hm%hm_base%phase))
         end if
       end if
