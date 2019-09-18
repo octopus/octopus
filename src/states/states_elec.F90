@@ -2320,14 +2320,14 @@ contains
 
     PUSH_SUB(states_elec_write_info)
 
-    call messages_print_stress(stdout, "States")
+    call messages_print_stress(stdout, "States", namespace=st%namespace)
 
     write(message(1), '(a,f12.3)') 'Total electronic charge  = ', st%qtot
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
     write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
     call messages_info(3)
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=st%namespace)
 
     POP_SUB(states_elec_write_info)
   end subroutine states_elec_write_info

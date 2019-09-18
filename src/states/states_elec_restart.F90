@@ -699,7 +699,7 @@ contains
       else
         write(str, '(a,i5)') 'Reading states information for linear response.'
       end if
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
       if(.not. present(skip)) then
         write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
              st%nst * st%d%nik * st%d%dim, ' could be read.'
@@ -709,7 +709,7 @@ contains
         ierr = 0
       end if
       call messages_info(1)
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     message(1) = 'Info: States reading done.'
@@ -1156,7 +1156,7 @@ contains
     !%End
     if(parse_block(namespace, 'UserDefinedStates', blk) == 0) then
 
-      call messages_print_stress(stdout, trim('Substitution of orbitals'))
+      call messages_print_stress(stdout, trim('Substitution of orbitals'), namespace=namespace)
 
       ! find out how many lines (i.e. states) the block has
       nstates = parse_block_n(blk)
@@ -1270,7 +1270,7 @@ contains
       SAFE_DEALLOCATE_A(zpsi)
 
       call parse_block_end(blk)
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
 
     else
       message(1) = "'UserDefinedStates' has to be specified as block."
