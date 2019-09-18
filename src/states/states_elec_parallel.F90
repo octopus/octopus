@@ -68,7 +68,7 @@ contains
     if(.not. st%scalapack_compatible) then
       message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
       message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
-      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
+      call messages_fatal(2, only_root_writes = .true., namespace=st%namespace)
     end if
     
     if (mesh%parallel_in_domains) then
