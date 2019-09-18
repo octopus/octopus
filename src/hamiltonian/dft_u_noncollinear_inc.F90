@@ -142,9 +142,10 @@ end subroutine compute_complex_coulomb_integrals
 ! ---------------------------------------------------------
 !> This routine computes the effective U in the non-collinear case 
 ! ---------------------------------------------------------
-subroutine compute_ACBNO_U_noncollinear(this, ios)
-  type(lda_u_t), intent(inout)    :: this
-  integer,       intent(in)       :: ios
+subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
+  type(lda_u_t),     intent(inout) :: this
+  integer,           intent(in)    :: ios
+  type(namespace_t), intent(in)    :: namespace
 
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   CMPLX   :: numU, numJ, tmpU, tmpJ, denomU, denomJ
@@ -246,7 +247,7 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
     else
       write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
       write(message(2),'(a)')' U is set to zero '
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       this%orbsets(ios)%Ubar = M_ZERO
     end if
     this%orbsets(ios)%Jbar = 0

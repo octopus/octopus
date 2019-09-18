@@ -389,7 +389,7 @@ contains
     ! for non-dipole, it is more complicated to check whether it is actually in the periodic direction
     if(periodic_dim > 0) then
       message(1) = "Kicks cannot be applied correctly in periodic directions."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 
     !%Variable TDMomentumTransfer

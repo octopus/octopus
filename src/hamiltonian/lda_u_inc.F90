@@ -383,10 +383,10 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
-          call X(compute_ACBNO_U)(this, ios)
+          call X(compute_ACBNO_U)(this, ios, st%namespace)
           if(this%intersite) call X(compute_ACBNO_V)(this, ios)
         else
-          call compute_ACBNO_U_noncollinear(this, ios)
+          call compute_ACBNO_U_noncollinear(this, ios, st%namespace)
           if(this%intersite) then
             call messages_not_implemented("Intersite interaction with spinors orbitals.")
           end if
@@ -537,9 +537,10 @@ end subroutine X(lda_u_update_potential)
 !> This routine computes the effective U following the expression 
 !> given in Agapito et al., Phys. Rev. X 5, 011006 (2015)
 ! ---------------------------------------------------------
-subroutine X(compute_ACBNO_U)(this, ios)
-  type(lda_u_t), intent(inout)    :: this
-  integer,       intent(in)       :: ios
+subroutine X(compute_ACBNO_U)(this, ios, namespace)
+  type(lda_u_t),     intent(inout) :: this
+  integer,           intent(in)    :: ios
+  type(namespace_t), intent(in)    :: namespace
   
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
@@ -665,7 +666,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
         this%orbsets(ios)%Ubar = (numU/denomU)
         write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
         write(message(2),'(a,a)')' to be multiplied by ',  this%coulomb(1,1,1,1,ios)
-        call messages_warning(2) 
+        call messages_warning(2, namespace=namespace)
         this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar*this%coulomb(1,1,1,1,ios)
       end if
     end if
@@ -1567,7 +1568,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    !TODO: Implement
    if(this%intersite) then
      message(1) = "Intersite V forces are not implemented."
-     call messages_warning(1)
+     call messages_warning(1, namespace=st%namespace)
    end if
 
    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))

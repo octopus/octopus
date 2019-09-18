@@ -446,12 +446,12 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
   if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifndef HAVE_SCALAPACK
      message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
-     call messages_warning(1)
+     call messages_warning(1, namespace=st%namespace)
      do_serial = .true.
 #else
      if(.not.st%scalapack_compatible) then
         message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
-        call messages_warning(1)
+        call messages_warning(1, namespace=st%namespace)
         do_serial = .true.
      end if
 #endif

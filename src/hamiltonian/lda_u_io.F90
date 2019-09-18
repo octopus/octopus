@@ -713,7 +713,7 @@ contains
         call messages_fatal(1, namespace=namespace)
       else if (str(2:5) /= 'Real') then
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
     ! complex can be restarted from real, so there is no problem.

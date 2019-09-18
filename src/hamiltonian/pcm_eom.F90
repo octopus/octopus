@@ -219,7 +219,7 @@ contains
       call pcm_bem_init(namespace)
 
       !> initialize pcm charges due to electrons, external potential or kick
-      call init_charges(q_t, pot_t)
+      call init_charges(q_t, pot_t, namespace)
 
       if (initial_electron .and. which_eom == PCM_ELECTRONS) initial_electron = .false.
       if (initial_external .and. (which_eom == PCM_EXTERNAL_POTENTIAL .or. &
@@ -288,9 +288,10 @@ contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Polarization charges initialization (in equilibrium with the initial potential for electrons)
-  subroutine init_charges(q_t,pot_t)
-    FLOAT, intent(out) :: q_t(:)
-    FLOAT, intent(in)  :: pot_t(:)
+  subroutine init_charges(q_t,pot_t, namespace)
+    FLOAT,             intent(out) :: q_t(:)
+    FLOAT,             intent(in)  :: pot_t(:)
+    type(namespace_t), intent(in)  :: namespace
 
     PUSH_SUB(init_charges)
 
@@ -299,7 +300,7 @@ contains
       !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
       !< The latter is valid when starting the propagation from the ground state but does not hold in general.
       message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
   
       SAFE_ALLOCATE(pot_tp(1:nts_act))
       pot_tp = pot_t
@@ -487,7 +488,7 @@ contains
         SAFE_ALLOCATE(matqq(1:nts_act, 1:nts_act))
       end if
     end if
-    call do_PCM_propMat()
+    call do_PCM_propMat(namespace)
 
     if (which_eom == PCM_ELECTRONS) then
       pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_from_eom.out', namespace, action='write')
@@ -559,7 +560,8 @@ contains
   !> Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416.    - Debye case
   !> Ref.2 - J.Phys.Chem.C 2016, 120, 28-774-28781. - Drude-Lorentz case
   !> The matrices are required for the EOMs, eq.(37) in Ref.1 and eq.(15) in Ref.2 
-  subroutine do_PCM_propMat()
+  subroutine do_PCM_propMat(namespace)
+    type(namespace_t), intent(in) :: namespace
     save
     integer :: i, j
     FLOAT, allocatable :: scr4(:,:), scr1(:,:)
@@ -602,7 +604,7 @@ contains
     end do
     if (firsttime) then 
       call allocate_TS_matrix()
-      call do_TS_matrix()
+      call do_TS_matrix(namespace)
       firsttime = .false.
     end if
     SAFE_DEALLOCATE_A(cals)
@@ -761,7 +763,8 @@ contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Subroutine to build matrices S^{1/2}, S^{-1/2}, T and \Lambda (notation of Refs.1-2)
-  subroutine do_TS_matrix()
+  subroutine do_TS_matrix(namespace)
+    type(namespace_t), intent(in) :: namespace
     integer :: i, j
     integer :: info, lwork, liwork
     FLOAT, allocatable :: scr1(:,:), scr2(:,:), eigt_t(:,:)
@@ -790,7 +793,7 @@ contains
       if (eigv(i) < M_ZERO) then
         write(message(1),*) "Eigenvalue ", i, " of S when constructing the TS matrix is negative!"
         write(message(2),*) "I put it to 1e-8"
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
         eigv(i) = CNST(1.0e-8)
       end if
       scr1(:,i) = eigt(:,i)*sqrt(eigv(i))

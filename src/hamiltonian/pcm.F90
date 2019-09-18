@@ -313,7 +313,7 @@ contains
       call messages_write('Sorry, you have set PCMTDLevel /= eq, but PCMCalculation = no.')
       call messages_new_line()
       call messages_write('To spare you some time, Octopus will proceed as if PCMCalculation = yes.')       
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     endif
     
     !%Variable PCMStaticEpsilon
@@ -361,7 +361,7 @@ contains
       call messages_write('To spare you some time, Octopus will proceed with the default choice (Debye).')
       call messages_new_line()
       call messages_write('You may change PCMEpsilonModel value for a Drude-Lorentz run.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
 
     if (pcm%tdlevel /= PCM_TD_EQ .and. pcm%which_eps == PCM_DEBYE_MODEL .and. pcm%epsilon_0 == pcm%epsilon_infty) then
@@ -370,7 +370,7 @@ contains
       call messages_write('require both static and dynamic dielectric constants, and they must be different.')
       call messages_new_line()
       call messages_write('Octopus will run using TD-PCM version in equilibrium with solvent at each time.')        
-      call messages_warning()
+      call messages_warning(namespace=namespace)
       pcm%tdlevel = PCM_TD_EQ
     end if
 
@@ -397,7 +397,7 @@ contains
         call messages_write('Sorry, initial polarization charges can only be read from input file for a Debye EOM-PCM run.')
         call messages_new_line()
         call messages_write('To spare you some time, Octopus will proceed as if PCMEoMInitialCharges = 0.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
         pcm%initial_asc = 0
       endif
     endif
@@ -427,7 +427,7 @@ contains
       call messages_write('You need PCMEpsilonStatic, PCMEpsilonDynamic and PCMDebyeRelaxTime for an EOM TD-PCM run.')
       call messages_new_line()
       call messages_write('Octopus will run using TD-PCM version in equilibrium with solvent at each time.')        
-      call messages_warning()
+      call messages_warning(namespace=namespace)
       pcm%tdlevel = PCM_TD_EQ
     end if
 
@@ -455,7 +455,7 @@ contains
       call messages_new_line()
       if (pcm%epsilon_0 /= M_ONE) then
         call messages_write('Octopus will run using the default value of PCMDrudeLOmega.')        
-        call messages_warning()
+        call messages_warning(namespace=namespace)
         pcm%drl%w0 = sqrt(M_ONE/(pcm%epsilon_0 - M_ONE))
       else
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
@@ -509,7 +509,7 @@ contains
 
     if (pcm%run_pcm .and. (.not. pcm%solute)) then
       call messages_write('N.B. This PCM run do not consider the polarization effects due to the solute.')        
-      call messages_warning()
+      call messages_warning(namespace=namespace)
       if (.not. pcm%localf) then
         message(1) = "You have activated a PCM run without polarization effects. Octopus will halt."
         call messages_fatal(1, namespace=namespace)
@@ -548,7 +548,7 @@ contains
     if (pcm%kick_is_present .and. pcm%run_pcm .and. (.not. pcm%localf)) then
       message(1) = "You have set up a PCM calculation with a kick without local field effects."
       message(2) = "Please, reconsider if you want the kick to be relevant for the PCM run."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
     end if
     
     !%Variable PCMUpdateIter
@@ -758,7 +758,7 @@ contains
 
       if (pcm%n_tesserae > MXTS) then
         write(message(1),'(a,I5,a,I5)') "total number of tesserae", pcm%n_tesserae, ">", MXTS
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
@@ -1016,7 +1016,7 @@ contains
         call messages_write('in order to fit them into the mesh.')        
         call messages_new_line()
         call messages_write('This may produce unexpected results. ')        
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
 
@@ -1709,7 +1709,7 @@ contains
       message(1) = 'The simulation box is too small to contain all the requested'
       message(2) = 'nearest neighbors for each tessera.'
       message(3) = 'Consider using a larger box or reduce PCMChargeSmearNN.'
-      call messages_warning(3)
+      call messages_warning(3, namespace=pcm%namespace)
     end if
 
     POP_SUB(pcm_poisson_sanity_check)
@@ -2460,7 +2460,7 @@ contains
 
         if (nn > MXTS) then !> check the total number of tessera
           write(message(1),'(a,I5,a,I5)') "total number of tesserae", nn, ">",MXTS
-          call messages_warning(1)     
+          call messages_warning(1)
         end if
 
           cts(nn)%point(1)  = xctst(its)
@@ -3312,7 +3312,7 @@ contains
       call messages_write('However, PCM local field effects in the optical spectrum work well for polar or non-polar solvents')
       call messages_new_line()
       call messages_write('in the nonequilibrium or equation-of-motion TD-PCM propagation schemes.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
     call parse_variable(namespace, 'PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
     call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)

@@ -255,10 +255,10 @@ contains
         if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
           message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
           if(nik == 1) then
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           else
             message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
-            call messages_warning(2)
+            call messages_warning(2, namespace=namespace)
           end if
         end if
       end do
@@ -668,7 +668,7 @@ contains
       if(.not. species_is_ps(atm%species)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), atm, namespace, st%d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end

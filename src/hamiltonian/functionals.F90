@@ -179,7 +179,7 @@ contains
       if(bitand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
         message(1) = 'Specified functional does not have total energy available.'
         message(2) = 'Corresponding component of energy will just be left as zero.'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
       if(bitand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then

@@ -1061,14 +1061,14 @@ contains
 
     if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) then
       call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
-      call messages_warning()
+      call messages_warning(namespace=this%namespace)
       apply = .false.
     end if
     
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
-        call messages_warning()
+        call messages_warning(namespace=this%namespace)
       end if
       apply = .false.
     end if
@@ -1076,7 +1076,7 @@ contains
     if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
-        call messages_warning()
+        call messages_warning(namespace=this%namespace)
       end if
       apply = .false.
     end if
@@ -1084,7 +1084,7 @@ contains
     if(mesh%use_curvilinear .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
-        call messages_warning()
+        call messages_warning(namespace=this%namespace)
       end if
       apply = .false.
     end if
@@ -1092,7 +1092,7 @@ contains
     if(hamiltonian_elec_base_projector_self_overlap(this%hm_base) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
-        call messages_warning()
+        call messages_warning(namespace=this%namespace)
       end if
       apply = .false.
     end if
