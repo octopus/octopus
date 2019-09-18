@@ -306,7 +306,7 @@ contains
     call flush_msg(stderr, msg)
 
     if(present(namespace)) then
-      write(msg, '(2a)') '* In namespace ', namespace%get()
+      write(msg, '(3a)') '* In namespace ', trim(namespace%get()), ':'
       call flush_msg(stderr, msg)
     end if
 
@@ -393,7 +393,7 @@ contains
       call flush_msg(stderr, msg)
 
       if(present(namespace)) then
-        write(msg, '(2a)') '** In namespace ', namespace%get()
+        write(msg, '(3a)') '** In namespace ', trim(namespace%get()), ':'
         call flush_msg(stderr, msg)
       end if
 
@@ -823,16 +823,18 @@ contains
     end if
 
     if(present(msg)) then
+      ! make sure we do not get a segfault for too long messages
+      if(len_trim(msg) > max_len) then
+        msg_combined = trim(msg(1:max_len))
+      else
+        msg_combined = trim(msg)
+      end if
       if(present(namespace)) then
         if(len_trim(msg) + len_trim(namespace%get()) + 1 < max_len) then
           msg_combined = trim(msg) // " " // trim(namespace%get())
         end if
       end if
-      ! make sure we do not get a segfault for too long messages
-      if(len_trim(msg) > max_len) then
-        msg_combined = msg(1:max_len)
-      end if
-      length = len(msg_combined)
+      length = len_trim(msg_combined)
 
       str = ''
       jj = 1
@@ -846,7 +848,7 @@ contains
       jj = jj + 1
      
       do ii = 1, length
-        str(jj:jj) = msg(ii:ii)
+        str(jj:jj) = msg_combined(ii:ii)
         jj = jj + 1
       end do
 
