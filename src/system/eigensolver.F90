@@ -302,7 +302,7 @@ contains
       call messages_input_error('Eigensolver')
     end select
 
-    call messages_print_stress(stdout, 'Eigensolver')
+    call messages_print_stress(stdout, 'Eigensolver', namespace=namespace)
 
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
@@ -388,7 +388,7 @@ contains
       call messages_info()
     end select
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     !%Variable EigensolverSkipKpoints
     !%Type logical

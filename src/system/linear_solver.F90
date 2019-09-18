@@ -171,7 +171,7 @@ contains
     call parse_variable(namespace, "LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
-    call messages_print_stress(stdout, trim(message(1)))
+    call messages_print_stress(stdout, trim(message(1)), namespace=namespace)
     
     ! solver 
     select case(this%solver)
@@ -205,7 +205,7 @@ contains
 
     call messages_info(1)
     
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
       call messages_experimental("Multigrid linear solver")

@@ -629,7 +629,7 @@ contains
 
     PUSH_SUB(v_ks_write_info)
 
-    call messages_print_stress(iunit, "Theory Level")
+    call messages_print_stress(iunit, "Theory Level", namespace=namespace)
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
 
     select case(ks%theory_level)
@@ -653,7 +653,7 @@ contains
 
     end select
 
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(v_ks_write_info)
   end subroutine v_ks_write_info
