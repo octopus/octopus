@@ -31,7 +31,7 @@ module opt_control_oct_m
   use initst_oct_m
   use iso_c_binding
   use output_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
@@ -49,8 +49,8 @@ module opt_control_oct_m
   use propagator_base_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use system_oct_m
   use target_oct_m
   use td_oct_m
@@ -77,7 +77,7 @@ module opt_control_oct_m
   !> For the direct, nlopt, and cg schemes:
   type(controlfunction_t), save :: par_
   type(system_t), pointer :: sys_
-  type(hamiltonian_t), pointer :: hm_
+  type(hamiltonian_elec_t), pointer :: hm_
   type(td_t), pointer :: td_
   FLOAT, allocatable :: x_(:)
   integer :: index_
@@ -95,13 +95,13 @@ contains
     logical                        :: stop_loop
     FLOAT                          :: j1
     type(oct_prop_t)               :: prop_chi, prop_psi
-    type(states_t)                 :: psi
+    type(states_elec_t)            :: psi
 
     PUSH_SUB(opt_control_run)
 
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
-    call io_mkdir(OCT_DIR)
+    call io_mkdir(OCT_DIR, sys%namespace)
 
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".
@@ -118,13 +118,13 @@ contains
     call controlfunction_set(par, sys%hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
-    call controlfunction_write(OCT_DIR//'initial_laser_inp', par)
+    call controlfunction_write(OCT_DIR//'initial_laser_inp', par, sys%namespace)
     call controlfunction_prepare_initial(par)
     call controlfunction_to_h(par, sys%hm%ep)
     call messages_print_stress(stdout, "TD ext. fields after processing")
     call laser_write_info(sys%hm%ep%lasers, stdout)
     call messages_print_stress(stdout)
-    call controlfunction_write(OCT_DIR//'initial_laser', par)
+    call controlfunction_write(OCT_DIR//'initial_laser', par, sys%namespace)
 
 
     ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
@@ -141,7 +141,7 @@ contains
 
     ! If filters are to be used, they also have to be initialized.
     call filter_init(td%max_iter, sys%namespace, td%dt, filter)
-    call filter_write(filter)
+    call filter_write(filter, sys%namespace)
 
 
     ! Figure out the starting wavefunction(s), and the target.
@@ -156,7 +156,7 @@ contains
     call opt_control_get_qs(psi, initial_st)
     call output_states(psi, sys%namespace, sys%gr, sys%geo, sys%hm, OCT_DIR//'initial', sys%outp)
     call target_output(oct_target, sys%namespace, sys%gr, OCT_DIR//'target', sys%geo, sys%hm, sys%outp)
-    call states_end(psi)
+    call states_elec_end(psi)
 
 
     ! mode switcher; here is where the real run is made.
@@ -567,7 +567,7 @@ contains
     type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
     type(controlfunction_t), intent(inout)        :: par
 
-    type(states_t) :: chi
+    type(states_elec_t) :: chi
     type(opt_control_state_t) :: qcchi
     type(controlfunction_t) :: par_chi
 
@@ -581,7 +581,7 @@ contains
     call opt_control_state_copy(qcpsi, initial_st)
     call fwd_step(sys, td, oct_target, par, par_chi, qcpsi, prop_chi, prop_psi)
 
-    call states_end(chi)
+    call states_elec_end(chi)
     call opt_control_state_end(qcchi)
     call controlfunction_end(par_chi)
     POP_SUB(f_zbr98)

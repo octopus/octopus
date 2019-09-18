@@ -783,10 +783,11 @@ contains
   !> Some fft-libraries (only NFFT for the moment) need an additional 
   !! precomputation stage that depends on the spatial grid whose size 
   !! may change after fft_init
-  subroutine fft_init_stage1(this, XX, nn)
+  subroutine fft_init_stage1(this, namespace, XX, nn)
     type(fft_t),       intent(inout) :: this     !< FFT data type
     !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
     !! and z-axis XX(:,3) 
+    type(namespace_t), intent(in)    :: namespace
     FLOAT,             intent(in)    :: XX(:,:)  
     integer, optional, intent(in)    :: nn(:)  
  
@@ -810,7 +811,7 @@ contains
     case(FFTLIB_ACCEL)
     !Do nothing 
     case(FFTLIB_PNFFT)
-      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX)
+      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, namespace, XX)
 
     case default
       call messages_write('Invalid FFT library.')

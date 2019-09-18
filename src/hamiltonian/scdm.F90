@@ -42,9 +42,10 @@ module scdm_oct_m
   use profiling_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -60,7 +61,7 @@ module scdm_oct_m
   
   type scdm_t
     private
-    type(states_t)           :: st          !< localized orthogonal states
+    type(states_elec_t)      :: st          !< localized orthogonal states
     FLOAT, pointer,   public :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
     integer,          public :: box_size    !< number of mesh points in the dimension of local box around scdm states 
                                             !! NOTE: this could be dynamic and state dependent
@@ -108,13 +109,13 @@ contains
 !!                            selected columns of the density matrix
 !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
 subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
-  type(states_t),      intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+  type(states_elec_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
   type(namespace_t),   intent(in)  :: namespace
   type(derivatives_t)              :: der
   type(cube_t)                     :: fullcube !< cube of the full cell
   type(scdm_t)                     :: scdm
   logical,                optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
-  
+
   integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
   
@@ -157,7 +158,7 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
   scdm%nst   = st%nst
   
   ! initialize state object for the SCDM states by copying
-  call states_copy(scdm%st,st)
+  call states_elec_copy(scdm%st,st)
   
   !%Variable SCDM_verbose
   !%Type logical
@@ -271,7 +272,7 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
   
   ! create a cube object for the small box, with double size for coulomb truncation
   box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
-  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, namespace, fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
   
   ! set up poisson solver used for the exchange operator with scdm states
   ! this replicates poisson_kernel_init()
@@ -313,9 +314,9 @@ end subroutine scdm_init
 
 !> wrapper routine to rotate  KS states into their SCDM representation
 subroutine scdm_rotate_states(st,mesh,scdm)
-  type(states_t), intent(inout)  :: st
-  type(mesh_t), intent(in)       :: mesh
-  type(scdm_t), intent(inout)    :: scdm
+  type(states_elec_t), intent(inout)  :: st
+  type(mesh_t),        intent(in)     :: mesh
+  type(scdm_t),        intent(inout)  :: scdm
   
   PUSH_SUB(scdm_rotate_states)
   

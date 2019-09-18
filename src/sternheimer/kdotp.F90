@@ -23,7 +23,7 @@ module kdotp_oct_m
   use global_oct_m
   use grid_oct_m
   use output_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kdotp_calc_oct_m
   use kpoints_oct_m
@@ -40,9 +40,10 @@ module kdotp_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use system_oct_m
   use unit_oct_m
@@ -133,14 +134,14 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(restart_load, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
+      call states_elec_look_and_load(restart_load, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."
       call messages_fatal(1)
     end if
 
-    ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
+    ! Use of ForceComplex will make this true after states_elec_look_and_load even if it was not before.
     ! Otherwise, this line is a tautology.
     complex_response = states_are_complex(sys%st)
 
@@ -173,8 +174,8 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call io_mkdir(KDOTP_DIR) ! data output
-      call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
+      call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
+      call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:), sys%namespace)
     end if
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
@@ -202,7 +203,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
@@ -214,7 +215,9 @@ contains
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-            if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            if (ierr == 0) then
+              call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            end if
             call restart_close_dir(restart_load)
           
             if(ierr /= 0) then
@@ -313,7 +316,7 @@ contains
       end if
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
-      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars)
+      call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
     end if
 
     ! clean up some things
@@ -340,7 +343,7 @@ contains
       SAFE_DEALLOCATE_P(kdotp_vars%lr2)
     end if
 
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
@@ -453,10 +456,11 @@ contains
   end subroutine kdotp_lr_run
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_band_velocity(st, periodic_dim, velocity)
-    type(states_t), intent(inout) :: st
-    integer,        intent(in)    :: periodic_dim
-    FLOAT,          intent(in)    :: velocity(:,:,:)
+  subroutine kdotp_write_band_velocity(st, periodic_dim, velocity, namespace)
+    type(states_elec_t), intent(inout) :: st
+    integer,             intent(in)    :: periodic_dim
+    FLOAT,               intent(in)    :: velocity(:,:,:)
+    type(namespace_t),   intent(inout) :: namespace
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin, idir
@@ -464,12 +468,12 @@ contains
     PUSH_SUB(kdotp_write_band_velocity)
 
     write(filename, '(a)') KDOTP_DIR//'velocity'
-    iunit = io_open(trim(filename), action='write')
+    iunit = io_open(trim(filename), namespace, action='write')
     write(iunit,'(a)') '# Band velocities'
 
     do ik = 1, st%d%nik
-      ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = states_dim_get_kpoint_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
       tmp = int2str(ik2)
 
       write(iunit,'(a,i1,a,a)') '# spin = ', ispin, ', k-point = ', trim(tmp)
@@ -497,10 +501,11 @@ contains
   end subroutine kdotp_write_band_velocity
 
   ! ---------------------------------------------------------
-  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars)
-    type(states_t),       intent(inout) :: st
+  subroutine kdotp_write_eff_mass(st, gr, kdotp_vars, namespace)
+    type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(kdotp_t),        intent(inout) :: kdotp_vars
+    type(namespace_t),    intent(in)    :: namespace
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin
@@ -509,12 +514,12 @@ contains
     PUSH_SUB(kdotp_write_eff_mass)
 
     do ik = 1, st%d%nik
-      ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = states_dim_get_kpoint_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
       write(filename, '(3a, i1)') KDOTP_DIR//'kpoint_', trim(tmp), '_', ispin
-      iunit = io_open(trim(filename), action='write')
+      iunit = io_open(trim(filename), namespace, action='write')
 
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2
@@ -550,8 +555,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kdotp_write_degeneracies(st, threshold)
-    type(states_t), intent(inout) :: st
-    FLOAT,          intent(in)    :: threshold
+    type(states_elec_t), intent(inout) :: st
+    FLOAT,               intent(in)    :: threshold
 
     character(len=80) :: tmp
     integer :: ik, ist, ist2, ik2, ispin
@@ -561,8 +566,8 @@ contains
     call messages_print_stress(stdout, 'Degenerate subspaces')
 
     do ik = 1, st%d%nik
-      ispin = states_dim_get_spin_index(st%d, ik)
-      ik2 = states_dim_get_kpoint_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
       write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 

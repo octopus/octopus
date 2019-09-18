@@ -89,7 +89,7 @@
               ! normalize orbital
               call zmf_normalize(gr%mesh, tg%st%d%dim, zpsi)
 
-              call states_set_state(tg%st, gr%mesh, ist, ik, zpsi)
+              call states_elec_set_state(tg%st, gr%mesh, ist, ik, zpsi)
               
             end do
           end do
@@ -124,11 +124,11 @@
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     type(output_t),      intent(in) :: outp
     PUSH_SUB(target_output_userdefined)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), namespace)
     call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_userdefined)
@@ -139,9 +139,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_userdefined(tg, gr, psi) result(j1)
-    type(target_t), intent(in) :: tg
-    type(grid_t),   intent(in) :: gr
-    type(states_t), intent(in) :: psi
+    type(target_t),      intent(in) :: tg
+    type(grid_t),        intent(in) :: gr
+    type(states_elec_t), intent(in) :: psi
 
     integer :: ik, ist
     CMPLX, allocatable :: zpsi(:, :), zst(:, :)
@@ -155,8 +155,8 @@
     do ik = 1, psi%d%nik
       do ist = psi%st_start, psi%st_end
 
-        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
         
         j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
       end do
@@ -172,10 +172,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_userdefined(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
-    type(states_t),    intent(in)    :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ist
     CMPLX :: olap
@@ -190,13 +190,13 @@
     do ik = 1, psi_in%d%nik
       do ist = psi_in%st_start, psi_in%st_end
 
-        call states_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-        call states_get_state(tg%st, gr%mesh, ist, ik, zst)
+        call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
         
         olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
         zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
 
-        call states_set_state(chi_out, gr%mesh, ist, ik, zchi)
+        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
 
       end do
     end do

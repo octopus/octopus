@@ -27,7 +27,7 @@ module born_charges_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_system_oct_m
   use utils_oct_m
 
@@ -53,9 +53,9 @@ contains
   ! ---------------------------------------------------------
   subroutine born_charges_init(this, namespace, geo, st, dim)
     type(Born_charges_t), intent(out) :: this
-    type(namespace_t),    intent(in)    :: namespace
+    type(namespace_t),    intent(in)  :: namespace
     type(geometry_t),     intent(in)  :: geo
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     integer,              intent(in)  :: dim
 
     integer :: idir
@@ -131,9 +131,10 @@ contains
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
-  subroutine out_Born_charges(this, geo, dim, dirname, write_real)
+  subroutine out_Born_charges(this, geo, namespace, dim, dirname, write_real)
     type(Born_charges_t), intent(inout) :: this
     type(geometry_t),     intent(in)    :: geo
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
     logical,              intent(in)    :: write_real
@@ -146,7 +147,7 @@ contains
 
     call correct_Born_charges(this, geo, dim)
 
-    iunit = io_open(trim(dirname)//'/Born_charges', action='write')
+    iunit = io_open(trim(dirname)//'/Born_charges', namespace, action='write')
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms

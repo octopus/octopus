@@ -37,7 +37,7 @@ module vdw_ts_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   
@@ -166,7 +166,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
@@ -301,7 +301,7 @@ contains
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, der%mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)
@@ -324,7 +324,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
     type(hirshfeld_t) :: hirshfeld
@@ -440,18 +440,19 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, geo, dir, fname)
+  subroutine vdw_ts_write_c6ab(this, geo, dir, fname, namespace)
      type(vdw_ts_t)  , intent(inout) :: this
      type(geometry_t),    intent(in) :: geo
      character(len=*), intent(in)    :: dir, fname
+     type(namespace_t),   intent(in) :: namespace
  
      integer :: iunit, iatom, jatom
 
      PUSH_SUB(vdw_ts_write_c6ab)
 
      if(mpi_grp_is_root(mpi_world)) then  
-       call io_mkdir(dir)
-       iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
+       call io_mkdir(dir, namespace)
+       iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 

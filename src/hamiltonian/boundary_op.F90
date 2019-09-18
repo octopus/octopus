@@ -234,7 +234,7 @@ contains
         this%mf(:) = abheight * mf(:)
       end if
       
-      if(debug%info) call bc_write_info(this, mesh)
+      if(debug%info) call bc_write_info(this, mesh, namespace)
       
       SAFE_DEALLOCATE_A(mf)
     end if
@@ -255,23 +255,24 @@ contains
   end subroutine bc_end
 
   ! ---------------------------------------------------------
-  subroutine bc_write_info(this, mesh)
+  subroutine bc_write_info(this, mesh, namespace)
     type(bc_t),               intent(in) :: this
     type(mesh_t),             intent(in) :: mesh
+    type(namespace_t),        intent(in) :: namespace
 
     integer :: err
 
     PUSH_SUB(bc_write_info)
 
     if(this%abtype == MASK_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     else if(this%abtype == IMAGINARY_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     end if
 

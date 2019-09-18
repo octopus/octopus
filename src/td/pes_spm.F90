@@ -21,7 +21,7 @@
 module pes_spm_oct_m
   use comm_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lasers_oct_m
   use mesh_interpolation_oct_m
@@ -33,7 +33,7 @@ module pes_spm_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -81,11 +81,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_spm_init(this, namespace, mesh, st, save_iter)
-    type(pes_spm_t),   intent(out) :: this
-    type(namespace_t), intent(in)  :: namespace
-    type(mesh_t),      intent(in)  :: mesh
-    type(states_t),    intent(in)  :: st
-    integer,           intent(in)  :: save_iter
+    type(pes_spm_t),      intent(out) :: this
+    type(namespace_t),    intent(in)  :: namespace
+    type(mesh_t),         intent(in)  :: mesh
+    type(states_elec_t),  intent(in)  :: st
+    integer,              intent(in)  :: save_iter
 
     type(block_t) :: blk
     integer       :: stst, stend, kptst, kptend, sdim, mdim
@@ -350,11 +350,11 @@ contains
   ! ---------------------------------------------------------
   subroutine pes_spm_calc(this, st, mesh, dt, iter, hm)
     type(pes_spm_t),     intent(inout) :: this
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim
@@ -396,7 +396,7 @@ contains
     do ik = kptst, kptend 
       do ist = stst, stend
         do isdim = 1, sdim
-          call states_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
+          call states_elec_get_state(st, mesh, isdim, ist, ik, psistate(1:mesh%np_part))
           call mesh_interpolation_evaluate(this%interp, this%nspoints, psistate(1:mesh%np_part), &
             this%rcoords(1:mdim, 1:this%nspoints), interp_values(1:this%nspoints))
           this%wf(ist, isdim, ik, :, itstep) = st%occ(ist, ik) * interp_values(:)
@@ -443,12 +443,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_output(this, mesh, st, iter, dt)
-    type(pes_spm_t), intent(in) :: this
-    type(mesh_t),    intent(in) :: mesh
-    type(states_t),  intent(in) :: st
-    integer,         intent(in) :: iter
-    FLOAT,           intent(in) :: dt
+  subroutine pes_spm_output(this, mesh, st, namespace, iter, dt)
+    type(pes_spm_t),     intent(in) :: this
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
+    integer,             intent(in) :: iter
+    FLOAT,               intent(in) :: dt
 
     integer            :: ist, ik, isdim
     integer            :: ii, jj
@@ -553,8 +554,8 @@ contains
       ! OUTPUT FOR SPHERICAL GRID 
       ! -----------------------------------------------------------------
       if(this%sphgrid) then
-        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', action='write', position='rewind')
-        iunitone = io_open('td.general/'//'PES_spm.power.sum', action='write', position='rewind')
+        iunittwo = io_open('td.general/'//'PES_spm.distribution.out', namespace, action='write', position='rewind')
+        iunitone = io_open('td.general/'//'PES_spm.power.sum', namespace, action='write', position='rewind')
         write(iunitone, '(a23)') '# omega, total spectrum'
    
         select case(mdim)
@@ -662,7 +663,8 @@ contains
               write(*,*) 'TEST', itot
               write(filenr, '(i10.10)') itot
    
-              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write', position='append')
+              iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', &
+                namespace, action='write', position='append')
      
               do ii = 1, save_iter - mod(iter, save_iter)
                 jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -687,7 +689,8 @@ contains
                 itot = ist + (ik-1) * st%nst + (isdim-1) * st%nst*st%d%kpt%nglobal
                 write(filenr, '(i10.10)') itot
    
-                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', action='write', position='rewind')
+                iunitone = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.spectrum.out', &
+                  namespace, action='write', position='rewind')
                 write(iunitone, '(a48)') '# frequency, orbital spectrum at sampling points'
    
                 do iom = 1, this%nomega 
@@ -712,7 +715,7 @@ contains
         if(this%recipe == M_PHASE) then
           do isp = 1, this%nspoints
             write(filenr, '(i10.10)') isp
-            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write', position='append')
+            iunittwo = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write', position='append')
       
             do ii = 1, save_iter - mod(iter, save_iter)
               jj = iter - save_iter + ii + mod(save_iter - mod(iter, save_iter), save_iter)
@@ -727,7 +730,7 @@ contains
         end if
 
         if(this%onfly) then
-          iunitone = io_open('td.general/'//'PES_spm.total.out', action='write', position='rewind')
+          iunitone = io_open('td.general/'//'PES_spm.total.out', namespace, action='write', position='rewind')
           write(iunitone, '(a46)') '# frequency, total spectrum at sampling points'
           do iom = 1, this%nomega
             omega = iom*this%delomega
@@ -751,10 +754,11 @@ contains
   end subroutine pes_spm_output
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init_write(this, mesh, st)
-    type(PES_spm_t), intent(in) :: this
-    type(mesh_t),    intent(in) :: mesh
-    type(states_t),  intent(in) :: st
+  subroutine pes_spm_init_write(this, mesh, st, namespace)
+    type(PES_spm_t),     intent(in) :: this
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(namespace_t),   intent(in) :: namespace
 
     integer           :: ist, ik, isdim
     integer           :: isp
@@ -770,7 +774,7 @@ contains
         do isp = 1, this%nspoints
           write(filenr, '(i10.10)') isp
    
-          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', action='write')
+          iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.wavefunctions.out', namespace, action='write')
           xx(1:mesh%sb%dim) = this%rcoords(1:mesh%sb%dim, isp)
           write(iunit,'(a1)') '#'
           write(iunit, '(a7,f17.6,a1,f17.6,a1,f17.6,5a)') &
@@ -792,7 +796,7 @@ contains
           call io_close(iunit)
    
           if(this%recipe == M_PHASE) then
-            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', action='write')
+            iunit = io_open('td.general/'//'PES_spm.'//trim(filenr)//'.phase.out', namespace, action='write')
             write(iunit,'(a24)') '# time, dq(t), dOmega(t)'
             call io_close(iunit)
           end if
@@ -805,10 +809,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_spm_dump(restart, this, st, ierr)
-    type(restart_t), intent(in)  :: restart    
-    type(pes_spm_t), intent(in)  :: this
-    type(states_t),  intent(in)  :: st
-    integer,         intent(out) :: ierr
+    type(restart_t),     intent(in)  :: restart    
+    type(pes_spm_t),     intent(in)  :: this
+    type(states_elec_t), intent(in)  :: st
+    integer,             intent(out) :: ierr
     
     integer :: err, iunit
     
@@ -850,10 +854,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_spm_load(restart, this, st, ierr)
-    type(restart_t), intent(in)    :: restart    
-    type(pes_spm_t), intent(inout) :: this
-    type(states_t),  intent(inout) :: st
-    integer,         intent(out)   :: ierr
+    type(restart_t),     intent(in)    :: restart    
+    type(pes_spm_t),     intent(inout) :: this
+    type(states_elec_t), intent(inout) :: st
+    integer,             intent(out)   :: ierr
     
     integer :: err, iunit
     
@@ -898,7 +902,7 @@ contains
   subroutine pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
     type(pes_spm_t),     intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii

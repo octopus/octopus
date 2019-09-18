@@ -59,6 +59,7 @@ module opt_control_iter_oct_m
     integer            :: convergence_iunit
     integer            :: velocities_iunit
     logical            :: dump_intermediate
+    type(namespace_t), pointer :: namespace
   end type oct_iterator_t
 
 contains
@@ -66,9 +67,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_iterator_init(iterator, namespace, par)
-    type(oct_iterator_t),    intent(inout) :: iterator
-    type(namespace_t),       intent(in)    :: namespace        
-    type(controlfunction_t), intent(in)    :: par
+    type(oct_iterator_t),      intent(inout) :: iterator
+    type(namespace_t), target, intent(in)    :: namespace        
+    type(controlfunction_t),   intent(in)    :: par
 
     PUSH_SUB(oct_iterator_init)
 
@@ -128,11 +129,12 @@ contains
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
+    iterator%namespace => namespace
 
     SAFE_ALLOCATE(iterator%best_par)
     call controlfunction_copy(iterator%best_par, par)
 
-    iterator%convergence_iunit = io_open(OCT_DIR//'convergence', action='write')
+    iterator%convergence_iunit = io_open(OCT_DIR//'convergence', namespace, action='write')
 
     write(iterator%convergence_iunit, '(91(''#''))') 
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
@@ -142,7 +144,7 @@ contains
     write(iterator%convergence_iunit, '(91(''#''))') 
 
     if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
-       iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
+       iterator%velocities_iunit = io_open(OCT_DIR//'velocities', namespace, action='write')
     end if
 
     POP_SUB(oct_iterator_init)
@@ -157,7 +159,7 @@ contains
     
     PUSH_SUB(oct_iterator_end)
 
-    call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
+    call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par, namespace)
 
     call controlfunction_end(iterator%best_par)
     SAFE_DEALLOCATE_P(iterator%best_par)
@@ -233,7 +235,8 @@ contains
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
-      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
+      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', &
+        iterator%best_par, iterator%namespace)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
@@ -296,7 +299,8 @@ contains
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
-      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
+      if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', &
+        iterator%best_par, sys%namespace)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
@@ -342,7 +346,7 @@ contains
     PUSH_SUB(iterator_write)
 
     write(filename,'(a,i4.4)') OCT_DIR//'laser.', iterator%ctr_iter
-    call controlfunction_write(filename, par)
+    call controlfunction_write(filename, par, iterator%namespace)
 
     POP_SUB(iterator_write)
   end subroutine iterator_write

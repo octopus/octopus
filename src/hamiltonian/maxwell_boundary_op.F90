@@ -34,7 +34,7 @@ module maxwell_boundary_op_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -546,7 +546,7 @@ contains
 
     !call bc_generate_zero(bc, gr%mesh, ab_bounds)
 
-    if(debug%info) call bc_mxll_write_info(bc, gr%mesh)
+    if(debug%info) call bc_mxll_write_info(bc, gr%mesh, namespace)
 
     if (ab_mask_check .or. ab_pml_check) then
       call messages_print_stress(stdout)
@@ -566,9 +566,10 @@ contains
   end subroutine bc_mxll_end
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_write_info(bc, mesh)
+  subroutine bc_mxll_write_info(bc, mesh, namespace)
     type(bc_mxll_t),       intent(in) :: bc
-    type(mesh_t),             intent(in) :: mesh
+    type(mesh_t),          intent(in) :: mesh
+    type(namespace_t),     intent(in) :: namespace
 
     integer :: err, ip, ip_in, idim
     FLOAT, allocatable :: tmp(:)
@@ -747,24 +748,23 @@ contains
         FLOAT,            intent(in) :: tmp(:)
 
         call dio_function_output(io_function_fill_how("VTK"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("AxisX"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("AxisY"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
         call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", trim(filename), &
-                     mesh, tmp, unit_one, err)
+                     namespace, mesh, tmp, unit_one, err)
       end subroutine write_files
 
 
   end subroutine bc_mxll_write_info
-
 
   ! ---------------------------------------------------------
   subroutine maxwell_mask_points_mapping(bc, mesh, bounds, geo)

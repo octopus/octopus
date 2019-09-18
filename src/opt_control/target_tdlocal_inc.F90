@@ -79,10 +79,10 @@
     integer :: ierr
     PUSH_SUB(target_output_tdlocal)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
     call target_build_tdlocal(tg, gr, M_ZERO)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'td_local_target', gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'td_local_target', outp%namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 
@@ -112,7 +112,7 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_tdlocal(chi_out)
-    type(states_t), intent(inout) :: chi_out
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_tdlocal)
@@ -135,7 +135,7 @@
   subroutine target_tdcalc_tdlocal(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :), zpsi(:, :)
@@ -154,7 +154,7 @@
       opsi = M_z0
       do ist  = psi%st_start, psi%st_end
 
-        call states_get_state(psi, gr%mesh, ist, 1, zpsi)
+        call states_elec_get_state(psi, gr%mesh, ist, 1, zpsi)
         
         do ip = 1, gr%mesh%np
           opsi(ip, 1) = tg%rho(ip)*zpsi(ip, 1)

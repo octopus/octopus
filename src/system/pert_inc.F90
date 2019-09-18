@@ -17,16 +17,15 @@
 !!
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  type(batch_t),        intent(in)    :: f_in
-  type(batch_t),        intent(inout) :: f_out
+subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  integer,                  intent(in)    :: ik
+  type(batch_t),            intent(in)    :: f_in
+  type(batch_t),            intent(inout) :: f_out
 
   integer :: ist
   R_TYPE, allocatable :: fi(:, :), fo(:, :)
@@ -46,7 +45,7 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, psolver, ik, f_in, 
   case default
     do ist = 1, f_in%nst
       call batch_get_state(f_in, ist, gr%mesh%np, fi)
-      call X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, fi, fo)
+      call X(pert_apply)(this, namespace, gr, geo, hm, ik, fi, fo)
       call batch_set_state(f_out, ist, gr%mesh%np, fo)
     end do
   end select
@@ -91,17 +90,16 @@ end subroutine X(pert_apply_batch)
 ! --------------------------------------------------------------------------
 !> Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 !! Note that e^ikr phase is applied to f_in, then is removed afterward
-subroutine X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out, set_bc)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:, :)
-  R_TYPE,               intent(out)   :: f_out(:, :)
-  logical,    optional, intent(in)    :: set_bc
+subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(in)    :: f_in(:, :)
+  R_TYPE,                   intent(out)   :: f_out(:, :)
+  logical,        optional, intent(in)    :: set_bc
 
   R_TYPE, allocatable :: f_in_copy(:, :)
   logical :: apply_kpoint, set_bc_
@@ -138,7 +136,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out,
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+    call states_elec_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
 #endif
   end if
 
@@ -162,7 +160,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out,
   
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+    call states_elec_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
 #endif
   end if
 
@@ -230,7 +228,7 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      call X(hamiltonian_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply)(hm, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir)*Hxpsi(ip,idim)
@@ -242,7 +240,7 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      call X(hamiltonian_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply)(hm, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - Hxpsi(ip,idim)
@@ -350,7 +348,7 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
   type(grid_t),         intent(in)    :: gr
   type(namespace_t),    intent(in)    :: namespace
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
+  type(hamiltonian_elec_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -396,16 +394,15 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
 end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, psolver, ik, f_in, f_out)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:, :)
-  R_TYPE,               intent(out)   :: f_out(:, :)
+subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, ik, f_in, f_out)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(in)    :: f_in(:, :)
+  R_TYPE,                   intent(out)   :: f_out(:, :)
 
   integer :: ip, idim
   R_TYPE, allocatable :: f_in_copy(:,:)
@@ -429,7 +426,7 @@ subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, psolver, ik, f_i
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+    call states_elec_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
 #endif
   end if
 
@@ -449,7 +446,7 @@ subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, psolver, ik, f_i
 
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
-    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+    call states_elec_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
 #endif
   end if
 
@@ -650,7 +647,7 @@ contains
       cpsi(:,:) = M_ZERO
       call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, geo)
       call pert_setup_dir(pert_kdotp, this%dir)
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, psolver, ik, f_in_copy, cpsi,set_bc=.false.)
+      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik, f_in_copy, cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir2)*cpsi(ip,idim)
@@ -663,7 +660,7 @@ contains
         end do
       end do
       cpsi(:,:) = M_ZERO
-      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, psolver, ik, f_in_copy, cpsi, set_bc=.false.)
+      call X(pert_apply)(pert_kdotp, namespace, gr, geo, hm, ik, f_in_copy, cpsi, set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - cpsi(ip,idim)
@@ -689,7 +686,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   type(grid_t),        intent(in)    :: gr
   type(namespace_t),   intent(in)    :: namespace
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_elec_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: f_in(:)
   R_TYPE,              intent(out)   :: f_out(:)
@@ -750,9 +747,9 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
   type(grid_t),        intent(in)    :: gr
   type(namespace_t),   intent(in)    :: namespace
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_elec_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   type(vibrations_t),  intent(in)    :: vib
   FLOAT,               intent(in)    :: factor
   FLOAT,               intent(inout) :: matrix(:, :) !< this is an expectation value of a Hermitian operator
@@ -773,7 +770,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
 
   do ist = 1, st%nst
 
-    call states_get_state(st, gr%der%mesh, ist, ik, psi)
+    call states_elec_get_state(st, gr%der%mesh, ist, ik, psi)
     
     do idim = 1, st%d%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), gpsi(:, idim, :))
@@ -821,18 +818,17 @@ end subroutine X(ionic_pert_matrix_elements_2)
 !! correct if used as <psi(0)|H(1)|psi(1)> since the LR wavefunctions include the
 !! occupation. This routine must be modified if used differently than these two
 !! ways.
-subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, psolver, st, psia, psib, density, pert_order)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_t),       intent(in)    :: st
-  R_TYPE,               pointer       :: psia(:, :, :, :)
-  R_TYPE,               pointer       :: psib(:, :, :, :)
-  R_TYPE,               intent(out)   :: density(:)
-  integer, optional,    intent(in)    :: pert_order
+subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, st, psia, psib, density, pert_order)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(states_elec_t),      intent(in)    :: st
+  R_TYPE,                   pointer       :: psia(:, :, :, :)
+  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(out)   :: density(:)
+  integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: pertpsib(:, :)
   integer :: ik, ist, idim, order
@@ -852,10 +848,10 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, psolver, s
     do ist = st%st_start, st%st_end
 
       if(order == 1) then 
-        call X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, psib(:, :, ist, ik), pertpsib)
+        call X(pert_apply)(this, namespace, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%smear%el_per_state
       else
-        call X(pert_apply_order_2)(this, namespace, gr, geo, hm, psolver, ik, psib(:, :, ist, ik), pertpsib)
+        call X(pert_apply_order_2)(this, namespace, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%occ(ist, ik)
       end if
 
@@ -873,17 +869,16 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, psolver, s
 end subroutine X(pert_expectation_density)
 
 ! --------------------------------------------------------------------------
-R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, psolver, st, psia, psib, pert_order) result(expval)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_t),       intent(in)    :: st
-  R_TYPE,               pointer       :: psia(:, :, :, :)
-  R_TYPE,               pointer       :: psib(:, :, :, :)
-  integer, optional,    intent(in)    :: pert_order
+R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, st, psia, psib, pert_order) result(expval)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(states_elec_t),      intent(in)    :: st
+  R_TYPE,                   pointer       :: psia(:, :, :, :)
+  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: density(:)
 #ifdef HAVE_MPI
@@ -900,7 +895,7 @@ R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, psolver
 
   SAFE_ALLOCATE(density(1:gr%mesh%np))
 
-  call X(pert_expectation_density)(this, namespace, gr, geo, hm, psolver, st, psia, psib, density, pert_order = order)
+  call X(pert_expectation_density)(this, namespace, gr, geo, hm, st, psia, psib, density, pert_order = order)
 
   expval = X(mf_integrate)(gr%mesh, density)
 
@@ -919,21 +914,20 @@ end function X(pert_expectation_value)
 
 ! --------------------------------------------------------------------------
 
-R_TYPE function X(pert_states_expectation_value)(this, namespace, gr, geo, hm, psolver, st, pert_order) result(expval)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_t),       intent(in)    :: st
-  integer, optional,    intent(in)    :: pert_order
+R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, hm, st, pert_order) result(expval)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(states_elec_t),      intent(in)    :: st
+  integer, optional,        intent(in)    :: pert_order
 
   integer :: order, ik, ib, minst, maxst, ist
   R_TYPE, allocatable :: tt(:)
   type(batch_t) :: hpsib
 
-  PUSH_SUB(X(pert_states_expectation_value))
+  PUSH_SUB(X(pert_states_elec_expectation_value))
 
   order = 1
   if(present(pert_order)) order = pert_order
@@ -947,12 +941,12 @@ R_TYPE function X(pert_states_expectation_value)(this, namespace, gr, geo, hm, p
     tt = M_ZERO
 
     do ib = st%group%block_start, st%group%block_end
-      minst = states_block_min(st, ib)
-      maxst = states_block_max(st, ib)
+      minst = states_elec_block_min(st, ib)
+      maxst = states_elec_block_max(st, ib)
 
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(pert_apply_batch)(this, namespace, gr, geo, hm, psolver, ik, st%group%psib(ib, ik), hpsib)
+      call X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
       call batch_end(hpsib, copy = .false.)
@@ -968,9 +962,9 @@ R_TYPE function X(pert_states_expectation_value)(this, namespace, gr, geo, hm, p
   if(st%parallel_in_states) call comm_allreduce(st%mpi_grp%comm, expval)
 
 
-  POP_SUB(X(pert_states_expectation_value))
+  POP_SUB(X(pert_states_elec_expectation_value))
 
-end function X(pert_states_expectation_value)
+end function X(pert_states_elec_expectation_value)
 
 !! Local Variables:
 !! mode: f90

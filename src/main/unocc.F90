@@ -23,7 +23,7 @@ module unocc_oct_m
   use eigensolver_oct_m
   use global_oct_m
   use output_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m
@@ -38,9 +38,10 @@ module unocc_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_io_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_io_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -114,7 +115,7 @@ contains
         mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
-        call states_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(sys%hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_unocc, sys%hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
@@ -132,11 +133,11 @@ contains
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(sys%hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
       end if
-      call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
+      call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
     else
@@ -232,7 +233,7 @@ contains
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &
-        call states_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
+        call states_elec_dump_rho(restart_dump, sys%st, sys%gr, ierr_rho)
     end if
 
     message(1) = "Info: Starting calculation of unoccupied states."
@@ -244,22 +245,22 @@ contains
     ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
     ! the occupations must be recalculated each time, though they do not affect the result of course.
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-    call states_fermi(sys%st, sys%gr%mesh)
+    call states_elec_fermi(sys%st, sys%gr%mesh)
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, sys%psolver, 1, converged, sys%st%nst_conv)
+      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-      call states_fermi(sys%st, sys%gr%mesh)
+      call states_elec_fermi(sys%st, sys%gr%mesh)
 
       call write_iter_(sys%st)
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir(STATIC_DIR)
-        iunit = io_open(STATIC_DIR//'/eigenvalues', action='write')
+        call io_mkdir(STATIC_DIR, sys%namespace)
+        iunit = io_open(STATIC_DIR//'/eigenvalues', sys%namespace, action='write')
         
         if(converged) then
           write(iunit,'(a)') 'All states converged.'
@@ -268,7 +269,7 @@ contains
         end if
         write(iunit,'(a, e17.6)') 'Criterion = ', eigens%tolerance
         write(iunit,'(1x)')
-        call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
+        call states_elec_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
         call io_close(iunit)
       end if
 
@@ -277,7 +278,7 @@ contains
       if(.not. bandstructure_mode) then
         ! write restart information.
         if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
-          call states_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
+          call states_elec_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)
@@ -287,7 +288,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%psolver, sys%ks, dirname)
+        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
       end if
      
       if(converged .or. forced_finish) exit
@@ -310,14 +311,14 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
-        call states_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
+        call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
               sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
               vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
     end if
  
 
-    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%psolver, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)
@@ -326,17 +327,17 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_(mesh, st)
-      type(mesh_t),   intent(in)    :: mesh
-      type(states_t), intent(inout) :: st
+      type(mesh_t),        intent(in)    :: mesh
+      type(states_elec_t), intent(inout) :: st
 
       PUSH_SUB(unocc_run.init_)
 
       call messages_obsolete_variable(sys%namespace, "NumberUnoccStates", "ExtraStates")
 
-      call states_allocate_wfns(st, mesh)
+      call states_elec_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff
-      call eigensolver_init(eigens, sys%namespace, sys%gr, st, sys%ks%xc)
+      call eigensolver_init(eigens, sys%namespace, sys%gr, st)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
@@ -359,7 +360,7 @@ contains
 
         ! ---------------------------------------------------------
     subroutine write_iter_(st)
-      type(states_t), intent(in) :: st
+      type(states_elec_t), intent(in) :: st
 
       character(len=50) :: str
       FLOAT :: mem
@@ -375,7 +376,7 @@ contains
       write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
       call messages_info(1)
 
-      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
+      call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
 
       if(conf%report_memory) then
         mem = loct_get_memory_usage()/(CNST(1024.0)**2)

@@ -83,9 +83,9 @@
     integer :: ierr
     PUSH_SUB(target_output_local)
     
-    call io_mkdir(trim(dir))
+    call io_mkdir(trim(dir), outp%namespace)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'local_target', gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'local_target', outp%namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 
@@ -97,9 +97,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_local(gr, tg, psi) result(j1)
-    type(grid_t),   intent(in) :: gr
-    type(target_t), intent(in) :: tg
-    type(states_t), intent(in) :: psi
+    type(grid_t),        intent(in) :: gr
+    type(target_t),      intent(in) :: tg
+    type(states_elec_t), intent(in) :: psi
 
     integer :: is
     PUSH_SUB(target_j1_local)
@@ -116,10 +116,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_local(tg, gr, psi_in, chi_out)
-    type(target_t), intent(in)    :: tg
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(in)    :: psi_in
-    type(states_t), intent(inout) :: chi_out
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, idim, ist, ip
     CMPLX, allocatable :: zpsi(:, :)
@@ -131,11 +131,11 @@
     do ik = 1, psi_in%d%nik
       do idim = 1, psi_in%d%dim
         do ist = psi_in%st_start, psi_in%st_end
-          call states_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+          call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
           do ip = 1, gr%mesh%np
             zpsi(ip, idim) = psi_in%occ(ist, ik)*tg%rho(ip)*zpsi(ip, idim)
           end do
-          call states_set_state(chi_out, gr%mesh, ist, ik, zpsi)
+          call states_elec_set_state(chi_out, gr%mesh, ist, ik, zpsi)
         end do
       end do
     end do

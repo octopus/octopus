@@ -47,15 +47,15 @@ module hamiltonian_mxll_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use states_mxll_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
   use xyz_adjust_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use xc_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
@@ -88,7 +88,7 @@ module hamiltonian_mxll_oct_m
   type hamiltonian_mxll_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
-    type(states_dim_t)       :: d
+    type(states_elec_dim_t)       :: d
 
     !> absorbing boundaries
     logical :: adjoint
@@ -244,7 +244,7 @@ contains
        
     call hamiltonian_mxll_null(hm)
 
-    call states_dim_copy(hm%d, st%d)
+    call states_elec_dim_copy(hm%d, st%d)
 
     ASSERT(associated(gr%der%lapl))
 
@@ -347,7 +347,7 @@ contains
 
     call bc_mxll_end(hm%bc)
 
-    call states_dim_end(hm%d) 
+    call states_elec_dim_end(hm%d) 
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -1355,7 +1355,7 @@ end subroutine hamiltonian_mxll_apply_all
     type(poisson_t),          intent(in)    :: poisson
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm_mxll
-    type(hamiltonian_t),      intent(in)    :: hm_elec
+    type(hamiltonian_elec_t), intent(in)    :: hm_elec
     type(states_mxll_t),      intent(in)    :: st
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 

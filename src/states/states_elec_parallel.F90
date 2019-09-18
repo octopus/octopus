@@ -18,43 +18,44 @@
 
 #include "global.h"
 
-module states_parallel_oct_m
+module states_elec_parallel_oct_m
   use batch_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
 
   implicit none
 
   private
 
   public ::                                    &
-    states_parallel_blacs_blocksize,           &
-    states_parallel_remote_access_start,       &
-    states_parallel_remote_access_stop,        &
-    states_parallel_get_block,                 &
-    states_parallel_release_block,             &
-    states_parallel_gather
+    states_elec_parallel_blacs_blocksize,           &
+    states_elec_parallel_remote_access_start,       &
+    states_elec_parallel_remote_access_stop,        &
+    states_elec_parallel_get_block,                 &
+    states_elec_parallel_release_block,             &
+    states_elec_parallel_gather
 
-  interface states_parallel_gather
-    module procedure dstates_parallel_gather_1, zstates_parallel_gather_1
-    module procedure dstates_parallel_gather_3, zstates_parallel_gather_3
-  end interface states_parallel_gather
+  interface states_elec_parallel_gather
+    module procedure dstates_elec_parallel_gather_1, zstates_elec_parallel_gather_1
+    module procedure dstates_elec_parallel_gather_3, zstates_elec_parallel_gather_3
+  end interface states_elec_parallel_gather
 
   type(profile_t), save:: prof_gather
   
 contains
 
-  subroutine states_parallel_blacs_blocksize(st, mesh, blocksize, total_np)
-    type(states_t),  intent(in)    :: st
-    type(mesh_t),    intent(in)    :: mesh
-    integer,         intent(out)   :: blocksize(2)
-    integer,         intent(out)   :: total_np
+  subroutine states_elec_parallel_blacs_blocksize(st, mesh, blocksize, total_np)
+    type(states_elec_t),  intent(in)    :: st
+    type(mesh_t),         intent(in)    :: mesh
+    integer,              intent(out)   :: blocksize(2)
+    integer,              intent(out)   :: total_np
 
-    PUSH_SUB(states_parallel_blacs_blocksize)
+    PUSH_SUB(states_elec_parallel_blacs_blocksize)
 
 #ifdef HAVE_SCALAPACK
     ! We need to select the block size of the decomposition. This is
@@ -93,17 +94,17 @@ contains
     total_np = 0
 #endif
 
-    POP_SUB(states_parallel_blacs_blocksize)
-  end subroutine states_parallel_blacs_blocksize
+    POP_SUB(states_elec_parallel_blacs_blocksize)
+  end subroutine states_elec_parallel_blacs_blocksize
 
   ! ------------------------------------------------------------
 
-  subroutine states_parallel_remote_access_start(this)
-    type(states_t),       intent(inout) :: this
+  subroutine states_elec_parallel_remote_access_start(this)
+    type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
     
-    PUSH_SUB(states_parallel_remote_access_start)
+    PUSH_SUB(states_elec_parallel_remote_access_start)
 
     ASSERT(associated(this%group%psib))
 
@@ -123,17 +124,17 @@ contains
       end do
     end do
     
-    POP_SUB(states_parallel_remote_access_start)
-  end subroutine states_parallel_remote_access_start
+    POP_SUB(states_elec_parallel_remote_access_start)
+  end subroutine states_elec_parallel_remote_access_start
 
     ! ---------------------------------------------------------
 
-  subroutine states_parallel_remote_access_stop(this)
-    type(states_t),       intent(inout) :: this
+  subroutine states_elec_parallel_remote_access_stop(this)
+    type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
     
-    PUSH_SUB(states_parallel_remote_access_stop)
+    PUSH_SUB(states_elec_parallel_remote_access_stop)
 
     ASSERT(associated(this%group%psib))
     
@@ -151,21 +152,21 @@ contains
 
     SAFE_DEALLOCATE_A(this%group%rma_win)
     
-    POP_SUB(states_parallel_remote_access_stop)
-  end subroutine states_parallel_remote_access_stop
+    POP_SUB(states_elec_parallel_remote_access_stop)
+  end subroutine states_elec_parallel_remote_access_stop
 
   ! --------------------------------------
 
-  subroutine states_parallel_get_block(this, mesh, ib, iqn, psib)
-    type(states_t), target, intent(in) :: this
-    type(mesh_t),           intent(in) :: mesh
-    integer,                intent(in) :: ib
-    integer,                intent(in) :: iqn
-    type(batch_t),          pointer    :: psib
+  subroutine states_elec_parallel_get_block(this, mesh, ib, iqn, psib)
+    type(states_elec_t), target, intent(in) :: this
+    type(mesh_t),                intent(in) :: mesh
+    integer,                     intent(in) :: ib
+    integer,                     intent(in) :: iqn
+    type(batch_t),               pointer    :: psib
 
     type(profile_t), save :: prof
     
-    PUSH_SUB(states_parallel_get_block)
+    PUSH_SUB(states_elec_parallel_get_block)
 
     call profiling_in(prof, "STATES_GET_BLOCK")
     
@@ -202,18 +203,18 @@ contains
 
     call profiling_out(prof)
     
-    POP_SUB(states_parallel_get_block)
-  end subroutine states_parallel_get_block
+    POP_SUB(states_elec_parallel_get_block)
+  end subroutine states_elec_parallel_get_block
 
   ! --------------------------------------
 
-  subroutine states_parallel_release_block(this, ib, iqn, psib)
-    type(states_t), target, intent(in) :: this
-    integer,                intent(in) :: ib
-    integer,                intent(in) :: iqn
-    type(batch_t),          pointer    :: psib
+  subroutine states_elec_parallel_release_block(this, ib, iqn, psib)
+    type(states_elec_t), target, intent(in) :: this
+    integer,                     intent(in) :: ib
+    integer,                     intent(in) :: iqn
+    type(batch_t),               pointer    :: psib
 
-    PUSH_SUB(states_parallel_release_block)
+    PUSH_SUB(states_elec_parallel_release_block)
 
     if(this%group%block_is_local(ib, iqn)) then
       nullify(psib)
@@ -222,22 +223,22 @@ contains
       SAFE_DEALLOCATE_P(psib)
     end if
     
-    POP_SUB(states_parallel_release_block)
-  end subroutine states_parallel_release_block
+    POP_SUB(states_elec_parallel_release_block)
+  end subroutine states_elec_parallel_release_block
 
   ! --------------------------------------
   
 #include "undef.F90"
 #include "real.F90"
-#include "states_parallel_inc.F90"
+#include "states_elec_parallel_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "states_parallel_inc.F90"
+#include "states_elec_parallel_inc.F90"
 #include "undef.F90"
   
   
-end module states_parallel_oct_m
+end module states_elec_parallel_oct_m
 
 !! Local Variables:
 !! mode: f90

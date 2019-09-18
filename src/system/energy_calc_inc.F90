@@ -19,11 +19,10 @@
 
 ! ---------------------------------------------------------
 !> calculates the eigenvalues of the orbitals
-subroutine X(calculate_eigenvalues)(hm, der, psolver, st)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_t),      intent(inout) :: st
+subroutine X(calculate_eigenvalues)(hm, der, st)
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: eigen(:, :)
 
@@ -37,7 +36,7 @@ subroutine X(calculate_eigenvalues)(hm, der, psolver, st)
   st%eigenval = M_ZERO
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call X(calculate_expectation_values)(hm, der, psolver, st, eigen)
+  call X(calculate_expectation_values)(hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
@@ -49,13 +48,12 @@ subroutine X(calculate_eigenvalues)(hm, der, psolver, st)
   POP_SUB(X(calculate_eigenvalues))
 end subroutine X(calculate_eigenvalues)
 
-subroutine X(calculate_expectation_values)(hm, der, psolver, st, eigen, terms)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_t),      intent(inout) :: st
-  R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-  integer, optional,   intent(in)    :: terms
+subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
+  R_TYPE,                   intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
+  integer, optional,        intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
@@ -68,19 +66,19 @@ subroutine X(calculate_expectation_values)(hm, der, psolver, st, eigen, terms)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end
 
-      minst = states_block_min(st, ib)
-      maxst = states_block_max(st, ib)
+      minst = states_elec_block_min(st, ib)
+      maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(hamiltonian_elec_apply_packed(hm, der%mesh)) then
         call batch_pack(st%group%psib(ib, ik))
       end if
       
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_apply_batch)(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(hamiltonian_elec_apply_batch)(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(hamiltonian_elec_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
       end if
 
@@ -97,12 +95,11 @@ subroutine X(calculate_expectation_values)(hm, der, psolver, st, eigen, terms)
 end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
-FLOAT function X(energy_calc_electronic)(hm, der, psolver, st, terms) result(energy)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_t),      intent(inout) :: st
-  integer,             intent(in)    :: terms
+FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
+  integer,                  intent(in)    :: terms
 
   R_TYPE, allocatable  :: tt(:, :)
  
@@ -110,9 +107,9 @@ FLOAT function X(energy_calc_electronic)(hm, der, psolver, st, terms) result(ene
 
   SAFE_ALLOCATE(tt(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  call X(calculate_expectation_values)(hm, der, psolver, st, tt, terms = terms)
+  call X(calculate_expectation_values)(hm, der, st, tt, terms = terms)
 
-  energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+  energy = states_elec_eigenvalues_sum(st, real(tt, REAL_PRECISION))
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

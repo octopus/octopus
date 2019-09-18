@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module states_io_oct_m
+module states_elec_io_oct_m
   use atomic_orbital_oct_m
   use comm_oct_m
   use geometry_oct_m
@@ -39,8 +39,9 @@ module states_io_oct_m
   use smear_oct_m
   use sort_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -51,22 +52,22 @@ module states_io_oct_m
   private
 
   public ::                           &
-    states_write_eigenvalues,         &
-    states_write_tpa,                 &
-    states_write_bandstructure,       &
-    states_write_gaps
+    states_elec_write_eigenvalues,         &
+    states_elec_write_tpa,                 &
+    states_elec_write_bandstructure,       &
+    states_elec_write_gaps
 
 contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
-    integer,           intent(in) :: iunit, nst
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
-    FLOAT, optional,   intent(in) :: error(:,:) !< (nst, st%d%nik)
-    integer, optional, intent(in) :: st_start
-    logical, optional, intent(in) :: compact
+  subroutine states_elec_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
+    integer,             intent(in) :: iunit, nst
+    type(states_elec_t), intent(in) :: st
+    type(simul_box_t),   intent(in) :: sb
+    FLOAT, optional,     intent(in) :: error(:,:) !< (nst, st%d%nik)
+    integer, optional,   intent(in) :: st_start
+    logical, optional,   intent(in) :: compact
     
     integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
     logical :: print_eigenval
@@ -77,10 +78,10 @@ contains
     integer, allocatable :: flat_indices(:, :)
     integer, parameter :: print_range = 8
 
-    PUSH_SUB(states_write_eigenvalues)
+    PUSH_SUB(states_elec_write_eigenvalues)
 
     if(.not. st%calc_eigenval) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_elec_write_eigenvalues)
       return
     end if
     
@@ -90,7 +91,7 @@ contains
 
 
     if(.not. mpi_grp_is_root(mpi_world)) then
-      POP_SUB(states_write_eigenvalues)
+      POP_SUB(states_elec_write_eigenvalues)
       return
     end if
 
@@ -115,7 +116,7 @@ contains
 
       do ik = 1, st%d%nik, ns
         if(simul_box_is_periodic(sb)) then
-          ikk = states_dim_get_kpoint_index(st%d, ik)
+          ikk = states_elec_dim_get_kpoint_index(st%d, ik)
           kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikk, absolute_coordinates = .false.)
           write(message(1), '(a,i4,a)') '#k =', ikk, ', k = ('
           do idir = 1, sb%dim
@@ -207,8 +208,8 @@ contains
       do iflat = 1, st%d%nik*nst
         iqn = flat_indices(1, iflat)
         ist = flat_indices(2, iflat)
-        ik = states_dim_get_kpoint_index(st%d, iqn)
-        is = states_dim_get_spin_index(st%d, iqn)
+        ik = states_elec_dim_get_kpoint_index(st%d, iqn)
+        is = states_elec_dim_get_spin_index(st%d, iqn)
 
         print_eigenval = iflat <= print_range
         print_eigenval = print_eigenval .or. st%d%nik*nst - iflat < print_range
@@ -293,7 +294,7 @@ contains
       call messages_info(1, iunit)
     end if
 
-    POP_SUB(states_write_eigenvalues)
+    POP_SUB(states_elec_write_eigenvalues)
     
   contains
 
@@ -305,14 +306,14 @@ contains
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
       
-      PUSH_SUB(states_write_eigenvalues.print_dos)
+      PUSH_SUB(states_elec_write_eigenvalues.print_dos)
 
       emin = flat_eigenval(1)
       emax = flat_eigenval(st%d%nik*nst)
       de = (emax - emin)/(ndiv - M_ONE)
 
       if(de < M_EPSILON) then
-        POP_SUB(states_write_eigenvalues.print_dos)
+        POP_SUB(states_elec_write_eigenvalues.print_dos)
         return
       end if
       
@@ -358,27 +359,27 @@ contains
       call messages_new_line()
       call messages_info()
 
-      POP_SUB(states_write_eigenvalues.print_dos)
+      POP_SUB(states_elec_write_eigenvalues.print_dos)
     end subroutine print_dos
  
-  end subroutine states_write_eigenvalues
+  end subroutine states_elec_write_eigenvalues
 
   ! ---------------------------------------------------------
-  subroutine states_write_gaps(iunit, st, sb)
-    integer,           intent(in) :: iunit
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
+  subroutine states_elec_write_gaps(iunit, st, sb)
+    integer,             intent(in) :: iunit
+    type(states_elec_t), intent(in) :: st
+    type(simul_box_t),   intent(in) :: sb
     
     integer :: ik, ikk, ist
 
     FLOAT :: homo, lumo, egdir, egindir
     integer :: homok, lumok, egdirk
 
-    PUSH_SUB(states_write_gaps)
+    PUSH_SUB(states_elec_write_gaps)
 
     if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
      .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
-      POP_SUB(states_write_gaps)
+      POP_SUB(states_elec_write_gaps)
       return
     end if
 
@@ -425,16 +426,16 @@ contains
     end if
 
 
-    POP_SUB(states_write_gaps)
-  end subroutine states_write_gaps
+    POP_SUB(states_elec_write_gaps)
+  end subroutine states_elec_write_gaps
 
 
   ! ---------------------------------------------------------
-  subroutine states_write_tpa(dir, namespace, gr, st)
-    character(len=*),  intent(in) :: dir
-    type(namespace_t), intent(in) :: namespace
-    type(grid_t),      intent(in) :: gr
-    type(states_t),    intent(in) :: st
+  subroutine states_elec_write_tpa(dir, namespace, gr, st)
+    character(len=*),    intent(in) :: dir
+    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in) :: gr
+    type(states_elec_t), intent(in) :: st
 
     type(block_t) :: blk
     integer       :: ncols, icoord, ist, ik, tpa_initialst, tpa_initialk
@@ -449,7 +450,7 @@ contains
     logical             :: use_qvector = .false.
     FLOAT, allocatable  :: qvector(:), psi_initial(:, :), psi_ist(:, :)
 
-    PUSH_SUB(states_write_tpa)
+    PUSH_SUB(states_elec_write_tpa)
 
     ! find the orbital with half-occupation
     tpa_initialst = -1
@@ -469,7 +470,7 @@ contains
         call messages_write('No orbital with half-occupancy found. TPA output is not written.')
         call messages_warning()
 
-        POP_SUB(states_write_tpa)
+        POP_SUB(states_elec_write_tpa)
         return
       end if
     end if
@@ -528,7 +529,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), action='write')    
+      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), namespace, action='write')    
 
       ! header
       if(use_qvector) then
@@ -554,12 +555,12 @@ contains
     SAFE_ALLOCATE(psi_initial(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(psi_ist(1:gr%mesh%np, 1:st%d%dim))
 
-    call states_get_state(st, gr%mesh, tpa_initialst, tpa_initialk, psi_initial)
+    call states_elec_get_state(st, gr%mesh, tpa_initialst, tpa_initialk, psi_initial)
 
     ! loop through every state
     do ist = 1, st%nst
 
-      call states_get_state(st, gr%mesh, ist, tpa_initialk, psi_ist)
+      call states_elec_get_state(st, gr%mesh, ist, tpa_initialk, psi_ist)
 
       ! final states are the unoccupied ones
       if (abs(st%occ(ist,tpa_initialk))  <  M_THRESHOLD) then
@@ -624,18 +625,18 @@ contains
       SAFE_DEALLOCATE_A(qvector)
     end if
   
-    POP_SUB(states_write_tpa)
+    POP_SUB(states_elec_write_tpa)
  
-  end subroutine states_write_tpa
+  end subroutine states_elec_write_tpa
 
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),         intent(in)      :: dir
     type(namespace_t),        intent(in)      :: namespace
     integer,                  intent(in)      :: nst
-    type(states_t),           intent(in)      :: st
+    type(states_elec_t),      intent(in)      :: st
     type(simul_box_t),        intent(in)      :: sb
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
@@ -658,7 +659,7 @@ contains
     type(orbitalset_t) :: os
 
 
-    PUSH_SUB(states_write_bandstructure)   
+    PUSH_SUB(states_elec_write_bandstructure)   
 
     ! shortcuts
     ns = 1
@@ -684,7 +685,7 @@ contains
         else
           write(filename, '(a)') 'bandstructure'
         end if
-        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
 
         ! write header
         write(iunit(is),'(a)',advance='no') '# coord. '
@@ -808,7 +809,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
             if(states_are_real(st)) then
-              call states_get_state(st, mesh, ist, ik, dpsi )
+              call states_elec_get_state(st, mesh, ist, ik, dpsi )
               call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -816,10 +817,10 @@ contains
                 end do
               end do
             else
-              call states_get_state(st, mesh, ist, ik, zpsi )
+              call states_elec_get_state(st, mesh, ist, ik, zpsi )
               if(associated(phase)) then
                 ! Apply the phase that contains both the k-point and vector-potential terms.
-                call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
+                call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
               call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
                                  zdot(1:st%d%dim,1:os%norbs))
@@ -852,12 +853,12 @@ contains
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                                   states_dim_get_kpoint_index(st%d, ik + is) &
-                                                  -states_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
+                                                   states_elec_dim_get_kpoint_index(st%d, ik + is) &
+                                                  -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
         end do
@@ -896,11 +897,11 @@ contains
   SAFE_DEALLOCATE_A(iunit)
 
 
-  POP_SUB(states_write_bandstructure)
+  POP_SUB(states_elec_write_bandstructure)
     
-  end subroutine states_write_bandstructure
+  end subroutine states_elec_write_bandstructure
 
-end module states_io_oct_m
+end module states_elec_io_oct_m
 
 
 !! Local Variables:

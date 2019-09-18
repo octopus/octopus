@@ -98,6 +98,7 @@ module restart_oct_m
     character(len=MAX_PATH_LEN) :: dir !< Directory where the restart information is stored.
     character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
                                        !! It can be either dir or a subdirectory of dir.
+    type(namespace_t), pointer :: namespace !< namespace depending on system to modify path
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
     type(multicomm_t), pointer :: mc
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
@@ -399,7 +400,7 @@ contains
   !> Initializes a restart object.
   subroutine restart_init(restart, namespace, data_type, type, mc, ierr, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information
-    type(namespace_t),           intent(in)  :: namespace
+    type(namespace_t), target,   intent(in)  :: namespace
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
@@ -440,6 +441,7 @@ contains
       call messages_fatal(1)
     end if
     restart%data_type = data_type
+    restart%namespace => namespace
 
     select case (restart%type)
     case (RESTART_TYPE_DUMP)
@@ -496,9 +498,9 @@ contains
     restart%pwd = restart%dir
 
     ! Check if the directory already exists and create it if necessary
-    dir_exists = io_dir_exists(trim(restart%pwd))
+    dir_exists = io_dir_exists(trim(restart%pwd), namespace)
     if (restart%type == RESTART_TYPE_DUMP .and. .not. dir_exists) then
-      call io_mkdir(trim(restart%pwd), parents=.true.)
+      call io_mkdir(trim(restart%pwd), namespace, parents=.true.)
     end if
 
     if (restart%data_type == RESTART_UNDEFINED) then
@@ -516,7 +518,8 @@ contains
         ! Dump the grid information. The main parameters of the grid should not change
         ! during the calculation, so we should only need to dump it once.
         if (present(mesh)) then
-          iunit = io_open(trim(restart%pwd)//'/mesh', action='write', die=.true., grp=restart%mpi_grp)
+          iunit = io_open(trim(restart%pwd)//'/mesh', namespace, action='write', &
+            die=.true., grp=restart%mpi_grp)
           if (mpi_grp_is_root(restart%mpi_grp)) then
             write(iunit,'(a)') '# This file contains the necessary information to generate the'
             write(iunit,'(a)') '# grid with which the functions in this directory were calculated,'
@@ -524,25 +527,26 @@ contains
           end if
           call io_close(iunit, grp=restart%mpi_grp)
           
-          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)
           end if
 
-          call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, ierr)
+          call index_dump_lxyz(mesh%idx, mesh%np_part_global, restart%pwd, restart%mpi_grp, &
+            restart%namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write index map to '"//trim(restart%pwd)//"'."
             call messages_fatal(1)
           end if
 
-          call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, ierr)
+          call mesh_write_fingerprint(mesh, restart%pwd, "grid", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh fingerprint to '"//trim(restart%pwd)//"/grid'."
             call messages_fatal(1)
           end if
 
-          call simul_box_dump(mesh%sb, restart%pwd, "mesh", restart%mpi_grp, ierr)
+          call simul_box_dump(mesh%sb, namespace, restart%pwd, "mesh", restart%mpi_grp, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write simulation box information to '"//trim(restart%pwd)//"/mesh'."
             call messages_fatal(1)
@@ -565,8 +569,8 @@ contains
         call messages_info(1)
 
         if (present(mesh)) then
-          call mesh_check_dump_compatibility(mesh, restart%pwd, "grid", restart%mpi_grp, &
-            grid_changed, grid_reordered, restart%map, ierr)
+          call mesh_check_dump_compatibility(mesh, restart%pwd, "grid", restart%namespace, &
+            restart%mpi_grp, grid_changed, grid_reordered, restart%map, ierr)
 
           ! Check whether an error occurred. In this case we cannot read.
           if (ierr /= 0) then
@@ -631,9 +635,9 @@ contains
       select case (restart%type)
       case (RESTART_TYPE_LOAD)
         message(1) = "Info: Finished reading information from '"//trim(restart%dir)//"'."
-        call io_rm(trim(restart%pwd)//"/loading")
+        call io_rm(trim(restart%pwd)//"/loading", restart%namespace)
       case (RESTART_TYPE_DUMP)
-        call io_rm(trim(restart%pwd)//"/dumping")
+        call io_rm(trim(restart%pwd)//"/dumping", restart%namespace)
         message(1) = "Info: Finished writing information to '"//trim(restart%dir)//"'."
       end select
       call messages_info(1)
@@ -663,7 +667,7 @@ contains
 
     PUSH_SUB(restart_dir)
 
-    restart_dir = io_workpath(restart%pwd)
+    restart_dir = io_workpath(restart%pwd, restart%namespace)
 
     POP_SUB(restart_dir)
   end function restart_dir
@@ -731,7 +735,7 @@ contains
 
     ASSERT (restart%type == RESTART_TYPE_DUMP)
 
-    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), parents=.true.)
+    call io_mkdir(trim(restart%pwd)//"/"//trim(dirname), restart%namespace, parents=.true.)
 
     POP_SUB(restart_mkdir)
   end subroutine restart_mkdir
@@ -748,7 +752,7 @@ contains
 
     PUSH_SUB(restart_rm)
 
-    call io_rm(trim(restart%pwd)//"/"//trim(name))
+    call io_rm(trim(restart%pwd)//"/"//trim(name), restart%namespace)
 
     POP_SUB(restart_rm)
   end subroutine restart_rm
@@ -794,8 +798,9 @@ contains
 
     if (present(status)) status_ = status
 
-    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), action=trim(action), status=trim(status_), &
-                           die=die, position=position, form="formatted", grp=restart%mpi_grp)
+    restart_open = io_open(trim(restart%pwd)//"/"//trim(filename), restart%namespace, &
+      action=trim(action), status=trim(status_), &
+      die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
     if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."

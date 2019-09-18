@@ -27,7 +27,7 @@ module partial_charges_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -62,7 +62,7 @@ contains
     type(partial_charges_t), intent(in)    :: this
     type(namespace_t),       intent(in)    :: namespace
     type(mesh_t),            intent(in)    :: mesh
-    type(states_t),          intent(in)    :: st
+    type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(in)    :: geo
     FLOAT, optional,         intent(out)   :: hirshfeld_charges(:)
 

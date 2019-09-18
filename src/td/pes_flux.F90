@@ -24,7 +24,7 @@ module pes_flux_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use kpoints_oct_m
   use io_oct_m
   use lasers_oct_m
@@ -42,8 +42,8 @@ module pes_flux_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -131,8 +131,8 @@ contains
     type(pes_flux_t),    intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(in)    :: hm
+    type(states_elec_t), intent(in)    :: st
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: save_iter
     integer,             intent(in)    :: max_iter
 
@@ -540,12 +540,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_flux_reciprocal_mesh_gen(this, namespace, sb, st, comm, post)
-    type(pes_flux_t),  intent(inout) :: this
-    type(namespace_t), intent(in)    :: namespace
-    type(simul_box_t), intent(in)    :: sb
-    type(states_t),    intent(in)    :: st
-    integer,           intent(in)    :: comm
-    logical, optional, intent(in)    :: post !< only fill the data needed for postprocessing  
+    type(pes_flux_t),    intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(simul_box_t),   intent(in)    :: sb
+    type(states_elec_t), intent(in)    :: st
+    integer,             intent(in)    :: comm
+    logical, optional,   intent(in)    :: post !< only fill the data needed for postprocessing  
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
@@ -1074,9 +1074,9 @@ contains
   subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
@@ -1123,7 +1123,7 @@ contains
       do ik = kptst, kptend
         do ist = stst, stend
           do isdim = 1, sdim
-            call states_get_state(st, mesh, isdim, ist, ik, psi)
+            call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
 
             if(this%shape == M_SPHERICAL) then
@@ -1194,7 +1194,7 @@ contains
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -1356,7 +1356,7 @@ contains
   subroutine pes_flux_integrate_sph(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim
@@ -1565,7 +1565,7 @@ contains
   subroutine pes_flux_getcube(this, mesh, hm, border, offset)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 

@@ -68,6 +68,7 @@ basic_f_srcs =                                 \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
 	basic/namespace.F90                    \
+	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
@@ -89,6 +90,7 @@ basic_c_srcs =                                 \
 	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
+	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
 	basic/oct_gdlib_f.c                    \
 	basic/recipes.c                        \
@@ -268,6 +270,7 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 # Sources in grid
 grid_f_srcs =                                 \
 	grid/basins.F90                       \
+	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
 	grid/batch_ops.F90                    \
 	grid/boundaries.F90                   \
@@ -381,15 +384,16 @@ states_f_srcs =                                 \
 	states/opt_control_state.F90            \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_block.F90                 \
-	states/states_calc.F90                  \
-	states/states_dim.F90                   \
-	states/states.F90                       \
-	states/states_group.F90                 \
-	states/states_io.F90                    \
-	states/states_parallel.F90              \
-	states/states_restart.F90               \
-	states/states_mxll.F90             \
+	states/states_elec_block.F90            \
+	states/states_elec_calc.F90             \
+	states/states_elec_dim.F90              \
+	states/states_abst.F90                  \
+	states/states_elec.F90                  \
+	states/states_elec_group.F90            \
+	states/states_elec_io.F90               \
+	states/states_elec_parallel.F90         \
+	states/states_elec_restart.F90          \
+	states/states_mxll.F90                  \
 	states/states_mxll_restart.F90
 
 states_srcs = $(states_f_srcs)
@@ -401,10 +405,10 @@ noinst_HEADERS +=                               \
 	states/modelmb_density_matrix_inc.F90   \
 	states/modelmb_exchange_syms_inc.F90    \
 	states/physics_op_inc.F90               \
-	states/states_block_inc.F90             \
-	states/states_calc_inc.F90              \
-	states/states_inc.F90                   \
-	states/states_parallel_inc.F90
+	states/states_elec_block_inc.F90        \
+	states/states_elec_calc_inc.F90         \
+	states/states_elec_inc.F90              \
+	states/states_elec_parallel_inc.F90
 
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \
@@ -416,8 +420,9 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
         hamiltonian/hamiltonian_mxll.F90             \
-	hamiltonian/hamiltonian_base.F90             \
-	hamiltonian/hamiltonian.F90                  \
+	hamiltonian/hamiltonian_abst.F90             \
+	hamiltonian/hamiltonian_elec_base.F90        \
+	hamiltonian/hamiltonian_elec.F90             \
 	hamiltonian/hgh_projector.F90                \
 	hamiltonian/hirshfeld.F90                    \
 	hamiltonian/ion_interaction.F90              \
@@ -450,8 +455,8 @@ noinst_HEADERS +=                                    \
         hamiltonian/dft_u_noncollinear_inc.F90       \
         hamiltonian/functionals_list.F90             \
         hamiltonian/fxc_inc.F90                      \
-	hamiltonian/hamiltonian_base_inc.F90         \
-	hamiltonian/hamiltonian_inc.F90              \
+	hamiltonian/hamiltonian_elec_base_inc.F90         \
+	hamiltonian/hamiltonian_elec_inc.F90              \
 	hamiltonian/hgh_projector_inc.F90            \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
@@ -553,7 +558,9 @@ td_f_srcs =                                 \
 	td/spectrum.F90                     \
 	td/td_calc.F90                      \
 	td/td.F90                           \
-	td/td_write.F90
+	td/td_write.F90                     \
+        td/propagation_ops_abst.F90         \
+        td/propagation_ops_elec.F90
 
 td_srcs = $(td_f_srcs)
 
@@ -623,12 +630,6 @@ all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
 	     $(grid_c_srcs) $(poisson_c_srcs) $(hamiltonian_c_srcs)
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
-
-include/options.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 bin_PROGRAMS = octopus
 
@@ -764,7 +765,31 @@ oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs
 oct_unfold_LINK = $(FCLINK)
 oct_unfold_LDADD = $(all_LIBS)
 
+utils_f_srcs = \
+	utils/casida_spectrum.F90        \
+	utils/centergeom.F90             \
+	utils/conductivity.F90           \
+	utils/convert.F90                \
+	utils/dielectric_function.F90    \
+	utils/floquet.F90                \
+	utils/harmonic_spectrum.F90      \
+	utils/help.F90                   \
+	utils/infrared.F90               \
+	utils/local_multipoles.F90       \
+	utils/local_write.F90            \
+	utils/oscillator_strength.F90    \
+	utils/photoelectron_spectrum.F90 \
+	utils/propagation_spectrum.F90   \
+	utils/unfold.F90                 \
+	utils/vibrational.F90            \
+	utils/xyzanim.F90
 
+
+include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 # debug files from MacOS gcc with -g
 clean-local: clean-fdep

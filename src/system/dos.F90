@@ -23,7 +23,7 @@ module dos_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -35,8 +35,9 @@ module dos_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -63,9 +64,9 @@ module dos_oct_m
 contains
 
   subroutine dos_init(this, namespace, st)
-    type(dos_t),       intent(out)   :: this
-    type(namespace_t), intent(in)    :: namespace
-    type(states_t),    intent(in)    :: st
+    type(dos_t),         intent(out)   :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(states_elec_t), intent(in)    :: st
 
     FLOAT :: evalmin, evalmax, eextend
 
@@ -141,14 +142,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm)
-    type(dos_t),               intent(in) :: this
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
+    type(dos_t),              intent(in) :: this
     character(len=*),         intent(in) :: dir
-    type(states_t),           intent(in) :: st
+    type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
-    type(hamiltonian_t),      intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
+    type(namespace_t),        intent(in) :: namespace
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -185,7 +187,7 @@ contains
           else
             write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
           end if
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
         end do
@@ -216,7 +218,7 @@ contains
       if(st%d%nspin > 1) then    
         do is = 0, ns-1
           write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
 
@@ -236,7 +238,7 @@ contains
       end if
 
 
-      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', namespace, action='write')    
       write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
       
       ! compute total density of states
@@ -257,7 +259,7 @@ contains
 
 
       ! write Fermi file
-      iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', namespace, action='write')
       write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
         '] in a format compatible with total-dos.dat'
 
@@ -357,7 +359,7 @@ contains
                             l_notation(os%ll), '.dat'
             end if
  
-            iunit(0) = io_open(trim(dir)//'/'//trim(filename), action='write')
+            iunit(0) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
             ! write header
             write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], projected DOS'
           end if
@@ -374,7 +376,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
             if(states_are_real(st)) then
-              call states_get_state(st, mesh, ist, ik, dpsi )
+              call states_elec_get_state(st, mesh, ist, ik, dpsi )
               call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
@@ -382,7 +384,7 @@ contains
                 end do
               end do
             else
-              call states_get_state(st, mesh, ist, ik, zpsi )
+              call states_elec_get_state(st, mesh, ist, ik, zpsi )
               if(associated(hm%hm_base%phase)) then
               ! Apply the phase that contains both the k-point and vector-potential terms.
                 do idim = 1, st%d%dim
