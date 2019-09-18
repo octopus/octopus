@@ -965,13 +965,13 @@ contains
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
         call messages_write("One of the radii of your pseudopotential's localized parts seems", new_line = .true.)
         call messages_write("unusually large; check that your pseudopotential is correct.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       if(orbital_radius > CNST(20.0)) then
         call messages_write("The radius of the atomic orbitals given by your pseudopotential seems", new_line = .true.)
         call messages_write("unusually large; check that your pseudopotential is correct.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       if(debug%info) then
@@ -2023,7 +2023,7 @@ contains
           call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", &
                               new_line = .true.)
           call messages_write("You can specify the vdW radius in %Species block.")
-          call messages_warning()
+          call messages_warning(namespace=namespace)
         end if
         call messages_write('Info: default vdW radius for species '//trim(spec%label)//':')
         call messages_write(spec%vdw_radius)

@@ -198,7 +198,7 @@ contains
       call pseudo_nlcc_density(pseudo, this%nlcc_density(1))
     end if
 
-    if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this)
+    if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this, namespace)
 
     this%pseudo = pseudo
     
@@ -207,8 +207,9 @@ contains
 
   ! ---------------------------------------------------------
   !> checks normalization of the pseudo wavefunctions
-  subroutine ps_xml_check_normalization(this)
-    type(ps_xml_t), intent(in) :: this
+  subroutine ps_xml_check_normalization(this, namespace)
+    type(ps_xml_t),    intent(in) :: this
+    type(namespace_t), intent(in) :: namespace
     
     integer :: ll, ip
     FLOAT   :: nrm, rr
@@ -228,7 +229,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", ll, ' is not normalized'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
     end do

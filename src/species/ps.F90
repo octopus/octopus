@@ -298,10 +298,10 @@ contains
       end if
       
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_process(ps_cpi, ps%llocal)
+        call ps_cpi_process(ps_cpi, ps%llocal, namespace)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal)
+        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal, namespace)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
@@ -317,7 +317,7 @@ contains
       ps%llocal    = -1
       ps%lmax    = ps_hgh%l_max
 
-      call hgh_process(ps_hgh)
+      call hgh_process(ps_hgh, namespace)
       call logrid_copy(ps_hgh%g, ps%g)
 
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)

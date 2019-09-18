@@ -89,7 +89,7 @@ contains
     else
       iunit = io_open(fullpath, namespace, action='read', form='unformatted', status='old')
     end if
-    call ps_psf_file_read(iunit, ascii, pstm%psf_file)
+    call ps_psf_file_read(iunit, ascii, pstm%psf_file, namespace)
     call io_close(iunit)
 
     ! Fills the valence configuration data.
@@ -220,16 +220,16 @@ contains
       ps_psf%conf, ps_psf%ispin, ps_psf%ps_grid%rphi, ps_psf%eigen)
 
     ! check norm of rphi
-    call ps_in_grid_check_rphi(ps_psf%ps_grid)
+    call ps_in_grid_check_rphi(ps_psf%ps_grid, namespace)
 
     ! Fix the local potential. Final argument is the core radius
-    call ps_in_grid_vlocal(ps_psf%ps_grid, lloc, M_THREE)
+    call ps_in_grid_vlocal(ps_psf%ps_grid, lloc, M_THREE, namespace)
 
     ! Calculate kb cosines and norms
     call ps_in_grid_kb_cosines(ps_psf%ps_grid, lloc)
 
     ! Ghost analysis.
-    call ghost_analysis(ps_psf%psf_file, ps_psf%ps_grid, ps_psf%ps_grid%g, ps_psf%eigen, lmax)
+    call ghost_analysis(ps_psf%psf_file, ps_psf%ps_grid, ps_psf%ps_grid%g, namespace, ps_psf%eigen, lmax)
 
     ! Define the KB-projector cut-off radii
     call ps_in_grid_cutoff_radii(ps_psf%ps_grid, lloc)
@@ -432,10 +432,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ghost_analysis(psf_file, ps_grid, g, eigen, lmax)
+  subroutine ghost_analysis(psf_file, ps_grid, g, namespace, eigen, lmax)
     type(ps_psf_file_t), intent(in) :: psf_file
     type(ps_in_grid_t), intent(in) :: ps_grid
     type(logrid_t),     intent(in) :: g
+    type(namespace_t),  intent(in) :: namespace
     FLOAT,              intent(in) :: eigen(:,:)
     integer,            intent(in) :: lmax
 
@@ -506,7 +507,7 @@ contains
 
       if(ighost >= 0) then
         write(message(1), '(a,i2)') "Ghost state found for l = ", l
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end do
 
