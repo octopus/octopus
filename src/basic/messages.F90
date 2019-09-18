@@ -306,8 +306,10 @@ contains
     call flush_msg(stderr, msg)
 
     if(present(namespace)) then
-      write(msg, '(3a)') '* In namespace ', trim(namespace%get()), ':'
-      call flush_msg(stderr, msg)
+      if(len_trim(namespace%get()) > 0) then
+        write(msg, '(3a)') '* In namespace ', trim(namespace%get()), ':'
+        call flush_msg(stderr, msg)
+      end if
     end if
 
 #ifdef HAVE_MPI
@@ -393,8 +395,10 @@ contains
       call flush_msg(stderr, msg)
 
       if(present(namespace)) then
-        write(msg, '(3a)') '** In namespace ', trim(namespace%get()), ':'
-        call flush_msg(stderr, msg)
+        if(len_trim(namespace%get()) > 0) then
+          write(msg, '(3a)') '** In namespace ', trim(namespace%get()), ':'
+          call flush_msg(stderr, msg)
+        end if
       end if
 
 #ifdef HAVE_MPI
@@ -830,8 +834,12 @@ contains
         msg_combined = trim(msg)
       end if
       if(present(namespace)) then
+        ! check if we are below the maximum length
         if(len_trim(msg) + len_trim(namespace%get()) + 1 < max_len) then
-          msg_combined = trim(msg) // " " // trim(namespace%get())
+          ! only change message if namespace non-empty
+          if(len_trim(namespace%get()) > 0) then
+            msg_combined = trim(msg) // " " // trim(namespace%get())
+          end if
         end if
       end if
       length = len_trim(msg_combined)
