@@ -301,7 +301,7 @@ contains
       case('MOLECULE')
         gf%periodic_dim = 0
       case('ATOMS')
-        call messages_not_implemented("Input from XSF file beginning with ATOMS")
+        call messages_not_implemented("Input from XSF file beginning with ATOMS", namespace=namespace)
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
         call messages_fatal(1, namespace=namespace)

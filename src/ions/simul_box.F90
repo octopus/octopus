@@ -240,7 +240,7 @@ contains
 
         call messages_experimental('Multi-resolution')
 
-        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3')
+        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3', namespace=namespace)
 
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)
