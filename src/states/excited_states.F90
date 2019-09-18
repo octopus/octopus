@@ -282,7 +282,7 @@ contains
     if(.not. abs(dump - M_ONE) < CNST(1.0e-5)) then
       excited_state%weight(1:excited_state%n_pairs) = excited_state%weight(1:excited_state%n_pairs) / sqrt(dump)
       message(1) = 'The excited state in file "'//trim(filename)//'" was not normalized.'
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 
     call io_close(iunit)

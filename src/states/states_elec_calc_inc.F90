@@ -83,7 +83,7 @@ contains
       write(message(1),'(a,i6)') "The cholesky_serial orthogonalization failed with error code ", ierr
       message(2) = "There may be a linear dependence, a zero vector, or maybe a library problem."
       message(3) = "Using the Gram-Schimdt orthogonalization instead."
-      call messages_warning(3)
+      call messages_warning(3, namespace=st%namespace)
     end if
   
     if(.not. bof) then
@@ -122,7 +122,7 @@ contains
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
       message(1) = 'The cholesky_parallel orthogonalizer is designed to be used with domain or state parallelization.'
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 #endif
 

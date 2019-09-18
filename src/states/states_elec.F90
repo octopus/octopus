@@ -738,21 +738,21 @@ contains
       ncols = parse_block_cols(blk, 0)
       if(ncols > st%nst) then
         message(1) = "Too many columns in block Occupations."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         call messages_input_error("Occupations")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
         message(1) = "Wrong number of rows in block Occupations."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         call messages_input_error("Occupations")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
           message(1) = "All rows in block Occupations must have the same number of columns."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
           call messages_input_error("Occupations")
         end if
       end do
@@ -868,7 +868,7 @@ contains
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
       if(.not. unoccupied_states) then
         call messages_write('Smearing needs unoccupied states (via ExtraStates or TotalStates) to be useful.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
     end if
 
@@ -1671,7 +1671,7 @@ contains
     if(abs(charge-st%qtot) > CNST(1e-6)) then
       message(1) = 'Occupations do not integrate to total charge.'
       write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
-      call messages_warning(2)
+      call messages_warning(2, namespace=st%namespace)
       if(charge < M_EPSILON) then
         message(1) = "There don't seem to be any electrons at all!"
         call messages_fatal(1, namespace=st%namespace)
@@ -2279,7 +2279,7 @@ contains
           call messages_write(' of ')
           call messages_write(st%group%block_end - st%group%block_start + 1)
           call messages_write(' blocks will be stored in device memory.', new_line = .true.)
-          call messages_warning()
+          call messages_warning(namespace=st%namespace)
           exit qnloop
         end if
         

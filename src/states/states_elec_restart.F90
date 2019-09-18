@@ -444,18 +444,18 @@ contains
       read(lines(3), *) str, ik
       if(idim == 2 .and. st%d%dim == 1) then
         write(message(1),'(a)') 'Incompatible restart information: saved calculation is spinors, this one is not.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**2
       end if
       if(idim == 1 .and. st%d%dim == 2) then
         write(message(1),'(a)') 'Incompatible restart information: this calculation is spinors, saved one is not.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**3
       end if
       if(ik < st%d%nik) then
         write(message(1),'(a)') 'Incompatible restart information: not enough k-points.'
         write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, ' > Read ', ik
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
       ! We will check that they are the right k-points later, so we do not need to put a specific error here.
     end if
@@ -472,11 +472,11 @@ contains
       read(lines(2), '(a)') str
       if (str(2:8) == 'Complex') then
         message(1) = "Cannot read real states from complex wavefunctions."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**6
       else if (str(2:5) /= 'Real') then 
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
     ! complex can be restarted from real, so there is no problem.
@@ -555,7 +555,7 @@ contains
             write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
             write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
             write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
-            call messages_warning(3)
+            call messages_warning(3, namespace=namespace)
           end if
           restart_file_present(idim, ist, ik) = .false.
         end if
