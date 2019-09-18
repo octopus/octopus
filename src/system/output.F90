@@ -462,7 +462,7 @@ contains
 
       case default
 
-        call messages_not_implemented("CurrentThroughPlane for 4D or higher")
+        call messages_not_implemented("CurrentThroughPlane for 4D or higher", namespace=namespace)
 
       end select
       call parse_block_end(blk)
@@ -1218,19 +1218,19 @@ contains
     end if
 
     if(st%d%ispin == SPINORS) &
-      call messages_not_implemented("BerkeleyGW output for spinors")
+      call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("BerkeleyGW output parallel in states")
+      call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
 
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points")
+      call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
-      call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals")
+      call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
 
     if(geo%nlcc) &
-      call messages_not_implemented("BerkeleyGW output with NLCC")
+      call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
 

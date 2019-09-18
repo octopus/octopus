@@ -162,7 +162,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   PUSH_SUB(X(xc_oep_solve))
 
   if(st%parallel_in_states) &
-    call messages_not_implemented("Full OEP parallel in states")
+    call messages_not_implemented("Full OEP parallel in states", namespace=hm%namespace)
 
   SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(     ss(1:gr%mesh%np))

@@ -36,8 +36,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
 
 #ifdef HAVE_BERKELEYGW
 
-  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
-  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
+  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', namespace, action='write')
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))

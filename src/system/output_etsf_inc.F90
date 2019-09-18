@@ -104,9 +104,9 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states")
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states", namespace=namespace)
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k")
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k", namespace=namespace)
 
     call dcube_function_alloc_rs(dcube, cf)
 
@@ -136,9 +136,9 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states")
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k")
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k", namespace=namespace)
 
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)

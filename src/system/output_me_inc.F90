@@ -287,7 +287,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
   ASSERT(.not. st%parallel_in_states)
   if(st%d%ispin == SPINORS) then
-    call messages_not_implemented("Dipole matrix elements with spinors")
+    call messages_not_implemented("Dipole matrix elements with spinors", namespace=namespace)
   end if
 
   ispin = states_elec_dim_get_spin_index(st%d, ik)

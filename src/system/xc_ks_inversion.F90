@@ -102,7 +102,7 @@ contains
     PUSH_SUB(xc_ks_inversion_init)
 
 !    if(mc%n_node > 1) &
-!      call messages_not_implemented("Kohn-Sham inversion in parallel")
+!      call messages_not_implemented("Kohn-Sham inversion in parallel", namespace=namespace)
 
     call messages_experimental("Kohn-Sham inversion")
     

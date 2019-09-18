@@ -350,11 +350,11 @@ contains
       if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
         call messages_experimental("Hartree in fully periodic system")
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree with k-points")
+        call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree-Fock with k-points")
+        call messages_not_implemented("Hartree-Fock with k-points", namespace=namespace)
       
       ks%sic_type = SIC_NONE
 
@@ -391,7 +391,7 @@ contains
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh")
+        if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
         call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
       end if
@@ -403,8 +403,10 @@ contains
     end select
 
     if (st%d%ispin == SPINORS) then
-      if(bitand(ks%xc_family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA) /= 0) call messages_not_implemented("GGA with spinors")
-      if(bitand(ks%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) call messages_not_implemented("MGGA with spinors")
+      if(bitand(ks%xc_family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA) /= 0) &
+        call messages_not_implemented("GGA with spinors", namespace=namespace)
+      if(bitand(ks%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+        call messages_not_implemented("MGGA with spinors", namespace=namespace)
     end if
 
     ks%frozen_hxc = .false.
@@ -868,10 +870,10 @@ contains
       PUSH_SUB(add_adsic)
       
       if (family_is_mgga(hm%xc%family)) then
-        call messages_not_implemented('ADSIC with MGGAs')
+        call messages_not_implemented('ADSIC with MGGAs', namespace=namespace)
       end if
       if (st%d%ispin == SPINORS) then
-        call messages_not_implemented('ADSIC with non-collinear spin')      
+        call messages_not_implemented('ADSIC with non-collinear spin', namespace=namespace)
       end if
 
       SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))

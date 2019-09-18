@@ -130,9 +130,11 @@ contains
 
     if(st%parallel_in_states) then
       if(bitand(this%what, OUTPUT_ME_TWO_BODY) /= 0) &
-        call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.")
+        call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.", &
+        namespace=namespace)
       if(bitand(this%what, OUTPUT_ME_DIPOLE) /= 0) &
-        call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.")
+        call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.", &
+        namespace=namespace)
     end if
 
     if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
@@ -284,10 +286,12 @@ contains
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization", &
+        namespace=namespace)
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization", &
+        namespace=namespace)
       if (family_is_mgga_with_exc(hm%xc)) &
-      call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
+      call messages_not_implemented("OutputMatrixElements=one_body with MGGA", namespace=namespace)
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')
 
@@ -323,8 +327,10 @@ contains
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization", &
+        namespace=namespace)
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization", &
+        namespace=namespace)
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
