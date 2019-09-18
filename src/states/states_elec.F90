@@ -1771,7 +1771,7 @@ contains
 
     if(st%scalapack_compatible) then
       if(multicomm_have_slaves(mc)) &
-        call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)")
+        call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)", namespace=namespace)
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
     else
       call blacs_proc_grid_nullify(st%dom_st_proc_grid)

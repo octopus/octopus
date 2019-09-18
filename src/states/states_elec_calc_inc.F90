@@ -122,7 +122,7 @@ contains
 #endif
     if(st%dom_st_mpi_grp%size == 1) then
       message(1) = 'The cholesky_parallel orthogonalizer is designed to be used with domain or state parallelization.'
-      call messages_warning(1, namespace=namespace)
+      call messages_warning(1, namespace=st%namespace)
     end if
 #endif
 
@@ -377,7 +377,7 @@ subroutine X(states_elec_trsm)(st, mesh, ik, ss)
 
   else
 
-    if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_trsm for spinors')
+    if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_trsm for spinors', namespace=st%namespace)
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
@@ -1274,7 +1274,7 @@ subroutine X(states_elec_rotate)(mesh, st, uu, ik)
 
   else
 
-    if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_rotate for spinors')
+    if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_rotate for spinors', namespace=st%namespace)
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
@@ -1575,7 +1575,7 @@ subroutine X(states_elec_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iinde
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
 
   if (st%d%ispin == SPINORS) then
-    call messages_not_implemented("One-body integrals with spinors.")
+    call messages_not_implemented("One-body integrals with spinors.", namespace=st%namespace)
   end if
 
   
@@ -1642,7 +1642,7 @@ subroutine X(states_elec_me_two_body) (gr, st, psolver, st_min, st_max, iindex, 
   SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
 
   if (st%d%ispin == SPINORS) then
-    call messages_not_implemented("Two-body integrals with spinors.")
+    call messages_not_implemented("Two-body integrals with spinors.", namespace=st%namespace)
   end if
 
   ijst = 0
