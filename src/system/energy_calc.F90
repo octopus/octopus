@@ -28,17 +28,18 @@ module energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use pcm_oct_m
+  use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -58,11 +59,11 @@ contains
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
   subroutine energy_calc_total(hm, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    integer, optional,   intent(in)    :: iunit
-    logical, optional,   intent(in)    :: full
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    integer, optional,        intent(in)    :: iunit
+    logical, optional,        intent(in)    :: full
 
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
@@ -73,7 +74,7 @@ contains
     full_ = .false.
     if(present(full)) full_ = full
 
-    hm%energy%eigenvalues = states_eigenvalues_sum(st)
+    hm%energy%eigenvalues = states_elec_eigenvalues_sum(st)
 
     evxctau = M_ZERO
     if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
@@ -122,7 +123,7 @@ contains
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
-        + hm%energy%correlation + hm%energy%vdw
+        + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic
 
       ! FIXME: pcm terms are only added to total energy in DFT case
       
@@ -132,7 +133,7 @@ contains
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-        + hm%energy%dft_u -  hm%energy%int_dft_u
+        + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic
 
    end select 
     
@@ -191,7 +192,8 @@ contains
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
         write(message(3), '(6x,a, f18.8)')'Non-local   = ', units_from_atomic(units_out%energy, hm%energy%extern_non_local)
-        call messages_info(3, iunit)
+        write(message(4), '(6x,a, f18.8)')'Int[n*v_E]  = ', units_from_atomic(units_out%energy, hm%energy%intnvstatic)
+        call messages_info(4, iunit)
       end if
       if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
@@ -210,9 +212,9 @@ contains
   ! --------------------------------------------------------------------
   
   subroutine energy_calc_eigenvalues(hm, der, st)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(inout) :: der
-    type(states_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(derivatives_t),      intent(in)    :: der
+    type(states_elec_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)
 

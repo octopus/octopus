@@ -64,6 +64,7 @@ module batch_oct_m
   
   !--------------------------------------------------------------
   type batch_state_t
+    ! Components are public by default
     FLOAT,      pointer :: dpsi(:, :)
     CMPLX,      pointer :: zpsi(:, :)
     real(4),    pointer :: spsi(:, :)
@@ -72,6 +73,7 @@ module batch_oct_m
   end type batch_state_t
 
   type batch_state_l_t
+    ! Components are public by default
     FLOAT,      pointer :: dpsi(:)
     CMPLX,      pointer :: zpsi(:)
     real(4),    pointer :: spsi(:)
@@ -79,6 +81,7 @@ module batch_oct_m
   end type batch_state_l_t
   
   type batch_pack_t
+    ! Components are public by default
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
     FLOAT,      allocatable        :: dpsi(:, :)
@@ -89,31 +92,32 @@ module batch_oct_m
   end type batch_pack_t
   
   type batch_t
-    type(batch_state_t), pointer   :: states(:)
-    integer                        :: nst
-    integer                        :: current
-    integer                        :: dim
-    integer                        :: max_size
+    private
+    type(batch_state_t),   pointer, public :: states(:)
+    integer,                        public :: nst
+    integer                                :: current
+    integer,                        public :: dim
+    integer                                :: max_size
 
-    integer                        :: ndims
-    integer,             pointer   :: ist_idim_index(:, :)
+    integer                                :: ndims
+    integer,               pointer         :: ist_idim_index(:, :)
 
-    logical                        :: is_allocated
-    logical                        :: mirror !< keep a copy of the batch data in unpacked form
+    logical                                :: is_allocated
+    logical                                :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
-    integer                        :: nst_linear
-    type(batch_state_l_t), pointer :: states_linear(:)
+    integer,                        public :: nst_linear
+    type(batch_state_l_t), pointer, public :: states_linear(:)
 
     !> If the memory is contiguous, we can perform some operations faster.
-    FLOAT,               pointer   :: dpsicont(:, :, :)
-    CMPLX,               pointer   :: zpsicont(:, :, :)
-    real(4),             pointer   :: spsicont(:, :, :)
-    complex(4),          pointer   :: cpsicont(:, :, :)
-    integer                        :: status
-    integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
-    type(batch_pack_t)             :: pack
-    type(type_t)                   :: type !< only available if the batched is packed
+    FLOAT,                 pointer, public :: dpsicont(:, :, :)
+    CMPLX,                 pointer, public :: zpsicont(:, :, :)
+    real(4),               pointer, public :: spsicont(:, :, :)
+    complex(4),            pointer, public :: cpsicont(:, :, :)
+    integer                                :: status
+    integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
+    type(batch_pack_t),             public :: pack
+    type(type_t)                           :: type !< only available if the batched is packed
   end type batch_t
 
   !--------------------------------------------------------------
@@ -370,8 +374,7 @@ contains
     ! no push_sub, called too frequently
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
-    ! deactivate this to make temporary batches work
-    ! ok = ubound(this%states_linear, dim = 1) == this%nst_linear
+    ok = ok .and. ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok .and. .not. batch_is_packed(this)) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.
@@ -389,29 +392,19 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, pack, copy_data, fill_zeros)
+  subroutine batch_copy(bin, bout, pack, copy_data)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
-    logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
-    logical,       optional, intent(in)    :: copy_data
-    logical,       optional, intent(in)    :: fill_zeros
-    !! If .true. the new batch will be packed
-    !! The default is to do the same as bin.
+    logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
+    logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
 
     integer :: ii, np
-    logical :: pack_, copy_data_, fill_zeros_
-
+    logical :: pack_, copy_data_
     PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
 
     copy_data_ = optional_default(copy_data, .false.)
-
-    ! There is no point in filling with zeros if later we overwrite them by copying
-    fill_zeros_ = optional_default(fill_zeros, .not. copy_data_)
-
-    ! Make sure we do not request both to copy and fill with zero at the same time
-    ASSERT(.not. (copy_data_ .and. fill_zeros_))
 
     if(batch_type(bin) == TYPE_FLOAT) then
 
@@ -420,7 +413,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call dbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call dbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_CMPLX) then
       np = 0
@@ -428,7 +421,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call zbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call zbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
@@ -437,7 +430,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
       end do
 
-      call sbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call sbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
@@ -446,8 +439,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
       end do
 
-      call cbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
-
+      call cbatch_allocate(bout, 1, bin%nst, np)
     end if
 
     pack_ = batch_is_packed(bin)
@@ -992,6 +984,8 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
 
   PUSH_SUB(batch_remote_access_start)
 
+  ASSERT(.not. accel_is_enabled())
+  
   if(mpi_grp%size > 1) then
     call batch_pack(this)
     

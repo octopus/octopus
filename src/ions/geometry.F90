@@ -27,6 +27,7 @@ module geometry_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use read_coords_oct_m
@@ -62,6 +63,7 @@ module geometry_oct_m
     geometry_set_positions
 
   type geometry_t
+    ! Components are public by default
     type(space_t), pointer :: space
     integer                :: natoms
     type(atom_t), pointer  :: atom(:)
@@ -70,7 +72,7 @@ module geometry_oct_m
     integer :: nspecies
     type(species_t), pointer :: species(:)
     logical :: only_user_def        !< Do we want to treat only user-defined species?
-    logical :: species_time_dependent !< For time-dependent user defined species
+    logical, private :: species_time_dependent !< For time-dependent user defined species
     FLOAT :: kinetic_energy         !< the ion kinetic energy
     logical :: nlpp                 !< does any species have non-local pp?
     logical :: nlcc                 !< does any species have non-local core corrections?
@@ -85,8 +87,9 @@ module geometry_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, space, print_info)
+  subroutine geometry_init(geo, namespace, space, print_info)
     type(geometry_t),           intent(inout) :: geo
+    type(namespace_t),          intent(in)    :: namespace
     type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
 
@@ -94,11 +97,11 @@ contains
 
     geo%space => space
 
-    call species_init_global()
+    call species_init_global(namespace)
     
     ! initialize geometry
-    call geometry_init_xyz(geo)
-    call geometry_init_species(geo, print_info=print_info)
+    call geometry_init_xyz(geo, namespace)
+    call geometry_init_species(geo, namespace, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
 
     POP_SUB(geometry_init)
@@ -107,8 +110,9 @@ contains
 
   ! ---------------------------------------------------------------
   !> initializes the xyz positions of the atoms in the structure geo
-  subroutine geometry_init_xyz(geo)
-    type(geometry_t), intent(inout) :: geo
+  subroutine geometry_init_xyz(geo, namespace)
+    type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
 
     type(read_coords_info) :: xyz
     integer             :: ia
@@ -119,7 +123,7 @@ contains
     call read_coords_init(xyz)
 
     ! load positions of the atoms
-    call read_coords_read('Coordinates', xyz, geo%space)
+    call read_coords_read('Coordinates', xyz, geo%space, namespace)
 
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
@@ -148,7 +152,7 @@ contains
     call read_coords_init(xyz)
     nullify(geo%catom)
     geo%ncatoms = 0
-    call read_coords_read('Classical', xyz, geo%space)
+    call read_coords_read('Classical', xyz, geo%space, namespace)
     if(xyz%source /= READ_COORDS_ERR) then ! found classical atoms
       if(.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
@@ -172,8 +176,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_init_species(geo, print_info)
+  subroutine geometry_init_species(geo, namespace, print_info)
     type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_, spec_user_defined
@@ -206,7 +211,7 @@ contains
       end do
       k = k + 1
       call species_init(geo%species(k), atom_get_label(geo%atom(j)), k)
-      call species_read(geo%species(k))
+      call species_read(geo%species(k), namespace)
       ! these are the species which do not represent atoms
       geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
       
@@ -218,7 +223,7 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call parse_variable('SpinComponents', 1, ispin)
+    call parse_variable(namespace, 'SpinComponents', 1, ispin)
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error('SpinComponents')
     ispin = min(2, ispin)
 
@@ -226,7 +231,7 @@ contains
       call messages_print_stress(stdout, "Species")
     end if
     do i = 1, geo%nspecies
-      call species_build(geo%species(i), ispin, geo%space%dim, print_info=print_info_)
+      call species_build(geo%species(i), namespace, ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
       call messages_print_stress(stdout)
@@ -241,7 +246,7 @@ contains
     !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
     !% type of species to use this.
     !%End
-    call parse_variable('SpeciesTimeDependent', .false., geo%species_time_dependent)
+    call parse_variable(namespace, 'SpeciesTimeDependent', .false., geo%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,geo%nspecies
       if(species_type(geo%species(i)) == SPECIES_USDEF) then
@@ -419,9 +424,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_write_xyz(geo, fname, append, comment)
+  subroutine geometry_write_xyz(geo, fname, namespace, append, comment)
     type(geometry_t),    intent(in) :: geo
     character(len=*),    intent(in) :: fname
+    type(namespace_t),   intent(in) :: namespace
     logical,             intent(in), optional :: append
     character(len=*),    intent(in), optional :: comment
 
@@ -436,7 +442,7 @@ contains
     if(present(append)) then
       if(append) position = 'append'
     end if
-    iunit = io_open(trim(fname)//'.xyz', action='write', position=position)
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='write', position=position)
 
     write(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -450,7 +456,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='write', position=position)
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='write', position=position)
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do iatom = 1, geo%ncatoms
@@ -463,16 +469,17 @@ contains
   end subroutine geometry_write_xyz
 
   ! ---------------------------------------------------------
-  subroutine geometry_read_xyz(geo, fname, comment)
+  subroutine geometry_read_xyz(geo, fname, namespace, comment)
     type(geometry_t),    intent(inout) :: geo
     character(len=*),    intent(in) :: fname
+    type(namespace_t),   intent(in) :: namespace
     character(len=*),    intent(in), optional :: comment
 
     integer :: iatom, iunit
 
     PUSH_SUB(geometry_read_xyz)
 
-    iunit = io_open(trim(fname)//'.xyz', action='read', position='rewind')
+    iunit = io_open(trim(fname)//'.xyz', namespace, action='read', position='rewind')
 
     read(iunit, '(i4)') geo%natoms
     if (present(comment)) then
@@ -486,7 +493,7 @@ contains
     call io_close(iunit)
 
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='read', position='rewind')
+      iunit = io_open(trim(fname)//'_classical.xyz', namespace, action='read', position='rewind')
       read(iunit, '(i4)') geo%ncatoms
       read(iunit, *)
       do iatom = 1, geo%ncatoms

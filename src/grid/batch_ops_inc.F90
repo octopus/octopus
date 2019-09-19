@@ -32,7 +32,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -126,7 +126,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -264,7 +264,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   PUSH_SUB(X(batch_scal_vec))
   call profiling_in(scal_prof, "BATCH_SCAL")
 
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(xx) == TYPE_CMPLX)
 #endif
@@ -318,15 +318,17 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     
   case(BATCH_PACKED)
     if(batch_type(xx) == TYPE_CMPLX) then
-      do ist = 1, xx%pack%size(1)
-        do ip = 1, np
+      !$omp parallel do
+      do ip = 1, np
+        do ist = 1, xx%pack%size(1)
           xx%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip)
         end do
       end do
     else
 #ifdef R_TREAL
-      do ist = 1, xx%pack%size(1)
-        do ip = 1, np
+     !$omp parallel do
+     do ip = 1, np
+        do ist = 1, xx%pack%size(1)
           xx%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip)
         end do
       end do
@@ -372,7 +374,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   call profiling_in(xpay_prof, "BATCH_XPAY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -940,7 +942,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   call profiling_in(mul_prof, "BATCH_MUL")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif

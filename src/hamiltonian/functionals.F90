@@ -20,9 +20,10 @@
 
 module xc_functl_oct_m
   use global_oct_m
-  use parser_oct_m
   use libvdwxc_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -63,6 +64,7 @@ module xc_functl_oct_m
 #endif
 
   type xc_functl_t
+    ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
     integer         :: type              !< exchange, correlation, or exchange-correlation
     integer         :: id                !< identifier
@@ -70,9 +72,9 @@ module xc_functl_oct_m
     integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
     integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
-    type(XC_F90(pointer_t)) :: info         !< information about the functional
-    type(libvdwxc_t)        :: libvdwxc     !< libvdwxc data for van der Waals functionals
+    type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
+    type(XC_F90(pointer_t)), private :: info         !< information about the functional
+    type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
 
     integer         :: LB94_modified     !< should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    !< needs to be handled specially
@@ -98,8 +100,9 @@ contains
 
   ! ---------------------------------------------------------
 
- subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
+ subroutine xc_functl_init_functl(functl, namespace, id, ndim, nel, spin_channels)
+   type(xc_functl_t),  intent(out) :: functl
+   type(namespace_t),  intent(in)  :: namespace
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     FLOAT,             intent(in)  :: nel
@@ -136,7 +139,6 @@ contains
           call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
         else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
-          call messages_experimental("van der Waals functionals from libvdwxc")
           functl%family = XC_FAMILY_LIBVDWXC
           !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
         else if (functl%id == XC_RDMFT_XC_M) then
@@ -158,7 +160,7 @@ contains
       functl%type = XC_F90(info_kind)(functl%info)
       functl%flags = XC_F90(info_flags)(functl%info)
       ! Convert Octopus code for functional into corresponding libvdwxc code:
-      call libvdwxc_init(functl%libvdwxc, functl%id - XC_VDW_C_VDWDF + 1)
+      call libvdwxc_init(functl%libvdwxc, namespace, functl%id - XC_VDW_C_VDWDF + 1)
 
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
@@ -234,7 +236,7 @@ contains
       !% The parameter of the Slater X<math>\alpha</math> functional. Applies only for
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
-      call parse_variable('Xalpha', M_ONE, alpha)
+      call parse_variable(namespace, 'Xalpha', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = alpha
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
@@ -257,8 +259,8 @@ contains
       !%Option interaction_soft_coulomb 1
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable('Interaction1D', INT_SOFT_COULOMB, interact_1d)
+      call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1D')
+      call parse_variable(namespace, 'Interaction1D', INT_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
       !%Type float
@@ -268,8 +270,8 @@ contains
       !% Defines the screening parameter <math>\alpha</math> of the softened Coulomb interaction
       !% when running in 1D.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
-      call parse_variable('Interaction1DScreening', M_ONE, alpha)
+      call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
+      call parse_variable(namespace, 'Interaction1DScreening', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = real(interact_1d, REAL_PRECISION)
       parameters(2) = alpha
@@ -299,7 +301,7 @@ contains
       !%Description
       !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_modified', .false., lb94_modified)
+      call parse_variable(namespace, 'LB94_modified', .false., lb94_modified)
       if(lb94_modified) then
         functl%LB94_modified = 1
       else
@@ -314,7 +316,7 @@ contains
       !%Description
       !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
+      call parse_variable(namespace, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
       
     end select
     

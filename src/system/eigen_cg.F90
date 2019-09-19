@@ -19,10 +19,12 @@
 #include "global.h"
 
 module eigen_cg_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use comm_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use mesh_oct_m
@@ -32,9 +34,10 @@ module eigen_cg_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use poisson_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_group_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
 

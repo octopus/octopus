@@ -25,16 +25,20 @@ module propagator_magnus_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lasers_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use propagator_rk_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use v_ks_oct_m
+  use propagation_ops_elec_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -48,20 +52,23 @@ contains
   
   ! ---------------------------------------------------------
   !> Magnus propagator
-  subroutine td_magnus(hm, gr, st, tr, time, dt)
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
+  subroutine td_magnus(hm, gr, st, tr, namespace, time, dt)
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    type(namespace_t),                intent(in)    :: namespace
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
 
-    integer :: j, is, ist, ik, i
+    integer :: j, is, ib, ik, i
     FLOAT :: atime(2)
     FLOAT, allocatable :: vaux(:, :, :), pot(:)
     CMPLX, allocatable :: psi(:, :)
 
     PUSH_SUB(propagator_dt.td_magnus)
+
+    ASSERT(.not. family_is_mgga_with_exc(hm%xc))
 
     SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
@@ -70,14 +77,7 @@ contains
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
-        !TODO: There is no complex scaling here
-        if(hm%family_is_mgga_with_exc) then
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, &
-               hm%vhxc, vtau = hm%vtau)
-        else
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
-        end if
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+        call potential_interpolation_interpolate(tr%vksold, 3, time, dt, time - dt + atime(j), vaux(:, :, j))
       end do
     else
       vaux = M_ZERO
@@ -106,17 +106,11 @@ contains
     tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
     tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%der, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
-        call states_set_state(st, gr%mesh, ist, ik, psi)
+      do ib = st%group%block_start, st%group%block_end
+        call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus = tr%vmagnus)
       end do
     end do
-
-    SAFE_DEALLOCATE_A(psi)
 
     call density_calc(st, gr, st%rho)
 
@@ -127,17 +121,18 @@ contains
 
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
-  subroutine td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, iter)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    integer,                         intent(in)    :: iter
+  subroutine td_cfmagnus4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo, iter)
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    integer,                          intent(in)    :: iter
 
     integer :: ik, ib
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
@@ -151,7 +146,7 @@ contains
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
-      call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
+      call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
       POP_SUB(propagator_dt.td_cfmagnus4)
       return
     end if
@@ -171,20 +166,15 @@ contains
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
-      end do
-    end do
+    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
+    ! propagate by dt/2 
+    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
-      end do
-    end do
+    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
+    ! propagate by dt/2
+    !TODO: fuse this with density calc
+    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
 
     call density_calc(st, gr, st%rho)
 

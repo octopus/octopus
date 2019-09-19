@@ -26,7 +26,7 @@ match ; Complex Laplacian (blocksize =  32); GREPFIELD(out, 'Laplacian complex b
 match ; Complex Laplacian (blocksize =  64); GREPFIELD(out, 'Laplacian complex bsize =  64', 9) ; 3.4710603750E-09
 match ; Complex Laplacian (blocksize = 128); GREPFIELD(out, 'Laplacian complex bsize = 128', 9) ; 3.4710603750E-09
 
-Precision : 3.0e-11
+Precision : 4.0e-11
 match ; Real gradient; GREPFIELD(out, 'Gradient real', 5) ; 1.1709414428E-11
 match ; Complex gradient; GREPFIELD(out, 'Gradient complex', 5) ; 1.4055457659E-11
 
@@ -50,6 +50,6 @@ match ; Complex Laplacian (blocksize =  32); GREPFIELD(out, 'Laplacian complex b
 match ; Complex Laplacian (blocksize =  64); GREPFIELD(out, 'Laplacian complex bsize =  64', 9) ; 3.4710603750E-09
 match ; Complex Laplacian (blocksize = 128); GREPFIELD(out, 'Laplacian complex bsize = 128', 9) ; 3.4710603750E-09
 
-Precision : 3.0e-11
+Precision : 4.0e-11
 match ; Real gradient; GREPFIELD(out, 'Gradient real', 5) ; 1.1709414428E-11
 match ; Complex gradient; GREPFIELD(out, 'Gradient complex', 5) ; 1.4055457659E-11

@@ -26,3 +26,31 @@ match ; Dipole [step  5] ; LINEFIELD(td.general/multipoles, -16, 4) ; -7.2958101
 match ; Dipole [step 10] ; LINEFIELD(td.general/multipoles, -11, 4) ; -1.339402812014e+00
 match ; Dipole [step 15] ; LINEFIELD(td.general/multipoles, -6, 4) ; -1.833991422975e+00
 match ; Dipole [step 20] ; LINEFIELD(td.general/multipoles, -1, 4) ; -2.215415244400e+00
+
+Input      : 15-crank_nicolson.03-freeze_domains.inp
+match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -1.022768000580e+01
+match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.014174610483e+01
+match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.013487936146e+01
+match ; Energy [step 15] ; LINEFIELD(td.general/energy, -6, 3) ;  -1.012668816529e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ;  -1.011844216726e+01
+
+match ; Dipole [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.911553465566e-15
+match ; Dipole [step  5] ; LINEFIELD(td.general/multipoles, -16, 4) ; -3.957170174612e-01
+match ; Dipole [step 10] ; LINEFIELD(td.general/multipoles, -11, 4) ; -7.409784216867e-01
+match ; Dipole [step 15] ; LINEFIELD(td.general/multipoles, -6, 4) ;  -1.039496511223e+00
+match ; Dipole [step 20] ; LINEFIELD(td.general/multipoles, -1, 4) ;  -1.296299019633e+00
+
+#Values below are compied from 15-crank_nicolson.03-freeze_domains.inp
+Input      : 15-crank_nicolson.04-freeze_states.inp
+match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -1.022768000580e+01
+match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.014174610483e+01
+match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.013487936146e+01
+match ; Energy [step 15] ; LINEFIELD(td.general/energy, -6, 3) ;  -1.012668816529e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ;  -1.011844216726e+01
+
+match ; Dipole [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ; -1.911553465566e-15
+match ; Dipole [step  5] ; LINEFIELD(td.general/multipoles, -16, 4) ; -3.957170174612e-01
+match ; Dipole [step 10] ; LINEFIELD(td.general/multipoles, -11, 4) ; -7.409784216867e-01
+match ; Dipole [step 15] ; LINEFIELD(td.general/multipoles, -6, 4) ;  -1.039496511223e+00
+match ; Dipole [step 20] ; LINEFIELD(td.general/multipoles, -1, 4) ;  -1.296299019633e+00
+

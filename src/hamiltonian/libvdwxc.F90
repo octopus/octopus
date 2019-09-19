@@ -5,6 +5,7 @@
 !  * Functions that start with libvdwxc_ are public, to be called from other parts of Octopus.
 !  * Interfaces that start with vdwxc_ are actual functions of libvdwxc.
 
+
 module libvdwxc_oct_m
   use cube_oct_m
   use cube_function_oct_m
@@ -17,9 +18,11 @@ module libvdwxc_oct_m
   use mesh_cube_parallel_map_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pfft_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
   use unit_system_oct_m
 
   implicit none
@@ -42,87 +45,28 @@ module libvdwxc_oct_m
     libvdwxc_end
 
   type libvdwxc_t
+    private
     integer, pointer               :: libvdwxc_ptr
     type(mesh_t)                   :: mesh
     type(cube_t)                   :: cube
+    type(namespace_t), pointer     :: namespace
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     integer                        :: functional
     logical                        :: debug
-    FLOAT                          :: energy
+    FLOAT, public                  :: energy
     FLOAT                          :: vdw_factor
   end type libvdwxc_t
 
 #ifdef HAVE_LIBVDWXC
-  ! These interfaces correspond to functions in libvdwxc
-  interface
-    subroutine vdwxc_new(functional, vdw)
-      integer,          intent(in)  :: functional
-      integer, pointer, intent(out) :: vdw
-    end subroutine vdwxc_new
-  end interface
-
-  interface
-    subroutine vdwxc_print(vdw)
-      integer, pointer, intent(in) :: vdw
-    end subroutine vdwxc_print
-  end interface
-
-  interface
-    subroutine vdwxc_calculate(vdw, rho, sigma, dedn, dedsigma, energy)
-      integer, pointer, intent(inout) :: vdw
-      real(8),          intent(in)    :: rho(:,:,:)
-      real(8),          intent(in)    :: sigma(:,:,:)
-      real(8),          intent(inout) :: dedn(:,:,:)
-      real(8),          intent(inout) :: dedsigma(:,:,:)
-      real(8),          intent(inout) :: energy
-    end subroutine vdwxc_calculate
-  end interface
-
-  interface
-    subroutine vdwxc_set_unit_cell(vdw, nx, ny, nz, C00, C01, C02, &
-      C10, C11, C12, C20, C21, C22)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: nx, ny, nz
-      real(8),          intent(in)    :: C00, C01, C02, C10, C11, C12, C20, C21, C22
-    end subroutine vdwxc_set_unit_cell
-  end interface
-
-  interface
-    subroutine vdwxc_init_serial(vdw)
-      integer, pointer, intent(inout) :: vdw
-    end subroutine vdwxc_init_serial
-  end interface
-
-#ifdef HAVE_MPI
-  interface
-    subroutine vdwxc_init_mpi(vdw, comm)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: comm
-    end subroutine vdwxc_init_mpi
-  end interface
-
-  interface
-    subroutine vdwxc_init_pfft(vdw, comm, ncpu1, ncpu2)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: comm
-      integer,          intent(in)    :: ncpu1
-      integer,          intent(in)    :: ncpu2
-    end subroutine vdwxc_init_pfft
-  end interface
-#endif
-
-  interface
-    subroutine vdwxc_finalize(vdw)
-      integer, pointer, intent(inout) :: vdw
-    end subroutine vdwxc_finalize
-  end interface
+  include "vdwxcfort.f90"
 #endif
 
 contains
 
-  subroutine libvdwxc_init(libvdwxc, functional)
-    type(libvdwxc_t), intent(out) :: libvdwxc
-    integer,          intent(in)  :: functional
+  subroutine libvdwxc_init(libvdwxc, namespace, functional)
+    type(libvdwxc_t),          intent(out) :: libvdwxc
+    type(namespace_t), target, intent(in)  :: namespace
+    integer,                   intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
 #ifdef HAVE_LIBVDWXC
@@ -133,13 +77,14 @@ contains
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
+    libvdwxc%namespace => namespace
     !%Variable libvdwxcDebug
     !%Type logical
     !%Section Hamiltonian::XC
     !%Description
     !% Dump libvdwxc inputs and outputs to files.
     !%End
-    call parse_variable('libvdwxcDebug', .false., libvdwxc%debug)
+    call parse_variable(namespace, 'libvdwxcDebug', .false., libvdwxc%debug)
     POP_SUB(libvdwxc_init)
 
     !%Variable libvdwxcVDWFactor
@@ -150,7 +95,7 @@ contains
     !% Setting a prefactor other than one is wrong, but useful
     !% for debugging.
     !%End
-    call parse_variable('libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
+    call parse_variable(namespace, 'libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
   end subroutine libvdwxc_init
 
   subroutine libvdwxc_print(this)
@@ -172,7 +117,7 @@ contains
     else if(this%functional == 2) then
       write(message(2), '(4x,a)') 'vdW-DF2 from libvdwxc'
     else if(this%functional == 3) then
-      write(message(2), '(4x,a)') 'vdW-DF-CX from libvdwxc'
+      write(message(2), '(4x,a)') 'vdW-DF-cx from libvdwxc'
     else
       write(message(2), '(4x,a)') 'unknown libvdwxc functional'
     end if
@@ -180,9 +125,10 @@ contains
     POP_SUB(libvdwxc_write_info)
   end subroutine libvdwxc_write_info
 
-  subroutine libvdwxc_set_geometry(this, mesh)
-    type(libvdwxc_t), intent(inout) :: this
-    type(mesh_t),     intent(inout) :: mesh
+  subroutine libvdwxc_set_geometry(this, namespace, mesh)
+    type(libvdwxc_t),  intent(inout) :: this
+    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),      intent(inout) :: mesh
 
     integer :: blocksize
     integer :: libvdwxc_mode
@@ -213,7 +159,7 @@ contains
     !%Option libvdwxc_mode_mpi 3
     !% Run with fftw3-mpi.  Works only if Octopus is compiled with MPI.
     !%End
-    call parse_variable('libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
+    call parse_variable(namespace, 'libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
 
     if(libvdwxc_mode == LIBVDWXC_MODE_AUTO) then
       if(mesh%mpi_grp%size == 1) then
@@ -231,10 +177,10 @@ contains
     end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb)
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace)
     else
 #ifdef HAVE_MPI
-      call cube_init(this%cube, mesh%idx%ll, mesh%sb, mpi_grp = mesh%mpi_grp, &
+      call cube_init(this%cube, mesh%idx%ll, mesh%sb, namespace, mpi_grp = mesh%mpi_grp, &
         need_partition = .true., blocksize = blocksize)
       call mesh_cube_parallel_map_init(this%mesh_cube_map, mesh, this%cube)
 #endif
@@ -245,17 +191,29 @@ contains
     ! Therefore we cannot use the PFFT stuff without a frightful mess.
 
 #ifdef HAVE_LIBVDWXC
-    call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
-      this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
-      mesh%spacing(3) * this%cube%rs_n_global(3), 0.0_8, 0.0_8, &
-      0.0_8, mesh%spacing(2) * this%cube%rs_n_global(2), 0.0_8, &
-      0.0_8, 0.0_8, mesh%spacing(1) * this%cube%rs_n_global(1))
+    if(mesh%sb%box_shape == PARALLELEPIPED) then
+      call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
+        this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
+        mesh%sb%rlattice(3, 3), mesh%sb%rlattice(2, 3), mesh%sb%rlattice(1, 3), &
+        mesh%sb%rlattice(3, 2), mesh%sb%rlattice(2, 2), mesh%sb%rlattice(1, 2), &
+        mesh%sb%rlattice(3, 1), mesh%sb%rlattice(2, 1), mesh%sb%rlattice(1, 1))
+    else
+      call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
+        this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
+        mesh%spacing(3) * this%cube%rs_n_global(3), 0.0_8, 0.0_8, &
+        0.0_8, mesh%spacing(2) * this%cube%rs_n_global(2), 0.0_8, &
+        0.0_8, 0.0_8, mesh%spacing(1) * this%cube%rs_n_global(1))
+    end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
       call vdwxc_init_serial(this%libvdwxc_ptr)
     else
-#ifdef HAVE_MPI
+#ifdef HAVE_LIBVDWXC_MPI
       call vdwxc_init_mpi(this%libvdwxc_ptr, mesh%mpi_grp%comm)
+#else
+      message(1) = "libvdwxc was not compiled with MPI"
+      message(2) = "Recompile libvdwxc with MPI for vdW with domain decomposition"
+      call messages_fatal(2)
 #endif
     end if
     call vdwxc_print(this%libvdwxc_ptr)
@@ -279,7 +237,7 @@ contains
 #ifdef HAVE_MPI
     integer :: ierr
 #endif
-    
+
     PUSH_SUB(libvdwxc_calculate)
 
     ASSERT(size(rho, 2) == 1)
@@ -424,7 +382,7 @@ contains
         integer :: ierr
 
         call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
-          fname, this%mesh, arr, unit_one, ierr)
+          fname, this%namespace, this%mesh, arr, unit_one, ierr)
       end subroutine libvdwxc_write_array
 
     end subroutine libvdwxc_calculate

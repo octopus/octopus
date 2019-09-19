@@ -46,17 +46,32 @@ match ; Total current [step  100] ; LINEFIELD(td.general/total_current, -1, 3) ;
 Precision : 2e-6
 match ; Number of excited electrons [step  100] ; LINEFIELD(td.general/n_ex, -1, 3) ; 2.020946403375e-05
 
-Input      : 14-silicon_shifts.03-delayed_kick.inp
+match ; Projections [step 100] ; LINEFIELD(td.general/projections, -1, 3) ; 9.420281521009e-01
+match ; Projections [step 100] ; LINEFIELD(td.general/projections, -1, 4) ;-3.355279351983e-01
+
+#Results here are copy pasted from the previous test as we are just changing the parallelization scheme
+#Only n_ex is not copied, as this is not implemented at the moment
+Input      : 14-silicon_shifts.03-td_parstates.inp
+
+Precision : 6e-5
+match ; Total current [step  100] ; LINEFIELD(td.general/total_current, -1, 3) ; -1.215652788234e-02
+Precision : 2e-6
+match ; Projections [step 100] ; LINEFIELD(td.general/projections, -1, 3) ; 9.420281521009e-01
+match ; Projections [step 100] ; LINEFIELD(td.general/projections, -1, 4) ;-3.355279351983e-01
+
+
+Input      : 14-silicon_shifts.04-delayed_kick.inp
 
 Precision : 3e-4
 match ; Total current [step  100] ; LINEFIELD(td.general/gauge_field, -1, 3) ; 2.993089558398e+00
 
 
+
 Util : oct-dielectric-function
-Input      : 14-silicon_shifts.04-dielectric_function.inp
+Input      : 14-silicon_shifts.05-dielectric_function.inp
 
 match ; epsilon file  energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 1) ; 0.000000E+00
-match ; Re epsilon xx energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 2) ;-0.124397E+01
+match ; Re epsilon xx energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 2) ;-0.329541E+01
 match ; Im epsilon xx energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 3) ; 0.000000E+00
 match ; Re epsilon yy energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 4) ;-0.183444E-16
 match ; Im epsilon yy energy 0 ; LINEFIELD(td.general/dielectric_function, 2, 5) ; 0.000000E+00

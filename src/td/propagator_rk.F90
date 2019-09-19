@@ -27,22 +27,26 @@ module propagator_rk_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
+  use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
+  use parser_oct_m
+  use pert_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use species_oct_m
-#ifdef HAVE_SPARSKIT
   use sparskit_oct_m
-#endif
-  use states_oct_m
+  use states_elec_oct_m
   use v_ks_oct_m
+  use propagation_ops_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -54,35 +58,36 @@ module propagator_rk_oct_m
     td_runge_kutta2,           &
     td_runge_kutta4
   
-  type(grid_t),            pointer, private :: grid_p
-  type(hamiltonian_t),     pointer, private :: hm_p
-  type(states_t),          pointer, private :: st_p
-  type(xc_t),              pointer, private :: xc_p
-  type(propagator_t),      pointer, private :: tr_p
-  integer,                 private :: dim_op
-  FLOAT,                   private :: t_op, dt_op
-  FLOAT, allocatable, private      :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
+  type(mesh_t),             pointer,     private :: mesh_p
+  type(hamiltonian_elec_t), pointer,     private :: hm_p
+  type(states_elec_t),      pointer,     private :: st_p
+  type(propagator_t),       pointer,     private :: tr_p
+  type(namespace_t),        pointer,     private :: namespace_p
+  integer,                               private :: dim_op
+  FLOAT,                                 private :: t_op, dt_op
+  FLOAT,                    allocatable, private :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
   logical :: move_ions_op
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
+  subroutine td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
+    type(v_ks_t),                        target, intent(inout) :: ks
+    type(namespace_t),                           intent(in)    :: namespace
+    type(hamiltonian_elec_t),            target, intent(inout) :: hm
+    type(grid_t),                        target, intent(inout) :: gr
+    type(states_elec_t),                 target, intent(inout) :: st
+    FLOAT,                                       intent(in)    :: time
+    FLOAT,                                       intent(in)    :: dt
+    type(ion_dynamics_t),                        intent(inout) :: ions
+    type(geometry_t),                            intent(inout) :: geo
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    type(states_t), pointer :: chi
+    type(states_elec_t), pointer :: chi
     FLOAT, pointer :: q(:, :), p(:, :)
 
     integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, iatom, ib
     CMPLX, allocatable :: zphi(:, :, :, :), zchi(:, :, :, :), dvpsi(:, :, :)
-    type(states_t) :: hst, stphi, inh, hchi, stchi
+    type(states_elec_t) :: hst, stphi, inh, hchi, stchi
     logical :: propagate_chi
     FLOAT, allocatable :: pos0(:, :), vel0(:, :), &
       posk(:, :), velk(:, :), &
@@ -138,14 +143,14 @@ contains
       end if
     end if
 
-    call states_copy(hst, st)
-    call states_copy(stphi, st)
-    call states_get_state(st, gr%mesh, zphi)
+    call states_elec_copy(hst, st)
+    call states_elec_copy(stphi, st)
+    call states_elec_get_state(st, gr%mesh, zphi)
 
     if(propagate_chi) then
-      call states_copy(hchi, chi)
-      call states_copy(stchi, chi)
-      call states_get_state(chi, gr%mesh, zchi)
+      call states_elec_copy(hchi, chi)
+      call states_elec_copy(stchi, chi)
+      call states_elec_get_state(chi, gr%mesh, zchi)
     end if
 
     if(ion_dynamics_ions_move(ions)) then
@@ -171,9 +176,9 @@ contains
     !
 
     ! 
-    call states_set_state(stphi, gr%mesh, zphi)
+    call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)    
     end if
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0
@@ -193,9 +198,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 2.
     
-    call states_set_state(stphi, gr%mesh, zphi)
+    call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)    
     end if
     
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
@@ -224,9 +229,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 3.
 
-    call states_set_state(stphi, gr%mesh, zphi)
+    call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)    
     end if
     
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
@@ -256,9 +261,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 4.
 
-    call states_set_state(stphi, gr%mesh, zphi)
+    call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)    
     end if
     
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
@@ -294,8 +299,8 @@ contains
         geo%atom(iatom)%x(1:geo%space%dim) = posfinal(:, iatom)
         geo%atom(iatom)%v(1:geo%space%dim) = velfinal(:, iatom)
       end do
-      call hamiltonian_epot_generate(hm, gr, geo, st, time)
-      !call forces_calculate(gr, geo, hm, stphi, time, dt)
+      call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time)
+      !call forces_calculate(gr, namespace, geo, hm, stphi, time, dt)
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
       if(propagate_chi) then
@@ -306,12 +311,12 @@ contains
       end if
     end if
 
-    call states_end(hst)
-    call states_end(stphi)
+    call states_elec_end(hst)
+    call states_elec_end(stphi)
     SAFE_DEALLOCATE_A(zphi)
     if(propagate_chi) then
-      call states_end(hchi)
-      call states_end(stchi)
+      call states_elec_end(hchi)
+      call states_elec_end(stchi)
       SAFE_DEALLOCATE_A(zchi)
       nullify(chi)
       nullify(p)
@@ -352,28 +357,28 @@ contains
           geo%atom(iatom)%x(1:geo%space%dim) = pos(:, iatom)
           geo%atom(iatom)%v(1:geo%space%dim) = vel(:, iatom)
         end do
-        call hamiltonian_epot_generate(hm, gr, geo, stphi, time = tau)
+        call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, stphi, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
+        call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
+      call zhamiltonian_elec_apply_all(hm, gr%mesh, stphi, hst)
     end subroutine f_psi
 
     subroutine f_ions(tau)
       FLOAT, intent(in) :: tau
 
-      call forces_calculate(gr, geo, hm, stphi, ks, t = tau, dt = dt)
+      call forces_calculate(gr, namespace, geo, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, geo%natoms
         posk(:, iatom) = dt * vel(:, iatom)
         velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
       end do
       if(propagate_chi) then
-        call forces_costate_calculate(gr, geo, hm, stphi, stchi, coforce, transpose(post))
+        call forces_costate_calculate(gr, namespace, geo, hm, stphi, stchi, coforce, transpose(post))
         do iatom = 1, geo%natoms
           poskt(:, iatom) = dt * velt(:, iatom)
           velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(geo%atom(iatom)%species)
@@ -386,22 +391,23 @@ contains
 
       if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_set(hm%oct_exchange, stphi, gr%mesh)
       call prepare_inh()
-      call hamiltonian_adjoint(hm)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi)
-      call hamiltonian_not_adjoint(hm)
+      call hamiltonian_elec_adjoint(hm)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, tau)
+
+      call zhamiltonian_elec_apply_all(hm, gr%mesh, stchi, hchi)
+      call hamiltonian_elec_not_adjoint(hm)
 
 
       call apply_inh()
       if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_remove(hm%oct_exchange)
-      if(ion_dynamics_ions_move(ions)) call hamiltonian_remove_inh(hm)
+      if(ion_dynamics_ions_move(ions)) call hamiltonian_elec_remove_inh(hm)
     end subroutine f_chi
 
     subroutine apply_inh()
       integer :: ib
 
-      if(hamiltonian_inh_term(hm)) then
+      if(hamiltonian_elec_inh_term(hm)) then
         do ik = kp1, kp2
           do ib = 1, st%group%block_start, st%group%block_end
             call batch_axpy(np, M_ZI, hm%inh_st%group%psib(ib, ik), hchi%group%psib(ib, ik))
@@ -413,9 +419,10 @@ contains
     subroutine prepare_inh()
       integer :: idir
       CMPLX, allocatable :: psi(:, :), inhpsi(:, :)
+      type(pert_t) :: pert
 
       if(ion_dynamics_ions_move(ions)) then
-        call states_copy(inh, st)
+        call states_elec_copy(inh, st)
 
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
         SAFE_ALLOCATE(inhpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -425,26 +432,28 @@ contains
           do ist = 1, st%nst
 
             inhpsi = M_z0
-            call states_get_state(stphi, gr%mesh, ist, ik, psi)
+            call states_elec_get_state(stphi, gr%mesh, ist, ik, psi)
 
             do iatom = 1, geo%natoms
-
-              call zhamiltonian_dervexternal(hm, geo, gr, iatom, stphi%d%dim, psi, dvpsi)
-
               do idir = 1, gr%sb%dim
+                call pert_init(pert, namespace, PERTURBATION_IONIC, gr, geo)
+                call pert_setup_atom(pert, iatom)
+                call pert_setup_dir(pert, idir)
+                call zpert_apply(pert, namespace, gr, geo, hm, ik, psi(:, :), dvpsi(:, :, idir))
+                dvpsi(:, :, idir) = - dvpsi(:, :, idir)
                 inhpsi(1:gr%mesh%np, 1:stphi%d%dim) = inhpsi(1:gr%mesh%np, 1:stphi%d%dim) &
                   + st%occ(ist, ik)*post(idir, iatom)*dvpsi(1:gr%mesh%np, 1:stphi%d%dim, idir)
+                call pert_end(pert)
               end do
-
             end do
 
-            call states_set_state(inh, gr%mesh, ist, ik, inhpsi)
+            call states_elec_set_state(inh, gr%mesh, ist, ik, inhpsi)
 
           end do
         end do
 
-        call hamiltonian_set_inh(hm, inh)
-        call states_end(inh)
+        call hamiltonian_elec_set_inh(hm, inh)
+        call states_elec_end(inh)
 
         SAFE_DEALLOCATE_A(psi)
         SAFE_DEALLOCATE_A(inhpsi)
@@ -478,16 +487,17 @@ contains
   end subroutine td_explicit_runge_kutta4
 
 
-  subroutine td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
+  subroutine td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),        target, intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
 
     integer :: np_part, np, kp1, kp2, st1, st2, nspin, ik, ist, idim, j, ip
     integer :: i
@@ -519,14 +529,14 @@ contains
     if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
 
     ! define pointer and variables for usage in td_rk2op, td_rk2opt routines
-    grid_p    => gr
+    mesh_p    => gr%mesh
     hm_p      => hm
     tr_p      => tr
     st_p      => st
+    namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
-    xc_p      => ks%xc
 
     SAFE_ALLOCATE(k2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
     SAFE_ALLOCATE(oldk2(1:np_part, 1:st%d%dim, st1:st2, kp1:kp2))
@@ -540,35 +550,38 @@ contains
     ! First, we get the state that we want to propagate. For the moment being, only one state.
     do ik = kp1, kp2
       do ist = st1, st2
-        call states_get_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
+        call states_elec_get_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
       end do
     end do
 
-    if(oct_exchange_enabled(hm%oct_exchange)) call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time-dt)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    if (oct_exchange_enabled(hm%oct_exchange)) then
+      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver)
+    end if
+
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
+
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
       do ist = st1, st2
         if(oct_exchange_enabled(hm%oct_exchange)) then
-          call zoct_exchange_operator(hm%oct_exchange, gr%der, rhs1(:, :, ist, ik), ist, ik)
+          call zoct_exchange_operator(hm%oct_exchange, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
 
     rhs1 = zphi - M_zI * M_HALF * dt * rhs1
 
-    if(hamiltonian_inh_term(hm)) then
+    if(hamiltonian_elec_inh_term(hm)) then
       SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
       do ik = kp1, kp2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+            call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
             forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
           end do
         end do
@@ -586,20 +599,21 @@ contains
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         do ik = kp1, kp2
           do ist = st1, st2
-            call states_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
+            call states_elec_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
           end do
         end do
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       end if
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+        call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
+
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
           call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
@@ -638,11 +652,7 @@ contains
       end do
 
       t_op  = time - dt
-#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk2op, td_rk2opt, zpsi, rhs)
-#else
-      ASSERT(.false.)
-#endif
       
       k2 = M_z0
       j = 1
@@ -672,7 +682,7 @@ contains
     zphi = k2
     do ik = kp1, kp2
       do ist = st1, st2
-        call states_set_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
+        call states_elec_set_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
       end do
     end do
 
@@ -690,17 +700,19 @@ contains
     POP_SUB(td_runge_kutta2)
   end subroutine td_runge_kutta2
 
+  !----------------------------------------------------------------------------
 
-  subroutine td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
+  subroutine td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),        target, intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
 
     integer :: np_part, np, idim, ip, ist, ik, j, kp1, kp2, st1, st2, nspin
     FLOAT :: dres
@@ -744,10 +756,11 @@ contains
     if(sp_parallel) sp_comm = st%st_kpt_mpi_grp%comm
 
     ! define pointer and variables for usage in td_rk4op, td_rk4opt routines
-    grid_p    => gr
+    mesh_p    => gr%mesh
     hm_p      => hm
     tr_p      => tr
     st_p      => st
+    namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
@@ -771,7 +784,7 @@ contains
     ! First, we get the state that we want to propagate. For the moment being, only one state.
     do ik = kp1, kp2
       do ist = st1, st2
-        call states_get_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
+        call states_elec_get_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
       end do
     end do
     k1 = M_z0
@@ -788,29 +801,30 @@ contains
       ! Set the Hamiltonian at time-dt + c(1) * dt
       do ik = kp1, kp2
         do ist = st1, st2
-          call states_set_state(st, gr%mesh, ist, ik, yn1(:, :, ist, ik))
+          call states_elec_set_state(st, gr%mesh, ist, ik, yn1(:, :, ist, ik))
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(1)*dt)
+        call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(1)*dt)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt + c(1)*dt)
+
       vhxc1_op = hm%vhxc
       t_op  = time - dt + c(1) * dt
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
-          if(hamiltonian_inh_term(hm)) then
+          call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+          if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
-              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
               forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
             end do
             SAFE_DEALLOCATE_A(inhpsi)
@@ -825,29 +839,30 @@ contains
       ! Set the Hamiltonian at time-dt + c(2) * dt
       do ik = kp1, kp2
         do ist = st1, st2
-          call states_set_state(st, gr%mesh, ist, ik, yn2(:, :, ist, ik))
+          call states_elec_set_state(st, gr%mesh, ist, ik, yn2(:, :, ist, ik))
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(2)*dt)
+        call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(2)*dt)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt + c(2)*dt)
+
       vhxc2_op = hm%vhxc
       t_op  = time - dt + c(2) * dt
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
-          if(hamiltonian_inh_term(hm)) then
+          call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
+          if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
-              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+              call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
               forall(ip = 1:gr%mesh%np) rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
             end do
             SAFE_DEALLOCATE_A(inhpsi)
@@ -897,11 +912,7 @@ contains
       end do
 
       t_op  = time - dt
-#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk4op, td_rk4opt, zpsi, rhs)
-#else
-      ASSERT(.false.)
-#endif
       
       k1 = M_z0
       k2 = M_z0
@@ -942,7 +953,7 @@ contains
     zphi = zphi + b(1) * k1 + b(2) * k2
     do ik = kp1, kp2
       do ist = st1, st2
-        call states_set_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
+        call states_elec_set_state(st, gr%mesh, ist, ik, zphi(:, :, ist, ik))
       end do
     end do
 
@@ -982,8 +993,8 @@ contains
 
     PUSH_SUB(td_rk4op)
 
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
+    np_part = mesh_p%np_part
+    np = mesh_p%np
     st1 = st_p%st_start
     st2 = st_p%st_end
     kp1 = st_p%d%kpt%start
@@ -1005,8 +1016,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(1)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(1)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1019,7 +1029,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1031,8 +1041,7 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(2)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(2)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1045,7 +1054,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1078,8 +1087,8 @@ contains
 
     PUSH_SUB(td_rk4opt)
 
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
+    np_part = mesh_p%np_part
+    np = mesh_p%np
     st1 = st_p%st_start
     st2 = st_p%st_end
     kp1 = st_p%d%kpt%start
@@ -1101,8 +1110,9 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(1)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(1)*dt_op)
+
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1115,7 +1125,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1127,8 +1137,9 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(2)*dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(2)*dt_op)
+
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1141,7 +1152,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1173,8 +1184,8 @@ contains
 
     PUSH_SUB(td_rk2op)
 
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
+    np_part = mesh_p%np_part
+    np = mesh_p%np
     st1 = st_p%st_start
     st2 = st_p%st_end
     kp1 = st_p%d%kpt%start
@@ -1190,8 +1201,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + dt_op)
-   call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1205,7 +1215,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver)
     end if
 
     j = 1
@@ -1216,7 +1226,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1235,7 +1245,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, grid_p%der, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1269,8 +1279,8 @@ contains
 
     PUSH_SUB(td_rk2opt)
 
-    np_part = grid_p%mesh%np_part
-    np = grid_p%mesh%np
+    np_part = mesh_p%np_part
+    np = mesh_p%np
     st1 = st_p%st_start
     st2 = st_p%st_end
     kp1 = st_p%d%kpt%start
@@ -1286,8 +1296,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + dt_op)
-    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1301,7 +1310,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, grid_p%mesh, zpsi_, xc_p)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver)
     end if
 
     j = 1
@@ -1312,7 +1321,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1332,7 +1341,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, grid_p%der, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

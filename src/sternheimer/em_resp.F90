@@ -25,7 +25,7 @@ module em_resp_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use output_oct_m
   use io_oct_m
   use kdotp_oct_m
@@ -36,6 +36,7 @@ module em_resp_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
   use profiling_oct_m
@@ -43,9 +44,10 @@ module em_resp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use string_oct_m
   use system_oct_m
@@ -63,6 +65,7 @@ module em_resp_oct_m
        out_hyperpolarizability
 
   type em_resp_t
+    private
     type(pert_t) :: perturbation
 
     integer :: nsigma !< 1: consider only positive values of the frequency
@@ -113,9 +116,8 @@ module em_resp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine em_resp_run(sys, hm, fromScratch)
+  subroutine em_resp_run(sys, fromScratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(grid_t),   pointer :: gr
@@ -167,16 +169,16 @@ contains
 
     complex_wfs = states_are_complex(sys%st)
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
       call messages_fatal(1)
     end if
 
-    ! Use of ForceComplex will make this true after states_look_and_load even if it was not before.
+    ! Use of ForceComplex will make this true after states_elec_look_and_load even if it was not before.
     ! Otherwise, this line is a tautology.
     complex_response = states_are_complex(sys%st)
 
@@ -190,7 +192,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
@@ -205,7 +207,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(kdotp_restart, sys%namespace, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -220,7 +222,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -246,8 +248,8 @@ contains
     end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
-      call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
-      call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+      call pert_init(pert_kdotp, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_em_lr2(1:gr%sb%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -261,8 +263,8 @@ contains
           end do
         end do
       end do
-      call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = .false.)
-      call sternheimer_init(sh_kdotp, sys, hm, complex_response, set_ham_var = 0, &
+      call sternheimer_init(sh2, sys, complex_response, set_ham_var = 0, set_last_occ_response = .false.)
+      call sternheimer_init(sh_kdotp, sys, complex_response, set_ham_var = 0, &
         set_last_occ_response = .true.)
       em_vars%occ_response = .true.
       SAFE_ALLOCATE(dl_eig(1:sys%st%nst, 1:sys%st%d%nik, 1:sys%gr%sb%periodic_dim))
@@ -298,7 +300,7 @@ contains
       em_vars%occ_response = .false.
    
       if(use_kdotp) then
-        call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+        call pert_init(pert2_none, sys%namespace, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
         SAFE_ALLOCATE(k2_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
@@ -333,22 +335,22 @@ contains
               kdotp_lr(idir, 1), frequency_zero)
           end do
         end if
-        call sternheimer_init(sh_kmo, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
+        call sternheimer_init(sh_kmo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)  
       end if
     end if
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
-      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
+      call born_charges_init(em_vars%Born_charges(ifactor), sys%namespace, sys%geo, sys%st, gr%sb%dim)
     end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
       .and. sys%st%d%nspin == 1 .and. states_are_real(sys%st)) then
       ! first-order response is zero if there is time-reversal symmetry. F Mauri and SG Louie, PRL 76, 4246 (1996)
-      call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response)
       ! set HamiltonianVariation to V_ext_only, in magnetic case
     else
-      call sternheimer_init(sh, sys, hm, complex_response, set_last_occ_response = em_vars%occ_response)
+      call sternheimer_init(sh, sys, complex_response, set_last_occ_response = em_vars%occ_response)
       ! otherwise, use default, which is hartree + fxc
     end if
 
@@ -361,7 +363,7 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       call info()
-      call io_mkdir(EM_RESP_DIR) ! output
+      call io_mkdir(EM_RESP_DIR, sys%namespace) ! output
     end if
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
@@ -383,9 +385,9 @@ contains
 
     if(em_vars%calc_magnetooptics) then
       if(em_vars%magnetooptics_nohvar) then
-        call sternheimer_init(sh_mo, sys, hm, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
+        call sternheimer_init(sh_mo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
       else
-        call sternheimer_init(sh_mo, sys, hm, complex_response, set_last_occ_response = em_vars%occ_response) 
+        call sternheimer_init(sh_mo, sys, complex_response, set_last_occ_response = em_vars%occ_response) 
         call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
       end if
       call messages_experimental("Magneto-optical response")
@@ -414,7 +416,7 @@ contains
           end do
         end do
       else
-        call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
+        call pert_init(pert_b, sys%namespace, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
       end if
     end if
 
@@ -544,9 +546,9 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer()
+            call drun_sternheimer(sys%namespace)
           else
-            call zrun_sternheimer()
+            call zrun_sternheimer(sys%namespace)
           end if
 
         end if ! have_to_calculate
@@ -562,9 +564,9 @@ contains
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear()
+        call dcalc_properties_nonlinear(sys%namespace)
       else
-        call zcalc_properties_nonlinear()
+        call zcalc_properties_nonlinear(sys%namespace)
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -659,7 +661,7 @@ contains
     do ifactor = 1, em_vars%nfactor
       call Born_charges_end(em_vars%Born_charges(ifactor))
     end do
-    call states_deallocate_wfns(sys%st)
+    call states_elec_deallocate_wfns(sys%st)
 
     POP_SUB(em_resp_run)
 
@@ -675,10 +677,10 @@ contains
 
       PUSH_SUB(em_resp_run.parse_input)
 
-      call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
-      call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
-      call messages_obsolete_variable('PolEta                 ', 'EMEta               ')
-      call messages_obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
+      call messages_obsolete_variable(sys%namespace, 'PolFreqs               ', 'EMFreqs             ')
+      call messages_obsolete_variable(sys%namespace, 'PolHyper               ', 'EMHyperpol          ')
+      call messages_obsolete_variable(sys%namespace, 'PolEta                 ', 'EMEta               ')
+      call messages_obsolete_variable(sys%namespace, 'PolHamiltonianVariation', 'HamiltonianVariation')
 
       !%Variable EMFreqs
       !%Type block
@@ -701,7 +703,7 @@ contains
       !%
       !%End
 
-      if (parse_block('EMFreqs', blk) == 0) then 
+      if(parse_block(sys%namespace, 'EMFreqs', blk) == 0) then 
 
         nrow = parse_block_n(blk)
         em_vars%nomega = 0
@@ -747,7 +749,7 @@ contains
         !% they are calculated in increasing order. Can be set to false to use the order as stated,
         !% in case this makes better use of available restart information.
         !%End
-        call parse_variable('EMFreqsSort', .true., freq_sort)
+        call parse_variable(sys%namespace, 'EMFreqsSort', .true., freq_sort)
 
         if(freq_sort) call sort(em_vars%omega)
 
@@ -770,7 +772,7 @@ contains
       !% In units of energy. Cannot be negative.
       !%End
 
-      call parse_variable('EMEta', M_ZERO, em_vars%eta, units_inp%energy)
+      call parse_variable(sys%namespace, 'EMEta', M_ZERO, em_vars%eta, units_inp%energy)
       if(em_vars%eta < -M_EPSILON) then
         message(1) = "EMEta cannot be negative."
         call messages_fatal(1)
@@ -797,10 +799,10 @@ contains
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
-      call parse_variable('EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
+      call parse_variable(sys%namespace, 'EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
       call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
       
-      call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
+      call pert_init(em_vars%perturbation, sys%namespace, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable EMCalcRotatoryResponse
@@ -812,7 +814,7 @@ contains
         !% and write to file <tt>rotatory_strength</tt>.
         !%End
 
-        call parse_variable('EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
+        call parse_variable(sys%namespace, 'EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
 
         !%Variable EMHyperpol
         !%Type block
@@ -826,7 +828,7 @@ contains
         !% <tt>1 | 1 | -2</tt>.
         !%End
 
-        if (parse_block('EMHyperpol', blk) == 0) then 
+        if (parse_block(sys%namespace, 'EMHyperpol', blk) == 0) then 
           call parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
@@ -848,7 +850,7 @@ contains
         !%Description
         !% Calculate magneto-optical response.
         !%End
-        call parse_variable('EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
+        call parse_variable(sys%namespace, 'EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
 
         !%Variable EMMagnetoopticsNoHVar
         !%Type logical
@@ -858,7 +860,7 @@ contains
         !% Exclude corrections to the exchange-correlation and Hartree terms 
         !% from consideration of perturbations induced by a magnetic field
         !%End
-        call parse_variable('EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
+        call parse_variable(sys%namespace, 'EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
 
         !%Variable EMKPointOutput
         !%Type logical
@@ -869,7 +871,7 @@ contains
         !% Can be also used for magneto-optical effects.
         !%End
 
-        call parse_variable('EMKPointOutput', .false., em_vars%kpt_output)
+        call parse_variable(sys%namespace, 'EMKPointOutput', .false., em_vars%kpt_output)
 
       end if
 
@@ -885,7 +887,7 @@ contains
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 
-      call parse_variable('EMForceNoKdotP', .false., em_vars%force_no_kdotp)
+      call parse_variable(sys%namespace, 'EMForceNoKdotP', .false., em_vars%force_no_kdotp)
 
       !%Variable EMCalcBornCharges
       !%Type logical
@@ -895,7 +897,7 @@ contains
       !% Calculate linear-response Born effective charges from electric perturbation (experimental).
       !%End
 
-      call parse_variable('EMCalcBornCharges', .false., em_vars%calc_Born)
+      call parse_variable(sys%namespace, 'EMCalcBornCharges', .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMOccupiedResponse
@@ -909,7 +911,7 @@ contains
       !% the full response is always calculated.
       !%End
 
-      call parse_variable('EMOccupiedResponse', .false., em_vars%occ_response)
+      call parse_variable(sys%namespace, 'EMOccupiedResponse', .false., em_vars%occ_response)
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call messages_fatal(1)
@@ -925,7 +927,7 @@ contains
       !% be used. Restart wavefunctions from a very different frequency can hinder convergence.
       !%End
 
-      call parse_variable('EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
+      call parse_variable(sys%namespace, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
       POP_SUB(em_resp_run.parse_input)
 
@@ -980,15 +982,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega, ifactor)
-    type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(geometry_t),     intent(inout) :: geo
-    type(output_t),       intent(in)    :: outp
-    type(em_resp_t),      intent(inout) :: em_vars
-    integer,              intent(in)    :: iomega
-    integer,              intent(in)    :: ifactor
+  subroutine em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
+    type(states_elec_t),      intent(inout) :: st
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(geometry_t),         intent(inout) :: geo
+    type(output_t),           intent(in)    :: outp
+    type(em_resp_t),          intent(inout) :: em_vars
+    integer,                  intent(in)    :: iomega
+    integer,                  intent(in)    :: ifactor
     
     integer :: iunit
     character(len=80) :: dirname, str_tmp
@@ -1002,7 +1005,7 @@ contains
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(ifactor)*em_vars%omega(iomega)))
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-    call io_mkdir(trim(dirname))
+    call io_mkdir(trim(dirname), namespace)
 
     call write_eta()
 
@@ -1010,7 +1013,7 @@ contains
       if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
         call out_polarizability()
         if(em_vars%calc_Born) then
-          call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
+          call out_Born_charges(em_vars%Born_charges(ifactor), geo, namespace, gr%sb%dim, dirname, &
             write_real = em_vars%eta < M_EPSILON)
         end if
 
@@ -1045,7 +1048,7 @@ contains
 
       PUSH_SUB(em_resp_output.write_eta)
 
-      iunit = io_open(trim(dirname)//'/eta', action='write')
+      iunit = io_open(trim(dirname)//'/eta', namespace, action='write')
 
       write(iunit, '(3a)') 'Imaginary part of frequency [', trim(units_abbrev(units_out%energy)), ']'
       write(iunit, '(f20.6)') units_from_atomic(units_out%energy, em_vars%eta)
@@ -1097,7 +1100,7 @@ contains
       
       PUSH_SUB(em_resp_output.out_polarizability)
   
-      iunit = io_open(trim(dirname)//'/alpha', action='write')
+      iunit = io_open(trim(dirname)//'/alpha', namespace, action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
@@ -1118,7 +1121,7 @@ contains
           end do
         end do
 
-        iunit = io_open(trim(dirname)//'/cross_section', action='write')
+        iunit = io_open(trim(dirname)//'/cross_section', namespace, action='write')
         if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
         crossp(1:gr%sb%dim, 1:gr%sb%dim) = matmul(cross(1:gr%sb%dim, 1:gr%sb%dim), cross(1:gr%sb%dim, 1:gr%sb%dim))
@@ -1159,7 +1162,7 @@ contains
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
   
-      iunit = io_open(trim(dirname)//'/epsilon', action='write')
+      iunit = io_open(trim(dirname)//'/epsilon', namespace, action='write')
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
   
       epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
@@ -1202,7 +1205,7 @@ contains
             end do
           end do
         end do
-        iunit = io_open(trim(dirname)//'/epsilon_k_re', action='write')
+        iunit = io_open(trim(dirname)//'/epsilon_k_re', namespace, action='write')
 
         write(iunit, '(a)') '# Real part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1234,7 +1237,7 @@ contains
         end do
         call io_close(iunit)
 
-        iunit = io_open(trim(dirname)//'/epsilon_k_im', action='write')
+        iunit = io_open(trim(dirname)//'/epsilon_k_im', namespace, action='write')
 
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1281,10 +1284,10 @@ contains
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         write(dirname1, '(a)') EM_RESP_DIR//'freq_0.0000'
-        call io_mkdir(trim(dirname1))
-        iunit = io_open(trim(dirname1)//'/susceptibility', action='write')
+        call io_mkdir(trim(dirname1), namespace)
+        iunit = io_open(trim(dirname1)//'/susceptibility', namespace, action='write')
       else  
-        iunit = io_open(trim(dirname)//'/susceptibility', action='write')
+        iunit = io_open(trim(dirname)//'/susceptibility', namespace, action='write')
       end if
 
       if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
@@ -1349,7 +1352,7 @@ contains
         do idir = 1, gr%sb%dim
 
           write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
-          iunit = io_open(trim(fname), action='write')
+          iunit = io_open(trim(fname), namespace, action='write')
 
           if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1374,12 +1377,12 @@ contains
 
                 if(states_are_complex(st)) then
                   SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_get_state(st, gr%mesh, ist, ik, zpsi)
+                  call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
                   proj = zmf_dotp(gr%mesh, st%d%dim, zpsi, em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
                   SAFE_DEALLOCATE_A(zpsi)
                 else
                   SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_get_state(st, gr%mesh, ist, ik, dpsi)
+                  call states_elec_get_state(st, gr%mesh, ist, ik, dpsi)
                   proj = dmf_dotp(gr%mesh, st%d%dim, dpsi, em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
                   SAFE_DEALLOCATE_A(dpsi)
                 end if
@@ -1463,18 +1466,20 @@ contains
         message(1) = "Info: Calculating rotatory response."
         call messages_info(1)
 
-        call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+        call pert_init(angular_momentum, namespace, PERTURBATION_MAGNETIC, gr, geo)
         
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-        call states_get_state(st, gr%mesh, psi)
+        call states_elec_get_state(st, gr%mesh, psi)
 
         dic = M_ZERO
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
+            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
+            psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, namespace, gr, geo, hm, st, &
+            em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
         SAFE_DEALLOCATE_P(psi)
@@ -1483,7 +1488,7 @@ contains
         
         dic = dic*M_zI*M_HALF
 
-        iunit = io_open(trim(dirname)//'/rotatory_strength', action='write')
+        iunit = io_open(trim(dirname)//'/rotatory_strength', namespace, action='write')
 
         ! print header
         write(iunit, '(a1,a20,a20,a20)') '#', str_center("Energy", 20), str_center("R", 20), str_center("Re[beta]", 20)
@@ -1522,7 +1527,7 @@ contains
       diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
       epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
   
-      iunit = io_open(trim(dirname)//'/alpha_mo', action='write')
+      iunit = io_open(trim(dirname)//'/alpha_mo', namespace, action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
 
@@ -1606,7 +1611,7 @@ contains
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
-	iunit = io_open(trim(dirname)//'/epsilon_mo_k', action='write')
+	iunit = io_open(trim(dirname)//'/epsilon_mo_k', namespace, action='write')
 
         write(iunit, '(a)') '# Contribution to dielectric tensor for B = 1 a.u.'
         write(iunit, '(a10)', advance = 'no') '#  index  '
@@ -1653,12 +1658,13 @@ contains
   !> Ref: David M Bishop, Rev Mod Phys 62, 343 (1990)
   !! beta // and _L are eqn (154), beta  k is eqn (155)
   !! generalized to lack of Kleinman symmetry
-  subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname)
+  subroutine out_hyperpolarizability(sb, beta, freq_factor, converged, dirname, namespace)
     type(simul_box_t),  intent(in) :: sb
     CMPLX,              intent(in) :: beta(:, :, :)
     FLOAT,              intent(in) :: freq_factor(:)
     logical,            intent(in) :: converged
     character(len=*),   intent(in) :: dirname
+    type(namespace_t),  intent(in) :: namespace
 
     CMPLX :: bpar(1:MAX_DIM), bper(1:MAX_DIM), bk(1:MAX_DIM)
     CMPLX :: HRS_VV, HRS_HV
@@ -1667,7 +1673,7 @@ contains
     PUSH_SUB(out_hyperpolarizability)
 
     ! Output first hyperpolarizability (beta)
-    iunit = io_open(trim(dirname)//'/beta', action='write')
+    iunit = io_open(trim(dirname)//'/beta', namespace, action='write')
 
     if (.not. converged) write(iunit, '(a)') "# WARNING: not converged"
 

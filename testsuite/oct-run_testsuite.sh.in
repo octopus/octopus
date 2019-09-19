@@ -75,12 +75,21 @@ function find_tests() {
     testfiles=`find $testsuite -name "*.test" | \
 	xargs @EGREP@ "$groups_pat" | \
 	awk -F: '{print $1}' | sort -u`
-    echo "$testfiles"
+    # We now reorder the list so that long tests come first.
+    # This is to optimize the total runtime when running many jobs concurrently.
+    if  [ -n "$testfiles" ]; then
+        for duration in "long-run" "short-run"; do
+            tests=`@EGREP@ "^TestGroups *:.*($duration)" $testfiles| \
+            awk -F: '{print $1}'`
+            echo "$tests"
+        done
+    fi
 }
 
 function queue {
     OCT_QUEUE="$OCT_QUEUE $1 "
     OUTLIST="$OUTLIST $2 "
+    GPULIST="$GPULIST $3 "
     NUM=$(($NUM+1))
 }
 
@@ -106,6 +115,7 @@ function checkqueue {
         for (( ijob=1; ijob <= $NUM; ijob++ )); do
 	    testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
             test_name=`echo $OUTLIST | cut -f $ijob -d " "`
+            gpuid=`echo $GPULIST | cut -f $ijob -d " "`
 	    #echo "checking $test_name $testpid"
             ps -p $testpid > /dev/null;
 	    # is this pid still running?
@@ -116,13 +126,16 @@ function checkqueue {
                 if [ $NUM -eq 1 ]; then
                     OCT_QUEUE=
 	            OUTLIST=
+                    GPULIST=
                 elif [ $ijob -eq 1 ]; then
                     OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
 	            OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f 2- -d " "`
                 else
 	            # cut will not accept 0 as an index
                     OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
 	            OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
                 fi
                 NUM=$(($NUM-1))
                 break;
@@ -181,11 +194,19 @@ else
 fi
 
 test_index=0
+gpuid=0
 
 if [ "$report" == "yes" ]; then
     if [ -f "$yaml" ]; then
         `rm $yaml`                      
     fi
+fi
+
+options=" "`$bin_directory/octopus -c`" "
+if [[ $options =~ " mpi " ]]; then
+    GPUS_PER_JOB=2
+else
+    GPUS_PER_JOB=1
 fi
 
 for y in $tests; do
@@ -201,30 +222,34 @@ for y in $tests; do
     test_index=$(($test_index + 1))
     echo Starting test $test_index: $test_name
 
+
     if [ "$dry_run" == "yes" ]; then
         if [ "$report" == "yes" ]; then
 	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &"
+	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &"
         else
             echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-                $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+                $preserve_opt -D $bin_directory -f $y > ${ybase}.log -G $gpuid 2>&1 &"
         fi 
     fi
     if [ "$report" == "yes" ]; then
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &
     else
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -G $gpuid > ${ybase}.log 2>&1 &
     fi
     ppid=$!
-    queue $ppid $test_name
+    queue $ppid $test_name $gpuid
 	
     if [ $NUM -ge $OCT_TEST_NJOBS ]
     then
 	checkqueue
+    else
+        gpuid=$(($gpuid+$GPUS_PER_JOB))
     fi
 done
+
 while [ $NUM -ge 1 ]
 do
     checkqueue

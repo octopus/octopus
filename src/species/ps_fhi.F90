@@ -23,6 +23,7 @@ module ps_fhi_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_file_oct_m
   use ps_cpi_oct_m
@@ -40,18 +41,20 @@ module ps_fhi_oct_m
 
   !> remember that the FHI format is basically the CPI format with a header
   type ps_fhi_t
-    type(ps_fhi_file_t), pointer :: fhi_file !< This just includes the extra header
-    type(ps_cpi_file_t), pointer :: cpi_file !< This includes the real pseudopotential
-    type(ps_in_grid_t),  pointer :: ps_grid  !< the pseudopotential in the grid
-    type(valconf_t),     pointer :: conf
+    ! Components are public by default
+    type(ps_fhi_file_t), pointer, private :: fhi_file !< This just includes the extra header
+    type(ps_cpi_file_t), pointer, private :: cpi_file !< This includes the real pseudopotential
+    type(ps_in_grid_t),  pointer          :: ps_grid  !< the pseudopotential in the grid
+    type(valconf_t),     pointer, private :: conf
   end type ps_fhi_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_fhi_init(ps_fhi, filename)
-    type(ps_fhi_t),   intent(inout) :: ps_fhi
-    character(len=*), intent(in)    :: filename
+  subroutine ps_fhi_init(ps_fhi, filename, namespace)
+    type(ps_fhi_t),    intent(inout) :: ps_fhi
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit
     logical :: found
@@ -70,7 +73,7 @@ contains
       call messages_fatal()
     end if
 
-    iunit = io_open(filename, action='read', form='formatted', status='old')
+    iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
     call ps_fhi_file_read(iunit, ps_fhi%fhi_file)
     call ps_cpi_file_read(iunit, ps_fhi%cpi_file)
     call io_close(iunit)

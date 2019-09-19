@@ -28,6 +28,7 @@ SUBDIRS = \
         symmetries       \
 	linear_response  \
         lda_u            \
+	multisystem      \
 	optimal_control  \
 	periodic_systems \
 	photo_electron   \

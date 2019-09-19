@@ -33,6 +33,7 @@ module ps_xml_oct_m
     ps_xml_end
 
   type ps_xml_t
+    ! Components are public by default
     logical            :: initialized
     logical            :: kleinman_bylander
     logical            :: nlcc

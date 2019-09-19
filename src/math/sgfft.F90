@@ -25,8 +25,8 @@ module sgfft_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
-#ifdef HAVE_OMP
-  use omp
+#ifdef HAVE_OPENMP
+  use omp_lib
 #endif
   use profiling_oct_m
 
@@ -273,9 +273,9 @@ contains
       !$omp private(zw,trig,before,after,now,i,j,iam,npr,jj,ma,mb,mm,ic,n,m,jompa,jompb,lot,lotomp,inzeep,inzet,nn,nfft) &
       !$omp shared(n1,n2,n3,nd1,nd2,nd3,z,isign,inzee,ncache) 
       npr = 1
-      ! npr = omp_get_num_threads()
+      !$ npr = omp_get_num_threads()
       iam = 0
-      ! iam = omp_get_thread_num()
+      !$ iam = omp_get_thread_num()
 
       SAFE_ALLOCATE(zw(1:2,1:ncache/4,1:2))
       SAFE_ALLOCATE(trig(1:2,1:1024))

@@ -46,9 +46,10 @@ module potential_interpolation_oct_m
     potential_interpolation_load
 
   type potential_interpolation_t
-    FLOAT, pointer      :: v_old(:, :, :) => null()
-    FLOAT, pointer      :: vtau_old(:, :, :) => null()
-    logical             :: mgga_with_exc
+    private
+    FLOAT, pointer, public :: v_old(:, :, :) => null()
+    FLOAT, pointer, public :: vtau_old(:, :, :) => null()
+    logical                :: mgga_with_exc
   end type potential_interpolation_t
 
   integer :: interpolation_steps

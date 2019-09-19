@@ -15,13 +15,13 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: submesh_inc.F90 15314 2016-04-30 08:40:18Z xavier $
 
 !Here ff is a function in the submesh 
-R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
+R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
+  logical, optional, intent(in) :: reduce
 
   integer :: is
 
@@ -45,7 +45,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     res = M_ZERO
   end if
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
     call comm_allreduce(mesh%vp%comm, res)
     call profiling_out(C_PROFILING_SM_REDUCE)
@@ -55,10 +55,11 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 end function X(sm_integrate)
 
 !Here ff is a function expressed in mesh
-R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
+R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
+  logical, optional, intent(in) :: reduce
 
   PUSH_SUB(X(sm_integrate_frommesh))
 
@@ -74,7 +75,11 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
     res = M_ZERO
   end if
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call comm_allreduce(mesh%vp%comm, res)
+    call profiling_out(C_PROFILING_SM_REDUCE)
+  end if
 
   POP_SUB(X(sm_integrate_frommesh))
 end function X(sm_integrate_frommesh)
