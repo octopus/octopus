@@ -524,6 +524,8 @@ contains
 
       !The perturbation direction is defined as
       !cos(q.r)*uvec + sin(q.r)*vvec
+    else
+      kick%easy_axis(1:MAX_DIM) = M_ZERO
     end if
 
     POP_SUB(kick_init)
