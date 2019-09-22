@@ -23,6 +23,7 @@ TheoryLevel = hartree_fock
 MixingScheme = linear
 Mixing = 0.5
 
+EigenSolver = cg_new
 EigenSolverTolerance = 1.0e-8
 ConvRelDens = 1e-10
 

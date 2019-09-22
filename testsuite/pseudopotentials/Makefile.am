@@ -26,7 +26,6 @@ dist_share_DATA =                                  \
 	02-cu2_hgh.test                            \
 	02-cu2_hgh.01_gs.inp                       \
 	02-cu2_hgh.02_gs_current.inp               \
-	02-cu2_hgh.03_gs_current_fast.inp          \
 	03-nlcc.test                               \
 	03-nlcc.01-Fatom.inp                       \
 	03-nlcc.F.UPF                              \
@@ -65,6 +64,9 @@ dist_share_DATA =                                  \
 	15-calcium_psp8_sic.test                   \
 	16-platinum_psp8.test                      \
 	16-platinum_psp8.01-gs.inp                 \
-	16-platinum_psp8.78_Pt_r.oncvpsp.psp8
+	16-platinum_psp8.78_Pt_r.oncvpsp.psp8      \
+	17-lithium_automatic.01-gs.inp             \
+	17-lithium_automatic.02-gs_tol.inp         \
+	17-lithium_automatic.test
 
 CLEANFILES = *~ *.bak

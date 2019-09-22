@@ -22,7 +22,7 @@ module memory_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use system_oct_m
   use unit_system_oct_m
   
@@ -61,7 +61,7 @@ contains
 
     call messages_info()
 
-    wfns = states_wfns_memory(sys%st, sys%gr%mesh)
+    wfns = states_elec_wfns_memory(sys%st, sys%gr%mesh)
 
     call messages_write('States')
     call messages_new_line()

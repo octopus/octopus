@@ -72,6 +72,8 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     end do
   else
     do ia = 1, geo%natoms
+      if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
       work = 0
       n_s_orb = 0
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
@@ -111,6 +113,9 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
 
   iorbset = 0
   do ia = 1, geo%natoms
+    if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+
     hubbardj = species_hubbard_j(geo%atom(ia)%species)
     !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
     hasjdependence = .false.
@@ -288,7 +293,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
     os%phase(:,:) = M_ZERO
     if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
-      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
+      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
       SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
@@ -382,10 +387,8 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   os%sphere%mesh => mesh
   nullify(os%spec)
   os%iatom = -1
-  do is = 1, nstates
-    SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
-    os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
-  end do
+  SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+  os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
 
   this%maxnorbs = nstates
   this%max_np = mesh%np 
@@ -395,7 +398,7 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
 #ifdef R_TCOMPLEX
   SAFE_ALLOCATE(os%phase(1:mesh%np, kpt%start:kpt%end))
   os%phase(:,:) = M_ZERO
-  SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
+  SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
   os%eorb_mesh(:,:,:,:) = M_ZERO
 #endif
 

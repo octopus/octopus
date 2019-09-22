@@ -35,6 +35,6 @@ match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 4.0
 match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  5, 2)   ; 4.13407749831853E-002
 match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  6, 2)   ; 4.92225042631259E-002
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  5, 2) ; -3.59965316514216E-002
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; -5.93823309581599E-002
+match ; Bader value 1     ; LINEFIELD(static/bader.y=0\,z=0,  5, 2) ; -3.59965316514216E-002
+match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  6, 2) ; -5.93823309581599E-002
 

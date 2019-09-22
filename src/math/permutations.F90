@@ -19,7 +19,6 @@
 #include "global.h"
 
 module permutations_oct_m
-
   use global_oct_m
   use loct_pointer_oct_m
   use math_oct_m
@@ -37,10 +36,12 @@ module permutations_oct_m
             permutations_end, &
             permutations_t
 
-  type permutations_t 
-   integer :: nn, npermutations, npairs
-   integer, pointer :: allpermutations(:,:)
-   integer, pointer :: permsign(:)
+  type permutations_t
+   private
+   integer,          public :: npermutations
+   integer                  :: nn, npairs
+   integer, pointer, public :: allpermutations(:,:)
+   integer, pointer, public :: permsign(:)
   end type permutations_t 
 
 contains

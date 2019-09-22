@@ -20,19 +20,23 @@
 
 psfdir = $(pkgdatadir)/pseudopotentials/PSF
 
-dist_psf_DATA =      \
-	set_defaults \
+dist_psf_DATA =        \
+	set_defaults   \
 	Cd.psf \
 	C.psf  \
+	C.psf.spacing  \
 	D.psf  \
 	H.psf  \
 	Li.psf \
 	Na.psf \
 	N.psf  \
 	O.psf  \
+	O.psf.spacing  \
 	Se.psf \
+	Se.psf.spacing \
 	Si.psf \
 	S.psf  \
+	S.psf.spacing  \
 	T.psf  \
 	Ti.psf
 

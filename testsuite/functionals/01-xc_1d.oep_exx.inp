@@ -28,3 +28,5 @@ OEPMixing = 0.001
 
 # Parallelization in spin/k-points is currently not available for OEP
 ParKpoints = no
+
+EigenSolver = cg_new

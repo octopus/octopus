@@ -16,10 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+    vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(poisson_t),      intent(in)    :: psolver
+  type(namespace_t),    intent(in)    :: namespace
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
@@ -111,7 +114,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! initialize a couple of handy variables
   gga  = family_is_gga(xcs%family)
   mgga = family_is_mgga(xcs%family)
-  mgga_withexc = family_is_mgga_with_exc(xcs, ispin)
+  mgga_withexc = family_is_mgga_with_exc(xcs)
   if(mgga) then
     ASSERT(gga)
   end if
@@ -136,9 +139,9 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   ! Get the gradient and the Laplacian of the density and the kinetic-energy density
   ! We do it here instead of doing it in gga_init and mgga_init in order to 
-  ! avoid calling the subroutine states_calc_quantities twice
+  ! avoid calling the subroutine states_elec_calc_quantities twice
   if((gga .and. (.not. mgga)) .or. xcs%xc_density_correction == LR_X) then
-    ! get gradient of the density (this is faster than calling states_calc_quantities)
+    ! get gradient of the density (this is faster than calling states_elec_calc_quantities)
     do isp = 1, spin_channels 
       call dderivatives_grad(der, dens(:, isp), gdens(:, :, isp)) 
     end do
@@ -155,9 +158,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     end if
 
     if (xcs%use_gi_ked) then
-      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      call states_elec_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
+                                  density_gradient = gdens, density_laplacian = ldens)
     else
-      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      call states_elec_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
+ density_gradient = gdens, density_laplacian = ldens)
     end if
 
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
@@ -397,7 +402,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   if(present(deltaxc)) deltaxc = M_ZERO
 
   if(xcs%xc_density_correction == LR_X) then
-    call xc_density_correction_calc(xcs, der, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
+    call xc_density_correction_calc(xcs, der, psolver, namespace, spin_channels, &
+      rho, vx, dedd, deltaxc = deltaxc)
 
     if(calc_energy) then
       ! correct the energy density from Levy-Perdew, note that vx now
@@ -852,39 +858,13 @@ end subroutine xc_get_vxc
     family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
 
-  logical function family_is_mgga_with_exc(xcs, ispin)
-    type(xc_t),    target,  intent(in)    :: xcs
-    integer,                intent(in)    :: ispin
-
-    type(xc_functl_t), pointer :: functl(:)
-    integer :: ixc  
-
-    PUSH_SUB(family_is_mgga_with_exc)
-
-    !Pointer-shortcut for xcs%functional
-    !It helps to remember that for xcs%functional(:,:)
-    ! (1,:) => exchange,    (2,:) => correlation
-    ! (:,1) => unpolarized, (:,2) => polarized
-    if(ispin == UNPOLARIZED) then
-      functl => xcs%functional(:, 1)
-    else
-      functl => xcs%functional(:, 2)
-    end if
-
-    family_is_mgga_with_exc = .false.
-    do ixc = 1, 2
-        if((bitand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
-           .and. (bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
-    end do
-
-    POP_SUB(family_is_mgga_with_exc)
-  end function family_is_mgga_with_exc
-
 ! -----------------------------------------------------
 
-subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, deltaxc)
+subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
   type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
+  type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
   FLOAT,               intent(inout) :: refvx(:)
@@ -913,9 +893,12 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", der%mesh, density(:, 1), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", der%mesh, refvx(:), unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
+      der%mesh, density(:, 1), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
+      der%mesh, refvx(:), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
 
   if(xcs%xcd_optimize_cutoff) then
@@ -929,7 +912,7 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
     if(debug%info) then
       if(mpi_world%rank == 0) then
         write(number, '(i4)') iter
-        iunit = io_open('qxc.'//trim(adjustl(number)), action='write')
+        iunit = io_open('qxc.'//trim(adjustl(number)), namespace, action='write')
       end if
     end if
     do
@@ -1009,7 +992,8 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   
     if(mpi_world%rank == 0) then
       print*, "Iter",    iter, ncutoff, qxcfin
@@ -1025,12 +1009,18 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end if
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
 
   forall(ip = 1:der%mesh%np) 
@@ -1052,9 +1042,12 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   end do
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
   end if
   
   dd = dmf_integrate(der%mesh, lrvxc)/vol
@@ -1068,7 +1061,8 @@ subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, delt
   if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
   if(debug%info) then
-    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", der%mesh, nxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
   end if
   
   call profiling_out(prof)
@@ -1108,245 +1102,6 @@ FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
 
   POP_SUB(get_qxc)
 end function get_qxc
-
-!------------------------------------------------------------
-!
-! Complex scaled XC
-!
-!------------------------------------------------------------
-
-!> Subroutine to stitch discontinuous values of a multiple-valued function
-!! together to a single continuous, single-valued function by smoothly
-!! joining at the branch cuts.
-!! Each value of the parameter 'branch' corresponds to one such value.
-subroutine stitch(get_branch, functionvalues, startpoint)
-  interface
-    CMPLX function get_branch(x, branch)
-      implicit none
-      CMPLX,   intent(in) :: x
-      integer, intent(in) :: branch
-    end function get_branch
-  end interface
-
-  CMPLX,   intent(inout) :: functionvalues(:, :, :)
-  integer, intent(in)    :: startpoint(3)
-  
-  integer :: i, j, imax, jmax
-
-  imax = size(functionvalues, 1)
-  jmax = size(functionvalues, 2)
-
-  call stitchline(get_branch, functionvalues, startpoint(1), startpoint(2), startpoint(3), 1)
-  do i=1, imax
-    call stitchline(get_branch, functionvalues, i, startpoint(2), startpoint(3), 2)
-    do j=1, jmax
-      call stitchline(get_branch, functionvalues, i, j, startpoint(3), 3)
-    end do
-  end do
-end subroutine stitch
-
-
-!> Like stitch, but stitches along one line only.
-subroutine stitchline(get_branch, functionvalues, startpoint1, startpoint2, startpoint3, direction, startbranch)
-  
-  ! Function for getting values of multiple-valued functions.
-  ! Each value of the parameter 'branch' corresponds to one such value.
-  interface 
-    CMPLX function get_branch(x, branch)
-      implicit none
-      CMPLX,   intent(in) :: x
-      integer, intent(in) :: branch
-    end function get_branch
-  end interface
-
-  CMPLX,             intent(inout) :: functionvalues(:, :, :)
-  integer,           intent(in)    :: startpoint1, startpoint2, startpoint3
-  integer, optional, intent(in)    :: direction
-  integer, optional, intent(in)    :: startbranch
-
-  integer :: stitchedpoints, direction_, startbranch_
-  
-  integer :: currentbranch, npts, i
-  integer :: startpoint(3), currentlocation(3)
-  CMPLX :: prev_value
-
-  PUSH_SUB(stitchline)
-
-  stitchedpoints = 0
-
-  startpoint = (/startpoint1, startpoint2, startpoint3/)
-  currentlocation = startpoint
-
-  if (present(direction)) then
-    direction_ = direction
-  else
-    direction_ = 1
-  end if
-
-  if (present(startbranch)) then
-    startbranch_ = startbranch
-  else
-    startbranch_ = 0
-  end if
-
-  npts = size(functionvalues, direction_)
-
-  ! First loop forwards from zero and stitch along the way
-  currentbranch = startbranch_
-  prev_value = functionvalues(startpoint(1), startpoint(2), startpoint(3))
-  do i=startpoint(direction_) + 1, npts
-    call stitch_single_point()
-  end do
-  
-  ! Now loop backwards
-  currentbranch = startbranch_
-  prev_value = functionvalues(startpoint(1), startpoint(2), startpoint(3))
-  do i=startpoint(direction_) - 1, 1, -1
-    call stitch_single_point()
-  end do
-  
-  POP_SUB(stitchline)
-contains
-
-  !recursive 
-  subroutine stitch_single_point()
-    CMPLX   :: v1, v2, v3, v
-    integer :: adj
-    
-    stitchedpoints = stitchedpoints + 1
-
-    PUSH_SUB(newstitch.stitch_single_point)
-    
-    currentlocation(direction_) = i
-
-    v1 = get_branch(functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)), currentbranch)
-    v2 = get_branch(functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)), currentbranch - 1)
-    v3 = get_branch(functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)), currentbranch + 1)
-    
-    adj = 0
-    v = v1
-    if (abs(v2 - prev_value) < abs(v - prev_value)) then
-      v = v2
-      adj = -1
-    end if
-    if (abs(v3 - prev_value) < abs(v - prev_value)) then
-      v = v3
-      adj = +1
-    end if
-    currentbranch = currentbranch + adj
-    functionvalues(currentlocation(1), currentlocation(2), currentlocation(3)) = v
-    prev_value = v
-
-    POP_SUB(newstitch.stitch_single_point)
-  end subroutine stitch_single_point
-  
-end subroutine stitchline
-
-! For evaluating values of multiple-valued functions when one value,
-! e.g. the principal value, is known.  Used to stitch
-CMPLX function get_root2_branch(x, branch) result(y)
-  CMPLX, intent(in)   :: x
-  integer, intent(in) :: branch
-  
-  y = x * exp(branch * M_zI * M_PI)
-end function get_root2_branch
-
-CMPLX function get_root3_branch(x, branch) result(y)
-  CMPLX,   intent(in) :: x
-  integer, intent(in) :: branch
-  
-  y = x * exp(branch * M_TWO * M_zI * M_PI / M_THREE)
-end function get_root3_branch
-
-CMPLX function get_root6_branch(x, branch) result(y)
-  CMPLX,   intent(in) :: x
-  integer, intent(in) :: branch
-  
-  y = x * exp(branch * M_zI * M_PI / M_THREE)
-end function get_root6_branch
-
-CMPLX function get_logarithm_branch(x, branch) result(y)
-  CMPLX,   intent(in) :: x
-  integer, intent(in) :: branch
-  
-  y = x + branch * M_TWO * M_zI * M_PI
-end function get_logarithm_branch
-
-
-subroutine zxc_complex_lda_gamma(mesh, rootrs, epsc, depsdrs, gamma, alpha1, beta1, beta2, beta3, beta4)
-  type(mesh_t), intent(in)  :: mesh
-  CMPLX,        intent(in)  :: rootrs(:)
-  CMPLX,        intent(out) :: epsc(:)
-  CMPLX,        intent(out) :: depsdrs(:)
-  FLOAT,        intent(in)  :: gamma
-  FLOAT,        intent(in)  :: alpha1
-  FLOAT,        intent(in)  :: beta1
-  FLOAT,        intent(in)  :: beta2
-  FLOAT,        intent(in)  :: beta3
-  FLOAT,        intent(in)  :: beta4
-  
-  CMPLX, allocatable :: Q0(:), Q1(:), dQ1drs(:)
-
-  PUSH_SUB(zxc_complex_lda_gamma)
-  
-  SAFE_ALLOCATE(Q0(1:mesh%np))
-  SAFE_ALLOCATE(Q1(1:mesh%np))
-  SAFE_ALLOCATE(dQ1drs(1:mesh%np))
-
-  Q0(:) = -M_TWO * gamma * (M_ONE + alpha1 * rootrs(:)**2)
-  Q1(:) = M_TWO * gamma * rootrs(:) * (beta1 + rootrs(:) * (beta2 + rootrs(:) * (beta3 + rootrs(:) * beta4)))
-  dQ1drs(:) = gamma * (beta1 / rootrs(:) + M_TWO * beta2 + rootrs(:) * (M_THREE * beta3 + M_FOUR * beta4 * rootrs(:)))
-
-  epsc(:) = log(M_ONE + M_ONE / Q1(:))
-  call localstitch(mesh, epsc, get_logarithm_branch)
-  epsc(:) = Q0(:) * epsc(:)
-
-  depsdrs(:) = -M_TWO * gamma * alpha1 * epsc(:) / Q0(:) &
-    - Q0(:) * dQ1drs(:) / (Q1(:) * (Q1(:) + M_ONE))
-
-  SAFE_DEALLOCATE_A(Q0)
-  SAFE_DEALLOCATE_A(Q1)
-  SAFE_DEALLOCATE_A(dQ1drs)
-  
-  POP_SUB(zxc_complex_lda_gamma)
-end subroutine zxc_complex_lda_gamma
-
-subroutine localstitch(mesh, array, get_branch)
-  type(mesh_t), intent(in)    :: mesh
-  CMPLX,        intent(inout) :: array(:)
-
-  interface 
-    CMPLX function get_branch(x, branch)
-      implicit none
-      CMPLX,   intent(in) :: x
-      integer, intent(in) :: branch
-    end function get_branch
-  end interface
-  
-  type(cube_t)          :: cube
-  type(cube_function_t) :: cf
-  CMPLX, allocatable :: stitchbuffer(:, :, :)
-
-  PUSH_SUB(localstitch)
-
-  ! XXX this will use mpi_world
-  call cube_init(cube, mesh%idx%ll, mesh%sb)
-  call cube_function_null(cf)
-  call zcube_function_alloc_rs(cube, cf)
-  call zmesh_to_cube(mesh, array, cube, cf, .true.)
-  
-  SAFE_ALLOCATE(stitchbuffer(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
-  stitchbuffer(:, :, :) = cf%zRS(:, :, :)
-  call stitch(get_branch, stitchbuffer, cube%center)
-  cf%zRS(:, :, :) = stitchbuffer(:, :, :)
-  SAFE_DEALLOCATE_A(stitchbuffer)
-  
-  call zcube_to_mesh(cube, cf, mesh, array, .true.)
-  call zcube_function_free_rs(cube, cf)
-  call cube_end(cube)
-
-  POP_SUB(localstitch)
-end subroutine 
 
 
 !! Local Variables:

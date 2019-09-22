@@ -19,13 +19,10 @@
 #include "global.h"
 
 module ps_xml_oct_m
-  use atomic_oct_m
   use global_oct_m
-  use io_oct_m
   use messages_oct_m
   use profiling_oct_m
   use pseudo_oct_m
-  use ps_in_grid_oct_m
 
   implicit none
 
@@ -36,6 +33,7 @@ module ps_xml_oct_m
     ps_xml_end
 
   type ps_xml_t
+    ! Components are public by default
     logical            :: initialized
     logical            :: kleinman_bylander
     logical            :: nlcc

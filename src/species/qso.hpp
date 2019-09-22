@@ -46,6 +46,9 @@ namespace pseudopotential {
       doc_.parse<0>(&buffer_[0]);
 
       root_node_ = doc_.first_node("fpmd:species");
+      //for the old version of the standard
+      if(!root_node_) root_node_ = doc_.first_node("qbox:species");
+      if(!root_node_) throw status::FORMAT_NOT_SUPPORTED;
 
       pseudo_node_ = root_node_->first_node("ultrasoft_pseudopotential");
       if(pseudo_node_) type_ = pseudopotential::type::ULTRASOFT;
@@ -99,8 +102,8 @@ namespace pseudopotential {
       return value<double>(root_node_->first_node("mass"));
     }
     
-    int valence_charge() const {
-      return value<int>(pseudo_node_->first_node("valence_charge"));
+    double valence_charge() const {
+      return value<double>(pseudo_node_->first_node("valence_charge"));
     }
 
     int llocal() const {

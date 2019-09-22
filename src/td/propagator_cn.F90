@@ -21,21 +21,24 @@
 module propagator_cn_oct_m
   use density_oct_m
   use exponential_oct_m
+  use gauge_field_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
-  use loct_pointer_oct_m
+  use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use solvers_oct_m
   use sparskit_oct_m
-  use states_oct_m
+  use states_elec_oct_m
+  use propagation_ops_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -45,35 +48,38 @@ module propagator_cn_oct_m
   public ::                    &
     td_crank_nicolson
 
-  type(grid_t),            pointer, private :: grid_p
-  type(hamiltonian_t),     pointer, private :: hm_p
-  type(propagator_t),      pointer, private :: tr_p
-  integer,                 private :: ik_op, ist_op, dim_op
-  FLOAT,                   private :: t_op, dt_op
+  type(mesh_t),             pointer, private :: mesh_p
+  type(hamiltonian_elec_t), pointer, private :: hm_p
+  type(propagator_t),       pointer, private :: tr_p
+  integer,                           private :: ik_op, ist_op, dim_op
+  FLOAT,                             private :: t_op, dt_op
 
 contains
 
   ! ---------------------------------------------------------
   !> Crank-Nicolson propagator
-  subroutine td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, use_sparskit)
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_t),      target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical, intent(in) :: use_sparskit
+  subroutine td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, use_sparskit)
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(namespace_t),                intent(in)    :: namespace
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in) :: use_sparskit
 
     CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
     integer :: ik, ist, idim, ip, np_part, np, iter
     FLOAT :: dres
     FLOAT :: cgtol = CNST(1.0e-12)
     logical :: converged
-    type(ion_state_t) :: ions_state
 
     PUSH_SUB(propagator_dt.td_crank_nicolson)
+
+    !TODO: Add gauge field support
+    ASSERT(.not.gauge_field_is_applied(hm%ep%gfield))
 
 #ifndef HAVE_SPARSKIT
     if(use_sparskit) then
@@ -86,7 +92,7 @@ contains
     np = gr%mesh%np
 
     ! define pointer and variables for usage in td_zop, td_zopt routines
-    grid_p    => gr
+    mesh_p    => gr%mesh
     hm_p      => hm
     tr_p      => tr
     dt_op = dt
@@ -103,13 +109,10 @@ contains
     SAFE_ALLOCATE(rhs(1:np*st%d%dim))
 
     !move the ions to time 'time - dt/2', and save the current status to return to it later.
-    if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_save_state(ions, geo, ions_state)
-      call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt/M_TWO)
-    end if
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
+                time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    if(hm%family_is_mgga_with_exc) then
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_interpolate(tr%vksold, 3, &
         time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
     else 
@@ -117,21 +120,19 @@ contains
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt*M_HALF)
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
 
-        call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
-        call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO)
+        call states_elec_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
+        call exponential_apply(tr%te, gr%mesh, hm, zpsi_rhs, ist, ik, dt/M_TWO)
 
-        if(hamiltonian_inh_term(hm)) then
+        if(hamiltonian_elec_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
           do idim = 1, st%d%dim
-            call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
+            call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
             forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
           end do
           SAFE_DEALLOCATE_A(inhpsi)
@@ -139,7 +140,7 @@ contains
 
         ! put the values in a continuous array
         do idim = 1, st%d%dim
-          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
+          call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np))
           rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
         end do
 
@@ -147,9 +148,7 @@ contains
         ik_op = ik
 
         if(use_sparskit) then
-#ifdef HAVE_SPARSKIT
           call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
-#endif
         else
           iter = 2000
           call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
@@ -164,7 +163,7 @@ contains
         end if
 
         do idim = 1, st%d%dim
-          call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
+          call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np))
         end do
 
       end do
@@ -173,9 +172,7 @@ contains
     call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
-    if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_restore_state(ions, geo, ions_state)
-    end if
+    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo)
 
     SAFE_DEALLOCATE_A(zpsi_rhs)
     SAFE_DEALLOCATE_A(zpsi)
@@ -198,18 +195,18 @@ contains
 
     PUSH_SUB(td_zop)
 
-    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
+    SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op)
-      zpsi(1:grid_p%mesh%np, idim) = xre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) + &
-        M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+      zpsi(1:mesh_p%np, idim) = xre((idim-1)*mesh_p%np+1:idim*mesh_p%np) + &
+        M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
-      yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = real(zpsi(1:grid_p%mesh%np, idim))
-      yim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = aimag(zpsi(1:grid_p%mesh%np, idim))
+      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) = real(zpsi(1:mesh_p%np, idim))
+      yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = aimag(zpsi(1:mesh_p%np, idim))
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
@@ -235,18 +232,18 @@ contains
     ! To act with the transpose of H on the wfn we apply H to the conjugate of psi
     ! and conjugate the resulting hpsi (note that H is not a purely real operator
     ! for scattering wavefunctions anymore).
-    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
+    SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op)
-      zpsi(1:grid_p%mesh%np, idim) = xre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) - &
-        M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+      zpsi(1:mesh_p%np, idim) = xre((idim-1)*mesh_p%np+1:idim*mesh_p%np) - &
+        M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
-      yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) =    real(zpsi(1:grid_p%mesh%np, idim))
-      yim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = - aimag(zpsi(1:grid_p%mesh%np, idim))
+      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) =    real(zpsi(1:mesh_p%np, idim))
+      yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = - aimag(zpsi(1:mesh_p%np, idim))
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)
@@ -266,16 +263,16 @@ contains
 
     PUSH_SUB(propagator_qmr_op)
 
-    SAFE_ALLOCATE(zpsi(1:grid_p%mesh%np_part, 1:dim_op))
+    SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
     forall(idim = 1:dim_op)
-      zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
+      zpsi(1:mesh_p%np, idim) = x((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
-      y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)
+      y((idim-1)*mesh_p%np+1:idim*mesh_p%np) = zpsi(1:mesh_p%np, idim)
     end forall
 
     SAFE_DEALLOCATE_A(zpsi)

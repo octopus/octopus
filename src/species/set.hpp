@@ -48,13 +48,17 @@ namespace pseudopotential {
       double radius_;
     };
 
-    typedef std::map<std::string, element_values> element_map;
     
+    typedef std::map<std::string, element_values> element_map;
+
     element_map map_;
+    bool automatic_;
     
   public:
     
-    set(const std::string & dirname){
+    set(const std::string & dirname, const bool automatic = true):
+      automatic_(automatic){
+      
       DIR * dir = opendir(dirname.c_str());
 
       struct dirent *ent;
@@ -164,8 +168,46 @@ namespace pseudopotential {
       return map_.at(el.symbol()).llocal_;
     }
     
-    double spacing(const element & el) const {
-      return map_.at(el.symbol()).spacing_;
+    double spacing(const element & el, double etol) const {
+      std::ifstream file((map_.at(el.symbol()).file_path_ + ".spacing").c_str());
+      if(automatic_ && file) {
+	std::vector<double> spacing;
+	std::vector<double> energy;
+
+	while(true){
+	  double h, e;
+	  std::string line;
+	  file >> h >> e;
+	  getline(file, line);
+	  if(file.eof()) break;
+	  spacing.push_back(h);
+	  energy.push_back(e);
+	}
+
+	double eref = energy[energy.size() - 1];
+	energy[energy.size() - 1] = 0.0;
+	for(int ii = energy.size() - 2; ii >= 0; ii--){
+	  energy[ii] = std::max(energy[ii + 1], fabs(energy[ii] - eref));
+	}
+
+	{
+	  //make the curve a bit smoother by taking a running average
+	  std::vector<double> e2(energy);
+	  energy[1] = (e2[0] + e2[1] + e2[2])/3.0;
+	  for(unsigned ii = 2; ii < energy.size() - 2; ii++){
+	    energy[ii] = (e2[ii - 2] + e2[ii - 1] + e2[ii] + e2[ii + 1] + e2[ii + 2])/5.0;
+	  }
+	  energy[energy.size() - 2] = (e2[energy.size() - 3] + e2[energy.size() - 2] + e2[energy.size() - 1])/3.0;
+	}
+
+	for(unsigned ii = 0; ii < energy.size(); ii++){
+	  if(energy[ii] < etol) return spacing[ii];
+	}
+	
+	
+      } else {      
+	return map_.at(el.symbol()).spacing_;
+      }
     }
     
     double radius(const element & el) const {

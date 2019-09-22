@@ -18,23 +18,22 @@
 
   ! ---------------------------------------------------------
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
+    type(hamiltonian_elec_t),       intent(in)    :: hm
+    type(states_elec_t),       intent(inout) :: st
+    type(derivatives_t),       intent(in)    :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin, ik, ib
+    integer :: is, err, idir, ik, ib
     character(len=MAX_PATH_LEN) :: fname
-    FLOAT,         dimension(:),   pointer :: xpot
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
-    FLOAT, allocatable :: gradvh(:, :)
+    FLOAT, allocatable :: gradvh(:, :), heat_current(:, :, :)
 
     PUSH_SUB(output_hamiltonian)
    
@@ -42,24 +41,37 @@
     if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
       SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
       v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-      call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
+      call dio_function_output(outp%how, dir, "v0", outp%namespace, &
+        der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
       SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
-        call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
+        call dio_function_output(outp%how, dir, "vc", outp%namespace, &
+          der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
       end if
 
       if(associated(hm%ep%v_static)) then
-        call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
+        call dio_function_output(outp%how, dir, "vext", outp%namespace, &
+          der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
+        call dio_function_output(outp%how, dir, 'vh', outp%namespace, &
+          der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
         if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
           SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
           call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-          call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+          call io_function_output_vector(outp%how, dir, 'grad_vh', outp%namespace, &
+            der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+
+          SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
+          v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call io_function_output_vector(outp%how, dir, 'grad_v0', outp%namespace, &
+            der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                   geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+          SAFE_DEALLOCATE_A(v0)
           SAFE_DEALLOCATE_A(gradvh)
         end if
         
@@ -70,7 +82,8 @@
           else
             write(fname, '(a,i1)') 'vxc-sp', is
           end if
-          call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, fname, outp%namespace, &
+            der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           
           ! finally the full KS potential (without non-local PP contributions)
           potential = hm%ep%vpsl + hm%vhxc(:, is)
@@ -80,11 +93,11 @@
             write(fname, '(a,i1)') 'vks-sp', is
           end if
           if (hm%ep%classical_pot > 0) then
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              potential + hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
+            call dio_function_output(outp%how, dir, fname, outp%namespace, &
+              der%mesh, potential + hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
           else
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-                potential, units_out%energy, err, geo = geo, grp = grp)
+            call dio_function_output(outp%how, dir, fname, outp%namespace, &
+              der%mesh, potential, units_out%energy, err, geo = geo, grp = grp)
           end if
         end do
         SAFE_DEALLOCATE_A(potential)
@@ -93,26 +106,35 @@
       !PCM potentials
       if(hm%theory_level == KOHN_SHAM_DFT .and. hm%pcm%run_pcm ) then
         if (hm%pcm%solute .and. hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm', outp%namespace, &
+            der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_sol', outp%namespace, &
+            der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', outp%namespace, &
+            der%mesh, hm%pcm%v_e_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', outp%namespace, &
+            der%mesh, hm%pcm%v_n_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_ext', outp%namespace, &
+            der%mesh, hm%pcm%v_ext_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
         else if (hm%pcm%solute .and. .not.hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_sol', outp%namespace, &
+            der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', outp%namespace, &
+            der%mesh, hm%pcm%v_e_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', outp%namespace, &
+            der%mesh, hm%pcm%v_n_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
         else if (.not.hm%pcm%solute .and. hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_ext', outp%namespace, &
+            der%mesh, hm%pcm%v_ext_rs , & 
+            units_out%energy, err, geo = geo, grp = grp)
         end if
       end if
 
@@ -121,11 +143,13 @@
         select case(der%mesh%sb%dim)
         case(3)
           do idir = 1, der%mesh%sb%dim
-            call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), der%mesh, hm%b_ind(:, idir), &
+            call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), outp%namespace, &
+              der%mesh, hm%b_ind(:, idir), &
               units_out%force, err, geo = geo, grp = grp)
           end do
         case(2)
-          call dio_function_output(outp%how, dir, 'Bind_z', der%mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'Bind_z', outp%namespace, &
+            der%mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo, grp = grp)
         end select
       end if
     end if
@@ -146,7 +170,8 @@
 
         call dderivatives_lapl(der, v0(:, 1), nxc)
 
-        call dio_function_output(outp%how, dir, fname, der%mesh, nxc, units_out%energy, err, geo = geo, grp = grp)
+        call dio_function_output(outp%how, dir, fname, outp%namespace, &
+          der%mesh, nxc, units_out%energy, err, geo = geo, grp = grp)
         
       end do
 
@@ -164,7 +189,7 @@
             write(fname, '(a,i1)') 'current-sp', is
           end if
           
-          call io_function_output_vector(outp%how, dir, fname, der%mesh, &
+          call io_function_output_vector(outp%how, dir, fname, outp%namespace, der%mesh, &
             st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
@@ -178,14 +203,18 @@
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
       if(states_are_complex(st)) then
       
-        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:der%mesh%sb%dim)) 
         do ik = st%d%kpt%start,st%d%kpt%end
           do idir = 1,der%mesh%sb%dim
-            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
+            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik), reduce = .false.)
           end do
         end do
+        if(der%mesh%parallel_in_domains) then
+          call comm_allreduce(der%mesh%mpi_grp%comm, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%mesh%sb%dim/))
+        end if
+
         write(fname, '(2a)') 'current_kpt'
-        call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
+        call io_function_output_vector_BZ(outp%how, dir, fname, outp%namespace, der%mesh, st%d%kpt, &
             current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         SAFE_DEALLOCATE_A(current_kpt)
@@ -195,6 +224,27 @@
       end if
     end if
 
+    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
+
+      SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+      
+      call current_heat_calculate(der, hm, st, heat_current)
+      
+      do is = 1, hm%d%nspin
+        if(st%d%nspin == 1) then
+          write(fname, '(2a)') 'heat_current'
+        else
+          write(fname, '(a,i1)') 'heat_current-sp', is
+        end if
+        
+        call io_function_output_vector(outp%how, dir, fname, outp%namespace, der%mesh, &
+          st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+          geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+        
+        SAFE_DEALLOCATE_A(heat_current)
+      end do
+    end if
+    
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
       SAFE_ALLOCATE(density_kpt(1:st%d%nik))
       density_kpt(1:st%d%nik) = M_ZERO
@@ -203,7 +253,7 @@
 
       !These two conditions should be copied from the density_calc_end routine
       !We cannot call this routine as we must not symmetrize of reduce on kpoints
-      ASSERT(.not.states_are_packed(st))
+      ASSERT(.not.st%are_packed())
       ASSERT(.not.gr%have_fine_mesh)
 
       do ik = st%d%kpt%start,st%d%kpt%end
@@ -214,17 +264,16 @@
  
         density_kpt(ik) = M_ZERO
         do is = 1, st%d%nspin
-          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is))
+          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is), reduce = .false.)
         end do
       end do
-
-   #if defined(HAVE_MPI)        
+    
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, density_kpt)
+        call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, density_kpt)
       end if
-   #endif  
 
-      call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
+      call io_function_output_global_BZ(outp%how, dir, "density_kpt", outp%namespace, &
+        gr%mesh, density_kpt, unit_one, err)
       SAFE_DEALLOCATE_A(density_tmp)
       SAFE_DEALLOCATE_A(density_kpt)
     end if
@@ -235,9 +284,9 @@
 
   ! ---------------------------------------------------------
   subroutine output_scalar_pot(outp, gr, geo, hm, dir, time)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(hamiltonian_elec_t),  intent(inout) :: hm
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
     FLOAT, optional,      intent(in)    :: time
@@ -254,7 +303,8 @@
         write(fname, '(a,i1)') 'scalar_pot-', is
         scalar_pot = M_ZERO
         call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot, time=time)
-        call dio_function_output(outp%how, dir, fname, gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
+        call dio_function_output(outp%how, dir, fname, outp%namespace, &
+          gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
       end do
       SAFE_DEALLOCATE_A(scalar_pot)
     end if
@@ -279,7 +329,7 @@
     if(bitand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       call kick_function_get(mesh, kick, kick_function)
-      call zio_function_output(outp%how, dir, "kick_function", mesh, kick_function(:), &
+      call zio_function_output(outp%how, dir, "kick_function", outp%namespace, mesh, kick_function(:), &
         units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(kick_function)
     end if

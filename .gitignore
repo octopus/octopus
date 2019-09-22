@@ -17,11 +17,18 @@ stamp-h1
 aclocal.m4
 autom4te.cache
 autogen*
+INSTALL
 configure
 config.h.in
 build-aux
 build-stamp
 semantic.cache
+*.gcno
+*.gcda
+
+# new dependencies files
+*.dirstamp
+src/.fortran_dependencies/
 
 # /
 /bin

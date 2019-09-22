@@ -55,26 +55,26 @@ end subroutine pes_flux_pmesh
 
 ! Wrapper function
 subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin)
-  type(pes_flux_t),   intent(in) :: this
-  type(restart_t),    intent(in) :: restart
-  type(states_t),     intent(in) :: st
-  integer,            intent(in) :: ll(:)
-  FLOAT, target,     intent(out) :: pesP(:,:,:,:)
-  integer,           intent(in)  :: krng(:) 
-  integer,  pointer,  intent(in) :: Lp(:,:,:,:,:)  
-  integer, optional, intent(in)  :: istin 
+  type(pes_flux_t),    intent(in) :: this
+  type(restart_t),     intent(in) :: restart
+  type(states_elec_t), intent(in) :: st
+  integer,             intent(in) :: ll(:)
+  FLOAT, target,       intent(out) :: pesP(:,:,:,:)
+  integer,             intent(in)  :: krng(:) 
+  integer,  pointer,   intent(in) :: Lp(:,:,:,:,:)  
+  integer, optional,   intent(in)  :: istin 
 
   PUSH_SUB(pes_flux_map_from_states)
 
   select case (this%shape)
   
   case (M_SPHERICAL)
-    call pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, istin)
+    call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
   
   case (M_CUBIC)
 
   case (M_PLANES)
-    call pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, istin)
+    call pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
   
   end select
 
@@ -478,10 +478,10 @@ end subroutine pes_flux_pmesh_pln
 
 
 !< Build the photoemission map form the restart files
-subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, istin)
+subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
   type(pes_flux_t),   intent(in) :: this
   type(restart_t),    intent(in) :: restart
-  type(states_t),     intent(in) :: st
+  type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesP(:,:,:,:)
   integer,           intent(in)  :: krng(:) 
@@ -495,7 +495,7 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
   FLOAT   :: weight 
   integer :: istart, iend, nst, ig, igpt
 
-  PUSH_SUB(pes_flux_map_from_states_pln)
+  PUSH_SUB(pes_flux_map_from_states_elec_pln)
 
   istart = 1
   iend = st%nst
@@ -514,7 +514,7 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_dim_get_spin_index(st%d, ik)
+    ispin = states_elec_dim_get_spin_index(st%d, ik)
     
     do ist = istart, iend
 
@@ -606,8 +606,8 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
 
   write(stdout, '(1x)')
 
-  POP_SUB(pes_flux_map_from_states_pln)
-end subroutine pes_flux_map_from_states_pln
+  POP_SUB(pes_flux_map_from_states_elec_pln)
+end subroutine pes_flux_map_from_states_elec_pln
 
 
 
@@ -725,10 +725,10 @@ end subroutine pes_flux_pmesh_sph
 
 
 
-subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, istin)
+subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
   type(pes_flux_t),   intent(in) :: this
   type(restart_t),    intent(in) :: restart
-  type(states_t),     intent(in) :: st
+  type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesP(:,:,:,:)
   integer,           intent(in)  :: krng(:) 
@@ -743,7 +743,7 @@ subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, i
   FLOAT   :: weight 
   integer :: istart, iend, nst, ig
   
-  PUSH_SUB(pes_flux_map_from_states_sph)
+  PUSH_SUB(pes_flux_map_from_states_elec_sph)
 
   istart = 1
   iend = st%nst
@@ -762,7 +762,7 @@ subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, i
   
   pesP = M_ZERO
   do ik = krng(1), krng(2)
-    ispin = states_dim_get_spin_index(st%d, ik)
+    ispin = states_elec_dim_get_spin_index(st%d, ik)
     
     do ist = istart, iend
 
@@ -831,9 +831,9 @@ subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, i
   write(stdout, '(1x)')
 
 
-  POP_SUB(pes_flux_map_from_states_sph)
+  POP_SUB(pes_flux_map_from_states_elec_sph)
   
-end subroutine pes_flux_map_from_states_sph
+end subroutine pes_flux_map_from_states_elec_sph
 
 
 
@@ -960,11 +960,12 @@ end subroutine pes_flux_out_energy_sph
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! ---------------------------------------------------------
-subroutine pes_flux_output(this, mesh, sb, st, dt)
+subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   type(pes_flux_t), intent(inout)    :: this
   type(mesh_t),        intent(in)    :: mesh
   type(simul_box_t),   intent(in)    :: sb
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
+  type(namespace_t),   intent(in)    :: namespace
   FLOAT,               intent(in)    :: dt
 
   integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -1121,8 +1122,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
     if (this%shape /= M_PLANES) then
-      iunittwo = io_open('td.general/PES_flux.distribution.out', action='write', position='rewind')
-      iunitone = io_open('td.general/'//'PES_flux.power.sum', action='write', position='rewind')
+      iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
+      iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
       write(iunitone, '(a19)') '# E, total spectrum'
     end if
     
@@ -1280,7 +1281,8 @@ subroutine pes_flux_output(this, mesh, sb, st, dt)
             itot = ist + (ik-1) * st%nst +  (isdim-1) * st%nst * st%d%kpt%nglobal
             write(filename,'(i10.10)') itot
             
-            iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', action='write', position='rewind')
+            iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
+              namespace, action='write', position='rewind')
             write(iunitone, '(a29)') '# gx, gy, gz distribution'
             
             do ikp = 1, this%nkpnts
@@ -1331,11 +1333,11 @@ end subroutine pes_flux_output
 
 ! ---------------------------------------------------------
 subroutine pes_flux_dump(restart, this, mesh, st, ierr)
-  type(restart_t),  intent(in)  :: restart
-  type(pes_flux_t), intent(in)  :: this
-  type(mesh_t),     intent(in)  :: mesh
-  type(states_t),   intent(in)  :: st
-  integer,          intent(out) :: ierr
+  type(restart_t),     intent(in)  :: restart
+  type(pes_flux_t),    intent(in)  :: this
+  type(mesh_t),        intent(in)  :: mesh
+  type(states_elec_t), intent(in)  :: st
+  integer,             intent(out) :: ierr
 
   integer          :: ist, ik, idim, itot
   integer          :: err
@@ -1429,7 +1431,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   type(restart_t),     intent(in)    :: restart
   type(pes_flux_t),    intent(inout) :: this
   type(mesh_t),        intent(in)    :: mesh
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   integer,             intent(out)   :: ierr
 
   integer          :: stst, stend, kptst, kptend, sdim, mdim

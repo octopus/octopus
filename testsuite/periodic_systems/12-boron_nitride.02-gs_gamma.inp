@@ -1,0 +1,49 @@
+CalculationMode = gs
+FromScratch = yes
+PeriodicDimensions = 2
+ExperimentalFeatures = yes
+
+UnitsOutput = ev_angstrom
+
+MixField = potential
+ExtraStates = 2
+ConvRelDens = 1e-6
+ConvEigenError = yes
+
+XCfunctional = lda_x + lda_c_pw
+
+BoxShape = parallelepiped
+a = 1.45*angstrom
+lx = 3*a
+ly = sqrt(3)*a
+lz = 4.0*angstrom
+
+%Lsize
+  lx/2 | ly/2 | lz
+% 
+
+%Spacing
+ lx/16 | ly/8 | lx/16
+%
+
+KPointsUseSymmetries = yes
+SymmetrizeDensity = yes
+
+%Species
+ 'B' | species_pseudo | set | hgh_lda
+%
+
+%Coordinates
+ 'B' | 0.0    | 0.0  | 0.00
+ 'N' | 2/3*lx | 0.0  | 0.00
+ 'B' | 1/2*lx | ly/2 | 0.00
+ 'N' | 1/6*lx | ly/2 | 0.00
+%
+
+# LCAO is actually metallic
+SmearingFunction = fermi_dirac
+Smearing = 0.01*eV
+
+FilterPotentials = filter_none
+
+

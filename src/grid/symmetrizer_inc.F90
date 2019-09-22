@@ -128,7 +128,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
       ! apply periodic boundary conditions in periodic directions
       do idir = 1, this%mesh%sb%periodic_dim
-        if(srcpoint(idir) < M_ZERO .or. srcpoint(idir) + M_HALF*SYMPREC >= lsize(idir)) then
+        if(nint(srcpoint(idir)) < 0 .or. nint(srcpoint(idir)) >= lsize(idir)) then
           srcpoint(idir) = modulo(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
         end if
       end do

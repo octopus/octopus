@@ -27,8 +27,14 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   FLOAT                :: aa1, aa2, aa3, aa4
   integer              :: ip, jp, dim, nthreads
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
+#ifdef HAVE_MPI
+  FLOAT, allocatable   :: pvec(:), tmp(:)
+#endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(dpoisson_solve_direct_sm)
+
+  call profiling_in(prof, "SM_POISSON_SOLVE")
 
   nthreads = 1
 #ifdef HAVE_OPENMP
@@ -38,8 +44,6 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   !$omp end master
   !$omp end parallel
 #endif
-
-  ASSERT(.not.this%der%mesh%parallel_in_domains)
 
   dim = sm%mesh%sb%dim
 
@@ -55,84 +59,151 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   end select
 
   if(.not. sm%mesh%use_curvilinear) then
-    prefactor = prefactor / (sm%mesh%volume_element**(M_ONE/sm%mesh%sb%dim))
+    prefactor = prefactor / (sm%mesh%volume_element**(M_ONE/dim))
   end if
 
-  do ip = 1, sm%np - 4 + 1, 4
+#ifdef HAVE_MPI
+  if(sm%mesh%parallel_in_domains) then
+    ASSERT(sm%np_global > -1) !We have to build the global array before
+    SAFE_ALLOCATE(pvec(1:sm%np))
+    SAFE_ALLOCATE(tmp(1:sm%np_global))
 
-    xx1(1:dim) = sm%x(ip    , 1:dim)
-    xx2(1:dim) = sm%x(ip + 1, 1:dim)
-    xx3(1:dim) = sm%x(ip + 2, 1:dim)
-    xx4(1:dim) = sm%x(ip + 3, 1:dim)
+    pot = M_ZERO
+    do ip = 1, sm%np_global
+      xx1(1:dim) = sm%x_global(ip,1:dim)
+      if(sm%mesh%use_curvilinear) then
+        do jp = 1, sm%np
+          if(sm%part_v(ip) == sm%mesh%vp%partno .and. sm%global2local(ip) == jp) then
+            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/dim)
+          else
+            pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
+          end if
+        end do
+      else
+        do jp = 1, sm%np
+          if(sm%part_v(ip) == sm%mesh%vp%partno .and. sm%global2local(ip) == jp) then
+            pvec(jp) = rho(jp)*prefactor
+          else
+            pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
+          end if
+        end do
+      end if
+      tmp(ip) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
+   end do
+
+
+   call comm_allreduce(sm%mesh%mpi_grp%comm, tmp)
+
+   do ip = 1, sm%np_global
+      if (sm%part_v(ip) == sm%mesh%vp%partno) then
+        pot(sm%global2local(ip)) = tmp(ip)
+      end if
+    end do
+
+    SAFE_DEALLOCATE_A(pvec)
+    SAFE_DEALLOCATE_A(tmp)
+
+  else ! serial mode
+#endif
+
+    do ip = 1, sm%np - 4 + 1, 4
+
+      xx1(1:dim) = sm%x(ip    , 1:dim)
+      xx2(1:dim) = sm%x(ip + 1, 1:dim)
+      xx3(1:dim) = sm%x(ip + 2, 1:dim)
+      xx4(1:dim) = sm%x(ip + 3, 1:dim)
       
-    if(this%der%mesh%use_curvilinear) then
+      if(this%der%mesh%use_curvilinear) then
 
-      aa1 = prefactor*rho(ip    )*sm%mesh%vol_pp(ip    )**(M_ONE - M_ONE/sm%mesh%sb%dim)
-      aa2 = prefactor*rho(ip + 1)*sm%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/sm%mesh%sb%dim)
-      aa3 = prefactor*rho(ip + 2)*sm%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/sm%mesh%sb%dim)
-      aa4 = prefactor*rho(ip + 3)*sm%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/sm%mesh%sb%dim)
+        aa1 = prefactor*rho(ip    )*sm%mesh%vol_pp(ip    )**(M_ONE - M_ONE/dim)
+        aa2 = prefactor*rho(ip + 1)*sm%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/dim)
+        aa3 = prefactor*rho(ip + 2)*sm%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/dim)
+        aa4 = prefactor*rho(ip + 3)*sm%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/dim)
 
-      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
-      do jp = 1, sm%np
-        if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
-        if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
-        if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
-        if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
-      end do
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
+        do jp = 1, sm%np
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
+        end do
 
-    else
+      else
 
-      aa1 = prefactor*rho(ip    )
-      aa2 = prefactor*rho(ip + 1)
-      aa3 = prefactor*rho(ip + 2)
-      aa4 = prefactor*rho(ip + 3)
+        aa1 = prefactor*rho(ip    )
+        aa2 = prefactor*rho(ip + 1)
+        aa3 = prefactor*rho(ip + 2)
+        aa4 = prefactor*rho(ip + 3)
 
-      !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
-      do jp = 1, sm%np
-        if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
-        if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
-        if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
-        if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
-      end do
-      
-    end if
-
-    pot(ip    ) = sm%mesh%volume_element*aa1
-    pot(ip + 1) = sm%mesh%volume_element*aa2
-    pot(ip + 2) = sm%mesh%volume_element*aa3
-    pot(ip + 3) = sm%mesh%volume_element*aa4
-    
-  end do
-  
-  
-  do ip = ip, sm%np
-
-    aa1 = M_ZERO
-
-    xx1(1:dim) = sm%x(ip,1:dim)
-    if(sm%mesh%use_curvilinear) then
-      !$omp parallel do reduction(+:aa1)
-      do jp = 1, sm%np
-        if(ip == jp) then
-          aa1 = aa1 + prefactor*rho(ip)*sm%mesh%vol_pp(sm%map(jp))**(M_ONE - M_ONE/sm%mesh%sb%dim)
-        else
-          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
-        end if
-      end do
-    else
-      !$omp parallel do reduction(+:aa1)
-      do jp = 1, sm%np
-        if(ip == jp) then
-          aa1 = aa1 + prefactor*rho(ip)
-        else
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
+        do jp = 1, ip-1
           aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
-        end if
-      end do
-    end if
+          aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+          aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+          aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+  
+        do jp = ip, ip+3
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+        
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
+        do jp = ip+4, sm%np
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+          aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+          aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+          aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
 
-    pot(ip) = sm%mesh%volume_element*aa1
+      end if
+
+      pot(ip    ) = sm%mesh%volume_element*aa1
+      pot(ip + 1) = sm%mesh%volume_element*aa2
+      pot(ip + 2) = sm%mesh%volume_element*aa3
+      pot(ip + 3) = sm%mesh%volume_element*aa4
     
-  end do
+    end do
+  
+  
+    do ip = ip, sm%np
+
+      aa1 = M_ZERO
+
+      xx1(1:dim) = sm%x(ip,1:dim)
+      if(sm%mesh%use_curvilinear) then
+        !$omp parallel do reduction(+:aa1)
+        do jp = 1, sm%np
+          if(ip == jp) then
+            aa1 = aa1 + prefactor*rho(ip)*sm%mesh%vol_pp(sm%map(jp))**(M_ONE - M_ONE/sm%mesh%sb%dim)
+          else
+            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))*sm%mesh%vol_pp(sm%map(jp))
+          end if
+        end do
+      else
+
+        !$omp parallel do reduction(+:aa1)
+        do jp = 1, ip-1
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+        aa1 = aa1 + prefactor*rho(ip)
+        !$omp parallel do reduction(+:aa1)
+        do jp = ip+1, sm%np
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+      end if
+
+      pot(ip) = sm%mesh%volume_element*aa1
+    
+    end do
+
+#ifdef HAVE_MPI
+  end if
+#endif
+
+  call profiling_out(prof)
   
   POP_SUB(dpoisson_solve_direct_sm) 
 end subroutine dpoisson_solve_direct_sm

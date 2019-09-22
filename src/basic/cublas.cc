@@ -37,14 +37,55 @@ typedef int CUdeviceptr;
 typedef std::complex<double> cuDoubleComplex;
 #endif
 
-#define CUBLAS_SAFE_CALL(x)                                       \
-  do {                                                            \
-    cublasStatus_t safe_call_result = x;                          \
-    if(safe_call_result != CUBLAS_STATUS_SUCCESS) {               \
-      std::cerr << "\nerror: " #x " failed with error\n";	  \
-      exit(1);                                                    \
-    }                                                             \
-  } while(0)
+#define CUBLAS_SAFE_CALL(x) cublas_safe_call(#x, x)
+
+#ifdef HAVE_CUDA
+
+static cublasStatus_t cublas_safe_call(const char * call, cublasStatus_t safe_call_result){
+  if(safe_call_result != CUBLAS_STATUS_SUCCESS){
+
+    std::string error_str;
+    
+    switch(safe_call_result){
+    case CUBLAS_STATUS_SUCCESS:
+      error_str = "CUBLAS_STATUS_SUCCESS";
+      break;
+    case CUBLAS_STATUS_NOT_INITIALIZED:
+      error_str = "CUBLAS_STATUS_NOT_INITIALIZED";
+      break;
+    case CUBLAS_STATUS_ALLOC_FAILED:
+     error_str = "CUBLAS_STATUS_ALLOC_FAILED";
+      break;
+    case CUBLAS_STATUS_INVALID_VALUE:
+     error_str = "CUBLAS_STATUS_INVALID_VALUE";
+      break;
+    case CUBLAS_STATUS_ARCH_MISMATCH:
+     error_str = "CUBLAS_STATUS_ARCH_MISMATCH";
+      break;
+    case CUBLAS_STATUS_MAPPING_ERROR:
+     error_str = "CUBLAS_STATUS_MAPPING_ERROR";
+      break;
+    case CUBLAS_STATUS_EXECUTION_FAILED:
+     error_str = "CUBLAS_STATUS_EXECUTION_FAILED";
+      break;
+    case CUBLAS_STATUS_INTERNAL_ERROR:
+     error_str = "CUBLAS_STATUS_INTERNAL_ERROR";
+      break;
+    case CUBLAS_STATUS_NOT_SUPPORTED:
+     error_str = "CUBLAS_STATUS_NOT_SUPPORTED";
+      break;
+    case CUBLAS_STATUS_LICENSE_ERROR:
+      error_str = "CUBLAS_STATUS_LICENSE_ERROR";
+      break;
+    }
+
+    std::cerr << "\nerror: " << call << " failed with error '" << error_str << "'" << std::endl;
+    exit(1);
+  }
+  return safe_call_result;
+}
+
+#endif
 
 extern "C" void FC_FUNC_(cublas_init, CUBLAS_INIT)(cublasHandle_t ** handle){
 #ifdef HAVE_CUDA

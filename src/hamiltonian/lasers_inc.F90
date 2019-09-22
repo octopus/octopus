@@ -79,14 +79,14 @@ end subroutine X(vlaser_operator_quadratic)
 
 ! ---------------------------------------------------------
 subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnetic_ratio, a_static)
-  type(laser_t),       intent(in)    :: laser
-  type(derivatives_t), intent(in)    :: der
-  type(states_dim_t),  intent(in)    :: std
-  R_TYPE,              intent(inout) :: psi(:,:) 
-  R_TYPE,              intent(inout) :: hpsi(:,:)
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: gyromagnetic_ratio
-  FLOAT, optional,     intent(in)    :: a_static(:,:)
+  type(laser_t),       intent(in)      :: laser
+  type(derivatives_t), intent(in)      :: der
+  type(states_elec_dim_t),  intent(in) :: std
+  R_TYPE,              intent(inout)   :: psi(:,:) 
+  R_TYPE,              intent(inout)   :: hpsi(:,:)
+  integer,             intent(in)      :: ik
+  FLOAT,               intent(in)      :: gyromagnetic_ratio
+  FLOAT, optional,     intent(in)      :: a_static(:,:)
 
   integer :: ip, idim
   logical :: electric_field, vector_potential, magnetic_field

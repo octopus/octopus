@@ -24,6 +24,7 @@ dist_share_DATA = \
 	01-carbon_atom.01-psf_l0.inp \
 	01-carbon_atom.02-psf_l1.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
+	01-carbon_atom.04-static_field.inp \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
@@ -71,8 +72,8 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	14-fullerene_packed.test                      \
-	14-fullerene_packed.01-gs.inp                 \
+	14-fullerene_unpacked.test                      \
+	14-fullerene_unpacked.01-gs.inp                 \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
         16-scfinlcao_std.test                         \
@@ -81,12 +82,15 @@ dist_share_DATA = \
         17-scfinlcao_alt.test                         \
 	17-scfinlcao_alt.Cl.psf                       \
         17-scfinlcao_alt.01-gs.inp                    \
+	18-preconditioner_poisson.test                \
+	18-preconditioner_poisson.01-poisson.inp      \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
 	20-eigensolver.04-plan.inp \
 	20-eigensolver.05-evolution.inp \
 	20-eigensolver.06-rmmdiis.inp \
+	20-eigensolver.07-psd.inp \
 	20-eigensolver.test \
 	21-lobpcg.01-spin_polarized.inp \
 	21-lobpcg.02-spinors.inp \
@@ -95,7 +99,6 @@ dist_share_DATA = \
 	22-preconditioner.01-none.inp                \
 	22-preconditioner.02-filter.inp              \
 	22-preconditioner.03-jacobi.inp              \
-	22-preconditioner.04-poisson.inp             \
 	22-preconditioner.05-multigrid.inp           \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
@@ -109,13 +112,28 @@ dist_share_DATA = \
 	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
-        29-pcm_chlorine_anion.01-ground_state.inp \
-        29-pcm_chlorine_anion.02-td_prop.inp      \
+        29-pcm_chlorine_anion.01-ground_state-n60.inp \
+        29-pcm_chlorine_anion.02-td_prop-n60.inp      \
+        29-pcm_chlorine_anion.03-ground_state-n60-poisson.inp \
+        29-pcm_chlorine_anion.04-ground_state-n240.inp \
         29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.02-multipoles.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \
-	31-acetylene_b3lyp.01-gs.inp
+	31-acetylene_b3lyp.01-gs.inp \
+	32-tdpcm_methane.test \
+	32-tdpcm_methane.01-ground_state.inp \
+        32-tdpcm_methane.02-td_prop_neq.inp      \
+        32-tdpcm_methane.03-td_prop_eom.inp \
+	33-cg.test \
+	33-cg.01-orthogonalize_all.inp \
+	33-cg.02-additional_terms.inp \
+	33-cg.03-cg_direction.inp \
+	34-walltime.01-gs_walltime.inp \
+	34-walltime.02-restart_gs.inp \
+	34-walltime.03-td_walltime.inp \
+	34-walltime.04-restart_td.inp \
+	34-walltime.test
 
 CLEANFILES = *~ *.bak

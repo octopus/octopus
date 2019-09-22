@@ -26,13 +26,13 @@ module ion_interaction_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use unit_system_oct_m
 
   implicit none
 
@@ -45,6 +45,7 @@ module ion_interaction_oct_m
     ion_interaction_test
 
   type ion_interaction_t
+    ! Components are public by default
     FLOAT                      :: alpha
   end type ion_interaction_t
 
@@ -56,8 +57,9 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this)
+  subroutine ion_interaction_init(this, namespace)
     type(ion_interaction_t), intent(out)   :: this
+    type(namespace_t),       intent(in)    :: namespace
 
     PUSH_SUB(ion_interaction_init)
 
@@ -71,7 +73,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
+    call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -102,7 +104,7 @@ contains
     FLOAT, optional,          intent(out)   :: force_components(:, :, :)
     
     FLOAT, allocatable:: r(:), f(:)
-    FLOAT :: rr, dd, zi, zj, epsilon, sigma
+    FLOAT :: rr, dd, zi, zj
     integer :: iatom, jatom, natom, iindex, jindex
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof
@@ -187,30 +189,14 @@ contains
           iindex = species_index(spci)
           jindex = species_index(spcj)
           
-          select case(geo%ionic_interaction_type(iindex, jindex))
-          case(INTERACTION_COULOMB)
-            zj = species_zval(spcj)
-            !the force
-            dd = zi*zj/rr
-            f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
-            force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-            force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
-            !energy
-            energy=energy + dd
-
-          case(INTERACTION_LJ)
-            epsilon= geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
-            sigma  = geo%ionic_interaction_parameter(LJ_SIGMA,   iindex, jindex)
-            dd = (sigma/rr)**6
-
-            !the force
-            f(1:sb%dim) = (CNST(24.0)*epsilon*(dd/rr**2)*(CNST(2.0)*dd - M_ONE))*r
-            force(1:sb%dim, iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-            force(1:sb%dim, jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
-
-            !energy
-            energy = energy + CNST(4.0)*epsilon*dd*(dd - M_ONE)
-          end select
+          zj = species_zval(spcj)
+          !the force
+          dd = zi*zj/rr
+          f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
+          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
+          force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
+          !energy
+          energy=energy + dd
           
         end do !jatom
       end do !iatom
@@ -222,13 +208,11 @@ contains
         end if
         
         do jatom = 1, geo%ncatoms
-          if(ignore_external_ions) then
-            if(.not. in_box(geo%natoms+jatom)) cycle
-          end if
+          if(ignore_external_ions .and. .not. in_box(geo%natoms + jatom)) cycle
           
           r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%catom(jatom)%x(1:sb%dim)
           rr = sqrt(sum(r**2))
-          !INTERACTION_COULOMB
+
           zi = species_zval(geo%atom(iatom)%species)
           zj = geo%catom(jatom)%charge
           !the force
@@ -270,11 +254,6 @@ contains
     type(ps_t) :: spec_ps
 
     PUSH_SUB(ion_interaction_periodic)
-
-    if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
-      message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
-      call messages_fatal(1)
-    end if
 
     ereal = M_ZERO
 
@@ -492,8 +471,8 @@ contains
     integer :: iatom, jatom
     integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
-    FLOAT   :: factor,factor1,factor2
-    FLOAT   :: dz_max, dz_ij, area_cell, erfc
+    FLOAT   :: factor,factor1,factor2, coeff
+    FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
 
     PUSH_SUB(Ewald_long_2d)
 
@@ -505,15 +484,15 @@ contains
     dz_max = M_ZERO
     do iatom = 1, geo%natoms
       do jatom = iatom + 1, geo%natoms
-        dz_max = max(dz_max, abs(geo%atom(iatom)%x(3) - geo%atom(iatom)%x(3)))
+        dz_max = max(dz_max, abs(geo%atom(iatom)%x(3) - geo%atom(jatom)%x(3)))
       end do
     end do
 
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
-      erfc = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
-      if(erfc*exp(rcut*dz_max) < CNST(1e-10))exit
+      erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
+      if(erfc1*exp(rcut*dz_max) < CNST(1e-10))exit
       rcut = rcut * CNST(1.414)
     end do
 
@@ -531,7 +510,8 @@ contains
 ! efourier
         dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
-        factor1 = dz_ij*loct_erf(this%alpha*dz_ij)
+        tmp_erf = loct_erf(this%alpha*dz_ij)
+        factor1 = dz_ij*tmp_erf
         factor2 = exp(-(this%alpha*dz_ij)**2)/(this%alpha*sqrt(M_PI))
 
         efourier = efourier - factor&
@@ -540,12 +520,15 @@ contains
 
 ! force
         if(iatom == jatom)cycle
+        if(abs(tmp_erf) < M_EPSILON) cycle
+
         force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
-          * loct_erf(this%alpha*dz_ij)
+          * tmp_erf
 
       end do
     end do
+
 
 
     do ix = -ix_max, ix_max
@@ -563,19 +546,33 @@ contains
         factor = M_HALF*M_PI/(area_cell*gg_abs)
           
         do iatom = 1, geo%natoms
-          do jatom = 1, geo%natoms
+          do jatom = iatom, geo%natoms
 ! efourier
             gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
               + gg(2)*(geo%atom(iatom)%x(2)-geo%atom(jatom)%x(2))
             dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
-            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*erfc
-            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*erfc
+            erfc1 = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            if(abs(erfc1) > M_EPSILON) then
+              factor1 = exp(gg_abs*dz_ij)*erfc1
+            else
+              factor1 = M_ZERO
+            end if
+            erfc2 = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            if(abs(erfc2) > M_EPSILON) then
+              factor2 = exp(-gg_abs*dz_ij)*erfc2
+            else
+              factor2 = M_ZERO
+            end if
+
+            if(iatom == jatom) then
+              coeff = M_ONE
+            else
+              coeff = M_TWO
+            end if
 
             efourier = efourier &
-              + factor &
+              + factor * coeff &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 + factor2)
               
@@ -587,15 +584,34 @@ contains
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
-            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
+            force(1:2, jatom) = force(1:2, jatom) &
+              + (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              *sin(gx)*(factor1 + factor2)
+
+            factor1 = gg_abs*erfc1 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor1) > M_EPSILON) then
+              factor1 = factor1*exp(gg_abs*dz_ij)
+            else
+              factor1 = M_ZERO
+            end if
+
+            factor2 = gg_abs*erfc2 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor2) > M_EPSILON) then
+              factor2 = factor2*exp(-gg_abs*dz_ij)
+            else
+              factor2 = M_ZERO
+            end if
+             
 
             force(3, iatom) = force(3, iatom) &
               - M_TWO*factor &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              * cos(gx)* ( factor1 - factor2)
+            force(3, jatom) = force(3, jatom) &
+              + M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
 
@@ -614,8 +630,9 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, sb)
+  subroutine ion_interaction_test(geo, namespace, sb)
     type(geometry_t),         intent(in)    :: geo
+    type(namespace_t),        intent(in)    :: namespace
     type(simul_box_t),        intent(in)    :: sb
 
     type(ion_interaction_t) :: ion_interaction
@@ -626,7 +643,7 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction)
+    call ion_interaction_init(ion_interaction, namespace)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))

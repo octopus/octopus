@@ -58,7 +58,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   ASSERT(batch_status(arrayb) == batch_status(subarrayb))
     
   select case(batch_status(arrayb))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
     call accel_create_buffer(offsets_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)

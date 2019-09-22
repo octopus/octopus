@@ -65,8 +65,7 @@ namespace pseudopotential {
       double val;
       file >> val;
       atomic_number_ = round(val);
-      file >> val;
-      valence_charge_ = round(val);
+      file >> valence_charge_;
       getline(file, line);
 
       //line 3
@@ -203,7 +202,7 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
+    double valence_charge() const {
       return valence_charge_;
     }
 
@@ -213,7 +212,7 @@ namespace pseudopotential {
 	if(ixc_ >= 2 && ixc_ <= 9) return pseudopotential::exchange::LDA;
 	if(ixc_ == 11 || ixc_ == 12) return pseudopotential::exchange::PBE;
       }	else {
-	return pseudopotential::exchange(-ixc_);
+	return pseudopotential::exchange((-ixc_ +ixc_%1000)/1000);
       }
       
       return pseudopotential::exchange::UNKNOWN;
@@ -229,7 +228,7 @@ namespace pseudopotential {
 	if(ixc_ == 11) return pseudopotential::correlation::PBE;
 	if(ixc_ == 12) return pseudopotential::correlation::NONE;
       }	else {
-	return pseudopotential::correlation(-ixc_/1000);
+	return pseudopotential::correlation(-ixc_%1000);
       }
       
       return pseudopotential::correlation::UNKNOWN;
@@ -365,7 +364,7 @@ namespace pseudopotential {
     size_t file_size_;
     std::string description_;
     int atomic_number_;
-    int valence_charge_;
+    double valence_charge_;
     int ixc_;
     int llocal_;
     int mesh_size_;

@@ -59,6 +59,8 @@ module profiling_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
+  use namespace_oct_m
+  use nvtx_oct_m
   use sort_oct_m
   use string_oct_m
   use types_oct_m
@@ -129,15 +131,17 @@ module profiling_oct_m
     module procedure dprofiling_count_operations
   end interface profiling_count_operations
  
-  integer, parameter, public  ::   &
+  integer, parameter, public  ::  &
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
-       PROFILING_MEMORY_FULL = 4
+       PROFILING_MEMORY_FULL = 4, &
+       PROFILING_LIKWID      = 8
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
   type profile_vars_t
-    integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
+    private
+    integer, public          :: mode    !< 1=time, 2=memory, 4=memory_full
 
     type(profile_pointer_t)  :: current !< the currently active profile
     type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !< the list of all profiles
@@ -175,7 +179,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Create profiling subdirectory.
-  subroutine profiling_init()
+  subroutine profiling_init(namespace)
+    type(namespace_t),          intent(in)    :: namespace
+    
     integer :: ii
 
     PUSH_SUB(profiling_init)
@@ -204,9 +210,11 @@ contains
     !%Option prof_memory_full 4
     !% As well as the time and summary memory information, a
     !% log is reported of every allocation and deallocation.
+    !%Option likwid 8
+    !% Enable instrumentation using LIKWID.
     !%End
 
-    call parse_variable('ProfilingMode', 0, prof_vars%mode)
+    call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode)) then
       call messages_input_error('ProfilingMode')
     end if
@@ -227,7 +235,7 @@ contains
     !% will write the profile. If set to yes, all nodes will print it.
     !%End
 
-    call parse_variable('ProfilingAllNodes', .false., prof_vars%all_nodes)
+    call parse_variable(namespace, 'ProfilingAllNodes', .false., prof_vars%all_nodes)
 
     call get_output_dir()
 
@@ -257,7 +265,7 @@ contains
       !% is requested (in kb). Note that this variable only works when 
       !% <tt>ProfilingMode = prof_memory(_full)</tt>.
       !%End
-      call parse_variable('MemoryLimit', -1, ii)
+      call parse_variable(namespace, 'MemoryLimit', -1, ii)
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 
@@ -267,7 +275,8 @@ contains
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
       
-      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
+      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, &
+        namespace, action='write')
       write(prof_vars%mem_iunit, '(5a16,a70)') 'Elapsed Time', 'Alloc/Dealloc', 'Size (words)', 'Prof Mem', &
         'Sys Mem', 'Variable Name(Filename:Line)'
     end if
@@ -275,6 +284,12 @@ contains
     ! initialize time profiling
     prof_vars%last_profile = 0
     nullify(prof_vars%current%p)
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerInit()
+#endif
+    end if
 
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
@@ -295,7 +310,7 @@ contains
 
       prof_vars%output_dir = 'profiling'
 
-      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
+      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir), namespace)
 
       POP_SUB(profiling_init.get_output_dir)
     end subroutine get_output_dir
@@ -304,7 +319,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine profiling_end
+  subroutine profiling_end(namespace)
+    type(namespace_t), intent(in) :: namespace
     integer :: ii
     real(8), parameter :: megabyte = 1048576.0_8
 
@@ -312,7 +328,7 @@ contains
     PUSH_SUB(profiling_end)
 
     call profiling_out(C_PROFILING_COMPLETE_RUN)
-    call profiling_output()
+    call profiling_output(namespace)
 
     do ii = 1, prof_vars%last_profile
       prof_vars%profile_list(ii)%p%initialized = .false.
@@ -350,6 +366,12 @@ contains
 
     if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       call io_close(prof_vars%mem_iunit)
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerClose()
+#endif
     end if
 
     POP_SUB(profiling_end)
@@ -451,6 +473,16 @@ contains
 
     this%exclude = optional_default(exclude, .false.)
 
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStartRegion(trim(label))
+#endif
+    end if
+
+#ifdef HAVE_NVTX
+    call nvtx_range_push(trim(label))
+#endif
+
   end subroutine profiling_in
 
 
@@ -507,6 +539,16 @@ contains
     else
       nullify(prof_vars%current%p)
     end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStopRegion(trim(this%label))
+#endif
+    end if
+
+#ifdef HAVE_NVTX
+    call nvtx_range_pop()
+#endif
 
   end subroutine profiling_out
 
@@ -779,7 +821,8 @@ contains
   !!
   !! The last column gives the average time consumed between in and out
   !! (only, if pass_in and pass_out are equal).
-  subroutine profiling_output()
+  subroutine profiling_output(namespace)
+    type(namespace_t), intent(in) :: namespace
     
     integer          :: ii
     integer          :: iunit
@@ -802,7 +845,7 @@ contains
     end if
 
     filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number
-    iunit = io_open(trim(filename), action='write')
+    iunit = io_open(trim(filename), namespace, action='write')
     if(iunit < 0) then
       message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
       call messages_warning(1)

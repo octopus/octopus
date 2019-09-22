@@ -25,7 +25,7 @@ module index_oct_m
   use io_binary_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use simul_box_oct_m
+  use namespace_oct_m
 
   implicit none
 
@@ -38,10 +38,10 @@ module index_oct_m
     index_dump,            &
     index_load,            &
     index_dump_lxyz,       &
-    index_load_lxyz,       &
-    index_subset_indices
+    index_load_lxyz
 
   type index_t
+    ! Components are public by default
     type(hypercube_t)    :: hypercube
     logical              :: is_hypercube     !< true if the box shape is an hypercube
     integer              :: dim              !< the dimension
@@ -127,31 +127,14 @@ contains
   end subroutine index_to_coords
 
 
-  !> This function returns .true. if the coordinates are inside the
-  !! inner cube (without the enlargement).
-  logical pure function coords_in_inner_cube(idx, ix) result(inside)
-    type(index_t), intent(in)    :: idx
-    integer,       intent(in)    :: ix(:)
-    
-    integer :: idir
-
-    inside = .true.
-    do idir = 1, idx%dim
-      inside = inside &
-           .and. (ix(idir) > idx%nr(1, idir) + idx%enlarge(idir)) &
-           .and. (ix(idir) < idx%nr(2, idir) - idx%enlarge(idir))
-    end do
-
-  end function coords_in_inner_cube
-
-
   ! --------------------------------------------------------------
-  subroutine index_dump(idx, dir, filename, mpi_grp, ierr)
-    type(index_t),    intent(in)  :: idx 
-    character(len=*), intent(in)  :: dir
-    character(len=*), intent(in)  :: filename
-    type(mpi_grp_t),  intent(in)  :: mpi_grp
-    integer,          intent(out) :: ierr
+  subroutine index_dump(idx, dir, filename, mpi_grp, namespace, ierr)
+    type(index_t),     intent(in)  :: idx 
+    character(len=*),  intent(in)  :: dir
+    character(len=*),  intent(in)  :: filename
+    type(mpi_grp_t),   intent(in)  :: mpi_grp
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(out) :: ierr
 
     integer :: iunit, idir
 
@@ -159,7 +142,8 @@ contains
 
     ierr = 0
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action='write', position="append", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action='write', &
+      position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -189,12 +173,13 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_load(idx, dir, filename, mpi_grp, ierr)
-    type(index_t),    intent(inout) :: idx
-    character(len=*), intent(in)    :: dir
-    character(len=*), intent(in)    :: filename
-    type(mpi_grp_t),  intent(in)    :: mpi_grp
-    integer,          intent(out)   :: ierr
+  subroutine index_load(idx, dir, filename, mpi_grp, namespace, ierr)
+    type(index_t),     intent(inout) :: idx
+    character(len=*),  intent(in)    :: dir
+    character(len=*),  intent(in)    :: filename
+    type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(out)   :: ierr
 
     integer :: iunit, idir, err
     character(len=100) :: lines(6)
@@ -209,7 +194,8 @@ contains
     idx%enlarge = 0
     idx%is_hypercube = .false.
 
-    iunit = io_open(trim(dir)//"/"//trim(filename), action="read", status="old", die=.false., grp=mpi_grp)
+    iunit = io_open(trim(dir)//"/"//trim(filename), namespace, action="read", &
+      status="old", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
@@ -251,11 +237,12 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine index_dump_lxyz(idx, np, dir, mpi_grp, ierr)
+  subroutine index_dump_lxyz(idx, np, dir, mpi_grp, namespace, ierr)
     type(index_t),    intent(in)  :: idx
     integer,          intent(in)  :: np
     character(len=*), intent(in)  :: dir
     type(mpi_grp_t),  intent(in)  :: mpi_grp
+    type(namespace_t),intent(in)  :: namespace
     integer,          intent(out) :: ierr
 
     integer :: err
@@ -268,7 +255,7 @@ contains
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
         ASSERT(allocated(idx%lxyz))
-        call io_binary_write(trim(io_workpath(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_write(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
@@ -288,11 +275,12 @@ contains
 
   ! --------------------------------------------------------------
   !> Fill the lxyz and lxyz_inv arrays from a file
-  subroutine index_load_lxyz(idx, np, dir, mpi_grp, ierr)
+  subroutine index_load_lxyz(idx, np, dir, mpi_grp, namespace, ierr)
     type(index_t),     intent(inout) :: idx
     integer,           intent(in)    :: np
     character(len=*),  intent(in)    :: dir
     type(mpi_grp_t),   intent(in)    :: mpi_grp
+    type(namespace_t), intent(in)    :: namespace
     integer,           intent(out)   :: ierr
 
     integer :: ip, idir, ix(MAX_DIM), err
@@ -306,7 +294,7 @@ contains
 
       if (mpi_grp_is_root(mpi_grp)) then
         ! lxyz is a global function and only root will write
-        call io_binary_read(trim(io_workpath(dir))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
+        call io_binary_read(trim(io_workpath(dir, namespace))//"/lxyz.obf", np*idx%dim, idx%lxyz, err)
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to read index function from '"//trim(dir)//"/lxyz.obf'."
@@ -336,78 +324,6 @@ contains
 
     POP_SUB(index_load_lxyz)
   end subroutine index_load_lxyz
-
-
-  ! --------------------------------------------------------------
-  !> Checks if the (x, y, z) indices of point are valid, i.e.
-  !! inside the dimensions of the simulation box.
-  logical function index_valid(idx, point)
-    type(index_t), intent(in) :: idx
-    integer,       intent(in) :: point(MAX_DIM)
-
-    integer :: idir
-    logical :: valid
-
-    PUSH_SUB(index_valid)
-
-    valid = .true.
-    do idir = 1, idx%dim
-      if(point(idir)  <  idx%nr(1, idir) .or. point(idir) > idx%nr(2, idir)) then
-        valid = .false.
-      end if
-    end do
-
-    index_valid = valid
-
-    POP_SUB(index_valid)
-  end function index_valid
-
-
-  ! --------------------------------------------------------------
-  !> Extracts the point numbers of a rectangular subset spanned
-  !! by the two corner points from and to.
-  subroutine index_subset_indices(idx, from, to, indices)
-    type(index_t), intent(in)  :: idx
-    integer,       intent(in)  :: from(MAX_DIM)
-    integer,       intent(in)  :: to(MAX_DIM)
-    integer,       intent(out) :: indices(:)
-
-    integer :: lb(MAX_DIM) !< Lower bound of indices.
-    integer :: ub(MAX_DIM) !< Upper bound of indices.
-
-    integer :: ix, iy, iz, ii
-
-    PUSH_SUB(index_subset_indices)
-
-    ! In debug mode, check for valid indices in from, to first.
-    if(debug%info) then
-      if(.not.index_valid(idx, from).or..not.index_valid(idx, to)) then
-        message(1) = 'Failed assertion:'
-        message(2) = 'mesh.mesh_subset_indices has been passed points outside the box:'
-        message(3) = ''
-        write(message (4), '(a, i6, a, i6, a, i6, a)') &
-          '  from = (', from(1), ', ', from(2), ', ', from(3), ')'
-        write(message(5), '(a, i6, a, i6, a, i6, a)') & 
-          '  to   = (', to(1), ', ', to(2), ', ', to(3), ')'
-        call messages_fatal(5)
-      end if
-    end if
-
-    lb = min(from, to)
-    ub = max(from, to)
-
-    ii = 1
-    do ix = lb(1), ub(1)
-      do iy = lb(2), ub(2)
-        do iz = lb(3), ub(3)
-          indices(ii) = idx%lxyz_inv(ix, iy, iz)
-          ii         = ii + 1
-        end do
-      end do
-    end do
-
-    POP_SUB(index_subset_indices)
-  end subroutine index_subset_indices
 
 end module index_oct_m
 

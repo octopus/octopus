@@ -34,6 +34,7 @@ skipped_tests=0
 passed_tests=0
 total_tests=0
 failure_report=""
+failed_list=""
 failed_logs=""
 NUM=0
 
@@ -53,6 +54,7 @@ Usage: oct-run_testsuite.sh [options]
      -l            local run
      -p PREFIX     installation prefix [default: /usr]
      -c            delete all .log files and work directories after the run
+     -r            name of the YAML report
 
 Report bugs to <octopus-devel@tddft.org>.
 EOF
@@ -73,22 +75,34 @@ function find_tests() {
     testfiles=`find $testsuite -name "*.test" | \
 	xargs @EGREP@ "$groups_pat" | \
 	awk -F: '{print $1}' | sort -u`
-    echo "$testfiles"
+    # We now reorder the list so that long tests come first.
+    # This is to optimize the total runtime when running many jobs concurrently.
+    if  [ -n "$testfiles" ]; then
+        for duration in "long-run" "short-run"; do
+            tests=`@EGREP@ "^TestGroups *:.*($duration)" $testfiles| \
+            awk -F: '{print $1}'`
+            echo "$tests"
+        done
+    fi
 }
 
 function queue {
-	OCT_QUEUE="$OCT_QUEUE $1 "
-	OUTLIST="$OUTLIST $2 "
-	NUM=$(($NUM+1))
+    OCT_QUEUE="$OCT_QUEUE $1 "
+    OUTLIST="$OUTLIST $2 "
+    GPULIST="$GPULIST $3 "
+    NUM=$(($NUM+1))
 }
 
 function inqueue {
-  if [ $OCT_TEST_NJOBS -gt 1 ]
-  then
-    printf "In execution: $OUTLIST\n\n"
-  else
+    if [ $OCT_TEST_NJOBS -gt 1 ]
+    then
+        printf "In execution: $OUTLIST\n"
+    fi
+    if [ $failed_tests -gt 0 ]
+    then
+        printf "\nFAILED TESTS: $failed_list\n"
+    fi
     printf "\n"
-  fi
 }
 
 
@@ -97,33 +111,37 @@ function checkqueue {
 
     still_waiting=1;
     while [ $still_waiting = 1 ]; do
-      # find first test in queue which has finished
-      for (( ijob=1; ijob <= $NUM; ijob++ )); do
-	testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
-        test_name=`echo $OUTLIST | cut -f $ijob -d " "`
-	#echo "checking $test_name $testpid"
-        ps -p $testpid > /dev/null;
-	# is this pid still running?
-        if [ $? -ne 0 ]; then
-	  still_waiting=0;
-	  # remove it from the queue
-
-          if [ $NUM -eq 1 ]; then
-            OCT_QUEUE=
-	    OUTLIST=
-          elif [ $ijob -eq 1 ]; then
-            OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
-	    OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
-          else
-	    # cut will not accept 0 as an index
-            OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
-	    OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
-          fi
-          NUM=$(($NUM-1))
-          break;
-        fi
-      done
-      sleep 0.1s;
+        # find first test in queue which has finished
+        for (( ijob=1; ijob <= $NUM; ijob++ )); do
+	    testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
+            test_name=`echo $OUTLIST | cut -f $ijob -d " "`
+            gpuid=`echo $GPULIST | cut -f $ijob -d " "`
+	    #echo "checking $test_name $testpid"
+            ps -p $testpid > /dev/null;
+	    # is this pid still running?
+            if [ $? -ne 0 ]; then
+	        still_waiting=0;
+	        # remove it from the queue
+                
+                if [ $NUM -eq 1 ]; then
+                    OCT_QUEUE=
+	            OUTLIST=
+                    GPULIST=
+                elif [ $ijob -eq 1 ]; then
+                    OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
+	            OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f 2- -d " "`
+                else
+	            # cut will not accept 0 as an index
+                    OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+	            OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                fi
+                NUM=$(($NUM-1))
+                break;
+            fi
+        done
+        sleep 0.1s;
     done
 
     logfile=`basename $test_name .test`.log
@@ -146,7 +164,8 @@ function checkqueue {
     elif [ ${failures} == "skipped" ]; then
 	skipped_tests=$((skipped_tests + 1))
     else
-	echo "Failed test: "$test_name
+	echo "Test failed: "$test_name
+	failed_list="$failed_list "$test_name
 	failed_logs="$failed_logs "$logfile
 	failed_tests=$((failed_tests + 1))
 	name_length=`echo -n $test_name | wc -m`
@@ -163,7 +182,7 @@ function run_testsuite() {
 
 tests="$1"
 if [ -n "$test_groups" ]; then
-echo "Test groups: $test_groups"
+    echo "Test groups: $test_groups"
 fi
 echo ""
 
@@ -175,6 +194,20 @@ else
 fi
 
 test_index=0
+gpuid=0
+
+if [ "$report" == "yes" ]; then
+    if [ -f "$yaml" ]; then
+        `rm $yaml`                      
+    fi
+fi
+
+options=" "`$bin_directory/octopus -c`" "
+if [[ $options =~ " mpi " ]]; then
+    GPUS_PER_JOB=2
+else
+    GPUS_PER_JOB=1
+fi
 
 for y in $tests; do
     total_tests=$((total_tests + 1))
@@ -189,20 +222,34 @@ for y in $tests; do
     test_index=$(($test_index + 1))
     echo Starting test $test_index: $test_name
 
+
     if [ "$dry_run" == "yes" ]; then
-	echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	     $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+        if [ "$report" == "yes" ]; then
+	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
+	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &"
+        else
+            echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+                $preserve_opt -D $bin_directory -f $y > ${ybase}.log -G $gpuid 2>&1 &"
+        fi 
     fi
-    $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-        $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+    if [ "$report" == "yes" ]; then
+        $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &
+    else
+        $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+            $preserve_opt -D $bin_directory -f $y -G $gpuid > ${ybase}.log 2>&1 &
+    fi
     ppid=$!
-    queue $ppid $test_name
+    queue $ppid $test_name $gpuid
 	
     if [ $NUM -ge $OCT_TEST_NJOBS ]
     then
 	checkqueue
+    else
+        gpuid=$(($gpuid+$GPUS_PER_JOB))
     fi
 done
+
 while [ $NUM -ge 1 ]
 do
     checkqueue
@@ -218,13 +265,14 @@ if [ $failed_tests -gt 0 ]; then
     done
 
 fi
+
 }
 
 
 function trap_kill() {
- kill $OCT_QUEUE > /dev/null 2>&1
- echo "Killed"
- exit 1
+    kill $OCT_QUEUE > /dev/null 2>&1
+    echo "Killed"
+    exit 1
 }
 
 # Show usage info if no args at all.
@@ -238,7 +286,7 @@ cleanup="no"
 test_groups=""
 dry_run="no"
 
-while getopts "hnlp:d:cg:q:" opt ; do
+while getopts "hnlp:d:cg:q:r:" opt ; do
     case "$opt" in
         h) usage;;
         n) dry_run="yes";; 
@@ -248,6 +296,7 @@ while getopts "hnlp:d:cg:q:" opt ; do
 	c) cleanup="yes";;
 	g) test_groups="$OPTARG";;
 	q) test_groups="$OPTARG"; query="yes";;
+	r) yaml="$OPTARG"; report="yes";;
         ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
@@ -262,7 +311,7 @@ echo " to more than two hours."
 echo
 
 if [ "${local_run}" == "yes" ]; then
-    bin_directory=`pwd`/../src/main
+    bin_directory=`pwd`/../src
 else
     bin_directory=$prefix/bin
 fi

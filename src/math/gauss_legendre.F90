@@ -19,6 +19,7 @@
 #include "global.h"
 
 module gauss_legendre_oct_m
+  use global_oct_m
 
   implicit none
 

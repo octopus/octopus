@@ -24,8 +24,10 @@ LCAOStart = no
 PoissonSolver = cg_corrected
 
 #for the moment OpenCL is not supported
-DisableOpenCL = yes
+DisableAccel = yes
 
 FilterPotentials = filter_none
 
 MixField = density
+
+ConvAbsEv = 1e-5

@@ -27,6 +27,7 @@ module ps_oct_m
   use parser_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_oct_m
   use ps_fhi_oct_m
@@ -56,6 +57,7 @@ module ps_oct_m
     ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
+    ps_has_nlcc,                &
     ps_density_volume
   
   integer, parameter, public :: &
@@ -75,15 +77,17 @@ module ps_oct_m
     (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh ", "psp8"/)
 
   type ps_t
+    ! Components are public by default
     integer :: projector_type
-    character(len=10) :: label
+    character(len=10), private :: label
 
-    integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
-    FLOAT    :: z, z_val
+    integer, private  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
+    FLOAT, private    :: z
+    FLOAT    :: z_val
     type(valconf_t)   :: conf
-    type(logrid_t) :: g
+    type(logrid_t), private :: g
     type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
-    type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    type(spline_t), pointer, private :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
     logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
@@ -108,30 +112,31 @@ module ps_oct_m
 
     logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
+    type(spline_t) :: core_der !< derivative of the core correction
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
     
-    logical :: has_long_range
+    logical, private :: has_long_range
 
-    type(spline_t) :: vlr         !< the long-range part of the local potential
-    type(spline_t) :: vlr_sq      !< the long-range part of the
-                                  !< local potential in terms of r^2, to avoid the sqrt
-    type(spline_t) :: nlr         !< the charge density associated with the long-range part
+    type(spline_t), private :: vlr !< the long-range part of the local potential
+    type(spline_t) :: vlr_sq       !< the long-range part of the
+                                   !< local potential in terms of r^2, to avoid the sqrt
+    type(spline_t) :: nlr          !< the charge density associated with the long-range part
 
-    FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
+    FLOAT :: sigma_erf             !< the a constant in erf(r/(sqrt(2)*sigma))/r
 
-    logical :: has_density                     !< does the species have a density?
+    logical,        private :: has_density     !< does the species have a density?
     type(spline_t), pointer :: density(:)      !< the atomic density for each spin
     type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
-    logical :: is_separated
-    logical :: local
-    logical :: hamann
-    integer :: file_format
-    integer :: pseudo_type
-    integer :: exchange_functional
-    integer :: correlation_functional
+    logical, private :: is_separated
+    logical          :: local
+    logical          :: hamann
+    integer, private :: file_format
+    integer, private :: pseudo_type
+    integer          :: exchange_functional
+    integer          :: correlation_functional
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -140,8 +145,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, z, user_lmax, user_llocal, ispin, filename)
+  subroutine ps_init(ps, namespace, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    type(namespace_t), intent(in)    :: namespace
     character(len=10), intent(in)    :: label
     integer,           intent(in)    :: user_lmax
     integer,           intent(in)    :: user_llocal
@@ -165,7 +171,7 @@ contains
     
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
-    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call messages_obsolete_variable(namespace, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float
@@ -184,7 +190,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
-    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
     ps%file_format = pseudo_detect_format(filename)
@@ -195,7 +201,8 @@ contains
     end if
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
-      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
+      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
+                          new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
@@ -216,7 +223,7 @@ contains
     case(PSEUDO_FORMAT_PSF)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
-      call ps_psf_init(ps_psf, ispin, filename)
+      call ps_psf_init(ps_psf, ispin, filename, namespace)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
@@ -228,7 +235,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -252,10 +260,10 @@ contains
       call valconf_null(ps%conf)
 
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_init(ps_cpi, trim(filename))
+        call ps_cpi_init(ps_cpi, trim(filename), namespace)
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
-        call ps_fhi_init(ps_fhi, trim(filename))
+        call ps_fhi_init(ps_fhi, trim(filename), namespace)
         ps%conf%p      = ps_fhi%ps_grid%no_l_channels
       end if
 
@@ -274,7 +282,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -300,7 +309,7 @@ contains
       ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
-      call hgh_init(ps_hgh, trim(filename))
+      call hgh_init(ps_hgh, trim(filename), namespace)
       call valconf_copy(ps%conf, ps_hgh%conf)
 
       ps%z        = z
@@ -385,6 +394,7 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
+    call spline_init(ps%core_der)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
 
@@ -417,6 +427,10 @@ contains
       do is = 1, ps%ispin
         call spline_der(ps%density(is), ps%density_der(is))
       end do
+    end if
+
+    if(ps_has_nlcc(ps)) then
+      call spline_der(ps%core, ps%core_der)
     end if
 
     call ps_check_bound(ps, eigen)
@@ -667,7 +681,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -701,7 +715,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
       
@@ -765,9 +779,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_debug(ps, dir)
+  subroutine ps_debug(ps, dir, namespace)
     type(ps_t), intent(in) :: ps
     character(len=*), intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
 
     ! We will plot also some Fourier transforms.
     type(spline_t), allocatable :: fw(:, :)
@@ -779,7 +794,7 @@ contains
     PUSH_SUB(ps_debug)
 
     ! A text file with some basic data.
-    iunit = io_open(trim(dir)//'/pseudo-info', action='write')
+    iunit = io_open(trim(dir)//'/pseudo-info', namespace, action='write')
     write(iunit,'(a,/)')      ps%label
     write(iunit,'(a,a,/)')    'Format  : ', ps_name(ps%file_format)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
@@ -805,24 +820,30 @@ contains
 
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
-      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
+                                                         'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
     end do
 
     
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local', action='write')
+    iunit  = io_open(trim(dir)//'/local', namespace, action='write')
     call spline_print(ps%vl, iunit)
     call io_close(iunit)
 
     ! Local part of the pseudopotential
-    iunit  = io_open(trim(dir)//'/local_long_range', action='write')
+    iunit  = io_open(trim(dir)//'/local_long_range', namespace, action='write')
     call spline_print(ps%vlr, iunit)
+    call io_close(iunit)
+
+    ! Local part of the pseudopotential
+    iunit  = io_open(trim(dir)//'/local_long_range_density', namespace, action='write')
+    call spline_print(ps%nlr, iunit)
     call io_close(iunit)
     
     ! Fourier transform of the local part
-    iunit = io_open(trim(dir)//'/local_ft', action='write')
+    iunit = io_open(trim(dir)//'/local_ft', namespace, action='write')
     SAFE_ALLOCATE(fw(1:1, 1:1))
     call spline_init(fw(1, 1))
     call spline_3dft(ps%vl, fw(1, 1), gmax = gmax)
@@ -832,15 +853,15 @@ contains
     call io_close(iunit)
 
     ! Kleinman-Bylander projectors
-    iunit = io_open(trim(dir)//'/nonlocal', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal', namespace, action='write')
     call spline_print(ps%kb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_derivative', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal_derivative', namespace, action='write')
     call spline_print(ps%dkb, iunit)
     call io_close(iunit)
 
-    iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
+    iunit = io_open(trim(dir)//'/nonlocal_ft', namespace, action='write')
     SAFE_ALLOCATE(fw(0:ps%lmax, 1:ps%kbc))
     call spline_init(fw)
     do k = 0, ps%lmax
@@ -854,24 +875,24 @@ contains
     call io_close(iunit)
 
     ! Pseudo-wavefunctions
-    iunit = io_open(trim(dir)//'/wavefunctions', action='write')
+    iunit = io_open(trim(dir)//'/wavefunctions', namespace, action='write')
     call spline_print(ps%ur, iunit)
     call io_close(iunit)
 
     ! Density
     if (ps%has_density) then
-      iunit = io_open(trim(dir)//'/density', action='write')
+      iunit = io_open(trim(dir)//'/density', namespace, action='write')
       call spline_print(ps%density, iunit)
       call io_close(iunit)
 
-      iunit = io_open(trim(dir)//'/density_derivative', action='write')
+      iunit = io_open(trim(dir)//'/density_derivative', namespace, action='write')
       call spline_print(ps%density_der, iunit)
       call io_close(iunit)
     end if
 
     ! Non-linear core-corrections
-    if(ps%nlcc) then
-      iunit = io_open(trim(dir)//'/nlcc', action='write')
+    if(ps_has_nlcc(ps)) then
+      iunit = io_open(trim(dir)//'/nlcc', namespace, action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
     end if
@@ -901,6 +922,7 @@ contains
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
+    call spline_end(ps%core_der)
 
     if(associated(ps%density)) call spline_end(ps%density)
     if(associated(ps%density_der)) call spline_end(ps%density_der)
@@ -1186,7 +1208,8 @@ contains
       if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
         do ll = 0, ps_xml%lmax
 
-          if(is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
+              pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
             forall(ic = 1:ps_xml%nchannels)
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
@@ -1403,6 +1426,15 @@ contains
     has_density = ps%has_density
 
   end function ps_has_density
+
+  !---------------------------------------
+
+  pure logical function ps_has_nlcc(ps) result(has_nlcc)
+    type(ps_t), intent(in) :: ps
+
+    has_nlcc = ps%nlcc
+
+  end function ps_has_nlcc
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)
@@ -1414,6 +1446,11 @@ contains
     type(spline_t) :: volspl
     
     PUSH_SUB(ps_density_volume)
+    
+    if (.not. ps_has_density(ps)) then
+       message(1) = "The pseudopotential does not contain an atomic density"
+       call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
     

@@ -19,15 +19,11 @@
 #include "global.h"
 
 module double_grid_oct_m
-
-  use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
-  use loct_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -47,7 +43,6 @@ module double_grid_oct_m
   
   public ::                         &
        double_grid_t,               &
-       double_grid_nullify,         &
        double_grid_init,            &
        double_grid_end,             &
        double_grid_apply_local,     &
@@ -71,26 +66,10 @@ module double_grid_oct_m
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
 
 contains
-  
-  subroutine double_grid_nullify(this)
+
+  subroutine double_grid_init(this, namespace, sb)
     type(double_grid_t), intent(out) :: this
-
-    PUSH_SUB(double_grid_nullify)
-
-    this%order=0
-    this%npoints=0
-    this%spacing_divisor=0
-    this%interpolation_min=0
-    this%interpolation_max=0
-    this%nn=0
-    this%use_double_grid=.false.
-    nullify(this%co)
-
-    POP_SUB(double_grid_nullify)
-  end subroutine double_grid_nullify
-  
-  subroutine double_grid_init(this, sb)
-    type(double_grid_t), intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
 
     PUSH_SUB(double_grid_init)
@@ -108,7 +87,7 @@ contains
     !% pseudopotentials. This is experimental, especially in parallel.
     !%End
     if (sb%dim == 3) then 
-      call parse_variable('DoubleGrid', .false., this%use_double_grid)
+      call parse_variable(namespace, 'DoubleGrid', .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
     end if
@@ -124,7 +103,7 @@ contains
     !% an odd number. Low-order interpolation schemes are not
     !% recommended.
     !%End
-    call parse_variable('DoubleGridOrder', 9, this%order)
+    call parse_variable(namespace, 'DoubleGridOrder', 9, this%order)
     
     ASSERT(mod(this%order,2) == 1)
     
@@ -225,7 +204,7 @@ contains
     integer,             intent(in)    :: jxyz(:)
     integer,             intent(in)    :: jxyz_inv(:)
     FLOAT,               intent(in)    :: vv
-    FLOAT,               intent(inout) :: vs(0:)
+    FLOAT,               intent(inout) :: vs(:)
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
@@ -233,8 +212,8 @@ contains
     ! no push_sub, threadsafe function
     
     ip = jxyz(is)
-#ifdef HAVE_MPI                    
     if (mesh%parallel_in_domains) then
+#ifdef HAVE_MPI                    
       !map the local point to a global point
       if (ip <= mesh%np) then
         !inner points
@@ -249,8 +228,8 @@ contains
         ip = ip - 1 - (mesh%np + mesh%vp%np_ghost) + mesh%vp%xbndry
         ip = mesh%vp%bndry(ip)
       end if
-    end if
 #endif
+    end if
     
     start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
     
@@ -268,9 +247,10 @@ contains
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
-          if (ip == 0) cycle
-          is2 = jxyz_inv(ip)
-          vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          if (ip > 0) then
+            is2 = jxyz_inv(ip)
+            if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          end if
           rr = rr + kk
         end do
         qq = qq + jj
@@ -294,7 +274,7 @@ contains
 #define profiler double_grid_nonlocal_prof
 #define profiler_label "DOUBLE_GRID_NL"
 #define double_grid_apply double_grid_apply_non_local
-#define calc_pot(vv) call species_real_nl_projector(spec, xx, l, lm, ic, vv, tmp)
+#define calc_pot(vv) call species_real_nl_projector(spec, xx, l, lm, ic, vv)
 
 #include "double_grid_apply_inc.F90"
 

@@ -1,0 +1,29 @@
+CalculationMode = td
+UnitsOutput = eV_Angstrom
+
+radius = 3.5*angstrom
+spacing = 0.18*angstrom
+
+CH = 1.097*angstrom
+%Coordinates
+  "C" |           0 |          0 |           0
+  "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+  "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+  "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+  "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+PCMCalculation = yes
+PCMStaticEpsilon = 78.39
+PCMDynamicEpsilon = 1.789
+PCMTDLevel = neq
+
+TDDeltaStrength = 0.01/angstrom
+TDPolarizationDirection = 3
+
+TDPropagator = aetrs
+TDTimeStep = 0.0023/eV
+TDMaxSteps = 25
+
+FromScratch = yes
+ExperimentalFeatures = yes

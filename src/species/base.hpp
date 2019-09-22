@@ -98,7 +98,7 @@ namespace pseudopotential {
     virtual std::string symbol() const = 0;
     virtual int atomic_number() const = 0;
     virtual double mass() const = 0;
-    virtual int valence_charge() const = 0;
+    virtual double valence_charge() const = 0;
     virtual int llocal() const = 0;
     virtual int nchannels() const = 0;
     virtual double mesh_spacing() const = 0;

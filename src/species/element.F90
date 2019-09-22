@@ -19,11 +19,6 @@
 #include "global.h"
 
 module element_oct_m
-  use global_oct_m
-  use io_oct_m
-  use loct_oct_m
-  use messages_oct_m
-  use profiling_oct_m
   
   implicit none
 
@@ -38,6 +33,7 @@ module element_oct_m
     element_atomic_number
 
   type element_t
+    private
     integer(8) :: dummy
   end type element_t
 

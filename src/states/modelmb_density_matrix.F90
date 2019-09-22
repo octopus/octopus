@@ -19,7 +19,6 @@
 #include "global.h"
 
 module modelmb_density_matrix_oct_m
-
   use batch_oct_m
   use comm_oct_m
   use global_oct_m
@@ -28,19 +27,16 @@ module modelmb_density_matrix_oct_m
   use io_oct_m
   use index_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use modelmb_particles_oct_m
   use modelmb_1part_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -64,9 +60,10 @@ module modelmb_density_matrix_oct_m
 
 contains
 
-  subroutine modelmb_density_matrix_init(dir, st, denmat)
+  subroutine modelmb_density_matrix_init(dir, namespace, st, denmat)
     character(len=*),       intent(in)  :: dir
-    type(states_t),         intent(in)  :: st
+    type(namespace_t),      intent(in)  :: namespace
+    type(states_elec_t),    intent(in)  :: st
     type(modelmb_denmat_t), intent(out) :: denmat
 
     integer :: ncols, ipart
@@ -102,10 +99,10 @@ contains
     !%
     !%End
    
-    call messages_obsolete_variable('DensityMatrixtoCalc', 'DensitytoCalc')
-    call messages_obsolete_variable('DensitiestoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensityMatrixtoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensitiestoCalc', 'DensitytoCalc')
 
-    if(parse_block('DensitytoCalc', blk) /= 0) then
+    if(parse_block(namespace, 'DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
      call messages_fatal(1)
     end if

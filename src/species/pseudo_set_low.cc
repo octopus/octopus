@@ -28,22 +28,29 @@
 
 #include "element.hpp"
 
-extern "C" void FC_FUNC_(pseudo_set_init, PSEUDO_SET_INIT)
-  (pseudopotential::set ** pseudo_set, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
+extern "C" void FC_FUNC_(pseudo_set_init_low, PSEUDO_SET_INIT_LOW)
+  (pseudopotential::set ** pseudo_set, STR_F_TYPE const filename_f, const fint * automatic, fint * ierr STR_ARG1){
 
   *ierr = 0;
   
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
 
-  *pseudo_set = new pseudopotential::set(filename_c);
+  *pseudo_set = new pseudopotential::set(filename_c, bool(*automatic));
   assert(*pseudo_set);
 
   free(filename_c);
 }
 
+extern "C" void FC_FUNC_(pseudo_set_nullify, PSEUDO_SET_NULLIFY)(pseudopotential::set ** pseudo_set){
+  *pseudo_set = NULL;
+}
+
 extern "C" void FC_FUNC_(pseudo_set_end, PSEUDO_SET_END)(pseudopotential::set ** pseudo_set){
-  delete *pseudo_set;
+  if(*pseudo_set){
+    delete *pseudo_set;
+    *pseudo_set = NULL;
+  }
 }
 
 extern "C" fint FC_FUNC_(pseudo_set_has_low, PSEUDO_SET_HAS_LOW)
@@ -68,8 +75,8 @@ extern "C" fint FC_FUNC_(pseudo_set_llocal, PSEUDO_SET_LLOCAL)
 }
 
 extern "C" double FC_FUNC_(pseudo_set_spacing, PSEUDO_SET_SPACING)
-  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
-  return (*pseudo_set)->spacing(**el);
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el, double * etol){
+  return (*pseudo_set)->spacing(**el, *etol);
 }
 
 extern "C" double FC_FUNC_(pseudo_set_radius, PSEUDO_SET_RADIUS)

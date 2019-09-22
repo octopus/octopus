@@ -49,3 +49,4 @@ AOThreshold = 0.05
 AONormalize = no
 AOSubmeshForPeriodic = yes
 OutputLDA_U = occ_matrices + effectiveU
+ACBN0Screening = 0.5

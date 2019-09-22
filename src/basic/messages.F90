@@ -23,6 +23,7 @@ module messages_oct_m
   use debug_oct_m
   use loct_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use string_oct_m
   use unit_oct_m
@@ -123,12 +124,12 @@ module messages_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init()
+  subroutine messages_init(namespace)
+    type(namespace_t), intent(in) :: namespace
+    
     logical :: trap_signals
 
-    call parser_init()
-
-    call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(namespace, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -141,29 +142,29 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(namespace, 'ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable('DebugLevel', 'Debug')
+    call messages_obsolete_variable(namespace, 'DebugLevel', 'Debug')
 
-    call debug_init(debug)
+    call debug_init(debug, namespace)
     
     warnings = 0
     experimentals = 0
 
     !%Variable DebugTrapSignals
     !%Type logical
-    !%Default yes
     !%Section Execution::Debug
     !%Description
-    !% If true, traps signals to handle them in octopus itself and print a
-    !% custom backtrace. If false, do not trap signals; then, core dumps
-    !% can be produced or gdb can be used to stop at the point a signal was
-    !% produced (e.g. a segmentation fault).
+    !% If true, trap signals to handle them in octopus itself and
+    !% print a custom backtrace. If false, do not trap signals; then,
+    !% core dumps can be produced or gdb can be used to stop at the
+    !% point a signal was produced (e.g. a segmentation fault). This
+    !% variable is enabled if <tt>Debug</tt> is set to trace mode
+    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable('DebugTrapSignals', .true., trap_signals)
-    if (trap_signals) then
-      call trap_segfault()
-    end if
+    call parse_variable(namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+
+    if (trap_signals) call trap_segfault()
 
     call messages_reset_lines()
 
@@ -214,11 +215,6 @@ contains
         call messages_write('  or contact the octopus developers for details.')
         call messages_new_line()
         call messages_info()
-
-      else
-
-        
-
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
@@ -228,7 +224,6 @@ contains
  
     end if
 
-    call parser_end()
     call debug_end(debug)
   
   end subroutine messages_end
@@ -615,11 +610,7 @@ contains
 
     type(block_t) :: blk
     
-    if(parse_block(var, blk) == 0) then
-      call messages_write('Input error in the input block %'// trim(var))
-    else
-      call messages_write('Input error in the input variable '// trim(var))
-    end if
+    call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
       call messages_write(':', new_line = .true.)
@@ -1061,7 +1052,7 @@ contains
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
-    
+
     no_sub_stack = no_sub_stack - 1
 
   contains
@@ -1088,11 +1079,12 @@ contains
 #endif
   
   ! ---------------------------------------------------------
-  subroutine messages_obsolete_variable(name, rep)
+  subroutine messages_obsolete_variable(namespace, name, rep)
+    type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if ( parse_is_defined(trim(name))) then 
+    if(parse_is_defined(namespace, trim(name))) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

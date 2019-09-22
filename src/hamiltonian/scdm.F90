@@ -1,4 +1,4 @@
-!! Copyright (C) 2015 H. Huebener
+!! Copyright (C) 2019 H. Huebener, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,50 +19,35 @@
 #include "global.h"
 
 module scdm_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
   use blacs_proc_grid_oct_m
-  use blas_oct_m
+  use blacs_oct_m
   use comm_oct_m
   use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use fft_oct_m
-  use nfft_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
-  use hardware_oct_m
   use index_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use kpoints_oct_m
-  use lalg_basic_oct_m
-  use math_oct_m
+  use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use poisson_fft_oct_m
   use profiling_oct_m
+  use scalapack_oct_m
   use simul_box_oct_m
-  use smear_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
-  use types_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
-  use xc_oct_m
-  use XC_F90(lib_m)
 
   implicit none
 
@@ -75,44 +60,40 @@ module scdm_oct_m
        scdm_rotate_states
   
   type scdm_t
-    type(states_t)   :: st          !< localized orthogonal states
-    type(poisson_t)  :: poisson1    !< solver (not used, only for testing)
-    type(cube_t)     :: cube        !< mesh cube for fft
-    FLOAT, pointer   :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
-    FLOAT            :: rcut        !< orbital cutoff radius (box size) NOTE: this could be dynamic and state dependent
-    integer          :: box_size    !< number of mesh points in the dimension of local box around scdm states 
-                                    !! NOTE: this could be dynamic and state dependent
-    integer          :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
-    type(mesh_t)     :: boxmesh     !< mesh describing the small box
-    type(cube_t)     :: boxcube     !< cube of the small box (used for fft in poisson solver
-                                    !! has doubled size for truncation)
-    integer, pointer :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
+    private
+    type(states_elec_t)      :: st          !< localized orthogonal states
+    FLOAT, pointer,   public :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
+    integer,          public :: box_size    !< number of mesh points in the dimension of local box around scdm states 
+                                            !! NOTE: this could be dynamic and state dependent
+    integer,          public :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
+    type(mesh_t)             :: boxmesh     !< mesh describing the small box
+    type(cube_t)             :: boxcube     !< cube of the small box (used for fft in poisson solver
+                                            !! has doubled size for truncation)
+    integer, pointer, public :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
     
-    integer          :: full_cube_n(3) !< dimension of cube of fullsimulation cell
+    integer                  :: full_cube_n(3) !< dimension of cube of fullsimulation cell
     
-    FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
-    CMPLX, pointer   :: zpsi(:,:)   ! ^
-    type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
-    type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
+    FLOAT, pointer,   public :: dpsi(:,:)   !< scdm states in their local box
+    CMPLX, pointer,   public :: zpsi(:,:)   ! ^
+    type(poisson_t),  public :: poisson     !< solver used to compute exchange with localized scdm states
+    type(poisson_fft_t)      :: poisson_fft !< used for above poisson solver
 
-    logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
-    logical          :: verbose     !< write info about SCDM procedure
-    logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
+    logical                  :: verbose     !< write info about SCDM procedure
+    logical,          public :: psi_scdm    !< Hamiltonian is applied to an SCDM state
 
-    integer          :: nst         !< total number of states, copy os st%nst
+    integer                  :: nst         !< total number of states, copy os st%nst
     
     ! parallelization of scdm states
-    type(mpi_grp_t)  :: st_grp      !< MPI group for states parallelization, inherited from st
-    type(mpi_grp_t)  :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
-    type(mpi_grp_t)  :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
-                                    !! this is a copy of the domain group, i.e. the domain group is
-                                    !! used for states parallelization in the exchange operator
-    integer          :: st_exx_start!< index of state distribution in the exchange operator
-    integer          :: st_exx_end  !.
-    integer          :: lnst_exx    !.
-    logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
+    type(mpi_grp_t)          :: st_grp      !< MPI group for states parallelization, inherited from st
+    type(mpi_grp_t)          :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
+    type(mpi_grp_t),  public :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
+                                            !! this is a copy of the domain group, i.e. the domain group is
+                                             !! used for states parallelization in the exchange operator
+    integer,          public :: st_exx_start!< index of state distribution in the exchange operator
+    integer,          public :: st_exx_end  !.
+    logical                  :: root        !< this is a redundat flag equal to mpi_world%rank==0
 #ifdef HAVE_SCALAPACK 
-    type(blacs_proc_grid_t) :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
+    type(blacs_proc_grid_t)  :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
 #endif
   end type scdm_t
 
@@ -127,14 +108,14 @@ contains
 !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
 !!                            selected columns of the density matrix
 !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
-    
-  type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
-  type(derivatives_t) :: der
-  type(cube_t) :: fullcube !< cube of the full cell
-  type(scdm_t) :: scdm
-  logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
-  
+subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
+  type(states_elec_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+  type(namespace_t),   intent(in)  :: namespace
+  type(derivatives_t)              :: der
+  type(cube_t)                     :: fullcube !< cube of the full cell
+  type(scdm_t)                     :: scdm
+  logical,                optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
+
   integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
   
@@ -143,6 +124,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   integer,  allocatable:: ilsize(:)
   integer :: box(3)
   FLOAT :: dummy
+  FLOAT :: rcut ! orbital cutoff radius (box size) NOTE: this could be dynamic and state dependent
   
   PUSH_SUB(scdm_init)
   ! check if already initialized
@@ -176,7 +158,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   scdm%nst   = st%nst
   
   ! initialize state object for the SCDM states by copying
-  call states_copy(scdm%st,st)
+  call states_elec_copy(scdm%st,st)
   
   !%Variable SCDM_verbose
   !%Type logical
@@ -185,7 +167,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Output detailed information on SCDM procedure.
   !%End
-  call parse_variable('SCDM_verbose', .false., scdm%verbose)
+  call parse_variable(namespace, 'SCDM_verbose', .false., scdm%verbose)
   
   scdm%full_cube_n = fullcube%rs_n_global
   
@@ -202,12 +184,12 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
   !%End  
-  call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
-  if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
+  call parse_variable(namespace, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
+  if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', rcut)
   ! box_size is half the size of the  box
   scdm%box_size = 0
   do ii = 1, 3
-    scdm%box_size = max(scdm%box_size,ceiling(scdm%rcut/der%mesh%spacing(ii)))
+    scdm%box_size = max(scdm%box_size,ceiling(rcut/der%mesh%spacing(ii)))
   end do
   
   if (scdm%root .and. scdm%verbose) then
@@ -233,7 +215,6 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   call multicomm_divide_range(st%nst, scdm%st_exx_grp%size, istart, iend, lsize=ilsize)
   scdm%st_exx_start = istart(scdm%st_exx_grp%rank+1)
   scdm%st_exx_end = iend(scdm%st_exx_grp%rank+1)
-  scdm%lnst_exx = ilsize(scdm%st_exx_grp%rank+1)
   
   ! allocate local boxes for the SCDM states
   if (.not.states_are_real(st)) then
@@ -291,16 +272,16 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   
   ! create a cube object for the small box, with double size for coulomb truncation
   box(1:3) = scdm%boxmesh%idx%ll(1:3)*2
-  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb,fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
+  call cube_init(scdm%boxcube, box, scdm%boxmesh%sb, namespace, fft_type=FFT_REAL, fft_library=FFTLIB_FFTW)
   
   ! set up poisson solver used for the exchange operator with scdm states
   ! this replicates poisson_kernel_init()
   scdm%poisson%poisson_soft_coulomb_param = M_ZERO
   if (der%mesh%sb%periodic_dim.eq.3) then
-    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
+    call poisson_fft_init(scdm%poisson_fft, namespace, scdm%boxmesh, scdm%boxcube, &
          kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
   else !non periodic case
-    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
+    call poisson_fft_init(scdm%poisson_fft, namespace, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
   end if
   
   ! create poisson object
@@ -333,9 +314,9 @@ end subroutine scdm_init
 
 !> wrapper routine to rotate  KS states into their SCDM representation
 subroutine scdm_rotate_states(st,mesh,scdm)
-  type(states_t), intent(inout)  :: st
-  type(mesh_t), intent(in)       :: mesh
-  type(scdm_t), intent(inout)    :: scdm
+  type(states_elec_t), intent(inout)  :: st
+  type(mesh_t),        intent(in)     :: mesh
+  type(scdm_t),        intent(inout)  :: scdm
   
   PUSH_SUB(scdm_rotate_states)
   

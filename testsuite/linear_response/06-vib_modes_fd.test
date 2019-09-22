@@ -15,7 +15,7 @@ Precision : 0.00011
 match ; Dipole Moment  ; GREPFIELD(static/info, '<z>', 3) ; 2.24560
 
 Input: 06-vib_modes_fd.01-vib_modes_fd.inp
-Precision : 0.011
-match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_fd, 1, 2) ; 1421.73309602
-Precision : 1.8e-6
-match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5)  ; -0.0182025051759
+Precision : 2.0e-04
+match ; Vibrational Frequency   ; LINEFIELD(vib_modes/normal_frequencies_fd, 1, 2) ; 1421.73262324
+Precision: 4.0e-06
+match ; Dynamical Matrix Entry  ; LINEFIELD(vib_modes/dynamical_matrix_fd, 2, 5) ; -0.0182040948095

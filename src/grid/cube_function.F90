@@ -23,7 +23,6 @@ module cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
   use global_oct_m
-  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
@@ -31,7 +30,6 @@ module cube_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-  use parser_oct_m
   use partition_transfer_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -48,7 +46,6 @@ module cube_function_oct_m
     dcube_function_free_RS,        &
     zcube_function_free_RS,        &
     cube_function_surface_average, &
-    cube_function_phase_factor,    &
     dmesh_to_cube_parallel,        &
     zmesh_to_cube_parallel,        &
     dcube_to_mesh_parallel,        &
@@ -61,6 +58,7 @@ module cube_function_oct_m
     zcube_function_allgather
 
   type cube_function_t
+    ! Components are public by default
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
@@ -122,44 +120,6 @@ contains
     POP_SUB(cube_function_surface_average)
   end function cube_function_surface_average
 
-  ! ---------------------------------------------------------
-  !> This routine computes
-  !! \f$ cube\_function_o = cf_o + e^{-k vec} cf_i \f$
-  subroutine cube_function_phase_factor(mesh, vec, cube, cf_i, cf_o)
-    type(mesh_t),          intent(in)    :: mesh
-    FLOAT,                 intent(in)    :: vec(3)
-    type(cube_t),          intent(in)    :: cube
-    type(cube_function_t), intent(in)    :: cf_i
-    type(cube_function_t), intent(inout) :: cf_o
-
-    CMPLX   :: k(3)
-    integer :: n(3), ix, iy, iz, ixx, iyy, izz
-
-    PUSH_SUB(cube_function_phase_factor)
-
-    ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
-    ASSERT(.not. cube%parallel_in_domains)
-
-    k = M_z0
-    k(1:mesh%sb%dim) = M_zI * ((M_TWO*M_Pi)/(cube%rs_n_global(1:mesh%sb%dim)*mesh%spacing(1:mesh%sb%dim)))
-
-    n  = cube%fs_n_global
-    do iz = 1, n(3)
-      izz = pad_feq(iz, n(3), .true.)
-      do iy = 1, n(2)
-        iyy = pad_feq(iy, n(2), .true.)
-        do ix = 1, n(1)
-          ixx = pad_feq(ix, n(1), .true.)
-
-          cf_o%FS(ix, iy, iz) = cf_o%FS(ix, iy, iz) + &
-            exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * cf_i%FS(ix, iy, iz)
-        end do
-      end do
-    end do
-
-    POP_SUB(cube_function_phase_factor)
-  end subroutine cube_function_phase_factor
-  
   ! ---------------------------------------------------------
   !> Nullifies the real space and Fourier space grids
   subroutine cube_function_null(cf)

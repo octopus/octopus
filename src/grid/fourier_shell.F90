@@ -19,7 +19,6 @@
 #include "global.h"
 
 module fourier_shell_oct_m
-  use cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
   use global_oct_m
@@ -39,6 +38,7 @@ module fourier_shell_oct_m
        fourier_shell_end
 
   type fourier_shell_t
+    ! Components are public by default
     integer          :: ngvectors
     FLOAT            :: ekin_cutoff
     integer, pointer :: coords(:, :)

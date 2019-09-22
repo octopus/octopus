@@ -75,7 +75,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   ! first post the receptions
   select case(batch_status(v_local))
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
 
     do ipart = 1, vp%npart
@@ -130,7 +130,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
 
-  if(batch_status(v_local) == BATCH_CL_PACKED) then
+  if(batch_status(v_local) == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
     call accel_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
@@ -138,7 +138,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   select case(batch_status(v_local))
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     do ipart = 1, vp%npart
       if(vp%ghost_scounts(ipart) == 0) cycle
       handle%nnb = handle%nnb + 1
@@ -201,14 +201,14 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 
-  if(batch_status(handle%v_local) == BATCH_CL_PACKED) then
+  if(batch_status(handle%v_local) == BATCH_DEVICE_PACKED) then
     call accel_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
       handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
     SAFE_DEALLOCATE_P(handle%X(send_buffer))
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))
   end if
 
-  call batch_end(handle%ghost_send, copy = .false.)
+  call batch_end(handle%ghost_send)
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))
@@ -231,7 +231,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   ASSERT(batch_type(ffb) == R_TYPE_VAL)
   ! phase correction not implemented for OpenCL
   if(present(phase_correction)) then
-    ASSERT(batch_status(ffb) /= BATCH_CL_PACKED)
+    ASSERT(batch_status(ffb) /= BATCH_DEVICE_PACKED)
   end if
 
   ! The boundary points are at different locations depending on the presence
@@ -261,25 +261,28 @@ contains
     PUSH_SUB(X(boundaries_set_batch).zero_boundaries)
 
     select case(batch_status(ffb))
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
       call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call accel_finish()
+
     case(BATCH_PACKED)
-      forall(ip = bndry_start:bndry_end) 
-        forall(ist = 1:ffb%nst_linear)
+      !$omp parallel do simd schedule(static)
+      do ip = bndry_start, bndry_end
+        do ist = 1, ffb%nst_linear
           ffb%pack%X(psi)(ist, ip) = R_TOTYPE(M_ZERO)
-        end forall
-      end forall
+        end do
+      end do
 
     case(BATCH_NOT_PACKED)
       do ist = 1, ffb%nst_linear
-        forall (ip = bndry_start:bndry_end) ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+        !$omp parallel do simd schedule(static)
+        do ip = bndry_start, bndry_end
+          ffb%states_linear(ist)%X(psi)(ip) = R_TOTYPE(M_ZERO)
+        end do
       end do
 
     end select
-
-    call batch_pack_was_modified(ffb)
 
     POP_SUB(X(boundaries_set_batch).zero_boundaries)
   end subroutine zero_boundaries
@@ -287,16 +290,21 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multiresolution()
+#ifndef SINGLE_PRECISION
     integer :: ist, ip
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
-    R_TYPE, pointer :: ff(:)
+    R_TYPE, allocatable :: ff(:)
+#endif
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
+#ifndef SINGLE_PRECISION
+    SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
+    
     do ist = 1, ffb%nst_linear
-      ff => ffb%states_linear(ist)%X(psi)
-
+      call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
+      
       do ip = bndry_start, bndry_end
         ix = boundaries%mesh%idx%lxyz(ip, 1)
         iy = boundaries%mesh%idx%lxyz(ip, 2)
@@ -327,8 +335,15 @@ contains
         end if
 
       end do ! ip
+
+      call batch_set_state(ffb, ist, boundaries%mesh%np_part, ff)
     end do ! ist
 
+    SAFE_DEALLOCATE_A(ff)
+#else
+    ASSERT(.false.)
+#endif
+    
     POP_SUB(X(boundaries_set_batch).multiresolution)
   end subroutine multiresolution
 
@@ -359,7 +374,7 @@ contains
       maxrecv = maxval(boundaries%nrecv(1:npart))
 
       ldbuffer = ffb%nst_linear
-      if(batch_status(ffb) == BATCH_CL_PACKED) ldbuffer = ffb%pack%size(1)
+      if(batch_status(ffb) == BATCH_DEVICE_PACKED) ldbuffer = ffb%pack%size(1)
       SAFE_ALLOCATE(sendbuffer(1:ldbuffer, 1:maxsend, 1:npart))
 
       select case(batch_status(ffb))
@@ -367,6 +382,7 @@ contains
       case(BATCH_NOT_PACKED)
 
         do ipart = 1, npart
+          !$omp parallel do private(ip2)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -378,7 +394,7 @@ contains
       case(BATCH_PACKED)
 
         do ipart = 1, npart
-          !$omp parallel do private(ip, ip2, ist)
+          !$omp parallel do private(ip2)
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
@@ -387,7 +403,7 @@ contains
           end do
         end do
 
-      case(BATCH_CL_PACKED)
+      case(BATCH_DEVICE_PACKED)
         call accel_create_buffer(buff_send, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxsend*npart)
 
         call accel_kernel_start_call(kernel_send, 'boundaries.cl', 'boundaries_periodic_send')
@@ -459,6 +475,7 @@ contains
         if(.not. present(phase_correction)) then
           ! do not apply phase correction; phase is set in another step
           do ipart = 1, npart
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -471,6 +488,7 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -486,7 +504,7 @@ contains
         if(.not. present(phase_correction)) then
           ! do not apply phase correction; phase is set in another step
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -499,7 +517,7 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
-            !$omp parallel do private(ip, ip2, ist)
+            !$omp parallel do private(ip2)
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
@@ -510,7 +528,7 @@ contains
           end do
         end if
 
-      case(BATCH_CL_PACKED)
+      case(BATCH_DEVICE_PACKED)
         call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
         call accel_write_buffer(buff_recv, ffb%pack%size(1)*maxrecv*npart, recvbuffer)
 
@@ -589,7 +607,7 @@ contains
         end do
       end if
 
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
       call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
 
       call accel_set_kernel_arg(kernel, 0, boundaries%nper)

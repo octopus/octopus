@@ -240,7 +240,7 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
+    double valence_charge() const {
       return zval_;
     }
 
@@ -488,7 +488,7 @@ namespace pseudopotential {
 
     std::string symbol_;
     std::string xc_functional_;
-    int zval_;
+    double zval_;
     int nwavefunctions_;
     int nprojectors_;
     std::vector<int> proj_l_;

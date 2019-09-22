@@ -2,21 +2,21 @@
 #define PSEUDO_UPF2_HPP
 
 /*
- Copyright (C) 2018 Xavier Andrade
+  Copyright (C) 2018 Xavier Andrade
 
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU Lesser General Public License as published by
- the Free Software Foundation; either version 3 of the License, or
- (at your option) any later version.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
   
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Lesser General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
   
- You should have received a copy of the GNU Lesser General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <fstream>
@@ -57,53 +57,62 @@ namespace pseudopotential {
       std::string pseudo_type = root_node_->first_node("PP_HEADER")->first_attribute("pseudo_type")->value();
       
       if(pseudo_type == "NC" || pseudo_type == "SL"){
-	type_ = pseudopotential::type::KLEINMAN_BYLANDER;
+        type_ = pseudopotential::type::KLEINMAN_BYLANDER;
       } else if(pseudo_type == "USPP"){
-	throw status::UNSUPPORTED_TYPE_ULTRASOFT;
+        throw status::UNSUPPORTED_TYPE_ULTRASOFT;
       } else if(pseudo_type == "PAW") {
-	throw status::UNSUPPORTED_TYPE_PAW;
+        throw status::UNSUPPORTED_TYPE_PAW;
       } else {
-	throw status::UNSUPPORTED_TYPE;
+        throw status::UNSUPPORTED_TYPE;
       }
       
       assert(root_node_);
 
       // Read the grid
       {
-	rapidxml::xml_base<> * xmin = root_node_->first_node("PP_MESH")->first_attribute("xmin");
+        rapidxml::xml_base<> * xmin = root_node_->first_node("PP_MESH")->first_attribute("xmin");
+  
+        start_point_ = 0;
+        if(xmin && fabs(value<double>(xmin)) > 1.0e-10) start_point_ = 1;
+	
+        rapidxml::xml_node<> * node = root_node_->first_node("PP_MESH")->first_node("PP_R");
+	
+        assert(node);
 
-	start_point_ = 0;
-	if(xmin && fabs(value<double>(xmin)) > 1.0e-10) start_point_ = 1;
+        rapidxml::xml_attribute<> * size_attr = node->first_attribute("size");
+
+        //some files seems to have this information elsewhere
+        if(size_attr == NULL) size_attr = root_node_->first_node("PP_MESH")->first_attribute("mesh");
+
+        if(size_attr == NULL) throw status::FORMAT_NOT_SUPPORTED;
+
+        int size = value<int>(size_attr);
+        
+        grid_.resize(size + start_point_);
+        std::istringstream stst(node->value());
+        grid_[0] = 0.0;
+        for(int ii = 0; ii < size; ii++) stst >> grid_[start_point_ + ii];
 	
-	rapidxml::xml_node<> * node = root_node_->first_node("PP_MESH")->first_node("PP_R");
-	
-	assert(node);
-	
-	int size = value<int>(node->first_attribute("size"));
-	grid_.resize(size + start_point_);
-	std::istringstream stst(node->value());
-	grid_[0] = 0.0;
-	for(int ii = 0; ii < size; ii++) stst >> grid_[start_point_ + ii];
-	
-	assert(fabs(grid_[0]) <= 1e-10);
+        assert(fabs(grid_[0]) <= 1e-10);
       }
 
       {
-	rapidxml::xml_node<> * node = root_node_->first_node("PP_MESH")->first_node("PP_RAB");
+        rapidxml::xml_node<> * node = root_node_->first_node("PP_MESH")->first_node("PP_RAB");
 	
-	assert(node);
+        assert(node);
+
+        int size = get_size(node);
+        
+        grid_weights_.resize(size + start_point_);
+        std::istringstream stst(node->value());
+        grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
+        for(int ii = 0; ii < size; ii++) stst >> grid_weights_[start_point_ + ii];
 	
-	int size = value<int>(node->first_attribute("size"));
-	grid_weights_.resize(size + start_point_);
-	std::istringstream stst(node->value());
-	grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
-	for(int ii = 0; ii < size; ii++) stst >> grid_weights_[start_point_ + ii];
-	
-	mesh_size_ = 0;
-	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
+        mesh_size_ = 0;
+        for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
 	
       }
-
+      
       //calculate lmax (we can't trust the one given by the file :-/)
 
       std::vector<bool> has_l(MAX_L, false);
@@ -116,26 +125,26 @@ namespace pseudopotential {
 
       //projector info
       for(int iproj = 0; iproj < nprojectors(); iproj++){
-	std::ostringstream tag;
-	tag << "PP_BETA."  << iproj + 1;
-	rapidxml::xml_node<> * node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.str().c_str());
+        std::ostringstream tag;
+        tag << "PP_BETA."  << iproj + 1;
+        rapidxml::xml_node<> * node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.str().c_str());
 
-	assert(node);
+        assert(node);
 
-	int read_l = value<int>(node->first_attribute("angular_momentum"));
+        int read_l = value<int>(node->first_attribute("angular_momentum"));
 
-	lmax_ = std::max(lmax_, read_l);
-	proj_l[iproj] = read_l;
-	has_l[read_l] = true;
+        lmax_ = std::max(lmax_, read_l);
+        proj_l[iproj] = read_l;
+        has_l[read_l] = true;
  
-	//now calculate the channel index, by counting previous projectors with the same l
-	proj_c[iproj] = 0;
-	for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l[jproj]) proj_c[iproj]++;
+        //now calculate the channel index, by counting previous projectors with the same l
+        proj_c[iproj] = 0;
+        for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l[jproj]) proj_c[iproj]++;
 
-	nchannels_ = std::max(nchannels_, proj_c[iproj] + 1);
+        nchannels_ = std::max(nchannels_, proj_c[iproj] + 1);
 
       }
-
+      
       assert(lmax_ >= 0);
       
       llocal_ = -1;
@@ -146,27 +155,27 @@ namespace pseudopotential {
 
       	rapidxml::xml_node<> * node = root_node_->first_node("PP_NONLOCAL")->first_node("PP_DIJ");
 
-	assert(node);
+        assert(node);
 
-	dij_.resize((lmax_ + 1)*nchannels_*nchannels_);
+        dij_.resize((lmax_ + 1)*nchannels_*nchannels_);
 	
-	for(unsigned kk = 0; kk < dij_.size(); kk++) dij_[kk] = 0.0;
+        for(unsigned kk = 0; kk < dij_.size(); kk++) dij_[kk] = 0.0;
 	
-	std::istringstream stst(node->value());
-	for(int ii = 0; ii < nprojectors(); ii++){
-	  for(int jj = 0; jj < nprojectors(); jj++){
-	    double val;
-	    stst >> val;
+        std::istringstream stst(node->value());
+        for(int ii = 0; ii < nprojectors(); ii++){
+          for(int jj = 0; jj < nprojectors(); jj++){
+            double val;
+            stst >> val;
 
-	    if(proj_l[ii] != proj_l[jj]) {
-	      assert(fabs(val) < 1.0e-10);
-	      continue;
-	    }
+            if(proj_l[ii] != proj_l[jj]) {
+              assert(fabs(val) < 1.0e-10);
+              continue;
+            }
 	    
-	    val *= 0.5; //convert from Rydberg to Hartree
-	    d_ij(proj_l[ii], proj_c[ii], proj_c[jj]) = val;
-	  }
-	}
+            val *= 0.5; //convert from Rydberg to Hartree
+            d_ij(proj_l[ii], proj_c[ii], proj_c[jj]) = val;
+          }
+        }
 	
       }
 
@@ -194,8 +203,8 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
-      return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("z_valence"));
+    double valence_charge() const {
+      return value<double>(root_node_->first_node("PP_HEADER")->first_attribute("z_valence"));
     }
 
     pseudopotential::exchange exchange() const {
@@ -221,13 +230,13 @@ namespace pseudopotential {
 
       assert(node);
 
-      int size = value<int>(node->first_attribute("size"));
-
+      int size = get_size(node);
+      
       potential.resize(size + start_point_);
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) {
-	stst >> potential[ii + start_point_];
-	potential[ii + start_point_] *= 0.5; //Convert from Rydberg to Hartree
+        stst >> potential[ii + start_point_];
+        potential[ii + start_point_] *= 0.5; //Convert from Rydberg to Hartree
       }
       if(start_point_ > 0) extrapolate_first_point(potential);
 
@@ -243,20 +252,21 @@ namespace pseudopotential {
       rapidxml::xml_node<> * node = NULL;
 
       for(int iproj = 1; iproj <= nprojectors(); iproj++){
-	std::stringstream tag;
-	tag << "PP_BETA." << iproj;
-	node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.str().c_str());
+        std::stringstream tag;
+        tag << "PP_BETA." << iproj;
+        node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.str().c_str());
 
-	assert(node);
+        assert(node);
 	
-	int read_l = value<int>(node->first_attribute("angular_momentum"));
-	int read_i = (value<int>(node->first_attribute("index")) - 1)%nchannels();
-	if(l == read_l && i == read_i) break;
+        int read_l = value<int>(node->first_attribute("angular_momentum"));
+        int read_i = (value<int>(node->first_attribute("index")) - 1)%nchannels();
+        if(l == read_l && i == read_i) break;
       }
 
       assert(node);
 
-      int size = value<int>(node->first_attribute("size"));
+      int size = get_size(node);
+      
       proj.resize(size + start_point_);
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
@@ -288,8 +298,9 @@ namespace pseudopotential {
       rapidxml::xml_node<> * node = root_node_->first_node("PP_NLCC");
       assert(node);
       
-      int size = value<int>(node->first_attribute("size"));
-      density.resize(size);
+      int size = get_size(node);
+            
+      density.resize(size + start_point_);
 
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> density[start_point_ + ii];
@@ -310,7 +321,8 @@ namespace pseudopotential {
 	
       l = value<int>(node->first_attribute("angular_momentum"));
 
-      int size = value<int>(node->first_attribute("size"));
+      int size = get_size(node);
+      
       proj.resize(size + start_point_);
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
@@ -325,10 +337,10 @@ namespace pseudopotential {
     void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const {
       dnm.resize(nbeta);
       for(int i = 0; i < nbeta; i++){
-	dnm[i].resize(nbeta);
-	for ( int j = 0; j < nbeta; j++){
-	  dnm[i][j] = dij_[i*nbeta + j];
-	}
+        dnm[i].resize(nbeta);
+        for ( int j = 0; j < nbeta; j++){
+          dnm[i][j] = dij_[i*nbeta + j];
+        }
       }
     }
 
@@ -339,8 +351,9 @@ namespace pseudopotential {
     void density(std::vector<double> & val) const {
       rapidxml::xml_node<> * node = root_node_->first_node("PP_RHOATOM");
       assert(node);
-      
-      int size = value<int>(node->first_attribute("size"));
+
+      int size = get_size(node);
+            
       val.resize(size + start_point_);
       
       std::istringstream stst(node->value());
@@ -368,17 +381,18 @@ namespace pseudopotential {
 
       // not all files have "n", so we might have to parse the label
       if(node->first_attribute("n")){
-	n = value<int>(node->first_attribute("n"));
+        n = value<int>(node->first_attribute("n"));
       } else {
-	std::string label = node->first_attribute("label")->value();
-	n = atoi(label.substr(0, 1).c_str());
+        std::string label = node->first_attribute("label")->value();
+        n = atoi(label.substr(0, 1).c_str());
       }
       
       l = value<int>(node->first_attribute("l"));
 
       occ = value<double>(node->first_attribute("occupation"));
+
+      int size = get_size(node);
       
-      int size = value<int>(node->first_attribute("size"));
       proj.resize(size + start_point_);
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
@@ -391,6 +405,16 @@ namespace pseudopotential {
     }
     
   private:
+
+    int get_size(const rapidxml::xml_node<> * node) const {
+      int size = grid_.size() - start_point_;
+
+      rapidxml::xml_attribute<> * size_attr = node->first_attribute("size");
+
+      if(size_attr != NULL) size = value<int>(size_attr);
+
+      return size;
+    }
     
     std::ifstream file_;
     std::vector<char> buffer_;

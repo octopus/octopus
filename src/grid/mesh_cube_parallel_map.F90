@@ -30,7 +30,6 @@ module mesh_cube_parallel_map_oct_m
   use partition_transfer_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
 
   implicit none
 
@@ -41,6 +40,8 @@ module mesh_cube_parallel_map_oct_m
     mesh_cube_parallel_map_end
 
   type mesh_cube_parallel_map_t
+    ! Components are public by default
+
     ! Mesh to cube:
     type(partition_transfer_t) :: m2c
     integer :: m2c_nsend !< How many points will this process send to the cube partition

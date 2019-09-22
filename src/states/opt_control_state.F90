@@ -24,11 +24,11 @@
 module opt_control_state_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -48,10 +48,10 @@ module opt_control_state_oct_m
 
   !> This is the datatype that contains the objects that are propagated: in principle this
   !! could be both the quantum and the classical subsystems, but for the moment it is only
-  !! the quantum subsystem. So this data type is merely a wrapper around the states_t data type.
+  !! the quantum subsystem. So this data type is merely a wrapper around the states_elec_t data type.
   type opt_control_state_t
     private
-    type(states_t) :: psi
+    type(states_elec_t) :: psi
     FLOAT, allocatable :: q(:, :)
     FLOAT, allocatable :: p(:, :)
     integer :: natoms, ndim
@@ -67,7 +67,7 @@ contains
 
     SAFE_DEALLOCATE_A(ocs%q)
     SAFE_DEALLOCATE_A(ocs%p)
-    call states_null(ocs%psi)
+    call ocs%psi%nullify()
 
     POP_SUB(opt_control_state_null)
   end subroutine opt_control_state_null
@@ -75,7 +75,7 @@ contains
 
   function opt_control_point_qs(ocs)
     type(opt_control_state_t), target, intent(in) :: ocs
-    type(states_t), pointer :: opt_control_point_qs
+    type(states_elec_t), pointer :: opt_control_point_qs
 
     PUSH_SUB(opt_control_point_qs)
 
@@ -107,12 +107,12 @@ contains
   end function opt_control_point_p
 
   subroutine opt_control_get_qs(qstate, ocs)
-    type(states_t),            intent(inout) :: qstate
+    type(states_elec_t),       intent(inout) :: qstate
     type(opt_control_state_t), intent(in)    :: ocs
 
     PUSH_SUB(opt_control_get_qs)
 
-    call states_copy(qstate, ocs%psi)
+    call states_elec_copy(qstate, ocs%psi)
 
     POP_SUB(opt_control_get_qs)
   end subroutine opt_control_get_qs
@@ -155,14 +155,14 @@ contains
 
   subroutine opt_control_state_init(ocs, qstate, geo)
     type(opt_control_state_t), intent(inout) :: ocs
-    type(states_t),            intent(in)    :: qstate
+    type(states_elec_t),       intent(in)    :: qstate
     type(geometry_t),          intent(in)    :: geo
 
     integer :: iatom, idim
 
     PUSH_SUB(opt_control_state_init)
 
-    call states_copy(ocs%psi, qstate)
+    call states_elec_copy(ocs%psi, qstate)
 
     SAFE_DEALLOCATE_A(ocs%q)
     SAFE_DEALLOCATE_A(ocs%p)
@@ -188,7 +188,7 @@ contains
 
     PUSH_SUB(opt_control_state_end)
 
-    call states_end(ocs%psi)
+    call states_elec_end(ocs%psi)
 
     SAFE_DEALLOCATE_A(ocs%q)
     SAFE_DEALLOCATE_A(ocs%p)
@@ -202,8 +202,8 @@ contains
 
     PUSH_SUB(opt_control_state_copy)
 
-    call states_end(ocsout%psi)
-    call states_copy(ocsout%psi, ocsin%psi)
+    call states_elec_end(ocsout%psi)
+    call states_elec_copy(ocsout%psi, ocsin%psi)
     ocsout%ndim = ocsin%ndim
     ocsout%natoms = ocsin%natoms
     SAFE_DEALLOCATE_A(ocsout%q)

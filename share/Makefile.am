@@ -33,11 +33,10 @@ dist_dta2_DATA = variables varinfo
 
 CLEANFILES = variables varinfo varinfo_orig
 
-varinfo: RUN_SCRIPT
+varinfo:
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
-variables: RUN_SCRIPT
-
-RUN_SCRIPT:
+variables:
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 check:

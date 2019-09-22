@@ -31,35 +31,37 @@ module forces_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
-  use index_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use linear_response_oct_m
-  use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symm_op_oct_m
   use symmetrizer_oct_m
-  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
+  use vdw_ts_oct_m
 
   implicit none
 
@@ -78,27 +80,18 @@ module forces_oct_m
 
   type(profile_t), save :: prof_comm
 
-
-  type(geometry_t), pointer :: geo_
-  type(grid_t), pointer :: gr_
-  type(hamiltonian_t), pointer :: hm_
-  type(states_t), pointer :: psi_
-  type(states_t), pointer :: chi_
-  integer, pointer :: j_, ist_, ik_, iatom_
-  CMPLX, allocatable :: derpsi_(:, :, :)
-
 contains
 
   ! ---------------------------------------------------------
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
   subroutine total_force_calculate(gr, geo, ep, st, x, lda_u)
-    type(grid_t),     intent(inout) :: gr
-    type(geometry_t), intent(in)    :: geo
-    type(epot_t),     intent(inout) :: ep
-    type(states_t),   intent(inout) :: st
-    FLOAT, intent(inout)            :: x(MAX_DIM)
-    integer,          intent(in)    :: lda_u
+    type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(in)    :: geo
+    type(epot_t),        intent(in)    :: ep
+    type(states_elec_t), intent(in)    :: st
+    FLOAT,               intent(inout) :: x(MAX_DIM)
+    integer,             intent(in)    :: lda_u
 
     type(profile_t), save :: forces_prof
 
@@ -118,26 +111,27 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
-    type(grid_t), target, intent(inout) :: gr
-    type(geometry_t), target, intent(inout) :: geo
-    type(hamiltonian_t), target, intent(inout) :: hm
-    type(states_t), target, intent(inout) :: psi
-    type(states_t), target, intent(inout) :: chi
-    FLOAT,            intent(inout) :: f(:, :)
-    FLOAT,            intent(in)    :: q(:, :)
+  subroutine forces_costate_calculate(gr, namespace, geo, hm, psi, chi, f, q)
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
+    type(geometry_t),    intent(inout) :: geo
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(states_elec_t), intent(in)    :: psi
+    type(states_elec_t), intent(in)    :: chi
+    FLOAT,               intent(inout) :: f(:, :)
+    FLOAT,               intent(in)    :: q(:, :)
 
     integer :: jatom, idim, jdim
     integer, target :: j, ist, ik, iatom
     FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), dq, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
     type(profile_t), save :: forces_prof
-    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: zpsi(:, :), derpsi(:, :, :)
     FLOAT, allocatable :: forceks1p(:), forceks1m(:), forceks1p2(:), forceks1m2(:), dforceks1(:)
 
     call profiling_in(forces_prof, "FORCES")
     PUSH_SUB(forces_costate_calculate)
 
-    ! FIXME: is the next section not basically the same as the routine ion_interaction_calculate?
+    ! FIXME: is the next section not basically the same as the routine ion_internamespace, action_calculate?
 
     f = M_ZERO
     do iatom = 1, geo%natoms
@@ -159,19 +153,9 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(derpsi_(1:gr%mesh%np_part, 1:gr%sb%dim, 1:psi%d%dim))
+    SAFE_ALLOCATE(derpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:psi%d%dim))
 
     dq = CNST(0.001)
-
-    geo_ => geo
-    gr_ => gr
-    hm_ => hm
-    j_ => j
-    ist_ => ist
-    ik_ => ik
-    iatom_ => iatom
-    psi_ => psi
-    chi_ => chi
 
     SAFE_ALLOCATE(forceks1p(1:gr%sb%dim))
     SAFE_ALLOCATE(forceks1m(1:gr%sb%dim))
@@ -182,9 +166,9 @@ contains
     
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
-        derpsi_ = M_z0
-        call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call zderivatives_grad(gr%der, zpsi(:, 1), derpsi_(:, :, 1))
+        derpsi = M_z0
+        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+        call zderivatives_grad(gr%der, zpsi(:, 1), derpsi(:, :, 1))
         do iatom = 1, geo%natoms
           do j = 1, gr%sb%dim
             call force1(geo%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
@@ -206,7 +190,7 @@ contains
     SAFE_DEALLOCATE_A(forceks1p2)
     SAFE_DEALLOCATE_A(forceks1m2)
     SAFE_DEALLOCATE_A(dforceks1)
-    SAFE_DEALLOCATE_A(derpsi_)
+    SAFE_DEALLOCATE_A(derpsi)
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
@@ -230,46 +214,49 @@ contains
       FLOAT, intent(in) :: r
       w2r = M_TWO * species_zval(speca) * species_zval(specb) / r**3
     end function w2r
+
+    subroutine force1(q, res, pdot3)
+      FLOAT, intent(in) :: q
+      FLOAT, intent(inout) :: res(:)
+      FLOAT, intent(inout) :: pdot3
+
+      integer :: m
+      FLOAT :: qold
+      CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
+
+      qold = geo%atom(iatom)%x(j)
+      geo%atom(iatom)%x(j) = q
+      SAFE_ALLOCATE(viapsi(1:gr%mesh%np_part, 1:psi%d%dim))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
+      viapsi = M_z0
+      call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call zhamiltonian_elec_apply_atom (hm, namespace, geo, gr, iatom, zpsi, viapsi)
+    
+      res(:) = M_ZERO
+      do m = 1, ubound(res, 1)
+        res(m) = real( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.) , REAL_PRECISION)
+      end do
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
+
+      call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
+      pdot3 = real(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
+      geo%atom(iatom)%x(j) = qold
+
+      SAFE_DEALLOCATE_A(viapsi)
+    end subroutine force1
+
   end subroutine forces_costate_calculate
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine force1(q, res, pdot3)
-    FLOAT, intent(in) :: q
-    FLOAT, intent(inout) :: res(:)
-    FLOAT, intent(inout) :: pdot3
-
-    integer :: m
-    FLOAT :: qold
-    CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
-
-    qold = geo_%atom(iatom_)%x(j_)
-    geo_%atom(iatom_)%x(j_) = q
-    SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
-    SAFE_ALLOCATE(zpsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
-    viapsi = M_z0
-    call states_get_state(psi_, gr_%mesh, ist_, ik_, zpsi)
-    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, zpsi, viapsi)
-    
-    do m = 1, ubound(res, 1)
-      res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1)) , REAL_PRECISION)
-    end do
-
-    call states_get_state(chi_, gr_%mesh, ist_, ik_, zpsi)
-    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
-    geo_%atom(iatom_)%x(j_) = qold
-    SAFE_DEALLOCATE_A(viapsi)
-  end subroutine force1
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, hm, st, vhxc_old, t, dt)
-    type(grid_t),        intent(inout) :: gr
+  subroutine forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old, t, dt)
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(states_elec_t), intent(inout) :: st
+    type(v_ks_t),        intent(in)      :: ks
     FLOAT,     optional, intent(in)    :: vhxc_old(:,:)
     FLOAT,     optional, intent(in)    :: t
     FLOAT,     optional, intent(in)    :: dt
@@ -277,6 +264,7 @@ contains
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
+    FLOAT, allocatable :: force_nlcc(: ,:)
     FLOAT, allocatable :: force_scf(:, :)
     type(profile_t), save :: forces_prof
 
@@ -295,10 +283,16 @@ contains
       geo%atom(iatom)%f_nl(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_u(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_fields(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_nlcc(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_scf(1:gr%sb%dim) = M_ZERO
     end do
 
     ! the ion-ion and vdw terms are already calculated
+    ! if we use vdw TS, we need to compute it now
+    if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
+      call vdw_ts_force_calculate(ks%vdw_ts, namespace, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+    end if
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
@@ -320,15 +314,21 @@ contains
     SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
     SAFE_ALLOCATE(force_scf(1:gr%mesh%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
+      call dforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
+      call zforces_from_potential(gr, namespace, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
+    if(associated(st%rho_core)) then
+      call forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+    else 
+      force_nlcc(:, :) = M_ZERO
+    end if
     if(present(vhxc_old)) then
-      call forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
+      call forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
     else
       force_scf = M_ZERO
     end if
@@ -339,14 +339,17 @@ contains
       call forces_set_total_to_zero(geo, force_nl)
       call forces_set_total_to_zero(geo, force_u)
       call forces_set_total_to_zero(geo, force_scf)
+      call forces_set_total_to_zero(geo, force_nlcc)
     end if
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) + force_scf(idir, iatom)
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) &
+            + force_scf(idir, iatom) + force_nlcc(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
         geo%atom(iatom)%f_u(idir) = force_u(idir, iatom)
+        geo%atom(iatom)%f_nlcc(idir) = force_nlcc(idir, iatom)
         geo%atom(iatom)%f_scf(idir) = force_scf(idir, iatom)
       end do
     end do
@@ -355,8 +358,9 @@ contains
     SAFE_DEALLOCATE_A(force_loc)
     SAFE_DEALLOCATE_A(force_nl)
     SAFE_DEALLOCATE_A(force_u)
+    SAFE_DEALLOCATE_A(force_nlcc)
     SAFE_DEALLOCATE_A(force_scf)
- 
+
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, hm%ep%no_lasers
@@ -439,11 +443,12 @@ contains
 
  ! ----------------------------------------------------------------------
 
-  subroutine forces_write_info(iunit, geo, sb, dir)
+  subroutine forces_write_info(iunit, geo, sb, dir, namespace)
     integer,             intent(in)    :: iunit
     type(geometry_t),    intent(in)    :: geo
     type(simul_box_t),   intent(in)    :: sb
     character(len=*),    intent(in)    :: dir
+    type(namespace_t),   intent(in)    :: namespace
 
     integer :: iatom, idir, ii, iunit2
     FLOAT:: rr(1:3), ff(1:3), torque(1:3)
@@ -478,10 +483,12 @@ contains
     end if
 
 
-    iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
-    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z)'
+    iunit2 = io_open(trim(dir)//'/forces', namespace, action='write', position='asis')
+    write(iunit2,'(a)') &
+      ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z)' // &
+      ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'
     do iatom = 1, geo%natoms
-       write(iunit2,'(i4,a10,24e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+       write(iunit2,'(i4,a10,27e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_ii(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_vdw(idir)), idir=1, sb%dim), &
@@ -489,7 +496,8 @@ contains
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_nl(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_fields(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_u(idir)), idir=1, sb%dim), &
-                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_scf(idir)), idir=1, sb%dim)
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_scf(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_nlcc(idir)), idir=1, sb%dim)
     end do
     call io_close(iunit2) 
 
@@ -497,17 +505,61 @@ contains
 
   end subroutine forces_write_info
 
+ ! ----------------------------------------------------------------------
+ ! This routine add the contribution to the forces from the nonlinear core correction
+ ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
+subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(states_elec_t),            intent(inout) :: st
+  FLOAT,                          intent(out)   :: force_nlcc(:, :)
+
+  integer :: is, iatom, idir
+  FLOAT, allocatable :: drho(:,:)
+
+  PUSH_SUB(forces_from_nlcc)
+
+  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+
+  force_nlcc = M_ZERO
+
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+    call species_get_nlcc_grad(geo%atom(iatom)%species, geo%atom(iatom)%x, gr%mesh, drho)
+
+    do idir = 1, gr%mesh%sb%dim
+      do is = 1, hm%d%spin_channels
+        force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
+                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is), reduce = .false.)&
+                          /st%d%spin_channels
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(drho)
+
+  if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
+
+#if defined(HAVE_MPI)
+  if(gr%mesh%parallel_in_domains) then
+    call profiling_in(prof_comm, "FORCES_COMM")
+    call comm_allreduce(gr%mesh%mpi_grp%comm, force_nlcc)
+    call profiling_out(prof_comm)
+  end if
+#endif
+
+  POP_SUB(forces_from_nlcc)
+end subroutine forces_from_nlcc
 
  ! Implementation of the term from Chan et al.,  Phys. Rev. B 47, 4771 (1993).
  ! Here we make the approximation that the "atomic densities" are just the one 
  ! from the pseudopotential.  
  ! NTD : No idea if this is good or bad, but this is easy to implement 
  !       and works well in practice
-subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
-  type(grid_t),                   intent(inout) :: gr
+subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
+  type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(inout) :: st
+  type(hamiltonian_elec_t),            intent(in)    :: hm
   FLOAT,                          intent(out)   :: force_scf(:, :)
   FLOAT,                          intent(in)    :: vhxc_old(:,:)
 
@@ -538,7 +590,7 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels
             force_scf(idir, iatom) = force_scf(idir, iatom) &
-                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
+                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is), reduce = .false.)
           end do
         end do
       end if
@@ -549,6 +601,15 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
   SAFE_DEALLOCATE_A(drho)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_scf) 
+
+#if defined(HAVE_MPI)
+  if(gr%mesh%parallel_in_domains) then
+    call profiling_in(prof_comm, "FORCES_COMM")
+    call comm_allreduce(gr%mesh%mpi_grp%comm, force_scf)
+    call profiling_out(prof_comm)
+  end if
+#endif
+
   
   POP_SUB(forces_from_scf)
 end subroutine forces_from_scf

@@ -23,13 +23,13 @@ module poisson_multigrid_oct_m
   use derivatives_oct_m
   use global_oct_m
   use lalg_basic_oct_m
-  use parser_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use operate_f_oct_m
+  use parser_oct_m
   use par_vec_oct_m
   use poisson_corrections_oct_m
   use profiling_oct_m
@@ -50,6 +50,7 @@ module poisson_multigrid_oct_m
     mg_solver_t
 
   type mg_solver_t
+    private
 
     FLOAT ::                    &
       threshold,                &
@@ -69,15 +70,16 @@ module poisson_multigrid_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_init(this, mesh, ml, thr)
+  subroutine poisson_multigrid_init(this, namespace, mesh, ml, thr)
     type(mg_solver_t), intent(out)   :: this
+    type(namespace_t), intent(in)    :: namespace
     type(mesh_t),      intent(inout) :: mesh
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
 
     PUSH_SUB(poisson_multigrid_init)
 
-    call poisson_corrections_init(this%corrector, ml, mesh)
+    call poisson_corrections_init(this%corrector, namespace, ml, mesh)
 
     this%threshold = thr
 
@@ -89,7 +91,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps before coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_variable('PoissonSolverMGPresmoothingSteps', 1, this%presteps)
+    call parse_variable(namespace, 'PoissonSolverMGPresmoothingSteps', 1, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -99,7 +101,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps after coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_variable('PoissonSolverMGPostsmoothingSteps', 4, this%poststeps)
+    call parse_variable(namespace, 'PoissonSolverMGPostsmoothingSteps', 4, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
@@ -109,7 +111,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved.
     !%End
-    call parse_variable('PoissonSolverMGMaxCycles', 50, this%maxcycles)
+    call parse_variable(namespace, 'PoissonSolverMGMaxCycles', 50, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -122,7 +124,7 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
-    call parse_variable('PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
+    call parse_variable(namespace, 'PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
        call messages_input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
@@ -142,9 +144,9 @@ contains
     !% Alternative implementation of Gauss-Jacobi.
     !%End
     if ( mesh%use_curvilinear ) then
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
+      call parse_variable(namespace, 'PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
     else
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
+      call parse_variable(namespace, 'PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
     end if
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
@@ -161,9 +163,9 @@ contains
     !% The default is 1.0, except 0.6666 for the <tt>gauss_jacobi</tt> method.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
-      call parse_variable('PoissonSolverMGRelaxationFactor', CNST(0.6666), this%relax_factor )
+      call parse_variable(namespace, 'PoissonSolverMGRelaxationFactor', CNST(0.6666), this%relax_factor )
     else
-      call parse_variable('PoissonSolverMGRelaxationFactor', M_ONE, this%relax_factor)
+      call parse_variable(namespace, 'PoissonSolverMGRelaxationFactor', M_ONE, this%relax_factor)
     end if
 
     POP_SUB(poisson_multigrid_init)
@@ -321,7 +323,7 @@ contains
 
     case(GAUSS_SEIDEL)
 
-      factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
+      factor = CNST(-1.0)/der%lapl%w(der%lapl%stencil%center, 1)*this%relax_factor
 
       do istep = 1, steps
 
@@ -334,13 +336,13 @@ contains
         nn = der%lapl%stencil%size
 
         if(der%lapl%const_w) then
-          call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
+          call dgauss_seidel(der%lapl%stencil%size, der%lapl%w(1, 1), der%lapl%nri, &
             der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
             factor, pot(1), rho(1))
         else
           do ip = 1, mesh%np
-            point_lap = sum(der%lapl%w_re(1:nn, ip)*pot(der%lapl%index(1:nn, ip)))
-            pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
+            point_lap = sum(der%lapl%w(1:nn, ip)*pot(der%lapl%index(1:nn, ip)))
+            pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
           end do
         end if
       end do

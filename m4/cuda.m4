@@ -24,7 +24,7 @@ AC_DEFUN([ACX_CUDA],
 
   dnl BACKUP LIBS AND CFLAGS
   acx_cuda_save_LIBS="$LIBS"
-  acx_cuda_save_LDFLAGS="$LIBS"
+  acx_cuda_save_LDFLAGS="$LDFLAGS"
   acx_cuda_save_CFLAGS="$CFLAGS"
 
   dnl Check if the library was given in the command line
@@ -34,7 +34,11 @@ AC_DEFUN([ACX_CUDA],
   if test x"$CFLAGS_CUDA" = x; then
     case $with_cuda_prefix in
       "") CFLAGS_CUDA="-I/usr/include" ;;
-      *)  CFLAGS_CUDA="-I$with_cuda_prefix/include" ;;
+      *)  CFLAGS_CUDA="-I$with_cuda_prefix/include"
+          if test x"${enable_nvtx}" == x"yes" ; then
+            CFLAGS_CUDA="-I$with_cuda_prefix/include/nvtx3 $CFLAGS_CUDA"
+          fi
+          ;;
     esac
   fi
 
@@ -47,6 +51,10 @@ AC_DEFUN([ACX_CUDA],
   fi
 
   LIBS=""
+
+  if test x"${enable_nvtx}" == x"yes" ; then
+    LIBS="$LIBS -ldl"
+  fi
 
   AC_CHECK_LIB(cuda, cuInit, [], [acx_cuda_ok=no], [$acx_cuda_save_LIBS])
   AC_CHECK_LIB(nvrtc, nvrtcCreateProgram, [], [acx_cuda_ok=no], [$acx_cuda_save_LIBS])

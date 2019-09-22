@@ -20,14 +20,10 @@
 
 module distributed_oct_m
   use global_oct_m
-  use io_oct_m
-  use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use parser_oct_m
   use profiling_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -43,6 +39,7 @@ module distributed_oct_m
   
 
   type distributed_t
+    ! Components are public by default
     integer              :: start
     integer              :: end
     integer              :: nlocal

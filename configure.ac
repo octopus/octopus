@@ -19,10 +19,10 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[selene],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -37,6 +37,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version. For ancient versions of MPI, you may need to specify PATH for MPI libs.]))
@@ -62,6 +63,7 @@ fi
 
 AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
+AM_PROG_CC_C_O
 
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
@@ -120,6 +122,11 @@ if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
 fi
 
 
+
+AC_ARG_ENABLE(nvtx, AS_HELP_STRING([--enable-nvtx], [NVTX profiling support for Cuda version]))
+if test x"${enable_nvtx}" == x"yes" ; then
+  AC_DEFINE(HAVE_NVTX, 1, [defined if nvtx support is enabled])
+fi
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -266,6 +273,7 @@ dnl ===================================================================
 dnl now we search for libraries
 
 ACX_LIBXC
+ACX_LIBVDWXC
 
 dnl check for BLAS
 ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))
@@ -349,7 +357,13 @@ AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 ACX_YAML
 
+dnl performance analysis using the likwid marker API
+ACX_LIKWID
+
 AC_SUBST(FCEXTRALIBS)
+
+m4_include([src/fdep/fortran_dependencies.m4])
+FDEP_F90_GNU_MAKE_DEPS
 
 ACX_OCTOPUS_COMPILATION_INFO
 
@@ -374,23 +388,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile
-  src/include/Makefile
-  src/basic/Makefile
-  src/math/Makefile
-  src/species/Makefile
-  src/ions/Makefile
-  src/grid/Makefile
-  src/poisson/Makefile
-  src/states/Makefile
-  src/hamiltonian/Makefile
-  src/basis_set/Makefile
-  src/system/Makefile
-  src/scf/Makefile
-  src/td/Makefile
-  src/opt_control/Makefile
-  src/sternheimer/Makefile
-  src/main/Makefile
-  src/utils/Makefile
   scripts/Makefile
   doc/Makefile
   doc/html/Makefile
@@ -436,6 +433,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile

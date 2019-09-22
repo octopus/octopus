@@ -34,13 +34,12 @@ module io_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
-  use openscad_oct_m
   use par_vec_oct_m
   use parser_oct_m
-  use polyhedron_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
@@ -103,8 +102,9 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, how, ignore_error)
+  subroutine io_function_read_how(sb, namespace, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
+    type(namespace_t), intent(in)  :: namespace
     integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
@@ -112,7 +112,7 @@ contains
 
     how = 0_8
     
-    call messages_obsolete_variable('OutputHow', 'OutputFormat')
+    call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
     
     !%Variable OutputFormat
     !%Type flag
@@ -178,7 +178,7 @@ contains
     !%Option boundary_points bit(12)
     !% This option includes the output of the mesh enlargement. Default is without.
     !% Supported only by <tt>binary</tt>, <tt>axis</tt>, <tt>plane</tt>, <tt>mesh_index</tt>,
-    !% <tt>matlab</tt>, and <tt>openscad</tt> formats.
+    !% and <tt>matlab</tt> formats.
     !% Not all types of <tt>Output</tt> will have this information available. Not supported when parallel in domains.
     !%Option binary bit(13)
     !% Plain binary, new format.
@@ -191,10 +191,6 @@ contains
     !%Option cube bit(16)
     !% Generates output in the <a href=http://paulbourke.net/dataformats/cube>cube file format</a>.
     !% Available only in 3D. Only writes the real part of complex functions.
-    !%Option openscad bit(17)
-    !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
-    !% Available only in 3D.
-    !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>. (Experimental.)
     !%Option bild bit(19)
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
     !%Option vtk bit(20)
@@ -206,7 +202,7 @@ contains
     !%Option integrate_yz bit(23)
     !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
     !%End
-    call parse_variable('OutputFormat', 0, how)
+    call parse_variable(namespace, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
       call messages_input_error('OutputFormat')
     end if
@@ -267,14 +263,6 @@ contains
       end if
     end if
 
-    if(bitand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
-      if(sb%dim /= 3) then
-        write(message(1),'(a)') "OutputFormat = OpenSCAD only available with Dimensions = 3."
-        call messages_fatal(1)
-      endif
-      call messages_experimental("OutputFormat = OpenSCAD")
-    endif
-    
 #if !defined(HAVE_NETCDF)
     if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
@@ -323,17 +311,17 @@ contains
     if(index(where, "NETCDF")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__NETCDF)
 #endif
     if(index(where, "Cube")      /= 0) how = ior(how, OPTION__OUTPUTFORMAT__CUBE)
-    if(index(where, "OpenSCAD")  /= 0) how = ior(how, OPTION__OUTPUTFORMAT__OPENSCAD)
     if(index(where, "VTK")       /= 0) how = ior(how, OPTION__OUTPUTFORMAT__VTK)
 
     POP_SUB(io_function_fill_how)
   end function io_function_fill_how
 
   ! ---------------------------------------------------------
-  subroutine write_bild_forces_file(dir, fname, geo, mesh)
+  subroutine write_bild_forces_file(dir, fname, geo, mesh, namespace)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
+    type(namespace_t),  intent(in) :: namespace
 
     integer :: iunit, iatom, idir
     FLOAT, allocatable :: forces(:,:), center(:,:)
@@ -343,8 +331,9 @@ contains
 
     PUSH_SUB(write_bild_forces_file)
 
-    call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.bild', action='write', position='asis')
+    call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.bild', namespace, action='write', &
+      position='asis')
 
     write(frmt,'(a,i0,a)')'(a,2(', mesh%sb%dim,'f16.6,1x))'
 
@@ -379,11 +368,12 @@ contains
   !> Includes information about simulation box and periodicity when applicable.
   !> This differs from a normal xyz file by including information about box
   !> shape and always using Angstroms.
-  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh)
-    character(len=*), intent(in) :: dir
-    character(len=*), intent(in) :: fname
-    type(geometry_t), intent(in) :: geo
-    type(mesh_t),     intent(in) :: mesh
+  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh, namespace)
+    character(len=*),  intent(in) :: dir
+    character(len=*),  intent(in) :: fname
+    type(geometry_t),  intent(in) :: geo
+    type(mesh_t),      intent(in) :: mesh
+    type(namespace_t), intent(in) :: namespace
 
     integer :: iunit
     integer :: idir
@@ -392,8 +382,8 @@ contains
 
     PUSH_SUB(write_canonicalized_xyz_file)
 
-    call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
+    call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', namespace, action='write', position='asis')
 
     write(iunit, '(i6)') geo%natoms
     call simul_box_write_short_info(mesh%sb, iunit)
@@ -418,10 +408,11 @@ contains
   end subroutine write_canonicalized_xyz_file
 
   ! ---------------------------------------------------------
-  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)
+  subroutine write_xsf_geometry_file(dir, fname, geo, mesh, namespace, write_forces)
     character(len=*),   intent(in) :: dir, fname
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
+    type(namespace_t),  intent(in) :: namespace
     logical,  optional, intent(in) :: write_forces
 
     integer :: iunit, iatom, idir
@@ -432,8 +423,8 @@ contains
 
     PUSH_SUB(write_xsf_geometry_file)
 
-    call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', action='write', position='asis')
+    call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xsf', namespace, action='write', position='asis')
 
     if(.not. present(write_forces)) then
       write_forces_ = .false.

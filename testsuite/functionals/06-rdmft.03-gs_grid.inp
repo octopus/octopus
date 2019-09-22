@@ -1,7 +1,7 @@
-ExperimentalFeatures=yes
-TheoryLevel=rdmft
+ExperimentalFeatures = yes
+TheoryLevel = rdmft
 CalculationMode = gs
-RDMBasis=no
+RDMBasis = no
 
 %Coordinates
  'H' |  0.717157 | 0 | 0
@@ -13,10 +13,6 @@ Radius = 6.5
 Spacing = 0.55
 Extrastates = 4
 
-RDMConvEner=1e-2
-
-
-
-FilterPotentials = filter_none
+RDMConvEner = 1e-6
 
 MixField = density

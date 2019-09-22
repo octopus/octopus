@@ -1,0 +1,10 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test density calculation
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 22-density_calc.01-Si.inp
+match ; Norm density; GREPFIELD(out, 'Norm density', 3) ; 0.521379

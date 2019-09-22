@@ -116,8 +116,8 @@ dist_share_DATA =                                  \
 	05-ks_inversion.01-target_density.inp      \
 	05-ks_inversion.02-two_particle.inp        \
         05-ks_inversion.03-inversion.inp           \
-        06-rdmft.01-lda.inp                        \
-        06-rdmft.02-gs.inp                         \
+        06-rdmft.01-ip.inp                        \
+        06-rdmft.02-gs_basis.inp                         \
         06-rdmft.03-gs_grid.inp                    \
         06-rdmft.test                              \
 	07-sic.01-gs.inp                           \
@@ -131,6 +131,16 @@ dist_share_DATA =                                  \
 	10-vdw_d3_dna.test                         \
 	10-vdw_d3_dna.xyz                          \
 	11-vdw_d3.test                             \
-	11-vdw_d3.01-gs.inp
+	11-vdw_d3.01-gs.inp                        \
+        12-vdw_solid_c6.test                       \
+        12-vdw_solid_c6.01-gs_diamond.inp          \
+        12-vdw_solid_c6.02-gs_graphene.inp         \
+        13-libvdwxc_h2o.test                       \
+        13-libvdwxc_h2o.01-vdwdfcx.inp             \
+        14-libvdwxc_Be_hcp.test                    \
+        14-libvdwxc_Be_hcp.01-vdwdfcx.inp          \
+        15-oep-CG.test                             \
+        15-oep-CG.01-kli.inp                       \
+        15-oep-CG.02-oep-bb.inp
 
 CLEANFILES = *~ *.bak
