@@ -864,10 +864,11 @@ end subroutine pes_flux_map_from_state_2
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy(this, pesK, file, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
   type(pes_flux_t),  intent(in) :: this
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
@@ -885,7 +886,7 @@ subroutine pes_flux_out_energy(this, pesK, file, ll, pmesh, Ekin)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces") 
 
   case (M_PLANES)
-    call pes_flux_out_energy_pln(pesK, file, ll, pmesh, Ekin)
+    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)
   
   end select
 
@@ -895,9 +896,10 @@ end subroutine pes_flux_out_energy
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy_pln(arpes, file, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
   FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
@@ -909,7 +911,7 @@ subroutine pes_flux_out_energy_pln(arpes, file, ll, pmesh, Ekin)
   PUSH_SUB(pes_flux_out_energy_pln)
 
   
-  iunit = io_open(file, action='write')
+  iunit = io_open(file, namespace, action='write')
   write(iunit, '(a)') '##################################################'
   write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
                                     str_center("E", 18),  str_center("P[E]", 18)
