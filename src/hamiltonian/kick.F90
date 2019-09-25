@@ -179,6 +179,7 @@ contains
       kick%wprime = M_ZERO
       kick%n_multipoles = 0
       kick%qkick_mode = QKICKMODE_NONE
+      kick%easy_axis(1:MAX_DIM) = M_ZERO
       POP_SUB(kick_init)
       return
     end if
@@ -570,6 +571,8 @@ contains
     kick_out%function_mode = kick_in%function_mode
     kick_out%user_defined_function = kick_in%user_defined_function
 
+    kick_out%easy_axis(1:MAX_DIM) = kick_in%easy_axis(1:MAX_DIM)
+
     POP_SUB(kick_copy)
   end subroutine kick_copy
 
@@ -591,6 +594,7 @@ contains
     end if
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
+    kick%easy_axis(1:MAX_DIM) = M_ZERO
 
     POP_SUB(kick_end)
   end subroutine kick_end
