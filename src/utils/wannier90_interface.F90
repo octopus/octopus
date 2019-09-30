@@ -62,6 +62,7 @@ program wannier90_interface
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use ylm_wannier_oct_m
 
   implicit none
 
@@ -1295,9 +1296,6 @@ contains
     POP_SUB(wannier_interpolation)
   end subroutine wannier_interpolation
     
-  ! the definitions of atomic orbitals are taken from this file:
-#include "wannier90_interface_defs_from_pwscf.F90"
-
 end program wannier90_interface
 
 !! Local Variables:

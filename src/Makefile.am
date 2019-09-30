@@ -164,7 +164,8 @@ math_f_srcs =                                 \
 	math/splines.F90                      \
 	math/symm_op.F90                      \
 	math/tdfunction.F90                   \
-	math/young.F90
+	math/young.F90                        \
+        math/ylm_wannier.F90
 
 math_c_srcs =                                 \
 	math/checksum.c                       \
@@ -194,7 +195,7 @@ noinst_HEADERS +=                             \
 	math/root_solver_inc.F90              \
 	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
-	math/symm_op_inc.F90
+	math/symm_op_inc.F90        
 
 # Sources in species
 species_f_srcs =                                 \
@@ -796,8 +797,6 @@ oct_wannier90_SOURCES = $(system_srcs) $(hamiltonian_elec_srcs) $(basis_set_srcs
                         $(poisson_srcs) $(states_srcs) $(grid_srcs) \
                         $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
                         utils/wannier90_interface.F90 
-noinst_HEADERS += \
-  utils/wannier90_interface_defs_from_pwscf.F90
 oct_wannier90_LINK = $(FCLINK)
 oct_wannier90_LDADD = $(all_LIBS)
 
