@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_magnus_oct_m
+  use batch_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
@@ -108,7 +109,15 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
+        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+          call batch_pack(st%group%psib(ib, ik))
+        end if
+
         call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus = tr%vmagnus)
+
+        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+          call batch_unpack(st%group%psib(ib, ik))
+        end if
       end do
     end do
 
