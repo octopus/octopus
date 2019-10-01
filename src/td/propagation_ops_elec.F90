@@ -235,7 +235,15 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
+        if (hamiltonian_elec_apply_packed(hm, mesh)) then
+          call batch_pack(st%group%psib(ib, ik))
+        end if
+
         call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, dt)
+
+        if (hamiltonian_elec_apply_packed(hm, mesh)) then
+          call batch_unpack(st%group%psib(ib, ik))
+        end if
       end do
     end do
 
@@ -268,6 +276,9 @@ contains
     if(present(dt2)) then
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
+          if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+            call batch_pack(st%group%psib(ib, ik))
+          end if
 
           call batch_copy(st%group%psib(ib, ik), zpsib_dt)
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
@@ -279,8 +290,10 @@ contains
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, ik, zpsib_dt)
 
+          if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+            call batch_unpack(st%group%psib(ib, ik))
+          end if
           call batch_end(zpsib_dt)
-
         end do
       end do
 
@@ -289,8 +302,16 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
+          if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+            call batch_pack(st%group%psib(ib, ik))
+          end if
+
           call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt)
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+
+          if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+            call batch_unpack(st%group%psib(ib, ik))
+          end if
         end do
       end do
 
