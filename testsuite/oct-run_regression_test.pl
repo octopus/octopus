@@ -393,18 +393,18 @@ while ($_ = <TESTSUITE>) {
 
                 # FIXME: here we could add code to probe for and remove 'not_' from $options
 
-                if( $option =~ /\bnot_\b/i ) {
-                    if(" $options_available " =~ (" $option "=~ s/not//) )  {
-                        print "\nSkipping test: executable does have the option '$option' required to be absent";
-                        if($options_are_mpi) {
-                            print " for MPI";
-                        }
-                        print ".\n";
-                        print "Executable: $command\n";
-                        print "Available options: $options_available\n\n";
-                        skip_exit();
-                    }
-                }
+                # if( $option =~ /\bnot_\b/i ) {
+                #     if(" $options_available " =~ (" $option "=~ s/not//) )  {
+                #         print "\nSkipping test: executable does have the option '$option' required to be absent";
+                #         if($options_are_mpi) {
+                #             print " for MPI";
+                #         }
+                #         print ".\n";
+                #         print "Executable: $command\n";
+                #         print "Available options: $options_available\n\n";
+                #         skip_exit();
+                #     }
+                # }
             }
         }
 
