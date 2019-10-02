@@ -94,18 +94,25 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, mirror)
+subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
   integer,        intent(in)    :: np
   logical, optional, intent(in) :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+  logical, optional, intent(in) :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
-  integer :: ist
+  integer :: ist, nst
 
   PUSH_SUB(X(batch_allocate))
 
-  SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
+  nst = st_end - st_start + 1
+  if(optional_default(special, .false.)) then
+    call c_f_pointer(X(allocate)(np*this%dim*nst), this%X(psicont), [np,this%dim,nst])
+    this%special_memory = .true.
+  else
+    SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:nst))
+  end if
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
@@ -127,7 +134,11 @@ subroutine X(batch_allocate_temporary)(this)
 
   ASSERT(.not. associated(this%X(psicont)))
   
-  SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
+  if(this%special_memory) then
+    call c_f_pointer(X(allocate)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
+  else
+    SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
+  end if
   
   do ist = 1, this%nst
     this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
