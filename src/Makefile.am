@@ -317,7 +317,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
-	grid/allocate.c                       \
+	grid/allocate_special.c               \
 	grid/hilbert.c                        \
 	grid/operate.c
 

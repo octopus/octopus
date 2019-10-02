@@ -143,34 +143,34 @@ module batch_oct_m
   end interface batch_add_state
 
   interface
-    function dallocate(size) bind(c, name='dallocate')
+    function dallocate_special(size) bind(c, name='dallocate_special')
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: dallocate
-    end function dallocate
+      type(c_ptr) :: dallocate_special
+    end function dallocate_special
 
-    function zallocate(size) bind(c, name='zallocate')
+    function zallocate_special(size) bind(c, name='zallocate_special')
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: zallocate
-    end function zallocate
+      type(c_ptr) :: zallocate_special
+    end function zallocate_special
 
-    function sallocate(size) bind(c, name='sallocate')
+    function sallocate_special(size) bind(c, name='sallocate_special')
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: sallocate
-    end function sallocate
+      type(c_ptr) :: sallocate_special
+    end function sallocate_special
 
-    function callocate(size) bind(c, name='callocate')
+    function callocate_special(size) bind(c, name='callocate_special')
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: callocate
-    end function callocate
+      type(c_ptr) :: callocate_special
+    end function callocate_special
 
-    subroutine my_deallocate(array) bind(c, name='my_deallocate')
+    subroutine deallocate_special(array) bind(c, name='deallocate_special')
       import :: c_ptr
       type(c_ptr), value :: array
-    end subroutine my_deallocate
+    end subroutine deallocate_special
   end interface
 
   integer, public, parameter :: &
@@ -252,19 +252,19 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call my_deallocate(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%dpsicont(1,1,1)))
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call my_deallocate(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%zpsicont(1,1,1)))
         nullify(this%zpsicont)
       end if
       if(associated(this%spsicont)) then
-        call my_deallocate(c_loc(this%spsicont(1,1,1)))
+        call deallocate_special(c_loc(this%spsicont(1,1,1)))
         nullify(this%spsicont)
       end if
       if(associated(this%cpsicont)) then
-        call my_deallocate(c_loc(this%cpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%cpsicont(1,1,1)))
         nullify(this%cpsicont)
       end if
     else
@@ -302,19 +302,19 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call my_deallocate(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%dpsicont(1,1,1)))
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call my_deallocate(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%zpsicont(1,1,1)))
         nullify(this%zpsicont)
       end if
       if(associated(this%spsicont)) then
-        call my_deallocate(c_loc(this%spsicont(1,1,1)))
+        call deallocate_special(c_loc(this%spsicont(1,1,1)))
         nullify(this%spsicont)
       end if
       if(associated(this%cpsicont)) then
-        call my_deallocate(c_loc(this%cpsicont(1,1,1)))
+        call deallocate_special(c_loc(this%cpsicont(1,1,1)))
         nullify(this%cpsicont)
       end if
     else
