@@ -178,7 +178,7 @@ module batch_oct_m
     BATCH_PACKED         = 1,   &
     BATCH_DEVICE_PACKED  = 2
 
-  integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 128 !< this value controls the size (in number of wave-functions)
+  integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
                                                     !! of the buffer used to copy states to the opencl device.
 
 contains
@@ -969,7 +969,7 @@ contains
         call accel_set_kernel_arg(kernel, 4, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
-        call accel_kernel_run(kernel, (/this%pack%size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
+        call accel_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, accel_max_workgroup_size()/unroll/))
 
         if(batch_type(this) == TYPE_FLOAT) then
           call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
