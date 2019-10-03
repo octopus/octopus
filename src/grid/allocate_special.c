@@ -7,7 +7,7 @@
 inline
 cudaError_t checkCuda(cudaError_t result)
 {
-#if defined(DEBUG) || defined(_DEBUG)
+#if defined(DEBUG_ALLOC)
   if (result != cudaSuccess) {
     fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
     assert(result == cudaSuccess);
@@ -19,12 +19,16 @@ cudaError_t checkCuda(cudaError_t result)
 
 void *my_allocate(int size_bytes) {
 #ifndef HAVE_CUDA
-  printf("Allocating %d bytes, unpinned.\n", (unsigned int)size_bytes); 
+#ifdef DEBUG_ALLOC
+  printf("Allocating %d bytes, unpinned.\n", (unsigned int)size_bytes);
+#endif
   return malloc(size_bytes);
 #else
+#ifdef DEBUG_ALLOC
+  printf("Allocating %d bytes, pinned.\n", (unsigned int)size_bytes);
+#endif
   void *pinned;
   checkCuda(cudaMallocHost(&pinned, (unsigned int)size_bytes));
-  printf("Allocating %d bytes, pinned.\n", (unsigned int)size_bytes); 
   return pinned;
 #endif
 }
@@ -47,10 +51,14 @@ void *callocate_special(int size) {
 
 void deallocate_special(void *array) {
 #ifndef HAVE_CUDA
-  printf("Deallocating unpinned.\n"); 
+#ifdef DEBUG_ALLOC
+  printf("Deallocating unpinned.\n");
+#endif
   free(array);
 #else
-  printf("Deallocating pinned.\n"); 
+#ifdef DEBUG_ALLOC
+  printf("Deallocating pinned.\n");
+#endif
   checkCuda(cudaFreeHost(array));
 #endif
 }
