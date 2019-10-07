@@ -1078,6 +1078,7 @@ contains
 
       if(iter ==0) then
         call td_write_print_header_init(out_magnets)
+        call kick_write(kick, out = out_magnets)
 
         do iq = 1, kick%nqvec
           !second line -> columns name

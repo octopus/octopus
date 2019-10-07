@@ -723,7 +723,18 @@ contains
       read(iunit, '(15x,i2)')      kick%pol_equiv_axes
       read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
     end if
+    if(kick%delta_strength_mode == KICK_MAGNON_MODE) then
+      read(iunit, '(15x,i3)') kick%nqvec
+      SAFE_ALLOCATE(kick%qvector(1:MAX_DIM, 1:kick%nqvec))
+      do im = 1, kick%nqvec
+        read(iunit, '(15x,3f18.12)') kick%qvector(1:3, im)
+      end do
+      read(iunit, '(15x,3f18.12)')   kick%easy_axis(1:3)
+      read(iunit, '(15x,3f18.12)')   kick%trans_vec(1:3,1)
+      read(iunit, '(15x,3f18.12)')   kick%trans_vec(1:3,2)
+    end if
     read(iunit, '(15x,f18.12)', iostat = ierr) kick%time
+
     if(ierr /= 0) then
       kick%time = M_ZERO
       backspace(iunit)
@@ -807,6 +818,25 @@ contains
         call write_iter_string(out, aux)
         call write_iter_nl(out)
         write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
+      end if
+      if(present(out) .and. kick%delta_strength_mode == KICK_MAGNON_MODE) then
+        write(aux, '(a15,i3)')      '# N q-vectors  ', kick%nqvec
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
+        do im = 1, kick%nqvec
+          write(aux, '(a15,3f18.12)') '# q-vector     ', kick%qvector(1:3, im)
+          call write_iter_string(out, aux)
+          call write_iter_nl(out)
+        end do
+        write(aux, '(a15,3f18.12)')   '# Easy axis    ', kick%easy_axis(1:3)
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
+        write(aux, '(a15,3f18.12)')   '# Trans. dir 1 ', kick%trans_vec(1:3,1)
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
+        write(aux, '(a15,3f18.12)')   '# Trans. dir 2 ', kick%trans_vec(1:3,2)
         call write_iter_string(out, aux)
         call write_iter_nl(out)
       end if

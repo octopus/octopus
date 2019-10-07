@@ -50,7 +50,6 @@ program spin_susceptibility
   type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
-  FLOAT :: delta_strength
   character(len=MAX_PATH_LEN) :: ref_filename
   CMPLX, allocatable :: chi(:,:)
 
@@ -73,48 +72,15 @@ program spin_susceptibility
 
   call spectrum_init(spectrum, namespace)
 
-  call parse_variable(namespace, 'TDDeltaStrength', M_ZERO, delta_strength )
-
-  if(parse_block(namespace, 'TDEasyAxis', blk)==0) then
-    n_rows = parse_block_n(blk)
-
-    do idir = 1, 3
-      call parse_block_float(blk, 0, idir - 1, kick%easy_axis(idir))
-    end do
-    norm = sqrt(sum(kick%easy_axis(1:3)**2))
-    if(norm < CNST(1e-9)) then
-      message(1) = "TDEasyAxis norm is too small."
-      call messages_fatal(1)
-    end if
-    kick%easy_axis(1:3) = kick%easy_axis(1:3)/norm
-    call parse_block_end(blk)
-  else
-    message(1) = "For magnons, the variable TDEasyAxis must be defined."
-    call messages_fatal(1)
-  end if
-
-  !We first two vectors defining a basis in the transverse plane
-  !For this we take two vectors not align with the first one
-  !and we perform a Gram-Schmidt orthogonalization
-  kick%trans_vec(1,1) = -kick%easy_axis(2)
-  kick%trans_vec(2,1) = M_TWO*kick%easy_axis(3)
-  kick%trans_vec(3,1) = M_THREE*kick%easy_axis(1)
-
-  dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,1))
-  kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1) - dot*kick%easy_axis(1:3)
-  norm = sum(kick%trans_vec(1:3,1)**2)
-  kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1)/sqrt(norm)
-
-  kick%trans_vec(1,2) = kick%easy_axis(2) * kick%trans_vec(3,1) - kick%easy_axis(3) * kick%trans_vec(2,1)
-  kick%trans_vec(2,2) = kick%easy_axis(3) * kick%trans_vec(1,1) - kick%easy_axis(1) * kick%trans_vec(3,1)
-  kick%trans_vec(3,2) = kick%easy_axis(1) * kick%trans_vec(2,1) - kick%easy_axis(2) * kick%trans_vec(1,1)
-
-
   in_file = io_open('td.general/total_magnetization', namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then 
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization', namespace))//"'"
     call messages_fatal(1)
   end if
+  rewind(in_file)
+  read(in_file,*)
+  read(in_file,*)
+  call kick_read(kick, in_file)
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
@@ -234,7 +200,7 @@ program spin_susceptibility
   do ii = 1, num_col/2
     do kk = 1, energy_steps
       chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
-                  -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/delta_strength
+                  -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/kick%delta_strength
     end do
   end do
 
