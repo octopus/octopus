@@ -40,17 +40,17 @@ program spin_susceptibility
   implicit none
 
   integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr, ib, num_col, num_col_cart
-  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, n_rows
+  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, n_rows, iq
   FLOAT   :: dt, dt_ref, tt, ww, norm, dot
   FLOAT, allocatable :: ftreal(:,:), ftimag(:,:)
-  FLOAT, allocatable :: m_cart(:,:), magnetization(:,:)
+  FLOAT, allocatable :: m_cart(:,:), magnetization(:,:,:)
   type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
-  character(len=MAX_PATH_LEN) :: ref_filename
+  character(len=MAX_PATH_LEN) :: ref_filename, fname
   CMPLX, allocatable :: chi(:,:)
 
   ! Initialize stuff
@@ -86,7 +86,7 @@ program spin_susceptibility
 
   time_steps = time_steps + 1
 
-  num_col_cart = 12
+  num_col_cart = 12*kick%nqvec
   SAFE_ALLOCATE(m_cart(1:time_steps, 1:num_col_cart))
   
   call io_skip_header(in_file)
@@ -101,44 +101,59 @@ program spin_susceptibility
   !In this basis we have only m_+(q), m_-(q), and m_z(+/-q)
   !where z means here along the easy axis
   num_col = 8
-  SAFE_ALLOCATE(magnetization(1:time_steps, 1:num_col))
-  !Real part of m_x
-  magnetization(:,1) = m_cart(:,1)*kick%trans_vec(1,1) + m_cart(:,3)*kick%trans_vec(2,1) &
-                         + m_cart(:,5)*kick%trans_vec(3,1)
-  !We add -Im(m_y)
-  magnetization(:,1) = magnetization(:,1) -(m_cart(:,2)*kick%trans_vec(1,2) &
-                         + m_cart(:,4)*kick%trans_vec(2,2) + m_cart(:,6)*kick%trans_vec(3,2))  
-  
-  !Im part of m_x
-  magnetization(:,2) = m_cart(:,2)*kick%trans_vec(1,1) + m_cart(:,4)*kick%trans_vec(2,1) &
-                         + m_cart(:,6)*kick%trans_vec(3,1)
-  !We add +Re(m_y)
-  magnetization(:,2) = magnetization(:,2) +(m_cart(:,1)*kick%trans_vec(1,2) &
-                         + m_cart(:,3)*kick%trans_vec(2,2) + m_cart(:,5)*kick%trans_vec(3,2))
+  SAFE_ALLOCATE(magnetization(1:time_steps, 1:num_col, 1:kick%nqvec))
 
-  !Real part of m_x
-  magnetization(:,3) = m_cart(:,7)*kick%trans_vec(1,1) + m_cart(:,9)*kick%trans_vec(2,1) &
-                         + m_cart(:,11)*kick%trans_vec(3,1)
-  !We add +Im(m_y)
-  magnetization(:,3) = magnetization(:,3) +(m_cart(:,8)*kick%trans_vec(1,2) &
-                         + m_cart(:,10)*kick%trans_vec(2,2) + m_cart(:,12)*kick%trans_vec(3,2))
-
-  !Im part of m_x
-  magnetization(:,4) = m_cart(:,8)*kick%trans_vec(1,1) + m_cart(:,10)*kick%trans_vec(2,1) &
-                         + m_cart(:,12)*kick%trans_vec(3,1)
-  !We add -Re(m_y)
-  magnetization(:,4) = magnetization(:,4) -(m_cart(:,7)*kick%trans_vec(1,2) &
-                         + m_cart(:,9)*kick%trans_vec(2,2) + m_cart(:,11)*kick%trans_vec(3,2))
+  do iq = 1, kick%nqvec
+    !Real part of m_x
+    magnetization(:,1,iq) = m_cart(:,(iq-1)*12+1)*kick%trans_vec(1,1)  &
+                          + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,1) &
+                          + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,1)
+    !We add -Im(m_y)
+    magnetization(:,1,iq) = magnetization(:,1,iq) -(m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,2) &
+                           + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,2) &
+                           + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,2))  
   
-  !Real and Im part of m_z
-  magnetization(:,5) = m_cart(:,1)*kick%easy_axis(1) + m_cart(:,3)*kick%easy_axis(2) &
-                              + m_cart(:,5)*kick%easy_axis(3)
-  magnetization(:,6) = m_cart(:,2)*kick%easy_axis(1) + m_cart(:,4)*kick%easy_axis(2) &
-                              + m_cart(:,6)*kick%easy_axis(3)
-  magnetization(:,7) = m_cart(:,7)*kick%easy_axis(1) + m_cart(:,9)*kick%easy_axis(2) &
-                              + m_cart(:,11)*kick%easy_axis(3)
-  magnetization(:,8) = m_cart(:,8)*kick%easy_axis(1) + m_cart(:,10)*kick%easy_axis(2) &
-                              + m_cart(:,12)*kick%easy_axis(3)
+    !Im part of m_x
+    magnetization(:,2,iq) = m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,1) &
+                          + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,1) &
+                          + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,1)
+    !We add +Re(m_y)
+    magnetization(:,2,iq) = magnetization(:,2,iq) +(m_cart(:,(iq-1)*12+1)*kick%trans_vec(1,2) &
+                         + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,2) &
+                         + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,2))
+
+    !Real part of m_x
+    magnetization(:,3,iq) = m_cart(:,(iq-1)*12+7)*kick%trans_vec(1,1)  &
+                           + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,1) &
+                           + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,1)
+    !We add +Im(m_y)
+    magnetization(:,3,iq) = magnetization(:,3,iq) +(m_cart(:,(iq-1)*12+8)*kick%trans_vec(1,2) &
+                           + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,2) &
+                           + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,2))
+
+    !Im part of m_x
+    magnetization(:,4,iq) = m_cart(:,(iq-1)*12+8)*kick%trans_vec(1,1)  &
+                          + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,1) &
+                          + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,1)
+    !We add -Re(m_y)
+    magnetization(:,4,iq) = magnetization(:,4,iq) -(m_cart(:,(iq-1)*12+7)*kick%trans_vec(1,2) &
+                         + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,2) &
+                         + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,2))
+  
+    !Real and Im part of m_z
+    magnetization(:,5,iq) = m_cart(:,(iq-1)*12+1)*kick%easy_axis(1)  &
+                          + m_cart(:,(iq-1)*12+3)*kick%easy_axis(2)  &
+                          + m_cart(:,(iq-1)*12+5)*kick%easy_axis(3)
+    magnetization(:,6,iq) = m_cart(:,(iq-1)*12+2)*kick%easy_axis(1)  &
+                          + m_cart(:,(iq-1)*12+4)*kick%easy_axis(2)  &
+                          + m_cart(:,(iq-1)*12+6)*kick%easy_axis(3)
+    magnetization(:,7,iq) = m_cart(:,(iq-1)*12+7)*kick%easy_axis(1)  &
+                          + m_cart(:,(iq-1)*12+9)*kick%easy_axis(2)  &
+                          + m_cart(:,(iq-1)*12+11)*kick%easy_axis(3)
+    magnetization(:,8,iq) = m_cart(:,(iq-1)*12+8)*kick%easy_axis(1)  &
+                          + m_cart(:,(iq-1)*12+10)*kick%easy_axis(2) &
+                          + m_cart(:,(iq-1)*12+12)*kick%easy_axis(3)
+  end do
 
   SAFE_DEALLOCATE_A(m_cart)
 
@@ -149,79 +164,85 @@ program spin_susceptibility
   write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
             'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
             'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
+ 
+  do iq = 1, kick%nqvec
 
-  out_file = io_open('td.general/tranverse_magnetization', namespace, action='write')
-  write(out_file,'(a)') trim(header)
-  do kk = 1, time_steps
-    write(out_file, '(9e15.6)') (kk - 1)*dt, (magnetization(kk,ii), ii = 1, 8)
-  end do
-  call io_close(out_file)
-
-
-  ! Find out the iteration numbers corresponding to the time limits.
-  call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
-
-  istart = max(1, istart)
-
-  energy_steps = spectrum_nenergy_steps(spectrum)
-
-  SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
-  SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
-
-  call batch_init(vecpotb, num_col)
-  call batch_init(ftrealb, num_col)
-  call batch_init(ftimagb, num_col)
-
-  do ib = 1, num_col
-    call batch_add_state(vecpotb, magnetization(:, ib))
-    call batch_add_state(ftrealb, ftreal(1:energy_steps,ib))
-    call batch_add_state(ftimagb, ftimag(1:energy_steps,ib))
-  end do
-
-
-  call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
-
-  call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
-    spectrum%max_energy, spectrum%energy_step, ftrealb)
-
-  call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
-    spectrum%max_energy, spectrum%energy_step, ftimagb)
-
-
-  call batch_end(vecpotb)
-  call batch_end(ftrealb)
-  call batch_end(ftimagb)
-  SAFE_DEALLOCATE_A(magnetization)
-
-  ASSERT(abs(anint(num_col*M_HALF) - num_col*M_HALF) <= M_EPSILON)
-  SAFE_ALLOCATE(chi(1:energy_steps, 1:num_col/2))
-  do ii = 1, num_col/2
-    do kk = 1, energy_steps
-      chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
-                  -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/kick%delta_strength
+    write(fname, '(a,i3.3)') 'td.general/tranverse_magnetization_q', iq
+    out_file = io_open(trim(fname), namespace, action='write')
+    write(out_file,'(a)') trim(header)
+    do kk = 1, time_steps
+      write(out_file, '(9e15.6)') (kk - 1)*dt, (magnetization(kk,ii,iq), ii = 1,8)
     end do
-  end do
+    call io_close(out_file)
 
-  SAFE_DEALLOCATE_A(ftreal)
-  SAFE_DEALLOCATE_A(ftimag)
+
+    ! Find out the iteration numbers corresponding to the time limits.
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
+
+    istart = max(1, istart)
+
+    energy_steps = spectrum_nenergy_steps(spectrum)
+
+    SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
+    SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
+
+    call batch_init(vecpotb, num_col)
+    call batch_init(ftrealb, num_col)
+    call batch_init(ftimagb, num_col)
+
+    do ib = 1, num_col
+      call batch_add_state(vecpotb, magnetization(:, ib, iq))
+      call batch_add_state(ftrealb, ftreal(1:energy_steps,ib))
+      call batch_add_state(ftimagb, ftimag(1:energy_steps,ib))
+    end do
+
+
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
+
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+      spectrum%max_energy, spectrum%energy_step, ftrealb)
+
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+      spectrum%max_energy, spectrum%energy_step, ftimagb)
+
+
+    call batch_end(vecpotb)
+    call batch_end(ftrealb)
+    call batch_end(ftimagb)
+
+    ASSERT(abs(anint(num_col*M_HALF) - num_col*M_HALF) <= M_EPSILON)
+    SAFE_ALLOCATE(chi(1:energy_steps, 1:num_col/2))
+    do ii = 1, num_col/2
+      do kk = 1, energy_steps
+        chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
+                    -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/kick%delta_strength
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(ftreal)
+    SAFE_DEALLOCATE_A(ftimag)
   
 
-  write(header, '(9a15)') '#        energy', 'Re[\chi_{+-}(q)]', 'Im[\chi_{+-}(q)]', &
-            'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
-            'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
+    write(header, '(9a15)') '#        energy', 'Re[\chi_{+-}(q)]', 'Im[\chi_{+-}(q)]', &
+              'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
+              'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
 
-  out_file = io_open('td.general/spin_susceptibility', namespace, action='write')
-  write(out_file,'(a)') trim(header)
-  do kk = 1, energy_steps
-    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
-    write(out_file, '(13e15.6)') ww,                                   &
-             (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
-  end do
-  call io_close(out_file)
+    write(fname, '(a,i3.3)') 'td.general/spin_susceptibility_q', iq
+    out_file = io_open(trim(fname), namespace, action='write')
+    write(out_file,'(a)') trim(header)
+    do kk = 1, energy_steps
+      ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
+      write(out_file, '(13e15.6)') ww,                                   &
+               (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
+    end do
+    call io_close(out_file)
  
-  SAFE_DEALLOCATE_A(chi)
+    SAFE_DEALLOCATE_A(chi)
+  end do !iq
+
+  SAFE_DEALLOCATE_A(magnetization)
 
   call io_end()
   call messages_end()
