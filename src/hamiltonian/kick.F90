@@ -102,16 +102,18 @@ module kick_oct_m
     !! V(\vec{r}) = sum_{i=1}^{n\_multipoles} 
     !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
     !! \f]
-    integer           :: n_multipoles
-    integer, pointer  :: l(:), m(:)
-    FLOAT, pointer    :: weight(:)
-    FLOAT             :: qvector(MAX_DIM)
-    FLOAT             :: trans_vec(MAX_DIM,2)
-    FLOAT             :: qlength
-    integer           :: qkick_mode
-    integer           :: qbessel_l, qbessel_m
+    integer              :: n_multipoles
+    integer, pointer     :: l(:), m(:)
+    FLOAT, pointer       :: weight(:)
+    integer              :: nqmult(1:MAX_DIM)
+    integer              :: nqvec
+    FLOAT, allocatable   :: qvector(:,:)
+    FLOAT                :: trans_vec(MAX_DIM,2)
+    FLOAT                :: qlength
+    integer              :: qkick_mode
+    integer              :: qbessel_l, qbessel_m
     !> In case we use a general function
-    integer           :: function_mode
+    integer              :: function_mode
     character(len=200), private:: user_defined_function
   end type kick_t
 
@@ -127,8 +129,9 @@ contains
     integer,           intent(in)  :: periodic_dim
 
     type(block_t) :: blk
-    integer :: n_rows, irow, idir, iop
+    integer :: n_rows, irow, idir, iop, iq, iqx, iqy, iqz
     FLOAT :: norm, dot
+    FLOAT :: qtemp(1:MAX_DIM)
 
     PUSH_SUB(kick_init)
 
@@ -431,9 +434,11 @@ contains
     !%End
 
     if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
+      kick%nqvec = 1
+      SAFE_ALLOCATE(kick%qvector(1:MAX_DIM,1)) 
       do idir = 1, MAX_DIM
-        call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
-        kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))
+        call parse_block_float(blk, 0, idir - 1, kick%qvector(idir,1))
+        kick%qvector(idir,1) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir,1))
       end do
 
       ! Read the calculation mode (exp, cos, sin, or bessel)
@@ -459,7 +464,7 @@ contains
       if(sb%kpoints%use_symmetries) then
         do iop = 1, symmetries_number(sb%symm)
           if(iop == symmetries_identity_index(sb%symm)) cycle
-          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector, CNST(1e-5))) then
+          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
             message(1) = "The TDMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to TDMomemtumTransfer."
             call messages_fatal(2)
@@ -469,15 +474,12 @@ contains
 
     else
       kick%qkick_mode = QKICKMODE_NONE
-      kick%qvector(:) = M_ZERO
+      kick%nqvec = 1
+      SAFE_ALLOCATE(kick%qvector(1:MAX_DIM,1))
+      kick%qvector(:,1) = M_ZERO
     end if
 
-    kick%qlength = sqrt(sum(kick%qvector(:)**2))
-
-    if(kick%delta_strength_mode == KICK_MAGNON_MODE .and. kick%qkick_mode /= QKICKMODE_EXP) then
-      message(1) = "For magnons, the kick mode must be expnential."
-      call messages_fatal(1)
-    end if
+    kick%qlength = sqrt(sum(kick%qvector(:,1)**2))
 
     if(kick%delta_strength_mode == KICK_MAGNON_MODE) then
       !%Variable TDEasyAxis
@@ -525,8 +527,84 @@ contains
 
       !The perturbation direction is defined as
       !cos(q.r)*uvec + sin(q.r)*vvec
+
+
+      if(parse_is_defined(namespace, 'TDMomentumTransfer') &
+            .and. parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
+        message(1) = "TDMomentumTransfer and TDMultipleMomentumTransfer cannot be defined at the same time."
+        call messages_fatal(1)
+      end if
+ 
+      if(parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
+
+        kick%qkick_mode = QKICKMODE_EXP
+
+        !%Variable TDMultipleMomentumTransfer
+        !%Type block
+        !%Section Time-Dependent::Response
+        !%Description
+        !% For magnon kicks only.
+        !% A simple way to specify momentum-transfer vectors for the calculation of 
+        !% the magnetization dynamics. This variable should be used for a supercell.
+        !% For each reciprocal lattice vectors, the code will kick the original magnetization
+        !% using all the multiples of it.
+        !% The syntax reads:
+        !%
+        !% <tt>%TDMultipleMomentumTransfer
+        !% <br>&nbsp;&nbsp;N_x | N_y | N_z
+        !% <br>%</tt>
+        !%
+        !% and will include the (2N_x+1)*(2N_y+1)*(2N_z+1) multiples vectors of the reciprocal 
+        !% lattice vectors of the current cell.
+        !%End
+        if(parse_block(namespace, 'TDMultipleMomentumTransfer', blk) /= 0) then
+          write(message(1),'(a)') 'Internal error while reading TDMultipleMomentumTransfer.'
+          call messages_fatal(1)
+        end if
+
+        do idir = 1, 3
+          call parse_block_integer(blk, 0, idir-1, kick%nqmult(idir))
+        end do
+
+        call parse_block_end(blk)
+
+
+        kick%nqvec = (2*kick%nqmult(1)+1)*(2*kick%nqmult(2)+1)*(2*kick%nqmult(3)+1)
+        !qvector has been allocated by default to a null vector before
+        SAFE_DEALLOCATE_A(kick%qvector)
+        SAFE_ALLOCATE(kick%qvector(1:MAX_DIM, 1:kick%nqvec))
+        iq = 0
+        do iqx = -kick%nqmult(1), kick%nqmult(1) 
+          do iqy = -kick%nqmult(2), kick%nqmult(2) 
+            do iqz = -kick%nqmult(3), kick%nqmult(3) 
+              iq = iq + 1
+              qtemp(1:3) = (/iqx, iqy, iqz/)
+              call kpoints_to_absolute(sb%klattice, qtemp, kick%qvector(1:3, iq), 3)
+
+              !Checking symmetries for all G vectors
+              if(sb%kpoints%use_symmetries) then
+                do iop = 1, symmetries_number(sb%symm)
+                  if(iop == symmetries_identity_index(sb%symm)) cycle
+                  if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
+                    message(1) = "The TDMultipleMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
+                    message(2) = "Set SymmetryBreakDir accordingly."
+                    call messages_fatal(2)
+                  end if
+                end do
+              end if
+            end do
+          end do
+        end do
+
+      end if
+
     else
       kick%easy_axis(1:MAX_DIM) = M_ZERO
+    end if
+
+    if(kick%delta_strength_mode == KICK_MAGNON_MODE .and. kick%qkick_mode /= QKICKMODE_EXP) then
+      message(1) = "For magnons, the kick mode must be exponential."
+      call messages_fatal(1)
     end if
 
     POP_SUB(kick_init)
@@ -561,7 +639,9 @@ contains
       kick_out%m = kick_in%m
       kick_out%weight = kick_in%weight
     end if
-    kick_out%qvector(1:MAX_DIM) = kick_in%qvector(1:MAX_DIM)
+    kick_out%nqvec = kick_in%nqvec
+    SAFE_ALLOCATE(kick_out%qvector(1:MAX_DIM, 1:kick_in%nqvec))
+    kick_out%qvector(1:MAX_DIM, 1:kick_in%nqvec) = kick_in%qvector(1:MAX_DIM, 1:kick_in%nqvec)
     kick_out%qlength = kick_in%qlength
     kick_out%qkick_mode = kick_in%qkick_mode
     kick_out%qbessel_l = kick_in%qbessel_l
@@ -742,10 +822,11 @@ contains
 
   ! ---------------------------------------------------------
   ! 
-  subroutine kick_function_get(mesh, kick, kick_function, theta, to_interpolate)
+  subroutine kick_function_get(mesh, kick, kick_function, iq, theta, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
+    integer,              intent(in)    :: iq
     FLOAT, optional,      intent(in)    :: theta
     logical, optional,    intent(in)    :: to_interpolate
 
@@ -766,13 +847,13 @@ contains
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(1:3), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
         case (QKICKMODE_SIN)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(1:3), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(1:3, iq), ')'
         case (QKICKMODE_SIN + QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(1:3), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
         case (QKICKMODE_EXP)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(1:3), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(1:3, iq), ')'
         case (QKICKMODE_BESSEL)
           write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
             kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
@@ -786,13 +867,13 @@ contains
         call mesh_r(mesh, ip, rr, coords = xx)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:) * xx(:)))
+            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:, iq) * xx(:)))
           case (QKICKMODE_SIN)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
           case (QKICKMODE_SIN+QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
           case (QKICKMODE_EXP)
-            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:) * xx(:)))
+            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:, iq) * xx(:)))
           case (QKICKMODE_BESSEL)
             call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
               kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
@@ -851,7 +932,7 @@ contains
     if ( pcm%localf ) then
       SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
       kick_function_interpolate = M_ZERO
-      call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
+      call kick_function_get(mesh, kick, kick_function_interpolate, 1, to_interpolate = .true.)
       SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
       kick_function_real = DREAL(kick_function_interpolate)
       if ( pcm%kick_like ) then
@@ -891,8 +972,9 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
     CMPLX, allocatable :: kick_pcm_function(:)
-    integer :: ns
-    FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM)
+    integer :: ns, idir, iq
+    FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), Gvec(MAX_DIM,MAX_DIM)
+    FLOAT :: xx(MAX_DIM), rr
 
     PUSH_SUB(kick_apply)
 
@@ -901,7 +983,9 @@ contains
     delta_strength: if(kick%delta_strength /= M_ZERO) then
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-      call kick_function_get(mesh, kick, kick_function, theta)          
+      if(kick%delta_strength_mode /= KICK_MAGNON_MODE .or. kick%nqvec == 1) then
+        call kick_function_get(mesh, kick, kick_function, 1, theta)          
+      end if
 
       ! PCM - computing polarization due to kick
       if( present(pcm) ) then
@@ -987,42 +1071,88 @@ contains
       else
         ASSERT(st%d%ispin==SPINORS)
 
-        !The perturbation direction is defined as
-        !cos(q.r)*uvec + sin(q.r)*vvec
-        uvec(1:3) = kick%trans_vec(1:3,1)
-        vvec(1:3) = kick%trans_vec(1:3,2)
+        if(kick%nqvec == 1) then
+          !The perturbation direction is defined as
+          !cos(q.r)*uvec + sin(q.r)*vvec
+          uvec(1:3) = kick%trans_vec(1:3,1)
+          vvec(1:3) = kick%trans_vec(1:3,2)
 
-        do iqn = st%d%kpt%start, st%d%kpt%end, ns
-          do ist = st%st_start, st%st_end
+          do iqn = st%d%kpt%start, st%d%kpt%end, ns
+            do ist = st%st_start, st%st_end
+  
+              call states_elec_get_state(st, mesh, ist, iqn, psi)
 
-            call states_elec_get_state(st, mesh, ist, iqn, psi)
-
-            do ip = 1, mesh%np
+              do ip = 1, mesh%np
               
-              cc(1) = psi(ip, 1)
-              cc(2) = psi(ip, 2) 
+                cc(1) = psi(ip, 1)
+                cc(2) = psi(ip, 2) 
 
-              !First part: 1I*cos(\lambda)
-              psi(ip, 1) = cos(kick%delta_strength)* cc(1)
-              psi(ip, 2) = cos(kick%delta_strength)* cc(2)
+                !First part: 1I*cos(\lambda)
+                psi(ip, 1) = cos(kick%delta_strength)* cc(1)
+                psi(ip, 2) = cos(kick%delta_strength)* cc(2)
 
-              !We now add -i sin(\lambda) u.\sigma
-              !           (u_z      u_x-i*u_y)            (v_z         v_x-i*v_y)
-              ! =cos(q.r) (                  )  + sin(q.r)(                     )
-              !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     ) 
-              psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
-                                * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
-                     + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
-              psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
-                                * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
-                     + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
+                !We now add -i sin(\lambda) u.\sigma
+                !           (u_z      u_x-i*u_y)            (v_z         v_x-i*v_y)
+                ! =cos(q.r) (                  )  + sin(q.r)(                     )
+                !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     ) 
+                psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
+                                  * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
+                       + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
+                psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
+                                  * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
+                       + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
+
+              end do
+
+              call states_elec_set_state(st, mesh, ist, iqn, psi)
 
             end do
-
-            call states_elec_set_state(st, mesh, ist, iqn, psi)
-
           end do
-        end do
+
+        else ! Multi-q kick
+
+           call kpoints_to_absolute(mesh%sb%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
+           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
+           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
+  
+           kick_function = M_ONE
+           do ip = 1, mesh%np
+             call mesh_r(mesh, ip, rr, coords = xx)
+             do iq = 1, 3
+               if(kick%nqmult(iq) == 0) cycle
+               if(abs(sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))) <= M_EPSILON) cycle
+
+               kick_function(ip) = kick_function(ip)*sin(M_HALF*(2*kick%nqmult(iq)+1) &
+                     *sum(Gvec(1:3, iq) * xx(1:3)))/sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))
+             end do
+             kick_function(ip) = kick_function(ip)*M_HALF*kick%delta_strength/kick%nqvec
+           end do
+
+           do iqn = st%d%kpt%start, st%d%kpt%end, ns
+            do ist = st%st_start, st%st_end
+
+              call states_elec_get_state(st, mesh, ist, iqn, psi)
+
+              do ip = 1, mesh%np
+
+                cc(1) = psi(ip, 1)
+                cc(2) = psi(ip, 2)
+
+                !   (cos(F) + in_x sin(F)                   sin(F)(u_y (u_x-iu_y)/(1+u_z) - iu_z))
+                ! = (                                                                            )
+                !   (-sin(F)(u_y (u_x+iu_y)/(1+u_z)+iu_z)   cos(F) - in_x sin(F)                 )
+
+                psi(ip, 1) = (cos(kick_function(ip))+M_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(1) &
+                        +sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1)-M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
+                psi(ip, 2) =-sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1)+M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
+                        + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2) 
+
+              end do
+
+            end do
+          end do
+
+        end if
       end if
 
       SAFE_DEALLOCATE_A(psi)

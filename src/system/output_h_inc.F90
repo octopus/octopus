@@ -328,7 +328,7 @@
 
     if(bitand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-      call kick_function_get(mesh, kick, kick_function)
+      call kick_function_get(mesh, kick, kick_function, 1)
       call zio_function_output(outp%how, dir, "kick_function", outp%namespace, mesh, kick_function(:), &
         units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(kick_function)

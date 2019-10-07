@@ -1063,44 +1063,54 @@ contains
     integer,                  intent(in)    :: iter
 
     character(len=50) :: aux
-    CMPLX :: tm(6)
-    integer :: ii
+    CMPLX, allocatable :: tm(:,:)
+    integer :: ii, iq
 
     PUSH_SUB(td_write_tot_mag)
 
-    call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector, tm)
+    SAFE_ALLOCATE(tm(1:6,1:kick%nqvec))
+
+    do iq = 1, kick%nqvec
+      call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector(:,iq), tm(1:6,iq))
+    end do
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
       if(iter ==0) then
         call td_write_print_header_init(out_magnets)
 
-        !second line -> columns name
-        call write_iter_header_start(out_magnets)
-        call write_iter_header(out_magnets, 'Re[m_x(q)]')
-        call write_iter_header(out_magnets, 'Im[m_x(q)]')
-        call write_iter_header(out_magnets, 'Re[m_y(q)]')
-        call write_iter_header(out_magnets, 'Im[m_y(q)]')
-        call write_iter_header(out_magnets, 'Re[m_z(q)]')
-        call write_iter_header(out_magnets, 'Im[m_z(q)]')
-        call write_iter_header(out_magnets, 'Re[m_x(-q)]')
-        call write_iter_header(out_magnets, 'Im[m_x(-q)]')
-        call write_iter_header(out_magnets, 'Re[m_y(-q)]')
-        call write_iter_header(out_magnets, 'Im[m_y(-q)]')
-        call write_iter_header(out_magnets, 'Re[m_z(-q)]')
-        call write_iter_header(out_magnets, 'Im[m_z(-q)]')
-        call write_iter_nl(out_magnets)
+        do iq = 1, kick%nqvec
+          !second line -> columns name
+          call write_iter_header_start(out_magnets)
+          call write_iter_header(out_magnets, 'Re[m_x(q)]')
+          call write_iter_header(out_magnets, 'Im[m_x(q)]')
+          call write_iter_header(out_magnets, 'Re[m_y(q)]')
+          call write_iter_header(out_magnets, 'Im[m_y(q)]')
+          call write_iter_header(out_magnets, 'Re[m_z(q)]')
+          call write_iter_header(out_magnets, 'Im[m_z(q)]')
+          call write_iter_header(out_magnets, 'Re[m_x(-q)]')
+          call write_iter_header(out_magnets, 'Im[m_x(-q)]')
+          call write_iter_header(out_magnets, 'Re[m_y(-q)]')
+          call write_iter_header(out_magnets, 'Im[m_y(-q)]')
+          call write_iter_header(out_magnets, 'Re[m_z(-q)]')
+          call write_iter_header(out_magnets, 'Im[m_z(-q)]')
+          call write_iter_nl(out_magnets)
+        end do
 
         call td_write_print_header_end(out_magnets)
       end if
 
       call write_iter_start(out_magnets)
-      do ii = 1, 6
-        call write_iter_double(out_magnets, real(tm(ii),REAL_PRECISION), 1)
-        call write_iter_double(out_magnets, aimag(tm(ii)), 1)
+      do iq = 1, kick%nqvec
+        do ii = 1, 6
+          call write_iter_double(out_magnets, real(tm(ii, iq),REAL_PRECISION), 1)
+          call write_iter_double(out_magnets, aimag(tm(ii, iq)), 1)
+        end do
       end do
       call write_iter_nl(out_magnets)
     end if
+
+    SAFE_DEALLOCATE_A(tm)
 
     POP_SUB(td_write_tot_mag)
   end subroutine td_write_tot_mag
@@ -1321,7 +1331,7 @@ contains
       else ! sin or cos
         write(aux, '(a15)')       '# qvector      '
         do idir = 1, gr%mesh%sb%dim
-          write(aux2, '(f9.5)') kick%qvector(idir)
+          write(aux2, '(f9.5)') kick%qvector(idir,1)
           aux = trim(aux) // trim(aux2)
         end do
       end if
@@ -1357,7 +1367,7 @@ contains
       integrand = M_ZERO
       do is = 1, st%d%nspin
         forall(ip = 1:gr%mesh%np)
-          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:)))
+          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
         end forall
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)

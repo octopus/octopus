@@ -1271,7 +1271,7 @@ contains
       energy = (ie-1) * spectrum%energy_step + spectrum%min_energy
       fsum = fsum + energy * aimag(chi(ie))
     end do
-    fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:)**2)
+    fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:,1)**2)
 
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
