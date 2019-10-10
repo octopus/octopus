@@ -1173,8 +1173,10 @@ contains
                 !   (-sin(F)(u_y (u_x+iu_y)/(1+u_z)+iu_z)   cos(F) - in_x sin(F)                 )
 
                 psi(ip, 1) = (cos(kick_function(ip))+M_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(1) &
-                        +sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1)-M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
-                psi(ip, 2) =-sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1)+M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
+                        +sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
+                        -M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
+                psi(ip, 2) =-sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
+                        +M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
                         + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2) 
 
               end do
