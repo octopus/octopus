@@ -20,8 +20,8 @@
 
 module batch_oct_m
   use accel_oct_m
+  use allocate_special_oct_m
   use blas_oct_m
-  use iso_c_binding
   use global_oct_m
   use hardware_oct_m
   use math_oct_m
@@ -141,37 +141,6 @@ module batch_oct_m
     module procedure sbatch_add_state_linear
     module procedure cbatch_add_state_linear
   end interface batch_add_state
-
-  interface
-    function dallocate_special(size) bind(c, name='dallocate_special')
-      import :: c_ptr, c_int
-      integer(c_int), value :: size
-      type(c_ptr) :: dallocate_special
-    end function dallocate_special
-
-    function zallocate_special(size) bind(c, name='zallocate_special')
-      import :: c_ptr, c_int
-      integer(c_int), value :: size
-      type(c_ptr) :: zallocate_special
-    end function zallocate_special
-
-    function sallocate_special(size) bind(c, name='sallocate_special')
-      import :: c_ptr, c_int
-      integer(c_int), value :: size
-      type(c_ptr) :: sallocate_special
-    end function sallocate_special
-
-    function callocate_special(size) bind(c, name='callocate_special')
-      import :: c_ptr, c_int
-      integer(c_int), value :: size
-      type(c_ptr) :: callocate_special
-    end function callocate_special
-
-    subroutine deallocate_special(array) bind(c, name='deallocate_special')
-      import :: c_ptr
-      type(c_ptr), value :: array
-    end subroutine deallocate_special
-  end interface
 
   integer, public, parameter :: &
     BATCH_NOT_PACKED     = 0,   &

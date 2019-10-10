@@ -268,6 +268,7 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 
 # Sources in grid
 grid_f_srcs =                                 \
+	grid/allocate_special_f.F90           \
 	grid/basins.F90                       \
 	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
