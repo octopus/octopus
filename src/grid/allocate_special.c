@@ -19,6 +19,8 @@
 */
 #include <stdlib.h>
 #include <config.h>
+#include <stdio.h>
+#include "vectors.h"
 
 #ifdef HAVE_CUDA
 #include <cuda_runtime.h>
@@ -42,15 +44,23 @@ void *my_allocate(int size_bytes) {
 #ifdef DEBUG_ALLOC
   printf("Allocating %d bytes, unpinned.\n", (unsigned int)size_bytes);
 #endif
-  return malloc(size_bytes);
-#else
+  void *aligned;
+  int status;
+  // align on vector size to improve vectorization
+  status = posix_memalign(&aligned, (size_t)sizeof(double)*VEC_SIZE, (unsigned int)size_bytes);
+  if (status != 0) {
+    printf("Error allocating aligned memory!\n");
+    return NULL;
+  }
+  return aligned;
+#else // HAVE_CUDA
 #ifdef DEBUG_ALLOC
   printf("Allocating %d bytes, pinned.\n", (unsigned int)size_bytes);
 #endif
   void *pinned;
   checkCuda(cudaMallocHost(&pinned, (unsigned int)size_bytes));
   return pinned;
-#endif
+#endif // HAVE_CUDA
 }
 
 void *dallocate_special(int size) {
