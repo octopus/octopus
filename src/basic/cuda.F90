@@ -254,6 +254,14 @@ module cuda_oct_m
       integer,       intent(out)   :: version
     end subroutine cuda_driver_version
 
+    subroutine cuda_deref(cuda_ptr, cuda_deref_ptr)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr), intent(in)  :: cuda_ptr
+      type(c_ptr), intent(out) :: cuda_deref_ptr
+    end subroutine cuda_deref
+
   end interface
   
 end module cuda_oct_m

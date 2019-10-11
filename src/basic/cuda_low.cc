@@ -427,3 +427,7 @@ extern "C" void FC_FUNC_(cuda_driver_version, CUDA_DRIVER_VERSION)(fint * versio
   *version = driverversion;
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_deref, CUDA_DEREF)(CUdeviceptr ** cuda_ptr, void ** cuda_deref_ptr) {
+  *cuda_deref_ptr = (void *) **cuda_ptr;
+}
