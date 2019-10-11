@@ -998,12 +998,15 @@ contains
     SAFE_ALLOCATE(lsize(1:nthreads))
     call multicomm_divide_range(nobjs, nthreads, istart, ifinal, lsize)
     rank   = 1 + omp_get_thread_num()
-#endif
     ini    = istart(rank)
     nobjs_loc = lsize(rank)
     SAFE_DEALLOCATE_A(istart)
     SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
+#else
+    ini = 1
+    nobjs_loc = nobjs
+#endif
 
   end subroutine multicomm_divide_range_omp
 

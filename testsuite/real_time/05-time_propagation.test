@@ -25,6 +25,9 @@ Input      : 05-time_propagation.03-td_domains_states.inp
 match ; Energy [step  5] ; LINEFIELD(td.general/energy, -6, 3) ; -3.792522754945e+01
 match ; Energy [step 10] ; LINEFIELD(td.general/energy, -1, 3) ; -3.792522754814e+01
 
+match ; Projections ; LINEFIELD(td.general/projections, -1, 3) ; 7.219363991120e-01
+match ; Projections ; LINEFIELD(td.general/projections, -1, 35) ; 7.873723347818e-01
+
 # moving the ions
 Processors : 4
 Input      : 05-time_propagation.04-td_md.inp
