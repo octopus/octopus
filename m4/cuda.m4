@@ -50,7 +50,7 @@ AC_DEFUN([ACX_CUDA],
     LDFLAGS=""
   fi
 
-  LIBS=""
+  LIBS="-lcudart"
 
   if test x"${enable_nvtx}" == x"yes" ; then
     LIBS="$LIBS -ldl"

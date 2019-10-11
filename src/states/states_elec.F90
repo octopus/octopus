@@ -1059,10 +1059,12 @@ contains
 
           if (states_are_real(st)) then
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
+            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
+              mirror = st%d%mirror_states, special=.true.)
           else
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
+            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
+              mirror = st%d%mirror_states, special=.true.)
           end if
           
         end do
