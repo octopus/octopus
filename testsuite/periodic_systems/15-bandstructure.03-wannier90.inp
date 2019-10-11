@@ -33,6 +33,6 @@ ExperimentalFeatures = yes
 
 ParKPoints = no
 
-Wannier90_prefix = '15-bandstructure.03-wannier90'
-Wannier90_mode = w90_output
+Wannier90Prefix = '15-bandstructure.03-wannier90'
+Wannier90Mode = w90_output
 

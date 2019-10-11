@@ -120,20 +120,20 @@ program wannier90_interface
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys, namespace)
 
-  !%Variable wannier90_prefix
+  !%Variable Wannier90Prefix
   !%Type string
   !%Default w90
   !%Section Utilities::oct-wannier90
   !%Description
   !% Prefix for wannier90 files
   !%End
-  call parse_variable(namespace, 'wannier90_prefix', 'w90', w90_prefix)
+  call parse_variable(namespace, 'Wannier90Prefix', 'w90', w90_prefix)
   if(w90_prefix=='w90') then
-    message(1) = "Did not find wannier90_prefix keyword, will use default: w90"
+    message(1) = "Did not find Wannier90Prefix keyword, will use default: w90"
     call  messages_warning(1)
   end if
 
-  !%Variable wannier90_mode
+  !%Variable Wannier90Mode
   !%Type flag
   !%Default none
   !%Section Utilities::oct-wannier90
@@ -155,18 +155,18 @@ program wannier90_interface
   !%Option w90_scdm bit(4)
   !% use scdm method to generate *.amn file for wannier90
   !%End
-  call parse_variable(namespace, 'wannier90_mode', 0, w90_what)
-  w90_setup = iand(w90_what, OPTION__WANNIER90_MODE__W90_SETUP) /= 0
-  w90_output = iand(w90_what, OPTION__WANNIER90_MODE__W90_OUTPUT) /= 0
-  w90_wannier = iand(w90_what, OPTION__WANNIER90_MODE__W90_WANNIER) /= 0
-  w90_scdm = iand(w90_what, OPTION__WANNIER90_MODE__W90_SCDM) /= 0
+  call parse_variable(namespace, 'Wannier90Mode', 0, w90_what)
+  w90_setup = iand(w90_what, OPTION__WANNIER90MODE__W90_SETUP) /= 0
+  w90_output = iand(w90_what, OPTION__WANNIER90MODE__W90_OUTPUT) /= 0
+  w90_wannier = iand(w90_what, OPTION__WANNIER90MODE__W90_WANNIER) /= 0
+  w90_scdm = iand(w90_what, OPTION__WANNIER90MODE__W90_SCDM) /= 0
 
   if(w90_what == 0) then
-    message(1) = "wannier90_mode must be set to a value different from 0."
+    message(1) = "Wannier90Mode must be set to a value different from 0."
     call messages_fatal(1)
   end if
 
-  !%Variable wannier90_files
+  !%Variable Wannier90Files
   !%Type flag
   !%Default w90_mmn + w90_amn + w90_eig
   !%Section Utilities::oct-wannier90
@@ -182,8 +182,8 @@ program wannier90_interface
   !%Option w90_eig bit(4)
   !% Eigenvalues. See Wannier90 documentation for more details.
   !%End
-  w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN + OPTION__WANNIER90_FILES__W90_EIG
-  call parse_variable(namespace, 'wannier90_files', w90_what, w90_what)
+  w90_what = OPTION__WANNIER90FILES__W90_MMN + OPTION__WANNIER90FILES__W90_AMN + OPTION__WANNIER90FILES__W90_EIG
+  call parse_variable(namespace, 'Wannier90Files', w90_what, w90_what)
 
 
   ! sanity checks
@@ -335,19 +335,19 @@ program wannier90_interface
     end if
 
     ! ---- actual interface work ----------
-    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0) then
+    if(iand(w90_what, OPTION__WANNIER90FILES__W90_MMN) /= 0) then
       call create_wannier90_mmn(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0) then
+    if(iand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
       call write_unk(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
+    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       call create_wannier90_amn(sys%gr%mesh, sys%gr%sb,sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_EIG) /= 0) then
+    if(iand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
       call create_wannier90_eig()
     end if
 
@@ -572,7 +572,7 @@ contains
       band_index(ii) = itemp
     end do
 
-    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
+    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       ! parse file again for definitions of projections
       w90_nnkp = io_open(trim(filename), namespace, action='read')
 
@@ -647,7 +647,7 @@ contains
           if(.not. w90_scdm) then
             message(1) = 'Found auto_projections block. Currently the only implemeted automatic way'
             message(2) = 'to compute projections is the SCDM method.'
-            message(3) = 'Please set wannier90_mode = w90_scdm in the inp file.'
+            message(3) = 'Please set Wannier90Mode = w90_scdm in the inp file.'
             call messages_fatal(3)
           end if
           if(w90_nproj /= w90_num_bands) then
@@ -852,7 +852,7 @@ contains
       call messages_not_implemented("w90_unk output with states parallelization")
     end if
 
-    call messages_experimental("Wannier90_files = w90_unk")
+    call messages_experimental("Wannier90Files = w90_unk")
 
 
     SAFE_ALLOCATE(psi(1:mesh%np))
