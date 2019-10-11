@@ -586,7 +586,8 @@ contains
                 do iop = 1, symmetries_number(sb%symm)
                   if(iop == symmetries_identity_index(sb%symm)) cycle
                   if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
-                    message(1) = "The TDMultipleMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
+                    message(1) = "The TDMultipleMomentumTransfer breaks (at least) one " &
+                                      // "of the symmetries used to reduce the k-points."
                     message(2) = "Set SymmetryBreakDir accordingly."
                     call messages_fatal(2)
                   end if
