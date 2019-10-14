@@ -59,7 +59,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(batch_t), target,    intent(inout) :: v_local
   type(pv_handle_batch_t),  intent(out)   :: handle
 
-  integer :: ipart, pos, ii, tag, nn
+  integer :: ipart, pos, ii, tag, nn, offset
 
   call profiling_in(prof_start, "GHOST_UPDATE_START")
   PUSH_SUB(X(ghost_update_batch_start))
@@ -76,14 +76,23 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   select case(batch_status(v_local))
 
   case(BATCH_DEVICE_PACKED)
-    SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
+    if(.not. accel%cuda_mpi) then
+      SAFE_ALLOCATE(handle%X(recv_buffer)(1:v_local%pack%size(1)*vp%np_ghost))
+      offset = 0
+    else
+      ! get device pointer for CUDA-aware MPI
+      call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%pack%buffer, &
+        [product(v_local%pack%size)])
+      ! offset needed because the device pointer represents the full vector
+      offset = v_local%pack%size(1)*vp%np_local
+    end if
 
     do ipart = 1, vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
       
       handle%nnb = handle%nnb + 1
       tag = 0
-      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack%size(1)
+      pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack%size(1) + offset
 #ifdef HAVE_MPI
       call MPI_Irecv(handle%X(recv_buffer)(pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
@@ -132,8 +141,12 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   if(batch_status(v_local) == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
-    SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
-    call accel_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
+    if(.not. accel%cuda_mpi) then
+      SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
+      call accel_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
+    else
+      call accel_get_device_pointer(handle%X(send_buffer), handle%ghost_send%pack%buffer, [nn])
+    end if
   end if
 
   select case(batch_status(v_local))
@@ -197,15 +210,20 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_ALLOCATE(status(1:MPI_STATUS_SIZE, 1:handle%nnb))
   call MPI_Waitall(handle%nnb, handle%requests(1), status(1, 1), mpi_err)
 #endif
-
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 
   if(batch_status(handle%v_local) == BATCH_DEVICE_PACKED) then
-    call accel_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
-      handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
-    SAFE_DEALLOCATE_P(handle%X(send_buffer))
-    SAFE_DEALLOCATE_P(handle%X(recv_buffer))
+    ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
+    ! synchronize the operate_map kernel for the inner points
+    call accel_finish()
+
+    if(.not. accel%cuda_mpi) then
+      call accel_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack%size(1)*handle%vp%np_ghost, &
+        handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
+      SAFE_DEALLOCATE_P(handle%X(send_buffer))
+      SAFE_DEALLOCATE_P(handle%X(recv_buffer))
+    end if
   end if
 
   call batch_end(handle%ghost_send)
