@@ -197,6 +197,8 @@ my @if_done = ();
 
 sub parse_condition {
 
+    # This routine parses a string recursively to look for 'avail*' 'and' and ','
+    # and push found requirements to @($_[1]).
 
     my $condition = $_[0];
     my @required = @{$_[1]};
@@ -205,11 +207,13 @@ sub parse_condition {
         parse_condition($1, $_[1]);
     }
 
+    # parse comma separated options
     elsif ($condition =~ /\b(\w*)\b\s+and\s+(.*)$/i ) {
         push(@{$_[1]}, $1);
         parse_condition($2, $_[1]);
     }
 
+    # parse 'and' separated options
     elsif ($condition =~ /\b(\w*)\b\s+,\s+(.*)$/i ) {
         push(@{$_[1]}, $1);
         parse_condition($2, $_[1]);
