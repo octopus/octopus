@@ -132,6 +132,7 @@ module accel_oct_m
     integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
+    logical                :: cuda_mpi
   end type accel_t
 
   type accel_mem_t
@@ -595,6 +596,29 @@ contains
     
     if(run_benchmark) then
       call opencl_check_bandwidth()
+    end if
+
+    !%Variable CudaAwareMPI
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% If Octopus was compiled with CUDA support and MPI support and if the MPI
+    !% implementation is CUDA-aware (i.e., it supports communication using device pointers),
+    !% this switch can be set to true to use the CUDA-aware MPI features. The advantage
+    !% of this approach is that it can do, e.g., peer-to-peer copies between devices without
+    !% going through the host memmory.
+    !% The default is false, except when the configure switch --enable-cudampi is set, in which
+    !% case this variable is set to true.
+    !%End
+#ifdef HAVE_CUDA_MPI
+    default = .true.
+#else
+    default = .false.
+#endif
+    call parse_variable(namespace, 'CudaAwareMPI', default, accel%cuda_mpi)
+    if(accel%cuda_mpi) then
+      call messages_write("Using CUDA-aware MPI.")
+      call messages_info()
     end if
 
     call messages_print_stress(stdout)
