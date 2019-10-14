@@ -223,6 +223,9 @@ subroutine X(ghost_update_batch_finish)(handle)
         handle%X(recv_buffer), offset = handle%v_local%pack%size(1)*handle%vp%np_local)
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
+    else
+      nullify(handle%X(send_buffer))
+      nullify(handle%X(recv_buffer))
     end if
   end if
 
