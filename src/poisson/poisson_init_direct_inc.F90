@@ -223,8 +223,8 @@ subroutine poisson_solve_direct(this, pot, rho)
                                         !<                      (= dim+1 if soft coulomb)
 
   FLOAT                :: xx1(1:MAX_DIM+1), xx2(1:MAX_DIM+1), xx3(1:MAX_DIM+1), xx4(1:MAX_DIM+1)
-  #ifdef HAVE_MPI
   FLOAT                :: xx(1:MAX_DIM+1), yy(1:MAX_DIM+1) 
+#ifdef HAVE_MPI
   FLOAT                :: xg(MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
