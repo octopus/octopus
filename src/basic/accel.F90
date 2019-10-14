@@ -82,7 +82,8 @@ module accel_oct_m
     clfft_print_error,            &
     accel_local_memory_size,      &
     accel_global_memory_size,     &
-    accel_max_size_per_dim
+    accel_max_size_per_dim,       &
+    accel_get_device_pointer
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -220,6 +221,15 @@ module accel_oct_m
       zaccel_set_kernel_arg_data,   &
       accel_set_kernel_arg_local
   end interface accel_set_kernel_arg
+
+  interface accel_get_device_pointer
+    module procedure iaccel_get_device_pointer_1
+    module procedure iaccel_get_device_pointer_2
+    module procedure daccel_get_device_pointer_1, zaccel_get_device_pointer_1
+    module procedure daccel_get_device_pointer_2, zaccel_get_device_pointer_2
+    module procedure saccel_get_device_pointer_1, caccel_get_device_pointer_1
+    module procedure saccel_get_device_pointer_2, caccel_get_device_pointer_2
+  end interface accel_get_device_pointer
 
   type(profile_t), save :: prof_read, prof_write
 
@@ -1851,7 +1861,7 @@ contains
   end function accel_max_size_per_dim
 
   ! ------------------------------------------------------
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "accel_inc.F90"
