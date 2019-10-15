@@ -53,7 +53,7 @@ AC_DEFUN([ACX_CUDA],
   LIBS="-lcudart"
 
   if test x"${enable_nvtx}" == x"yes" ; then
-    LIBS="$LIBS -ldl"
+    LIBS="$LIBS -lnvToolsExt -ldl"
   fi
 
   AC_CHECK_LIB(cuda, cuInit, [], [acx_cuda_ok=no], [$acx_cuda_save_LIBS])
