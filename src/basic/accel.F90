@@ -127,6 +127,7 @@ module accel_oct_m
     type(cl_command_queue) :: command_queue
 #endif
     type(c_ptr)            :: cublas_handle
+    type(c_ptr)            :: cuda_stream
     type(c_ptr)            :: module_map
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
@@ -377,7 +378,8 @@ contains
 
 #ifdef HAVE_CUDA
     if(idevice<0) idevice = 0
-    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, accel%cuda_stream, &
+      idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
     call messages_info(1, all_nodes = .true.)
@@ -386,7 +388,7 @@ contains
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .true.
 
-    call cublas_init(accel%cublas_handle)
+    call cublas_init(accel%cublas_handle, accel%cuda_stream)
 #endif
     
 #ifdef HAVE_OPENCL

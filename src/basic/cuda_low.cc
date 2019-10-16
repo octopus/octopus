@@ -76,7 +76,7 @@ typedef int CUdeviceptr;
 
 using namespace std;
 
-extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number, fint * rank){
+extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, CUstream ** stream, fint * device_number, fint * rank){
 
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuInit(0));
@@ -101,6 +101,7 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
   CUDA_SAFE_CALL(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
   CUDA_SAFE_CALL(cuStreamCreate(&hStream, CU_STREAM_NON_BLOCKING));
+  *stream = &hStream;
 #endif
 }
 
@@ -396,7 +397,6 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   // but it should help us to detect missing arguments.
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) free((**arg_array)[ii]);
   (**arg_array).resize(0);
- 
 #endif
 }
 
