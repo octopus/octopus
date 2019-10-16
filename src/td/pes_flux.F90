@@ -167,8 +167,6 @@ contains
     mdim   = mesh%sb%dim
     pdim   = mesh%sb%periodic_dim
 
-    call messages_experimental("PhotoElectronSpectrum with t-surff")
-
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
