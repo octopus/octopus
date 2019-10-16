@@ -88,6 +88,7 @@ program wannier90_interface
   integer              :: w90_num_exclude
   logical, allocatable :: exclude_list(:)                          ! list of excluded bands
   integer, allocatable :: band_index(:)                            ! band index after exclusion
+  logical              :: read_td_states
 
   ! scdm variables
   type(scdm_t)         :: scdm
@@ -185,6 +186,17 @@ program wannier90_interface
   w90_what = OPTION__WANNIER90FILES__W90_MMN + OPTION__WANNIER90FILES__W90_AMN + OPTION__WANNIER90FILES__W90_EIG
   call parse_variable(namespace, 'Wannier90Files', w90_what, w90_what)
 
+  !%Variable Wannier90UseTD
+  !%Type logical
+  !%Default no
+  !%Section Utilities::oct-wannier90
+  !%Description
+  !% By default oct-wannier90 uses the ground-state states to compute the necessary information.
+  !% By setting this variable to yes, oct-wannier90 will use the TD states instead. 
+  !%End
+  call parse_variable(namespace, 'Wannier90UseTD', .false., read_td_states)
+
+
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
@@ -231,8 +243,14 @@ program wannier90_interface
 
     ! normal interface run
     call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
+    if(read_td_states) then
+      call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
+    else
+      call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, sys%gr%der%mesh)
+    end if
+
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
@@ -356,8 +374,14 @@ program wannier90_interface
 
    ! normal interface run
     call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
+    if(read_td_states) then
+      call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
+    else
+      call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, sys%gr%der%mesh)
+    end if
+
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
