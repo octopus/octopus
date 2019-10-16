@@ -291,7 +291,6 @@ contains
         call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
         ! Snap the plane to the closest grid point
         border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
         
       else
         select case(mesh%sb%box_shape)
@@ -307,8 +306,9 @@ contains
         end select
         call messages_write('PES_Flux_Lsize not specified. Using default values.')
         call messages_info()
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
       end if
+
+      call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
 
     else
       !%Variable PES_Flux_Radius
