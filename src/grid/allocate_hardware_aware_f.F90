@@ -19,9 +19,9 @@
 #include "global.h"
 
 ! -----------------------------------------------------------------------
-!> This module contains interfaces for routines in allocate_special.c
+!> This module contains interfaces for routines in allocate_hardware_aware.c
 ! -----------------------------------------------------------------------
-module allocate_special_oct_m
+module allocate_hardware_aware_oct_m
   use iso_c_binding
 
   implicit none
@@ -29,45 +29,45 @@ module allocate_special_oct_m
   public ! only interfaces in this module
 
   interface
-    function dallocate_special(size) bind(c, name='dallocate_special')
+    function dallocate_hardware_aware(size) bind(c)
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: dallocate_special
-    end function dallocate_special
+      type(c_ptr) :: dallocate_hardware_aware
+    end function dallocate_hardware_aware
   end interface
 
   interface
-    function zallocate_special(size) bind(c, name='zallocate_special')
+    function zallocate_hardware_aware(size) bind(c)
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: zallocate_special
-    end function zallocate_special
+      type(c_ptr) :: zallocate_hardware_aware
+    end function zallocate_hardware_aware
   end interface
 
   interface
-    function sallocate_special(size) bind(c, name='sallocate_special')
+    function sallocate_hardware_aware(size) bind(c)
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: sallocate_special
-    end function sallocate_special
+      type(c_ptr) :: sallocate_hardware_aware
+    end function sallocate_hardware_aware
   end interface
 
   interface
-    function callocate_special(size) bind(c, name='callocate_special')
+    function callocate_hardware_aware(size) bind(c)
       import :: c_ptr, c_int
       integer(c_int), value :: size
-      type(c_ptr) :: callocate_special
-    end function callocate_special
+      type(c_ptr) :: callocate_hardware_aware
+    end function callocate_hardware_aware
   end interface
 
   interface
-    subroutine deallocate_special(array) bind(c, name='deallocate_special')
+    subroutine deallocate_hardware_aware(array) bind(c)
       import :: c_ptr
       type(c_ptr), value :: array
-    end subroutine deallocate_special
+    end subroutine deallocate_hardware_aware
   end interface
 
-end module allocate_special_oct_m
+end module allocate_hardware_aware_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -63,23 +63,23 @@ void *my_allocate(int size_bytes) {
 #endif // HAVE_CUDA
 }
 
-void *dallocate_special(int size) {
+void *dallocate_hardware_aware(int size) {
   return my_allocate(sizeof(double)*size);
 }
 
-void *zallocate_special(int size) {
+void *zallocate_hardware_aware(int size) {
   return my_allocate(sizeof(double)*2*size);
 }
 
-void *sallocate_special(int size) {
+void *sallocate_hardware_aware(int size) {
   return my_allocate(sizeof(float)*size);
 }
 
-void *callocate_special(int size) {
+void *callocate_hardware_aware(int size) {
   return my_allocate(sizeof(float)*2*size);
 }
 
-void deallocate_special(void *array) {
+void deallocate_hardware_aware(void *array) {
 #ifndef HAVE_CUDA
 #ifdef DEBUG_ALLOC
   printf("Deallocating unpinned.\n");

@@ -20,7 +20,7 @@
 
 module batch_oct_m
   use accel_oct_m
-  use allocate_special_oct_m
+  use allocate_hardware_aware_oct_m
   use blas_oct_m
   use global_oct_m
   use hardware_oct_m
@@ -221,19 +221,19 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_special(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_special(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
         nullify(this%zpsicont)
       end if
       if(associated(this%spsicont)) then
-        call deallocate_special(c_loc(this%spsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%spsicont(1,1,1)))
         nullify(this%spsicont)
       end if
       if(associated(this%cpsicont)) then
-        call deallocate_special(c_loc(this%cpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%cpsicont(1,1,1)))
         nullify(this%cpsicont)
       end if
     else
@@ -271,19 +271,19 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_special(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_special(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
         nullify(this%zpsicont)
       end if
       if(associated(this%spsicont)) then
-        call deallocate_special(c_loc(this%spsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%spsicont(1,1,1)))
         nullify(this%spsicont)
       end if
       if(associated(this%cpsicont)) then
-        call deallocate_special(c_loc(this%cpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%cpsicont(1,1,1)))
         nullify(this%cpsicont)
       end if
     else
