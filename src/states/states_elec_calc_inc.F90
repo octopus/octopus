@@ -1618,7 +1618,7 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
   type(grid_t),      intent(in)             :: gr
   type(namespace_t), intent(in)             :: namespace
   type(poisson_t),   intent(inout)          :: solver
-  type(states_elec_t), intent(in)           :: st
+  type(states_elec_t), intent(inout)        :: st
   integer,           intent(in)             :: st_min, st_max
   integer,           intent(out)            :: iindex(:,:)
   integer,           intent(out)            :: jindex(:,:)
@@ -1631,21 +1631,21 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint, ikpoint, jkpoint, ip, idim
+  integer :: iint, ikpoint, jkpoint, ip, idim, ibind
   R_TYPE  :: me
-  R_TYPE, allocatable :: nn(:), vv(:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+  R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:)
+  R_TYPE, pointer :: psii(:), psij(:), psil(:)
+  R_TYPE, allocatable :: psik(:, :)
   FLOAT :: qq(1:MAX_DIM)
   logical :: exc_k_
+  type(batch_t), pointer :: batch
 
   PUSH_SUB(X(states_elec_me_two_body))
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))
   SAFE_ALLOCATE(vv(1:gr%mesh%np))
-  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(two_body_int(1:gr%mesh%np))
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
 
   if (st%d%ispin == SPINORS) then
     call messages_not_implemented("Two-body integrals with spinors.")
@@ -1655,6 +1655,8 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 #ifdef R_TCOMPLEX
   ASSERT(present(phase))
 #endif
+
+  if(st%are_packed()) call st%unpack()
 
   ijst = 0
   iint = 1
@@ -1670,7 +1672,10 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
     ikpt = (ist_global - ist)/nst + 1
     ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
-    call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
+!    call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
+    batch => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
+    ibind = batch_inv_index(batch, (/ist+st_min-1, 1/))
+    psii => batch%states_linear(ibind)%X(psi)
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global - 1, nst) + 1
@@ -1688,20 +1693,18 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
-      call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
-
 #ifndef R_TCOMPLEX
       if(jst_global > ist_global) cycle
 #endif
       ijst=ijst+1
 
-      call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
+   !   call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
+      batch => st%group%psib(st%group%iblock(jst+st_min-1, jkpt), jkpt)
+      ibind = batch_inv_index(batch, (/jst+st_min-1, 1/))
+      psij => batch%states_linear(ibind)%X(psi)
 
       
-      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
-      do idim = 2, st%d%dim
-        nn(1:gr%mesh%np) = nn(1:gr%mesh%np) + R_CONJ(psii(1:gr%mesh%np, idim))*psij(1:gr%mesh%np, idim)
-      end do
+      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
       call X(poisson_solve)(solver, vv, nn, all_nodes=.false.)
 
       !We now put back the phase that we treated analytically using the Poisson solver
@@ -1737,16 +1740,19 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
           if(exc_k_ .and. kst /= lst) cycle
           if(exc_k_ .and. lkpt /= ikpt) cycle
 
-          call states_elec_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
-#ifdef R_TCOMPLEX
+          batch => st%group%psib(st%group%iblock(lst+st_min-1, lkpt), lkpt)
+          ibind = batch_inv_index(batch, (/lst+st_min-1, 1/))
+          psil => batch%states_linear(ibind)%X(psi)
+
           if(present(phase)) then
-            call states_elec_set_phase(st%d, psil, phase(1:gr%mesh%np, lkpt), gr%mesh%np, .false.)
+#ifdef R_TCOMPLEX
+            two_body_int(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np)*phase(1:gr%mesh%np, lkpt)            
+#endif 
+          else
+            two_body_int(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np)
           end if
-#endif
 
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np, 1)
-
-          me = X(mf_integrate)(gr%mesh, psil(:, 1))
+          me = X(mf_integrate)(gr%mesh, two_body_int(:))
 
           iindex(1,iint) =  ist+st_min-1
           iindex(2,iint) =  ikpt
@@ -1766,10 +1772,8 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
-  SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(two_body_int)
   SAFE_DEALLOCATE_A(psik)
-  SAFE_DEALLOCATE_A(psil)
 
   POP_SUB(X(states_elec_me_two_body))
 end subroutine X(states_elec_me_two_body)

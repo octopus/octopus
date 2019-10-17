@@ -20,6 +20,7 @@
 
 module singularity_oct_m
   use comm_oct_m
+  use distributed_oct_m
   use global_oct_m
   use hamiltonian_elec_base_oct_m
   use kpoints_oct_m
@@ -144,18 +145,34 @@ contains
     type(simul_box_t),         intent(in)    :: sb
 
     integer :: ik, ik2, ikpoint, Nk, Nsteps
-    integer :: ikx, iky, ikz, istep
+    integer :: ikx, iky, ikz, istep, kpt_start, kpt_end
     FLOAT :: length
     FLOAT :: kpoint(1:MAX_DIM), qpoint(1:MAX_DIM)
     FLOAT :: kvol_element
     FLOAT :: energy
+    type(distributed_t) :: dist_kpt
+    type(profile_t), save :: prof
  
     PUSH_SUB(singularity_correction)
+
+    call profiling_in(prof, "COULOMB_SINGULARITY")
 
     !At the moment this is only implemented in 3D.
     ASSERT(sb%dim == 3)
 
-    do ik = st%d%kpt%start, st%d%kpt%end
+    call distributed_nullify(dist_kpt, 0)
+    kpt_start = st%d%kpt%start
+    kpt_end = st%d%kpt%end
+
+#ifdef HAVE_MPI
+    if(.not.st%d%kpt%parallel) then
+      call distributed_init(dist_kpt, st%d%nik, MPI_COMM_WORLD, "singularity")
+      kpt_start = dist_kpt%start
+      kpt_end = dist_kpt%end
+    end if
+ #endif
+
+    do ik = kpt_start, kpt_end
       ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
       kpoint = M_ZERO
       kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpoint, absolute_coordinates = .false.) 
@@ -172,6 +189,12 @@ contains
       end do
       this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume/sb%kpoints%full%npoints
     end do
+
+    if(dist_kpt%parallel) then
+      call comm_allreduce(dist_kpt%mpi_grp%comm, this%Fk)
+    end if
+    call distributed_end(dist_kpt)
+
 
     if(this%coulomb_singularity == SINGULARITY_GENERAL) then 
       !%Variable HFSingularity_Nk
@@ -258,6 +281,7 @@ contains
       call messages_info(1)
     end if
 
+    call profiling_out(prof)
     POP_SUB(singularity_correction)
 
   contains
