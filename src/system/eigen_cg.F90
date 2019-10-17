@@ -19,6 +19,7 @@
 #include "global.h"
 
 module eigen_cg_oct_m
+  use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m

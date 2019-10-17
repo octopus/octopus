@@ -578,6 +578,163 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
 end subroutine X(states_elec_orthogonalize_single)
 
 ! ---------------------------------------------------------
+subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, &
+  against_all)
+  type(states_elec_t), intent(in)    :: st
+  type(mesh_t),        intent(in)    :: mesh
+  integer,             intent(in)    :: nst
+  integer,             intent(in)    :: iqn
+  R_TYPE,              intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
+  logical, optional,   intent(in)    :: normalize
+  logical, optional,   intent(inout) :: mask(:)      !< mask(nst)
+  R_TYPE,  optional,   intent(out)   :: overlap(:) 
+  FLOAT,   optional,   intent(out)   :: norm
+  FLOAT,   optional,   intent(in)    :: theta_fi
+  R_TYPE,  optional,   intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional,   intent(in)    :: against_all
+
+  integer :: ib, minst, maxst, ist, idim, length_ss, ibind
+  FLOAT   :: nrm2
+  R_TYPE, allocatable  :: ss(:)
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  logical :: against_all_
+  type(batch_t), pointer :: batch
+  
+  call profiling_in(prof, "GRAM_SCHMIDT_BATCH")
+  PUSH_SUB(X(states_elec_orthogonalize_single_batch))
+
+  ASSERT(nst <= st%nst)
+  ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
+
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
+  end if
+  SAFE_ALLOCATE(ss(1:length_ss))
+  ! Check length of optional arguments
+  if(present(mask)) then
+    ASSERT(ubound(mask, dim=1) >= length_ss)
+  end if
+  if(present(overlap)) then
+    ASSERT(ubound(overlap, dim=1) >= length_ss)
+  end if
+  if(present(beta_ij)) then
+    ASSERT(ubound(beta_ij, dim=1) >= length_ss)
+  end if
+
+  ss = R_TOTYPE(M_ZERO)
+
+  do ib = st%group%block_start, st%group%block_end
+    minst = states_elec_block_min(st, ib)
+    maxst = min(states_elec_block_max(st, ib), length_ss)
+    if(minst > length_ss) cycle
+
+    if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
+    if(present(mask)) then
+      if(all(mask(minst:maxst) == .true.)) cycle
+    end if
+ 
+    batch => st%group%psib(ib, iqn)
+    call X(mesh_batch_mf_dotp)(mesh, batch, phi, ss(minst:maxst), reduce = .false., nst = maxst-minst+1)
+
+    !In case some of the states in the batche need to be skipped
+    do ist = minst, maxst
+      if(ist > length_ss) cycle
+      if(skip_this_iteration(ist, nst, against_all_)) ss(ist) = R_TOTYPE(M_ZERO)
+      if(present(mask)) then
+        if(mask(ist)) ss(ist) = R_TOTYPE(M_ZERO)
+      end if
+    end do    
+  end do
+    
+  if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
+    call profiling_out(reduce_prof)
+  end if
+
+  if(present(mask)) then
+    do ist = 1, st%nst
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
+      mask(ist) = (abs(ss(ist)) <= M_EPSILON)
+    end do
+  end if
+
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
+  
+  if(present(theta_fi)) then
+    if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
+  end if
+
+  do ib = st%group%block_start, st%group%block_end
+    minst = states_elec_block_min(st, ib)
+    maxst = min(states_elec_block_max(st, ib), length_ss)
+    if(minst > length_ss) cycle
+    batch => st%group%psib(ib, iqn)
+
+    if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
+    if(present(mask)) then
+      if(all(mask(minst:maxst) == .true.)) cycle
+    end if
+
+    call X(mesh_batch_mf_axpy)(mesh, -ss, batch, phi, nst = maxst-minst+1) 
+
+  end do
+
+  if(optional_default(normalize, .false.)) then
+    call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
+  end if
+
+  if(present(overlap)) then
+    overlap(1:length_ss) = ss(1:length_ss)
+  end if
+
+  if(present(norm)) then
+    ASSERT(present(normalize))
+    ASSERT(normalize)
+    norm = nrm2
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+
+  POP_SUB(X(states_elec_orthogonalize_single_batch))
+  call profiling_out(prof)
+
+  contains
+   logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
+
+    logical function skip_this_batch(minst, maxst, nst, against_all_states)
+      integer, intent(in) :: minst, maxst, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_batch = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(minst > nst) skip_this_batch = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(minst == nst + 1 .and. maxst == nst + 1) skip_this_batch = .true.
+      end if
+    end function skip_this_batch
+end subroutine X(states_elec_orthogonalize_single_batch)
+
+! ---------------------------------------------------------
 !> Orthonormalizes phi to the nst orbitals psi.
 !! It also permits doing only the orthogonalization (no normalization).
 !! And one can pass an extra optional argument, mask, which:
