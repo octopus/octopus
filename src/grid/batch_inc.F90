@@ -108,7 +108,7 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
 
   nst = st_end - st_start + 1
   if(optional_default(special, .false.)) then
-    call c_f_pointer(X(allocate_special)(np*this%dim*nst), this%X(psicont), [np,this%dim,nst])
+    call c_f_pointer(X(allocate_hardware_aware)(np*this%dim*nst), this%X(psicont), [np,this%dim,nst])
     this%special_memory = .true.
   else
     SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:nst))
@@ -135,7 +135,7 @@ subroutine X(batch_allocate_temporary)(this)
   ASSERT(.not. associated(this%X(psicont)))
   
   if(this%special_memory) then
-    call c_f_pointer(X(allocate_special)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
+    call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
   else
     SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
   end if
