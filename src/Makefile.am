@@ -533,7 +533,8 @@ scf_f_srcs =                                 \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
 	scf/rdmft.F90                        \
-	scf/scf.F90
+	scf/scf.F90                          \
+        scf/unocc.F90
 
 scf_srcs = $(scf_f_srcs)
 
@@ -639,7 +640,6 @@ bin_PROGRAMS = octopus
 octopus_f_srcs =                             \
 	main/invert_ks.F90                   \
 	main/memory.F90                      \
-	main/unocc.F90                       \
 	main/static_pol.F90                  \
 	main/geom_opt.F90                    \
 	main/phonons_fd.F90                  \

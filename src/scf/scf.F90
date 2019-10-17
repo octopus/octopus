@@ -44,8 +44,8 @@ module scf_oct_m
   use mix_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -80,12 +80,16 @@ module scf_oct_m
   implicit none
 
   private
-  public ::             &
-    scf_t,              &
-    scf_init,           &
-    scf_mix_clear,      &
-    scf_run,            &
-    scf_end
+  public ::              &
+    scf_t,               &
+    scf_init,            & 
+    scf_mix_clear,       &
+    scf_run,             &
+    scf_end,             &
+    scf_state_info,      &
+    scf_init_eigensolver,&
+    scf_end_eigensolver, &
+    scf_print_mem_use
 
   integer, public, parameter :: &
     VERB_NO      = 0,   &
@@ -379,13 +383,7 @@ contains
       call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
-    ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st)
-
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
+    call scf_init_eigensolver(scf%eigens, namespace, gr, st, geo, mc)
 
     !%Variable SCFinLCAO
     !%Type logical
@@ -494,12 +492,8 @@ contains
     
     PUSH_SUB(scf_end)
 
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      call multigrid_end(scf%gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(scf%gr%mgrid_prec)
-    end if
+    call scf_end_eigensolver(scf%eigens, scf%gr)
 
-    call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
     nullify(scf%mixfield)
@@ -1109,15 +1103,7 @@ contains
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
 
-        if(conf%report_memory) then
-          mem = loct_get_memory_usage()/(CNST(1024.0)**2)
-#ifdef HAVE_MPI
-          call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
-          mem = mem_tmp
-#endif
-          write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
-          call messages_info(1)
-        end if
+        call scf_print_mem_use()
 
         call messages_print_stress(stdout)
 
@@ -1412,6 +1398,84 @@ contains
     end subroutine write_convergence_file
     
   end subroutine scf_run
+
+  ! ---------------------------------------------------------
+  subroutine scf_init_eigensolver(eigens, namespace, gr, st, geo, mc)
+    type(eigensolver_t),  intent(inout) :: eigens
+    type(namespace_t),    intent(in)    :: namespace
+    type(grid_t),         intent(inout) :: gr
+    type(states_elec_t),  intent(in)    :: st
+    type(geometry_t),     intent(in)    :: geo
+    type(multicomm_t),    intent(in)    :: mc
+
+    PUSH_SUB(scf_init_eigensolver)
+
+    ! now the eigensolver stuff
+    call eigensolver_init(eigens, namespace, gr, st)
+
+    if(preconditioner_is_multigrid(eigens%pre)) then
+      SAFE_ALLOCATE(gr%mgrid_prec)
+      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+    end if
+
+    POP_SUB(scf_init_eigensolver)
+  end subroutine scf_init_eigensolver
+
+  ! ---------------------------------------------------------
+  subroutine scf_end_eigensolver(eigens, gr)
+    type(eigensolver_t),  intent(inout) :: eigens
+    type(grid_t),         intent(inout) :: gr
+
+    PUSH_SUB(scf_end_eigensolver)
+
+    if(preconditioner_is_multigrid(eigens%pre)) then
+      call multigrid_end(gr%mgrid_prec)
+      SAFE_DEALLOCATE_P(gr%mgrid_prec)
+    end if
+
+    call eigensolver_end(eigens)
+
+    POP_SUB(scf_end_eigensolver)
+  end subroutine scf_end_eigensolver
+
+  ! ---------------------------------------------------------
+  subroutine scf_state_info(st)
+    class(states_abst_t), intent(in) :: st
+
+    PUSH_SUB(scf_state_info)
+
+    if (states_are_real(st)) then
+      call messages_write('Info: SCF using real wavefunctions.')
+    else
+      call messages_write('Info: SCF using complex wavefunctions.')
+    end if
+    call messages_info()
+
+    POP_SUB(scf_state_info)
+
+  end subroutine scf_state_info
+
+  ! ---------------------------------------------------------
+  subroutine scf_print_mem_use()
+    FLOAT :: mem
+#ifdef HAVE_MPI
+    FLOAT :: mem_tmp
+#endif
+
+    PUSH_SUB(scf_print_mem_use)
+
+    if(conf%report_memory) then
+      mem = loct_get_memory_usage()/(CNST(1024.0)**2)
+#ifdef HAVE_MPI
+      call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
+      mem = mem_tmp
+#endif
+      write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
+      call messages_info(1)
+    end if
+
+    POP_SUB(scf_print_mem_use)
+  end subroutine scf_print_mem_use
 
 end module scf_oct_m
 
