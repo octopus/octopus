@@ -135,7 +135,7 @@ program wannier90_interface
   end if
 
   !%Variable Wannier90Mode
-  !%Type flag
+  !%Type integer
   !%Default none
   !%Section Utilities::oct-wannier90
   !%Description
@@ -197,22 +197,6 @@ program wannier90_interface
   call parse_variable(namespace, 'Wannier90UseTD', .false., read_td_states)
 
 
-
-  ! sanity checks
-  if(w90_setup .and. w90_output) then
-    message(1) = 'oct-wannier90: wannier90_setup and wannier90_output are mutually exclusive'
-    call messages_fatal(1)
-  end if
-  if(w90_setup .and. w90_wannier) then
-    message(1) = 'oct-wannier90: wannier90_setup and wannier90_wannier are mutually exclusive'
-    call messages_fatal(1)
-  end if
-  if(w90_wannier .and. w90_output) then
-    message(1) = 'oct-wannier90: wannier90_wannier and wannier90_output are mutually exclusive'
-    call messages_fatal(1)
-  end if
-
-
   if(sys%gr%sb%kpoints%use_symmetries) then
     message(1) = 'oct-wannier90: k-points symmetries are not allowed'
     call messages_fatal(1)
@@ -263,21 +247,21 @@ program wannier90_interface
     call restart_end(restart)
 
     if(w90_scdm) then
-      !%Variable scdm_sigma
+      !%Variable SCDMsigma
       !%Type float
       !%Section Utilities::oct-wannier90  
       !%Description
       !% Broadening of SCDM smearing function
-      !%End                                                                                                                                                                       
-      call parse_variable(namespace, 'scdm_sigma', CNST(0.2), scdm_sigma)
+      !%End
+      call parse_variable(namespace, 'SCDMsigma', CNST(0.2), scdm_sigma)
 
-      !%Variable scdm_mu
+      !%Variable SCDMmu
       !%Type float
       !%Section Utilities::oct-wannier90
       !%Description
       !% Energy range up to which states are considered for SCDM 
       !%End
-      call parse_variable(namespace, 'scdm_mu', M_HUGE, scdm_mu)
+      call parse_variable(namespace, 'SCDMmu', M_HUGE, scdm_mu)
 
       nik = w90_num_kpts
       SAFE_ALLOCATE(jpvt(1:sys%gr%der%mesh%np_global))
