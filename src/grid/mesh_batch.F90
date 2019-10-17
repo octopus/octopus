@@ -53,7 +53,11 @@ module mesh_batch_oct_m
     zmesh_batch_exchange_points,    &
     mesh_batch_nrm2,                &
     dmesh_batch_orthogonalization,  &
-    zmesh_batch_orthogonalization
+    zmesh_batch_orthogonalization,  &
+    dmesh_batch_mf_dotp,            &
+    zmesh_batch_mf_dotp,            &
+    dmesh_batch_mf_axpy,            &
+    zmesh_batch_mf_axpy
 
 contains
 

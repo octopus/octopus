@@ -445,6 +445,155 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   POP_SUB(X(mesh_batch_dotp_vector))
 end subroutine X(mesh_batch_dotp_vector)
 
+! --------------------------------------------------------------------------
+
+subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
+  type(mesh_t),      intent(in)    :: mesh
+  type(batch_t),     intent(in)    :: aa
+  R_TYPE,            intent(in)    :: psi(:,:) 
+  R_TYPE,            intent(inout) :: dot(:)
+  logical, optional, intent(in)    :: reduce
+  integer, optional, intent(in)    :: nst
+
+  integer :: ist, indb, idim, ip, nst_
+  type(profile_t), save :: prof, profcomm
+  R_TYPE, allocatable :: tmp(:,:), phi(:)
+  R_TYPE :: temp
+
+  PUSH_SUB(X(mesh_batch_mf_dotp))
+  call profiling_in(prof, "DOTPV_MF_BATCH")
+
+  ASSERT(aa%dim == ubound(psi,dim=2))
+
+  ASSERT(batch_status(aa) /= BATCH_DEVICE_PACKED)
+
+  nst_ = aa%nst
+  if(present(nst)) nst_ = nst 
+
+  select case(batch_status(aa))
+  case(BATCH_NOT_PACKED)
+    do ist = 1, nst_
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), psi(1:mesh%np,idim),& 
+           reduce = .false.)
+      end do
+    end do
+
+  case(BATCH_PACKED)
+
+    SAFE_ALLOCATE(tmp(1:nst_*aa%dim, aa%dim))
+    SAFE_ALLOCATE(phi(1:mesh%np))
+
+    tmp = M_ZERO
+
+    !Here we compute the complex conjuguate of the dot product first and then
+    !we take the conjugate at the end
+    
+    do idim = 1, aa%dim
+      if(mesh%use_curvilinear) then
+        !$omp parallel do
+        do ip = 1, mesh%np
+          phi(ip) = mesh%vol_pp(ip)*R_CONJ(psi(ip, idim))
+        end do
+      else
+        !$omp parallel do
+        do ip = 1, mesh%np
+          phi(ip) = R_CONJ(psi(ip, idim))
+        end do
+      end if
+
+      !Due to how BLAS implements gemv, with no incx for the A matrix, 
+      !we have to perform two complete passes for the spinor case
+      call blas_gemv('N', nst_*aa%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), aa%pack%X(psi)(idim,1), &
+                            aa%nst_linear, phi(1), 1, R_TOTYPE(M_ZERO), tmp(idim,idim), 1)
+    end do
+
+    do ist = 1, nst_
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        dot(ist) = dot(ist) + mesh%volume_element*R_CONJ(tmp(indb, idim))
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(phi)
+
+  end select
+
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(profcomm, "DOTPV_MF_BATCH_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
+    call profiling_out(profcomm)
+  end if
+  
+  call profiling_count_operations(nst_*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(batch_type(aa))/types_get_size(TYPE_FLOAT))
+
+  call profiling_out(prof)
+  POP_SUB(X(mesh_batch_mf_dotp))
+end subroutine X(mesh_batch_mf_dotp)
+
+! --------------------------------------------------------------------------
+! This routines adds a contain of a batch, weighted, to a single mesh function
+subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
+  type(mesh_t),      intent(in)    :: mesh
+  type(batch_t),     intent(in)    :: xx
+  R_TYPE,            intent(inout) :: psi(:,:) 
+  R_TYPE,            intent(in)    :: aa(:)
+  integer, optional, intent(in)    :: nst
+
+  integer :: ist, indb, idim, ip, nst_
+  type(profile_t), save :: prof
+  R_TYPE, allocatable :: alpha(:)
+
+  PUSH_SUB(X(mesh_batch_mf_axpy))
+  call profiling_in(prof, "AXPY_MF_BATCH")
+
+  ASSERT(xx%dim == ubound(psi,dim=2))
+
+  ASSERT(batch_status(xx) /= BATCH_DEVICE_PACKED)
+
+  nst_ = xx%nst
+  if(present(nst)) nst_ = nst
+
+
+  select case(batch_status(xx))
+  case(BATCH_NOT_PACKED)
+    do ist = 1, nst_
+      do idim = 1, xx%dim
+        indb = batch_ist_idim_to_linear(xx, (/ist, idim/))
+        if(abs(aa(batch_linear_to_ist(xx,indb))) < M_EPSILON) cycle
+        call lalg_axpy(mesh%np, aa(batch_linear_to_ist(xx,indb)), xx%states_linear(indb)%X(psi), psi(1:mesh%np, idim))
+      end do
+    end do
+
+  case(BATCH_PACKED)
+ 
+    SAFE_ALLOCATE(alpha(1:nst_*xx%dim))
+
+    do idim = 1, xx%dim
+      !Due to how BLAS implements gemv, with no incx for the A matrix, 
+      !we have to perform two complete passes for the spinor case
+      alpha = M_ZERO
+      do ist = idim, nst_*xx%dim, xx%dim
+        alpha(ist) = aa(batch_linear_to_ist(xx,ist))
+      end do
+      call blas_gemv('T', nst_*xx%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(idim,1), &
+                            xx%nst_linear, alpha(idim), 1, R_TOTYPE(M_ONE), psi(1,idim), 1)
+    end do
+
+    SAFE_DEALLOCATE_A(alpha)
+
+  end select
+
+  call profiling_out(prof)
+  POP_SUB(X(mesh_batch_mf_axpy))
+end subroutine X(mesh_batch_mf_axpy)
+
+
+
 !--------------------------------------------------------------------------------------
 
 !> This functions exchanges points of a mesh according to a certain
