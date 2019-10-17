@@ -53,7 +53,7 @@ contains
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
     type(states_elec_t),      intent(inout) :: st
-    type(propagator_t),       intent(inout) :: tr
+    type(propagator_elec_t),       intent(inout) :: tr
     FLOAT,                    intent(in)    :: time, dt
     type(ion_dynamics_t),     intent(inout) :: ions
     type(geometry_t),         intent(inout) :: geo

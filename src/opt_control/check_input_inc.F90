@@ -22,7 +22,7 @@
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(sys, tr)
     type(system_t),      intent(in) :: sys
-    type(propagator_t),  intent(in) :: tr
+    type(propagator_elec_t),  intent(in) :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
 

@@ -49,7 +49,7 @@ contains
     type(namespace_t),                intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_elec_t),       target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale
@@ -57,7 +57,7 @@ contains
     type(geometry_t),                 intent(inout) :: geo
     logical,                          intent(in)    :: move_ions
 
-    PUSH_SUB(propagator_dt.exponential_midpoint)
+    PUSH_SUB(propagator_elec_dt.exponential_midpoint)
 
     ! the half step of this propagator screws with the gauge field kick
     ASSERT(hm%ep%gfield%with_gauge_field .eqv. .false.)
@@ -87,7 +87,7 @@ contains
 
     call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr%mesh)
 
-    POP_SUB(propagator_dt.exponential_midpoint)
+    POP_SUB(propagator_elec_dt.exponential_midpoint)
   end subroutine exponential_midpoint
 ! ---------------------------------------------------------
 

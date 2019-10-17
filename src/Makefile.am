@@ -551,7 +551,8 @@ td_f_srcs =                                 \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
-	td/propagator.F90                   \
+	td/propagator_elec.F90              \
+	td/propagator_mxll.F90              \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
 	td/propagator_rk.F90                \

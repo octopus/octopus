@@ -50,7 +50,7 @@ module propagator_cn_oct_m
 
   type(mesh_t),             pointer, private :: mesh_p
   type(hamiltonian_elec_t), pointer, private :: hm_p
-  type(propagator_t),       pointer, private :: tr_p
+  type(propagator_elec_t),       pointer, private :: tr_p
   integer,                           private :: ik_op, ist_op, dim_op
   FLOAT,                             private :: t_op, dt_op
 
@@ -63,7 +63,7 @@ contains
     type(namespace_t),                intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_elec_t),       target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions
@@ -76,7 +76,7 @@ contains
     FLOAT :: cgtol = CNST(1.0e-12)
     logical :: converged
 
-    PUSH_SUB(propagator_dt.td_crank_nicolson)
+    PUSH_SUB(propagator_elec_dt.td_crank_nicolson)
 
     !TODO: Add gauge field support
     ASSERT(.not.gauge_field_is_applied(hm%ep%gfield))
@@ -177,7 +177,7 @@ contains
     SAFE_DEALLOCATE_A(zpsi_rhs)
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(rhs)
-    POP_SUB(propagator_dt.td_crank_nicolson)
+    POP_SUB(propagator_elec_dt.td_crank_nicolson)
 
   end subroutine td_crank_nicolson
   ! ---------------------------------------------------------

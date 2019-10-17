@@ -19,17 +19,17 @@
 #include "global.h"
 
 module propagator_base_oct_m
-  use exponential_oct_m
+  use exponential_oct_m 
+  use propagation_ops_elec_oct_m
   use potential_interpolation_oct_m
   use sparskit_oct_m
-  use propagation_ops_elec_oct_m
   
   implicit none
 
   private
   public ::                            &
-     propagator_t,                     &
-     propagator_mxll_t
+    propagator_abst_t,                 &
+    propagator_elec_t
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -45,10 +45,14 @@ module propagator_base_oct_m
     PROP_EXPLICIT_RUNGE_KUTTA4   = 15, &
     PROP_CFMAGNUS4               = 16
 
-  type propagator_t
+  type :: propagator_abst_t
+     integer             :: method         !< Which evolution method to use.
+     type(exponential_t) :: te             !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
+     FLOAT               :: scf_threshold
+  end type propagator_abst_t
+
+  type, extends(propagator_abst_t) :: propagator_elec_t
     ! Components are public by default
-    integer             :: method           !< Which evolution method to use.
-    type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     !> Storage of the KS potential of previous iterations.
     type(potential_interpolation_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
@@ -56,29 +60,8 @@ module propagator_base_oct_m
     integer             :: scf_propagation_steps 
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
-    FLOAT               :: scf_threshold
-    
     type(propagation_ops_elec_t) :: propagation_ops_elec
-  end type propagator_t
-
-  type propagator_mxll_t
-    integer             :: maxwell_tr_method
-    integer             :: maxwell_op_method
-    logical             :: maxwell_bc_add_ab_region  = .false.
-    logical             :: maxwell_bc_zero           = .false.
-    logical             :: maxwell_bc_constant       = .false.
-    logical             :: maxwell_bc_mirror_pec     = .false.
-    logical             :: maxwell_bc_mirror_pmc     = .false.
-    logical             :: maxwell_bc_periodic       = .false.
-    logical             :: maxwell_bc_plane_waves    = .false.
-    logical             :: maxwell_bc_medium         = .false.
-    type(exponential_t) :: maxwell_te
-    FLOAT               :: maxwell_scf_threshold
-    integer             :: maxwell_inter_steps
-    FLOAT               :: maxwell_delay_time
-    logical             :: maxwell_plane_waves_in_box
-    integer             :: maxwell_tr_etrs_approx
-  end type propagator_mxll_t
+ end type propagator_elec_t
 
 end module propagator_base_oct_m
 

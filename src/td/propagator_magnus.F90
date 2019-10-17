@@ -56,7 +56,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_elec_t),       target, intent(inout) :: tr
     type(namespace_t),                intent(in)    :: namespace
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
@@ -66,7 +66,7 @@ contains
     FLOAT, allocatable :: vaux(:, :, :), pot(:)
     CMPLX, allocatable :: psi(:, :)
 
-    PUSH_SUB(propagator_dt.td_magnus)
+    PUSH_SUB(propagator_elec_dt.td_magnus)
 
     ASSERT(.not. family_is_mgga_with_exc(hm%xc))
 
@@ -115,7 +115,7 @@ contains
     call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(vaux)
-    POP_SUB(propagator_dt.td_magnus)
+    POP_SUB(propagator_elec_dt.td_magnus)
   end subroutine td_magnus
 
 
@@ -127,7 +127,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_elec_t),       target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions
@@ -143,11 +143,11 @@ contains
       call messages_fatal(1)
     end if
 
-    PUSH_SUB(propagator_dt.td_cfmagnus4)
+    PUSH_SUB(propagator_elec_dt.td_cfmagnus4)
 
     if(iter < 4) then
       call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
-      POP_SUB(propagator_dt.td_cfmagnus4)
+      POP_SUB(propagator_elec_dt.td_cfmagnus4)
       return
     end if
 
@@ -180,7 +180,7 @@ contains
 
     SAFE_DEALLOCATE_A(vhxc1)
     SAFE_DEALLOCATE_A(vhxc2)
-    POP_SUB(propagator_dt.td_cfmagnus4)
+    POP_SUB(propagator_elec_dt.td_cfmagnus4)
   end subroutine td_cfmagnus4
 
 end module propagator_magnus_oct_m
