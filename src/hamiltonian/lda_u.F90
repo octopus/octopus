@@ -83,7 +83,9 @@ module lda_u_oct_m
        dlda_u_force,                    &
        zlda_u_force,                    &
        lda_u_write_info,                &
-       compute_ACBNO_U_kanamori
+       compute_ACBNO_U_kanamori,        &
+       dcompute_dftu_energy,            &
+       zcompute_dftu_energy
 
 
   type lda_u_t

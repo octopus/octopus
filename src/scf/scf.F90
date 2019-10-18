@@ -628,7 +628,7 @@ contains
       end if
 
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_load(restart_load, hm%lda_u, st, ierr) 
+        call lda_u_load(restart_load, hm%lda_u, st, hm%energy%dft_u, ierr) 
         if (ierr /= 0) then
           message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
           call messages_warning(1)

@@ -790,7 +790,7 @@ contains
         !In this case we should reload GS wavefunctions 
         if(sys%hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
           call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
-          call lda_u_load(restart_frozen, sys%hm%lda_u, st, ierr, occ_only = .true.)
+          call lda_u_load(restart_frozen, sys%hm%lda_u, st, sys%hm%energy%dft_u, ierr, occ_only = .true.)
           call restart_end(restart_frozen)
         end if
       end if
@@ -811,7 +811,7 @@ contains
         !In this case we should reload GS wavefunctions
         if(sys%hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
           call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
-          call lda_u_load(restart_frozen, sys%hm%lda_u, st, ierr, u_only = .true.)
+          call lda_u_load(restart_frozen, sys%hm%lda_u, st, sys%hm%energy%dft_u, ierr, u_only = .true.)
           call restart_end(restart_frozen)    
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
           call messages_info(1)
