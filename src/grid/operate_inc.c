@@ -322,6 +322,10 @@
 
   } /* l */
 
+  // this fence instruction is needed to ensure correctness when using non-temporal stores
+#if defined(ALIGNED) && defined(FENCE)
+  FENCE;
+#endif
 }
 
 #undef LOAD

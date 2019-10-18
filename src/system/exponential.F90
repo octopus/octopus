@@ -589,7 +589,7 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2)
+  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -597,9 +597,12 @@ contains
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
     type(batch_t), target, optional, intent(inout) :: psib2
-    FLOAT, optional,                 intent(in)    :: deltat2
+    FLOAT,                 optional, intent(in)    :: deltat2
+    FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+    logical,               optional, intent(in)    :: imag_time
     
     integer :: ii, ist
+    CMPLX :: deltat_, deltat2_
     CMPLX, pointer :: psi(:, :), psi2(:, :)
     logical :: phase_correction
 
@@ -608,15 +611,30 @@ contains
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
 
-    
+    if (optional_default(imag_time, .false.)) then
+      select case(te%exp_method)
+      case(EXP_TAYLOR, EXP_LANCZOS)
+        deltat_ = M_zI*deltat
+        if (present(deltat2)) deltat2_ = M_zI*deltat2
+      case default
+        write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
+        write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
+        write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
+        call messages_fatal(3)
+      end select
+    else
+      deltat_ = TOCMPLX(deltat, M_ZERO)
+      if (present(deltat2)) deltat2_ = TOCMPLX(deltat2, M_ZERO)
+    end if
+
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
     if(accel_is_enabled()) phase_correction = .false.
 
-    if (te%exp_method == EXP_TAYLOR .or. &
-          (te%exp_method == EXP_LANCZOS.and..not. hamiltonian_elec_inh_term(hm)&
-           .and..not. present(psib2))) then 
+    if ( te%exp_method == EXP_TAYLOR .or. &
+        (te%exp_method == EXP_CHEBYSHEV .and. .not.present(psib2)) .or. &
+        (te%exp_method == EXP_LANCZOS .and..not. hamiltonian_elec_inh_term(hm) .and..not. present(psib2))) then
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
      !will be treated as a phase correction in the Hamiltonian
       if(phase_correction) then
@@ -628,6 +646,8 @@ contains
         call taylor_series_batch()
       case(EXP_LANCZOS) 
         call lanczos_batch()
+      case(EXP_CHEBYSHEV)
+        call cheby_batch()
       end select
 
       if(phase_correction) then
@@ -661,7 +681,7 @@ contains
         else
           psi => psib%states(ii)%zpsi
         end if
-        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat)
+        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat, vmagnus=vmagnus, imag_time=imag_time)
         if (batch_status(psib) /= BATCH_NOT_PACKED) then
           call batch_set_state(psib, ii, mesh%np, psi)
         end if
@@ -673,7 +693,7 @@ contains
           else
             psi2 => psib2%states(ii)%zpsi
           end if
-          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2)
+          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2, vmagnus=vmagnus, imag_time=imag_time)
           if (batch_status(psib2) /= BATCH_NOT_PACKED) then
             call batch_set_state(psib2, ii, mesh%np, psi2)
           end if
@@ -705,11 +725,6 @@ contains
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_pack(psib)
-        if(present(psib2)) call batch_pack(psib2, copy = .false.)
-      end if
-
       call batch_copy(psib, psi1b)
       call batch_copy(psib, hpsi1b)
 
@@ -720,8 +735,8 @@ contains
       if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
-        zfact = zfact*(-M_zI*deltat)/iter
-        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
+        zfact = zfact*(-M_zI*deltat_)/iter
+        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2_)/iter
         zfact_is_real = .not. zfact_is_real
         ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
         !  in runaway case the problem is really hard to trace back: the positions
@@ -729,9 +744,9 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_elec_apply_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
         else
-          call zhamiltonian_elec_apply_batch(hm, mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
         end if
         
         if(zfact_is_real) then
@@ -749,16 +764,10 @@ contains
       call batch_end(psi1b)
       call batch_end(hpsi1b)
       
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        if(present(psib2)) call batch_unpack(psib2)
-        call batch_unpack(psib)
-      end if
-
       call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
       
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
-
     end subroutine taylor_series_batch
 
 
@@ -787,10 +796,6 @@ contains
         return
       end if
 
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_pack(psib)
-      end if
-
       SAFE_ALLOCATE(vb(1:te%exp_order+1))
       do iter = 1, te%exp_order+1
         call batch_copy(psib, vb(iter))
@@ -807,7 +812,7 @@ contains
       do iter = 1, te%exp_order
 
         !to apply the Hamiltonian
-        call zhamiltonian_elec_apply_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
+        call operate_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
 
         if(hm%is_hermitian()) then
           l = max(1, iter - 1)
@@ -821,7 +826,7 @@ contains
             gs_scheme = te%arnoldi_gs)
 
         do ii = 1, psib%nst
-          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+          call zlalg_exp(iter, -M_zI*deltat_, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
 
           res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
         end do !ii
@@ -865,17 +870,75 @@ contains
       SAFE_DEALLOCATE_A(res)
       SAFE_DEALLOCATE_A(norm)
 
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_unpack(psib)
-      end if
-
       call profiling_out(prof)
 
       POP_SUB(exponential_apply_batch.lanczos_batch)
     end subroutine lanczos_batch
 
+    subroutine cheby_batch()
+      integer :: j
+      CMPLX :: zfact
+      type(batch_t) :: psi0, psi1, psi2
+      type(profile_t), save :: prof
+
+      PUSH_SUB(exponential_apply_batch.cheby_batch)
+      call profiling_in(prof, "EXP_CHEBY_BATCH")
+
+      call batch_copy(psib, psi0)
+      call batch_copy(psib, psi1)
+      call batch_copy(psib, psi2)
+      call batch_set_zero(psi0)
+      call batch_set_zero(psi1)
+
+      do j = te%exp_order - 1, 0, -1
+        call batch_copy_data(mesh%np, psi1, psi2)
+        call batch_copy_data(mesh%np, psi0, psi1)
+
+        call operate_batch(hm, mesh, psi1, psi0, ik, set_phase = .not.phase_correction, vmagnus=vmagnus)
+        zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
+
+        call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
+        call batch_scal(mesh%np, M_TWO/hm%spectral_half_span, psi0)
+        call batch_axpy(mesh%np, zfact, psib, psi0)
+        call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
+      end do
+
+      call batch_copy_data(mesh%np, psi0, psib)
+      call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
+      call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
+
+      call batch_end(psi0)
+      call batch_end(psi1)
+      call batch_end(psi2)
+
+      call profiling_out(prof)
+
+      POP_SUB(exponential_apply_batch.cheby_batch)
+    end subroutine cheby_batch
+
   end subroutine exponential_apply_batch
 
+
+  subroutine operate_batch(hm, mesh, psib, hpsib, ik, set_phase, vmagnus)
+    type(hamiltonian_elec_t),        intent(inout) :: hm
+    type(mesh_t),                    intent(in)    :: mesh
+    type(batch_t),                   intent(inout) :: psib
+    type(batch_t),                   intent(inout) :: hpsib
+    integer,                         intent(in)    :: ik
+    logical,                         intent(in)    :: set_phase
+    FLOAT,                 optional, intent(in)    :: vmagnus(mesh%np, hm%d%nspin, 2)
+
+    PUSH_SUB(operate_batch)
+
+    if (present(vmagnus)) then
+      call zhamiltonian_elec_apply_magnus(hm, mesh, psib, hpsib, ik, vmagnus, set_phase = set_phase)
+    else
+      call zhamiltonian_elec_apply_batch(hm, mesh, psib, hpsib, ik, set_phase = set_phase)
+    end if
+
+    POP_SUB(operate_batch)
+  end subroutine operate_batch
+  
   ! ---------------------------------------------------------
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the

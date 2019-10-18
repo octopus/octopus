@@ -34,7 +34,11 @@ AC_DEFUN([ACX_CUDA],
   if test x"$CFLAGS_CUDA" = x; then
     case $with_cuda_prefix in
       "") CFLAGS_CUDA="-I/usr/include" ;;
-      *)  CFLAGS_CUDA="-I$with_cuda_prefix/include" ;;
+      *)  CFLAGS_CUDA="-I$with_cuda_prefix/include"
+          if test x"${enable_nvtx}" == x"yes" ; then
+            CFLAGS_CUDA="-I$with_cuda_prefix/include/nvtx3 $CFLAGS_CUDA"
+          fi
+          ;;
     esac
   fi
 
@@ -46,7 +50,11 @@ AC_DEFUN([ACX_CUDA],
     LDFLAGS=""
   fi
 
-  LIBS=""
+  LIBS="-lcudart"
+
+  if test x"${enable_nvtx}" == x"yes" ; then
+    LIBS="$LIBS -lnvToolsExt -ldl"
+  fi
 
   AC_CHECK_LIB(cuda, cuInit, [], [acx_cuda_ok=no], [$acx_cuda_save_LIBS])
   AC_CHECK_LIB(nvrtc, nvrtcCreateProgram, [], [acx_cuda_ok=no], [$acx_cuda_save_LIBS])

@@ -79,6 +79,8 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
+    dhamiltonian_elec_apply_magnus,       &
+    zhamiltonian_elec_apply_magnus,       &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
@@ -750,31 +752,41 @@ contains
 
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
-        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        end do
+
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
           if (this%pcm%solute) then
-            forall (ip = 1:mesh%np)  
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-            end forall
+            end do
           end if
           if (this%pcm%localf) then
-            forall (ip = 1:mesh%np)  
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_ext_rs(ip)
-            end forall
+            end do
           end if 
         end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
-          forall (ip = 1:mesh%np)
+          !$omp parallel do simd schedule(static)
+          do ip = 1, mesh%np
             this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
-          end forall
+          end do
         end if
 
       else !Spinors 
-        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        end do
           
       end if
 
@@ -797,9 +809,12 @@ contains
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
           call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
-          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-            this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
-          end forall
+          !$omp parallel do schedule(static)
+          do ip = 1, mesh%np
+            do idir = 1, mesh%sb%dim
+              this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
+            end do
+          end do
           ! and the magnetic field
           call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
@@ -832,17 +847,20 @@ contains
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-        this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
-      end forall
+      !$omp parallel do schedule(static)
+      do ip = 1, mesh%np
+        do idir = 1, mesh%sb%dim
+          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+        end do
+      end do
     end if
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
-      forall (idir = 1:3)
+      do idir = 1, 3
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
-      end forall
+      end do
     end if
 
     call hamiltonian_elec_base_update(this%hm_base, mesh)
@@ -895,16 +913,16 @@ contains
           !We add the vector potential
           kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
-          !It is more efficient to compute the exponential of the full array
-          forall (ip = 1:mesh%np_part)
-            this%hm_base%phase(ip, ik) = -M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*kpoint(1:mesh%sb%dim))
-          end forall
-          this%hm_base%phase(1:mesh%np_part, ik) = exp(this%hm_base%phase(1:mesh%np_part, ik))
+          !$omp parallel do schedule(static)
+          do ip = 1, mesh%np_part
+            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*kpoint(1:mesh%sb%dim)))
+          end do
 
           if(compute_phase_correction) then
             ! loop over boundary points
             sp = mesh%np
             if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
+            !$omp parallel do schedule(static) private(ip_global, ip_inner, x_global)
             do ip = sp + 1, mesh%np_part
               !translate to a global point
               ip_global = ip
@@ -917,11 +935,9 @@ contains
               ! compute phase correction from global coordinate (opposite sign!)
               x_global = mesh_x_global(mesh, ip_inner)
 
-              !It is more efficient to compute the exponential of the full array 
               this%hm_base%phase_corr(ip, ik) = M_zI * sum(x_global(1:mesh%sb%dim) * kpoint(1:mesh%sb%dim))
+              this%hm_base%phase_corr(ip, ik) = exp(this%hm_base%phase_corr(ip, ik))*this%hm_base%phase(ip, ik)
             end do
-            this%hm_base%phase_corr(sp+1:mesh%np_part, ik) = exp(this%hm_base%phase_corr(sp+1:mesh%np_part, ik)) &
-                                            *this%hm_base%phase(sp+1:mesh%np_part, ik)
           end if
 
         end do
@@ -955,6 +971,7 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
+            !$omp parallel do schedule(static)
             do ip = 1, this%hm_base%projector_matrices(imat)%npoints
               this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
             end do
@@ -1308,31 +1325,40 @@ contains
 
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
-        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        end do
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
           if (this%pcm%solute) then
-            forall (ip = 1:mesh%np)
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-            end forall
+            end do
           end if
           if (this%pcm%localf) then
-            forall (ip = 1:mesh%np)
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_ext_rs(ip)
-            end forall
+            end do
           end if
         end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
-          forall (ip = 1:mesh%np)
+          !$omp parallel do simd schedule(static)
+          do ip = 1, mesh%np
             this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
-          end forall
+          end do
         end if
 
       else !Spinors
-        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        end do
       end if
 
 
@@ -1349,7 +1375,10 @@ contains
           do ispin = 1, this%d%spin_channels
             velectric = M_ZERO
             call laser_potential(this%ep%lasers(ilaser), mesh,  velectric, time_)
-            this%hm_base%potential(:, ispin) = this%hm_base%potential(:, ispin) + mu(itime) * velectric(:)
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + mu(itime) * velectric(ip)
+            end do
           end do
           SAFE_DEALLOCATE_A(velectric)
         case(E_FIELD_MAGNETIC)
@@ -1358,10 +1387,13 @@ contains
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
           call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
-          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-            this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) &
-              - mu(itime) * vp(ip, idir)/P_C
-          end forall
+          do idir = 1, mesh%sb%dim
+            !$omp parallel do schedule(static)
+            do ip = 1, mesh%np
+              this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) &
+                - mu(itime) * vp(ip, idir)/P_C
+            end do
+          end do
           ! and the magnetic field
           call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
@@ -1394,17 +1426,20 @@ contains
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-        this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
-      end forall
+      do idir = 1, mesh%sb%dim
+        !$omp parallel do schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+        end do
+      end do
     end if
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
       call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
-      forall (idir = 1:3)
+      do idir = 1, 3
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
-      end forall
+      end do
     end if
 
     call hamiltonian_elec_base_update(this%hm_base, mesh)
@@ -1446,10 +1481,11 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(this%d, ik))
 
-          forall (ip = 1:mesh%np_part)
+          !$omp parallel do schedule(static)
+          do ip = 1, mesh%np_part
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
-          end forall
+          end do
         end do
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
@@ -1474,6 +1510,7 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
+            !$omp parallel do schedule(static)
             do ip = 1, this%hm_base%projector_matrices(imat)%npoints
               this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
             end do

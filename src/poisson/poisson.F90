@@ -352,7 +352,7 @@ contains
       call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
 
       write(message(1), '(a)')'Dressed Orbital calculation'
-      write(message(2),'(a,1x,f14.12,f14.12,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z
+      write(message(2),'(a,1x,f14.12,1x,f14.12,1x,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z
       write(message(3),'(a,1x,f14.12)') 'DressedParamOmega', this%dressed_omega
       write(message(4),'(a,1x,f14.12)') 'DressedNoElectrons', this%dressed_electrons
       write(message(5),'(a,1x,f14.12)') 'DressedCoulomb', this%dressed_coulomb
@@ -825,11 +825,7 @@ contains
 
     ASSERT(this%method /= POISSON_NULL)
 
-    if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
-      call zpoisson1d_solve_direct(this, pot, rho)
-    else
-      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
-    end if
+    call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
@@ -906,10 +902,14 @@ contains
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      if(this%dressed) dim_electronic = this%der%mesh%sb%dim - 1
+      if(this%dressed) then
+        dim_electronic = this%der%mesh%sb%dim - 1
+      else 
+        dim_electronic = this%der%mesh%sb%dim
+      end if
       select case(dim_electronic)
       case(1)
-        call dpoisson1d_solve_direct(this, pot, rho)
+        call poisson_solve_direct(this, pot, rho)
       case(2)
         call poisson_solve_direct(this, pot, rho)
       case(3)
@@ -1366,11 +1366,9 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 
 end module poisson_oct_m
 

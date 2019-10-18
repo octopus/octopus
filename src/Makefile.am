@@ -68,6 +68,7 @@ basic_f_srcs =                                 \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
 	basic/namespace.F90                    \
+	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
@@ -89,6 +90,7 @@ basic_c_srcs =                                 \
 	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
+	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
 	basic/oct_gdlib_f.c                    \
 	basic/recipes.c                        \
@@ -266,6 +268,7 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 
 # Sources in grid
 grid_f_srcs =                                 \
+	grid/allocate_hardware_aware_f.F90    \
 	grid/basins.F90                       \
 	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
@@ -315,6 +318,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
+	grid/allocate_hardware_aware.c        \
 	grid/hilbert.c                        \
 	grid/operate.c
 
@@ -367,8 +371,7 @@ noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
-	poisson/poisson_init_direct_inc.F90      \
-	poisson/solver_1d_solve_inc.F90
+	poisson/poisson_init_direct_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \
@@ -631,12 +634,6 @@ all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 
-include/options.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
 bin_PROGRAMS = octopus
 
 octopus_f_srcs =                             \
@@ -771,7 +768,31 @@ oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_elec
 oct_unfold_LINK = $(FCLINK)
 oct_unfold_LDADD = $(all_LIBS)
 
+utils_f_srcs = \
+	utils/casida_spectrum.F90        \
+	utils/centergeom.F90             \
+	utils/conductivity.F90           \
+	utils/convert.F90                \
+	utils/dielectric_function.F90    \
+	utils/floquet.F90                \
+	utils/harmonic_spectrum.F90      \
+	utils/help.F90                   \
+	utils/infrared.F90               \
+	utils/local_multipoles.F90       \
+	utils/local_write.F90            \
+	utils/oscillator_strength.F90    \
+	utils/photoelectron_spectrum.F90 \
+	utils/propagation_spectrum.F90   \
+	utils/unfold.F90                 \
+	utils/vibrational.F90            \
+	utils/xyzanim.F90
 
+
+include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 # debug files from MacOS gcc with -g
 clean-local: clean-fdep

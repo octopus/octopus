@@ -19,6 +19,7 @@
 #include "global.h"
 
 module run_oct_m
+  use accel_oct_m
   use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m
@@ -31,6 +32,7 @@ module run_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use multisystem_oct_m
   use namespace_oct_m
@@ -148,6 +150,8 @@ contains
     end if
 
     call restart_module_init(namespace)
+
+    call accel_init(mpi_world, namespace)
 
     ! initialize FFTs
     call fft_all_init(namespace)
@@ -311,6 +315,9 @@ contains
     call multisystem_end(systems)
 
     call fft_all_end()
+
+    call accel_end()
+
 
 #ifdef HAVE_MPI
     call mpi_debug_statistics()

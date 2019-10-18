@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_magnus_oct_m
+  use batch_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
@@ -61,12 +62,14 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
 
-    integer :: j, is, ist, ik, i
+    integer :: j, is, ib, ik, i
     FLOAT :: atime(2)
     FLOAT, allocatable :: vaux(:, :, :), pot(:)
     CMPLX, allocatable :: psi(:, :)
 
     PUSH_SUB(propagator_dt.td_magnus)
+
+    ASSERT(.not. family_is_mgga_with_exc(hm%xc))
 
     SAFE_ALLOCATE(vaux(1:gr%mesh%np, 1:st%d%nspin, 1:2))
 
@@ -75,14 +78,7 @@ contains
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       do j = 1, 2
-        !TODO: There is no complex scaling here
-        if (family_is_mgga_with_exc(hm%xc)) then
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, &
-               hm%vhxc, vtau = hm%vtau)
-        else
-          call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
-        end if
-        call hamiltonian_elec_update(hm, gr%mesh, namespace)
+        call potential_interpolation_interpolate(tr%vksold, 3, time, dt, time - dt + atime(j), vaux(:, :, j))
       end do
     else
       vaux = M_ZERO
@@ -111,19 +107,7 @@ contains
     tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
     tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_elec_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%mesh, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
-        call states_elec_set_state(st, gr%mesh, ist, ik, psi)
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(psi)
-
-    call density_calc(st, gr, st%rho)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt, vmagnus = tr%vmagnus)
 
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)

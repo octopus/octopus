@@ -60,6 +60,7 @@ module profiling_oct_m
   use mpi_oct_m
   use parser_oct_m
   use namespace_oct_m
+  use nvtx_oct_m
   use sort_oct_m
   use string_oct_m
   use types_oct_m
@@ -478,6 +479,9 @@ contains
 #endif
     end if
 
+#ifdef HAVE_NVTX
+    call nvtx_range_push(trim(label))
+#endif
 
   end subroutine profiling_in
 
@@ -542,6 +546,9 @@ contains
 #endif
     end if
 
+#ifdef HAVE_NVTX
+    call nvtx_range_pop()
+#endif
 
   end subroutine profiling_out
 
