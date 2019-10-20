@@ -64,6 +64,41 @@ __kernel void density_complex(const int nst,
 
 }
 
+__kernel void density_spinors(const int nst,
+			      const int np,
+			      __constant double * restrict weights,
+			      const __global double2 * restrict psi, const int ldpsi,
+			      __global double * restrict density){
+  
+  int ip  = get_global_id(0);
+  if(ip >= np) return;
+
+  double dd1 = 0.0;
+  double dd2 = 0.0;
+  double dd3 = 0.0;
+  double dd4 = 0.0;
+
+  for(int ist = 0; ist < nst; ist ++){
+    double2 cc1 = complex_conj(psi[(ip<<ldpsi) + 2*ist - 1]);
+    double2 cc2 = complex_conj(psi[(ip<<ldpsi) + 2*ist]);
+    double2 ff1 = complex_mul(cc1, psi[(ip<<ldpsi) + 2*ist - 1]);
+    double2 ff2 = complex_mul(cc2, psi[(ip<<ldpsi) + 2*ist]);
+    double2 ff3 = complex_mul(psi[(ip<<ldpsi) + 2*ist - 1], cc2);
+    dd1 += weights[ist]*ff1.x;
+    dd2 += weights[ist]*ff2.x;
+    dd3 += weights[ist]*ff3.x;
+    dd4 += weights[ist]*ff3.y;
+  }
+
+  density[ip*4 + 0] += dd1;
+  density[ip*4 + 1] += dd2;
+  density[ip*4 + 2] += dd3;
+  density[ip*4 + 3] += dd4;
+
+}
+
+
+
 __kernel void current_accumulate(const int nst,
 				 const int np,
 				 __constant double * restrict weights,
