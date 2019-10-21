@@ -1027,7 +1027,6 @@ contains
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
       if (this%arpes_grid) then
-        print *, ikpt,"sb%kpoints%full%dim ",sb%kpoints%full%dim
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
         kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
         val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
