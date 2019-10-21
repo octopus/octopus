@@ -298,7 +298,8 @@ program wannier90_interface
           smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
           do jst = 1, w90_num_bands
-             chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
+             chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) &
+                 * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
           end do
         end do
 
@@ -1024,7 +1025,7 @@ contains
       SAFE_ALLOCATE(projection(1:w90_nproj))
       
       do ik = 1, w90_num_kpts
-        !This won't work for spin-polarized calculations
+        !This will not work for spin-polarized calculations
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
       
         forall(ip=1:mesh%np)
