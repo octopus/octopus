@@ -370,7 +370,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
         dip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
         if(simul_box_is_periodic(gr%mesh%sb)) then
-          if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-6)) then  
+          if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-5)) then  
             dip_element = -dip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else
             dip_element = R_TOTYPE(M_ZERO)

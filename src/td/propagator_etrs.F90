@@ -393,6 +393,9 @@ contains
       ispin = states_elec_dim_get_spin_index(st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
+        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+          call batch_pack(st%group%psib(ib, ik))
+        end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
         select case(batch_status(st%group%psib(ib, ik)))
@@ -427,7 +430,10 @@ contains
 
         call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
- 
+
+        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+          call batch_unpack(st%group%psib(ib, ik))
+        end if
       end do
     end do
 

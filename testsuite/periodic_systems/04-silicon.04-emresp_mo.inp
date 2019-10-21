@@ -38,7 +38,7 @@ ExtraStates = 1
 XCKernelLRCAlpha = 0.2
 
 LinearSolver = qmr_dotp
-LRTolInitTol = 1e-4
+LRTolInitTol = 1e-5
 LinearSolverMaxIter = 500
 EMEta = 0.01
 KdotPEta = 0.01

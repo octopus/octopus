@@ -514,6 +514,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
   CMPLX, allocatable :: tmp_proj(:, :)
 
   integer :: block_size
+  integer :: size_unfolded
   
   if(.not. this%apply_projector_matrices) return
 
@@ -562,11 +563,17 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
         call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
       end if
 
+      ! In case of CUDA we use an optimized kernel, in which the loop over npoints is broken
+      ! further into chunks, in order to parallelize over the threads within a warp.
+      ! Therefore we need to launch warp_size * size kernels. The size of each block needs to 
+      ! have multiples of warp_size as x-dimension.
+
+      size_unfolded = size * accel%warp_size
       padnprojs = pad_pow2(this%max_nprojs)
-      lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
+      lnprojs = min(accel_kernel_workgroup_size(kernel)/accel%warp_size, padnprojs)
 
       call accel_kernel_run(kernel, &
-        (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
+        (/size_unfolded, padnprojs, this%nprojector_matrices/), (/accel%warp_size, lnprojs, 1/))
 
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
@@ -631,11 +638,11 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
     if(.not. allocated(this%projector_phases)) then
       if(batch_is_packed(psib)) then
         
-        !$omp parallel do private(ist)
+        !$omp parallel do private(ist, ip)
         do ip = 1, npoints
-          forall(ist=1:nst)
+          do ist= 1, nst
             lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
-          end forall
+          end do
         end do
         
       else
@@ -654,9 +661,9 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
       if(batch_is_packed(psib)) then
         !$omp parallel do private(ist)
         do ip = 1, npoints
-          forall(ist = 1:nst)
+          do ist = 1, nst
             lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, ik)
-          end forall
+          end do
         end do
 
       else
@@ -677,6 +684,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
       SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:nst))
       call blas_gemm('C', 'T', nprojs, nst, npoints, &
           M_z1, pmat%zprojectors(1, 1), npoints, lpsi(1, 1), nst, M_z0, tmp_proj(1,1), nprojs)
+      !$omp parallel do private(iproj, ist)
       do iproj = 1, nprojs
         do ist = 1, nst
           projection%X(projection)(ist, iprojection + iproj) = tmp_proj(iproj, ist)
@@ -691,6 +699,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
     end if
 
+    !$omp parallel do private(iproj, ist)
     do iproj = 1, nprojs
       do ist = 1, nst
         projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)

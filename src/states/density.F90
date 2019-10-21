@@ -149,27 +149,31 @@ contains
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
             if(abs(weight(ist)) <= M_EPSILON) cycle
-            forall(ip = 1:this%gr%mesh%np)
+            !$omp parallel do simd schedule(static)
+            do ip = 1, this%gr%mesh%np
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
-            end forall
+            end do
           end do
         else
           do ist = 1, psib%nst
             if(abs(weight(ist)) <= M_EPSILON) cycle
-            forall(ip = 1:this%gr%mesh%np)
+            !$omp parallel do schedule(static)
+            do ip = 1, this%gr%mesh%np
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                 real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
-            end forall
+            end do
           end do
         end if
       case(BATCH_PACKED)
         if(states_are_real(this%st)) then
+          !$omp parallel do schedule(static)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
             end do
           end do
         else
+          !$omp parallel do schedule(static)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
@@ -221,12 +225,14 @@ contains
 
         call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
 
+        !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
-          sqpsi(ip) = abs(fpsi(ip))**2
+          sqpsi(ip) = real(conjg(fpsi(ip))*fpsi(ip), REAL_PRECISION)
         end do
 
         nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
         
+        !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
           this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*sqpsi(ip)/nrm
         end do
@@ -259,6 +265,7 @@ contains
 
         call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
         
+        !$omp parallel do schedule(static) private(psi1, psi2, term)
         do ip = 1, this%gr%fine%mesh%np
           
           psi1 = zpsi(ip, 1)
