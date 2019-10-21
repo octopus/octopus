@@ -149,7 +149,7 @@ end function flatten_indices
 !  FLOAT,   allocatable :: KK(:,:,:), KK_tmp(:)
 !  integer, allocatable :: Lkpt_inv(:,:), idx_tmp(:)
 !  
-!  PUSH_SUB(reorder_kpoints)
+!  cPUSH_SUB(reorder_kpoints)
 !  
 !  dim  = this%dim
 !  pdim = this%pdim
@@ -157,10 +157,10 @@ end function flatten_indices
 !  nk(:) = 1  
 !  nk(1:dim) = kpoints%nik_axis(1:dim)
 !
-!  SAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
-!  SAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
-!  SAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
-!  SAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
+!  cSAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
+!  cSAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
+!  cSAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
+!  cSAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
 !
 !  KK = M_ZERO
 !  kpt = M_ZERO
@@ -228,12 +228,12 @@ end function flatten_indices
 !
 !
 !  
-!  SAFE_DEALLOCATE_A(KK)
-!  SAFE_DEALLOCATE_A(KK_tmp)
-!  SAFE_DEALLOCATE_A(Lkpt_inv)
-!  SAFE_DEALLOCATE_A(idx_tmp)
+!  cSAFE_DEALLOCATE_A(KK)
+!  cSAFE_DEALLOCATE_A(KK_tmp)
+!  cSAFE_DEALLOCATE_A(Lkpt_inv)
+!  cSAFE_DEALLOCATE_A(idx_tmp)
 !
-!  POP_SUB(reorder_kpoints)  
+!  cPOP_SUB(reorder_kpoints)  
 !end subroutine reorder_kpoints
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
