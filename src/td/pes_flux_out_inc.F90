@@ -137,104 +137,104 @@ integer pure function flatten_indices(i1,i2,i3,igpt, ll, ngpt) result(ii)
 end function flatten_indices
 
 
-subroutine reorder_kpoints(this, kpoints, krng, Lkpt, idx)
-  type(pes_flux_t),     intent(in)  :: this
-  type(kpoints_t),      intent(in)  :: kpoints
-  integer,              intent(in)  :: krng(:)
-  integer,              intent(in)  :: Lkpt(:,:)
-  integer,              intent(out) :: idx(:,:)
-  
-  integer :: dim, pdim, idim, ik,  nk(1:3), ix, iy
-  FLOAT :: kpt(1:3)
-  FLOAT,   allocatable :: KK(:,:,:), KK_tmp(:)
-  integer, allocatable :: Lkpt_inv(:,:), idx_tmp(:)
-  
-  PUSH_SUB(reorder_kpoints)
-  
-  dim  = this%dim
-  pdim = this%pdim
-  
-  nk(:) = 1  
-  nk(1:dim) = kpoints%nik_axis(1:dim)
-
-  SAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
-  SAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
-  SAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
-  SAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
-
-  KK = M_ZERO
-  kpt = M_ZERO
-  idx(:,:) = 1
-  
-  do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
-    KK(Lkpt(ik, 1),Lkpt(ik, 2),1:dim) = kpt(1:dim)
-    Lkpt_inv(Lkpt(ik, 1),Lkpt(ik, 2)) = ik
-    print *, Lkpt(ik, 1), Lkpt(ik, 2),   ik,  kpt(1:dim)
-  end do 
-
-  
-
-  do ix = 1, nk(1)
-    idx(ix, 1) = ix
-  end do
-  do iy = 1, nk(2)
-    idx(iy, 2) = iy
-  end do
-
-  do ix = 1, nk(1)
-    do iy = 1, nk(2)
-      print *, ix, iy, KK(ix,iy,1:dim), idx(ix,1), idx(iy,2)
-    end do
-  end do
-
-
-  do iy = 1, nk(2)
-    do ix = 1, nk(1)
-      idx_tmp(ix)=ix
-    end do
-    KK_tmp(1:nk(1)) = KK(iy,1:nk(1),2)
-  print *, iy, "--", KK(iy,1:nk(1),2)
-    call sort(KK_tmp, idx_tmp(1:nk(1)))
-    KK(iy,1:nk(1),2)= KK_tmp(1:nk(1)) 
-!     call sort(KK(iy,1:nk(1),2), idx_tmp(1:nk(1)))
-print *, iy, "--",  idx_tmp(1:nk(1))
-    
-print *, iy, "--",  KK(iy,1:nk(1),2)
-print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
-    do ix = 1, nk(1)
-!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(Lkpt(Lkpt_inv(ix,iy), 1))
-!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(ix)
-      idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx(idx_tmp(ix), 1)
-    end do
-print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
-    
-  end do
-
-
-!   do ix = 1, nk(1)
-!     do iy = 1, nk(2)
-!       idx_tmp(iy)=iy
-!     end do
-!     KK_tmp(1:nk(2)) = KK(ix,1:nk(2),1)
-!     call sort(KK_tmp, idx_tmp(1:nk(2)))
-!     do iy = 1, nk(2)
-! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(Lkpt(ik, 2))
-! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(iy)
-!       idx(idx_tmp(Lkpt(Lkpt_inv(ix,iy), 2)), 2) = iy
-!     end do
-!   end do
-
-
-
-  
-  SAFE_DEALLOCATE_A(KK)
-  SAFE_DEALLOCATE_A(KK_tmp)
-  SAFE_DEALLOCATE_A(Lkpt_inv)
-  SAFE_DEALLOCATE_A(idx_tmp)
-
-  POP_SUB(reorder_kpoints)  
-end subroutine reorder_kpoints
+!subroutine reorder_kpoints(this, kpoints, krng, Lkpt, idx)
+!  type(pes_flux_t),     intent(in)  :: this
+!  type(kpoints_t),      intent(in)  :: kpoints
+!  integer,              intent(in)  :: krng(:)
+!  integer,              intent(in)  :: Lkpt(:,:)
+!  integer,              intent(out) :: idx(:,:)
+!  
+!  integer :: dim, pdim, idim, ik,  nk(1:3), ix, iy
+!  FLOAT :: kpt(1:3)
+!  FLOAT,   allocatable :: KK(:,:,:), KK_tmp(:)
+!  integer, allocatable :: Lkpt_inv(:,:), idx_tmp(:)
+!  
+!  PUSH_SUB(reorder_kpoints)
+!  
+!  dim  = this%dim
+!  pdim = this%pdim
+!  
+!  nk(:) = 1  
+!  nk(1:dim) = kpoints%nik_axis(1:dim)
+!
+!  SAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
+!  SAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
+!  SAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
+!  SAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
+!
+!  KK = M_ZERO
+!  kpt = M_ZERO
+!  idx(:,:) = 1
+!  
+!  do ik = krng(1),krng(2)
+!    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
+!    KK(Lkpt(ik, 1),Lkpt(ik, 2),1:dim) = kpt(1:dim)
+!    Lkpt_inv(Lkpt(ik, 1),Lkpt(ik, 2)) = ik
+!    print *, Lkpt(ik, 1), Lkpt(ik, 2),   ik,  kpt(1:dim)
+!  end do 
+!
+!  
+!
+!  do ix = 1, nk(1)
+!    idx(ix, 1) = ix
+!  end do
+!  do iy = 1, nk(2)
+!    idx(iy, 2) = iy
+!  end do
+!
+!  do ix = 1, nk(1)
+!    do iy = 1, nk(2)
+!      print *, ix, iy, KK(ix,iy,1:dim), idx(ix,1), idx(iy,2)
+!    end do
+!  end do
+!
+!
+!  do iy = 1, nk(2)
+!    do ix = 1, nk(1)
+!      idx_tmp(ix)=ix
+!    end do
+!    KK_tmp(1:nk(1)) = KK(iy,1:nk(1),2)
+!  print *, iy, "--", KK(iy,1:nk(1),2)
+!    call sort(KK_tmp, idx_tmp(1:nk(1)))
+!    KK(iy,1:nk(1),2)= KK_tmp(1:nk(1)) 
+!!     call sort(KK(iy,1:nk(1),2), idx_tmp(1:nk(1)))
+!print *, iy, "--",  idx_tmp(1:nk(1))
+!    
+!print *, iy, "--",  KK(iy,1:nk(1),2)
+!print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
+!    do ix = 1, nk(1)
+!!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(Lkpt(Lkpt_inv(ix,iy), 1))
+!!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(ix)
+!      idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx(idx_tmp(ix), 1)
+!    end do
+!print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
+!    
+!  end do
+!
+!
+!!   do ix = 1, nk(1)
+!!     do iy = 1, nk(2)
+!!       idx_tmp(iy)=iy
+!!     end do
+!!     KK_tmp(1:nk(2)) = KK(ix,1:nk(2),1)
+!!     call sort(KK_tmp, idx_tmp(1:nk(2)))
+!!     do iy = 1, nk(2)
+!! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(Lkpt(ik, 2))
+!! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(iy)
+!!       idx(idx_tmp(Lkpt(Lkpt_inv(ix,iy), 2)), 2) = iy
+!!     end do
+!!   end do
+!
+!
+!
+!  
+!  SAFE_DEALLOCATE_A(KK)
+!  SAFE_DEALLOCATE_A(KK_tmp)
+!  SAFE_DEALLOCATE_A(Lkpt_inv)
+!  SAFE_DEALLOCATE_A(idx_tmp)
+!
+!  POP_SUB(reorder_kpoints)  
+!end subroutine reorder_kpoints
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
