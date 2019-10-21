@@ -564,8 +564,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
     do ist = 1, nst_
       do idim = 1, xx%dim
         indb = batch_ist_idim_to_linear(xx, (/ist, idim/))
-        if(abs(aa(batch_linear_to_ist(xx,indb))) < M_EPSILON) cycle
-        call lalg_axpy(mesh%np, aa(batch_linear_to_ist(xx,indb)), xx%states_linear(indb)%X(psi), psi(1:mesh%np, idim))
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call lalg_axpy(mesh%np, aa(ist), xx%states_linear(indb)%X(psi), psi(1:mesh%np, idim))
       end do
     end do
 
@@ -577,8 +577,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
       !Due to how BLAS implements gemv, with no incx for the A matrix, 
       !we have to perform two complete passes for the spinor case
       alpha = M_ZERO
-      do ist = idim, nst_*xx%dim, xx%dim
-        alpha(ist) = aa(batch_linear_to_ist(xx,ist))
+      do ist = 1, nst_
+        alpha((ist-1)*xx%dim+idim) = aa(ist)
       end do
       call blas_gemv('T', nst_*xx%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(idim,1), &
                             xx%nst_linear, alpha(idim), 1, R_TOTYPE(M_ONE), psi(1,idim), 1)
