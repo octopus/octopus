@@ -217,10 +217,14 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT,           intent(in)  :: rho(:)
 
   FLOAT                :: prefactor, aa1, aa2, aa3, aa4
-  integer              :: ip, jp, dim
-  FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
+  integer              :: ip, jp
+  integer              :: dim           !< physical dimensions
+  integer              :: dim_effective !< effective dimensions (= dim,  if no soft coulomb)
+                                        !<                      (= dim+1 if soft coulomb)
+
+  FLOAT                :: xx1(1:MAX_DIM+1), xx2(1:MAX_DIM+1), xx3(1:MAX_DIM+1), xx4(1:MAX_DIM+1)
+  FLOAT                :: xx(1:MAX_DIM+1), yy(1:MAX_DIM+1) 
 #ifdef HAVE_MPI
-  FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
   FLOAT                :: xg(MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
@@ -231,13 +235,25 @@ subroutine poisson_solve_direct(this, pot, rho)
   dim = this%der%mesh%sb%dim
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
+
+  if (this%poisson_soft_coulomb_param**2 == M_ZERO) then ! TODO: check that test
+    dim_effective = dim+1
+    xx(dim_effective) = this%poisson_soft_coulomb_param
+    yy(dim_effective) = M_ZERO
+  else
+    dim_effective = dim
+  endif
+
+
   select case(dim)
   case(3)
     prefactor = M_TWO*M_PI*(M_THREE/(M_PI*M_FOUR))**(M_TWOTHIRD)
   case(2)
     prefactor = M_TWO*sqrt(M_PI)
+  case(1)
+    prefactor = M_ONE / this%poisson_soft_coulomb_param
   case default
-    message(1) = "Internal error: poisson_solve_direct can only be called for 2D or 3D."
+    message(1) = "Internal error: poisson_solve_direct can only be called for 1D, 2D or 3D."
     ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
     call messages_fatal(1)
   end select
@@ -267,7 +283,7 @@ subroutine poisson_solve_direct(this, pot, rho)
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
+            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2))
           end if
         end do
       else
@@ -276,7 +292,7 @@ subroutine poisson_solve_direct(this, pot, rho)
             pvec(jp) = rho(jp)*prefactor
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
+            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2))
           end if
         end do
       end if
@@ -312,11 +328,13 @@ subroutine poisson_solve_direct(this, pot, rho)
         aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+
         do jp = 1, this%der%mesh%np
-          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+          yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
         end do
 
       else
@@ -327,11 +345,13 @@ subroutine poisson_solve_direct(this, pot, rho)
         aa4 = prefactor*rho(ip + 3)
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+
         do jp = 1, this%der%mesh%np
-          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
-          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
-          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
-          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+          yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))
         end do
         
       end if
@@ -350,18 +370,20 @@ subroutine poisson_solve_direct(this, pot, rho)
       xx1(1:dim) = this%der%mesh%x(ip,1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
+          yy(1:dim) = this%der%mesh%x(jp, 1:dim)
           if(ip == jp) then
             aa1 = aa1 + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
-            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))*this%der%mesh%vol_pp(jp)
+            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
           end if
         end do
       else
         do jp = 1, this%der%mesh%np
+          yy(1:dim) = this%der%mesh%x(jp, 1:dim)
           if(ip == jp) then
             aa1 = aa1 + prefactor*rho(ip)
           else
-            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - this%der%mesh%x(jp, 1:dim))**2))
+            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))
           end if
         end do
       end if

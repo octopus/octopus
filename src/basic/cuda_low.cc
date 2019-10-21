@@ -419,3 +419,12 @@ extern "C" void FC_FUNC_(cuda_driver_version, CUDA_DRIVER_VERSION)(fint * versio
   *version = driverversion;
 #endif
 }
+
+extern "C" void FC_FUNC_(cuda_device_get_warpsize, CUDA_DEVICE_GET_WARPSIZE)(CUdevice ** device, fint * warpSize){
+#ifdef HAVE_CUDA
+  int cwarpSize=0;
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&cwarpSize, CU_DEVICE_ATTRIBUTE_WARP_SIZE, **device));
+  *warpSize = cwarpSize;
+#endif
+}
+
