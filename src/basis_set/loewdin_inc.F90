@@ -69,7 +69,7 @@
            iorb2 = basis%global2os(2, ind2)
            os2 => basis%orbsets(ios2)
            ns = os2%sphere%np
-           if(abs(overlap(ind2, ind)) < CNST(1e-6)) cycle
+          ! if(abs(overlap(ind2, ind)) < CNST(1e-6)) cycle
            do is = 1, ns
              os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
                       = os%eorb_mesh(os2%sphere%map(is), iorb, idim, ik) &
@@ -136,7 +136,7 @@
         end do
  #endif
       else
-        call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+        call messages_not_implemented("Lowdin orthogonalization with submeshes")
       end if
     end do !ind2
   end do !ind
@@ -197,17 +197,17 @@ subroutine X(print_matrix)(basis, label, namespace, overlap, ik)
 #endif
   do is = 1, basis%size
     do is2 = 1, basis%size-1
-      write(iunit,'(f14.8)',advance='no') real(overlap(is,is2))
+      write(iunit,'(es19.12,1x)',advance='no') real(overlap(is,is2))
     end do
-    write(iunit,'(f14.8)') real(overlap(is,basis%size))
+    write(iunit,'(es19.12)') real(overlap(is,basis%size))
   end do
 #ifdef R_TCOMPLEX
   write(iunit,'(a)') ' Imaginary part '
   do is = 1, basis%size
     do is2 = 1, basis%size-1
-      write(iunit,'(f14.8)',advance='no') aimag(overlap(is,is2))
+      write(iunit,'(es19.12,1x)',advance='no') aimag(overlap(is,is2))
     end do
-    write(iunit,'(f14.8)') aimag(overlap(is,basis%size))
+    write(iunit,'(es19.12)') aimag(overlap(is,basis%size))
   end do
 #endif
   call io_close(iunit)
