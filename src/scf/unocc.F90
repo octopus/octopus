@@ -58,7 +58,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unocc_run(sys, fromscratch)
-    type(system_t), target, intent(inout) :: sys
+    type(system_t),         intent(inout) :: sys
     logical,                intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
@@ -70,11 +70,8 @@ contains
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
     logical :: write_density, bandstructure_mode
-    type(namespace_t), pointer :: namespace
 
     PUSH_SUB(unocc_run)
-
-    namespace => sys%namespace
 
     !%Variable MaximumIter
     !%Type integer
@@ -85,8 +82,8 @@ contains
     !% has not been achieved. -1 means unlimited. 0 means just do LCAO or read from
     !% restart, and stop.
     !%End
-    call parse_variable(namespace, 'MaximumIter', 50, max_iter)
-    call messages_obsolete_variable(namespace, 'UnoccMaximumIter', 'MaximumIter')
+    call parse_variable(sys%namespace, 'MaximumIter', 50, max_iter)
+    call messages_obsolete_variable(sys%namespace, 'UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
     !%Variable UnoccShowOccStates
@@ -98,7 +95,7 @@ contains
     !% This is useful for testing, or if the occupied states fail to converge.
     !% It will be enabled automatically if only occupied states are being calculated.
     !%End
-    call parse_variable(namespace, 'UnoccShowOccStates', .false., showoccstates)
+    call parse_variable(sys%namespace, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
     if(simul_box_is_periodic(sys%gr%sb) .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
@@ -115,11 +112,11 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, &
+      call restart_init(restart_load_unocc, sys%namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, &
         mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
-        call states_elec_load(restart_load_unocc, namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(sys%hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_unocc, sys%hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
@@ -132,12 +129,12 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, &
+    call restart_init(restart_load_gs, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, &
       exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_elec_load(restart_load_gs, namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(sys%hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
       end if
@@ -204,7 +201,7 @@ contains
       call lcao_run(sys, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
-      call v_ks_calc(sys%ks, namespace, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
 
@@ -228,7 +225,7 @@ contains
 
     if(.not. bandstructure_mode) then
       ! Restart dump should be initialized after restart_load, as the mesh might have changed
-      call restart_init(restart_dump, namespace, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, sys%namespace, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &
@@ -260,8 +257,8 @@ contains
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
-        call io_mkdir(STATIC_DIR, namespace)
-        iunit = io_open(STATIC_DIR//'/eigenvalues', namespace, action='write')
+        call io_mkdir(STATIC_DIR, sys%namespace)
+        iunit = io_open(STATIC_DIR//'/eigenvalues', sys%namespace, action='write')
         
         if(converged) then
           write(iunit,'(a)') 'All states converged.'
@@ -291,7 +288,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
+        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
       end if
      
       if(converged .or. forced_finish) exit
@@ -317,14 +314,14 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
-        call states_elec_write_bandstructure(STATIC_DIR, namespace, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
+        call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
               sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
               vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
     end if
  
 
-    call output_all(sys%outp, namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)
@@ -338,11 +335,11 @@ contains
 
       PUSH_SUB(unocc_run.init_)
 
-      call messages_obsolete_variable(namespace, "NumberUnoccStates", "ExtraStates")
+      call messages_obsolete_variable(sys%namespace, "NumberUnoccStates", "ExtraStates")
 
       call states_elec_allocate_wfns(st, mesh)
 
-      call scf_init_eigensolver(eigens, namespace, sys%gr, st, sys%geo, sys%mc)
+      call scf_init_eigensolver(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
