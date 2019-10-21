@@ -612,13 +612,9 @@ program photoelectron_spectrum
         if (need_pmesh) then
           call pes_out_velocity_map_cut(default_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, pmesh = pmesh)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, default_namespace, llp, dim, pol, dir, integrate, &
-!                                              pos = idxZero, pmesh = pmesh)
         else
           call pes_out_velocity_map_cut(default_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, Lk = Lg)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, default_namespace, llp, dim, pol, dir, integrate, &
-!                                              pos = idxZero, Lk = Lg)
         end if
       end if
 
@@ -710,47 +706,6 @@ program photoelectron_spectrum
       
     end subroutine output_pes
     
-!     subroutine get_kpath_direction(kpoints, krng, kpth_dir, pvec)
-!       type(kpoints_t),   intent(in)  :: kpoints
-!       integer,           intent(in)  :: krng(2)
-!       integer,           intent(out) :: kpth_dir
-!       FLOAT,             intent(out) :: pvec(3)
-!
-!
-!       FLOAT                :: kpt(3)
-!
-!       PUSH_SUB(get_kpath_direction)
-!
-!       kpth_dir = -1
-!
-!       kpt = M_ZERO
-!       kpt(1:dim) = kpoints_get_point(kpoints, krng(1)+1)-kpoints_get_point(kpoints, krng(1))
-!       kpt(1:dim) = kpt(1:dim)/sqrt(sum(kpt(1:dim)**2))
-!
-!
-!       if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
-!         kpth_dir = 1
-!         write(message(1), '(a)') 'along kx'
-!         pvec = (/0,1,0/)
-!       end if
-!
-!       if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then
-!         kpth_dir = 2
-!         write(message(1), '(a)') 'along ky'
-!         pvec = (/1,0,0/)
-!       end if
-!
-!       call messages_info(1)
-!
-!
-!       if (kpth_dir == -1) then
-!         message(1) = "K-points with zero weight path works only with paths along kx or ky."
-!         call messages_fatal(1)
-!       end if
-!
-!       POP_SUB(get_kpath_direction)
-!     end subroutine get_kpath_direction
-
     
     subroutine write_kpoints_info(kpoints, ikstart, ikend)
       type(kpoints_t),   intent(in) :: kpoints 
