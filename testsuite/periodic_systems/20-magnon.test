@@ -39,5 +39,5 @@ Util : oct-spin_susceptibility
 Input : 20-magnon.02-td.inp
 
 Precision : 0.15
-match ; Spin susceptibilty Re [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility, 30, 2) ; -0.814485E+01
-match ; Spin susceptibilty Im [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility, 30, 3) ; -0.956870E+01
+match ; Spin susceptibilty Re [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 2) ; -0.814485E+01
+match ; Spin susceptibilty Im [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 3) ; -0.956870E+01
