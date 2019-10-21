@@ -1633,7 +1633,7 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
   integer :: iint, ikpoint, jkpoint, ip, idim, ibind
   R_TYPE  :: me
-  R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:)
+  R_TYPE, allocatable :: nn(:), vv(:), tmp(:), two_body_int(:)
   R_TYPE, pointer :: psii(:), psij(:), psil(:)
   R_TYPE, allocatable :: psik(:, :)
   FLOAT :: qq(1:MAX_DIM)
@@ -1644,6 +1644,7 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))
   SAFE_ALLOCATE(vv(1:gr%mesh%np))
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np))
   SAFE_ALLOCATE(two_body_int(1:gr%mesh%np))
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
 
@@ -1727,6 +1728,7 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
            call states_elec_set_phase(st%d, psik, phase(1:gr%mesh%np, kkpt), gr%mesh%np, .false.)
         end if
 #endif
+        tmp(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))
 
         do lst_global = 1, nst_tot
           lst = mod(lst_global - 1, nst) + 1
@@ -1746,13 +1748,21 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
 
           if(present(phase)) then
 #ifdef R_TCOMPLEX
-            two_body_int(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np)*phase(1:gr%mesh%np, lkpt)            
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)*phase(ip, lkpt)
+            end do
+            !$omp end parallel do
 #endif 
           else
-            two_body_int(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np)
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)
+            end do
+            !$omp end parallel do
           end if
 
-          me = X(mf_integrate)(gr%mesh, two_body_int(:))
+          me = X(mf_integrate)(gr%mesh, two_body_int(:), reduce = .false.)
 
           iindex(1,iint) =  ist+st_min-1
           iindex(2,iint) =  ikpt
@@ -1770,8 +1780,13 @@ subroutine X(states_elec_me_two_body) (gr, namespace, solver, st, st_min, st_max
     end do
   end do
 
+  if(gr%mesh%parallel_in_domains) then
+    call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+  end if
+
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
   SAFE_DEALLOCATE_A(two_body_int)
   SAFE_DEALLOCATE_A(psik)
 
