@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_magnus_oct_m
+  use batch_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
@@ -106,13 +107,7 @@ contains
     tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
     tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus = tr%vmagnus)
-      end do
-    end do
-
-    call density_calc(st, gr, st%rho)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt, vmagnus = tr%vmagnus)
 
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)

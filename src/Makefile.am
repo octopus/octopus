@@ -268,6 +268,7 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 
 # Sources in grid
 grid_f_srcs =                                 \
+	grid/allocate_hardware_aware_f.F90    \
 	grid/basins.F90                       \
 	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
@@ -317,6 +318,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
+	grid/allocate_hardware_aware.c        \
 	grid/hilbert.c                        \
 	grid/operate.c
 
@@ -369,8 +371,7 @@ noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
-	poisson/poisson_init_direct_inc.F90      \
-	poisson/solver_1d_solve_inc.F90
+	poisson/poisson_init_direct_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \

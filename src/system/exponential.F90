@@ -725,11 +725,6 @@ contains
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_pack(psib)
-        if(present(psib2)) call batch_pack(psib2, copy = .false.)
-      end if
-
       call batch_copy(psib, psi1b)
       call batch_copy(psib, hpsi1b)
 
@@ -769,16 +764,10 @@ contains
       call batch_end(psi1b)
       call batch_end(hpsi1b)
       
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        if(present(psib2)) call batch_unpack(psib2)
-        call batch_unpack(psib)
-      end if
-
       call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
       
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
-
     end subroutine taylor_series_batch
 
 
@@ -805,10 +794,6 @@ contains
         call profiling_out(prof)
         POP_SUB(exponential_apply_batch.lanczos_batch)
         return
-      end if
-
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_pack(psib)
       end if
 
       SAFE_ALLOCATE(vb(1:te%exp_order+1))
@@ -885,10 +870,6 @@ contains
       SAFE_DEALLOCATE_A(res)
       SAFE_DEALLOCATE_A(norm)
 
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_unpack(psib)
-      end if
-
       call profiling_out(prof)
 
       POP_SUB(exponential_apply_batch.lanczos_batch)
@@ -902,10 +883,6 @@ contains
 
       PUSH_SUB(exponential_apply_batch.cheby_batch)
       call profiling_in(prof, "EXP_CHEBY_BATCH")
-
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_pack(psib)
-      end if
 
       call batch_copy(psib, psi0)
       call batch_copy(psib, psi1)
@@ -933,10 +910,6 @@ contains
       call batch_end(psi0)
       call batch_end(psi1)
       call batch_end(psi2)
-
-      if(hamiltonian_elec_apply_packed(hm, mesh)) then
-        call batch_unpack(psib)
-      end if
 
       call profiling_out(prof)
 

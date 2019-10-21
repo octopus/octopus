@@ -25,14 +25,14 @@ Spacing = 0.4
  "C" |   1/4    | 1/4     | 1/4 
 %
 
-ExtraStates = 2
+ExtraStates = 4
 ConvRelDens = 1e-7
 EigensolverTolerance = 1e-8
 
 Output = matrix_elements
 OutputMatrixElements = dipole
-OutputMEStart = 4
-OutputMEEnd = 6
+OutputMEStart = 2
+OutputMEEnd = 7
 
 %KpointsReduced
  0.0370   |  0.0000   |   0.0000  |    0.0000

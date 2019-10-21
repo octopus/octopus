@@ -132,6 +132,7 @@ module accel_oct_m
     integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
+    integer                :: warp_size
   end type accel_t
 
   type accel_mem_t
@@ -546,11 +547,13 @@ contains
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+    accel%warp_size = 1
 #endif
 #ifdef HAVE_CUDA
     call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
     call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
     call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+    call cuda_device_get_warpsize(accel%device%cuda_device, accel%warp_size)
 #endif
       
     if(mpi_grp_is_root(base_grp)) call device_info()
