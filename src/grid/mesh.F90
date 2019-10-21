@@ -398,7 +398,7 @@ contains
     integer,      intent(out)   :: imin_local
     integer,      intent(out)   :: imin_global
 
-    integer              :: ip, ip_global=0, idim, ipart
+    integer              :: ip, ip_global, idim, ipart
     FLOAT                :: dd, xx(3)
 
     dmin_global = M_HUGE
