@@ -267,8 +267,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     call messages_fatal(1)
   end select
 
-!  if(.not. this%der%mesh%use_curvilinear) then
-  if(this%der%mesh%use_curvilinear) then
+  if(.not. this%der%mesh%use_curvilinear) then
       prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
   end if
 
