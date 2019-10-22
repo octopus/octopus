@@ -340,10 +340,14 @@ subroutine poisson_solve_direct(this, pot, rho)
 
         do jp = 1, this%der%mesh%np
           yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2)) & 
+                                                         *this%der%mesh%vol_pp(jp)
+          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2)) & 
+                                                         *this%der%mesh%vol_pp(jp)
+          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2)) & 
+                                                         *this%der%mesh%vol_pp(jp)
+          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2)) & 
+                                                         *this%der%mesh%vol_pp(jp)
         end do
 
       else
