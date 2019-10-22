@@ -224,6 +224,9 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   FLOAT                :: xx1(1:MAX_DIM+1), xx2(1:MAX_DIM+1), xx3(1:MAX_DIM+1), xx4(1:MAX_DIM+1)
   FLOAT                :: xx(1:MAX_DIM+1), yy(1:MAX_DIM+1) 
+
+  logical              :: include_diag
+
 #ifdef HAVE_MPI
   FLOAT                :: xg(MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
@@ -236,12 +239,18 @@ subroutine poisson_solve_direct(this, pot, rho)
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
 
-  if (this%poisson_soft_coulomb_param**2 == M_ZERO) then ! TODO: check that test
+  if (this%poisson_soft_coulomb_param**2 > M_ZERO) then ! TODO: check that test
     dim_effective = dim+1
     xx(dim_effective) = this%poisson_soft_coulomb_param
+    xx1(dim_effective) = this%poisson_soft_coulomb_param
+    xx2(dim_effective) = this%poisson_soft_coulomb_param
+    xx3(dim_effective) = this%poisson_soft_coulomb_param
+    xx4(dim_effective) = this%poisson_soft_coulomb_param
     yy(dim_effective) = M_ZERO
+    include_diag = .true.
   else
     dim_effective = dim
+    include_diag = .false.
   endif
 
 
@@ -251,15 +260,16 @@ subroutine poisson_solve_direct(this, pot, rho)
   case(2)
     prefactor = M_TWO*sqrt(M_PI)
   case(1)
-    prefactor = M_ONE / this%poisson_soft_coulomb_param
+    prefactor = M_ONE ! / this%poisson_soft_coulomb_param
   case default
     message(1) = "Internal error: poisson_solve_direct can only be called for 1D, 2D or 3D."
     ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
     call messages_fatal(1)
   end select
 
-  if(.not. this%der%mesh%use_curvilinear) then
-    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
+!  if(.not. this%der%mesh%use_curvilinear) then
+  if(this%der%mesh%use_curvilinear) then
+      prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
   end if
 
 #ifdef HAVE_MPI
@@ -331,10 +341,10 @@ subroutine poisson_solve_direct(this, pot, rho)
 
         do jp = 1, this%der%mesh%np
           yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
-          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
+          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
         end do
 
       else
@@ -348,10 +358,10 @@ subroutine poisson_solve_direct(this, pot, rho)
 
         do jp = 1, this%der%mesh%np
           yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-          if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))
-          if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))
-          if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))
-          if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))
+          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))
         end do
         
       end if
