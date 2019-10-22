@@ -452,11 +452,13 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(batch_type(yy) == TYPE_CMPLX) then
+        !omp parallel do 
         do ip = 1, np
           yy%states_linear(ist)%zpsi(ip) = xx%states_linear(ist)%zpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%zpsi(ip)
         end do
       else
 #ifdef R_TREAL
+        !omp parallel do
         do ip = 1, np
           yy%states_linear(ist)%dpsi(ip) = xx%states_linear(ist)%dpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%dpsi(ip)
         end do
@@ -530,15 +532,25 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
-      forall(ip = 1:np) this%states_linear(ist)%dpsi(ip) = psi(ip)
+#ifdef R_TREAL
+      call lalg_copy(np, psi, this%states_linear(ist)%dpsi)
+#endif
     else
-      forall(ip = 1:np) this%states_linear(ist)%zpsi(ip) = psi(ip)
+#ifdef R_TCOMPLEX
+      call lalg_copy(np, psi, this%states_linear(ist)%zpsi)
+#endif
     end if
   case(BATCH_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
-      forall(ip = 1:np) this%pack%dpsi(ist, ip) = psi(ip)
+      !omp parallel do 
+      do ip = 1, np
+        this%pack%dpsi(ist, ip) = psi(ip)
+      end do
     else
-      forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
+      !omp parallel do
+      do ip = 1, np
+        this%pack%zpsi(ist, ip) = psi(ip)
+      end do
     end if
   case(BATCH_DEVICE_PACKED)
 
@@ -550,7 +562,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       ! that we copy half of the data there
       
       SAFE_ALLOCATE(zpsi(1:np))
-
+      !omp parallel do
       do ip = 1, np
         zpsi(ip) = psi(ip)
       end do
@@ -717,6 +729,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
       ! and convert to complex on the cpu
       
+      !omp parallel do
       do ip = 1, np
         psi(ip) = dpsi(ip)
       end do
