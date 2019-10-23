@@ -260,7 +260,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   case(2)
     prefactor = M_TWO*sqrt(M_PI)
   case(1)
-    prefactor = M_ONE ! / this%poisson_soft_coulomb_param
+    prefactor = M_ONE 
   case default
     message(1) = "Internal error: poisson_solve_direct can only be called for 1D, 2D or 3D."
     ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
@@ -359,6 +359,11 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa2 = prefactor*rho(ip + 1)
           aa3 = prefactor*rho(ip + 2)
           aa4 = prefactor*rho(ip + 3)
+        else
+          aa1 = M_ZERO
+          aa2 = M_ZERO
+          aa3 = M_ZERO
+          aa4 = M_ZERO
         end if
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
@@ -388,7 +393,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
           yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-          if(ip == jp) then
+          if(ip == jp .and. .not. include_diag) then
             aa1 = aa1 + prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
             aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp)
