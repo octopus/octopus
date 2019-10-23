@@ -1526,12 +1526,6 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
       call MPI_Barrier(mpi_world%comm, mpi_err)
       if(mpi_err /= 0) ierr = ierr + 3
   #endif
-  
-
-  #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      if(mpi_err /= 0) ierr = ierr + 3
-  #endif
 
   POP_SUB(pes_flux_load)
 end subroutine pes_flux_load
