@@ -331,11 +331,13 @@ subroutine poisson_solve_direct(this, pot, rho)
       
       if(this%der%mesh%use_curvilinear) then
 
-        aa1 = prefactor*rho(ip    )*this%der%mesh%vol_pp(ip    )**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-        aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-
+        if(.not. include_diag) then
+          aa1 = prefactor*rho(ip    )*this%der%mesh%vol_pp(ip    )**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+          aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+          aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+          aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+        end if
+        
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
 
         do jp = 1, this%der%mesh%np
@@ -352,10 +354,12 @@ subroutine poisson_solve_direct(this, pot, rho)
 
       else
 
-        aa1 = prefactor*rho(ip    )
-        aa2 = prefactor*rho(ip + 1)
-        aa3 = prefactor*rho(ip + 2)
-        aa4 = prefactor*rho(ip + 3)
+        if(.not. include_diag) then
+          aa1 = prefactor*rho(ip    )
+          aa2 = prefactor*rho(ip + 1)
+          aa3 = prefactor*rho(ip + 2)
+          aa4 = prefactor*rho(ip + 3)
+        end if
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
 
