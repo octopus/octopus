@@ -70,7 +70,7 @@ Tpr = tcpr*npr
 %
 
 TDTimeStep = 0.2
-TDPropagationTime = Tpr/4
+TDPropagationTime = Tpr/2
 
 ############
 # PES
