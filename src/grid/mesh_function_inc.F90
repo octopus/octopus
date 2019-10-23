@@ -498,7 +498,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 #if defined HAVE_MPI
   call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
 #else
-  call lagl_copy(mesh%np_global, ff, f_global)
+  call lalg_copy(mesh%np_global, ff, f_global)
 #endif
 
   call qshep_init(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2))
