@@ -39,6 +39,7 @@ module output_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -67,6 +68,7 @@ module output_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
+  use states_mxll_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m

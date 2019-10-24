@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-  module system_mxll_oct_m
+module system_mxll_oct_m
   use calc_mode_par_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -51,7 +51,6 @@
 !    type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_mxll_t), pointer :: st    !< the states
-    type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(namespace_t)            :: namespace
@@ -85,8 +84,7 @@ contains
 
     call space_init(sys%space, sys%namespace)
     
-    call geometry_nullify(sys%geo) ! probably delete geo attribute
-
+    call geometry_nullify(sys%geo)
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
     !call sys%st%write_info()
