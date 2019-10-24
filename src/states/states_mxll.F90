@@ -572,22 +572,21 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_electric_field_state(rs_state, electric_field, ep_field, np)
-    CMPLX,             intent(in)    :: rs_state(:,:)
+  subroutine get_electric_field_state(rsb, electric_field, ep_field, np)
+    type(batch_t),     intent(in)    :: rsb(:,:)
     FLOAT,             intent(inout) :: electric_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
-
     integer :: ip
 
     PUSH_SUB(get_electric_field_state)
 
     if (present(ep_field) .and. present(np)) then
       do ip=1, np
-        electric_field(ip,:) = sqrt(M_TWO/ep_field(ip)) * real(rs_state(ip,:))
+         electric_field(ip,:) = sqrt(M_TWO/ep_field(ip)) * real(rbs(ip,:))
       end do
     else
-      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rs_state(:,:))
+      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rsb(:,:))
     end if
 
     POP_SUB(get_electric_field_state)
