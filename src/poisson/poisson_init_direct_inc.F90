@@ -288,7 +288,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       xx(1:dim) = xg(1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
@@ -297,7 +297,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         end do
       else
         do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
             pvec(jp) = rho(jp)*prefactor
           else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
