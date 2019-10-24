@@ -698,6 +698,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     
     if(.not. mesh%use_curvilinear) then
 
+      !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%pack%X(psi)(ist, ip)
@@ -713,6 +714,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     else
 
+      !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%pack%X(psi)(ist, ip)
@@ -745,10 +747,8 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
 
     do ist = 1, aa%nst_linear
-
       call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
         res = nrm2_buffer, offres = int(ist - 1, 8))
-      
     end do
 
     call accel_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)
