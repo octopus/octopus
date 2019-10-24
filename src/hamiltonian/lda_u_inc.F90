@@ -1683,7 +1683,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(inout) :: this
     R_TYPE,         intent(in)    :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_set_occupations))
 
@@ -1712,6 +1712,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  this%X(n_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                  ind = ind + 1
+                  this%X(n_alt_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                end do
+              end do
+            end do
+          end do
+        end do
+      end if
     end if
 
     POP_SUB(X(lda_u_set_occupations))
@@ -1722,7 +1740,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(in) :: this
     R_TYPE,      intent(inout) :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_get_occupations))
 
@@ -1751,6 +1769,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  occ(ind) = this%X(n_ij)(im,imp,ispin,ios,inn)
+                  ind = ind + 1
+                  occ(ind) = this%X(n_alt_ij)(im,imp,ispin,ios,inn)
+                end do
+              end do
+            end do
+          end do
+        end do 
+      end if
     end if
 
     POP_SUB(X(lda_u_get_occupations))
