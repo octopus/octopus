@@ -10,7 +10,7 @@ Enabled    : Yes
 
 
 # specify on how many processors we should run this test
-Processors : 1
+Processors : 2
 Input      : 03-He-Hartree-Fock.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -2.22420452
