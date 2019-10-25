@@ -116,7 +116,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   type(states_elec_t),      target, intent(in)    :: st
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(inout) :: xb
-  type(batch_t),                    intent(in)    :: yb
+  type(batch_t),                    intent(inout) :: yb
   R_TYPE,                           intent(in)    :: shift(:)
   FLOAT,                            intent(in)    :: tol
   FLOAT,                            intent(out)   :: residue(:)
@@ -131,7 +131,16 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   case(OPTION__LINEARSOLVER__QMR_DOTP)
 
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
+
+    if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+      call batch_pack(xb)
+      call batch_pack(yb)
+    end if
     call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
+    if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+      call batch_unpack(yb)
+      call batch_unpack(xb)
+    end if
     call profiling_out(prof_batch)
 
   case default
