@@ -1749,7 +1749,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
 
     do ii = 2, nn
       ! npoints==0.0 when pes==0.0
-      if(pes(ii)/=0.0)then
+      if(pes(ii)/= M_ZERO)then
         EE = (ii-1)*step
         !Multiply for the correct Jacobian factor
         pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 
