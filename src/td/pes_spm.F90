@@ -457,7 +457,7 @@ contains
     integer            :: iom, ith, iph, iphi, itot
     FLOAT              :: omega, thetar, phir
     CMPLX              :: vfu
-    FLOAT              :: wfu, weight
+    FLOAT              :: wfu
     FLOAT, allocatable :: wffttot(:,:)
     FLOAT, allocatable :: spctrsum(:,:,:,:), spctrout(:,:)
     character(len=80)  :: filenr
