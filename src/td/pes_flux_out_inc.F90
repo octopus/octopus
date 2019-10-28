@@ -129,112 +129,11 @@ integer pure function flatten_indices(i1,i2,i3,igpt, ll, ngpt) result(ii)
   integer, intent(in) :: ll(:)
   integer, intent(in) :: ngpt
   
-!   ii = (i3-1)*ll(1)*ll(2)*ngpt + (igpt-1)*ll(1)*ll(2) + (i2-1)*ll(1) + i1
-!   ii = (i3-1)*ll(1)*ll(2)*ngpt + (i1-1)*ll(2)*ngpt + (i2-1)*ngpt + igpt
   ii = (i3-1)*ll(1)*ll(2)*ngpt + (i2-1)*ll(1)*ngpt + (i1-1)*ngpt + igpt 
-!   ii = (i3-1)*ll(1)*ll(2) + (i2-1)*ll(1) + i1
   
 end function flatten_indices
 
 
-!subroutine reorder_kpoints(this, kpoints, krng, Lkpt, idx)
-!  type(pes_flux_t),     intent(in)  :: this
-!  type(kpoints_t),      intent(in)  :: kpoints
-!  integer,              intent(in)  :: krng(:)
-!  integer,              intent(in)  :: Lkpt(:,:)
-!  integer,              intent(out) :: idx(:,:)
-!  
-!  integer :: dim, pdim, idim, ik,  nk(1:3), ix, iy
-!  FLOAT :: kpt(1:3)
-!  FLOAT,   allocatable :: KK(:,:,:), KK_tmp(:)
-!  integer, allocatable :: Lkpt_inv(:,:), idx_tmp(:)
-!  
-!  cPUSH_SUB(reorder_kpoints)
-!  
-!  dim  = this%dim
-!  pdim = this%pdim
-!  
-!  nk(:) = 1  
-!  nk(1:dim) = kpoints%nik_axis(1:dim)
-!
-!  cSAFE_ALLOCATE(KK(nk(1), nk(2),1:3))
-!  cSAFE_ALLOCATE(Lkpt_inv(nk(1), nk(2)) )
-!  cSAFE_ALLOCATE(idx_tmp(maxval(nk(1:2))) )
-!  cSAFE_ALLOCATE(KK_tmp(maxval(nk(1:2))) )
-!
-!  KK = M_ZERO
-!  kpt = M_ZERO
-!  idx(:,:) = 1
-!  
-!  do ik = krng(1),krng(2)
-!    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
-!    KK(Lkpt(ik, 1),Lkpt(ik, 2),1:dim) = kpt(1:dim)
-!    Lkpt_inv(Lkpt(ik, 1),Lkpt(ik, 2)) = ik
-!    print *, Lkpt(ik, 1), Lkpt(ik, 2),   ik,  kpt(1:dim)
-!  end do 
-!
-!  
-!
-!  do ix = 1, nk(1)
-!    idx(ix, 1) = ix
-!  end do
-!  do iy = 1, nk(2)
-!    idx(iy, 2) = iy
-!  end do
-!
-!  do ix = 1, nk(1)
-!    do iy = 1, nk(2)
-!      print *, ix, iy, KK(ix,iy,1:dim), idx(ix,1), idx(iy,2)
-!    end do
-!  end do
-!
-!
-!  do iy = 1, nk(2)
-!    do ix = 1, nk(1)
-!      idx_tmp(ix)=ix
-!    end do
-!    KK_tmp(1:nk(1)) = KK(iy,1:nk(1),2)
-!  print *, iy, "--", KK(iy,1:nk(1),2)
-!    call sort(KK_tmp, idx_tmp(1:nk(1)))
-!    KK(iy,1:nk(1),2)= KK_tmp(1:nk(1)) 
-!!     call sort(KK(iy,1:nk(1),2), idx_tmp(1:nk(1)))
-!print *, iy, "--",  idx_tmp(1:nk(1))
-!    
-!print *, iy, "--",  KK(iy,1:nk(1),2)
-!print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
-!    do ix = 1, nk(1)
-!!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(Lkpt(Lkpt_inv(ix,iy), 1))
-!!       idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx_tmp(ix)
-!      idx(Lkpt(Lkpt_inv(ix,iy), 1), 1) = idx(idx_tmp(ix), 1)
-!    end do
-!print *, iy, "--", idx(Lkpt(Lkpt_inv(1:nk(1),iy), 1), 1)
-!    
-!  end do
-!
-!
-!!   do ix = 1, nk(1)
-!!     do iy = 1, nk(2)
-!!       idx_tmp(iy)=iy
-!!     end do
-!!     KK_tmp(1:nk(2)) = KK(ix,1:nk(2),1)
-!!     call sort(KK_tmp, idx_tmp(1:nk(2)))
-!!     do iy = 1, nk(2)
-!! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(Lkpt(ik, 2))
-!! !       idx(Lkpt(Lkpt_inv(ix,iy), 2), 2) = idx_tmp(iy)
-!!       idx(idx_tmp(Lkpt(Lkpt_inv(ix,iy), 2)), 2) = iy
-!!     end do
-!!   end do
-!
-!
-!
-!  
-!  cSAFE_DEALLOCATE_A(KK)
-!  cSAFE_DEALLOCATE_A(KK_tmp)
-!  cSAFE_DEALLOCATE_A(Lkpt_inv)
-!  cSAFE_DEALLOCATE_A(idx_tmp)
-!
-!  cPOP_SUB(reorder_kpoints)  
-!end subroutine reorder_kpoints
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
@@ -313,15 +212,12 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
   end if
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
-!   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), kpoints_have_zero_weight_path(kpoints))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
   
-!   call reorder_kpoints(this, kpoints, krng, Lkpt, ikidx)
   
   if (debug%info) then
     print *,"reordered"
     do ik = krng(1),krng(2)
-!       kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .false.)
       kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
       print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),&
                 "] -- kpt= ",kpt(1:dim)
@@ -331,8 +227,6 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
     print *,"ll(:)", ll(:)
     print *,"----"
   end if
-  
-!   stop
 
 
   pmesh(:, :, :, :) = M_HUGE      
@@ -365,19 +259,15 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
             ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
 
             GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
-  !           print *, ik, j1, j2, j3, "GG(:) = ", GG(:) , ig
-  !           GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
           
             ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1)
             ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2)
             ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
           
-  !           Lp(idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,1:3) =  (/ip1,ip2,ip3/)
             Lp(j1,j2,j3,ik,1:3) =  (/ip1,ip2,ip3/)
           
             ! The final momentum corresponds to p = K-G. 
             ! I have to subtract G only along the periodic dimensions
-!             pmesh(ip1, ip2, ip3, 1:dim) = GG(1:dim) - kpt(1:dim)
             pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
             pmesh(ip1, ip2, ip3, dim)         = GG(dim)
             pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
@@ -387,11 +277,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
                                                      * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
 
             if (debug%info) then
-              print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)!,&
-  !                   "kpt(1:dim)=", kpt(1:dim), "GG(1:dim)=", GG(1:dim)
-                  
-  !             print *,j1,j2,j3,ik,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/), &
-  !                    "pmesh = ",pmesh(ip1, ip2, ip3, 1:3), "Ekin=", Ekin(ip1, ip2, ip3)
+              print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
             end if
 
             ! Sanity checks
@@ -402,7 +288,8 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
             end if
           
             if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
-stop
+              write(message(1),'(a)')'This condition should never happen something bad is going on.'
+              call messages_fatal(1)
               err = -2 
             end if
       
@@ -427,7 +314,6 @@ stop
             do igpt = 1, this%ngpt
               
               ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
-!               ig = flatten_indices(j1,j2,j3, ll)
               GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
               if (sum(GG(1:dim-1)**2)<=M_EPSILON) idxZero(1:3) = (/j1,j2,j3/)
             end do
@@ -503,7 +389,6 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   end if
 
   nkpt =  krng(2)-krng(1)+1
-!       ntodo = st%d%kpt%nglobal * st%nst * st%d%dim
   ntodo = nkpt * nst 
   idone = 0 
   call loct_progress_bar(-1, ntodo)
@@ -528,11 +413,6 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
           itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         
-!           if (itot == 1) then
-!             do ig = 1, this%nkpnts
-!               print *, ig, abs(psiG1(ig))**2
-!             end do
-!           end if
         
           do i1=1, ll(1)
             do i2=1, ll(2)
@@ -540,19 +420,10 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
                 do igpt = 1, this%ngpt
                   ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                   ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-!                   ig = flatten_indices(i1,i2,i3, ll)
               
                     pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
                                                    + abs(psiG1(ig))**2 * weight 
                 
-  !                 print *, ip(:), ig, itot, "abs(psiG1(ig))**2 * weight = ", &
-  !                           abs(psiG1(ig))**2 * weight, abs(psiG1(ig))**2
-
-  !                   if (all(ip(1:2)==(/155,17/))) then
-  !                     print *, itot, ig, ip(1:2), "psiG1(ig) =", psiG1(ig), & 
-  !                              "pesP(ip(1),ip(2),ip(3), ispin) =", pesP(ip(1),ip(2),ip(3), ispin) ,&
-  !                               "abs(psiG1(ig))**2 * weight =", abs(psiG1(ig))**2 * weight
-  !                   end if
                 end do
               end do
             end do
@@ -573,7 +444,6 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
               do igpt = 1, this%ngpt
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                 ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-!                 ig = flatten_indices(i1,i2,i3, ll)
             
                   pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
                                                  + abs(psiG1(ig))**2 * weight 
@@ -663,13 +533,6 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
   idxZero(1:3) =(/0,0,0/) 
   
-!   print *, "ll(:)=", ll(:)
-!   print *, "this%nk = ", this%nk , "this%nstepsthetak = ", &
-!            this%nstepsthetak, "this%nstepsphik ",this%nstepsphik ,&
-!            "this%nstepsomegak", this%nstepsomegak
-!
-!   print *, " size(Pmesh) = ", size(Pmesh, 1),size(Pmesh, 2), size(Pmesh, 3)
-!   print *, "pmesh(1, 2, 2, 1)=", pmesh(1, 2, 2, 1:3)
   
   do ikk = 1, this%nk 
     kact = ikk * this%dk
@@ -705,7 +568,6 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
         kvec(:) = kvec(:) * kact
          
         
-!         print *, ip1, ip2, ip3, iomk
         pmesh(ip1, ip2, ip3, 1:3) = kvec(1:3)
         
         
@@ -751,7 +613,6 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
   end if
 
   nkpt =  krng(2)-krng(1)+1
-!       ntodo = st%d%kpt%nglobal * st%nst * st%d%dim
   ntodo = nkpt * nst 
   idone = 0 
   call loct_progress_bar(-1, ntodo)
