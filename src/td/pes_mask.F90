@@ -190,7 +190,6 @@ contains
     integer :: il, it, ll(3)
     FLOAT :: field(3)
     FLOAT :: DeltaE, MaxE, pCutOff, tmp
-    FLOAT :: width 
     integer :: defaultMask,k1,k2,st1,st2
     integer :: cols_pesmask_block, idim, ip
 
@@ -812,7 +811,7 @@ contains
     type(pes_mask_t),  intent(inout) :: mask
     type(simul_box_t),   intent(in)  :: sb
 
-    integer :: ii,nn(3),dim
+    integer :: ii,dim
     FLOAT   :: temp
 
     PUSH_SUB(pes_mask_generate_Lk)
@@ -898,7 +897,7 @@ contains
     FLOAT,            intent(in)    :: R(2)
     FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
 
-    integer :: ip, dir, ierr
+    integer :: ip, dir
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
     CMPLX,allocatable :: mask_fn(:)
@@ -1001,12 +1000,6 @@ contains
 
     mask_fn(:) = M_ONE - mask_fn(:)
 
-! This output needs a namespace argument to work from now on. It
-! hasn't been touched for some years now, so I won't adapt it. - SO
-!   Keep this here to debug further mask shapes.    
-!     call dio_function_output(io_function_fill_how("PlaneZ"), &
-!                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)
-    
 
     call pes_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 
@@ -1309,7 +1302,7 @@ contains
     integer,             intent(in)    :: iter
 
     integer :: idim, ist, ik
-    type(cube_function_t):: cf1,cf2,cf3,cf4
+    type(cube_function_t):: cf1, cf2
     CMPLX, allocatable :: mf(:), psi(:)
 
     FLOAT :: time
