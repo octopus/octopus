@@ -1081,14 +1081,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: dt
-    logical,             intent(in)    :: stopping
+    type(pes_flux_t),    intent(inout)    :: this
+    type(mesh_t),        intent(in)       :: mesh
+    type(states_elec_t), intent(inout)    :: st
+    type(grid_t),        intent(in)       :: gr
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    integer,             intent(in)       :: iter
+    FLOAT,               intent(in)       :: dt
+    logical,             intent(in)       :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
