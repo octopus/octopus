@@ -46,7 +46,8 @@ TDTimeStep = 0.1
 TDPropagator = aetrs
 TDExponentialMethod = lanczos
 TDExpOrder = 16
-TDPropagationTime = 5
+TDPropagationTime = 10
+RestartWriteInterval = 100
 SpiralBoundaryCondition = yes
 
 TDOutput = total_magnetization + energy
