@@ -73,7 +73,6 @@ contains
     type(simul_box_t), intent(in) :: sb 
     FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
   
-    integer :: iunit
     integer :: ierr
     character(len=512) :: filename
     type(cube_t) :: cube
