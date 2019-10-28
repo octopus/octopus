@@ -204,14 +204,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine pes_calc(pes, mesh, st, dt, iter, gr, hm, stopping)
-    type(pes_t),         intent(inout) :: pes
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    FLOAT,               intent(in)    :: dt
-    integer,             intent(in)    :: iter
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    logical            , intent(in)    :: stopping
+    type(pes_t),         intent(inout)    :: pes
+    type(mesh_t),        intent(in)       :: mesh
+    type(states_elec_t), intent(inout)    :: st
+    type(grid_t),        intent(in)       :: gr
+    FLOAT,               intent(in)       :: dt
+    integer,             intent(in)       :: iter
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    logical            , intent(in)       :: stopping
 
     PUSH_SUB(pes_calc)
 
