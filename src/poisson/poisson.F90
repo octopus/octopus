@@ -723,11 +723,7 @@ contains
 
     ASSERT(this%method /= POISSON_NULL)
 
-    if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
-      call zpoisson1d_solve_direct(this, pot, rho)
-    else
-      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
-    end if
+    call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
@@ -805,7 +801,7 @@ contains
     case(POISSON_DIRECT_SUM)
       select case(this%der%mesh%sb%dim)
       case(1)
-        call dpoisson1d_solve_direct(this, pot, rho)
+        call poisson_solve_direct(this, pot, rho)
       case(2)
         call poisson_solve_direct(this, pot, rho)
       case(3)
@@ -1262,11 +1258,9 @@ contains
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 
 end module poisson_oct_m
 

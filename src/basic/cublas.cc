@@ -162,6 +162,30 @@ extern "C" void FC_FUNC_(cuda_blas_zgemm, CUDA_BLAS_ZGEMM)
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_blas_dgemv, CUDA_BLAS_DGEMV)
+  (cublasHandle_t ** handle, fint * transa, fint8 * m, fint8 * n, 
+   CUdeviceptr ** alpha, CUdeviceptr ** A, fint8 * lda, CUdeviceptr ** x, fint8 * incx, 
+   CUdeviceptr ** beta, CUdeviceptr ** y, fint8 * incy){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasDgemv(**handle, (cublasOperation_t) *transa, *m, *n,
+			       (double *) ** alpha, (double *) **A, *lda, (double *) **x, *incx,
+			       (double *) ** beta, (double *) **y, *incy));
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_blas_zgemv, CUDA_BLAS_ZGEMV)
+  (cublasHandle_t ** handle, fint * transa, fint8 * m, fint8 * n, 
+   CUdeviceptr ** alpha, CUdeviceptr ** A, fint8 * lda, CUdeviceptr ** x, fint8 * incx, 
+   CUdeviceptr ** beta, CUdeviceptr ** y, fint8 * incy){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasZgemv(**handle, (cublasOperation_t) *transa, *m, *n, 
+			       (cuDoubleComplex *) **alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **x, *incx,
+			       (cuDoubleComplex *) **beta, (cuDoubleComplex *) **y, *incy));
+#endif
+}
+
 extern "C" void FC_FUNC_(cuda_blas_dsyrk, CUDA_BLAS_DSYRK)
   (cublasHandle_t ** handle, fint * uplo, fint * trans, fint8 * n, fint8 * k,
    CUdeviceptr **alpha, CUdeviceptr ** A, fint8 * lda,
