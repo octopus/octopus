@@ -117,8 +117,6 @@ contains
 
       if(ierr == 0) then
         call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(sys%hm%lda_u_level /= DFT_U_NONE) &
-          call lda_u_load(restart_load_unocc, sys%hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
       
@@ -135,9 +133,9 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(sys%hm%lda_u_level /= DFT_U_NONE) &
-          call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
       end if
+      if(sys%hm%lda_u_level /= DFT_U_NONE) &
+        call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
       call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
