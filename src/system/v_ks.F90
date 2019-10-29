@@ -565,8 +565,9 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks)
+  subroutine v_ks_end(ks, gr)
     type(v_ks_t),     intent(inout) :: ks
+    type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
     
@@ -580,7 +581,7 @@ contains
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion)
+        call xc_ks_inversion_end(ks%ks_inversion, gr)
       end if
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)

@@ -45,7 +45,6 @@ module scf_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multigrid_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -1411,12 +1410,7 @@ contains
     PUSH_SUB(scf_init_eigensolver)
 
     ! now the eigensolver stuff
-    call eigensolver_init(eigens, namespace, gr, st)
-
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
+    call eigensolver_init(eigens, namespace, gr, st, geo, mc)
 
     POP_SUB(scf_init_eigensolver)
   end subroutine scf_init_eigensolver
@@ -1428,12 +1422,7 @@ contains
 
     PUSH_SUB(scf_end_eigensolver)
 
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      call multigrid_end(gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(gr%mgrid_prec)
-    end if
-
-    call eigensolver_end(eigens)
+    call eigensolver_end(eigens, gr)
 
     POP_SUB(scf_end_eigensolver)
   end subroutine scf_end_eigensolver
