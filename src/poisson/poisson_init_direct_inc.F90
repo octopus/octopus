@@ -343,12 +343,12 @@ subroutine poisson_solve_direct(this, pot, rho)
               pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor**(M_ONE - M_ONE/dim_elec) + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             else
               pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2)) + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             end if
           end if
         end do
@@ -368,12 +368,12 @@ subroutine poisson_solve_direct(this, pot, rho)
               pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             else
               pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2)) + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             end if
           end if
         end do
@@ -442,28 +442,28 @@ subroutine poisson_solve_direct(this, pot, rho)
               + rho(jp)*this%der%mesh%vol_pp(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-              + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx2) ) aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx2(1:dim_effective) &
               - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp) &
               + rho(jp)*this%der%mesh%vol_pp(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx2(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp2 &
-              + dot_product(lam(1:dim_elec),xx2(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx2(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx3) ) aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx3(1:dim_effective) &
               - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp) &
               + rho(jp)*this%der%mesh%vol_pp(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx3(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp3 &
-              + dot_product(lam(1:dim_elec),xx3(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx3(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx4) ) aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx4(1:dim_effective) &
               - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp) &
               + rho(jp)*this%der%mesh%vol_pp(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx4(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp4 &
-              + dot_product(lam(1:dim_elec),xx4(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx4(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
           end do
         end if
         
@@ -500,25 +500,25 @@ subroutine poisson_solve_direct(this, pot, rho)
               + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-              + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx2) ) aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2)) &
               + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx2(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp2 &
-              + dot_product(lam(1:dim_elec),xx2(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx2(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx3) ) aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2)) &
               + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx3(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp3 &
-              + dot_product(lam(1:dim_elec),xx3(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx3(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             
             if( .not. all(yy == xx4) ) aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2)) &
               + rho(jp)*( &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx4(1:dim_elec))*qq &
               - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp4 &
-              + dot_product(lam(1:dim_elec),xx4(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              + dot_product(lam(1:dim_elec),xx4(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
           end do
         end if
       end if
@@ -560,13 +560,13 @@ subroutine poisson_solve_direct(this, pot, rho)
                 + rho(jp)*this%der%mesh%vol_pp(jp)*( &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)))
+                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             else
               aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2))*this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*( &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)))
+                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             end if
           end do
         end if
@@ -589,13 +589,13 @@ subroutine poisson_solve_direct(this, pot, rho)
                 + rho(jp)*( &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)))
+                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             else
               aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2)) &
                 + rho(jp)*( &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pp1 &
-                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)))
+                + dot_product(lam(1:dim_elec),xx1(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec)) )
             end if
           end do
         end if
