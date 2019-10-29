@@ -116,7 +116,7 @@ contains
   subroutine eigensolver_init(eigens, namespace, gr, st, geo, mc)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
     type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc

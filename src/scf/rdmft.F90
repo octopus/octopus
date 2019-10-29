@@ -105,13 +105,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
-    type(rdm_t),         intent(out) :: rdm
-    type(namespace_t),   intent(in)  :: namespace
-    type(grid_t),        intent(in)  :: gr  !< grid
-    type(states_elec_t), intent(in)  :: st  !< States
+    type(rdm_t),         intent(out)   :: rdm
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(inout) :: gr  !< grid
+    type(states_elec_t), intent(in)    :: st  !< States
     type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
-    logical,             intent(in)  :: fromScratch
+    logical,             intent(in)    :: fromScratch
 
     integer :: ist
 
