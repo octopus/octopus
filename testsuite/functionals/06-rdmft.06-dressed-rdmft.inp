@@ -11,7 +11,7 @@ lam=1.0
 Nelec = 2.0
 
 DressedOrbitals = yes
-DressedLambda = lam
+DressedLambdaX = lam
 DressedOmega = om
 DressedElectrons = Nelec
 
