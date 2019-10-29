@@ -341,14 +341,14 @@ subroutine poisson_solve_direct(this, pot, rho)
             qg = this%der%mesh%x(jp, dim)
             if (all(yy == xx)) then
               pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor**(M_ONE - M_ONE/dim_elec) + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*(dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
             else
               pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2)) + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*(dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
             end if
           end if
         end do
@@ -366,14 +366,14 @@ subroutine poisson_solve_direct(this, pot, rho)
             qg = this%der%mesh%x(jp, dim)
             if (all(yy == xx) .and. .not. include_diag) then
               pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*(dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
+              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
             else
               pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_effective) - yy(1:dim_effective))**2)) + rho(jp)*( &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
-              - this%dressed_omega/sqrt(this%dressed_electrons)*(dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
-              + (dot_product(lam(1:dim_elec),xx(1:dim_elec))*(dot_product(lam(1:dim_elec),yy(1:dim_elec))
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx(1:dim_elec))*qg &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),yy(1:dim_elec))*pg &
+              + dot_product(lam(1:dim_elec),xx(1:dim_elec))*dot_product(lam(1:dim_elec),yy(1:dim_elec))
             end if
           end if
         end do
