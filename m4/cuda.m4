@@ -74,6 +74,27 @@ AC_DEFUN([ACX_CUDA],
       AC_MSG_RESULT([yes ($CFLAGS_CUDA $LIBS_CUDA)])
   fi
 
+  if test x"$enable_mpi" == x"yes"; then
+    AC_MSG_CHECKING([for CUDA-aware MPI])
+
+    AC_LANG_PUSH([C])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+    #include "mpi.h"
+    #include "mpi-ext.h"
+    #if !(defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
+    # error No CUDA support.
+    #endif
+    ]])], [acx_cudampi="yes"], [acx_cudampi="no"])
+    AC_LANG_POP([C])
+
+    if test x"${acx_cudampi}" == x"yes" ; then
+      AC_DEFINE(HAVE_CUDA_MPI, 1, [defined if cuda-aware MPI is enabled])
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+  fi
+
   AC_SUBST(CFLAGS_CUDA)
   AC_SUBST(LIBS_CUDA)
 

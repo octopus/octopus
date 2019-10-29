@@ -135,13 +135,6 @@ if test x"${enable_cuda}" == x"yes" ; then
   ACX_CUDA
 fi
 
-if test x"${enable_cuda}" == x"yes" ; then
-  AC_ARG_ENABLE(cudampi, AS_HELP_STRING([--enable-cudampi], [Use CUDA-aware MPI]))
-  if test x"${enable_cudampi}" == x"yes" ; then
-    AC_DEFINE(HAVE_CUDA_MPI, 1, [defined if cuda-aware MPI is enabled])
-  fi
-fi
-
 if test x"${enable_opencl}" == x"yes" ; then
   AC_MSG_WARN([
   
