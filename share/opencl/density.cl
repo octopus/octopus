@@ -66,7 +66,7 @@ __kernel void density_complex(const int nst,
 
 __kernel void density_spinors(const int nst,
 			      const int np,
-                  const int pnp,
+            const int pnp,
 			      __constant double * restrict weights,
 			      const __global double2 * restrict psi, const int ldpsi,
 			      __global double * restrict density){
@@ -83,13 +83,6 @@ __kernel void density_spinors(const int nst,
 
     double2 psi1 = psi[(ip<<ldpsi) + 2*ist + 0];
     double2 psi2 = psi[(ip<<ldpsi) + 2*ist + 1];
-
-    //double2 cc1 = complex_conj(psi[(ip<<ldpsi) + 2*ist + 0]);
-    //double2 cc2 = complex_conj(psi[(ip<<ldpsi) + 2*ist + 1]);
-    //double2 ff1 = complex_mul(cc1, psi[(ip<<ldpsi) + 2*ist + 0]);
-    //double2 ff2 = complex_mul(cc2, psi[(ip<<ldpsi) + 2*ist + 1]);
-    //double2 ff3 = complex_mul(psi[(ip<<ldpsi) + 2*ist], cc2);
-
     double2 ff1 = complex_mul(psi1,complex_conj(psi1));
     double2 ff2 = complex_mul(psi2,complex_conj(psi2));
     double2 ff3 = complex_mul(psi1,complex_conj(psi2));
