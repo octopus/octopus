@@ -66,7 +66,7 @@ program wannier90_interface
 
   implicit none
 
-  integer              :: w90_what
+  integer              :: w90_what, w90_mode
 
   integer              :: ierr
   integer              :: dim, idim
@@ -74,8 +74,7 @@ program wannier90_interface
 
   type(restart_t)      :: restart
   type(system_t)       :: sys
-  logical              :: w90_setup, w90_output, w90_wannier, w90_scdm
-  logical              :: w90_spinors, scdm_proj
+  logical              :: w90_spinors, scdm_proj, w90_scdm
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !
   character(len=80)    :: w90_prefix                               ! w90 input file prefix
@@ -130,39 +129,35 @@ program wannier90_interface
   !%End
   call parse_variable(namespace, 'Wannier90Prefix', 'w90', w90_prefix)
   if(w90_prefix=='w90') then
-    message(1) = "Did not find Wannier90Prefix keyword, will use default: w90"
-    call  messages_warning(1)
+    message(1) = "oct-wannier90: the prefix is set by default to w90"
+    call  messages_info(1)
   end if
 
   !%Variable Wannier90Mode
   !%Type integer
-  !%Default none
+  !%Default 0
   !%Section Utilities::oct-wannier90
   !%Description
   !% Specifies which stage of the Wannier90 interface to use
-  !%Option w90_setup bit(1)
+  !%Option none 0
+  !% Nothing is done.
+  !%Option w90_setup 1
   !% Writes parts of the wannier90 input file <tt>w90_prefix.win</tt> corresponding to
   !% the octopus inp file. Importantly it generates the correct form of Monkhorst-Pack mesh
   !% written to the file w90_kpoints that has to be used in a gs calculation of Octopus by
-  !% as <tt> include w90_kpoints </tt> instead of the <tt>%KpointsGrid</tt> block
-  !%Option w90_output bit(2)
+  !% as <tt> include w90_kpoints </tt> instead of the <tt>%KpointsGrid</tt> block.
+  !%Option w90_output 2
   !% Generates the relevant files for a wannier90 run, specified by the variable <tt>W90_interface_files</tt>.
   !% This needs files previously generated
   !% by <tt>wannier90.x -pp w90 </tt>
-  !%Option w90_wannier bit(3)
+  !%Option w90_wannier 3
   !% Parse the output of wannier90 to generate the Wannier states on the real-space grid. 
   !% The states will be written in the folder wannier. By default, the states are written as
   !% binary files, similar to the Kohn-Sham states.
-  !%Option w90_scdm bit(4)
-  !% use scdm method to generate *.amn file for wannier90
   !%End
-  call parse_variable(namespace, 'Wannier90Mode', 0, w90_what)
-  w90_setup = iand(w90_what, OPTION__WANNIER90MODE__W90_SETUP) /= 0
-  w90_output = iand(w90_what, OPTION__WANNIER90MODE__W90_OUTPUT) /= 0
-  w90_wannier = iand(w90_what, OPTION__WANNIER90MODE__W90_WANNIER) /= 0
-  w90_scdm = iand(w90_what, OPTION__WANNIER90MODE__W90_SCDM) /= 0
+  call parse_variable(namespace, 'Wannier90Mode', 0, w90_mode)
 
-  if(w90_what == 0) then
+  if(w90_mode == 0) then
     message(1) = "Wannier90Mode must be set to a value different from 0."
     call messages_fatal(1)
   end if
@@ -172,8 +167,8 @@ program wannier90_interface
   !%Default w90_mmn + w90_amn + w90_eig
   !%Section Utilities::oct-wannier90
   !%Description
-  !% Specifies which files to generate
-  !% Example: <tt>w90_mmn + w90_unk< /tt>
+  !% Specifies which files to generate.
+  !% Example: <tt>w90_mmn + w90_unk</tt>
   !%Option w90_mmn bit(1)
   !% (see Wannier90 documentation)
   !%Option w90_unk bit(2)
@@ -218,11 +213,144 @@ program wannier90_interface
   w90_spinors = .false.
 
   ! create setup files
-  if(w90_setup) then
+  select case(w90_mode) 
+  case(OPTION__WANNIER90MODE__W90_SETUP)
     call wannier90_setup(sys%gr%sb, sys%geo)
 
   ! load states and calculate interface files
-  elseif(w90_output) then
+  case(OPTION__WANNIER90MODE__W90_OUTPUT)
+    call wannier90_output()
+
+  case(OPTION__WANNIER90MODE__W90_WANNIER)
+    call read_wannier90_files()
+
+   ! normal interface run
+    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
+    if(read_td_states) then
+      call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, sys%gr%der%mesh)
+    else
+      call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, sys%gr%der%mesh)
+    end if
+
+    if(ierr == 0) then
+      call states_elec_look(restart, nik, dim, nst, ierr)
+      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
+        call states_elec_load(restart, namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+      else
+         write(message(1),'(a)') 'Restart structure not commensurate.'
+         call messages_fatal(1)
+      end if
+    end if
+    call restart_end(restart)
+
+    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st)
+  case default
+    message(1) = "Wannier90Mode is set to an unsupported value."
+    call messages_fatal(1)
+  end select
+
+  SAFE_DEALLOCATE_A(exclude_list)
+  SAFE_DEALLOCATE_A(band_index)
+  SAFE_DEALLOCATE_A(w90_nnk_list)
+
+  call system_end(sys)
+  call fft_all_end()
+  call io_end()
+  call profiling_end(namespace)
+  call messages_end()
+  call parser_end()
+  call global_end()
+
+contains
+
+  subroutine wannier90_setup(sb, geo)
+    type(simul_box_t), intent(in) :: sb
+    type(geometry_t),  intent(in) :: geo
+
+    character(len=80) :: filename
+    integer :: w90_win, ia, axis(3), npath
+
+    PUSH_SUB(wannier90_setup)
+
+    ! open win file
+    filename = trim(adjustl(w90_prefix)) //'.win'
+    w90_win = io_open(trim(filename), namespace, action='write')
+
+    write(w90_win,'(a)') '# this file has been created by the Octopus wannier90 utility'
+    write(w90_win,'(a)') ' '
+
+    ! write direct lattice vectors (in angstrom)
+    write(w90_win,'(a)') 'begin unit_cell_cart'
+    write(w90_win,'(a)') 'Ang'
+    do idim=1,3
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
+    end do
+    write(w90_win,'(a)') 'end unit_cell_cart'
+    write(w90_win,'(a)') ' '
+
+    write(w90_win,'(a)') 'begin atoms_frac'
+    do ia=1,sys%geo%natoms
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
+         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+    end do
+    write(w90_win,'(a)') 'end atoms_frac'
+    write(w90_win,'(a)') ' '
+
+    ! This is a default value. In practice, one should use projections
+    write(w90_win,'(a)') 'use_bloch_phases = .true.'
+    write(w90_win,'(a)') ' '
+
+    write(w90_win,'(a10,i4)') 'num_bands ', sys%st%nst
+    write(w90_win,'(a9,i4)') 'num_wann ', sys%st%nst
+    write(w90_win,'(a)') ' '
+
+    if(sys%st%d%ispin == SPINORS) then
+       write(w90_win,'(a)') 'spinors = .true.'
+    end if
+
+    !This is for convenience. This is needed for plotting the Wannier states, if requested.
+    write(w90_win,'(a)')  'write_u_matrices = .true.'
+    write(w90_win,'(a)')  'translate_home_cell = .true.'
+    write(w90_win,'(a)')  'write_xyz = .true.'
+    write(w90_win,'(a)') ' '
+
+    if(sb%kpoints%reduced%npoints == 1) then
+      write(w90_win,'(a)')  'gamma_only = .true.'
+      write(w90_win,'(a)') ' '
+    else
+      if(.not.parse_is_defined(namespace, 'KPointsGrid')) then
+        message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
+        call messages_fatal(1)
+      end if
+
+      !In case the user used also a k-point path, we ignore it
+      npath = SIZE(sb%kpoints%coord_along_path)
+
+      axis(1:3) = sb%kpoints%nik_axis(1:3)
+      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
+
+      write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
+      write(w90_win,'(a)') ' '
+      write(w90_win,'(a)')  'begin kpoints '
+      !Put a minus sign here for the wrong convention in Octopus
+
+      do ii = 1, sb%kpoints%reduced%npoints-npath
+        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
+      end do
+      write(w90_win,'(a)')  'end kpoints '
+    end if
+
+    call io_close(w90_win)
+
+    POP_SUB(wannier90_setup)
+
+  end subroutine wannier90_setup
+
+  subroutine wannier90_output()
+    PUSH_SUB(wannier90_output)
+
     call read_wannier90_files()
 
     ! normal interface run
@@ -245,6 +373,16 @@ program wannier90_interface
       end if
     end if
     call restart_end(restart)
+
+    !%Variable Wannier90UseSCDM
+    !%Type logical
+    !%Default no
+    !%Section Utilities::oct-wannier90
+    !%Description
+    !% By default oct-wannier90 uses the projection method to generate the .amn file.
+    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
+    !%End
+    call parse_variable(namespace, 'Wannier90UseSCDM', .false., w90_scdm)
 
     if(w90_scdm) then
       !%Variable SCDMsigma
@@ -354,128 +492,8 @@ program wannier90_interface
       call create_wannier90_eig()
     end if
 
-  else if(w90_wannier) then
-    call read_wannier90_files()
-
-   ! normal interface run
-    call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    if(read_td_states) then
-      call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
-    else
-      call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
-    end if
-
-    if(ierr == 0) then
-      call states_elec_look(restart, nik, dim, nst, ierr)
-      if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-        call states_elec_load(restart, namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
-      else
-         write(message(1),'(a)') 'Restart structure not commensurate.'
-         call messages_fatal(1)
-      end if
-    end if
-    call restart_end(restart)
-
-    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo, sys%st)
-  end if
-
-  SAFE_DEALLOCATE_A(exclude_list)
-  SAFE_DEALLOCATE_A(band_index)
-
-  call system_end(sys)
-  call fft_all_end()
-  call io_end()
-  call profiling_end(namespace)
-  call messages_end()
-  call parser_end()
-  call global_end()
-
-contains
-
-  subroutine wannier90_setup(sb, geo)
-    type(simul_box_t), intent(in) :: sb
-    type(geometry_t),  intent(in) :: geo
-
-    character(len=80) :: filename
-    integer :: w90_win, ia, axis(3), npath
-
-    PUSH_SUB(wannier90_setup)
-
-    ! open win file
-    filename = trim(adjustl(w90_prefix)) //'.win'
-    w90_win = io_open(trim(filename), namespace, action='write')
-
-    write(w90_win,'(a)') '# this file has been created by the Octopus wannier90 utility'
-    write(w90_win,'(a)') ' '
-
-    ! write direct lattice vectors (in angstrom)
-    write(w90_win,'(a)') 'begin unit_cell_cart'
-    write(w90_win,'(a)') 'Ang'
-    do idim=1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
-    end do
-    write(w90_win,'(a)') 'end unit_cell_cart'
-    write(w90_win,'(a)') ' '
-
-    write(w90_win,'(a)') 'begin atoms_frac'
-    do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
-    end do
-    write(w90_win,'(a)') 'end atoms_frac'
-    write(w90_win,'(a)') ' '
-
-    ! This is a default value. In practice, one should use projections
-    write(w90_win,'(a)') 'use_bloch_phases = .true.'
-    write(w90_win,'(a)') ' '
-
-    write(w90_win,'(a10,i4)') 'num_bands ', sys%st%nst
-    write(w90_win,'(a9,i4)') 'num_wann ', sys%st%nst
-    write(w90_win,'(a)') ' '
-
-    if(sys%st%d%ispin == SPINORS) then
-       write(w90_win,'(a)') 'spinors = .true.'
-    end if
-
-    !This is for convenience. This is needed for plotting the Wannier states, if requested.
-    write(w90_win,'(a)')  'write_u_matrices = .true.'
-    write(w90_win,'(a)')  'translate_home_cell = .true.'
-    write(w90_win,'(a)')  'write_xyz = .true.'
-    write(w90_win,'(a)') ' '
-
-    if(sb%kpoints%reduced%npoints == 1) then
-      write(w90_win,'(a)')  'gamma_only = .true.'
-      write(w90_win,'(a)') ' '
-    else
-      if(.not.parse_is_defined(namespace, 'KPointsGrid')) then
-        message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
-        call messages_fatal(1)
-      end if
-
-      !In case the user used also a k-point path, we ignore it
-      npath = SIZE(sb%kpoints%coord_along_path)
-
-      axis(1:3) = sb%kpoints%nik_axis(1:3)
-      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
-
-      write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
-      write(w90_win,'(a)') ' '
-      write(w90_win,'(a)')  'begin kpoints '
-      !Put a minus sign here for the wrong convention in Octopus
-
-      do ii = 1, sb%kpoints%reduced%npoints-npath
-        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
-      end do
-      write(w90_win,'(a)')  'end kpoints '
-    end if
-
-    call io_close(w90_win)
-
-    POP_SUB(wannier90_setup)
-
-  end subroutine wannier90_setup
+    POP_SUB(wannier90_output)
+  end subroutine wannier90_output
 
   subroutine read_wannier90_files()
     integer ::  w90_nnkp, itemp, dummyint
@@ -496,71 +514,71 @@ contains
 
     inquire(file=filename,exist=exist)
     if(.not. exist) then
-       message(1) = 'oct-wannier90: Cannot find specified Wannier90 nnkp file.'
-       write(message(2),'(a)') 'Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.' 
-       call messages_fatal(2)
+      message(1) = 'oct-wannier90: Cannot find specified Wannier90 nnkp file.'
+      write(message(2),'(a)') 'Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.' 
+      call messages_fatal(2)
     end if
 
     w90_nnkp = io_open(trim(filename), namespace, action='read')
 
     ! check number of k-points
     do while(.true.)
-       read(w90_nnkp,*) dummy, dummy1
-       if(dummy =='begin' .and. dummy1 == 'kpoints' ) then
-          read(w90_nnkp,*) itemp
-          if(itemp /= w90_num_kpts) then
-             message(1) = 'oct-wannier90: wannier90 setup seems to have been done with a different number of k-points.'
-             call messages_fatal(1)
-          else
-             exit
-          end if
-       end if
+      read(w90_nnkp,*) dummy, dummy1
+      if(dummy =='begin' .and. dummy1 == 'kpoints' ) then
+        read(w90_nnkp,*) itemp
+        if(itemp /= w90_num_kpts) then
+          message(1) = 'oct-wannier90: wannier90 setup seems to have been done with a different number of k-points.'
+          call messages_fatal(1)
+        else
+          exit
+        end if
+      end if
     end do
-   call io_close(w90_nnkp)
+    call io_close(w90_nnkp)
 
-   w90_nnkp = io_open(trim(filename), namespace, action='read')
-   ! read from nnkp file
-   ! find the nnkpts block
-   do while(.true.)
-     read(w90_nnkp,*,end=101) dummy, dummy1
-     if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
-       read(w90_nnkp,*) w90_nntot
-       SAFE_ALLOCATE(w90_nnk_list(1:w90_num_kpts*w90_nntot,1:5))
-       do ii=1,w90_num_kpts*w90_nntot
-         read(w90_nnkp,*) w90_nnk_list(ii,1:5)
-       end do
-       !make sure we are at the end of the block
-       read(w90_nnkp,*) dummy
-       if(dummy /= 'end') then
-         message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
-         call messages_fatal(1)
-       end if
-       exit
-     end if
-   end do
+    w90_nnkp = io_open(trim(filename), namespace, action='read')
+    ! read from nnkp file
+    ! find the nnkpts block
+    do while(.true.)
+      read(w90_nnkp,*,end=101) dummy, dummy1
+      if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
+        read(w90_nnkp,*) w90_nntot
+        SAFE_ALLOCATE(w90_nnk_list(1:5, 1:w90_num_kpts * w90_nntot))
+        do ii = 1, w90_num_kpts * w90_nntot
+          read(w90_nnkp,*) w90_nnk_list(1:5, ii)
+        end do
+        !make sure we are at the end of the block
+        read(w90_nnkp,*) dummy
+        if(dummy /= 'end') then
+          message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
+          call messages_fatal(1)
+        end if
+        exit
+      end if
+    end do
 
-   ! read from nnkp file
-   ! find the exclude block
-   SAFE_ALLOCATE(exclude_list(1:sys%st%nst))
-   !By default we use all the bands
-   exclude_list(1:sys%st%nst) = .false.
-   do while(.true.)
-     read(w90_nnkp, *, end=102) dummy, dummy1
-     if(dummy =='begin' .and. dummy1 == 'exclude_bands') then
-       read(w90_nnkp, *) w90_num_exclude
-       do ii=1, w90_num_exclude
-         read(w90_nnkp, *) itemp
-         exclude_list(itemp) = .true.
-       end do
-       !make sure we are at the end of the block
-       read(w90_nnkp, *) dummy
-       if(dummy /= 'end') then
-         message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
-         call messages_fatal(1)
-       end if
-       goto 102
-     end if
-   end do
+    ! read from nnkp file
+    ! find the exclude block
+    SAFE_ALLOCATE(exclude_list(1:sys%st%nst))
+    !By default we use all the bands
+    exclude_list(1:sys%st%nst) = .false.
+    do while(.true.)
+      read(w90_nnkp, *, end=102) dummy, dummy1
+      if(dummy =='begin' .and. dummy1 == 'exclude_bands') then
+        read(w90_nnkp, *) w90_num_exclude
+        do ii=1, w90_num_exclude
+          read(w90_nnkp, *) itemp
+          exclude_list(itemp) = .true.
+        end do
+        !make sure we are at the end of the block
+        read(w90_nnkp, *) dummy
+        if(dummy /= 'end') then
+          message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
+          call messages_fatal(1)
+        end if
+        goto 102
+      end if
+    end do
 
     ! jump point when EOF found while looking for nnkpts block
 101 message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
@@ -601,7 +619,7 @@ contains
             call messages_warning(1)
           else
             if(sys%st%d%ispin == SPINORS) then
-              message(1) = 'oct-wannier90: Octopus has pinors wavefunctions but spinor_projections is not define.'
+              message(1) = 'oct-wannier90: Octopus has spinors wavefunctions but spinor_projections is not defined.'
               message(2) = 'oct-wannier90: Please check the input file for wannier 90.'
               call messages_fatal(2)
             end if
@@ -614,8 +632,12 @@ contains
 
           SAFE_ALLOCATE(w90_proj_centers(w90_nproj, 3))
           SAFE_ALLOCATE(w90_proj_lmr(w90_nproj, 3))
-          if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj))
-          if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj, 3))
+          if(w90_spinors) then
+            SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj)) 
+          end if
+          if(w90_spinors) then
+            SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj, 3))
+          end if
 
           do ii=1, w90_nproj
              read(w90_nnkp, *) w90_proj_centers(ii, 1:3), w90_proj_lmr(ii, 1:3)
@@ -728,9 +750,9 @@ contains
 
     ! loop over the pairs specified in the nnkp file (read before in init)
     do ii = 1, w90_num_kpts * w90_nntot
-       ik = w90_nnk_list(ii, 1)
-       iknn = w90_nnk_list(ii, 2)
-       G(1:3) = w90_nnk_list(ii, 3:5)
+       ik = w90_nnk_list(1, ii)
+       iknn = w90_nnk_list(2, ii)
+       G(1:3) = w90_nnk_list(3:5, ii)
        if(mpi_grp_is_root(mpi_world)) write(w90_mmn, '(I10,2x,I10,2x,I3,2x,I3,2x,I3)') ik, iknn, G(1:3)
 
        Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
@@ -1145,7 +1167,6 @@ contains
     !Read num_kpts, num_wann, num_wann for consistency check
     read(w90_u_mat, *) nik, nwann, nwann
     if(nik /= w90_num_kpts .or. nwann /= w90_num_wann) then
-      print *, nik, w90_num_kpts, nwann, w90_num_wann
       message(1) = "The file contains U matrices is inconsistent with the .win file."
       call messages_fatal(1)
     end if
