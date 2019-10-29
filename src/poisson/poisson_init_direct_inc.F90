@@ -265,7 +265,6 @@ subroutine poisson_solve_direct(this, pot, rho)
   else !dressed orbitals
     dim_elec = dim - 1
     lam(1:dim_elec) = (/ this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z /)
-!print*, "lam", lam
     if (this%poisson_soft_coulomb_param**2 > M_ZERO) then ! TODO: check that test
       dim_effective = dim
       dim_phot = dim + 1
@@ -282,14 +281,12 @@ subroutine poisson_solve_direct(this, pot, rho)
       yy(dim_effective) = M_ZERO
       yy(dim_phot) = M_ZERO
       include_diag = .true.
-!print*, "xx", xx, "lam x xx", dot_product(lam(1:dim_elec),xx(1:dim_elec))
     else
       dim_effective = dim_elec
       include_diag = .false.
       dim_phot = dim
     endif
   end if
-!print*, "dim", dim, "dim_elec", dim_elec, "dim_phot", dim_phot, "dim_effective", dim_effective
 
   ASSERT(this%method == POISSON_DIRECT_SUM)
 
@@ -588,7 +585,6 @@ subroutine poisson_solve_direct(this, pot, rho)
             yy(1:dim_elec) = this%der%mesh%x(jp, 1:dim_elec)
             qq = this%der%mesh%x(jp, dim)
             if (all( xx1 == yy)) then
-!print*, "xx1==yy","xx1", xx1, "yy", yy, "pp1", pp1, "qq", qq
               aa1 = aa1 + this%dressed_coulomb*prefactor*rho(ip) &
                 + rho(jp)*( &
                 - this%dressed_omega/sqrt(this%dressed_electrons)*dot_product(lam(1:dim_elec),xx1(1:dim_elec))*qq &
