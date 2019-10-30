@@ -95,7 +95,7 @@ module maxwell_boundary_op_oct_m
     integer, pointer  :: constant_points_map(:)
     CMPLX,   pointer  :: constant_rs_state(:,:)
 
-    logical           :: mirror = .false.
+!    logical           :: mirror = .false.
     integer           :: mirror_points_number(3)
     integer, pointer  :: mirror_points_map(:,:)
 
@@ -105,7 +105,7 @@ module maxwell_boundary_op_oct_m
     integer,  pointer :: plane_waves_modus(:)
     integer,  pointer :: plane_waves(:)
     character(len=1024), pointer :: plane_waves_e_field_string(:,:)
-    FLOAT,    pointer :: plane_waves_amplitude(:,:,:)
+!    FLOAT,    pointer :: plane_waves_amplitude(:,:,:)
     FLOAT,    pointer :: plane_waves_k_vector(:,:)
     FLOAT,    pointer :: plane_waves_v_vector(:,:)
     FLOAT,    pointer :: plane_waves_e_field(:,:)
@@ -138,7 +138,7 @@ module maxwell_boundary_op_oct_m
     integer, pointer  :: zero_points_map(:,:)
     FLOAT,   pointer  :: zero(:,:)
 
-    logical           :: maxwell_vacuum_fluctuation = .false.
+!    logical           :: maxwell_vacuum_fluctuation = .false.
   end type bc_mxll_t
 
   integer, public, parameter ::       &
