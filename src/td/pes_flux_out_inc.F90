@@ -793,22 +793,6 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
 end subroutine pes_flux_out_energy_pln
 
 
-subroutine pes_flux_out_energy_sph(pes, file, ll, pmesh, Ekin)
-  FLOAT,             intent(in) :: pes(:,:,:)
-  character(len=*),  intent(in) :: file
-  integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
-  FLOAT,             intent(in) :: Ekin(:,:,:)
-  
-  PUSH_SUB(pes_flux_out_energy_sph)
-  
-  
-  
-  POP_SUB(pes_flux_out_energy_sph)
-  
-  
-end subroutine pes_flux_out_energy_sph
-
 
 
 
