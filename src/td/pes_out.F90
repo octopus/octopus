@@ -134,10 +134,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_arpes_cut(namespace, arpes, file, ll, pmesh, Ekin)
+  subroutine pes_out_arpes_cut(namespace, arpes, file, dim, ll, pmesh, Ekin)
     type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: arpes(:,:,:)
     character(len=*),  intent(in) :: file
+    integer,           intent(in) :: dim
     integer,           intent(in) :: ll(:)
     FLOAT,             intent(in) :: pmesh(:,:,:,:)
     FLOAT,             intent(in) :: Ekin(:,:,:)
@@ -171,15 +172,31 @@ contains
       if (ip > 1) pdiff = pp(1:2) - pmesh(ip-1,1,1,1:2)
       dp = sqrt(sum(pdiff(1:2)**2))
       length = length + dp 
+
+      select case (dim)
+        case (2)
+          do ie = 1, ll(2) 
+            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+                                            units_from_atomic(unit_one/units_out%length, length),&
+                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
+                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
+                                            units_from_atomic(units_out%energy, Ekin(ip,ie,1)), &
+                                            arpes(ip,ie,1)
+          end do      
+
+        case(3)
+          do ie = 1, ll(3)
+            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+                                            units_from_atomic(unit_one/units_out%length, length),&
+                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
+                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
+                                            units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
+                                            arpes(ip,1,ie)
+          end do
+          
+      end select
       
-      do ie = 1, ll(3) 
-        write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
-                                        units_from_atomic(unit_one/units_out%length, length),&
-                                        units_from_atomic(unit_one/units_out%length, pp(1)), &
-                                        units_from_atomic(unit_one/units_out%length, pp(2)), &
-                                        units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
-                                        arpes(ip,1,ie)
-      end do      
+
       write(iunit, *)
       
        

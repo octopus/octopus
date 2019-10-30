@@ -1,0 +1,44 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Photoelectron ARPES
+Program    : octopus
+TestGroups : long-run, periodic_systems, photo_electron
+Enabled    : Yes
+
+
+
+# Calculate ground state
+Processors : 2
+Input      : 13-arpes_2d.01-gs.inp
+match ; bandstructure [kpoint]  ; LINEFIELD(static/bandstructure, 5, 1) ; 0.50000000
+match ; bandstructure [energy 1]; LINEFIELD(static/bandstructure, 5, 4) ; -1.04517185
+match ; bandstructure [energy 2]; LINEFIELD(static/bandstructure, 5, 5) ; -0.14310069
+
+# Start time evolution
+Processors : 2
+Input      : 13-arpes_2d.02-td.inp
+match ; TD [energy]       ; LINEFIELD(td.general/energy, 1040, 3)     ; 8.272282167136e+03
+match ; TD [total charge] ; LINEFIELD(td.general/multipoles, 1051, 3) ; 3.999925129380e+00
+
+
+# Retstart time evolution
+Processors : 2
+Input      : 13-arpes_2d.03-restart.inp
+match ; TD [energy]       ; LINEFIELD(td.general/energy, 2073, 3)     ; 8.272282245310e+03
+match ; TD [total charge] ; LINEFIELD(td.general/multipoles, 2084, 3) ; 3.999850046460e+00
+
+# Get the ARPES spectrum 
+Util      : oct-photoelectron_spectrum
+Input     : 13-arpes_2d.04-spectrum.inp
+
+Precision : 1e-7
+
+match ; ARPES [energy 1] ; LINEFIELD(PES_ARPES.path, 77, 4) ; 1.770000000000E+00
+match ; ARPES [kpath  1] ; LINEFIELD(PES_ARPES.path, 77, 1) ; 3.882395023933E-01
+match ; ARPES [val    1] ; LINEFIELD(PES_ARPES.path, 77, 5) ; 2.303415755408E-16
+
+match ; ARPES [energy 2] ; LINEFIELD(PES_ARPES.path, 119, 4) ; 1.750000000000E+00
+match ; ARPES [kpath  2] ; LINEFIELD(PES_ARPES.path, 119, 1) ; 6.460026123303E-01
+match ; ARPES [val    2] ; LINEFIELD(PES_ARPES.path, 119, 5) ; 4.625154197556E-05
+
+
