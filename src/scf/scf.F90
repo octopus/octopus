@@ -86,8 +86,6 @@ module scf_oct_m
     scf_run,             &
     scf_end,             &
     scf_state_info,      &
-    scf_init_eigensolver,&
-    scf_end_eigensolver, &
     scf_print_mem_use
 
   integer, public, parameter :: &
@@ -382,7 +380,8 @@ contains
       call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
-    call scf_init_eigensolver(scf%eigens, namespace, gr, st, geo, mc)
+    ! now the eigensolver stuff
+    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
 
     !%Variable SCFinLCAO
     !%Type logical
@@ -491,7 +490,7 @@ contains
     
     PUSH_SUB(scf_end)
 
-    call scf_end_eigensolver(scf%eigens, scf%gr)
+    call eigensolver_end(scf%eigens, scf%gr)
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
@@ -1397,35 +1396,6 @@ contains
     end subroutine write_convergence_file
     
   end subroutine scf_run
-
-  ! ---------------------------------------------------------
-  subroutine scf_init_eigensolver(eigens, namespace, gr, st, geo, mc)
-    type(eigensolver_t),  intent(inout) :: eigens
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(inout) :: gr
-    type(states_elec_t),  intent(in)    :: st
-    type(geometry_t),     intent(in)    :: geo
-    type(multicomm_t),    intent(in)    :: mc
-
-    PUSH_SUB(scf_init_eigensolver)
-
-    ! now the eigensolver stuff
-    call eigensolver_init(eigens, namespace, gr, st, geo, mc)
-
-    POP_SUB(scf_init_eigensolver)
-  end subroutine scf_init_eigensolver
-
-  ! ---------------------------------------------------------
-  subroutine scf_end_eigensolver(eigens, gr)
-    type(eigensolver_t),  intent(inout) :: eigens
-    type(grid_t),         intent(inout) :: gr
-
-    PUSH_SUB(scf_end_eigensolver)
-
-    call eigensolver_end(eigens, gr)
-
-    POP_SUB(scf_end_eigensolver)
-  end subroutine scf_end_eigensolver
 
   ! ---------------------------------------------------------
   subroutine scf_state_info(st)

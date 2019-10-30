@@ -337,7 +337,8 @@ contains
 
       call states_elec_allocate_wfns(st, mesh)
 
-      call scf_init_eigensolver(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)
+      ! now the eigensolver stuff
+      call eigensolver_init(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
@@ -353,7 +354,7 @@ contains
     subroutine end_()
       PUSH_SUB(unocc_run.end_)
 
-      call scf_end_eigensolver(eigens, sys%gr)
+      call eigensolver_end(eigens, sys%gr)
 
       POP_SUB(unocc_run.end_)
     end subroutine end_
