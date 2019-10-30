@@ -66,17 +66,17 @@ module maxwell_function_oct_m
     MXF_ZERO_FOURIER     =  10013
 
   type mxf_t
-    integer :: mode       = MXF_EMPTY
+    integer :: mode        = MXF_EMPTY
     FLOAT   :: k_vector(3) = M_ZERO
-    FLOAT   :: r0(3)      = M_ZERO  !< vector at the maximum of the pulse
-    FLOAT   :: width      = M_ZERO  !< the width of the pulse
-    FLOAT   :: a0         = M_ZERO
-    FLOAT   :: dx         = M_ZERO !< the space-discretization value.
-    FLOAT   :: init_x     = M_ZERO
-    FLOAT   :: final_x    = M_ZERO
-    FLOAT   :: gr         = M_ZERO
-    integer :: niter      = 0
-    integer :: nfreqs     = 0
+    FLOAT   :: r0(3)       = M_ZERO  !< vector at the maximum of the pulse
+    FLOAT   :: width       = M_ZERO  !< the width of the pulse
+    FLOAT   :: a0          = M_ZERO
+    FLOAT   :: dx          = M_ZERO !< the space-discretization value.
+    FLOAT   :: init_x      = M_ZERO
+    FLOAT   :: final_x     = M_ZERO
+    FLOAT   :: gr          = M_ZERO
+    integer :: niter       = 0
+    integer :: nfreqs      = 0
 
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
@@ -196,74 +196,74 @@ contains
 
         a0 = M_ONE; r0 = M_ZERO; width = M_ZERO; k_vector = M_ZERO
         select case(function_type)
-          case(MXF_CONST_WAVE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call mxf_init_const_wave(f, a0, k_vector, r0)
-          case(MXF_CONST_PHASE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call mxf_init_const_phase(f, a0, k_vector, r0)
-          case(MXF_GAUSSIAN_WAVE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call parse_block_float(blk, i-1, 8, width, units_inp%length)
-            call mxf_init_gaussian_wave(f, a0, k_vector, r0, width)
-          case(MXF_COSINOIDAL_WAVE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call parse_block_float(blk, i-1, 8, width, units_inp%length)
-            call mxf_init_cosinoidal_wave(f, a0, k_vector, r0, width)
-          case(MXF_LOGISTIC_WAVE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call parse_block_float(blk, i-1, 8, gr, units_inp%length)
-            call parse_block_float(blk, i-1, 9, width, units_inp%length)
-            call mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
-          case(MXF_TRAPEZOIDAL_WAVE)
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
-            end do
-            do idim=1, 3
-              call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
-            end do
-            call parse_block_float(blk, i-1, 8, gr, units_inp%length)
-            call parse_block_float(blk, i-1, 9, width, units_inp%length)
-            call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
-          !case(MXF_BESSEL_WAVE)
-          !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
-          !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
-          !  call parse_block_integer(blk, i-1, 4, order, unit_one)
-          !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
-          !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
-          case(MXF_FROM_EXPR)
-            call parse_block_string(blk, i-1, 2, function_expression)
-            call mxf_init_fromexpr(f, trim(function_expression))
-          case default
-            ierr = -2
-            call parse_block_end(blk)
-            POP_SUB(mxf_read)
-            return
+        case (MXF_CONST_WAVE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call mxf_init_const_wave(f, a0, k_vector, r0)
+        case (MXF_CONST_PHASE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call mxf_init_const_phase(f, a0, k_vector, r0)
+        case (MXF_GAUSSIAN_WAVE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call parse_block_float(blk, i-1, 8, width, units_inp%length)
+          call mxf_init_gaussian_wave(f, a0, k_vector, r0, width)
+        case (MXF_COSINOIDAL_WAVE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call parse_block_float(blk, i-1, 8, width, units_inp%length)
+          call mxf_init_cosinoidal_wave(f, a0, k_vector, r0, width)
+        case (MXF_LOGISTIC_WAVE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call parse_block_float(blk, i-1, 8, gr, units_inp%length)
+          call parse_block_float(blk, i-1, 9, width, units_inp%length)
+          call mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
+        case (MXF_TRAPEZOIDAL_WAVE)
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
+          end do
+          do idim = 1, 3
+            call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
+          end do
+          call parse_block_float(blk, i-1, 8, gr, units_inp%length)
+          call parse_block_float(blk, i-1, 9, width, units_inp%length)
+          call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
+        !case(MXF_BESSEL_WAVE)
+        !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
+        !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
+        !  call parse_block_integer(blk, i-1, 4, order, unit_one)
+        !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
+        !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
+        case (MXF_FROM_EXPR)
+          call parse_block_string(blk, i-1, 2, function_expression)
+          call mxf_init_fromexpr(f, trim(function_expression))
+        case default
+          ierr = -2
+          call parse_block_end(blk)
+          POP_SUB(mxf_read)
+          return
         end select
 
         ierr = 0
@@ -272,6 +272,7 @@ contains
     end do row_loop
 
     call parse_block_end(blk)
+
     POP_SUB(mxf_read)
   end subroutine mxf_read
   !------------------------------------------------------------
@@ -479,58 +480,57 @@ contains
     ! no push_sub because it is called too frequently
 
     select case(f%mode)
+    case (MXF_CONST_WAVE)
 
-    case(MXF_CONST_WAVE)
+      y = f%a0 * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
-      y = f%a0 * cos( sum(f%k_vector(:)*(x(:)-f%r0(:))) )
+    case (MXF_CONST_PHASE)
 
-    case(MXF_CONST_PHASE)
+      y = f%a0 * sum(f%k_vector(:)*(x(:) - f%r0(:))) 
 
-      y = f%a0 * sum(f%k_vector(:)*(x(:)-f%r0(:))) 
+    case (MXF_GAUSSIAN_WAVE)
 
-    case(MXF_GAUSSIAN_WAVE)
+      r = exp( - ( ( sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) )**2 / (M_TWO*f%width**2) ) )
+      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
-      r = exp( - ( ( sum(f%k_vector(:)*(x(:)-f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) )**2 / (M_TWO*f%width**2) ) )
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:)-f%r0(:))) )
-
-    case(MXF_COSINOIDAL_WAVE)
+    case (MXF_COSINOIDAL_WAVE)
 
       r = M_ZERO
-      if(abs( sum( f%k_vector(:)*(x(:)-f%r0(:))/sqrt(sum(f%k_vector(:)**2)) ) ) <= f%width) then
-        r = - cos( (M_Pi/2) * ( ( sum(f%k_vector(:)*(x(:)-f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) -2*f%width ) / f%width ) ) 
-        r = r * cos( sum(f%k_vector(:)*(x(:)-f%r0(:))) )
+      if(abs( sum( f%k_vector(:)*(x(:) - f%r0(:))/sqrt(sum(f%k_vector(:)**2)) ) ) <= f%width) then
+        r = - cos( (M_Pi/2) * ( ( sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) - 2*f%width ) / f%width ) ) 
+        r = r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
       end if
       y = f%a0 * r
 
-    case(MXF_LOGISTIC_WAVE)
+    case (MXF_LOGISTIC_WAVE)
 
-      r = M_ONE/(M_ONE+exp(f%gr*(sum(f%k_vector(:)*(x(:)-f%r0(:)))/sqrt(sum(f%k_vector(:)**2))-f%width/M_TWO))) &
-          + M_ONE/(M_ONE+exp(-f%gr*(sum(f%k_vector(:)*(x(:)-f%r0(:)))/sqrt(sum(f%k_vector(:)**2))+f%width/M_TWO))) - M_ONE
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:)-f%r0(:))) )
+      r = M_ONE/(M_ONE + exp(f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO))) &
+          + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO))) - M_ONE
+      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
-    case(MXF_TRAPEZOIDAL_WAVE)
+    case (MXF_TRAPEZOIDAL_WAVE)
 
-      xx = sum(f%k_vector(:)*(x(:)-f%r0(:)))/sqrt(sum(f%k_vector(:)**2))
+      xx = sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2))
       limit_1 = - f%width/2 - 1/f%gr
       limit_2 = - f%width/2
       limit_3 =   f%width/2
       limit_4 =   f%width/2 + 1/f%gr
       if ( ( xx > limit_1 ) .and. ( xx <= limit_2 ) ) then
-        r = M_ONE + f%gr * (sum(f%k_vector(:)*(x(:)-f%r0(:)))/sqrt(sum(f%k_vector(:)**2))+f%width/M_TWO)
+        r = M_ONE + f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO)
       else if ( ( xx > limit_2 ) .and. ( xx <= limit_3 ) ) then
         r = M_ONE
       else if ( ( xx > limit_3 ) .and. ( xx <= limit_4 ) ) then
-        r = M_ONE - f%gr * (sum(f%k_vector(:)*(x(:)-f%r0(:)))/sqrt(sum(f%k_vector(:)**2))-f%width/M_TWO)
+        r = M_ONE - f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO)
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:)-f%r0(:))) )
+      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
-   ! case(MXF_BESSEL_WAVE)
+   ! case (MXF_BESSEL_WAVE)
 
-   !   rad = sqrt(x(1)**2+x(2)**2)
-   !   phi = atan2(x(2),x(1))
-   !   r   = loct_bessel(order,f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3)+order*phi))
+   !   rad = sqrt(x(1)**2 + x(2)**2)
+   !   phi = atan2(x(2), x(1))
+   !   r   = loct_bessel(order, f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3) + order*phi))
 
     case default
 
