@@ -152,7 +152,7 @@ module maxwell_boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_init(bc, namespace, gr, st, sb, geo, dt, add_ab_region)
+  subroutine bc_mxll_init(bc, namespace, gr, st, sb, geo, dt)
     type(bc_mxll_t),          intent(inout) :: bc
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
@@ -160,10 +160,9 @@ contains
     type(simul_box_t),        intent(in)    :: sb
     type(geometry_t),         intent(in)    :: geo
     FLOAT, optional,          intent(in)    :: dt
-    logical, optional,        intent(in)    :: add_ab_region
 
-    integer             :: ip, ip_in, ip_bd, idim, ab_shape_dim, point_info, nlines, icol, ncols 
-    FLOAT               :: dd, bounds(1:2,3), ab_bounds(1:2,3)
+    integer             :: idim, ab_shape_dim, nlines, icol, ncols 
+    FLOAT               :: bounds(1:2,3), ab_bounds(1:2,3)
     FLOAT               :: mask_width, pml_width, zero_width
     type(block_t)       :: blk
     character(len=1024) :: string
@@ -303,7 +302,7 @@ contains
         !%End
         call parse_variable(namespace, 'MaxwellMagneticSigma', M_ONE, bc%medium_sigma_m_factor, unit_one)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
-        call bc_mxll_generate_medium(bc, gr, bounds, dt, geo, st)
+        call bc_mxll_generate_medium(bc, gr, bounds, geo)
       end if
 
       if(bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
@@ -472,7 +471,7 @@ contains
     end do
 
     ! initialization of surfaces
-    call maxwell_surfaces_init(gr%mesh, st, bc, bounds)
+    call maxwell_surfaces_init(gr%mesh, st, bounds)
 
     !%Variable MaxwellABPMLKappaMax
     !%Type float
@@ -529,7 +528,7 @@ contains
     ! mapping of plane waves boundary points
     if (plane_waves_check) then
       call maxwell_plane_waves_points_mapping(bc, gr%mesh, bounds, geo)
-      call maxwell_plane_waves_boundaries_init(bc, gr%mesh, namespace)
+      call maxwell_plane_waves_boundaries_init(bc, namespace)
     end if
 
     ! mapping of zero points
@@ -572,7 +571,7 @@ contains
     type(mesh_t),          intent(in) :: mesh
     type(namespace_t),     intent(in) :: namespace
 
-    integer :: err, ip, ip_in, idim
+    integer :: err, idim
     FLOAT, allocatable :: tmp(:)
     logical :: mask_check, pml_check, medium_check
 
@@ -596,58 +595,58 @@ contains
 
     if (mask_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
-      call get_mask_io_function(bc%mask, bc, mesh, tmp)
+      call get_mask_io_function(bc%mask, bc, tmp)
       call write_files("maxwell_mask", tmp)
       SAFE_DEALLOCATE_A(tmp)
     else if (pml_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
       ! sigma for electric field dim = 1
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:, 1), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 1), bc, tmp)
       call write_files("maxwell_sigma_e-x", tmp)
       ! sigma for electric field dim = 2
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:, 2), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 2), bc, tmp)
       call write_files("maxwell_sigma_e-y", tmp)
       ! sigma for electric field dim = 3
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:, 3), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 3), bc, tmp)
       call write_files("maxwell_sigma_e-z", tmp)
       ! sigma for magnetic field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:, 1), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 1), bc, tmp)
       call write_files("maxwell_sigma_m-x", tmp)
       ! sigma for magnetic dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:, 2), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 2), bc, tmp)
       call write_files("maxwell_sigma_m-y", tmp)
       ! sigma for magnetic = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:, 3), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 3), bc, tmp)
       call write_files("maxwell_sigma_m-z", tmp)
       ! pml_a for electric field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 1)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 1)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-x", tmp)
       ! pml_a for electric field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 2)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 2)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-y", tmp)
       ! pml_a for electric field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 3)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 3)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-z", tmp)
       ! pml_a for magnetic field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:, 1)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 1)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_m-x", tmp)
       ! pml_a for magnetic field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:, 2)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 2)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_m-y", tmp)
       ! pml_a for magnetic field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:, 3)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 3)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_m-z", tmp)
       SAFE_DEALLOCATE_A(tmp)
     end if
@@ -655,39 +654,39 @@ contains
       SAFE_ALLOCATE(tmp(mesh%np))
       ! medium epsilon
       tmp(:) = P_ep
-      call get_medium_io_function(bc%medium_ep, bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_ep, bc, tmp)
       call write_files("maxwell_ep", tmp)
       ! medium mu
       tmp(:) = P_mu
-      call get_medium_io_function(bc%medium_mu, bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_mu, bc, tmp)
       call write_files("maxwell_mu", tmp)
       ! medium epsilon
       tmp(:) = P_c
-      call get_medium_io_function(bc%medium_c, bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_c, bc, tmp)
       call write_files("maxwell_c", tmp)
       ! medium epsilon aux field dim = 1
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:, 1, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 1, :), bc, tmp)
       call write_files("maxwell_aux_ep-x", tmp)
       ! medium epsilon aux field dim = 2
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:, 2, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 2, :), bc, tmp)
       call write_files("maxwell_aux_ep-y", tmp)
       ! medium epsilon aux field dim = 3
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:, 3, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 3, :), bc, tmp)
       call write_files("maxwell_aux_ep-z", tmp)
       ! medium mu aux field dim = 1
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:, 1, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 1, :), bc, tmp)
       call write_files("maxwell_aux_mu-x", tmp)
       ! medium mu aux field dim = 2
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:, 2, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 2, :), bc, tmp)
       call write_files("maxwell_aux_mu-y", tmp)
       ! medium mu aux field dim = 3
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:, 3, :), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 3, :), bc, tmp)
       call write_files("maxwell_aux_mu-z", tmp)
       SAFE_DEALLOCATE_A(tmp)
     end if
@@ -696,10 +695,9 @@ contains
 
     contains
 
-      subroutine get_pml_io_function(pml_func, bc, mesh, io_func)
+      subroutine get_pml_io_function(pml_func, bc, io_func)
         FLOAT,              intent(in)    :: pml_func(:)
         type(bc_mxll_t),    intent(in)    :: bc
-        type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in
@@ -711,33 +709,31 @@ contains
 
       end subroutine get_pml_io_function
 
-      subroutine get_mask_io_function(mask_func, bc, mesh, io_func)
+      subroutine get_mask_io_function(mask_func, bc, io_func)
         FLOAT,              intent(in)    :: mask_func(:,:)
         type(bc_mxll_t),    intent(in)    :: bc
-        type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in, idim
 
         do ip_in = 1, bc%mask_points_number(idim)
-          ip          = bc%mask_points_map(ip_in,idim)
-          io_func(ip) = mask_func(ip_in,idim)
+          ip          = bc%mask_points_map(ip_in, idim)
+          io_func(ip) = mask_func(ip_in, idim)
         end do
 
       end subroutine get_mask_io_function
 
-      subroutine get_medium_io_function(medium_func, bc, mesh, io_func)
+      subroutine get_medium_io_function(medium_func, bc, io_func)
         FLOAT,              intent(in)    :: medium_func(:,:)
         type(bc_mxll_t),    intent(in)    :: bc
-        type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in, idim
 
         do idim = 1, 3
           do ip_in = 1, bc%medium_points_number(idim)
-            ip          = bc%medium_points_map(ip_in,idim)
-            io_func(ip) = medium_func(ip_in,idim)
+            ip          = bc%medium_points_map(ip_in, idim)
+            io_func(ip) = medium_func(ip_in, idim)
           end do
         end do
 
@@ -774,7 +770,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_in_max, ip_bd, point_info, idim
+    integer :: ip, ip_in, ip_in_max, point_info, idim
 
     PUSH_SUB(maxwell_mask_points_mapping)
 
@@ -821,7 +817,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_bd, point_info, pi_face, pi_edge, pi_vertex
+    integer :: ip, ip_in, point_info
 
     PUSH_SUB(maxwell_pml_points_mapping)
 
@@ -859,7 +855,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_bd, point_info
+    integer :: ip, ip_in, point_info
 
     PUSH_SUB(maxwell_constant_points_mapping)
 
@@ -896,7 +892,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_in_max, ip_bd, point_info, idim
+    integer :: ip, ip_in, ip_in_max, point_info, idim
 
     PUSH_SUB(maxwell_mirror_points_mapping)
 
@@ -944,7 +940,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_bd, point_info
+    integer :: ip, ip_in, point_info
 
     PUSH_SUB(maxwell_plane_waves_points_mapping)
 
@@ -980,7 +976,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
-    integer :: ip, ip_in, ip_in_max, ip_bd, point_info, idim
+    integer :: ip, ip_in, ip_in_max, point_info, idim
 
     PUSH_SUB(maxwell_zero_points_mapping)
 
@@ -1041,7 +1037,7 @@ contains
         ip_bd = 0
         do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          call maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
+          call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
@@ -1064,7 +1060,7 @@ contains
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
         do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          call maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
+          call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
           if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
             bc%medium_points_map(ip_in,idim) = ip
@@ -1082,13 +1078,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_surface_points_mapping(bc, mesh, st, bounds, geo)
-    type(bc_mxll_t),     intent(inout) :: bc
+  subroutine maxwell_surface_points_mapping(mesh, st, bounds)
     type(mesh_t),        intent(in)    :: mesh
     type(states_mxll_t), intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
-    type(geometry_t),    intent(in)    :: geo
- 
+
     integer :: ii, jj, ip_surf, rankmin, ip_local, ip_global, np_surf(3), max_np_surf
     FLOAT   :: rr(3), dmin
 
@@ -1243,7 +1237,7 @@ contains
     FLOAT, optional,    intent(in)    :: dt
 
     integer :: ip, ip_in, idim
-    FLOAT   :: width(3), kappa(3), sigma_max(3), ddv(3), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
+    FLOAT   :: width(3), ddv(3), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(bc_mxll_generate_pml)
@@ -1454,16 +1448,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_generate_medium(bc, gr, bounds, dt, geo, st)
+  subroutine bc_mxll_generate_medium(bc, gr, bounds, geo)
     type(bc_mxll_t),         intent(inout) :: bc
     type(grid_t),            intent(in)    :: gr
     FLOAT,                   intent(in)    :: bounds(:,:)
-    FLOAT,         optional, intent(in)    :: dt
     type(geometry_t),        intent(in)    :: geo
-    type(states_mxll_t),     intent(inout) :: st
 
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
-    FLOAT   :: width(3), dd, dd_min, dd_max, dd_dim(3), xx(3), xxp(3)
+    FLOAT   :: dd, dd_min, dd_max, xx(3), xxp(3)
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(bc_mxll_generate_medium)
@@ -1566,17 +1558,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_plane_waves_boundaries_init(bc, mesh, namespace)
+  subroutine maxwell_plane_waves_boundaries_init(bc, namespace)
     type(bc_mxll_t),        intent(inout) :: bc
-    type(mesh_t),           intent(in)    :: mesh
     type(namespace_t),      intent(in)    :: namespace
 
     type(block_t)        :: blk
-    integer              :: ip, ip_global, il, nlines, ncols, bp, default, k_dim, ierr
-    integer              :: ip_1, ip_2, ip_3, limit(2,3), ip_in, oam, sam
+    integer              :: il, nlines, ncols, ierr
+    integer              :: oam, sam
     FLOAT                :: k_vector(3), e_field(3), vv(3), xx(3), rr, dummy(3), test, test_limit!, angle, sigma
-    character(len=1024)  :: k_string(3), e_string(3), width_string(3), shift_string(3), omega_string(3)
-    character(len=1024)  :: mxf_expression, phase_expression
+    character(len=1024)  :: k_string(3)
+    character(len=1024)  :: mxf_expression
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
 
@@ -1777,10 +1768,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_surfaces_init(mesh, st, bc, bounds)
+  subroutine maxwell_surfaces_init(mesh, st, bounds)
     type(mesh_t),             intent(in)    :: mesh
     type(states_mxll_t),      intent(inout) :: st
-    type(bc_mxll_t),          intent(inout) :: bc
     FLOAT,                    intent(in)    :: bounds(:,:)
 
     PUSH_SUB(maxwell_surfaces_init)
@@ -1888,9 +1878,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     integer,             intent(out)   :: point_info
  
-
-    FLOAT   :: rr, dd, xx(3), ddv(1:3), width(3)
-    integer :: dir
+    FLOAT   :: rr, dd, xx(3), width(3)
     
     point_info = 0
     
@@ -1944,8 +1932,7 @@ contains
   end subroutine maxwell_box_point_info
 
 
-  subroutine maxwell_box_pml_point_info(bc, mesh, ip, bounds, pi_face, pi_edge, pi_vertex)
-    type(bc_mxll_t),     intent(inout) :: bc
+  subroutine maxwell_box_pml_point_info(mesh, ip, bounds, pi_face, pi_edge, pi_vertex)
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
@@ -1953,8 +1940,7 @@ contains
     integer,             intent(out)   :: pi_edge
     integer,             intent(out)   :: pi_vertex
 
-    FLOAT   :: rr, dd, xx(3), ddv(1:3), width(3)
-    integer :: dir
+    FLOAT   :: xx(3)
 
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
@@ -2003,21 +1989,17 @@ contains
       pi_vertex = -1
     end if
 
-
   end subroutine maxwell_box_pml_point_info
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
-    type(bc_mxll_t),     intent(inout) :: bc
+  subroutine maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
     integer,             intent(out)   :: boundary_info
  
-
-    FLOAT   :: dd, xx(3)
-    integer :: dir
+    FLOAT   :: xx(3)
 
     boundary_info = 0
 
