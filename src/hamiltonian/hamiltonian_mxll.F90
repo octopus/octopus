@@ -78,8 +78,6 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
     maxwell_fft_hamiltonian,                    &
-!    get_Efield_at_points,               &
-!    get_Bfield_at_points,               &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field, &
     surface_integral_helmholtz_transverse
@@ -212,7 +210,6 @@ contains
  
     hm%adjoint = .false.
     
-!    hm%hamiltonian_mxll = .false.
     hm%current_density_ext_flag = .false.
 
     nullify(hm%energy_density)
@@ -330,7 +327,6 @@ contains
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_init)
-
   end subroutine hamiltonian_mxll_init
 
   
@@ -406,7 +402,6 @@ contains
     if(present(time)) this%current_time = time
 
     POP_SUB(hamiltonian_mxll_update)
-
   end subroutine hamiltonian_mxll_update
 
   ! -----------------------------------------------------------------
@@ -422,51 +417,51 @@ contains
 
   logical pure function hamiltonian_mxll_apply_packed(this, mesh) result(apply)
     type(hamiltonian_mxll_t),   intent(in) :: this
-    type(mesh_t),          intent(in) :: mesh
+    type(mesh_t),               intent(in) :: mesh
 
     apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
     
   end function hamiltonian_mxll_apply_packed
 
-! ---------------------------------------------------------
-subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_bc)
-  type(hamiltonian_mxll_t),      intent(in)    :: hm
-  type(derivatives_t),      intent(in)    :: der
-  type(batch_t), target,    intent(inout) :: psib
-  type(batch_t), target,    intent(inout) :: hpsib
-  FLOAT, optional,          intent(in)    :: time
-  integer, optional,        intent(in)    :: terms
-  logical, optional,        intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, time, terms, set_bc)
+    type(hamiltonian_mxll_t),  intent(in)    :: hm
+    type(derivatives_t),       intent(in)    :: der
+    type(batch_t), target,     intent(inout) :: psib
+    type(batch_t), target,     intent(inout) :: hpsib
+    FLOAT, optional,           intent(in)    :: time
+    integer, optional,         intent(in)    :: terms
+    logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-  type(profile_t), save :: prof_hamiltonian
-  logical :: pack
-  integer :: ii
-  integer :: terms_
+    type(profile_t), save :: prof_hamiltonian
+    logical :: pack
+    integer :: ii
+    integer :: terms_
 
-  call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
-  PUSH_SUB(hamiltonian_mxll_apply_batch)
+    PUSH_SUB(hamiltonian_mxll_apply_batch)
+    call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
 
-  ASSERT(batch_status(psib) == batch_status(hpsib))
+    ASSERT(batch_status(psib) == batch_status(hpsib))
 
-  ASSERT(batch_is_ok(psib))
-  ASSERT(batch_is_ok(hpsib))
-  ASSERT(psib%nst == hpsib%nst)
+    ASSERT(batch_is_ok(psib))
+    ASSERT(batch_is_ok(hpsib))
+    ASSERT(psib%nst == hpsib%nst)
 
-  !Not implemented at the moment
-  ASSERT(.not.present(terms))
-  ASSERT(.not.present(set_bc))
+    !Not implemented at the moment
+    ASSERT(.not.present(terms))
+    ASSERT(.not.present(set_bc))
 
-!  pack = hamiltonian_mxll_apply_packed(hm, der%mesh) &
-!    .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
-!    .and. terms_ == TERM_ALL
+!    pack = hamiltonian_mxll_apply_packed(hm, der%mesh) &
+!      .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
+!      .and. terms_ == TERM_ALL
 
-!  if(pack) then
-!    call batch_pack(psib)
-!    call batch_pack(hpsib, copy = .false.)
-!  end if
+!    if(pack) then
+!      call batch_pack(psib)
+!      call batch_pack(hpsib, copy = .false.)
+!    end if
 
-  if(present(time)) then
+    if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
@@ -474,57 +469,56 @@ subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_
       endif
     end if
 
-  call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
-  hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
+    call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
+    hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
   
-!  if(pack) then
-!    call batch_unpack(psib, copy = .false.)
-!    call batch_unpack(hpsib)
-!  end if
+!    if(pack) then
+!      call batch_unpack(psib, copy = .false.)
+!      call batch_unpack(hpsib)
+!    end if
 
-  POP_SUB(hamiltonian_mxll_apply_batch)
-  call profiling_out(prof_hamiltonian)
+    call profiling_out(prof_hamiltonian)
+    POP_SUB(hamiltonian_mxll_apply_batch)
+  end subroutine hamiltonian_mxll_apply_batch
 
-end subroutine hamiltonian_mxll_apply_batch
+  ! ---------------------------------------------------------
+  !> Applying the Maxwell Hamiltonian on Maxwell states
+  subroutine hamiltonian_mxll_apply(hm, der, psi, oppsi, ist, ik, time, terms, set_bc)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    integer,                  intent(in)    :: ist       !< the index of the state
+    integer,                  intent(in)    :: ik        !< the index of the k-point
+    !R_TYPE,   target,         intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    !R_TYPE,   target,         intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+    CMPLX,    target,          intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,    target,         intent(inout) :: oppsi(:,:) !< (gr%mesh%np, hm%d%dim)
+    FLOAT,    optional,       intent(in)    :: time
+    integer,  optional,       intent(in)    :: terms
+    logical,  optional,       intent(in)    :: set_bc
 
-! ---------------------------------------------------------
-!> Applying the Maxwell Hamiltonian on Maxwell states
-subroutine hamiltonian_mxll_apply (hm, der, psi, oppsi, ist, ik, time, terms, set_bc)
-  type(hamiltonian_mxll_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ist       !< the index of the state
-  integer,             intent(in)    :: ik        !< the index of the k-point
-  !R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  !R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-  CMPLX,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  CMPLX,   target,    intent(inout) :: oppsi(:,:) !< (gr%mesh%np, hm%d%dim)
-  FLOAT,    optional,  intent(in)    :: time
-  integer,  optional,  intent(in)    :: terms
-  logical,  optional,  intent(in)    :: set_bc
+!    type(batch_t) :: psib, hpsib
+    type(profile_t), save :: prof_hamiltonian
 
-!  type(batch_t) :: psib, hpsib
-  type(profile_t), save :: prof_hamiltonian
+    PUSH_SUB(hamiltonian_mxll_apply)
 
-  PUSH_SUB(hamiltonian_mxll_apply)
-
-!  call batch_init(psib, hm%d%dim, 1)
-!  call batch_add_state(psib, ist, psi)
-!  call batch_init(hpsib, hm%d%dim, 1)
-!  call batch_add_state(hpsib, ist, hpsi)
+!    call batch_init(psib, hm%d%dim, 1)
+!    call batch_add_state(psib, ist, psi)
+!    call batch_init(hpsib, hm%d%dim, 1)
+!    call batch_add_state(hpsib, ist, hpsi)
 !
-!  call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
+!    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !
-!  call batch_end(psib)
-!  call batch_end(hpsib)
+!    call batch_end(psib)
+!    call batch_end(hpsib)
 
-   call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
+    call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
 
-   if(present(time)) then
-      if(abs(time - hm%current_time) > CNST(1e-10)) then
+    if (present(time)) then
+      if (abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
         call messages_fatal(2)
-      endif
+      end if
     end if
 
 !    select case (hm%op_method) 
@@ -534,44 +528,44 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, oppsi, ist, ik, time, terms, se
 !        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
 !     end select
 
-  call profiling_out(prof_hamiltonian)
+    call profiling_out(prof_hamiltonian)
 
-  POP_SUB(hamiltonian_mxll_apply)
-end subroutine hamiltonian_mxll_apply
+    POP_SUB(hamiltonian_mxll_apply)
+  end subroutine hamiltonian_mxll_apply
 
 
-! ---------------------------------------------------------
-subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time)
-  type(hamiltonian_mxll_t), intent(inout) :: hm
-  type(xc_t),          intent(in)    :: xc
-  type(derivatives_t), intent(inout) :: der
-  type(states_mxll_t), intent(inout) :: st
-  type(states_mxll_t), intent(inout) :: hst
-  FLOAT, optional,     intent(in)    :: time
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_mxll_apply_all(hm, xc, der, st, hst, time)
+    type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(xc_t),               intent(in)    :: xc
+    type(derivatives_t),      intent(inout) :: der
+    type(states_mxll_t),      intent(inout) :: st
+    type(states_mxll_t),      intent(inout) :: hst
+    FLOAT, optional,          intent(in)    :: time
 
-  integer :: ik, ib, ist
-  !R_TYPE, allocatable :: psi(:, :)
-  FLOAT, allocatable :: psi(:, :)
+    integer :: ik, ib, ist
+    !R_TYPE, allocatable :: psi(:, :)
+    FLOAT, allocatable :: psi(:, :)
   
-  PUSH_SUB(X(hamiltonian_mxll_apply_all))
+    PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
-!  if(present(Imtime)) then
-!    do ik = st%d%kpt%start, st%d%kpt%end
-!      do ib = st%group%block_start, st%group%block_end
-!        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
+!    if(present(Imtime)) then
+!      do ik = st%d%kpt%start, st%d%kpt%end
+!        do ib = st%group%block_start, st%group%block_end
+!          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
 !      end do
 !    end do
   !  else
-  if (present(time)) then 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
+    if (present(time)) then 
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
+        end do
       end do
-    end do
-  end if
+    end if
 
-  POP_SUB(hamiltonian_mxll_apply_all)
-end subroutine hamiltonian_mxll_apply_all
+    POP_SUB(hamiltonian_mxll_apply_all)
+  end subroutine hamiltonian_mxll_apply_all
 
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states with finite difference
@@ -797,10 +791,6 @@ end subroutine hamiltonian_mxll_apply_all
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
 
-
-
-
-
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation
   subroutine maxwell_pml_hamiltonian(hm, der, psi, dir1, dir2, tmp)
@@ -825,16 +815,15 @@ end subroutine hamiltonian_mxll_apply_all
     POP_SUB(maxwell_pml_hamiltonian)
   end subroutine maxwell_pml_hamiltonian
 
-
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation
   subroutine maxwell_pml_hamiltonian_medium(hm, der, psi, dir1, dir2, tmp)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(derivatives_t), intent(in)    :: der
-    CMPLX,               intent(inout) :: psi(:,:)
-    integer,             intent(in)    :: dir1
-    integer,             intent(in)    :: dir2
-    CMPLX,               intent(inout) :: tmp(:,:)
+    type(derivatives_t),      intent(in)    :: der
+    CMPLX,                    intent(inout) :: psi(:,:)
+    integer,                  intent(in)    :: dir1
+    integer,                  intent(in)    :: dir2
+    CMPLX,                    intent(inout) :: tmp(:,:)
 
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
 
@@ -849,7 +838,6 @@ end subroutine hamiltonian_mxll_apply_all
 
     POP_SUB(maxwell_pml_hamiltonian_medium)
   end subroutine maxwell_pml_hamiltonian_medium
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein vector
@@ -876,12 +864,12 @@ end subroutine hamiltonian_mxll_apply_all
       SAFE_ALLOCATE(tmp_partial(np_part))
 
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
+      do ip_in = 1, hm%bc%pml_points_number
         ip       = hm%bc%pml_points_map(ip_in)
-        pml_c(:) = hm%bc%pml_c(ip_in,:)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
+        pml_c(:) = hm%bc%pml_c(ip_in, :)
+        pml_a(:) = hm%bc%pml_a(ip_in, :)
+        pml_b(:) = hm%bc%pml_b(ip_in, :)
+        pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
                  + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
@@ -894,7 +882,6 @@ end subroutine hamiltonian_mxll_apply_all
 
     POP_SUB(maxwell_pml_calculation_via_riemann_silberstein)
   end subroutine maxwell_pml_calculation_via_riemann_silberstein
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation directly via electric and magnetic field
@@ -923,16 +910,16 @@ end subroutine hamiltonian_mxll_apply_all
 
       call get_electric_field_state(psi, tmp_e)
       call get_magnetic_field_state(psi, hm%rs_sign, tmp_b)
-      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:), pml_dir, set_bc = .false.)
-      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_e(:, field_dir), tmp_partial_e(:), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:, field_dir), tmp_partial_b(:), pml_dir, set_bc = .false.)
       tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
       tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
       do ip_in = 1, hm%bc%pml_points_number
         ip       = hm%bc%pml_points_map(ip_in)
-        pml_c(:) = hm%bc%pml_c(ip_in,:)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
+        pml_c(:) = hm%bc%pml_c(ip_in, :)
+        pml_a(:) = hm%bc%pml_a(ip_in, :)
+        pml_b(:) = hm%bc%pml_b(ip_in, :)
+        pml_g(:) = hm%bc%pml_conv_plus(ip_in,pml_dir, :)
         pml(ip)  = pml_c(pml_dir) * tmp_partial_e(ip) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip) &
                  + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip) &
                  + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip) &
@@ -949,7 +936,6 @@ end subroutine hamiltonian_mxll_apply_all
 
     POP_SUB(maxwell_pml_calculation_via_e_b_fields)
   end subroutine maxwell_pml_calculation_via_e_b_fields
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein 
@@ -978,19 +964,19 @@ end subroutine hamiltonian_mxll_apply_all
       call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
       do ip_in = 1, hm%bc%pml_points_number
         ip         = hm%bc%pml_points_map(ip_in)
-        pml_c(:)   = hm%bc%pml_c(ip_in,:)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,pml_dir,:)
-        pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip,1) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip,1)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip,1)) &
+        pml_c(:)   = hm%bc%pml_c(ip_in, :)
+        pml_a(:)   = hm%bc%pml_a(ip_in, :)
+        pml_b(:)   = hm%bc%pml_b(ip_in, :)
+        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
+        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
+        pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
+                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 1)) &
+                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
                    + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
-        pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip,2) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip,2)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip,2)) &
+        pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
+                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 2)) &
+                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
                    + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
@@ -1001,7 +987,6 @@ end subroutine hamiltonian_mxll_apply_all
 
     POP_SUB(maxwell_pml_calculation_via_riemann_silberstein_medium)
   end subroutine maxwell_pml_calculation_via_riemann_silberstein_medium
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation directly 
@@ -1025,35 +1010,35 @@ end subroutine hamiltonian_mxll_apply_all
 
       np_part = der%mesh%np_part
       SAFE_ALLOCATE(tmp_e(np_part,3))
-      SAFE_ALLOCATE(tmp_partial_e(np_part,2))
+      SAFE_ALLOCATE(tmp_partial_e(np_part, 2))
       SAFE_ALLOCATE(tmp_b(np_part,3))
-      SAFE_ALLOCATE(tmp_partial_b(np_part,2))
+      SAFE_ALLOCATE(tmp_partial_b(np_part, 2))
 
-      call get_electric_field_state(psi(:,1:3), tmp_e)
-      call get_magnetic_field_state(psi(:,1:3), 1, tmp_b)
-      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,1), pml_dir, set_bc = .false.)
-      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,1), pml_dir, set_bc = .false.)
-      call get_electric_field_state(psi(:,4:6), tmp_e)
-      call get_magnetic_field_state(psi(:,4:6), -1, tmp_b)
-      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,2), pml_dir, set_bc = .false.)
-      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,2), pml_dir, set_bc = .false.)
+      call get_electric_field_state(psi(:, 1:3), tmp_e)
+      call get_magnetic_field_state(psi(:, 1:3), 1, tmp_b)
+      call dderivatives_partial(der, tmp_e(:, field_dir), tmp_partial_e(:, 1), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:, field_dir), tmp_partial_b(:, 1), pml_dir, set_bc = .false.)
+      call get_electric_field_state(psi(:, 4:6), tmp_e)
+      call get_magnetic_field_state(psi(:, 4:6), -1, tmp_b)
+      call dderivatives_partial(der, tmp_e(:, field_dir), tmp_partial_e(:, 2), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:, field_dir), tmp_partial_b(:, 2), pml_dir, set_bc = .false.)
       tmp_partial_e(:,:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:,:)
       tmp_partial_b(:,:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:,:)
-      do ip_in=1, hm%bc%pml_points_number
+      do ip_in = 1, hm%bc%pml_points_number
         ip         = hm%bc%pml_points_map(ip_in)
-        pml_c(:)   = hm%bc%pml_c(ip_in,:)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,pml_dir,:)
-        pml(ip,1)  = pml_c(pml_dir) * tmp_partial_e(ip,1) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip,1) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip,1) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip,1) &
+        pml_c(:)   = hm%bc%pml_c(ip_in, :)
+        pml_a(:)   = hm%bc%pml_a(ip_in, :)
+        pml_b(:)   = hm%bc%pml_b(ip_in, :)
+        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,pml_dir, :)
+        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,pml_dir, :)
+        pml(ip, 1) = pml_c(pml_dir) * tmp_partial_e(ip, 1) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip, 1) &
+                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip, 1) &
+                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip, 1) &
                    + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
-        pml(ip,2)  = pml_c(pml_dir) * tmp_partial_e(ip,2) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip,2) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip,2) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip,2) &
+        pml(ip,2)  = pml_c(pml_dir) * tmp_partial_e(ip, 2) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip, 2) &
+                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip, 2) &
+                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip, 2) &
                    + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
@@ -1067,7 +1052,6 @@ end subroutine hamiltonian_mxll_apply_all
 
     POP_SUB(maxwell_pml_calculation_via_e_b_fields_medium)
   end subroutine maxwell_pml_calculation_via_e_b_fields_medium
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian for medium boundaries
@@ -1083,48 +1067,48 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_medium_boundaries_calculation)
 
-    do idim=1, 3
+    do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
-        do ip_in=1, hm%bc%medium_points_number(idim)
-          ip          = hm%bc%medium_points_map(ip_in,idim)
-          cc          = hm%bc%medium_c(ip_in,idim)/P_c
-          aux_ep(:)   = hm%bc%medium_aux_ep(ip_in,:,idim)
-          aux_mu(:)   = hm%bc%medium_aux_mu(ip_in,:,idim)
-          sigma_e     = hm%bc%medium_sigma_e(ip_in,idim)
-          sigma_m     = hm%bc%medium_sigma_m(ip_in,idim)
-          ff_plus(1)  = psi(ip,1)
-          ff_plus(2)  = psi(ip,2)
-          ff_plus(3)  = psi(ip,3)
-          ff_minus(1) = psi(ip,4)
-          ff_minus(2) = psi(ip,5)
-          ff_minus(3) = psi(ip,6)
+        do ip_in = 1, hm%bc%medium_points_number(idim)
+          ip          = hm%bc%medium_points_map(ip_in, idim)
+          cc          = hm%bc%medium_c(ip_in, idim)/P_c
+          aux_ep(:)   = hm%bc%medium_aux_ep(ip_in, :, idim)
+          aux_mu(:)   = hm%bc%medium_aux_mu(ip_in, :, idim)
+          sigma_e     = hm%bc%medium_sigma_e(ip_in, idim)
+          sigma_m     = hm%bc%medium_sigma_m(ip_in, idim)
+          ff_plus(1)  = psi(ip, 1)
+          ff_plus(2)  = psi(ip, 2)
+          ff_plus(3)  = psi(ip, 3)
+          ff_minus(1) = psi(ip, 4)
+          ff_minus(2) = psi(ip, 5)
+          ff_minus(3) = psi(ip, 6)
           aux_ep      = dcross_product(aux_ep,real(ff_plus+ff_minus))
           aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
-          oppsi(ip,1) = oppsi(ip,1)*cc                                        &
-                      - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,4) = oppsi(ip,4)*cc                                        &
-                      + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,2) = oppsi(ip,2)*cc                                        &
-                      - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2))
-          oppsi(ip,5) = oppsi(ip,5)*cc                                        &
-                      + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2)) 
-          oppsi(ip,3) = oppsi(ip,3)*cc                                        &
-                      - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
-          oppsi(ip,6) = oppsi(ip,6)*cc                                        &
-                      + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
+          oppsi(ip, 1) = oppsi(ip, 1)*cc                                         &
+                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 4) = oppsi(ip, 4)*cc                                         &
+                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 2) = oppsi(ip, 2)*cc                                         &
+                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
+                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+          oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
+                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          oppsi(ip, 6) = oppsi(ip, 6)*cc                                         &
+                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end if
     end do
@@ -1132,12 +1116,11 @@ end subroutine hamiltonian_mxll_apply_all
     POP_SUB(maxwell_medium_boundaries_calculation)
   end subroutine maxwell_medium_boundaries_calculation
 
-
   ! ---------------------------------------------------------
   ! > Maxwell Hamiltonian including medium boxes
   subroutine maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(derivatives_t),      intent(in)    :: der
+     type(derivatives_t),      intent(in)    :: der
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
@@ -1154,103 +1137,102 @@ end subroutine hamiltonian_mxll_apply_all
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
       do il = 1, hm%medium_box_number
         do ip_in = 1, hm%medium_box_points_number(il)
-          ip           = hm%medium_box_points_map(ip_in,il)
+          ip           = hm%medium_box_points_map(ip_in, il)
           cc           = hm%medium_box_c(ip_in,il)/P_c
-          aux_ep(:)    = hm%medium_box_aux_ep(ip_in,:,il)
-          aux_mu(:)    = hm%medium_box_aux_mu(ip_in,:,il)
-          sigma_e      = hm%medium_box_sigma_e(ip_in,il)
-          sigma_m      = hm%medium_box_sigma_m(ip_in,il)
-          ff_plus(1)   = psi(ip,1)
-          ff_plus(2)   = psi(ip,2)
-          ff_plus(3)   = psi(ip,3)
-          ff_minus(1)  = psi(ip,4)
-          ff_minus(2)  = psi(ip,5)
-          ff_minus(3)  = psi(ip,6)
+          aux_ep(:)    = hm%medium_box_aux_ep(ip_in, :, il)
+          aux_mu(:)    = hm%medium_box_aux_mu(ip_in, :, il)
+          sigma_e      = hm%medium_box_sigma_e(ip_in, il)
+          sigma_m      = hm%medium_box_sigma_m(ip_in, il)
+          ff_plus(1)   = psi(ip, 1)
+          ff_plus(2)   = psi(ip, 2)
+          ff_plus(3)   = psi(ip, 3)
+          ff_minus(1)  = psi(ip, 4)
+          ff_minus(2)  = psi(ip, 5)
+          ff_minus(3)  = psi(ip, 6)
           aux_ep       = dcross_product(aux_ep,real(ff_plus+ff_minus))
           aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
-          oppsi(ip,1) = oppsi(ip,1)*cc                                        &
-                      - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,4) = oppsi(ip,4)*cc                                        &
-                      + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,2) = oppsi(ip,2)*cc                                        &
-                      - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2))
-          oppsi(ip,5) = oppsi(ip,5)*cc                                        &
-                      + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2)) 
-          oppsi(ip,3) = oppsi(ip,3)*cc                                        &
-                      - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))         &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
-          oppsi(ip,6) = oppsi(ip,6)*cc                                        &
-                      + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))         &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
+          oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
+                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 4) = oppsi(ip,4)*cc                                          &
+                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 2) = oppsi(ip,2)*cc                                          &
+                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          oppsi(ip, 5) = oppsi(ip,5)*cc                                          &
+                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+          oppsi(ip, 3) = oppsi(ip,3)*cc                                          &
+                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          oppsi(ip, 6) = oppsi(ip,6)*cc                                          &
+                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end do
     end if
 
     if (hm%medium_box .and. &
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) ) then
-      SAFE_ALLOCATE(tmp_e(np_part,3))
-      SAFE_ALLOCATE(tmp_curl_e(np_part,3))
-      SAFE_ALLOCATE(tmp_b(np_part,3))
-      SAFE_ALLOCATE(tmp_curl_b(np_part,3))
-      call get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, hm%st%ep, np_part)
-      call get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
+      SAFE_ALLOCATE(tmp_e(np_part, 3))
+      SAFE_ALLOCATE(tmp_curl_e(np_part, 3))
+      SAFE_ALLOCATE(tmp_b(np_part, 3))
+      SAFE_ALLOCATE(tmp_curl_b(np_part, 3))
+      call get_electric_field_state(psi(:, 1:3) +psi(:, 4:6), tmp_e, hm%st%ep, np_part)
+      call get_magnetic_field_state(psi(:, 1:3) +psi(:, 4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
       call dderivatives_curl(der, tmp_e, tmp_curl_e, set_bc = .false.)
       call dderivatives_curl(der, tmp_b, tmp_curl_b, set_bc = .false.)
       SAFE_DEALLOCATE_A(tmp_e)
       SAFE_DEALLOCATE_A(tmp_b)
-      tmp_curl_e(:,1) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,1)
-      tmp_curl_e(:,2) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,2)
-      tmp_curl_e(:,3) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,3)
-      tmp_curl_b(:,1) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,1)
-      tmp_curl_b(:,2) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,2)
-      tmp_curl_b(:,3) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,3)
-      do il=1, hm%medium_box_number
-        do ip_in=1, hm%medium_box_points_number(il)
-          ip           = hm%medium_box_points_map(ip_in,il)
-          cc           = hm%medium_box_c(ip_in,il)
-          sigma_e      = hm%medium_box_sigma_e(ip_in,il)
-          sigma_m      = hm%medium_box_sigma_m(ip_in,il)
-          ff_plus(1)   = psi(ip,1)
-          ff_plus(2)   = psi(ip,2)
-          ff_plus(3)   = psi(ip,3)
-          ff_minus(1)  = psi(ip,4)
-          ff_minus(2)  = psi(ip,5)
-          ff_minus(3)  = psi(ip,6)
-          oppsi(ip,1) =   cc * tmp_curl_e(ip,1) + cc * M_zI * tmp_curl_b(ip,1)   &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))            &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,4) = - cc * tmp_curl_e(ip,1) + cc * M_zI * tmp_curl_b(ip,1)   &
-                      - M_zI * sigma_e * real(ff_plus(1)+ff_minus(1))            &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(1)-ff_minus(1))
-          oppsi(ip,2) =   cc * tmp_curl_e(ip,2) + cc * M_zI * tmp_curl_b(ip,2)   &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))            &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2))
-          oppsi(ip,5) = - cc * tmp_curl_e(ip,2) + cc * M_zI * tmp_curl_b(ip,2)   &
-                      - M_zI * sigma_e * real(ff_plus(2)+ff_minus(2))            &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(2)-ff_minus(2)) 
-          oppsi(ip,3) =   cc * tmp_curl_e(ip,3) + cc * M_zI * tmp_curl_b(ip,3)   &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))            &
-                      - M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
-          oppsi(ip,6) = - cc * tmp_curl_e(ip,3) + cc * M_zI * tmp_curl_b(ip,3)   &
-                      - M_zI * sigma_e * real(ff_plus(3)+ff_minus(3))            &
-                      + M_zI * sigma_m * M_zI * aimag(ff_plus(3)-ff_minus(3))
+      tmp_curl_e(:, 1) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:, 1)
+      tmp_curl_e(:, 2) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:, 2)
+      tmp_curl_e(:, 3) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:, 3)
+      tmp_curl_b(:, 1) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:, 1)
+      tmp_curl_b(:, 2) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:, 2)
+      tmp_curl_b(:, 3) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:, 3)
+      do il = 1, hm%medium_box_number
+        do ip_in = 1, hm%medium_box_points_number(il)
+          ip           = hm%medium_box_points_map(ip_in, il)
+          cc           = hm%medium_box_c(ip_in, il)
+          sigma_e      = hm%medium_box_sigma_e(ip_in, il)
+          sigma_m      = hm%medium_box_sigma_m(ip_in, il)
+          ff_plus(1)   = psi(ip, 1)
+          ff_plus(2)   = psi(ip, 2)
+          ff_plus(3)   = psi(ip, 3)
+          ff_minus(1)  = psi(ip, 4)
+          ff_minus(2)  = psi(ip, 5)
+          ff_minus(3)  = psi(ip, 6)
+          oppsi(ip, 1) =   cc * tmp_curl_e(ip,1) + cc * M_zI * tmp_curl_b(ip, 1)   &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))           &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 4) = - cc * tmp_curl_e(ip,1) + cc * M_zI * tmp_curl_b(ip, 1)   &
+                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))           &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          oppsi(ip, 2) =   cc * tmp_curl_e(ip,2) + cc * M_zI * tmp_curl_b(ip, 2)   &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))           &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          oppsi(ip, 5) = - cc * tmp_curl_e(ip,2) + cc * M_zI * tmp_curl_b(ip, 2)   &
+                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))           &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+          oppsi(ip, 3) =   cc * tmp_curl_e(ip,3) + cc * M_zI * tmp_curl_b(ip, 3)   &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))           &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          oppsi(ip, 6) = - cc * tmp_curl_e(ip,3) + cc * M_zI * tmp_curl_b(ip, 3)   &
+                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))           &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end do
     end if
 
     POP_SUB(maxwell_medium_boxes_calculation)
   end subroutine maxwell_medium_boxes_calculation
-
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian as FFT
@@ -1272,77 +1254,77 @@ end subroutine hamiltonian_mxll_apply_all
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
       hm_matrix(:,:) = M_z0
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
+        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
         if (omega /= M_ZERO) then
           ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
         else
           ss(:) = M_ONE
         end if
-        hm_matrix(1,1)   =   M_z0
-        hm_matrix(1,2)   = - M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(1,3)   =   M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(2,1)   =   M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(2,2)   =   M_z0
-        hm_matrix(2,3)   = - M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(3,1)   = - M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(3,3)   =   M_z0
+        hm_matrix(1, 1)   =   M_z0
+        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(2, 2)   =   M_z0
+        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(3, 3)   =   M_z0
       else
-        hm_matrix(1,1)   =   M_z0
-        hm_matrix(1,2)   = - M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(1,3)   =   M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(2,1)   =   M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(2,2)   =   M_z0
-        hm_matrix(2,3)   = - M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(3,1)   = - M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(3,3)   =   M_z0
+        hm_matrix(1, 1)   =   M_z0
+        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(2, 2)   =   M_z0
+        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(3, 3)   =   M_z0
       end if
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
+        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
         if (omega /= M_ZERO) then
           ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
         else
           ss(:) = M_ONE
         end if
-        hm_matrix(1,1)   =   M_z0
-        hm_matrix(1,2)   = - M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(1,3)   =   M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(2,1)   =   M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(2,2)   =   M_z0
-        hm_matrix(2,3)   = - M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(3,1)   = - M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(3,3)   =   M_z0
-        hm_matrix(4,4)   =   M_z0
-        hm_matrix(4,5)   =   M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(4,6)   = - M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(5,4)   = - M_zI * P_c * k_vec(k_index_z,3)/ss(3)
-        hm_matrix(5,5)   =   M_z0
-        hm_matrix(5,6)   =   M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(6,4)   =   M_zI * P_c * k_vec(k_index_y,2)/ss(2)
-        hm_matrix(6,5)   = - M_zI * P_c * k_vec(k_index_x,1)/ss(1)
-        hm_matrix(6,6)   =   M_z0
+        hm_matrix(1, 1)   =   M_z0
+        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(2, 2)   =   M_z0
+        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(3, 3)   =   M_z0
+        hm_matrix(4, 4)   =   M_z0
+        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
+        hm_matrix(5, 5)   =   M_z0
+        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
+        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
+        hm_matrix(6, 6)   =   M_z0
       else
-        hm_matrix(1,1)   =   M_z0
-        hm_matrix(1,2)   = - M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(1,3)   =   M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(2,1)   =   M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(2,2)   =   M_z0
-        hm_matrix(2,3)   = - M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(3,1)   = - M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(3,3)   =   M_z0
-        hm_matrix(4,4)   =   M_z0
-        hm_matrix(4,5)   =   M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(4,6)   = - M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(5,4)   = - M_zI * P_c * k_vec(k_index_z,3)
-        hm_matrix(5,5)   =   M_z0
-        hm_matrix(5,6)   =   M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(6,4)   =   M_zI * P_c * k_vec(k_index_y,2)
-        hm_matrix(6,5)   = - M_zI * P_c * k_vec(k_index_x,1)
-        hm_matrix(6,6)   =   M_z0
+        hm_matrix(1, 1)   =   M_z0
+        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(2, 2)   =   M_z0
+        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(3, 3)   =   M_z0
+        hm_matrix(4, 4)   =   M_z0
+        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)
+        hm_matrix(5, 5)   =   M_z0
+        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)
+        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)
+        hm_matrix(6, 6)   =   M_z0
       end if
     end if
 
@@ -1377,14 +1359,14 @@ end subroutine hamiltonian_mxll_apply_all
     field_old = transverse_field
     call zderivatives_curl(gr%der, transverse_field(:,:), ztmp(:,:), set_bc = .false.)
     ! Apply poisson equation to solve helmholtz decomposition integral
-    do idim=1, st%d%dim
-      call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:,idim), .true.)
-      ztmp(1:gr%mesh%np_part,idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
+    do idim = 1, st%d%dim
+      call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:, idim), .true.)
+      ztmp(1:gr%mesh%np_part, idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
     end do
     call zderivatives_curl(gr%der, ztmp, transverse_field, set_bc = .false.)
-    do ip_in=1, hm_mxll%bc%der_bndry_mask_points_number
+    do ip_in = 1, hm_mxll%bc%der_bndry_mask_points_number
       ip = hm_mxll%bc%der_bndry_mask_points_map(ip_in)
-      transverse_field(ip,:) = hm_mxll%bc%der_bndry_mask(ip_in) * transverse_field(ip,:)
+      transverse_field(ip, :) = hm_mxll%bc%der_bndry_mask(ip_in) * transverse_field(ip, :)
     end do
 
     SAFE_DEALLOCATE_A(ztmp)
@@ -1415,7 +1397,6 @@ end subroutine hamiltonian_mxll_apply_all
     POP_SUB(maxwell_helmholtz_decomposition_trans_field)
   end subroutine maxwell_helmholtz_decomposition_trans_field
 
-
   !----------------------------------------------------------
   !> Helmholtz decomposition to calculate a longitudinal field (maybe should be a general math function)
   subroutine maxwell_helmholtz_decomposition_long_field(poisson, gr, longitudinal_field)
@@ -1441,7 +1422,6 @@ end subroutine hamiltonian_mxll_apply_all
     SAFE_DEALLOCATE_A(tmp_poisson)
 
   end subroutine maxwell_helmholtz_decomposition_long_field
-
 
   ! ---------------------------------------------------------
   !> Surface integral of the Helmholtz decomposition to calculate the transverse field
@@ -1481,90 +1461,90 @@ end subroutine hamiltonian_mxll_apply_all
     tmp_surf = M_z0
     tmp_sum  = M_z0
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1,iy,iz)
           normal    =  M_z0
           normal(1) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+          tmp_surf(1, 1, iy, iz,:) = tmp_surf(1, 1, iy, iz, :) & 
+             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)) &
+             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(1) = +M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) &
+             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)) &
+             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
         end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,1,iy,iz,:) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,1,iy,iz,:) * st%surface_grid_element(:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 1, iy, iz, :) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 1, iy, iz, :) * st%surface_grid_element(:)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
           normal    =  M_z0
           normal(2) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) &
+             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)) &
+             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(2) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) &
+             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)) &
+             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1,2,ix,iz,:) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,2,ix,iz,:) * st%surface_grid_element(:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 2, ix, iz, :) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 2, ix, iz, :) * st%surface_grid_element(:)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
           normal    =  M_z0
           normal(3) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) &
+             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)) &
+             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(3) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:) &
+          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :) &
                 * gr%mesh%spacing(1:3)
-          tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)) &
+          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) &
+             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)) &
              / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        tmp_sum(:) = tmp_sum(:) - tmp_surf(1,3,ix,iy,:) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2,3,ix,iy,:) * st%surface_grid_element(:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        tmp_sum(:) = tmp_sum(:) - tmp_surf(1, 3, ix, iy, :) * st%surface_grid_element(:)
+        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 3, ix, iy, :) * st%surface_grid_element(:)
       end do
     end do
 
