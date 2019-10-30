@@ -497,7 +497,7 @@ contains
 
       r = M_ZERO
       if(abs( sum( f%k_vector(:)*(x(:) - f%r0(:))/sqrt(sum(f%k_vector(:)**2)) ) ) <= f%width) then
-        r = - cos( (M_Pi/2) * ( ( sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) - 2*f%width ) / f%width ) ) 
+        r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) - M_TWO*f%width) / f%width))
         r = r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
       end if
       y = f%a0 * r
@@ -511,10 +511,10 @@ contains
     case (MXF_TRAPEZOIDAL_WAVE)
 
       xx = sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2))
-      limit_1 = - f%width/2 - 1/f%gr
-      limit_2 = - f%width/2
-      limit_3 =   f%width/2
-      limit_4 =   f%width/2 + 1/f%gr
+      limit_1 = - f%width/M_TWO - M_ONE/f%gr
+      limit_2 = - f%width/M_TWO
+      limit_3 =   f%width/M_TWO
+      limit_4 =   f%width/M_TWO + M_ONE/f%gr
       if ( ( xx > limit_1 ) .and. ( xx <= limit_2 ) ) then
         r = M_ONE + f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO)
       else if ( ( xx > limit_2 ) .and. ( xx <= limit_3 ) ) then
