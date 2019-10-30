@@ -37,6 +37,7 @@ module unocc_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use scf_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -57,8 +58,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unocc_run(sys, fromscratch)
-    type(system_t),      intent(inout) :: sys
-    logical,             intent(inout) :: fromscratch
+    type(system_t),         intent(inout) :: sys
+    logical,                intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
@@ -184,12 +185,7 @@ contains
       call density_calc(sys%st, sys%gr, sys%st%rho)
     end if
 
-    if (states_are_real(sys%st)) then
-      message(1) = 'Info: Using real wavefunctions.'
-    else
-      message(1) = 'Info: Using complex wavefunctions.'
-    end if
-    call messages_info(1)
+    call scf_state_info(sys%st)
 
     if(fromScratch .or. ierr /= 0) then
       if(fromScratch) then
@@ -245,6 +241,8 @@ contains
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
     call states_elec_fermi(sys%st, sys%gr%mesh)
 
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+
     do iter = 1, max_iter
       call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
@@ -275,7 +273,8 @@ contains
      
       if(.not. bandstructure_mode) then
         ! write restart information.
-        if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) .or. iter == max_iter .or. forced_finish) then
+        if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
+                     .or. iter == max_iter .or. forced_finish) then
           call states_elec_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
@@ -283,6 +282,7 @@ contains
           end if
         end if
       end if 
+
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
@@ -290,10 +290,13 @@ contains
       end if
      
       if(converged .or. forced_finish) exit
+
     end do
 
-    if(.not. bandstructure_mode) &
-      call restart_end(restart_dump)
+    if(.not. bandstructure_mode) call restart_end(restart_dump)
+
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) &
+      call sys%st%unpack()
 
     if(any(eigens%converged(:) < occ_states(:))) then
       write(message(1),'(a)') 'Some of the occupied states are not fully converged!'
@@ -335,7 +338,7 @@ contains
       call states_elec_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff
-      call eigensolver_init(eigens, sys%namespace, sys%gr, st)
+      call eigensolver_init(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
@@ -351,7 +354,7 @@ contains
     subroutine end_()
       PUSH_SUB(unocc_run.end_)
 
-      call eigensolver_end(eigens)
+      call eigensolver_end(eigens, sys%gr)
 
       POP_SUB(unocc_run.end_)
     end subroutine end_
@@ -376,15 +379,7 @@ contains
 
       call states_elec_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
 
-      if(conf%report_memory) then
-        mem = loct_get_memory_usage()/(CNST(1024.0)**2)
-#ifdef HAVE_MPI
-        call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
-        mem = mem_tmp
-#endif
-        write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
-        call messages_info(1)
-      end if
+      call scf_print_mem_use()
 
       call messages_print_stress(stdout)
 

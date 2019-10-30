@@ -39,6 +39,7 @@ module rdmft_oct_m
   use minimizer_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -103,12 +104,14 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, fromScratch)
-    type(rdm_t),         intent(out) :: rdm
-    type(namespace_t),   intent(in)  :: namespace
-    type(grid_t),        intent(in)  :: gr  !< grid
-    type(states_elec_t), intent(in)  :: st  !< States
-    logical,             intent(in)  :: fromScratch
+  subroutine rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
+    type(rdm_t),         intent(out)   :: rdm
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(inout) :: gr  !< grid
+    type(states_elec_t), intent(in)    :: st  !< States
+    type(geometry_t),    intent(in)    :: geo
+    type(multicomm_t),   intent(in)    :: mc
+    logical,             intent(in)    :: fromScratch
 
     integer :: ist
 
@@ -211,8 +214,8 @@ contains
         rdm%vecnat(ist, ist) = M_ONE
       end do
     else
-      ! initialize eigensolver.
-      call eigensolver_init(rdm%eigens, namespace, gr, st)
+      ! initialize eigensolver. 
+      call eigensolver_init(rdm%eigens, namespace, gr, st, geo, mc)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -237,8 +240,9 @@ contains
 
   ! ----------------------------------------
 
-  subroutine rdmft_end(rdm)
-    type(rdm_t), intent(inout) :: rdm
+  subroutine rdmft_end(rdm, gr)
+    type(rdm_t),  intent(inout) :: rdm
+    type(grid_t), intent(inout) :: gr
 
     PUSH_SUB(rdmft_end)
 
@@ -258,7 +262,7 @@ contains
       SAFE_DEALLOCATE_A(rdm%Coul)
       SAFE_DEALLOCATE_A(rdm%Exch)
     else
-      call eigensolver_end(rdm%eigens)
+      call eigensolver_end(rdm%eigens, gr)
     end if
 
     POP_SUB(rdmft_end)
