@@ -20,45 +20,25 @@
 
 module hamiltonian_mxll_oct_m
   use batch_oct_m
-  use blas_oct_m
-  use boundaries_oct_m
-  use boundary_op_oct_m
-  use comm_oct_m
   use cube_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use lalg_basic_oct_m
+  use hamiltonian_elec_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
-  use parser_oct_m
-  use partition_oct_m
-  use par_vec_oct_m
-  use poisson_oct_m
-  use profiling_oct_m
-  use restart_oct_m
-  use simul_box_oct_m
-  use states_elec_oct_m
-  use states_mxll_oct_m
-  use states_elec_dim_oct_m
-  use types_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use varinfo_oct_m
-  use xyz_adjust_oct_m
-  use hamiltonian_elec_oct_m
-  use xc_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
+  use parser_oct_m
+  use poisson_oct_m
+  use profiling_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_mxll_oct_m
+  use xc_oct_m
 
   implicit none
 
