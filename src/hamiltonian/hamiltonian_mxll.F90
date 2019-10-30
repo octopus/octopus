@@ -222,18 +222,14 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializing the Maxwell Hamiltonian
-  subroutine hamiltonian_mxll_init(hm, namespace, gr, geo, st)
+  subroutine hamiltonian_mxll_init(hm, namespace, gr, st)
     type(hamiltonian_mxll_t),                   intent(inout) :: hm
     type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
-    type(geometry_t),                   target, intent(inout) :: geo
     type(states_mxll_t),                target, intent(inout) :: st
 
-    integer :: iline, icol, default
-    integer :: ncols, default_propagator
-    type(block_t) :: blk
+    integer :: default_propagator
     type(profile_t), save :: prof
-    character(len=1024) :: string
 
     PUSH_SUB(hamiltonian_mxll_init)
 
@@ -436,7 +432,6 @@ contains
 
     type(profile_t), save :: prof_hamiltonian
     logical :: pack
-    integer :: ii
     integer :: terms_
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
@@ -543,8 +538,7 @@ contains
     type(states_mxll_t),      intent(inout) :: hst
     FLOAT, optional,          intent(in)    :: time
 
-    integer :: ik, ib, ist
-    !R_TYPE, allocatable :: psi(:, :)
+    integer :: ik, ib
     FLOAT, allocatable :: psi(:, :)
   
     PUSH_SUB(X(hamiltonian_mxll_apply_all))
@@ -575,14 +569,10 @@ contains
     CMPLX,                    intent(inout) :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
-    FLOAT              :: aux_ep(3), aux_mu(3), cc, pml_c(3), pml_aux_ep(3,3), pml_aux_mu(3,3), pml_g_e(3), pml_g_m(3)
-    FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_curl_e(:,:), tmp_curl_b(:,:), tmp_partial_e(:,:), tmp_partial_b(:,:)
     FLOAT, pointer     :: mx_rho(:,:)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
-    CMPLX              :: ff_plus(3), ff_minus(3), sigma_e, sigma_m
     CMPLX, allocatable :: tmp(:,:)
     CMPLX, pointer     :: kappa_psi(:,:)
-    integer            :: np, np_part, ip, ip_in, array_length_1, array_length_2, idim, il, ii, rs_sign
+    integer            :: np, np_part, ip, ip_in, rs_sign
 
     PUSH_SUB(maxwell_hamiltonian_apply_fd)
 
@@ -1124,7 +1114,7 @@ contains
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
-    integer            :: ip, ip_in, idim, il, np_part
+    integer            :: ip, ip_in, il, np_part
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_curl_e(:,:), tmp_curl_b(:,:)
     CMPLX              :: ff_plus(3), ff_minus(3)
@@ -1433,7 +1423,7 @@ contains
     CMPLX,               intent(in)    :: field(:,:)
     CMPLX,               intent(inout) :: surface_integral(:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: xx(3)
     CMPLX               :: tmp_sum(3), normal(3)
     CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)
