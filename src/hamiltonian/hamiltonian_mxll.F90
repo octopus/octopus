@@ -38,7 +38,6 @@ module hamiltonian_mxll_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_mxll_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -367,10 +366,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian update (here only the time is updated, can maybe be added to another routine)
-  subroutine hamiltonian_mxll_update(this, mesh, time)
+  subroutine hamiltonian_mxll_update(this, time)
     type(hamiltonian_mxll_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    FLOAT, optional,     intent(in)    :: time
+    FLOAT,          optional, intent(in)    :: time
 
     PUSH_SUB(hamiltonian_mxll_update)
 
@@ -510,9 +508,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_apply_all(hm, xc, der, st, hst, time)
+  subroutine hamiltonian_mxll_apply_all(hm, der, st, hst, time)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(xc_t),               intent(in)    :: xc
     type(derivatives_t),      intent(inout) :: der
     type(states_mxll_t),      intent(inout) :: st
     type(states_mxll_t),      intent(inout) :: hst
@@ -666,7 +663,7 @@ contains
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation if medium boundaries is set:
-      call maxwell_medium_boundaries_calculation(hm, der, psi, oppsi)
+      call maxwell_medium_boundaries_calculation(hm, psi, oppsi)
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation for medium boxes:
@@ -1025,9 +1022,8 @@ contains
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian for medium boundaries
-  subroutine maxwell_medium_boundaries_calculation(hm, der, psi, oppsi)
+  subroutine maxwell_medium_boundaries_calculation(hm, psi, oppsi)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(derivatives_t),      intent(in)    :: der
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
@@ -1206,10 +1202,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian as FFT
-  subroutine maxwell_fft_hamiltonian(hm, k_vec, ff_dim, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
+  subroutine maxwell_fft_hamiltonian(hm, k_vec, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
     type(hamiltonian_mxll_t), intent(in)    :: hm
     FLOAT,                    intent(in)    :: k_vec(:,:)
-    integer,                  intent(in)    :: ff_dim
     integer,                  intent(in)    :: k_index_x
     integer,                  intent(in)    :: k_index_y
     integer,                  intent(in)    :: k_index_z
