@@ -153,7 +153,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_init(bc, namespace, gr, st, sb, geo, dt, add_ab_region)
-    type(bc_mxll_t),               intent(inout) :: bc
+    type(bc_mxll_t),          intent(inout) :: bc
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(inout) :: st
@@ -218,7 +218,7 @@ contains
     end do
 
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
         ab_mask_check = .true.
       end if
@@ -238,25 +238,25 @@ contains
       call messages_print_stress(stdout, trim(str))
     end if
 
-    do idim=1, st%d%dim
+    do idim = 1, st%d%dim
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                     ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                         ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                     ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PMC) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                     ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PERIODIC) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                         ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PLANE_WAVES) then
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim)                                         ) * gr%mesh%spacing(idim)
+        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
         !%Variable MaxwellMediumWidth
@@ -267,9 +267,9 @@ contains
         !% Width of the boundary region with medium
         !%End
         call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%medium_width, units_inp%length)
-        bounds(1,idim) = ( gr%mesh%idx%nr(2,idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+        bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(1,idim) = bounds(1,idim) - bc%medium_width
-        bounds(2,idim) = ( gr%mesh%idx%nr(2,idim) ) * gr%mesh%spacing(idim)
+        bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
         !%Variable MaxwellEpsilonFactor
         !%Type float
         !%Default 1.0.
@@ -340,8 +340,8 @@ contains
             ab_shape_dim = 1
           else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
             ab_shape_dim = sb%dim
-            ab_bounds(1,idim) = bounds(1,idim)
-            ab_bounds(2,idim) = bounds(1,idim)
+            ab_bounds(1, idim) = bounds(1, idim)
+            ab_bounds(2, idim) = bounds(1, idim)
           end if
 
           !%Variable MaxwellABMaskWidth
@@ -351,7 +351,7 @@ contains
           !%Description
           !% Width of the region used to apply the absorbing boundaries.
           !%End
-          mask_width = ab_bounds(2,idim) - ab_bounds(1,idim)
+          mask_width = ab_bounds(2, idim) - ab_bounds(1, idim)
           call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
           bc%mask_width = mask_width
           if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
@@ -372,7 +372,7 @@ contains
           !% Width of the region used to apply the absorbing boundaries.
           !%End
           call parse_variable(namespace, 'MaxwellABMaskWidth', M_TWO, bc%mask_alpha, units_inp%length)
-          ab_bounds(1,idim) = ab_bounds(2,idim) - mask_width
+          ab_bounds(1, idim) = ab_bounds(2, idim) - mask_width
         end if
 
         if (bc%bc_ab_type(idim) == AB_CPML) then
@@ -381,8 +381,8 @@ contains
             ab_shape_dim = 1
           else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
             ab_shape_dim = sb%dim
-            ab_bounds(1,idim) = bounds(1,idim)
-            ab_bounds(2,idim) = bounds(1,idim)
+            ab_bounds(1, idim) = bounds(1, idim)
+            ab_bounds(2, idim) = bounds(1, idim)
           end if
 
           !%Variable MaxwellABPMLWidth
@@ -412,59 +412,59 @@ contains
       end if
 
       if (bc%bc_ab_type(idim) == AB_MASK) then
-        bounds(1,idim) = ab_bounds(1,idim)
-        bounds(2,idim) = bounds(2,idim)
+        bounds(1, idim) = ab_bounds(1, idim)
+        bounds(2, idim) = bounds(2, idim)
         bc%bc_bounds(:,idim) = bounds(:,idim)
       else if (bc%bc_ab_type(idim) == AB_CPML) then
-        bounds(1,idim) = ab_bounds(1,idim)
-        bounds(2,idim) = bounds(2,idim)
-        bc%bc_bounds(:,idim) = bounds(:,idim)
+        bounds(1, idim) = ab_bounds(1, idim)
+        bounds(2, idim) = bounds(2, idim)
+        bc%bc_bounds(:, idim) = bounds(:, idim)
       else if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
-        bounds(1,idim) = ab_bounds(1,idim)
-        bounds(2,idim) = bounds(2,idim)
-        bc%bc_bounds(:,idim) = bounds(:,idim)
+        bounds(1, idim) = ab_bounds(1, idim)
+        bounds(2, idim) = bounds(2, idim)
+        bc%bc_bounds(:, idim) = bounds(:, idim)
       else
-        bc%bc_bounds(:,idim) = bounds(:,idim)
+        bc%bc_bounds(:, idim) = bounds(:, idim)
       end if
 
       if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
         if (bc%bc_ab_type(idim) == AB_CPML) then
           string = "  PML Lower bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  PML Upper bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(2),'(a)') trim(string) 
           call messages_info(2)
         else if (bc%bc_ab_type(idim) == AB_MASK) then
           string = "  Mask Lower bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  Mask Upper bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(2),'(a)') trim(string) 
           call messages_info(2)
         else if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
           string = "  Zero Lower bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  Zero Upper bound = "
             write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2,idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(2),'(a)') trim(string) 
           call messages_info(2)
         end if
       else
         write(message(1),'(a,es10.3,3a)') & 
-          "  Lower bound = ", units_from_atomic(units_inp%length, ab_bounds(1,idim) ),&
+          "  Lower bound = ", units_from_atomic(units_inp%length, ab_bounds(1, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
         write(message(2),'(a,es10.3,3a)') & 
-          "  Upper bound = ", units_from_atomic(units_inp%length, ab_bounds(2,idim) ),&
+          "  Upper bound = ", units_from_atomic(units_inp%length, ab_bounds(2, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
         call messages_info(2)
       end if
@@ -603,51 +603,51 @@ contains
       SAFE_ALLOCATE(tmp(mesh%np))
       ! sigma for electric field dim = 1
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:,1), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 1), bc, mesh, tmp)
       call write_files("maxwell_sigma_e-x", tmp)
       ! sigma for electric field dim = 2
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:,2), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 2), bc, mesh, tmp)
       call write_files("maxwell_sigma_e-y", tmp)
       ! sigma for electric field dim = 3
       tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml_sigma_e(:,3), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_e(:, 3), bc, mesh, tmp)
       call write_files("maxwell_sigma_e-z", tmp)
       ! sigma for magnetic field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:,1), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 1), bc, mesh, tmp)
       call write_files("maxwell_sigma_m-x", tmp)
       ! sigma for magnetic dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:,2), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 2), bc, mesh, tmp)
       call write_files("maxwell_sigma_m-y", tmp)
       ! sigma for magnetic = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml_sigma_m(:,3), bc, mesh, tmp)
+      call get_pml_io_function(bc%pml_sigma_m(:, 3), bc, mesh, tmp)
       call write_files("maxwell_sigma_m-z", tmp)
       ! pml_a for electric field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:,1)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 1)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_e-x", tmp)
       ! pml_a for electric field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:,2)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 2)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_e-y", tmp)
       ! pml_a for electric field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:,3)), bc, mesh, tmp)
+      call get_pml_io_function(real(bc%pml_a(:, 3)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_e-z", tmp)
       ! pml_a for magnetic field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:,1)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 1)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_m-x", tmp)
       ! pml_a for magnetic field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:,2)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 2)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_m-y", tmp)
       ! pml_a for magnetic field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml_a(:,3)), bc, mesh, tmp)
+      call get_pml_io_function(aimag(bc%pml_a(:, 3)), bc, mesh, tmp)
       call write_files("maxwell_sigma_pml_a_m-z", tmp)
       SAFE_DEALLOCATE_A(tmp)
     end if
@@ -667,27 +667,27 @@ contains
       call write_files("maxwell_c", tmp)
       ! medium epsilon aux field dim = 1
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:,1,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 1, :), bc, mesh, tmp)
       call write_files("maxwell_aux_ep-x", tmp)
       ! medium epsilon aux field dim = 2
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:,2,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 2, :), bc, mesh, tmp)
       call write_files("maxwell_aux_ep-y", tmp)
       ! medium epsilon aux field dim = 3
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_ep(:,3,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_ep(:, 3, :), bc, mesh, tmp)
       call write_files("maxwell_aux_ep-z", tmp)
       ! medium mu aux field dim = 1
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:,1,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 1, :), bc, mesh, tmp)
       call write_files("maxwell_aux_mu-x", tmp)
       ! medium mu aux field dim = 2
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:,2,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 2, :), bc, mesh, tmp)
       call write_files("maxwell_aux_mu-y", tmp)
       ! medium mu aux field dim = 3
       tmp(:) = M_ZERO
-      call get_medium_io_function(bc%medium_aux_mu(:,3,:), bc, mesh, tmp)
+      call get_medium_io_function(bc%medium_aux_mu(:, 3, :), bc, mesh, tmp)
       call write_files("maxwell_aux_mu-z", tmp)
       SAFE_DEALLOCATE_A(tmp)
     end if
@@ -698,13 +698,13 @@ contains
 
       subroutine get_pml_io_function(pml_func, bc, mesh, io_func)
         FLOAT,              intent(in)    :: pml_func(:)
-        type(bc_mxll_t), intent(in)    :: bc
+        type(bc_mxll_t),    intent(in)    :: bc
         type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in
 
-        do ip_in=1, bc%pml_points_number
+        do ip_in = 1, bc%pml_points_number
           ip          = bc%pml_points_map(ip_in)
           io_func(ip) = pml_func(ip_in)
         end do
@@ -713,13 +713,13 @@ contains
 
       subroutine get_mask_io_function(mask_func, bc, mesh, io_func)
         FLOAT,              intent(in)    :: mask_func(:,:)
-        type(bc_mxll_t), intent(in)    :: bc
+        type(bc_mxll_t),    intent(in)    :: bc
         type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in, idim
 
-        do ip_in=1, bc%mask_points_number(idim)
+        do ip_in = 1, bc%mask_points_number(idim)
           ip          = bc%mask_points_map(ip_in,idim)
           io_func(ip) = mask_func(ip_in,idim)
         end do
@@ -728,14 +728,14 @@ contains
 
       subroutine get_medium_io_function(medium_func, bc, mesh, io_func)
         FLOAT,              intent(in)    :: medium_func(:,:)
-        type(bc_mxll_t), intent(in)    :: bc
+        type(bc_mxll_t),    intent(in)    :: bc
         type(mesh_t),       intent(in)    :: mesh
         FLOAT,              intent(inout) :: io_func(:)
 
         integer :: ip, ip_in, idim
 
-        do idim=1, 3
-          do ip_in=1, bc%medium_points_number(idim)
+        do idim = 1, 3
+          do ip_in = 1, bc%medium_points_number(idim)
             ip          = bc%medium_points_map(ip_in,idim)
             io_func(ip) = medium_func(ip_in,idim)
           end do
@@ -769,7 +769,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_mask_points_mapping(bc, mesh, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
@@ -778,14 +778,14 @@ contains
 
     PUSH_SUB(maxwell_mask_points_mapping)
 
-    ip_in_max=1
-    do idim=1, 3
+    ip_in_max = 1
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == AB_MASK) then
         ! allocate mask points map
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
         end do
@@ -793,18 +793,18 @@ contains
         bc%mask_points_number(idim) = ip_in
       end if
     end do
-    SAFE_ALLOCATE(bc%mask(1:ip_in_max,idim))
-    SAFE_ALLOCATE(bc%mask_points_map(1:ip_in_max,idim))
+    SAFE_ALLOCATE(bc%mask(1:ip_in_max, idim))
+    SAFE_ALLOCATE(bc%mask_points_map(1:ip_in_max, idim))
 
-    do idim=1,3
+    do idim = 1,3
       if (bc%bc_ab_type(idim) == AB_MASK) then
         ! mask points mapping
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
-            bc%mask_points_map(ip_in,idim) = ip
+            bc%mask_points_map(ip_in, idim) = ip
           end if
         end do
       end if
@@ -816,7 +816,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_pml_points_mapping(bc, mesh, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
@@ -826,8 +826,8 @@ contains
     PUSH_SUB(maxwell_pml_points_mapping)
 
     ! allocate pml points map
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
@@ -838,8 +838,8 @@ contains
     SAFE_ALLOCATE(bc%pml_points_map_inv(mesh%np))
 
     bc%pml_points_map_inv = 0
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
@@ -854,17 +854,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_constant_points_mapping(bc, mesh, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_bd, point_info
+
     PUSH_SUB(maxwell_constant_points_mapping)
 
     ! allocate constant points map
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
@@ -872,11 +873,11 @@ contains
     end do
     bc%constant_points_number = ip_in
     SAFE_ALLOCATE(bc%constant_points_map(1:ip_in))
-    SAFE_ALLOCATE(bc%constant_rs_state(1:ip_in,3))
+    SAFE_ALLOCATE(bc%constant_rs_state(1:ip_in, 3))
 
     ! zero constant mapping
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
@@ -896,17 +897,18 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, ip_bd, point_info, idim
+
     PUSH_SUB(maxwell_mirror_points_mapping)
 
     ip_in_max = 0
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC .or. &
           bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
         ! allocate zero points map
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
         end do
@@ -914,18 +916,18 @@ contains
         if (ip_in > ip_in_max) ip_in_max = ip_in
       end if
     end do
-    SAFE_ALLOCATE(bc%mirror_points_map(1:ip_in_max,3))
+    SAFE_ALLOCATE(bc%mirror_points_map(1:ip_in_max, 3))
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC .or. &
           bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
         ! zero points mapping
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
-            bc%mirror_points_map(ip_in,idim) = ip
+            bc%mirror_points_map(ip_in, idim) = ip
           end if
         end do
       end if
@@ -937,28 +939,29 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_plane_waves_points_mapping(bc, mesh, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_bd, point_info
+
     PUSH_SUB(maxwell_plane_waves_points_mapping)
 
     ! allocate zero points map
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
-         ip_in = ip_in + 1
+        ip_in = ip_in + 1
       end if
-     end do
-     bc%plane_waves_points_number = ip_in
+    end do
+    bc%plane_waves_points_number = ip_in
     SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in))
 
     ! zero points mapping
-    ip_in=0
-    do ip=1, mesh%np
+    ip_in = 0
+    do ip = 1, mesh%np
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
@@ -972,7 +975,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_zero_points_mapping(bc, mesh, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
@@ -982,13 +985,13 @@ contains
     PUSH_SUB(maxwell_zero_points_mapping)
 
     ip_in_max = 0
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
         ! allocate zero points map
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
         end do
@@ -997,17 +1000,17 @@ contains
     end do
     bc%zero_points_number = ip_in
     SAFE_ALLOCATE(bc%zero(1:ip_in_max,3))
-    SAFE_ALLOCATE(bc%zero_points_map(1:ip_in_max,3))
+    SAFE_ALLOCATE(bc%zero_points_map(1:ip_in_max, 3))
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
         ! zero points mapping
-        ip_in=0
-        do ip=1, mesh%np
+        ip_in = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
-            bc%zero_points_map(ip_in,idim) = ip
+            bc%zero_points_map(ip_in, idim) = ip
           end if
         end do
       end if
@@ -1019,7 +1022,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_medium_points_mapping(bc, mesh, st, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     type(states_mxll_t), intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
@@ -1031,18 +1034,18 @@ contains
 
     ip_in_max = 0
     ip_bd_max = 0
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
         ! allocate pml points map
-        ip_in=0
-        ip_bd=0
-        do ip=1, mesh%np
+        ip_in = 0
+        ip_bd = 0
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
           call maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
           end if
-          if ((boundary_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((boundary_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_bd = ip_bd + 1
           end if
         end do
@@ -1050,25 +1053,25 @@ contains
         bc%medium_bdry_number(idim) = ip_bd
       end if
     end do
-    SAFE_ALLOCATE(bc%medium_aux_ep(1:ip_in,1:st%d%dim,3))
-    SAFE_ALLOCATE(bc%medium_aux_mu(1:ip_in,1:st%d%dim,3))
-    SAFE_ALLOCATE(bc%medium_points_map(1:ip_in_max,3))
-    SAFE_ALLOCATE(bc%medium_bdry_map(1:ip_bd_max,3))
+    SAFE_ALLOCATE(bc%medium_aux_ep(1:ip_in, 1:st%d%dim, 3))
+    SAFE_ALLOCATE(bc%medium_aux_mu(1:ip_in, 1:st%d%dim, 3))
+    SAFE_ALLOCATE(bc%medium_points_map(1:ip_in_max, 3))
+    SAFE_ALLOCATE(bc%medium_bdry_map(1:ip_bd_max, 3))
 
-    ip_in=0
-    ip_bd=0
-    do idim=1, 3
+    ip_in = 0
+    ip_bd = 0
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
-        do ip=1, mesh%np
+        do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
           call maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
-          if ((point_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((point_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_in = ip_in + 1
             bc%medium_points_map(ip_in,idim) = ip
           end if
-          if ((boundary_info == 1) .and. (abs(mesh%x(ip,idim)) >= bounds(1,idim))) then
+          if ((boundary_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_bd = ip_bd + 1
-           bc%medium_bdry_map(ip_bd,idim) = ip
+           bc%medium_bdry_map(ip_bd, idim) = ip
           end if
         end do
       end if
@@ -1080,7 +1083,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_surface_points_mapping(bc, mesh, st, bounds, geo)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     type(states_mxll_t), intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
@@ -1097,13 +1100,13 @@ contains
     st%surface_element(3) = mesh%spacing(1) * mesh%spacing(2)
 
     ! surface points number calculation dim 1:
-    ip_surf=0
-    do ii = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        rr(1) = bounds(1,1)
+    ip_surf = 0
+    do ii = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
+        rr(1) = bounds(1, 1)
         rr(2) = ii * mesh%spacing(2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(2)) <= bounds(1,2)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(2)) <= bounds(1, 2)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
         end if
       end do
@@ -1111,13 +1114,13 @@ contains
     np_surf(1) = ip_surf
 
     ! surface points number calculation  dim 2:
-    ip_surf=0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    ip_surf = 0
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
         rr(1) = ii * mesh%spacing(2)
-        rr(2) = bounds(1,2)
+        rr(2) = bounds(1, 2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(1)) <= bounds(1, 1)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
         end if
       end do
@@ -1125,13 +1128,13 @@ contains
     np_surf(2) = ip_surf
 
     ! surface points number calulation dim 3:
-    ip_surf=0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+    ip_surf = 0
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
         rr(1) = ii * mesh%spacing(1)
         rr(2) = jj * mesh%spacing(3)
-        rr(3) = bounds(1,3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(2)) <= bounds(1,2)) ) then
+        rr(3) = bounds(1, 3)
+        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(2)) <= bounds(1, 2)) ) then
           ip_surf = ip_surf + 1
         end if
       end do
@@ -1142,57 +1145,57 @@ contains
     st%surface_points_number(2) = np_surf(2)
     st%surface_points_number(3) = np_surf(3)
     max_np_surf = max(np_surf(1),np_surf(2),np_surf(3))
-    SAFE_ALLOCATE(st%surface_points_map(1:st%d%dim,1:2,max_np_surf))
+    SAFE_ALLOCATE(st%surface_points_map(1:st%d%dim, 1:2, max_np_surf))
 
     ! surface points mapping dim 1:
     ip_surf = 0
-    do ii = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        rr(1) = -bounds(1,1)
+    do ii = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
+        rr(1) = -bounds(1, 1)
         rr(2) = ii * mesh%spacing(2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(2)) <= bounds(1,2)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(2)) <= bounds(1,2)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
-          st%surface_points_map(1,1,ip_surf) = ip_global
+          st%surface_points_map(1, 1, ip_surf) = ip_global
         end if
       end do
     end do
     ip_surf = 0
-    do ii = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        rr(1) = bounds(1,1)
+    do ii = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
+        rr(1) = bounds(1, 1)
         rr(2) = ii * mesh%spacing(2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(2)) <= bounds(1,2)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(2)) <= bounds(1, 2)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
-          st%surface_points_map(1,2,ip_surf) = ip_global
+          st%surface_points_map(1, 2, ip_surf) = ip_global
         end if
       end do
     end do
 
     ! surface points mapping dim 2:
     ip_surf = 0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
         rr(1) = ii * mesh%spacing(1)
         rr(2) = -bounds(1,2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(1)) <= bounds(1, 1)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
-          st%surface_points_map(2,1,ip_surf) = ip_global
+          st%surface_points_map(2, 1, ip_surf) = ip_global
         end if
       end do
     end do
     ip_surf = 0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 3), mesh%idx%nr(2, 3)
         rr(1) = ii * mesh%spacing(1)
-        rr(2) = bounds(1,2)
+        rr(2) = bounds(1, 2)
         rr(3) = jj * mesh%spacing(3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(3)) <= bounds(1,3)) ) then
+        if ( (abs(rr(1)) <= bounds(1, 1)) .and. (abs(rr(3)) <= bounds(1, 3)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
           st%surface_points_map(2,2,ip_surf) = ip_global
@@ -1202,28 +1205,28 @@ contains
 
     ! surface points mapping dim 3:
     ip_surf = 0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
         rr(1) = ii * mesh%spacing(1)
         rr(2) = jj * mesh%spacing(2)
-        rr(3) = -bounds(1,3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(2)) <= bounds(1,2)) ) then
+        rr(3) = -bounds(1, 3)
+        if ( (abs(rr(1)) <= bounds(1, 1)) .and. (abs(rr(2)) <= bounds(1, 2)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
-          st%surface_points_map(3,1,ip_surf) = ip_global
+          st%surface_points_map(3, 1, ip_surf) = ip_global
         end if
       end do
     end do
     ip_surf = 0
-    do ii = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do jj = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
+    do ii = mesh%idx%nr(1, 1), mesh%idx%nr(2, 1)
+      do jj = mesh%idx%nr(1, 2), mesh%idx%nr(2, 2)
         rr(1) = ii * mesh%spacing(1)
         rr(2) = jj * mesh%spacing(2)
-        rr(3) = bounds(1,3)
-        if ( (abs(rr(1)) <= bounds(1,1)) .and. (abs(rr(2)) <= bounds(1,2)) ) then
+        rr(3) = bounds(1, 3)
+        if ( (abs(rr(1)) <= bounds(1, 1)) .and. (abs(rr(2)) <= bounds(1, 2)) ) then
           ip_surf = ip_surf + 1
           call mesh_nearest_point_infos(mesh, rr, dmin, rankmin, ip_local, ip_global)
-          st%surface_points_map(3,2,ip_surf) = ip_global
+          st%surface_points_map(3, 2, ip_surf) = ip_global
         end if
       end do
     end do
@@ -1234,7 +1237,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_pml(bc, gr, bounds, dt)
-    type(bc_mxll_t), intent(inout) :: bc
+    type(bc_mxll_t),    intent(inout) :: bc
     type(grid_t),       intent(in)    :: gr
     FLOAT,              intent(in)    :: bounds(:,:)
     FLOAT, optional,    intent(in)    :: dt
@@ -1246,21 +1249,21 @@ contains
     PUSH_SUB(bc_mxll_generate_pml)
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
 
-    SAFE_ALLOCATE(bc%pml_kappa(1:bc%pml_points_number,1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml_sigma_e(1:bc%pml_points_number,1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml_sigma_m(1:bc%pml_points_number,1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml_a(1:bc%pml_points_number,1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml_b(1:bc%pml_points_number,1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml_c(1:bc%pml_points_number,1:3))
+    SAFE_ALLOCATE(bc%pml_kappa(1:bc%pml_points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(bc%pml_sigma_e(1:bc%pml_points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(bc%pml_sigma_m(1:bc%pml_points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(bc%pml_a(1:bc%pml_points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(bc%pml_b(1:bc%pml_points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(bc%pml_c(1:bc%pml_points_number, 1:3))
     SAFE_ALLOCATE(bc%pml_mask(1:bc%pml_points_number))
-    SAFE_ALLOCATE(bc%pml_conv_plus(1:bc%pml_points_number,1:3,1:3))
-    SAFE_ALLOCATE(bc%pml_conv_minus(1:bc%pml_points_number,1:3,1:3))
-    SAFE_ALLOCATE(bc%pml_conv_plus_old(1:bc%pml_points_number,1:3,1:3))
-    SAFE_ALLOCATE(bc%pml_conv_minus_old(1:bc%pml_points_number,1:3,1:3))
-    SAFE_ALLOCATE(bc%pml_aux_ep(1:bc%pml_points_number,1:3,1:3))
-    SAFE_ALLOCATE(bc%pml_aux_mu(1:bc%pml_points_number,1:3,1:3))
+    SAFE_ALLOCATE(bc%pml_conv_plus(1:bc%pml_points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(bc%pml_conv_minus(1:bc%pml_points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(bc%pml_conv_plus_old(1:bc%pml_points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(bc%pml_conv_minus_old(1:bc%pml_points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(bc%pml_aux_ep(1:bc%pml_points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(bc%pml_aux_mu(1:bc%pml_points_number, 1:3, 1:3))
 
     bc%pml_kappa                 = M_ONE
     bc%pml_sigma_e               = M_ZERO
@@ -1274,79 +1277,79 @@ contains
     bc%pml_conv_plus_old         = M_z0
     bc%pml_conv_minus_old        = M_z0
 
-    width(:) = bounds(2,:) - bounds(1,:)
+    width(:) = bounds(2, :) - bounds(1, :)
 
     ! PML variables for all boundary points
-    do ip_in=1, bc%pml_points_number
+    do ip_in = 1, bc%pml_points_number
       ip = bc%pml_points_map(ip_in)
-      ddv(:) = abs(gr%mesh%x(ip,:)) - bounds(1,:)
-      do idim=1, gr%mesh%sb%dim
+      ddv(:) = abs(gr%mesh%x(ip, :)) - bounds(1, :)
+      do idim = 1, gr%mesh%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/bc%pml_width)**bc%pml_power
           hh     = (M_ONE-ddv(idim)/bc%pml_width)**bc%pml_power
           kk     = M_ONE ! + (bc%pml_kappa_max - M_ONE) * gg
-          ss_max = -(bc%pml_power+M_ONE)*P_c*P_ep*log(bc%pml_refl_error)/(M_TWO * bc%pml_width)
+          ss_max = -(bc%pml_power + M_ONE)*P_c*P_ep*log(bc%pml_refl_error)/(M_TWO * bc%pml_width)
           ss_e   = gg * ss_max
           ss_m   = gg * ss_max ! * P_mu/P_ep
-          ll_e   = ss_e*kk !+kk**2*bc%pml_alpha_max*hh
-          ll_m   = ss_m*kk !+kk**2*bc%pml_alpha_max*hh
+          ll_e   = ss_e*kk ! + kk**2*bc%pml_alpha_max*hh
+          ll_m   = ss_m*kk ! + kk**2*bc%pml_alpha_max*hh
           bb_e   = exp(-(ss_e/(P_ep))*dt)
           bb_m   = exp(-(ss_m/(P_ep))*dt)
-!          aa_e   = (ss_e/ll_e)*(bb_e-1)
-!          aa_m   = (ss_m/ll_m)*(bb_m-1)
-          aa_e   = (bb_e-1)
-          aa_m   = (bb_m-1)
+!          aa_e   = (ss_e/ll_e)*(bb_e - 1)
+!          aa_m   = (ss_m/ll_m)*(bb_m - 1)
+          aa_e   = (bb_e - 1)
+          aa_m   = (bb_m - 1)
           if (ll_e == M_ZERO) aa_e = M_ZERO
           if (ll_m == M_ZERO) aa_m = M_ZERO
-          bc%pml_sigma_e(ip_in,idim) = ss_e
-          bc%pml_sigma_m(ip_in,idim) = ss_m
-          bc%pml_a(ip_in,idim)       = aa_e + M_zI * aa_m
-          bc%pml_b(ip_in,idim)       = bb_e + M_zI * bb_m
-          bc%pml_kappa(ip_in,idim)   = kk
-          bc%pml_mask(ip_in)         = bc%pml_mask(ip_in) * (M_ONE-sin(ddv(idim)*M_PI/(M_TWO*(width(idim))))**2)
+          bc%pml_sigma_e(ip_in, idim) = ss_e
+          bc%pml_sigma_m(ip_in, idim) = ss_m
+          bc%pml_a(ip_in, idim)       = aa_e + M_zI * aa_m
+          bc%pml_b(ip_in, idim)       = bb_e + M_zI * bb_m
+          bc%pml_kappa(ip_in, idim)   = kk
+          bc%pml_mask(ip_in)          = bc%pml_mask(ip_in) * (M_ONE - sin(ddv(idim)*M_PI/(M_TWO*(width(idim))))**2)
         else
-          bc%pml_kappa(ip_in,idim)   = M_ONE
-          bc%pml_sigma_e(ip_in,idim) = M_ZERO
-          bc%pml_sigma_m(ip_in,idiM) = M_ZERO
-          bc%pml_a(ip_in,idim)       = M_z0
-          bc%pml_b(ip_in,idim)       = M_z0
-          bc%pml_mask(ip_in)         = M_ONE
+          bc%pml_kappa(ip_in, idim)   = M_ONE
+          bc%pml_sigma_e(ip_in, idim) = M_ZERO
+          bc%pml_sigma_m(ip_in, idiM) = M_ZERO
+          bc%pml_a(ip_in, idim)       = M_z0
+          bc%pml_b(ip_in, idim)       = M_z0
+          bc%pml_mask(ip_in)          = M_ONE
         end if
       end do
     end do
 
     ! PML auxiliary epsilon for all boundary points
-    do idim=1, gr%mesh%sb%dim
+    do idim = 1, gr%mesh%sb%dim
       tmp = P_ep
-      do ip_in=1, bc%pml_points_number
+      do ip_in = 1, bc%pml_points_number
         ip = bc%pml_points_map(ip_in)
-        tmp(ip) = P_ep / bc%pml_kappa(ip_in,idim)
+        tmp(ip) = P_ep / bc%pml_kappa(ip_in, idim)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, bc%pml_points_number
+      do ip_in = 1, bc%pml_points_number
         ip = bc%pml_points_map(ip_in)
-        bc%pml_aux_ep(ip_in,:,idim) = tmp_grad(ip,:)/(M_FOUR*P_ep*bc%pml_kappa(ip_in,idim))
+        bc%pml_aux_ep(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_ep*bc%pml_kappa(ip_in, idim))
       end do
     end do
 
     ! PML auxiliary mu
-    do idim=1, gr%mesh%sb%dim
+    do idim = 1, gr%mesh%sb%dim
       tmp = P_mu
-      do ip_in=1, bc%pml_points_number
+      do ip_in = 1, bc%pml_points_number
         ip = bc%pml_points_map(ip_in)
-        tmp(ip) = P_mu / bc%pml_kappa(ip_in,idim)
+        tmp(ip) = P_mu / bc%pml_kappa(ip_in, idim)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, bc%pml_points_number
+      do ip_in = 1, bc%pml_points_number
         ip = bc%pml_points_map(ip_in)
-        bc%pml_aux_mu(ip_in,:,idim) = tmp_grad(ip,:)/(M_FOUR*P_mu*bc%pml_kappa(ip_in,idim))
+        bc%pml_aux_mu(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_mu*bc%pml_kappa(ip_in, idim))
       end do
     end do
 
     ! PML auxiliary c for all boundary points
-    do idim=1, gr%mesh%sb%dim
-      do ip_in=1, bc%pml_points_number
-        bc%pml_c(ip_in,idim) = P_c/bc%pml_kappa(ip_in,idim)
+    do idim = 1, gr%mesh%sb%dim
+      do ip_in = 1, bc%pml_points_number
+        bc%pml_c(ip_in, idim) = P_c/bc%pml_kappa(ip_in, idim)
       end do
     end do
 
@@ -1356,7 +1359,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_mask(bc, mesh, bounds)
-    type(bc_mxll_t), intent(inout) :: bc
+    type(bc_mxll_t),    intent(inout) :: bc
     type(mesh_t),       intent(in)    :: mesh
     FLOAT,              intent(in)    :: bounds(:,:)
 
@@ -1368,19 +1371,19 @@ contains
 
     ip_in_max = maxval(bc%mask_points_number(:))
 
-    SAFE_ALLOCATE(bc%mask(ip_in_max,3))
+    SAFE_ALLOCATE(bc%mask(ip_in_max, 3))
     SAFE_ALLOCATE(mask(mesh%np))
 
     mask(:) = M_ONE
 
-    width(:) = bounds(2,:) - bounds(1,:)
+    width(:) = bounds(2, :) - bounds(1, :)
     tmp(:)   = M_ZERO
 
-    do ip=1, mesh%np
+    do ip = 1, mesh%np
       tmp = M_ONE
       mask(ip) = M_ONE
-      ddv(:) = abs(mesh%x(ip,:)) - bounds(1,:)
-      do idim=1, mesh%sb%dim
+      ddv(:) = abs(mesh%x(ip, :)) - bounds(1, :)
+      do idim = 1, mesh%sb%dim
         if(ddv(idim) >= M_ZERO ) then
           if (ddv(idim)  <=  width(idim)) then
             tmp(idim) = M_ONE - sin(ddv(idim) * M_PI / (M_TWO * (width(idim)) ))**2
@@ -1392,9 +1395,9 @@ contains
       end do
     end do
 
-    do idim=1, mesh%sb%dim
-      do ip_in=1, bc%mask_points_number(idim)
-        ip = bc%mask_points_map(ip_in,idim)
+    do idim = 1, mesh%sb%dim
+      do ip_in = 1, bc%mask_points_number(idim)
+        ip = bc%mask_points_map(ip_in, idim)
         bc%mask(ip_in,idim) = mask(ip)
       end do
     end do
@@ -1407,7 +1410,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_zero(bc, mesh, bounds)
-    type(bc_mxll_t), intent(inout) :: bc
+    type(bc_mxll_t),    intent(inout) :: bc
     type(mesh_t),       intent(in)    :: mesh
     FLOAT,              intent(in)    :: bounds(:,:)
 
@@ -1421,16 +1424,16 @@ contains
     SAFE_ALLOCATE(bc%zero(ip_in_max,3))
     bc%zero(:,:) = M_ONE
 
-    width(:) = bounds(2,:) - bounds(1,:)
+    width(:) = bounds(2, :) - bounds(1, :)
 
-    do idim=1, 3
-      tmp(:)   = M_ZERO
-      do ip_in=1, bc%zero_points_number(idim)
+    do idim = 1, 3
+      tmp(:) = M_ZERO
+      do ip_in = 1, bc%zero_points_number(idim)
         ip = bc%zero_points_map(ip_in,idim)
         tmp = M_ONE
         bc%zero(ip_in,idim) = M_ONE
-        ddv(:) = abs(mesh%x(ip,:)) - bounds(1,:)
-        do iidim=1, mesh%sb%dim
+        ddv(:) = abs(mesh%x(ip, :)) - bounds(1, :)
+        do iidim = 1, mesh%sb%dim
           if(ddv(iidim) >= M_ZERO ) then
             if (ddv(iidim)  <=  width(iidim)) then
               if (bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK_ZERO) then
@@ -1440,9 +1443,9 @@ contains
               tmp(iidim) = M_ZERO
             end if
           end if
-          bc%zero(ip_in,idim) = bc%zero(ip_in,idim) * tmp(iidim)
+          bc%zero(ip_in, idim) = bc%zero(ip_in, idim) * tmp(iidim)
         end do
-        bc%zero(ip_in,idim) = bc%zero(ip_in,idim)
+        bc%zero(ip_in, idim) = bc%zero(ip_in, idim)
       end do
     end do
 
@@ -1453,11 +1456,11 @@ contains
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_medium(bc, gr, bounds, dt, geo, st)
     type(bc_mxll_t),         intent(inout) :: bc
-    type(grid_t),       intent(in)    :: gr
-    FLOAT,              intent(in)    :: bounds(:,:)
-    FLOAT, optional,    intent(in)    :: dt
-    type(geometry_t),   intent(in)    :: geo
-    type(states_mxll_t),intent(inout) :: st
+    type(grid_t),            intent(in)    :: gr
+    FLOAT,                   intent(in)    :: bounds(:,:)
+    FLOAT,         optional, intent(in)    :: dt
+    type(geometry_t),        intent(in)    :: geo
+    type(states_mxll_t),     intent(inout) :: st
 
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
     FLOAT   :: width(3), dd, dd_min, dd_max, dd_dim(3), xx(3), xxp(3)
@@ -1467,91 +1470,91 @@ contains
 
     ip_in_max = maxval(bc%medium_points_number(:))
 
-    SAFE_ALLOCATE(bc%medium_aux_ep(ip_in_max,gr%mesh%sb%dim,3))
-    SAFE_ALLOCATE(bc%medium_aux_mu(ip_in_max,gr%mesh%sb%dim,3))
-    SAFE_ALLOCATE(bc%medium_ep(ip_in_max,3))
-    SAFE_ALLOCATE(bc%medium_mu(ip_in_max,3))
-    SAFE_ALLOCATE(bc%medium_sigma_e(ip_in_max,3))
-    SAFE_ALLOCATE(bc%medium_sigma_m(ip_in_max,3))
-    SAFE_ALLOCATE(bc%medium_c(ip_in_max,3))
+    SAFE_ALLOCATE(bc%medium_aux_ep(ip_in_max,gr%mesh%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium_aux_mu(ip_in_max,gr%mesh%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium_ep(ip_in_max, 3))
+    SAFE_ALLOCATE(bc%medium_mu(ip_in_max, 3))
+    SAFE_ALLOCATE(bc%medium_sigma_e(ip_in_max, 3))
+    SAFE_ALLOCATE(bc%medium_sigma_m(ip_in_max, 3))
+    SAFE_ALLOCATE(bc%medium_c(ip_in_max, 3))
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
     bc%medium_aux_ep = M_ZERO
     bc%medium_aux_mu = M_ZERO
     bc%medium_c = P_c
 
-    dd_max = max(2*gr%mesh%spacing(1),2*gr%mesh%spacing(2),2*gr%mesh%spacing(3))
+    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
-    do idim=1, 3
+    do idim = 1, 3
       tmp = P_ep
-      do  ip=1, gr%mesh%np_part
+      do  ip = 1, gr%mesh%np_part
         call maxwell_box_point_info(bc, gr%mesh, ip, bounds, geo, point_info)
-        if ((point_info /= 0) .and. (abs(gr%mesh%x(ip,idim)) <= bounds(1,idim))) then
-          xx(:) = gr%mesh%x(ip,:)
+        if ((point_info /= 0) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
+          xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
           do ip_bd=1, bc%medium_bdry_number(idim)
-            ipp = bc%medium_bdry_map(ip_bd,idim)
-            xxp(:) = gr%mesh%x(ipp,:)
-            dd = sqrt((xx(1)-xxp(1))**2+(xx(2)-xxp(2))**2+(xx(3)-xxp(3))**2)
-            if (dd < dd_min) dd_min=dd
+            ipp = bc%medium_bdry_map(ip_bd, idim)
+            xxp(:) = gr%mesh%x(ipp, :)
+            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+            if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_ep * (M_ONE + bc%medium_ep_factor &
                   * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, bc%medium_points_number(idim)
-        ip = bc%medium_points_map(ip_in,idim)
-        bc%medium_aux_ep(ip_in,:,idim) = &
-          tmp_grad(ip,:)/(M_FOUR*P_ep*bc%medium_ep_factor * M_ONE/(M_ONE+exp(-M_FIVE/dd_max-dd)))
+      do ip_in = 1, bc%medium_points_number(idim)
+        ip = bc%medium_points_map(ip_in, idim)
+        bc%medium_aux_ep(ip_in, :, idim) = &
+          tmp_grad(ip, :)/(M_FOUR*P_ep*bc%medium_ep_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
       end do
     end do
 
-    do idim=1, 3
+    do idim = 1, 3
       tmp = P_mu
-      do  ip=1, gr%mesh%np_part
+      do  ip = 1, gr%mesh%np_part
         call maxwell_box_point_info(bc, gr%mesh, ip, bounds, geo, point_info)
-        if ((point_info == 1) .and. (abs(gr%mesh%x(ip,idim)) <= bounds(1,idim))) then
-          xx(:) = gr%mesh%x(ip,:)
+        if ((point_info == 1) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
+          xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
-          do ip_bd=1, bc%medium_bdry_number(idim)
-            ipp = bc%medium_bdry_map(ip_bd,idim)
+          do ip_bd = 1, bc%medium_bdry_number(idim)
+            ipp = bc%medium_bdry_map(ip_bd, idim)
             xxp(:) = gr%mesh%x(ipp,:)
-            dd = sqrt((xx(1)-xxp(1))**2+(xx(2)-xxp(2))**2+(xx(3)-xxp(3))**2)
-            if (dd < dd_min) dd_min=dd
+            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+            if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_mu * (M_ONE + bc%medium_mu_factor &
-                  * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
+                  * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, bc%medium_points_number(idim)
-        ip = bc%medium_points_map(ip_in,idim)
-        bc%medium_aux_mu(ip_in,:,idim) = & 
-          tmp_grad(ip,:)/(M_FOUR*P_mu*bc%medium_mu_factor * M_ONE/(M_ONE+exp(-M_FIVE/dd_max-dd)))
+      do ip_in = 1, bc%medium_points_number(idim)
+        ip = bc%medium_points_map(ip_in, idim)
+        bc%medium_aux_mu(ip_in, :, idim) = & 
+          tmp_grad(ip, :)/(M_FOUR*P_mu*bc%medium_mu_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
       end do
     end do
 
-    do idim=1, 3
+    do idim = 1, 3
       do ip_in=1, bc%medium_points_number(idim)
         ip = bc%medium_points_map(ip_in,idim)
         xx(:) = gr%mesh%x(ip,:)
         dd_min = M_HUGE
-        do ip_bd=1, bc%medium_bdry_number(idim)
-          ipp = bc%medium_bdry_map(ip_bd,idim)
-          xxp(:) = gr%mesh%x(ipp,:)
-          dd = sqrt((xx(1)-xxp(1))**2+(xx(2)-xxp(2))**2+(xx(3)-xxp(3))**2)
-          if (dd < dd_min) dd_min=dd
+        do ip_bd = 1, bc%medium_bdry_number(idim)
+          ipp = bc%medium_bdry_map(ip_bd, idim)
+          xxp(:) = gr%mesh%x(ipp, :)
+          dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+          if (dd < dd_min) dd_min = dd
         end do
-        bc%medium_ep(ip_in,idim) = P_ep * (M_ONE+bc%medium_ep_factor & 
-                                         * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-        bc%medium_mu(ip_in,idim) = P_mu * (M_ONE+bc%medium_mu_factor &
-                                         * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-        bc%medium_sigma_e(ip_in,idim) = (M_ONE+bc%medium_sigma_e_factor & 
-                                              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-        bc%medium_sigma_m(ip_in,idim) = (M_ONE+bc%medium_sigma_m_factor &
-                                              * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-        bc%medium_c(ip_in,idim) = M_ONE/sqrt(bc%medium_ep(ip_in,idim)*bc%medium_mu(ip_in,idim))
+        bc%medium_ep(ip_in, idim) = P_ep * (M_ONE+bc%medium_ep_factor & 
+                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_mu(ip_in, idim) = P_mu * (M_ONE+bc%medium_mu_factor &
+                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_sigma_e(ip_in, idim) = (M_ONE+bc%medium_sigma_e_factor & 
+                                               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_sigma_m(ip_in, idim) = (M_ONE+bc%medium_sigma_m_factor &
+                                               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_c(ip_in, idim) = M_ONE/sqrt(bc%medium_ep(ip_in, idim)*bc%medium_mu(ip_in, idim))
       end do
     end do
 
@@ -1565,8 +1568,8 @@ contains
   ! ---------------------------------------------------------
   subroutine maxwell_plane_waves_boundaries_init(bc, mesh, namespace)
     type(bc_mxll_t),        intent(inout) :: bc
-    type(mesh_t),      intent(in)    :: mesh
-    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),           intent(in)    :: mesh
+    type(namespace_t),      intent(in)    :: namespace
 
     type(block_t)        :: blk
     integer              :: ip, ip_global, il, nlines, ncols, bp, default, k_dim, ierr
@@ -1621,10 +1624,10 @@ contains
 
       bc%plane_waves_number = nlines
       SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field_string(3,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(3,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(3,nlines))
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(3,nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field_string(3, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field(3, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_k_vector(3, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_v_vector(3, nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
       SAFE_ALLOCATE(bc%plane_waves(nlines))
@@ -1635,7 +1638,7 @@ contains
       do il = 1, nlines
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, il - 1)
-        if((ncols  /= 6) .and. (ncols /= 8) .and. (ncols /= 10) .and. (ncols /=9)) then
+        if ((ncols /= 6) .and. (ncols /= 8) .and. (ncols /= 10) .and. (ncols /= 9)) then
           message(1) = 'Each line in the UserDefinedMaxwellIncidentWaves block must have'
           message(2) = 'six, eight, nine or ten columns.'
           call messages_fatal(2)
@@ -1650,9 +1653,9 @@ contains
           call parse_block_string( blk, il - 1, 1, k_string(1))
           call parse_block_string( blk, il - 1, 2, k_string(2))
           call parse_block_string( blk, il - 1, 3, k_string(3))
-          call parse_block_string( blk, il - 1, 4, bc%plane_waves_e_field_string(1,il))
-          call parse_block_string( blk, il - 1, 5, bc%plane_waves_e_field_string(2,il))
-          call parse_block_string( blk, il - 1, 6, bc%plane_waves_e_field_string(3,il))
+          call parse_block_string( blk, il - 1, 4, bc%plane_waves_e_field_string(1, il))
+          call parse_block_string( blk, il - 1, 5, bc%plane_waves_e_field_string(2, il))
+          call parse_block_string( blk, il - 1, 6, bc%plane_waves_e_field_string(3, il))
           call parse_block_integer(blk, il - 1, 7, bc%plane_waves(il))
 
           write(message(1), '(a,i2,a) ') 'Substituting electromagnetic incident wave ', il, ' with the expressions: '
@@ -1660,17 +1663,17 @@ contains
           write(message(1), '(6a)')     '  Wave vector k(x)   = ', trim(k_string(1))
           write(message(2), '(2a)')     '  Wave vector k(y)   = ', trim(k_string(2))
           write(message(3), '(2a)')     '  Wave vector k(z)   = ', trim(k_string(3))
-          write(message(4), '(2a)')     '  E-field(x) for t_0 = ', trim(bc%plane_waves_e_field_string(1,il))
-          write(message(5), '(2a)')     '  E-field(y) for t_0 = ', trim(bc%plane_waves_e_field_string(2,il))
-          write(message(6), '(2a)')     '  E-field(z) for t_0 = ', trim(bc%plane_waves_e_field_string(3,il))
+          write(message(4), '(2a)')     '  E-field(x) for t_0 = ', trim(bc%plane_waves_e_field_string(1, il))
+          write(message(5), '(2a)')     '  E-field(y) for t_0 = ', trim(bc%plane_waves_e_field_string(2, il))
+          write(message(6), '(2a)')     '  E-field(z) for t_0 = ', trim(bc%plane_waves_e_field_string(3, il))
           call messages_info(6)
 
           call conv_to_C_string(k_string(1))
           call conv_to_C_string(k_string(2))
           call conv_to_C_string(k_string(3))
-          call conv_to_C_string(bc%plane_waves_e_field_string(1,il))
-          call conv_to_C_string(bc%plane_waves_e_field_string(2,il))
-          call conv_to_C_string(bc%plane_waves_e_field_string(3,il))
+          call conv_to_C_string(bc%plane_waves_e_field_string(1, il))
+          call conv_to_C_string(bc%plane_waves_e_field_string(2, il))
+          call conv_to_C_string(bc%plane_waves_e_field_string(3, il))
 
           xx(:) = M_ZERO
           rr    = M_ZERO
@@ -1729,14 +1732,14 @@ contains
 
           bc%bessel_beam = .true.
 
-          call parse_block_float( blk, il - 1, 1, e_field(1))
-          call parse_block_float( blk, il - 1, 2, e_field(2))
-          call parse_block_float( blk, il - 1, 3, e_field(3))
-          call parse_block_float( blk, il - 1, 4, k_vector(1))
-          call parse_block_float( blk, il - 1, 5, k_vector(2))
-          call parse_block_float( blk, il - 1, 6, k_vector(3))
-          call parse_block_integer( blk, il - 1,  7, oam)
-          call parse_block_integer( blk, il - 1,  8, sam)
+          call parse_block_float(blk, il - 1, 1, e_field(1))
+          call parse_block_float(blk, il - 1, 2, e_field(2))
+          call parse_block_float(blk, il - 1, 3, e_field(3))
+          call parse_block_float(blk, il - 1, 4, k_vector(1))
+          call parse_block_float(blk, il - 1, 5, k_vector(2))
+          call parse_block_float(blk, il - 1, 6, k_vector(3))
+          call parse_block_integer(blk, il - 1,  7, oam)
+          call parse_block_integer(blk, il - 1,  8, sam)
 
           write(message(1), '(a,i2) ') 'Substituting electromagnetic incident wave ', il
           write(message(3), '(a)'    ) 'with the expression: '
@@ -1754,11 +1757,11 @@ contains
           !end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
 
-          bc%plane_waves_e_field(:,il)  = e_field(:)
-          bc%plane_waves_k_vector(:,il) = k_vector(:)
+          bc%plane_waves_e_field(:, il)  = e_field(:)
+          bc%plane_waves_k_vector(:, il) = k_vector(:)
 
-          bc%plane_waves_v_vector(:,il) = M_ZERO 
-          bc%plane_waves_v_vector(3,il) = sqrt(k_vector(1)**2+k_vector(2)**2)*P_c/k_vector(2)
+          bc%plane_waves_v_vector(:, il) = M_ZERO 
+          bc%plane_waves_v_vector(3, il) = sqrt(k_vector(1)**2 + k_vector(2)**2)*P_c/k_vector(2)
 
           bc%plane_waves_oam(il) = oam
           bc%plane_waves_sam(il) = sam
@@ -1775,102 +1778,102 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_surfaces_init(mesh, st, bc, bounds)
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_mxll_t), intent(inout) :: st
+    type(mesh_t),             intent(in)    :: mesh
+    type(states_mxll_t),      intent(inout) :: st
     type(bc_mxll_t),          intent(inout) :: bc
-    FLOAT,               intent(in)    :: bounds(:,:)
+    FLOAT,                    intent(in)    :: bounds(:,:)
 
     PUSH_SUB(maxwell_surfaces_init)
 
     ! y-z surface at -x boundary
-    st%surface(1,1)%spacing   = M_HALF*(mesh%spacing(2)+mesh%spacing(3))
-    st%surface(1,1)%origin(:) = M_ZERO
-    st%surface(1,1)%origin(1) = -bounds(1,1)
-    st%surface(1,1)%n(:) = M_ZERO
-    st%surface(1,1)%n(1) = -M_ONE
-    st%surface(1,1)%u(:) = M_ZERO
-    st%surface(1,1)%u(2) = -M_ONE
-    st%surface(1,1)%v(:) = M_ZERO
-    st%surface(1,1)%v(3) = M_ONE
-    st%surface(1,1)%nu   = -int(bounds(1,2)/mesh%spacing(2))
-    st%surface(1,1)%mu   =  int(bounds(1,2)/mesh%spacing(2))
-    st%surface(1,1)%nv   = -int(bounds(1,3)/mesh%spacing(3))
-    st%surface(1,1)%mv   =  int(bounds(1,3)/mesh%spacing(3))
+    st%surface(1, 1)%spacing   = M_HALF*(mesh%spacing(2) + mesh%spacing(3))
+    st%surface(1, 1)%origin(:) = M_ZERO
+    st%surface(1, 1)%origin(1) = -bounds(1, 1)
+    st%surface(1, 1)%n(:) = M_ZERO
+    st%surface(1, 1)%n(1) = -M_ONE
+    st%surface(1, 1)%u(:) = M_ZERO
+    st%surface(1, 1)%u(2) = -M_ONE
+    st%surface(1, 1)%v(:) = M_ZERO
+    st%surface(1, 1)%v(3) = M_ONE
+    st%surface(1, 1)%nu   = -int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(1, 1)%mu   =  int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(1, 1)%nv   = -int(bounds(1, 3)/mesh%spacing(3))
+    st%surface(1, 1)%mv   =  int(bounds(1, 3)/mesh%spacing(3))
 
     ! y-z surface at +x boundary
-    st%surface(2,1)%spacing   = M_HALF*(mesh%spacing(2)+mesh%spacing(3))
-    st%surface(2,1)%origin(:) = M_ZERO
-    st%surface(2,1)%origin(1) = bounds(1,1)
-    st%surface(2,1)%n(:) = M_ZERO
-    st%surface(2,1)%n(1) = M_ONE
-    st%surface(2,1)%u(:) = M_ZERO
-    st%surface(2,1)%u(2) = M_ONE
-    st%surface(2,1)%v(:) = M_ZERO
-    st%surface(2,1)%v(3) = M_ONE
-    st%surface(2,1)%nu   = -int(bounds(1,2)/mesh%spacing(2))
-    st%surface(2,1)%mu   =  int(bounds(1,2)/mesh%spacing(2))
-    st%surface(2,1)%nv   = -int(bounds(1,3)/mesh%spacing(3))
-    st%surface(2,1)%mv   =  int(bounds(1,3)/mesh%spacing(3))
+    st%surface(2, 1)%spacing   = M_HALF*(mesh%spacing(2) + mesh%spacing(3))
+    st%surface(2, 1)%origin(:) = M_ZERO
+    st%surface(2, 1)%origin(1) = bounds(1, 1)
+    st%surface(2, 1)%n(:) = M_ZERO
+    st%surface(2, 1)%n(1) = M_ONE
+    st%surface(2, 1)%u(:) = M_ZERO
+    st%surface(2, 1)%u(2) = M_ONE
+    st%surface(2, 1)%v(:) = M_ZERO
+    st%surface(2, 1)%v(3) = M_ONE
+    st%surface(2, 1)%nu   = -int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(2, 1)%mu   =  int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(2, 1)%nv   = -int(bounds(1, 3)/mesh%spacing(3))
+    st%surface(2, 1)%mv   =  int(bounds(1, 3)/mesh%spacing(3))
 
     ! x-z surface at -y boundary
-    st%surface(1,2)%spacing   = M_HALF*(mesh%spacing(1)+mesh%spacing(3))
-    st%surface(1,2)%origin(:) = M_ZERO
-    st%surface(1,2)%origin(2) = -bounds(1,2)
-    st%surface(1,2)%n(:) = M_ZERO
-    st%surface(1,2)%n(2) = -M_ONE
-    st%surface(1,2)%u(:) = M_ZERO
-    st%surface(1,2)%u(1) = M_ONE
-    st%surface(1,2)%v(:) = M_ZERO
-    st%surface(1,2)%v(3) = M_ONE
-    st%surface(1,2)%nu   = -int(bounds(1,1)/mesh%spacing(1))
-    st%surface(1,2)%mu   =  int(bounds(1,1)/mesh%spacing(1))
-    st%surface(1,2)%nv   = -int(bounds(1,3)/mesh%spacing(3))
-    st%surface(1,2)%mv   =  int(bounds(1,3)/mesh%spacing(3))
+    st%surface(1, 2)%spacing   = M_HALF*(mesh%spacing(1) + mesh%spacing(3))
+    st%surface(1, 2)%origin(:) = M_ZERO
+    st%surface(1, 2)%origin(2) = -bounds(1, 2)
+    st%surface(1, 2)%n(:) = M_ZERO
+    st%surface(1, 2)%n(2) = -M_ONE
+    st%surface(1, 2)%u(:) = M_ZERO
+    st%surface(1, 2)%u(1) = M_ONE
+    st%surface(1, 2)%v(:) = M_ZERO
+    st%surface(1, 2)%v(3) = M_ONE
+    st%surface(1, 2)%nu   = -int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(1, 2)%mu   =  int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(1, 2)%nv   = -int(bounds(1, 3)/mesh%spacing(3))
+    st%surface(1, 2)%mv   =  int(bounds(1, 3)/mesh%spacing(3))
 
     ! x-z surface at +y boundary
-    st%surface(2,2)%spacing   = M_HALF*(mesh%spacing(1)+mesh%spacing(3))
-    st%surface(2,2)%origin(:) = M_ZERO
-    st%surface(2,2)%origin(2) = bounds(1,2)
-    st%surface(2,2)%n(:) = M_ZERO
-    st%surface(2,2)%n(2) = M_ONE
-    st%surface(2,2)%u(:) = M_ZERO
-    st%surface(2,2)%u(1) = M_ONE
-    st%surface(2,2)%v(:) = M_ZERO
-    st%surface(2,2)%v(3) = -M_ONE
-    st%surface(2,2)%nu   = -int(bounds(1,1)/mesh%spacing(1))
-    st%surface(2,2)%mu   =  int(bounds(1,1)/mesh%spacing(1))
-    st%surface(2,2)%nv   = -int(bounds(1,3)/mesh%spacing(3))
-    st%surface(2,2)%mv   =  int(bounds(1,3)/mesh%spacing(3))
+    st%surface(2, 2)%spacing   = M_HALF*(mesh%spacing(1) + mesh%spacing(3))
+    st%surface(2, 2)%origin(:) = M_ZERO
+    st%surface(2, 2)%origin(2) = bounds(1, 2)
+    st%surface(2, 2)%n(:) = M_ZERO
+    st%surface(2, 2)%n(2) = M_ONE
+    st%surface(2, 2)%u(:) = M_ZERO
+    st%surface(2, 2)%u(1) = M_ONE
+    st%surface(2, 2)%v(:) = M_ZERO
+    st%surface(2, 2)%v(3) = -M_ONE
+    st%surface(2, 2)%nu   = -int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(2, 2)%mu   =  int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(2, 2)%nv   = -int(bounds(1, 3)/mesh%spacing(3))
+    st%surface(2, 2)%mv   =  int(bounds(1, 3)/mesh%spacing(3))
 
     ! x-y surface at -z boundary
-    st%surface(1,3)%spacing   = M_HALF*(mesh%spacing(1)+mesh%spacing(2))
-    st%surface(1,3)%origin(:) = M_ZERO
-    st%surface(1,3)%origin(3) = -bounds(1,3)
-    st%surface(1,3)%n(:) = M_ZERO
-    st%surface(1,3)%n(3) = -M_ONE
-    st%surface(1,3)%u(:) = M_ZERO
-    st%surface(1,3)%u(1) = M_ONE
-    st%surface(1,3)%v(:) = M_ZERO
-    st%surface(1,3)%v(2) = -M_ONE
-    st%surface(1,3)%nu   = -int(bounds(1,1)/mesh%spacing(1))
-    st%surface(1,3)%mu   =  int(bounds(1,1)/mesh%spacing(1))
-    st%surface(1,3)%nv   = -int(bounds(1,2)/mesh%spacing(2))
-    st%surface(1,3)%mv   =  int(bounds(1,2)/mesh%spacing(2))
+    st%surface(1, 3)%spacing   = M_HALF*(mesh%spacing(1) + mesh%spacing(2))
+    st%surface(1, 3)%origin(:) = M_ZERO
+    st%surface(1, 3)%origin(3) = -bounds(1, 3)
+    st%surface(1, 3)%n(:) = M_ZERO
+    st%surface(1, 3)%n(3) = -M_ONE
+    st%surface(1, 3)%u(:) = M_ZERO
+    st%surface(1, 3)%u(1) = M_ONE
+    st%surface(1, 3)%v(:) = M_ZERO
+    st%surface(1, 3)%v(2) = -M_ONE
+    st%surface(1, 3)%nu   = -int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(1, 3)%mu   =  int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(1, 3)%nv   = -int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(1, 3)%mv   =  int(bounds(1, 2)/mesh%spacing(2))
 
     ! x-y surface at +z boundary
-    st%surface(2,3)%spacing   = M_HALF*(mesh%spacing(1)+mesh%spacing(2))
-    st%surface(2,3)%origin(:) = M_ZERO
-    st%surface(2,3)%origin(3) = bounds(1,3)
-    st%surface(2,3)%n(:) = M_ZERO
-    st%surface(2,3)%n(3) = M_ONE
-    st%surface(2,3)%u(:) = M_ZERO
-    st%surface(2,3)%u(1) = M_ONE
-    st%surface(2,3)%v(:) = M_ZERO
-    st%surface(2,3)%v(2) = M_ONE
-    st%surface(2,3)%nu   = -int(bounds(1,1)/mesh%spacing(1))
-    st%surface(2,3)%mu   =  int(bounds(1,1)/mesh%spacing(1))
-    st%surface(2,3)%nv   = -int(bounds(1,2)/mesh%spacing(2))
-    st%surface(2,3)%mv   =  int(bounds(1,2)/mesh%spacing(2))
+    st%surface(2, 3)%spacing   = M_HALF*(mesh%spacing(1) + mesh%spacing(2))
+    st%surface(2, 3)%origin(:) = M_ZERO
+    st%surface(2, 3)%origin(3) = bounds(1, 3)
+    st%surface(2, 3)%n(:) = M_ZERO
+    st%surface(2, 3)%n(3) = M_ONE
+    st%surface(2, 3)%u(:) = M_ZERO
+    st%surface(2, 3)%u(1) = M_ONE
+    st%surface(2, 3)%v(:) = M_ZERO
+    st%surface(2, 3)%v(2) = M_ONE
+    st%surface(2, 3)%nu   = -int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(2, 3)%mu   =  int(bounds(1, 1)/mesh%spacing(1))
+    st%surface(2, 3)%nv   = -int(bounds(1, 2)/mesh%spacing(2))
+    st%surface(2, 3)%mv   =  int(bounds(1, 2)/mesh%spacing(2))
 
     POP_SUB(maxwell_surfaces_init)
   end subroutine maxwell_surfaces_init
@@ -1878,7 +1881,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info) 
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
@@ -1891,16 +1894,16 @@ contains
     
     point_info = 0
     
-    width(:) = bounds(2,:) - bounds(1,:)
+    width(:) = bounds(2, :) - bounds(1, :)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
 
       if(bc%ab_user_def) then
 
-        dd = bc%ab_ufn(ip) - bounds(1,1)
+        dd = bc%ab_ufn(ip) - bounds(1, 1)
         if(dd > M_ZERO) then
-          if(bc%ab_ufn(ip) < bounds(2,1) ) then
+          if(bc%ab_ufn(ip) < bounds(2, 1) ) then
              point_info = 1
           end if
         end if
@@ -1909,7 +1912,7 @@ contains
 
         if(mesh%sb%box_shape == SPHERE) then
 
-          dd = rr -  bounds(1,1)
+          dd = rr -  bounds(1, 1)
           if(dd > M_ZERO ) then
             if (dd  <  width(1)) then
               point_info = 1
@@ -1919,8 +1922,8 @@ contains
         else if (mesh%sb%box_shape == PARALLELEPIPED) then
 
           ! Limits of boundary region
-          if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-            if ( (abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3)) ) then
+          if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
+            if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
               point_info = 1
             else
               point_info = 0
@@ -1960,32 +1963,32 @@ contains
     pi_edge = 0
     pi_vertex = 0
     ! Limits of boundary region
-    if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-      if ( (abs(xx(1))>bounds(1,1)) .and. (abs(xx(2))>bounds(1,2)) .and. (abs(xx(3))>bounds(1,3)) ) then
+    if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
+      if ( (abs(xx(1)) > bounds(1, 1)) .and. (abs(xx(2)) > bounds(1, 2)) .and. (abs(xx(3)) > bounds(1, 3)) ) then
         pi_face   = 0
         pi_edge   = 0
         pi_vertex = 1
-      else if (abs(xx(1))>bounds(1,1) .and. (abs(xx(2))>bounds(1,2)) .and. (abs(xx(3))<bounds(1,3)) ) then
+      else if (abs(xx(1)) > bounds(1, 1) .and. (abs(xx(2)) > bounds(1, 2)) .and. (abs(xx(3)) < bounds(1, 3)) ) then
         pi_face   = 0
         pi_edge   = 1
         pi_vertex = 0
-      else if (abs(xx(1))>bounds(1,1) .and. (abs(xx(2))<bounds(1,2)) .and. (abs(xx(3))>bounds(1,3)) ) then
+      else if (abs(xx(1)) > bounds(1, 1) .and. (abs(xx(2)) < bounds(1, 2)) .and. (abs(xx(3)) > bounds(1, 3)) ) then
         pi_face   = 0
         pi_edge   = 1
         pi_vertex = 0
-      else if (abs(xx(1))>bounds(1,1) .and. (abs(xx(2))<bounds(1,2)) .and. (abs(xx(3))>bounds(1,3)) ) then
+      else if (abs(xx(1)) > bounds(1, 1) .and. (abs(xx(2)) < bounds(1, 2)) .and. (abs(xx(3)) > bounds(1, 3)) ) then
         pi_face   = 0
         pi_edge   = 1
         pi_vertex = 0
-      else if ( (abs(xx(1))>bounds(1,1)) .and. (abs(xx(2))<bounds(1,2)) .and. (abs(xx(3))<bounds(1,3)) ) then
+      else if ( (abs(xx(1)) > bounds(1, 1)) .and. (abs(xx(2)) < bounds(1, 2)) .and. (abs(xx(3)) < bounds(1, 3)) ) then
         pi_face   = 1
         pi_edge   = 0
         pi_vertex = 0
-      else if ( (abs(xx(1))<bounds(1,1)) .and. (abs(xx(2))>bounds(1,2)) .and. (abs(xx(3))<bounds(1,3)) ) then
+      else if ( (abs(xx(1)) < bounds(1, 1)) .and. (abs(xx(2)) > bounds(1, 2)) .and. (abs(xx(3)) < bounds(1, 3)) ) then
         pi_face   = 1
         pi_edge   = 0
         pi_vertex = 0
-      else if ( (abs(xx(1))<bounds(1,1)) .and. (abs(xx(2))<bounds(1,2)) .and. (abs(xx(3))>bounds(1,3)) ) then
+      else if ( (abs(xx(1)) < bounds(1, 1)) .and. (abs(xx(2)) < bounds(1, 2)) .and. (abs(xx(3)) > bounds(1, 3)) ) then
         pi_face   = 1
         pi_edge   = 0
         pi_vertex = 0
@@ -2006,7 +2009,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine maxwell_boundary_point_info(bc, mesh, ip, bounds, boundary_info)
-    type(bc_mxll_t),  intent(inout) :: bc
+    type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
@@ -2020,9 +2023,9 @@ contains
 
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-    if ( abs(xx(1))==bounds(1,1) .and. (abs(xx(2))<=bounds(1,2) .and. abs(xx(3))<=bounds(1,3)) .or. &
-         abs(xx(2))==bounds(1,2) .and. (abs(xx(1))<=bounds(1,1) .and. abs(xx(3))<=bounds(1,3)) .or. &
-         abs(xx(3))==bounds(1,3) .and. (abs(xx(1))<=bounds(1,1) .and. abs(xx(2))<=bounds(1,2)) ) then
+    if ( abs(xx(1)) == bounds(1, 1) .and. (abs(xx(2)) <= bounds(1, 2) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
+         abs(xx(2)) == bounds(1, 2) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
+         abs(xx(3)) == bounds(1, 3) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(2)) <= bounds(1, 2)) ) then
       boundary_info = 1
     else
       boundary_info = 0
