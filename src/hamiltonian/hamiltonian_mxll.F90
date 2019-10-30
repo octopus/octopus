@@ -78,11 +78,11 @@ module hamiltonian_mxll_oct_m
 
     type(nl_operator_t), pointer   :: operators(:) 
 
-    type(poisson_t)                :: poisson
+!    type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
-    type(grid_t), pointer          :: gr
+!    type(grid_t), pointer          :: gr
     type(states_mxll_t), pointer   :: st
 
     integer                        :: rs_sign
@@ -91,28 +91,28 @@ module hamiltonian_mxll_oct_m
 
     integer                        :: op_method
 
-    logical                        :: lorentz_force
-    logical                        :: lorentz_force_apply
+!    logical                        :: lorentz_force
+!    logical                        :: lorentz_force_apply
 
     integer, pointer               :: rs_state_fft_map(:,:,:)
     integer, pointer               :: rs_state_fft_map_inv(:,:)
 
     logical                        :: bc_add_ab_region  = .false.
-    logical                        :: bc_zero           = .false.
+!    logical                        :: bc_zero           = .false.
     logical                        :: bc_constant       = .false.
     logical                        :: bc_mirror_pec     = .false.
     logical                        :: bc_mirror_pmc     = .false.
     logical                        :: bc_periodic       = .false.
     logical                        :: bc_plane_waves    = .false.
-    logical                        :: bc_medium         = .false.
+!    logical                        :: bc_medium         = .false.
 
     logical                        :: plane_waves
     logical                        :: plane_waves_apply
-    logical                        :: spatial_constant
+!    logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
 
-    logical                        :: diamagnetic_current
-    logical                        :: spin_current
+!    logical                        :: diamagnetic_current
+!    logical                        :: spin_current
 
     integer                        :: medium_calculation
 
@@ -121,8 +121,8 @@ module hamiltonian_mxll_oct_m
     integer, pointer               :: medium_box_shape(:)
     FLOAT, pointer                 :: medium_box_center(:,:)
     FLOAT, pointer                 :: medium_box_size(:,:)
-    FLOAT, pointer                 :: medium_box_ep(:,:)
-    FLOAT, pointer                 :: medium_box_mu(:,:)
+!    FLOAT, pointer                 :: medium_box_ep(:,:)
+!    FLOAT, pointer                 :: medium_box_mu(:,:)
     FLOAT, pointer                 :: medium_box_c(:,:)
     FLOAT, pointer                 :: medium_box_ep_factor(:)
     FLOAT, pointer                 :: medium_box_mu_factor(:)
@@ -134,42 +134,42 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: medium_box_points_map(:,:)
     FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
     FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
-    integer, pointer               :: medium_box_bdry_number(:)
-    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
+!    integer, pointer               :: medium_box_bdry_number(:)
+!    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
   
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag
-    FLOAT                          :: energy
-    FLOAT                          :: energy_boundaries
-    FLOAT                          :: e_energy
-    FLOAT                          :: b_energy
-    FLOAT                          :: energy_plane_waves
-    FLOAT                          :: e_energy_plane_waves
-    FLOAT                          :: b_energy_plane_waves
+!    FLOAT                          :: energy
+!    FLOAT                          :: energy_boundaries
+!    FLOAT                          :: e_energy
+!    FLOAT                          :: b_energy
+!    FLOAT                          :: energy_plane_waves
+!    FLOAT                          :: e_energy_plane_waves
+!    FLOAT                          :: b_energy_plane_waves
 
-    FLOAT                          :: energy_pml
-    FLOAT                          :: energy_mask
+!    FLOAT                          :: energy_pml
+!    FLOAT                          :: energy_mask
     FLOAT, pointer                 :: energy_density(:)
     FLOAT, pointer                 :: energy_density_plane_waves(:)
     FLOAT, pointer                 :: e_energy_density(:)
     FLOAT, pointer                 :: b_energy_density(:)
-    FLOAT                          :: energy_trans
-    FLOAT                          :: energy_long
-    FLOAT                          :: e_energy_trans
-    FLOAT                          :: b_energy_trans
-    FLOAT                          :: energy_incident_waves
+!    FLOAT                          :: energy_trans
+!    FLOAT                          :: energy_long
+!    FLOAT                          :: e_energy_trans
+!    FLOAT                          :: b_energy_trans
+!    FLOAT                          :: energy_incident_waves
 
     logical                        :: cpml_hamiltonian = .false.
 
     logical                        :: diamag_current = .false.
 
-    integer                        :: current_prop_test = 0
+!    integer                        :: current_prop_test = 0
 
-    CMPLX, pointer                 :: test_output(:,:)
+!    CMPLX, pointer                 :: test_output(:,:)
 
     type(cube_t)                   :: cube
-    type(mesh_cube_parallel_map_t) :: mesh_cube_map
+!    type(mesh_cube_parallel_map_t) :: mesh_cube_map
 
   end type hamiltonian_mxll_t
 
