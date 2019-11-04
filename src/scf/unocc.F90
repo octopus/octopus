@@ -69,7 +69,7 @@ contains
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
-    logical :: write_density, bandstructure_mode
+    logical :: write_density, bandstructure_mode, read_td_states
 
     PUSH_SUB(unocc_run)
 
@@ -105,6 +105,20 @@ contains
     call init_(sys%gr%mesh, sys%st)
     converged = .false.
 
+    read_td_states = .false.
+    if(bandstructure_mode) then
+      !%Variable UnoccUseTD
+      !%Type logical
+      !%Default no
+      !%Section Calculation Modes::Unoccupied States
+      !%Description
+      !% If true, Octopus will use the density and states from the restart/td folder to compute
+      !% the bandstructure, instead of the restart/gs ones.
+      !%End
+      call parse_variable(sys%namespace, 'UnoccUseTD', .false., read_td_states)
+    end if
+
+
     SAFE_ALLOCATE(lowest_missing(1:sys%st%d%dim, 1:sys%st%d%nik))
     ! if there is no restart info to read, this will not get set otherwise
     ! setting to zero means everything is missing.
@@ -127,8 +141,13 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, &
-      exact=.true.)
+    if(read_td_states) then
+      call restart_init(restart_load_gs, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, &
+        exact=.true.)
+    else
+      call restart_init(restart_load_gs, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, &
+        exact=.true.)
+    end if
 
     if(ierr_rho == 0) then
       if (read_gs) then
