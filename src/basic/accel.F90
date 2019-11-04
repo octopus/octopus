@@ -83,7 +83,8 @@ module accel_oct_m
     accel_local_memory_size,      &
     accel_global_memory_size,     &
     accel_max_size_per_dim,       &
-    accel_get_device_pointer
+    accel_get_device_pointer,     &
+    accel_set_stream
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -1878,6 +1879,17 @@ contains
   end function accel_max_size_per_dim
 
   ! ------------------------------------------------------
+
+  subroutine accel_set_stream(stream_number)
+    integer, intent(in) :: stream_number
+
+    PUSH_SUB(accel_set_stream)
+
+    call cuda_set_stream(accel%cuda_stream, stream_number)
+    call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+
+    POP_SUB(accel_set_stream)
+  end subroutine accel_set_stream
 
 #include "undef.F90"
 #include "real.F90"

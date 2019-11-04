@@ -235,3 +235,9 @@ extern "C" void FC_FUNC_(cuda_blas_ztrsm, CUDA_BLAS_ZTRSM)
 			       *m, *n, (cuDoubleComplex *) **alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **B, *ldb));
 #endif
 }
+
+extern "C" void FC_FUNC_(cublas_set_stream, CUBLAS_SET_STREAM)(cublasHandle_t ** handle, cudaStream_t ** stream){
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasSetStream(**handle, **stream));
+#endif
+}

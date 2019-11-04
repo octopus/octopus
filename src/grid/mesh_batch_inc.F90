@@ -410,11 +410,17 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
     do ist = 1, aa%nst_linear
+      call accel_set_stream(ist)
       call X(accel_dot)(n = int(mesh%np, 8), &
         x = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
         y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
         res = dot_buffer, offres = int(ist - 1, 8))
     end do
+    do ist = 1, aa%nst_linear
+      call accel_set_stream(ist)
+      call accel_finish
+    end do
+    call accel_set_stream(1)
 
     SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1))
 

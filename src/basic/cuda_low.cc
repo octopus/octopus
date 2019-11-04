@@ -25,7 +25,9 @@
 #include <nvrtc.h>
 // all kernels and transfers are submitted to this non-blocking stream
 // -> allows operations from libraries to overlap with this stream
-CUstream hStream;
+CUstream * phStream;
+int current_stream;
+static int number_streams = 32;
 #else
 typedef int CUcontext;
 typedef int CUdevice;
@@ -101,15 +103,19 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
 
   CUDA_SAFE_CALL(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
-  CUDA_SAFE_CALL(cuStreamCreate(&hStream, CU_STREAM_NON_BLOCKING));
-  *stream = &hStream;
+  phStream = new CUstream[number_streams];
+  for(current_stream = 0; current_stream < number_streams; ++current_stream) {
+    CUDA_SAFE_CALL(cuStreamCreate(&phStream[current_stream], CU_STREAM_NON_BLOCKING));
+  }
+  current_stream = 0;
+  *stream = &phStream[current_stream];
 #endif
 }
 
 extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** device){
 #ifdef HAVE_CUDA
 
-  CUDA_SAFE_CALL(cuStreamDestroy(hStream));
+  CUDA_SAFE_CALL(cuStreamDestroy(phStream[current_stream]));
   CUDA_SAFE_CALL(cuCtxDestroy(**context));
   
   delete *context;
@@ -318,15 +324,15 @@ extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 
 extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyHtoDAsync(**cuda_ptr + *offset, data, *size, hStream));
-  CUDA_SAFE_CALL(cuStreamSynchronize(hStream));
+  CUDA_SAFE_CALL(cuMemcpyHtoDAsync(**cuda_ptr + *offset, data, *size, phStream[current_stream]));
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 
 extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyDtoHAsync(data, **cuda_ptr + *offset, *size, hStream));
-  CUDA_SAFE_CALL(cuStreamSynchronize(hStream));
+  CUDA_SAFE_CALL(cuMemcpyDtoHAsync(data, **cuda_ptr + *offset, *size, phStream[current_stream]));
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 
@@ -364,7 +370,7 @@ extern "C" void FC_FUNC_(cuda_kernel_set_arg_value, CUDA_KERNEL_SET_ARG_VALUE)
 
 extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuStreamSynchronize(hStream));
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif
 }
 
@@ -392,7 +398,7 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) assert((**arg_array)[ii] != NULL);
   
   CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
-         blockdim[0], blockdim[1], blockdim[2], *shared_mem, hStream, &(**arg_array)[0], NULL));
+         blockdim[0], blockdim[1], blockdim[2], *shared_mem, phStream[current_stream], &(**arg_array)[0], NULL));
 
   // release the stored argument, this is not necessary in principle,
   // but it should help us to detect missing arguments.
@@ -439,4 +445,9 @@ extern "C" void FC_FUNC_(cuda_device_get_warpsize, CUDA_DEVICE_GET_WARPSIZE)(CUd
 
 extern "C" void FC_FUNC_(cuda_deref, CUDA_DEREF)(CUdeviceptr ** cuda_ptr, void ** cuda_deref_ptr) {
   *cuda_deref_ptr = (void *) **cuda_ptr;
+}
+
+extern "C" void FC_FUNC_(cuda_set_stream, CUDA_SET_STREAM)(CUstream ** stream, fint * number) {
+  current_stream = (*number - 1) % number_streams;
+  *stream = &phStream[current_stream];
 }

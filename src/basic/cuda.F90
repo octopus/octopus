@@ -44,7 +44,8 @@ module cuda_oct_m
     cuda_launch_kernel,                 &
     cuda_device_name,                   &
     cuda_device_capability,             &
-    cuda_driver_version
+    cuda_driver_version,                &
+    cuda_set_stream
 
   interface
 
@@ -273,6 +274,13 @@ module cuda_oct_m
       type(c_ptr), intent(out) :: cuda_deref_ptr
     end subroutine cuda_deref
 
+    subroutine cuda_set_stream(stream, stream_number)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: stream
+      integer,     intent(in)    :: stream_number
+    end subroutine cuda_set_stream
   end interface
   
 end module cuda_oct_m

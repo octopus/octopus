@@ -243,7 +243,7 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
   (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
   y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
 
-  call accel_finish()
+  !call accel_finish()
 #endif
 
 #ifdef HAVE_OPENCL
