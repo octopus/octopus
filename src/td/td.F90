@@ -47,8 +47,8 @@ module td_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
+  use propagator_oct_m
   use propagator_base_oct_m
-  use propagator_elec_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
@@ -86,7 +86,7 @@ module td_oct_m
 
   type td_t
     private
-    type(propagator_elec_t),   public :: tr             !< contains the details of the time-evolution
+    type(propagator_t),   public :: tr             !< contains the details of the time-evolution
     type(scf_t)                  :: scf
     type(ion_dynamics_t), public :: ions
     FLOAT,                public :: dt             !< time step
@@ -302,7 +302,7 @@ contains
     td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
-    call propagator_elec_init(sys%gr, sys%namespace, sys%st, td%tr, &
+    call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), family_is_mgga_with_exc(sys%ks%xc))
     
     if(sys%hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
@@ -342,7 +342,7 @@ contains
     PUSH_SUB(td_end)
 
     call pes_end(td%pesv)
-    call propagator_elec_end(td%tr)  ! clean the evolution method
+    call propagator_end(td%tr)  ! clean the evolution method
     call ion_dynamics_end(td%ions)
 
     if(td%dynamics == BO) call scf_end(td%scf)
@@ -497,11 +497,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
+        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
           td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_elec_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
+        call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
           td%ions, scsteps)
       end select
 
@@ -840,7 +840,7 @@ contains
         end if
         call td_write_kick(gr%mesh, sys%hm%ep%kick, sys%outp, geo, 0)
       end if
-      call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
+      call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler)
         call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
