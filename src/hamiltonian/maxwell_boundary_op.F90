@@ -172,6 +172,83 @@ contains
 
     PUSH_SUB(bc_mxll_init)
 
+
+    !%Variable MaxwellBoundaryConditions
+    !%Type block
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Follows
+    !%
+    !% Example:
+    !%
+    !% <tt>%UserDefinedMaxwellIncidentWaves
+    !% <br>&nbsp;&nbsp;   maxwell_zero | maxwell_mirror_pec | maxwell_consant 
+    !% <br>%</tt>
+    !%
+    !% Description follows
+    !%
+    !%Option maxwell_zero 0
+    !% follows ...
+    !%Option maxwell_constant 2
+    !% follows ...
+    !%Option maxwell_mirror_pec 3
+    !% follows ...
+    !%Option maxwell_mirror_pmc 4
+    !% follows ...
+    !%Option maxwell_plane_waves 5
+    !% follows ...
+    !%Option maxwell_periodic 6
+    !% follows ...
+    !%Option maxwell_medium 7
+    !% follows ...
+    !%Option maxwell_lossy_layer 8
+    !% follows ...
+    !%End
+    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
+
+      call messages_print_stress(stdout, trim('Maxwell boundary conditions:'))
+
+      ! find out how many lines (i.e. states) the block has
+      nlines = parse_block_n(blk)
+      if (nlines /= 1) then
+        message(1) = 'MaxwellBoundaryConditions has to consist of one line!'
+        call messages_fatal(1)
+      end if
+      ncols = parse_block_cols(blk, 0)
+      if (ncols /= 3) then
+        message(1) = 'MaxwellBoundaryConditions has to consist of three columns!'
+        call messages_fatal(1)
+      end if
+      do icol = 1, ncols
+        call parse_block_integer(blk, 0, icol-1, bc%bc_type(icol))
+        select case (bc%bc_type(icol))
+          case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO)
+          string = 'Zero'
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT)
+          string = 'Constant'
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC)
+          string = 'PEC Mirror'
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PMC)
+          string = 'PMC Mirror'
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PERIODIC)
+          string = 'Periodic'
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PLANE_WAVES)
+          string = 'Plane waves'
+          if (.not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
+            write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "maxwell_plane_waves".'
+            write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
+            call messages_fatal(2)
+          end if
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM)
+          string = 'Medium boundary'
+        end select
+        write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
+        call messages_info(1)
+      end do
+
+      call messages_print_stress(stdout)
+    end if
+    
     !%Variable MaxwellAbsorbingBoundaries
     !%Type block
     !%Section Time-Dependent::Propagation
