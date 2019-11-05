@@ -168,7 +168,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_elec_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
-      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st)
+      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, geo, mc)
     end if
 
     POP_SUB(xc_ks_inversion_init)
@@ -176,14 +176,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_end(ks_inv)
+  subroutine xc_ks_inversion_end(ks_inv, gr)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
+    type(grid_t),            intent(inout) :: gr
 
     PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
-      call eigensolver_end(ks_inv%eigensolver)
+      call eigensolver_end(ks_inv%eigensolver, gr)
       call hamiltonian_elec_end(ks_inv%aux_hm)
       call states_elec_end(ks_inv%aux_st)
     end if

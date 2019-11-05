@@ -185,6 +185,9 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
+  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_real
+  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_complex
+  type(accel_kernel_t), public, target, save :: set_one
 
   ! kernels used locally
   type(accel_kernel_t), save :: set_zero
@@ -565,6 +568,7 @@ contains
     call accel_kernel_global_init()
 
     call accel_kernel_start_call(set_zero, 'set_zero.cl', "set_zero")
+    call accel_kernel_start_call(set_one, 'set_one.cl', "set_one")
     call accel_kernel_start_call(kernel_vpsi, 'vpsi.cl', "vpsi")
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
@@ -583,6 +587,8 @@ contains
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(kernel_mod_sqr_real, 'mod_sqr.cl', "mod_sqr_real")
+    call accel_kernel_start_call(kernel_mod_sqr_complex, 'mod_sqr.cl', "mod_sqr_complex")
 
     !%Variable AccelBenchmark
     !%Type logical

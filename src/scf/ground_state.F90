@@ -42,8 +42,8 @@ module ground_state_oct_m
   implicit none
 
   private
-  public ::                 &
-    ground_state_run_init,  &
+  public ::                       &
+    ground_state_run_init,        &
     ground_state_run
 
 contains
@@ -121,21 +121,16 @@ contains
     call restart_init(restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
-    if (states_are_real(sys%st)) then
-      call messages_write('Info: SCF using real wavefunctions.')
-    else
-      call messages_write('Info: SCF using complex wavefunctions.')
-    end if
-    call messages_info()
+    call scf_state_info(sys%st)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, fromScratch)
+      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc, fromScratch)
       call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
         restart_dump)
-      call rdmft_end(rdm)
+      call rdmft_end(rdm, sys%gr)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &

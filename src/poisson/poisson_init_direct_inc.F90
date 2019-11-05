@@ -249,7 +249,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   dim = this%der%mesh%sb%dim
   if (.not. this%dressed) then
     dim_elec = dim
-    if (this%poisson_soft_coulomb_param**2 > M_ZERO) then ! TODO: check that test
+    if (this%poisson_soft_coulomb_param**2 > M_ZERO) then
       dim_effective = dim+1
       xx(dim_effective) = this%poisson_soft_coulomb_param
       xx1(dim_effective) = this%poisson_soft_coulomb_param
@@ -304,7 +304,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   end select
 
   if(.not. this%der%mesh%use_curvilinear) then
-    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/dim))
+    prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
   end if
 
 #ifdef HAVE_MPI
