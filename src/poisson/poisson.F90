@@ -352,7 +352,8 @@ contains
       call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
 
       write(message(1), '(a)')'Dressed Orbital calculation'
-      write(message(2),'(a,1x,f14.12,1x,f14.12,1x,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z
+      write(message(2),'(a,1x,f14.12,1x,f14.12,1x,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, &
+        this%dressed_lambda_z
       write(message(3),'(a,1x,f14.12)') 'DressedParamOmega', this%dressed_omega
       write(message(4),'(a,1x,f14.12)') 'DressedNoElectrons', this%dressed_electrons
       write(message(5),'(a,1x,f14.12)') 'DressedCoulomb', this%dressed_coulomb
