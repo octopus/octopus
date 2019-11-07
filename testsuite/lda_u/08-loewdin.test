@@ -56,7 +56,7 @@ match ; V 3p-3p ;  GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055
 #Values are copied from the test above
 Input      : 08-loewdin.03-intersite_domains.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.66014967
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67225388
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -7.85780080
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14681809
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.54645192
