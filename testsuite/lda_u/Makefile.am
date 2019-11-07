@@ -51,6 +51,7 @@ dist_share_DATA =                                \
 	    09-basis_from_states.fhi             \
 	    09-basis_from_states.test            \
 	    10-intersite.01-Na2.inp              \
+            10-intersite.02-graphite.inp         \
             10-intersite.test
 
 CLEANFILES = *~ *.bak
