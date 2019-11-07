@@ -50,3 +50,8 @@ match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
 match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.694731
 match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
 
+#The same but with a static electric field along the x axis
+Input: 01-carbon_atom.04-static_field.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81294303
+match ; Int[n*v_E]         ; GREPFIELD(static/info, 'Int\[n\*v\_E\]  =', 3) ; -0.00136244

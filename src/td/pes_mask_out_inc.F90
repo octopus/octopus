@@ -381,7 +381,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
                 pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
                                                + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
                                                
-                pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
+                pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
                                                + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
             end do
           end do
@@ -409,7 +409,8 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
   character(len=80) :: filename
-  integer ::  np, err
+  integer ::  np, err, iunit 
+  character(len=128) :: lines(2)
 
   PUSH_SUB(pes_mask_map_from_state)
 
@@ -492,7 +493,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -506,7 +507,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
 
-  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
+  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -810,7 +811,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   
 #if defined(HAVE_NETCDF)  
   
-  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
@@ -822,7 +823,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
 
 #endif
   
-  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
+  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
@@ -1748,7 +1749,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
 
     do ii = 2, nn
       ! npoints==0.0 when pes==0.0
-      if(pes(ii)/=M_ZERO)then
+      if(pes(ii)/= M_ZERO)then
         EE = (ii-1)*step
         !Multiply for the correct Jacobian factor
         pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 
@@ -1896,7 +1897,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
  
 
   !Photoelectron wavefunction and density in real space
-  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
+  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
@@ -1911,7 +1912,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
 
   !Write the output in the td.00iter directories
   dir = file 
-  if(bitand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
+  if(iand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 

@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Processors: 1
 Input: 21-hamiltonian_apply.01-Si.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.502536
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.506436
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.503322
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.486444
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.501553
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.505064
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.501786
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.485487

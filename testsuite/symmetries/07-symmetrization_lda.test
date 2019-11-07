@@ -14,26 +14,26 @@ match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 );
 match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.80872076
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.80876402
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -6.54536956
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.00825922
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.90559796
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.79242790
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35324549
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.57198173
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.59525738
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.00827473
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.90562726
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.79243253
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35324582
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.57201667
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.59536065
 
-match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.326015
-match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.086281
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.326019
+match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.086287
 match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.013405
-match ; Eigenvalue [  k=1, n=4   ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ;  0.030492
+match ; Eigenvalue [  k=1, n=4   ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ;  0.030493
 
-match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.008928
-match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.005675
-match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.007488
-match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ;  0.008927
-match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.005673
-match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.007486
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.008920
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.005672
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ; -0.007482
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ;  0.008920
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.005672
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.007482
 
 match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 4.0
 
@@ -48,25 +48,25 @@ match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0, 14, 2) ; -4.7130828
 #Here the reference values should be copied from the calculation without symmetries
 Input : 07-symmetrization_lda.02-spg16_sym.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1.99963852
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -1.99959305
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.59674741
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.08266568
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.63416225
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.86393421
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.17102602
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  1.54126201
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.54335618
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.08259772
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.63416822
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.86388503
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.17102251
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  1.54088446
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -2.54299669
 
-match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.394794
-match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.130209
-match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.114304
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.394782
+match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.130181
+match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.114281
 
-match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ; -0.007162
-match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.006412
-match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.036688
-match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ;  0.007162
-match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ; -0.006412
-match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ; -0.036688
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ; -0.007151
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.006417
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.036692
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ;  0.007151
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ; -0.006417
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ; -0.036692
 
 match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
@@ -80,30 +80,30 @@ match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  6, 2) ; 1.40436127
 #Here the reference values should be copied from the calculation without symmetries
 Input : 07-symmetrization_lda.03-spg75_sym.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.10354200
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.10346235
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.14850957
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.30412290
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.00354789
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.97844716
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.18081768
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  1.76563355
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -3.56494859
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.30403359
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.00353613
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.97838331
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.18081352
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  1.76514022
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -3.56444398
 
-match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.483047
-match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.114647
-match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.114647
+match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.483028
+match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.114610
+match ; Eigenvalue [  k=1, n=3   ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.114610
 
-match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ;  0.003802
-match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.003352
-match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.000001
-match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ; -0.003352
-match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ;  0.003802
-match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ; -0.000001
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         H', 3) ;  0.003821
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         H', 4) ;  0.003365
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         H', 5) ; -0.000003
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         H', 3) ; -0.003365
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         H', 4) ;  0.003821
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         H', 5) ; -0.000003
 
 match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.0
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
 match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  5, 2)   ; 2.13029916823236E-002
 match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  6, 2)   ; 3.14261395757928E-002
 match ; Bader value 1     ; LINEFIELD(static/bader.y=0\,z=0,  6, 2) ; 4.40523517841285E-002
-match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  9, 2) ; 7.47075112164838E-002
+match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  9, 2) ; 7.46069151886898E-002
 

@@ -20,8 +20,8 @@
 
 module batch_oct_m
   use accel_oct_m
+  use allocate_hardware_aware_oct_m
   use blas_oct_m
-  use iso_c_binding
   use global_oct_m
   use hardware_oct_m
   use math_oct_m
@@ -118,6 +118,7 @@ module batch_oct_m
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
     type(type_t)                           :: type !< only available if the batched is packed
+    logical :: special_memory
   end type batch_t
 
   !--------------------------------------------------------------
@@ -218,10 +219,29 @@ contains
     
     this%current = 1
     
-    SAFE_DEALLOCATE_P(this%dpsicont)
-    SAFE_DEALLOCATE_P(this%zpsicont)
-    SAFE_DEALLOCATE_P(this%spsicont)
-    SAFE_DEALLOCATE_P(this%cpsicont)
+    if(this%special_memory) then
+      if(associated(this%dpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
+        nullify(this%dpsicont)
+      end if
+      if(associated(this%zpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
+        nullify(this%zpsicont)
+      end if
+      if(associated(this%spsicont)) then
+        call deallocate_hardware_aware(c_loc(this%spsicont(1,1,1)))
+        nullify(this%spsicont)
+      end if
+      if(associated(this%cpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%cpsicont(1,1,1)))
+        nullify(this%cpsicont)
+      end if
+    else
+      SAFE_DEALLOCATE_P(this%dpsicont)
+      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%spsicont)
+      SAFE_DEALLOCATE_P(this%cpsicont)
+    end if
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
@@ -233,7 +253,7 @@ contains
     
     integer :: ii
     
-    PUSH_SUB(batch_deallocate)
+    PUSH_SUB(batch_deallocate_temporary)
 
     do ii = 1, this%nst
       nullify(this%states(ii)%dpsi)
@@ -249,24 +269,43 @@ contains
       nullify(this%states_linear(ii)%cpsi)
     end do
     
-    SAFE_DEALLOCATE_P(this%dpsicont)
-    SAFE_DEALLOCATE_P(this%zpsicont)
-    SAFE_DEALLOCATE_P(this%spsicont)
-    SAFE_DEALLOCATE_P(this%cpsicont)
+    if(this%special_memory) then
+      if(associated(this%dpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
+        nullify(this%dpsicont)
+      end if
+      if(associated(this%zpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
+        nullify(this%zpsicont)
+      end if
+      if(associated(this%spsicont)) then
+        call deallocate_hardware_aware(c_loc(this%spsicont(1,1,1)))
+        nullify(this%spsicont)
+      end if
+      if(associated(this%cpsicont)) then
+        call deallocate_hardware_aware(c_loc(this%cpsicont(1,1,1)))
+        nullify(this%cpsicont)
+      end if
+    else
+      SAFE_DEALLOCATE_P(this%dpsicont)
+      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%spsicont)
+      SAFE_DEALLOCATE_P(this%cpsicont)
 
-    nullify(this%dpsicont)
-    nullify(this%zpsicont)
-    nullify(this%spsicont)
-    nullify(this%cpsicont)
+      nullify(this%dpsicont)
+      nullify(this%zpsicont)
+      nullify(this%spsicont)
+      nullify(this%cpsicont)
+    end if
         
-    POP_SUB(batch_deallocate)
+    POP_SUB(batch_deallocate_temporary)
   end subroutine batch_deallocate_temporary
   
   !--------------------------------------------------------------
   subroutine batch_allocate_temporary(this)
     type(batch_t),  intent(inout) :: this
 
-    PUSH_SUB(batch_deallocate_temporary)
+    PUSH_SUB(batch_allocate_temporary)
     
     if(batch_type(this) == TYPE_FLOAT) then
       call dbatch_allocate_temporary(this)
@@ -278,7 +317,7 @@ contains
       call cbatch_allocate_temporary(this)
     end if
 
-    POP_SUB(batch_deallocate_temporary)
+    POP_SUB(batch_allocate_temporary)
   end subroutine batch_allocate_temporary
 
   !--------------------------------------------------------------
@@ -293,6 +332,7 @@ contains
 
     this%is_allocated = .false.
     this%mirror = .false.
+    this%special_memory = .false.
     this%nst = nst
     this%dim = dim
     this%current = 1
@@ -338,6 +378,7 @@ contains
 
     this%is_allocated = .false.
     this%mirror = .false.
+    this%special_memory = .false.
     this%nst = 0
     this%dim = 0
     this%current = 1

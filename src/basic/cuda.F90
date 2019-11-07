@@ -253,6 +253,16 @@ module cuda_oct_m
       
       integer,       intent(out)   :: version
     end subroutine cuda_driver_version
+    
+    ! -------------------------------------------------
+
+    subroutine cuda_device_get_warpsize(device, warpsize)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr),  intent(inout) :: device
+      integer,      intent(out)   :: warpsize
+    end subroutine cuda_device_get_warpsize
 
   end interface
   

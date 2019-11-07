@@ -811,7 +811,8 @@ contains
     type(pes_mask_t),  intent(inout) :: mask
     type(simul_box_t),   intent(in)  :: sb
 
-    integer :: ii, dim
+    integer :: ii,dim
+    FLOAT   :: temp
 
     PUSH_SUB(pes_mask_generate_Lk)
 
@@ -999,12 +1000,6 @@ contains
 
     mask_fn(:) = M_ONE - mask_fn(:)
 
-! This output needs a namespace argument to work from now on. It
-! hasn't been touched for some years now, so I won't adapt it. - SO
-!   Keep this here to debug further mask shapes.    
-!     call dio_function_output(io_function_fill_how("PlaneZ"), &
-!                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)
-    
 
     call pes_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 

@@ -9,15 +9,15 @@ Processors : 3
 Input      : 12-vdw_solid_c6.01-gs_diamond.inp 
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.31903135
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.60869140
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.07099678
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.31863373
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.60815715
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.07111125
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.23975268
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35381308
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  9.01344124
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -7.06074672
-match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; -0.01433514
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.23970484
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.35380111
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  9.01044230
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -7.05753239
+match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; -0.01433596
 
 match ; Force C1 (x)   ; GREPFIELD(static/info, '1         C', 3) ; -0.000103
 match ; Force C1 (y)   ; GREPFIELD(static/info, '1         C', 4) ; -0.000103
@@ -27,10 +27,10 @@ match ; Force C2 (y)   ; GREPFIELD(static/info, '2         C', 4) ;  0.000103
 match ; Force C2 (z)   ; GREPFIELD(static/info, '2         C', 5) ;  0.000016
 
 Precision: 0.001
-match ; C6 eff  C1-C1   ; GREPFIELD(static/c6ab_eff, '1    1', 3) ; 0.366688E+02
-match ; C6 eff  C1-C2   ; GREPFIELD(static/c6ab_eff, '1    2', 3) ; 36.6618
-match ; C6 eff  C2-C1   ; GREPFIELD(static/c6ab_eff, '2    1', 3) ; 36.6618
-match ; C6 eff  C2-C2   ; GREPFIELD(static/c6ab_eff, '2    2', 3) ; 36.6548
+match ; C6 eff  C1-C1   ; GREPFIELD(static/c6ab_eff, '1    1', 3) ; 0.366721E+02
+match ; C6 eff  C1-C2   ; GREPFIELD(static/c6ab_eff, '1    2', 3) ; 0.366651E+02
+match ; C6 eff  C2-C1   ; GREPFIELD(static/c6ab_eff, '2    1', 3) ; 0.366651E+02
+match ; C6 eff  C2-C2   ; GREPFIELD(static/c6ab_eff, '2    2', 3) ; 0.366580E+02
 Precision: 0.0001
 
 
