@@ -705,7 +705,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
@@ -737,7 +737,8 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, &
+                     calc_eigenval=.false., calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -770,7 +771,7 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, calc_eigenval = .false.)
+          call system_h_setup(sys, calc_eigenval = .false., calc_current = .false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
@@ -803,7 +804,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
           call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
