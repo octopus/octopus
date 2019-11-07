@@ -393,6 +393,9 @@ contains
     ks%gr => gr
     ks%calc%calculating = .false.
 
+    !Initialize ks%calculate_current to false       
+    ks%calculate_current = .false. 
+
     !The value of ks%calculate_current is set to false or true by Output    
     call current_init(ks%current_calculator, namespace)
     
