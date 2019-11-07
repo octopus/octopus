@@ -106,6 +106,7 @@ contains
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
+    call v_ks_nullify(sys%ks)
     call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_elec_densities_init(sys%st, sys%gr, sys%geo)
     call states_elec_exec_init(sys%st, sys%namespace, sys%mc)

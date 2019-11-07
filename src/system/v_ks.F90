@@ -71,6 +71,7 @@ module v_ks_oct_m
   private
   public ::             &
     v_ks_t,             &
+    v_ks_nullify,       &
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
@@ -134,6 +135,26 @@ module v_ks_oct_m
   end type v_ks_t
 
 contains
+ 
+  ! ---------------------------------------------------------
+  subroutine v_ks_nullify(ks)
+    type(v_ks_t),            intent(inout) :: ks
+
+    PUSH_SUB(v_ks_nullify)
+
+    ks%theory_level = -1
+    ks%frozen_hxc = .false.
+    ks%xc_family = 0
+    ks%xc_flags = 0
+    ks%sic_type = -1
+    ks%calculate_current = .false.
+    ks%vdw_correction = -1
+    ks%vdw_self_consistent = .false.
+    ks%include_td_field = .false.
+
+    POP_SUB(v_ks_nullify)
+  end subroutine v_ks_nullify
+  
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, namespace, gr, st, geo, mc)
@@ -392,9 +413,6 @@ contains
 
     ks%gr => gr
     ks%calc%calculating = .false.
-
-    !Initialize ks%calculate_current to false       
-    ks%calculate_current = .false. 
 
     !The value of ks%calculate_current is set to false or true by Output    
     call current_init(ks%current_calculator, namespace)
