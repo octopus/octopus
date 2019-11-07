@@ -169,22 +169,25 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, hm, calc_eigenval)
+  subroutine system_h_setup(sys, hm, calc_eigenval, calc_current)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     logical,   optional, intent(in)    :: calc_eigenval !< default is true
+    logical,   optional, intent(in)    :: calc_current !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik
     FLOAT, allocatable :: copy_occ(:)
     logical :: calc_eigenval_
+    logical :: calc_current_
 
     PUSH_SUB(system_h_setup)
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
+    calc_current_ = optional_default(calc_current, .true.)
     call states_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
+    call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       message(1) = "Reordering occupations for restart."
