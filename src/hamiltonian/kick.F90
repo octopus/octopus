@@ -1182,6 +1182,8 @@ contains
 
               end do
 
+              call states_elec_set_state(st, mesh, ist, iqn, psi)
+
             end do
           end do
 
