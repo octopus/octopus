@@ -1080,23 +1080,21 @@ contains
         call td_write_print_header_init(out_magnets)
         call kick_write(kick, out = out_magnets)
 
-        do iq = 1, kick%nqvec
-          !second line -> columns name
-          call write_iter_header_start(out_magnets)
-          call write_iter_header(out_magnets, 'Re[m_x(q)]')
-          call write_iter_header(out_magnets, 'Im[m_x(q)]')
-          call write_iter_header(out_magnets, 'Re[m_y(q)]')
-          call write_iter_header(out_magnets, 'Im[m_y(q)]')
-          call write_iter_header(out_magnets, 'Re[m_z(q)]')
-          call write_iter_header(out_magnets, 'Im[m_z(q)]')
-          call write_iter_header(out_magnets, 'Re[m_x(-q)]')
-          call write_iter_header(out_magnets, 'Im[m_x(-q)]')
-          call write_iter_header(out_magnets, 'Re[m_y(-q)]')
-          call write_iter_header(out_magnets, 'Im[m_y(-q)]')
-          call write_iter_header(out_magnets, 'Re[m_z(-q)]')
-          call write_iter_header(out_magnets, 'Im[m_z(-q)]')
-          call write_iter_nl(out_magnets)
-        end do
+        !second line -> columns name
+        call write_iter_header_start(out_magnets)
+        call write_iter_header(out_magnets, 'Re[m_x(q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(q)]')
+        call write_iter_header(out_magnets, 'Re[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(-q)]')
+        call write_iter_nl(out_magnets)
 
         call td_write_print_header_end(out_magnets)
       end if
