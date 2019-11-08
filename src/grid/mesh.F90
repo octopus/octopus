@@ -58,6 +58,7 @@ module mesh_oct_m
     mesh_gcutoff,                  &
     mesh_write_info,               &
     mesh_nearest_point,            &
+    mesh_nearest_point_infos,      &
     mesh_periodic_point,           &
     mesh_global_memory,            &
     mesh_local_memory,             &
@@ -386,7 +387,54 @@ contains
     ind = imin
     POP_SUB(mesh_nearest_point)
   end function mesh_nearest_point
-  
+
+
+  ! --------------------------------------------------------------
+  subroutine mesh_nearest_point_infos(mesh, pos, dmin_global, rankmin, imin_local, imin_global)
+    type(mesh_t), intent(in)    :: mesh
+    FLOAT,        intent(in)    :: pos(:)
+    FLOAT,        intent(out)   :: dmin_global
+    integer,      intent(out)   :: rankmin
+    integer,      intent(out)   :: imin_local
+    integer,      intent(out)   :: imin_global
+
+    integer              :: ip, ip_global, idim, ipart
+    FLOAT                :: dd, xx(3)
+
+    dmin_global = M_HUGE
+    if (mesh%parallel_in_domains) then
+      do ipart=1, mesh%vp%npart
+        do ip=1, mesh%vp%np_local_vec(ipart)
+          ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
+          do idim = 1, mesh%sb%dim
+            xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
+          end do
+          dd = sqrt(sum((pos(:) - xx(:))**2))
+          if (dd < dmin_global) then
+            imin_local  = ip
+            rankmin     = ipart-1
+            imin_global = ip_global
+            dmin_global = dd
+          end if
+        end do
+      end do
+    else
+      do ip=1, mesh%np
+        do idim = 1, mesh%sb%dim
+          xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
+        end do
+        dd = sqrt(sum((pos(:) - xx(:))**2))
+        if (dd < dmin_global) then
+          imin_local  = ip
+          rankmin     = 0
+          imin_global = ip
+          dmin_global = dd
+        end if
+      end do
+    end if
+ 
+  end subroutine mesh_nearest_point_infos
+
  
   ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the

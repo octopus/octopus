@@ -1,0 +1,47 @@
+CalculationMode=gs
+ExperimentalFeatures = yes
+FromScratch=no
+
+## Cell ##
+
+TheoryLevel = independent_particles
+Dimensions = 2
+PeriodicDimensions = 1
+
+BoxShape = parallelepiped
+Spacing = 0.5
+
+LL = 120
+
+%LatticeParameters
+8.15| LL 
+%
+
+%LatticeVectors
+1.  | 0.
+0.  | 1.
+%
+
+U0 = 0.78
+x0 = 0.565*1.88
+y0 = 0.0
+
+
+%Species
+"tanh" | species_user_defined | potential_formula | " -U0*(1+tanh(x+x0))*(1+tanh(x0-x))*(1+tanh(y+y0))*(1+tanh(-y+y0))" | valence | 4
+%
+
+%Coordinates
+  "tanh" |   0.0   | 0.0
+%
+
+
+%KpointsGrid
+1 | 1 
+%
+
+%KPointsPath
+6
+-0.5| 0 
+0.5 | 0 
+%

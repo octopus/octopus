@@ -26,6 +26,7 @@ module eigensolver_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use exponential_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -38,6 +39,8 @@ module eigensolver_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
   use preconditioners_oct_m
@@ -110,11 +113,13 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, namespace, gr, st)
+  subroutine eigensolver_init(eigens, namespace, gr, st, geo, mc)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
+    type(geometry_t),    intent(in)    :: geo
+    type(multicomm_t),   intent(in)    :: mc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -394,15 +399,28 @@ contains
     call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
+    if(preconditioner_is_multigrid(eigens%pre)) then
+      SAFE_ALLOCATE(gr%mgrid_prec)
+      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+    end if
+
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_end(eigens)
+  subroutine eigensolver_end(eigens, gr)
     type(eigensolver_t), intent(inout) :: eigens
+    type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
+
+    if(preconditioner_is_multigrid(eigens%pre)) then
+      call multigrid_end(gr%mgrid_prec)
+      SAFE_DEALLOCATE_P(gr%mgrid_prec)
+    end if
+
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)

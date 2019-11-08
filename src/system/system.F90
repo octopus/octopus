@@ -155,7 +155,7 @@ contains
 
     call multicomm_end(sys%mc)
 
-    call v_ks_end(sys%ks)
+    call v_ks_end(sys%ks, sys%gr)
     
     call output_end(sys%outp)
     
