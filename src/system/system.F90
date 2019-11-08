@@ -106,6 +106,7 @@ contains
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
+    call v_ks_nullify(sys%ks)
     call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_elec_densities_init(sys%st, sys%gr, sys%geo)
     call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
@@ -177,21 +178,25 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, calc_eigenval)
+  subroutine system_h_setup(sys, calc_eigenval, calc_current)
     type(system_t),      intent(inout) :: sys
     logical,   optional, intent(in)    :: calc_eigenval !< default is true
+    logical,   optional, intent(in)    :: calc_current !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik
     FLOAT, allocatable :: copy_occ(:)
     logical :: calc_eigenval_
+    logical :: calc_current_
 
     PUSH_SUB(system_h_setup)
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
+    calc_current_ = optional_default(calc_current, .true.)
     call states_elec_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_, &
+                   calc_current = calc_current_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       message(1) = "Reordering occupations for restart."

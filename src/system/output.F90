@@ -101,7 +101,8 @@ module output_oct_m
     doutput_lr,          &
     zoutput_lr,          &
     output_kick,         &
-    output_scalar_pot
+    output_scalar_pot,   &
+    output_needs_current
 
 
   type output_bgw_t
@@ -562,13 +563,6 @@ contains
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
 
-    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
-      call v_ks_calculate_current(ks, .true.)
-    else
-      call v_ks_calculate_current(ks, .false.)
-    end if
-
-   
     !%Variable Output_KPT
     !%Type flag
     !%Default none
@@ -622,6 +616,13 @@ contains
       call io_function_read_how(sb, namespace, outp%how)
     else
       outp%how = 0
+    end if
+
+
+    if(output_needs_current(outp)) then
+      call v_ks_calculate_current(ks, .true.)
+    else
+      call v_ks_calculate_current(ks, .false.)
     end if
 
 
@@ -1556,6 +1557,20 @@ contains
 
     POP_SUB(output_dftu_orbitals)
   end subroutine output_dftu_orbitals
+
+  ! ---------------------------------------------------------
+  logical function output_needs_current(outp)
+    type(output_t),      intent(in) :: outp
+
+    output_needs_current = .false.
+
+    if( bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 &
+   .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
+   .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      output_needs_current = .true.
+    end if
+    
+  end function
 
   ! ---------------------------------------------------------
 
