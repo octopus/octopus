@@ -10,7 +10,7 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 01-propagators.01-gs.inp
-Precision  : 2e-07
+Precision  : 2e-08
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ;  Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -10.60766056
 
