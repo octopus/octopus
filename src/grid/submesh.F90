@@ -137,6 +137,8 @@ contains
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
+    call submesh_null(this)
+
     this%mesh => mesh
 
     this%center(1:sb%dim) = center(1:sb%dim)
@@ -316,8 +318,6 @@ contains
     
     PUSH_SUB(submesh_merge)
     call profiling_in(prof, "SUBMESH_MERGE")
-
-    ASSERT(.not.mesh%parallel_in_domains)
 
     this%mesh => mesh
 
@@ -588,21 +588,21 @@ contains
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
   #endif 
     this%np_global = sum(part_np)
-    !The 0 index correspond to the local index
+
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
     SAFE_ALLOCATE(this%part_v(1:this%np_global))
     SAFE_ALLOCATE(this%global2local(1:this%np_global))
-    this%x_global = M_ZERO
-    this%part_v = 0
-    this%global2local = 0
+    this%x_global(1:this%np_global, 1:this%mesh%sb%dim) = M_ZERO
+    this%part_v(1:this%np_global) = 0
+    this%global2local(1:this%np_global) = 0
 
     ind = 0
     do ipart = 1, this%mesh%vp%npart
       if(ipart == this%mesh%vp%partno) then
         do ip = 1, this%np
           this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
-          this%part_v(ind+ip) = this%mesh%vp%partno
-          this%global2local(ind+ip) = ip
+          this%part_v(ind + ip) = this%mesh%vp%partno
+          this%global2local(ind + ip) = ip
         end do
       end if
       ind = ind + part_np(ipart)
