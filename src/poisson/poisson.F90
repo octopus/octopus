@@ -108,7 +108,6 @@ module poisson_oct_m
     POISSON_NULL          = -999
   
   type poisson_t
-  
     private
     type(derivatives_t), pointer, public :: der
     integer, public           :: method = POISSON_NULL
@@ -216,6 +215,9 @@ contains
     !% Coordinate 1-d: electron; coordinate d+1: photon.
     !%End
     call parse_variable(namespace, 'DressedOrbitals', .false., this%dressed)
+    if (this%dressed) then
+      call messages_experimental('Dressed Orbitals')
+    end if
     call messages_print_var_value(stdout, 'DressedOrbitals', this%dressed)
 
     !%Variable PoissonSolver

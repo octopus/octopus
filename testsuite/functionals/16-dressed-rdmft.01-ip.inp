@@ -1,6 +1,8 @@
 CalculationMode = gs
-FromScratch = yes
 Dimensions = 2
+
+FromScratch = yes
+ExperimentalFeatures = yes
 TheoryLevel = independent_particles
 
 # Necessary Parameters for electron-photon coupling
