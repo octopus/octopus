@@ -24,21 +24,3 @@ Precision: 0.001
 match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; RDMFT converged energy           ; GREPFIELD(static/info, 'Total Energy ', 4) ; -1.1758699330E+00
 match ; RDMFT highest occupation number  ; GREPFIELD(static/info, '1 ', 2) ; 1.946806716954
-
-Input: 06-rdmft.04-dressed-ip.inp
-match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; IP energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.58545076
-match ; IP eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.792725
-
-Input: 06-rdmft.05-dressed-hf.inp
-Precision: 0.001
-match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; dHF converged energy           ; GREPFIELD(static/info, 'Total Energy ', 4) ; -7.8054701441E-01
-match ; dHF total mode occupation  ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 0.066618987207
-
-Input: 06-rdmft.06-dressed-rdmft.inp
-Precision: 0.001
-match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; dRDMFT converged energy           ; GREPFIELD(static/info, 'Total Energy ', 4) ; -8.8897928205E-01
-match ; dRDMFT highest occupation number  ; GREPFIELD(static/info, '1 ', 2) ; 1.924397206974
-match ; dRDMFT total mode occupation  ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 0.082985402889

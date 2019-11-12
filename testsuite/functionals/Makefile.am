@@ -119,9 +119,6 @@ dist_share_DATA =                                  \
 	06-rdmft.01-ip.inp                         \
 	06-rdmft.02-gs_basis.inp                   \
 	06-rdmft.03-gs_grid.inp                    \
-	06-rdmft.04-dressed-ip.inp                 \
-	06-rdmft.05-dressed-hf.inp                 \
-	06-rdmft.06-dressed-rdmft.inp              \
 	06-rdmft.test                              \
 	07-sic.01-gs.inp                           \
 	07-sic.test                                \
@@ -144,6 +141,10 @@ dist_share_DATA =                                  \
         14-libvdwxc_Be_hcp.01-vdwdfcx.inp          \
         15-oep-CG.test                             \
         15-oep-CG.01-kli.inp                       \
-        15-oep-CG.02-oep-bb.inp
+        15-oep-CG.02-oep-bb.inp                    \
+	16-dressed-rdmft.test                      \
+	16-dressed-rdmft.01-ip.inp                 \
+	16-dressed-rdmft.02-hf.inp                 \
+	16-dressed-rdmft.03-rdmft.inp
 
 CLEANFILES = *~ *.bak
