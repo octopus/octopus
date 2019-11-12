@@ -686,7 +686,7 @@ contains
 #endif
     end if
     
-    ! dressed orbital implementation works currently only ifor an electronic 1d system (=2d orbitals) and with direct sum 
+    ! dressed orbital implementation works currently only for an electronic 1d system (=2d orbitals) and with direct sum
     if(this%dressed .and. .not.this%method == POISSON_DIRECT_SUM) then
       write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum.'
       call messages_fatal(1)
@@ -877,7 +877,6 @@ contains
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
     logical               :: all_nodes_value
-    integer               :: dim_electronic
     type(profile_t), save :: prof
 
     call profiling_in(prof, 'POISSON_SOLVE')
@@ -899,22 +898,11 @@ contains
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      if(this%dressed) then
-        dim_electronic = this%der%mesh%sb%dim - 1
-      else 
-        dim_electronic = this%der%mesh%sb%dim
-      end if
-      select case(dim_electronic)
-      case(1)
-        call poisson_solve_direct(this, pot, rho)
-      case(2)
-        call poisson_solve_direct(this, pot, rho)
-      case(3)
-        call poisson_solve_direct(this, pot, rho)
-      case default
+      if ( (this%dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
-      end select
+      end if
+      call poisson_solve_direct(this, pot, rho)
 
     case(POISSON_FMM)
       call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
