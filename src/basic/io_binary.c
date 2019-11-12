@@ -512,7 +512,7 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
   fname_len = l1;
   io_read_header(hp, &correct_endianness, ierr, fname, fname_len);
 
-  if(ierr == 0) {
+  if(*ierr == 0) {
     *np  = hp->np;
     *type = (int) hp->type;
   } else {
