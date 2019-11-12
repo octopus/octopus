@@ -521,14 +521,14 @@ contains
         write(iunit, '(1x)')
 
         write(iunit, '(3a,es20.10)') 'Total Energy [', trim(units_abbrev(units_out%energy)), ']:', &
-          units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+          units_from_atomic(units_out%energy, energy + hm%ep%eii) 
         write(iunit,'(a,1x,f16.12)') 'Sum of occupation numbers:', rdm%occsum
       else
         iunit = 0
       end if
 
       if (hm%psolver%dressed) then
-        call calc_photon_number(photon_number_state,photon_number,ekin_state,epot_state)
+        call calc_photon_number(photon_number_state, photon_number, ekin_state, epot_state)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
         end if
@@ -574,10 +574,12 @@ contains
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
     
-  ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine calc_photon_number(photon_number_state, photon_number, ekin_state, epot_state)
+      FLOAT, intent(out) :: photon_number_state(st%nst)
       FLOAT, intent(out) :: photon_number
-      FLOAT, intent(out) :: photon_number_state (st%nst), ekin_state (st%nst), epot_state (st%nst)
+      FLOAT, intent(out) :: ekin_state(st%nst)
+      FLOAT, intent(out) :: epot_state(st%nst)
 
       integer :: ist, ip
       FLOAT   :: qq, q_square_exp, laplace_exp
@@ -607,8 +609,8 @@ contains
         ekin_state(ist) = -M_HALF*laplace_exp
 
         ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
-        psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)* gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
-        q_square_exp = dmf_dotp(gr%mesh, psi(:,1),psi_q_square(:,1))
+        psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
+        q_square_exp = dmf_dotp(gr%mesh, psi(:,1 ), psi_q_square(:, 1))
         epot_state(ist) = M_HALF * hm%psolver%dressed_omega * hm%psolver%dressed_omega * q_square_exp
 
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
@@ -617,7 +619,7 @@ contains
         photon_number_state(ist) = photon_number_state(ist) - M_HALF
 
         !! N_phot_total= sum_ist occ_ist*N_phot(ist)
-        photon_number =  photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
+        photon_number = photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
       end do
 
       photon_number =  photon_number - st%qtot/M_TWO
@@ -628,12 +630,12 @@ contains
       POP_SUB(scf_rdmft.calc_photon_number)
     end subroutine calc_photon_number
 
-  ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine calc_maxFO (hm, st, gr, rdm)
-      type(rdm_t),          intent(inout) :: rdm
-      type(grid_t),         intent(in)    :: gr
+      type(rdm_t),               intent(inout) :: rdm
+      type(grid_t),              intent(in)    :: gr
       type(hamiltonian_elec_t),  intent(inout) :: hm
-      type(states_elec_t),  intent(inout) :: st
+      type(states_elec_t),       intent(inout) :: st
     
       FLOAT, allocatable ::  lambda(:,:), FO(:,:)
       integer :: ist, jst
