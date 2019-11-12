@@ -504,11 +504,11 @@ contains
         
         if (hm%psolver%dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          write(iunit, '(a,5x)', advance='no') 'DressedLambda:'
+          write(iunit, '(a,1x)', advance='no') 'DressedLambda:   '
           write(iunit, '(f14.12)') (hm%psolver%dressed_lambda(idir), idir = 1,gr%mesh%sb%dim - 1)
-          write(iunit, '(a,5x,f14.12)') 'DressedOmega:', hm%psolver%dressed_omega
-          write(iunit, '(a,5x,f14.12)') 'DressedElectrons:', hm%psolver%dressed_electrons
-          write(iunit, '(a,5x,f14.12)') 'DressedCoulomb:', hm%psolver%dressed_coulomb
+          write(iunit, '(a,1x,f14.12)') 'DressedOmega:    ', hm%psolver%dressed_omega
+          write(iunit, '(a,1x,f14.12)') 'DressedElectrons:', hm%psolver%dressed_electrons
+          write(iunit, '(a,1x,f14.12)') 'DressedCoulomb:  ', hm%psolver%dressed_coulomb
         end if
         write(iunit, '(1x)')
 
