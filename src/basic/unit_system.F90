@@ -76,7 +76,7 @@ module unit_system_oct_m
   type(unit_t),        public :: unit_kilobytes     !< For small amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_megabytes     !< For large amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_gigabytes     !< For larger amounts of data (natural code units are bytes)
-  type(unit_t),        public :: unit_eV            !< For Wannier90, we need to output energies in eV.
+  type(unit_t),        public :: unit_eV            !< For output energies in eV.
 
   integer, parameter, public :: UNITS_ATOMIC = 0, UNITS_EVA = 1, UNITS_FS = 2
 
