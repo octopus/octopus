@@ -925,22 +925,44 @@ contains
     SAFE_ALLOCATE(pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae))
     pcm%matrix = M_ZERO
 
-    call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
+    !%Variable PCMExtMatrix
+    !%Type string
+    !%Section Hamiltonian::PCM
+    !%Description
+    !%Checks whether the PCM matrix is calculated in octopus
+    !%or read from a external file
+    !%End
+    call parse_variable('PCMExtMatrix', '', pcm%ext_matrix)
 
-    if (mpi_grp_is_root(mpi_world)) then
-      pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', pcm%namespace, action='write')
-      if (gamess_benchmark) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', &
-        pcm%namespace, action='write')
-
-      do jtess = 1, pcm%n_tesserae
-        do itess = 1, pcm%n_tesserae
-          write(pcmmat_unit,*) pcm%matrix(itess,jtess)
-          if (gamess_benchmark) write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
-        end do
-      end do
-      call io_close(pcmmat_unit)
-      if (gamess_benchmark) call io_close(pcmmat_gamess_unit)
+    if (pcm%ext_matrix == '') then
+     call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
+ 
+     if (mpi_grp_is_root(mpi_world)) then
+       pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', pcm%namespace, action='write')
+       if (gamess_benchmark) pcmmat_gamess_unit = io_open(PCM_DIR//'pcm_matrix_gamess.out', &
+         pcm%namespace, action='write')
+ 
+       do jtess = 1, pcm%n_tesserae
+         do itess = 1, pcm%n_tesserae
+           write(pcmmat_unit,*) pcm%matrix(itess,jtess)
+           if (gamess_benchmark) write(pcmmat_gamess_unit,*) mat_gamess(itess,jtess) !< for benchmarking with GAMESS
+         end do
+       end do
+       call io_close(pcmmat_unit)
+       if (gamess_benchmark) call io_close(pcmmat_gamess_unit)
+     end if
+    else
+       pcmmat_unit = io_open(trim(pcm%ext_matrix), action='read')
+       do jtess = 1, pcm%n_tesserae
+         do itess = 1, pcm%n_tesserae
+           read(pcmmat_unit,*) pcm%matrix(itess,jtess)
+         end do
+       end do
+       call io_close(pcmmat_unit)     
+       message(1) = "Info: PCM response matrix has been read from the file "//trim(pcm%ext_matrix)
+       call messages_info(1)
     end if
+
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
