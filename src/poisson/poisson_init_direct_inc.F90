@@ -265,7 +265,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     endif
   else !dressed orbitals
     dim_elec = dim - 1
-    lam(1:dim_elec) = (/ this%dressed_lambda_x, this%dressed_lambda_y, this%dressed_lambda_z /)
+    lam(1:dim_elec) = this%dressed_lambda(1:dim_elec)
     if (this%poisson_soft_coulomb_param**2 > M_ZERO) then ! TODO: check that test
       dim_effective = dim
       dim_phot = dim + 1

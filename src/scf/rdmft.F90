@@ -472,7 +472,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      integer :: iunit, ist
+      integer :: iunit, ist, idir
       FLOAT :: photon_number
       FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
@@ -504,10 +504,11 @@ contains
         
         if (hm%psolver%dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          write(iunit, '(a,5x,f14.12,f14.12,f14.12)') 'RDMParamLambda:', hm%psolver%dressed_lambda_x, hm%psolver%dressed_lambda_y, hm%psolver%dressed_lambda_z
-          write(iunit, '(a,5x,f14.12)') 'RDMParamOmega:', hm%psolver%dressed_omega
-          write(iunit, '(a,5x,f14.12)') 'RDMNoElectrons:', hm%psolver%dressed_electrons
-          write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', hm%psolver%dressed_coulomb
+          write(iunit, '(a,5x)', advance='no') 'DressedLambda:'
+          write(iunit, '(f14.12)') (hm%psolver%dressed_lambda(idir), idir = 1,gr%mesh%sb%dim - 1)
+          write(iunit, '(a,5x,f14.12)') 'DressedOmega:', hm%psolver%dressed_omega
+          write(iunit, '(a,5x,f14.12)') 'DressedElectrons:', hm%psolver%dressed_electrons
+          write(iunit, '(a,5x,f14.12)') 'DressedCoulomb:', hm%psolver%dressed_coulomb
         end if
         write(iunit, '(1x)')
 

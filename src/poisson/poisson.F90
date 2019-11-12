@@ -127,7 +127,7 @@ module poisson_oct_m
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
     logical, public :: dressed
-    FLOAT, public :: dressed_lambda_x, dressed_lambda_y, dressed_lambda_z
+    FLOAT, allocatable, public :: dressed_lambda(:)
     FLOAT, public :: dressed_omega
     FLOAT, public :: dressed_electrons
     FLOAT, public :: dressed_coulomb
@@ -161,9 +161,10 @@ contains
     integer,           optional, intent(in)  :: solver
 
     logical :: need_cube, isf_data_is_parallel
-    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
+    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library, idir
     FLOAT :: fft_alpha
     character(len=60) :: str
+    type(block_t) :: blk
 
     if(this%method /= POISSON_NULL) return ! already initialized
 
@@ -215,6 +216,7 @@ contains
     !% Coordinate 1-d: electron; coordinate d+1: photon.
     !%End
     call parse_variable(namespace, 'DressedOrbitals', .false., this%dressed)
+    call messages_print_var_value(stdout, 'DressedOrbitals', this%dressed)
 
     !%Variable PoissonSolver
     !%Type integer
@@ -228,6 +230,7 @@ contains
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
+    !% <br> Dressed orbitals: <tt>direct_sum</tt>.
     !%Option NoPoisson -99
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
@@ -296,32 +299,26 @@ contains
 
 
     if (this%dressed) then
-      !%Variable DressedLambdaX
-      !%Type float
-      !%Default 0 Ha
+      !%Variable DressedLambda
+      !%Type block
       !%Section Hamiltonian::Poisson
       !%Description
-      !% X component of polarization vector including the interaction strength in dressed orbital formalism.
+      !% Polarization vector including the interaction strength in dressed orbital formalism,
+      !% in units of energy. The default is zero for all components.
       !%End
-      call parse_variable(namespace, 'DressedLambdaX', CNST(0.0), this%dressed_lambda_x)
-      
-      !%Variable DressedLambdaY
-      !%Type float
-      !%Default 0 Ha
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% Y component of polarization vector including the interaction strength in dressed orbital formalism.
-      !%End
-      call parse_variable(namespace, 'DressedLambdaY', CNST(0.0), this%dressed_lambda_y)
-      
-      !%Variable DressedLambdaZ
-      !%Type float
-      !%Default 0 Ha
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% Z component of polarization vector including the interaction strength in dressed orbital formalism.
-      !%End
-      call parse_variable(namespace, 'DressedLambdaZ', CNST(0.0), this%dressed_lambda_z)
+      SAFE_ALLOCATE(this%dressed_lambda(der%mesh%sb%dim - 1))
+      if(parse_block(namespace, 'DressedLambda', blk) == 0) then
+        if(parse_block_cols(blk, 0) < der%mesh%sb%dim - 1) then
+          call messages_input_error(' DressedLambda')
+        end if
+        do idir = 1, der%mesh%sb%dim - 1
+          call parse_block_float(blk, 0, idir - 1, this%dressed_lambda(idir), units_inp%energy)
+        end do
+      else
+        this%dressed_lambda = M_ZERO
+      end if
+      call parse_block_end(blk)
+      call messages_print_var_value(stdout, 'DressedLambda', this%dressed_lambda, unit = units_out%energy)
 
       !%Variable DressedOmega
       !%Type float
@@ -330,7 +327,8 @@ contains
       !%Description
       !% mode frequency in dressed orbital formalism.
       !%End
-      call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%dressed_omega)
+      call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%dressed_omega, units_inp%energy)
+      call messages_print_var_value(stdout, 'DressedOmega', this%dressed_omega, unit = units_out%energy)
 
       !%Variable DressedElectrons
       !%Type float
@@ -341,6 +339,7 @@ contains
       !% for better usage later
       !%End
       call parse_variable(namespace, 'DressedElectrons', CNST(2.0), this%dressed_electrons)
+      call messages_print_var_value(stdout, 'DressedElectrons', this%dressed_electrons)
 
       !%Variable DressedCoulomb
       !%Type float
@@ -350,14 +349,7 @@ contains
       !% allows to control the prefactor of the electron electron interaction
       !%End
       call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
-
-      write(message(1), '(a)')'Dressed Orbital calculation'
-      write(message(2),'(a,1x,f14.12,1x,f14.12,1x,f14.12)') 'DressedLambda', this%dressed_lambda_x, this%dressed_lambda_y, &
-        this%dressed_lambda_z
-      write(message(3),'(a,1x,f14.12)') 'DressedParamOmega', this%dressed_omega
-      write(message(4),'(a,1x,f14.12)') 'DressedNoElectrons', this%dressed_electrons
-      write(message(5),'(a,1x,f14.12)') 'DressedCoulomb', this%dressed_coulomb
-      call messages_info(5)
+      call messages_print_var_value(stdout, 'DressedCoulomb', this%dressed_coulomb)
     end if
 
    
@@ -693,7 +685,7 @@ contains
     end if
     
     ! dressed orbital implementation works currently only ifor an electronic 1d system (=2d orbitals) and with direct sum 
-    if(this%dressed .and. .not.this%method==POISSON_DIRECT_SUM) then
+    if(this%dressed .and. .not.this%method == POISSON_DIRECT_SUM) then
       write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum.'
       call messages_fatal(1)
     end if
@@ -717,6 +709,8 @@ contains
     PUSH_SUB(poisson_end)
 
     has_cube = .false.
+
+    SAFE_DEALLOCATE_A(this%dressed_lambda)
 
     select case(this%method)
     case(POISSON_FFT)
