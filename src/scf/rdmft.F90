@@ -39,6 +39,7 @@ module rdmft_oct_m
   use minimizer_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -103,12 +104,14 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, fromScratch)
-    type(rdm_t),         intent(out) :: rdm
-    type(namespace_t),   intent(in)  :: namespace
-    type(grid_t),        intent(in)  :: gr  !< grid
-    type(states_elec_t), intent(in)  :: st  !< States
-    logical,             intent(in)  :: fromScratch
+  subroutine rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
+    type(rdm_t),         intent(out)   :: rdm
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(inout) :: gr  !< grid
+    type(states_elec_t), intent(in)    :: st  !< States
+    type(geometry_t),    intent(in)    :: geo
+    type(multicomm_t),   intent(in)    :: mc
+    logical,             intent(in)    :: fromScratch
 
     integer :: ist
 
@@ -211,8 +214,8 @@ contains
         rdm%vecnat(ist, ist) = M_ONE
       end do
     else
-      ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
-      call eigensolver_init(rdm%eigens, namespace, gr, st, disable_preconditioner=.true.)
+      ! initialize eigensolver. 
+      call eigensolver_init(rdm%eigens, namespace, gr, st, geo, mc)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -237,8 +240,9 @@ contains
 
   ! ----------------------------------------
 
-  subroutine rdmft_end(rdm)
-    type(rdm_t), intent(inout) :: rdm
+  subroutine rdmft_end(rdm, gr)
+    type(rdm_t),  intent(inout) :: rdm
+    type(grid_t), intent(inout) :: gr
 
     PUSH_SUB(rdmft_end)
 
@@ -258,7 +262,7 @@ contains
       SAFE_DEALLOCATE_A(rdm%Coul)
       SAFE_DEALLOCATE_A(rdm%Exch)
     else
-      call eigensolver_end(rdm%eigens)
+      call eigensolver_end(rdm%eigens, gr)
     end if
 
     POP_SUB(rdmft_end)
@@ -893,7 +897,7 @@ contains
  
     call lalg_eigensolve(st%nst, fo, rdm%evalues)
     call assign_eigfunctions(rdm, st, gr, fo)
-    if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
+    call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -954,6 +958,10 @@ contains
       rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     end do
     
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
+      write(stdout, '(1x)')
+    end if
+    
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, hm, st, geo)
@@ -976,8 +984,8 @@ contains
     FLOAT,                    intent(out)   :: lambda(:,:) !< (1:st%nst, 1:st%nst)
     type(rdm_t),              intent(inout) :: rdm
 
-    FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
-    FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
+    FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi1(:,:) 
+    FLOAT, allocatable :: fock(:,:,:), fvec(:)
     integer :: ist, iorb, jorb, jst
 
     PUSH_SUB(construct_lambda)
@@ -988,8 +996,8 @@ contains
     if (.not. rdm%do_basis) then
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(hpsi1(1:gr%mesh%np,1:st%d%dim))
-      SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part ,1:st%d%dim))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part ,1:st%d%dim))
+      SAFE_ALLOCATE(dpsi1(1:gr%mesh%np_part ,1:st%d%dim))
 
       do iorb = 1, st%nst
         call states_elec_get_state(st, gr%mesh, iorb, 1, dpsi)
@@ -997,12 +1005,12 @@ contains
 
         do jorb = iorb, st%nst  
           ! calculate <phi_j|H|phi_i> =lam_ji
-          call states_elec_get_state(st, gr%mesh, jorb, 1, dpsi2)
-          lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
+          call states_elec_get_state(st, gr%mesh, jorb, 1, dpsi1)
+          lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi1(:,1), hpsi(:,1))
           
           ! calculate <phi_i|H|phi_j>=lam_ij
           if (.not. iorb == jorb ) then
-            call dhamiltonian_elec_apply(hm, gr%mesh, dpsi2, hpsi1, jorb, 1)
+            call dhamiltonian_elec_apply(hm, gr%mesh, dpsi1, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
         end do
@@ -1047,15 +1055,10 @@ contains
 
 
     if (.not. rdm%do_basis) then
-      SAFE_DEALLOCATE_A(g_x)
-      SAFE_DEALLOCATE_A(g_h)
       SAFE_DEALLOCATE_A(hpsi)
       SAFE_DEALLOCATE_A(hpsi1)
-      SAFE_DEALLOCATE_A(dpsi2)
       SAFE_DEALLOCATE_A(dpsi)
-      SAFE_DEALLOCATE_A(rho) 
-      SAFE_DEALLOCATE_A(rho_tot) 
-      SAFE_DEALLOCATE_A(pot) 
+      SAFE_DEALLOCATE_A(dpsi1)
     else
       SAFE_DEALLOCATE_A(fvec) 
       SAFE_DEALLOCATE_A(fock) 
@@ -1078,29 +1081,19 @@ contains
 
     PUSH_SUB(assign_eigenfunctions)
 
-    if (.not. rdm%do_basis) then
-      do iqn = st%d%kpt%start, st%d%kpt%end
-        if (states_are_real(st)) then
-          call states_elec_rotate(gr%mesh, st, lambda, iqn)
-        else
-          call states_elec_rotate(gr%mesh, st, M_z1*lambda, iqn)
-        end if
-      end do
-    else
-      SAFE_ALLOCATE(vecnat_new(1:st%nst, 1:st%nst))
-      do iorb = 1, st%nst
-        do ist = 1, st%nst
-          vecnat_new(ist, iorb) = M_ZERO
-          do jorb = 1, st%nst
-            vecnat_new(ist , iorb) = vecnat_new(ist, iorb) + rdm%vecnat(ist, jorb)*lambda(jorb, iorb)
-          end do
+    SAFE_ALLOCATE(vecnat_new(1:st%nst, 1:st%nst))
+    do iorb = 1, st%nst
+      do ist = 1, st%nst
+        vecnat_new(ist, iorb) = M_ZERO
+        do jorb = 1, st%nst
+          vecnat_new(ist , iorb) = vecnat_new(ist, iorb) + rdm%vecnat(ist, jorb)*lambda(jorb, iorb)
         end do
       end do
-      
-      rdm%vecnat = vecnat_new
+    end do
+    
+    rdm%vecnat = vecnat_new
 
-      SAFE_DEALLOCATE_A(vecnat_new)
-    end if
+    SAFE_DEALLOCATE_A(vecnat_new)
 
     POP_SUB(assign_eigenfunctions)
   end subroutine assign_eigfunctions

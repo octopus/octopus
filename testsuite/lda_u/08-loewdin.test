@@ -38,7 +38,7 @@ match ; Occupation Ni2 up-down 3d5 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.1
 
 Input      : 08-loewdin.02-intersite.inp
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.66014967
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67225388
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -7.85780080
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14681809
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.54645192
@@ -51,5 +51,23 @@ match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;  0.060
 match ; U 3p Si1  ; LINEFIELD(static/effectiveU, 3, 4) ; 0.129050
 match ; U 3p Si2  ; LINEFIELD(static/effectiveU, 4, 4) ; 0.129050
 
-match ; V 3p-3p ;  GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055993 
+match ; V 3p-3p ;  GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055993
+
+#Values are copied from the test above
+Input      : 08-loewdin.03-intersite_domains.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67225388
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -7.85780080
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14681809
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.54645192
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.03446304
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.37502436
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  3.11675578
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -1.26756237
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;  0.06090528
+
+match ; U 3p Si1  ; LINEFIELD(static/effectiveU, 3, 4) ; 0.129050
+match ; U 3p Si2  ; LINEFIELD(static/effectiveU, 4, 4) ; 0.129050
+
+match ; V 3p-3p ;  GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055993
 

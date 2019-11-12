@@ -502,8 +502,8 @@ contains
     integer,              intent(out) :: ierr
     integer, optional,    intent(in)  :: iter
 
-    integer :: err, occsize
-    FLOAT, allocatable :: Ueff(:), docc(:)
+    integer :: err, occsize, ios, ncount
+    FLOAT, allocatable :: Ueff(:), docc(:), Veff(:)
     CMPLX, allocatable :: zocc(:)
 
     PUSH_SUB(lda_u_dump)
@@ -521,7 +521,13 @@ contains
     end if
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(this%level == DFT_U_ACBN0) then
+      occsize = occsize*2
+      if(this%intersite) then
+        occsize = occsize + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+      end if
+    end if
+
  
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
@@ -547,6 +553,18 @@ contains
       call drestart_write_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       SAFE_DEALLOCATE_A(Ueff)
       if (err /= 0) ierr = ierr + 1
+
+      if(this%intersite) then
+        ncount = 0  
+        do ios = 1, this%norbsets
+          ncount = ncount + this%orbsets(ios)%nneighbors
+        end do
+        SAFE_ALLOCATE(Veff(1:ncount))
+        call lda_u_get_effectiveV(this, Veff(:))
+        call drestart_write_binary(restart, "lda_u_Veff", ncount, Veff, err)
+        SAFE_DEALLOCATE_A(Veff)
+        if (err /= 0) ierr = ierr + 1 
+      end if
     end if
 
     if (debug%info) then
@@ -567,8 +585,8 @@ contains
     logical, optional,    intent(in)    :: occ_only
     logical, optional,    intent(in)    :: u_only
 
-    integer :: err, occsize
-    FLOAT, allocatable :: Ueff(:), docc(:)
+    integer :: err, occsize, ncount, ios
+    FLOAT, allocatable :: Ueff(:), docc(:), Veff(:)
     CMPLX, allocatable :: zocc(:)
 
     PUSH_SUB(lda_u_load)
@@ -593,12 +611,30 @@ contains
       if (err /= 0) ierr = ierr + 1
       call lda_u_set_effectiveU(this, Ueff)
       SAFE_DEALLOCATE_A(Ueff)
+
+      if(this%intersite) then
+        ncount = 0
+        do ios = 1, this%norbsets
+          ncount = ncount + this%orbsets(ios)%nneighbors
+        end do
+        SAFE_ALLOCATE(Veff(1:ncount))
+        call drestart_read_binary(restart, "lda_u_Veff", ncount, Veff, err)
+        if (err /= 0) ierr = ierr + 1
+        call lda_u_set_effectiveV(this, Veff)
+        SAFE_DEALLOCATE_A(Veff)
+      end if
     end if
 
 
     if(.not. optional_default(u_only, .false.)) then
       occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-      if(this%level == DFT_U_ACBN0) occsize = occsize*2
+      if(this%level == DFT_U_ACBN0) then
+        occsize = occsize*2
+        if(this%intersite) then
+          occsize = occsize + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+        end if
+      end if
+
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(docc(1:occsize))

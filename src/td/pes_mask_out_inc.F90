@@ -382,7 +382,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
                 pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
                                                + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
                                                
-                pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
+                pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
                                                + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
             end do
           end do
@@ -410,7 +410,8 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
   character(len=80) :: filename
-  integer ::  np, err
+  integer ::  np, err, iunit 
+  character(len=128) :: lines(2)
 
   PUSH_SUB(pes_mask_map_from_state)
 
@@ -1749,7 +1750,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
 
     do ii = 2, nn
       ! npoints==0.0 when pes==0.0
-      if(pes(ii)/=M_ZERO)then
+      if(pes(ii)/= M_ZERO)then
         EE = (ii-1)*step
         !Multiply for the correct Jacobian factor
         pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 

@@ -203,20 +203,21 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_calc(pes, mesh, st, dt, iter, gr, hm)
-    type(pes_t),         intent(inout) :: pes
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    FLOAT,               intent(in)    :: dt
-    integer,             intent(in)    :: iter
-    type(hamiltonian_elec_t), intent(in)    :: hm
+  subroutine pes_calc(pes, mesh, st, dt, iter, gr, hm, stopping)
+    type(pes_t),         intent(inout)    :: pes
+    type(mesh_t),        intent(in)       :: mesh
+    type(states_elec_t), intent(inout)    :: st
+    type(grid_t),        intent(in)       :: gr
+    FLOAT,               intent(in)       :: dt
+    integer,             intent(in)       :: iter
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    logical            , intent(in)       :: stopping
 
     PUSH_SUB(pes_calc)
 
     if(pes%calc_spm)  call pes_spm_calc(pes%spm, st, mesh, dt, iter, hm)
     if(pes%calc_mask) call pes_mask_calc(pes%mask, mesh, st, dt, iter)
-    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt)
+    if(pes%calc_flux) call pes_flux_calc(pes%flux, mesh, st, gr, hm, iter, dt, stopping)
 
     POP_SUB(pes_calc)
   end subroutine pes_calc

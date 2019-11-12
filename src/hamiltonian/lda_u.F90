@@ -78,6 +78,8 @@ module lda_u_oct_m
        zlda_u_update_potential,         &
        lda_u_get_effectiveU,            &
        lda_u_set_effectiveU,            &
+       lda_u_get_effectiveV,            &
+       lda_u_set_effectiveV,            &
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
@@ -129,9 +131,9 @@ module lda_u_oct_m
 
     type(distributed_t) :: orbs_dist
 
-    integer             :: maxneighbors       
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_IJ(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_IJ(:,:,:,:,:)
+    integer, public     :: maxneighbors       
+    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:)
+    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -182,8 +184,8 @@ contains
   nullify(this%orbsets)
   nullify(this%dn_ij)
   nullify(this%zn_ij)
-  nullify(this%dn_alt_IJ)
-  nullify(this%zn_alt_IJ)
+  nullify(this%dn_alt_ij)
+  nullify(this%zn_alt_ij)
 
   call distributed_nullify(this%orbs_dist, 0)
 
@@ -469,8 +471,8 @@ contains
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
    SAFE_DEALLOCATE_P(this%dn_ij)
    SAFE_DEALLOCATE_P(this%zn_ij)
-   SAFE_DEALLOCATE_P(this%dn_alt_IJ)
-   SAFE_DEALLOCATE_P(this%zn_alt_IJ)
+   SAFE_DEALLOCATE_P(this%dn_alt_ij)
+   SAFE_DEALLOCATE_P(this%zn_alt_ij)
    SAFE_DEALLOCATE_A(this%basisstates)
 
    nullify(this%orbsets)
@@ -535,16 +537,16 @@ contains
       SAFE_DEALLOCATE_P(this%dn_ij)
       SAFE_ALLOCATE(this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-      SAFE_DEALLOCATE_P(this%dn_alt_IJ)
-      SAFE_ALLOCATE(this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+      SAFE_DEALLOCATE_P(this%dn_alt_ij)
+      SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
     else
       SAFE_DEALLOCATE_P(this%zn_ij)
       SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-      SAFE_DEALLOCATE_P(this%zn_alt_IJ)
-      SAFE_ALLOCATE(this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+      SAFE_DEALLOCATE_P(this%zn_alt_ij)
+      SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
     end if
   end if
 
@@ -552,6 +554,13 @@ contains
   ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
     call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
+  else
+    !In case there is no phase, we perform the orthogonalization here
+    if(this%basis%orthogonalization) then
+      call dloewdin_orthogonalize(this%basis, st%d%kpt, namespace)
+    else
+      if(debug%info) call dloewdin_info(this%basis, st%d%kpt, namespace)
+    end if  
   end if
 
   POP_SUB(lda_u_update_basis)
@@ -677,19 +686,21 @@ contains
 
  end subroutine compute_ACBNO_U_kanamori
 
+  ! ---------------------------------------------------------
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this
 
     this%freeze_occ = .true.
   end subroutine lda_u_freeze_occ
 
+  ! ---------------------------------------------------------
   subroutine lda_u_freeze_u(this)            
     type(lda_u_t),     intent(inout) :: this
 
     this%freeze_u = .true.
   end subroutine lda_u_freeze_u
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine lda_u_set_effectiveU(this, Ueff)
     type(lda_u_t),  intent(inout) :: this
     FLOAT,          intent(in)    :: Ueff(:) !< (this%norbsets)
@@ -721,7 +732,43 @@ contains
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
 
+  ! ---------------------------------------------------------
+  subroutine lda_u_set_effectiveV(this, Veff)
+    type(lda_u_t),  intent(inout) :: this
+    FLOAT,          intent(in)    :: Veff(:)
 
+    integer :: ios, ncount
+
+    PUSH_SUB(lda_u_set_effectiveV)
+
+    ncount = 0
+    do ios = 1, this%norbsets
+      this%orbsets(ios)%V_ij(1:this%orbsets(ios)%nneighbors,0) = Veff(ncount+1:ncount+this%orbsets(ios)%nneighbors)
+      ncount = ncount + this%orbsets(ios)%nneighbors
+    end do
+
+    POP_SUB(lda_u_set_effectiveV)
+  end subroutine lda_u_set_effectiveV
+
+  ! ---------------------------------------------------------
+  subroutine lda_u_get_effectiveV(this, Veff)
+    type(lda_u_t),  intent(in)    :: this
+    FLOAT,          intent(inout) :: Veff(:)
+
+    integer :: ios, ncount
+
+    PUSH_SUB(lda_u_get_effectiveV)
+
+    ncount = 0
+    do ios = 1, this%norbsets
+      Veff(ncount+1:ncount+this%orbsets(ios)%nneighbors) = this%orbsets(ios)%V_ij(1:this%orbsets(ios)%nneighbors,0)
+      ncount = ncount + this%orbsets(ios)%nneighbors
+    end do
+
+    POP_SUB(lda_u_get_effectiveV)
+  end subroutine lda_u_get_effectiveV
+
+  ! ---------------------------------------------------------
   subroutine lda_u_write_info(this, iunit)
     type(lda_u_t),  intent(in)    :: this
     integer,        intent(in)    :: iunit

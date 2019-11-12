@@ -254,6 +254,7 @@ contains
     ASSERT(dim <= MAX_DIM)
 
     call kpoints_nullify(this)
+    this%nik_axis(1:MAX_DIM) = 1
 
     !%Variable KPointsUseSymmetries
     !%Type logical

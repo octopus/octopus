@@ -687,7 +687,7 @@ contains
     type(states_mxll_t), intent(in)      :: st
     type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, mpi_err, pos_index, rankmin, ip_global
+    integer :: ip, mpi_err, pos_index_local, pos_index_global, rankmin, ip_global
     FLOAT   :: dmin
     CMPLX   :: ztmp(MAX_DIM)
     CMPLX, allocatable :: ztmp_global(:)
@@ -697,16 +697,17 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip=1, st%selected_points_number
-      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
-!      if (mesh%parallel_in_domains) then
-      ztmp(:) = rs_state(pos_index,:)
-!#ifdef HAVE_MPI
-!        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
-!        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
-!#endif
-!      else
-!        ztmp(:) = rs_state(pos_index_global,:)
-!      end if
+      call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
+!      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
+      if (mesh%parallel_in_domains) then
+        ztmp(:) = rs_state(pos_index_local,:)
+#ifdef HAVE_MPI
+        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
+        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+#endif
+      else
+        ztmp(:) = rs_state(pos_index_global,:)
+      end if
       rs_state_point(:,ip) = ztmp(:)
     end do
 
