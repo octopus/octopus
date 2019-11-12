@@ -32,6 +32,7 @@ program wannier90_interface
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
+  use iso_fortran_env
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -496,9 +497,9 @@ contains
   end subroutine wannier90_output
 
   subroutine read_wannier90_files()
-    integer ::  w90_nnkp, itemp, dummyint
+    integer ::  w90_nnkp, itemp, dummyint, io
     character(len=80) :: filename, dummy, dummy1
-    logical :: exist
+    logical :: exist, parse_is_ok
     FLOAT :: dummyr(7)
 
     PUSH_SUB(read_wannier90_files)
@@ -519,28 +520,41 @@ contains
       call messages_fatal(2)
     end if
 
-    w90_nnkp = io_open(trim(filename), namespace, action='read')
+    parse_is_ok = .false.
 
     ! check number of k-points
-    do while(.true.)
-      read(w90_nnkp,*) dummy, dummy1
+    w90_nnkp = io_open(trim(filename), namespace, action='read')
+    do
+      read(w90_nnkp, *, iostat=io) dummy, dummy1
+      if(io == iostat_end) exit
+      print *, io, iostat_end, iostat_eor, dummy
+
       if(dummy =='begin' .and. dummy1 == 'kpoints' ) then
         read(w90_nnkp,*) itemp
         if(itemp /= w90_num_kpts) then
           message(1) = 'oct-wannier90: wannier90 setup seems to have been done with a different number of k-points.'
           call messages_fatal(1)
         else
+          parse_is_ok = .true.
           exit
         end if
       end if
     end do
     call io_close(w90_nnkp)
 
-    w90_nnkp = io_open(trim(filename), namespace, action='read')
+    if(.not. parse_is_ok) then
+      message(1) = 'oct-wannier90: Did not find the kpoints block in nnkp file'
+      call messages_fatal(1)
+    end if
+    parse_is_ok = .false.
+
     ! read from nnkp file
     ! find the nnkpts block
-    do while(.true.)
-      read(w90_nnkp,*,end=101) dummy, dummy1
+    w90_nnkp = io_open(trim(filename), namespace, action='read', position='rewind')
+    do
+      read(w90_nnkp, *, iostat=io) dummy, dummy1
+      if(io  == iostat_end) exit !End of file
+
       if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
         read(w90_nnkp,*) w90_nntot
         SAFE_ALLOCATE(w90_nnk_list(1:5, 1:w90_num_kpts * w90_nntot))
@@ -553,17 +567,25 @@ contains
           message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
           call messages_fatal(1)
         end if
+        parse_is_ok = .true.
         exit
       end if
     end do
+   
+    if(.not. parse_is_ok) then
+      message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
+      call messages_fatal(1)
+    end if
 
     ! read from nnkp file
     ! find the exclude block
     SAFE_ALLOCATE(exclude_list(1:sys%st%nst))
     !By default we use all the bands
     exclude_list(1:sys%st%nst) = .false.
-    do while(.true.)
-      read(w90_nnkp, *, end=102) dummy, dummy1
+    rewind(w90_nnkp)
+    do
+      read(w90_nnkp, *, iostat=io) dummy, dummy1
+      if(io  == iostat_end) exit !End of file
       if(dummy =='begin' .and. dummy1 == 'exclude_bands') then
         read(w90_nnkp, *) w90_num_exclude
         do ii=1, w90_num_exclude
@@ -576,16 +598,9 @@ contains
           message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
           call messages_fatal(1)
         end if
-        goto 102
+        exit
       end if
     end do
-
-    ! jump point when EOF found while looking for nnkpts block
-101 message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
-    call messages_fatal(1)
-
-102 continue
-
     call io_close(w90_nnkp)
 
     !We get the number of bands
@@ -601,10 +616,14 @@ contains
 
     if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       ! parse file again for definitions of projections
-      w90_nnkp = io_open(trim(filename), namespace, action='read')
+      w90_nnkp = io_open(trim(filename), namespace, action='read', position='rewind')
 
-      do while(.true.)
-        read(w90_nnkp, *, end=201) dummy, dummy1
+      do
+        read(w90_nnkp, *, iostat=io) dummy, dummy1
+        if(io == iostat_end) then !End of file
+          message(1) = 'oct-wannier90: Did not find projections block in w90.nnkp file'
+          call messages_fatal(1)
+        end if
 
         if(dummy =='begin' .and. (dummy1 == 'projections' .or. dummy1 == 'spinor_projections')) then
 
@@ -655,21 +674,15 @@ contains
              message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
              call messages_fatal(1)
           end if
-          goto 202
+          exit
         end if
       end do
 
-      ! jump point when EOF found while looking for projections block
-201   message(1) = 'oct-wannier90: Did not find projections block in w90.nnkp file'
-      call messages_fatal(1)
-
-      ! jump point when projections is found in file
-202   continue
-
       ! look for auto_projection block
       scdm_proj = .false.
-      do while(.true.)
-        read(w90_nnkp, *, end=203) dummy, dummy1
+      do
+        read(w90_nnkp, *, iostat=io) dummy, dummy1
+        if(io == iostat_end) exit !End of file
 
         if(dummy =='begin' .and. dummy1 =='auto_projections') then
           scdm_proj = .true.
@@ -692,9 +705,6 @@ contains
           end if
         end if
       end do
-
-      ! Jump point for scan for auto_projections, nothing checked here
-203   continue     
       call io_close(w90_nnkp)
  
     end if
