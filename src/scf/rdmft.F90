@@ -545,37 +545,22 @@ contains
       end if
 
       if (mpi_grp_is_root(mpi_world)) then
+        ! Write header
         write(iunit,'(a)') 'Natural occupation numbers:'
-        if (rdm%do_basis) then
-          ! for do_basis=true, we cannot differentiate between the convergences of different states
+        write(iunit,'(a4,5x,a12)', advance='no') '#st', 'Occupation'
+        if (.not. rdm%do_basis) write(iunit,'(5x,a12)', advance='no') 'conv'
+        if (hm%psolver%dressed) write(iunit,'(3(5x,a12))', advance='no') 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+        write(iunit,*)
+
+        ! Write values
+        do ist = 1, st%nst
+          write(iunit,'(i4,3x,f14.12)', advance='no') ist, st%occ(ist, 1)
+          if (.not. rdm%do_basis) write(iunit,'(3x,f14.12)', advance='no') rdm%eigens%diff(ist, 1)
           if (hm%psolver%dressed) then
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', &
-              '1/2w^2q^2'
-            do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), &
-                photon_number_state(ist), ekin_state(ist), epot_state(ist)
-            end do
-          else
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation'
-            do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12)') ist, st%occ(ist, 1)
-            end do
+            write(iunit,'(3(3x,f14.12))', advance='no') photon_number_state(ist), ekin_state(ist), epot_state(ist)
           end if
-        else
-          if (hm%psolver%dressed) then
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv', 'Mode Occ.', '-1/2d^2/dq^2', &
-              '1/2w^2q^2'
-            do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1), &
-                photon_number_state(ist), ekin_state(ist), epot_state(ist)
-            end do
-          else
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv'
-            do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1)
-            end do
-          end if
-        end if
+          write(iunit,*)
+        end do
       end if
       
       if (mpi_grp_is_root(mpi_world)) then
