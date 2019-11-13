@@ -73,7 +73,7 @@ program spin_susceptibility
   call spectrum_init(spectrum, namespace)
 
   in_file = io_open('td.general/total_magnetization', namespace, action='read', status='old', die=.false.)
-  if(in_file < 0) then 
+  if(in_file < 0) then
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization', namespace))//"'"
     call messages_fatal(1)
   end if
@@ -88,9 +88,9 @@ program spin_susceptibility
 
   num_col_cart = 12*kick%nqvec
   SAFE_ALLOCATE(m_cart(1:time_steps, 1:num_col_cart))
-  
+
   call io_skip_header(in_file)
-  
+
   do ii = 1, time_steps
     read(in_file, *) jj, tt, (m_cart(ii,ib),ib = 1, num_col_cart)
   end do
@@ -111,8 +111,8 @@ program spin_susceptibility
     !We add -Im(m_y)
     magnetization(:,1,iq) = magnetization(:,1,iq) -(m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,2) &
                            + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,2) &
-                           + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,2))  
-  
+                           + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,2))
+
     !Im part of m_x
     magnetization(:,2,iq) = m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,1) &
                           + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,1) &
@@ -139,7 +139,7 @@ program spin_susceptibility
     magnetization(:,4,iq) = magnetization(:,4,iq) -(m_cart(:,(iq-1)*12+7)*kick%trans_vec(1,2) &
                          + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,2) &
                          + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,2))
-  
+
     !Real and Im part of m_z
     magnetization(:,5,iq) = m_cart(:,(iq-1)*12+1)*kick%easy_axis(1)  &
                           + m_cart(:,(iq-1)*12+3)*kick%easy_axis(2)  &
@@ -164,10 +164,10 @@ program spin_susceptibility
   write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
             'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
             'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
- 
+
   do iq = 1, kick%nqvec
 
-    write(fname, '(a,i3.3)') 'td.general/tranverse_magnetization_q', iq
+    write(fname, '(a,i3.3)') 'td.general/transverse_magnetization_q', iq
     out_file = io_open(trim(fname), namespace, action='write')
     write(out_file,'(a)') trim(header)
     do kk = 1, time_steps
@@ -223,7 +223,7 @@ program spin_susceptibility
 
     SAFE_DEALLOCATE_A(ftreal)
     SAFE_DEALLOCATE_A(ftimag)
-  
+
 
     write(header, '(9a15)') '#        energy', 'Re[\chi_{+-}(q)]', 'Im[\chi_{+-}(q)]', &
               'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
@@ -238,7 +238,7 @@ program spin_susceptibility
                (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
     end do
     call io_close(out_file)
- 
+
     SAFE_DEALLOCATE_A(chi)
   end do !iq
 

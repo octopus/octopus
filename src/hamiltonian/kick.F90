@@ -94,12 +94,12 @@ module kick_oct_m
     !> In case we have a general multipolar kick,
     !! the form of this "kick" will be (atomic units):
     !! \f[
-    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles} 
+    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles}
     !!                weight(i) * (e^2 / a_0^(l+1)) * r^l(i) * Y_{l(i),m(i)} (\vec{r})
     !! \f]
     !! which has units of energy; if we include the time-dependence (delta function):
-    !! \f[    
-    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles} 
+    !! \f[
+    !! V(\vec{r}) = sum_{i=1}^{n\_multipoles}
     !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
     !! \f]
     integer              :: n_multipoles
@@ -157,7 +157,7 @@ contains
     !%Section Time-Dependent::Response
     !%Description
     !% When no laser is applied, a delta (in time) perturbation with
-    !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to 
+    !% strength <tt>TDDeltaStrength</tt> can be applied. This is used to
     !% calculate, <i>e.g.</i>, the linear optical spectra. If the ions are
     !% allowed to move, the kick will affect them also.
     !% The electric field is <math>-(\hbar k / e) \delta(t)</math> for a dipole with
@@ -211,7 +211,7 @@ contains
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
     !%Option kick_magnon 3
-    !% Rotates the magnetization. Only works for spinors. 
+    !% Rotates the magnetization. Only works for spinors.
     !% Can be used in a supercell or my making use of the generalized Bloch theorem.
     !% In the later case (see <tt>SpiralBoundaryConditions</tt>) spin-orbit coupling cannot be used.
     !%End
@@ -309,7 +309,7 @@ contains
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
         if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
       end if
-      
+
       !%Variable TDPolarization
       !%Type block
       !%Section Time-Dependent::Response::Dipole
@@ -348,9 +348,9 @@ contains
       kick%pol(:, :) = M_ZERO
       if(parse_block(namespace, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
-        
+
         if(n_rows < dim) call messages_input_error('TDPolarization')
-        
+
         do irow = 1, n_rows
           do idir = 1, 3
             call parse_block_float(blk, irow - 1, idir - 1, kick%pol(idir, irow))
@@ -382,14 +382,14 @@ contains
       !%Variable TDPolarizationWprime
       !%Type block
       !%Section Time-Dependent::Response::Dipole
-      !%Description 
+      !%Description
       !% This block is needed only when
       !% <tt>TDPolarizationEquivAxes</tt> is set to 3.  In such a case,
       !% the three directions (<i>pol1</i>, <i>pol2</i>, and <i>pol3</i>) defined in
       !% the <tt>TDPolarization</tt> block should be related by symmetry
       !% operations. If <i>A</i> is the symmetry operation that takes you
-      !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt> 
-      !% should be set to the direction defined by <i>A</i><math>^{-1}</math><i>pol3</i>.  
+      !% from <i>pol1</i> to <i>pol2</i>, then <tt>TDPolarizationWprime</tt>
+      !% should be set to the direction defined by <i>A</i><math>^{-1}</math><i>pol3</i>.
       !% For more information see MJT Oliveira
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
@@ -435,7 +435,7 @@ contains
 
     if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
       kick%nqvec = 1
-      SAFE_ALLOCATE(kick%qvector(1:MAX_DIM,1)) 
+      SAFE_ALLOCATE(kick%qvector(1:MAX_DIM,1))
       do idir = 1, MAX_DIM
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir,1))
         kick%qvector(idir,1) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir,1))
@@ -486,7 +486,7 @@ contains
       !%Type block
       !%Section Time-Dependent::Response::Dipole
       !%Description
-      !% For magnon kicks only. 
+      !% For magnon kicks only.
       !% This variable defines the direction of the easy axis of the crystal.
       !% The magnetization is kicked in the plane transverse to this vector
       !%End
@@ -534,7 +534,7 @@ contains
         message(1) = "TDMomentumTransfer and TDMultipleMomentumTransfer cannot be defined at the same time."
         call messages_fatal(1)
       end if
- 
+
       if(parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
 
         kick%qkick_mode = QKICKMODE_EXP
@@ -544,7 +544,7 @@ contains
         !%Section Time-Dependent::Response
         !%Description
         !% For magnon kicks only.
-        !% A simple way to specify momentum-transfer vectors for the calculation of 
+        !% A simple way to specify momentum-transfer vectors for the calculation of
         !% the magnetization dynamics. This variable should be used for a supercell.
         !% For each reciprocal lattice vectors, the code will kick the original magnetization
         !% using all the multiples of it.
@@ -554,7 +554,7 @@ contains
         !% <br>&nbsp;&nbsp;N_x | N_y | N_z
         !% <br>%</tt>
         !%
-        !% and will include the (2N_x+1)*(2N_y+1)*(2N_z+1) multiples vectors of the reciprocal 
+        !% and will include the (2N_x+1)*(2N_y+1)*(2N_z+1) multiples vectors of the reciprocal
         !% lattice vectors of the current cell.
         !%End
         if(parse_block(namespace, 'TDMultipleMomentumTransfer', blk) /= 0) then
@@ -574,9 +574,9 @@ contains
         SAFE_DEALLOCATE_A(kick%qvector)
         SAFE_ALLOCATE(kick%qvector(1:MAX_DIM, 1:kick%nqvec))
         iq = 0
-        do iqx = -kick%nqmult(1), kick%nqmult(1) 
-          do iqy = -kick%nqmult(2), kick%nqmult(2) 
-            do iqz = -kick%nqmult(3), kick%nqmult(3) 
+        do iqx = -kick%nqmult(1), kick%nqmult(1)
+          do iqy = -kick%nqmult(2), kick%nqmult(2)
+            do iqz = -kick%nqmult(3), kick%nqmult(3)
               iq = iq + 1
               qtemp(1:3) = (/iqx, iqy, iqz/)
               call kpoints_to_absolute(sb%klattice, qtemp, kick%qvector(1:3, iq), 3)
@@ -852,7 +852,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! 
+  !
   subroutine kick_function_get(mesh, kick, kick_function, iq, theta, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
@@ -872,8 +872,8 @@ contains
     np = mesh%np
     if(present(to_interpolate)) then
       if(to_interpolate) np = mesh%np_part
-    end if 
-    
+    end if
+
     if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
 
       select case (kick%qkick_mode)
@@ -945,7 +945,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! 
+  !
   subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
@@ -1015,7 +1015,7 @@ contains
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE .or. kick%nqvec == 1) then
-        call kick_function_get(mesh, kick, kick_function, 1, theta)          
+        call kick_function_get(mesh, kick, kick_function, 1, theta)
       end if
 
       ! PCM - computing polarization due to kick
@@ -1065,7 +1065,7 @@ contains
               ispin = states_elec_dim_get_spin_index(st%d, iqn)
               do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
-              
+
                 cc(1) = exp(kick_value)
                 cc(2) = exp(-kick_value)
 
@@ -1110,13 +1110,13 @@ contains
 
           do iqn = st%d%kpt%start, st%d%kpt%end, ns
             do ist = st%st_start, st%st_end
-  
+
               call states_elec_get_state(st, mesh, ist, iqn, psi)
 
               do ip = 1, mesh%np
-              
+
                 cc(1) = psi(ip, 1)
-                cc(2) = psi(ip, 2) 
+                cc(2) = psi(ip, 2)
 
                 !First part: 1I*cos(\lambda)
                 psi(ip, 1) = cos(kick%delta_strength)* cc(1)
@@ -1125,7 +1125,7 @@ contains
                 !We now add -i sin(\lambda) u.\sigma
                 !           (u_z      u_x-i*u_y)            (v_z         v_x-i*v_y)
                 ! =cos(q.r) (                  )  + sin(q.r)(                     )
-                !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     ) 
+                !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     )
                 psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
                                   * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
                        + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
@@ -1145,7 +1145,7 @@ contains
            call kpoints_to_absolute(mesh%sb%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
            call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
            call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
-  
+
            kick_function = M_ONE
            do ip = 1, mesh%np
              call mesh_r(mesh, ip, rr, coords = xx)
@@ -1156,7 +1156,7 @@ contains
                kick_function(ip) = kick_function(ip)*sin(M_HALF*(2*kick%nqmult(iq)+1) &
                      *sum(Gvec(1:3, iq) * xx(1:3)))/sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))
              end do
-             kick_function(ip) = kick_function(ip)*M_HALF*kick%delta_strength/kick%nqvec
+             kick_function(ip) = kick_function(ip)*kick%delta_strength
            end do
 
            do iqn = st%d%kpt%start, st%d%kpt%end, ns
@@ -1178,7 +1178,7 @@ contains
                         -M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
                 psi(ip, 2) =-sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
                         +M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
-                        + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2) 
+                        + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2)
 
               end do
 
