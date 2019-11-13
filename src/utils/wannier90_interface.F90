@@ -527,7 +527,6 @@ contains
     do
       read(w90_nnkp, *, iostat=io) dummy, dummy1
       if(io == iostat_end) exit
-      print *, io, iostat_end, iostat_eor, dummy
 
       if(dummy =='begin' .and. dummy1 == 'kpoints' ) then
         read(w90_nnkp,*) itemp
