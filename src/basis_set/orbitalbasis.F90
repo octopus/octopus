@@ -125,7 +125,7 @@ contains
   !%Variable AOThreshold
   !%Type float
   !%Default 0.01
-  !%Section Hamiltonian::DFT+U
+  !%Section Atomic Orbitals
   !%Description
   !% Determines the threshold used to compute the radius of the atomic orbitals for LDA+U and for Wannier90.
   !% This radius is computed by making sure that the 
