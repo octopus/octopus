@@ -145,11 +145,12 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks)
+  subroutine output_init(outp, sb, nst, ks, states_are_real)
     type(output_t),       intent(out)   :: outp
     type(simul_box_t),    intent(in)    :: sb
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
+    logical,              intent(in)    :: states_are_real
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -609,7 +610,7 @@ contains
     end if
 
 
-    if(output_needs_current(outp)) then
+    if(output_needs_current(outp, states_are_real)) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
@@ -1543,16 +1544,23 @@ contains
   end subroutine output_dftu_orbitals
 
   ! ---------------------------------------------------------
-  logical function output_needs_current(outp)
+  logical function output_needs_current(outp, states_are_real)
     type(output_t),      intent(in) :: outp
+    logical,             intent(in) :: states_are_real
 
     output_needs_current = .false.
 
     if( bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 &
-   .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
-   .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-      output_needs_current = .true.
+     .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
+     .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      if(.not. states_are_real) then
+        output_needs_current = .true.
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
     end if
+ 
     
   end function
 
