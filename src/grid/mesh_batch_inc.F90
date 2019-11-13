@@ -457,7 +457,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof, profcomm
-  R_TYPE, allocatable :: tmp(:,:), phi(:)
+  R_TYPE, allocatable :: tmp(:), phi(:, :)
   R_TYPE :: temp
 
   PUSH_SUB(X(mesh_batch_mf_dotp))
@@ -483,8 +483,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   case(BATCH_PACKED)
 
-    SAFE_ALLOCATE(tmp(1:nst_*aa%dim, aa%dim))
-    SAFE_ALLOCATE(phi(1:mesh%np))
+    SAFE_ALLOCATE(tmp(1:nst_*aa%dim))
+    SAFE_ALLOCATE(phi(1:mesh%np, aa%dim))
 
     tmp = M_ZERO
 
@@ -495,26 +495,30 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
       if(mesh%use_curvilinear) then
         !$omp parallel do
         do ip = 1, mesh%np
-          phi(ip) = mesh%vol_pp(ip)*R_CONJ(psi(ip, idim))
+          phi(ip, idim) = mesh%vol_pp(ip)*R_CONJ(psi(ip, idim))
         end do
       else
         !$omp parallel do
         do ip = 1, mesh%np
-          phi(ip) = R_CONJ(psi(ip, idim))
+          phi(ip, idim) = R_CONJ(psi(ip, idim))
         end do
       end if
+    end do
 
-      !Due to how BLAS implements gemv, with no incx for the A matrix, 
-      !we have to perform two complete passes for the spinor case
-      call blas_gemv('N', nst_*aa%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), aa%pack%X(psi)(idim,1), &
-                            aa%nst_linear, phi(1), 1, R_TOTYPE(M_ZERO), tmp(idim,idim), 1)
+    do ip = 1, mesh%np
+      do ist = 1, nst
+        do idim = 1, aa%dim
+          indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+          tmp(indb) = tmp(indb) + aa%pack%X(psi)(indb, ip)*phi(ip, idim)
+         end do
+       end do
     end do
 
     do ist = 1, nst_
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        dot(ist) = dot(ist) + mesh%volume_element*R_CONJ(tmp(indb, idim))
+        dot(ist) = dot(ist) + mesh%volume_element*R_CONJ(tmp(indb))
       end do
     end do
 
