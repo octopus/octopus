@@ -595,9 +595,9 @@ contains
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     integer,                         intent(in)    :: ik
-    type(batch_t), target,           intent(inout) :: psib
+    type(batch_t),                   intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
-    type(batch_t), target, optional, intent(inout) :: psib2
+    type(batch_t),         optional, intent(inout) :: psib2
     FLOAT,                 optional, intent(in)    :: deltat2
     FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,               optional, intent(in)    :: imag_time
@@ -633,89 +633,34 @@ contains
     if(associated(hm%hm_base%phase)) phase_correction = .true.
     if(accel_is_enabled()) phase_correction = .false.
 
-    if ( .not. (te%exp_method == EXP_LANCZOS .and. hamiltonian_elec_inh_term(hm))) then
-      !We apply the phase only to np points, and the phase for the np+1 to np_part points
-      !will be treated as a phase correction in the Hamiltonian
-      if(phase_correction) then
-        call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .false., psib)
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .false., psib)
+    end if
+
+    select case(te%exp_method)
+    case(EXP_TAYLOR)
+      call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
+    case(EXP_LANCZOS)
+      call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
+      if (present(psib2)) then
+        call batch_copy_data(mesh%np, psib, psib2)
+        call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
       end if
-
-      select case(te%exp_method)
-      case(EXP_TAYLOR)
-        call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
-      case(EXP_LANCZOS) 
-        call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
-        if (present(psib2)) then
-          call batch_copy_data(mesh%np, psib, psib2)
-          call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
-        end if        
-      case(EXP_CHEBYSHEV)
-        call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
-        if (present(psib2)) then
-          call batch_copy_data(mesh%np, psib, psib2)
-          call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
-        end if
-      end select
-
-      if(phase_correction) then
-        call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .true., psib)
-        if(present(psib2)) then
-          call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .true., psib2)
-        end if
+    case(EXP_CHEBYSHEV)
+      call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
+      if (present(psib2)) then
+        call batch_copy_data(mesh%np, psib, psib2)
+        call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
       end if
-    else
+    end select
 
-      if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
-
-      ! only allocate for packed cases
-      if (batch_status(psib) /= BATCH_NOT_PACKED) then
-        SAFE_ALLOCATE(psi(1:mesh%np_part, 1:hm%d%dim))
-      end if
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .true., psib)
       if(present(psib2)) then
-        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-          SAFE_ALLOCATE(psi2(1:mesh%np_part, 1:hm%d%dim))
-        end if
+        call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, ik, .true., psib2)
       end if
-
-      do ii = 1, psib%nst
-        ist = psib%states(ii)%ist
-
-        ! avoid copy for the unpacked case, simply set pointer
-        ! -> this should be removed by having batched versions of
-        ! exponential_apply
-        if (batch_status(psib) /= BATCH_NOT_PACKED) then
-          call batch_get_state(psib, ii, mesh%np, psi)
-        else
-          psi => psib%states(ii)%zpsi
-        end if
-        call exponential_apply(te, mesh, hm, psi, ist, ik, deltat, vmagnus=vmagnus, imag_time=imag_time)
-        if (batch_status(psib) /= BATCH_NOT_PACKED) then
-          call batch_set_state(psib, ii, mesh%np, psi)
-        end if
-        
-        if(present(psib2)) then
-          ! also avoid copying unpacked batches here
-          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-            call batch_get_state(psib2, ii, mesh%np, psi2)
-          else
-            psi2 => psib2%states(ii)%zpsi
-          end if
-          call exponential_apply(te, mesh, hm, psi2, ist, ik, deltat2, vmagnus=vmagnus, imag_time=imag_time)
-          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-            call batch_set_state(psib2, ii, mesh%np, psi2)
-          end if
-        end if
-      end do
-
-      if (batch_status(psib) /= BATCH_NOT_PACKED) then
-        SAFE_DEALLOCATE_P(psi)
-      end if
-      if(present(psib2)) then
-        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-           SAFE_DEALLOCATE_P(psi2)
-        end if
-      end if
-
     end if
     
     POP_SUB(exponential_apply_batch)
