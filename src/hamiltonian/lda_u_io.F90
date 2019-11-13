@@ -577,10 +577,11 @@ contains
 
 
  ! ---------------------------------------------------------
-  subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
+  subroutine lda_u_load(restart, this, st, dftu_energy, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
     type(states_elec_t),  intent(in)    :: st
+    FLOAT,                intent(out)   :: dftu_energy
     integer,              intent(out)   :: ierr
     logical, optional,    intent(in)    :: occ_only
     logical, optional,    intent(in)    :: u_only
@@ -652,8 +653,10 @@ contains
     end if
 
     if (states_are_real(st)) then
+      call dcompute_dftu_energy(this, dftu_energy, st)
       call dlda_u_update_potential(this, st)
     else
+      call zcompute_dftu_energy(this, dftu_energy, st)
       call zlda_u_update_potential(this, st)
     end if
 

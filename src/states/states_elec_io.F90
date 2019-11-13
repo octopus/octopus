@@ -856,9 +856,14 @@ contains
         red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
-        write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                                   states_elec_dim_get_kpoint_index(st%d, ik + is) &
-                                                  -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
+        if(st%d%nik > npath) then
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
+                                               states_elec_dim_get_kpoint_index(st%d, ik + is) &
+                                              -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
+        else
+          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
+                                               states_elec_dim_get_kpoint_index(st%d, ik + is))
+        end if
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
         end do

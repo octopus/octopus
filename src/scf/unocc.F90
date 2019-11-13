@@ -21,6 +21,7 @@
 module unocc_oct_m
   use density_oct_m
   use eigensolver_oct_m
+  use energy_calc_oct_m
   use global_oct_m
   use output_oct_m
   use hamiltonian_elec_oct_m
@@ -154,7 +155,7 @@ contains
         call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       end if
       if(sys%hm%lda_u_level /= DFT_U_NONE) &
-        call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
+        call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, sys%hm%energy%dft_u, ierr)
       call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)

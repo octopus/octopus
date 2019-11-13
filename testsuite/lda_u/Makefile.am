@@ -22,6 +22,7 @@ sharedir = $(pkgdatadir)/testsuite/lda_u
 
 dist_share_DATA =                                \
             01-nio.01-U5-gs.inp                  \
+            01-nio.02-unocc.inp                  \
             01-nio.test                          \
             02-ACBN0.01-nio.inp                  \
             02-ACBN0.02-lif.inp                  \
