@@ -493,6 +493,11 @@ contains
       call create_wannier90_eig()
     end if
 
+    SAFE_DEALLOCATE_A(uk)
+    SAFE_DEALLOCATE_A(w90_proj_centers)
+    SAFE_DEALLOCATE_A(w90_spin_proj_component)
+    SAFE_DEALLOCATE_A(w90_spin_proj_axis)
+
     POP_SUB(wannier90_output)
   end subroutine wannier90_output
 
