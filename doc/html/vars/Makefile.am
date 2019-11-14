@@ -24,6 +24,7 @@ dist_doc_DATA = \
 	alpha.js \
 	sections.js \
 	vars_index.html \
+        Atomic_Orbitals.html \
 	Execution.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
