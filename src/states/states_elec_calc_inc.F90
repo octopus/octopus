@@ -674,12 +674,12 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
     minst = states_elec_block_min(st, ib)
     maxst = min(states_elec_block_max(st, ib), length_ss)
     if(minst > length_ss) cycle
-    batch => st%group%psib(ib, iqn)
 
     if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
     if(present(mask)) then
       if(all(mask(minst:maxst) .eqv. .true.)) cycle
     end if
+    batch => st%group%psib(ib, iqn)
 
     call X(mesh_batch_mf_axpy)(mesh, -ss(minst:maxst), batch, phi, nst = maxst-minst+1) 
 
