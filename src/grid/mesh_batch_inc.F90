@@ -506,7 +506,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     end do
 
     do ip = 1, mesh%np
-      do ist = 1, nst
+      do ist = 1, nst_
         do idim = 1, aa%dim
           indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
           tmp(indb) = tmp(indb) + aa%pack%X(psi)(indb, ip)*phi(ip, idim)
@@ -577,17 +577,26 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
  
     SAFE_ALLOCATE(alpha(1:nst_*xx%dim))
 
-    do idim = 1, xx%dim
-      !Due to how BLAS implements gemv, with no incx for the A matrix, 
-      !we have to perform two complete passes for the spinor case
-      alpha = M_ZERO
-      do ist = 1, nst_
-        alpha((ist-1)*xx%dim+idim) = aa(ist)
+!    do idim = 1, xx%dim
+!      !Due to how BLAS implements gemv, with no incx for the A matrix, 
+!      !we have to perform two complete passes for the spinor case
+!      alpha = M_ZERO
+!      do ist = 1, nst_
+!        alpha((ist-1)*xx%dim+idim) = aa(ist)
+!      end do
+!      call blas_gemv('T', nst_*xx%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(idim,1), &
+!                            xx%nst_linear, alpha(idim), 1, R_TOTYPE(M_ONE), psi(1,idim), 1)
+!    end do
+   
+    do ist = 1, nst_
+      do idim = 1, xx%dim
+        indb = batch_ist_idim_to_linear(xx, (/ist, idim/))
+        do ip = 1, mesh%np
+          psi(ip,idim) = psi(ip, idim) + aa(ist)*xx%pack%X(psi)(indb, ip)
+        end do
       end do
-      call blas_gemv('T', nst_*xx%dim-idim+1, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(idim,1), &
-                            xx%nst_linear, alpha(idim), 1, R_TOTYPE(M_ONE), psi(1,idim), 1)
     end do
-
+    
     SAFE_DEALLOCATE_A(alpha)
 
   end select
