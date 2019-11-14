@@ -629,6 +629,9 @@ contains
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
+    if (present(inh_psib)) then
+      ASSERT(inh_psib%nst == psib%nst)
+    end if
 
     if (optional_default(imag_time, .false.)) then
       select case(te%exp_method)
@@ -679,6 +682,12 @@ contains
       end if
 
     case(EXP_CHEBYSHEV)
+      if (present(inh_psib)) then
+        write(message(1), '(a)') 'Chebyshev exponential ("TDExponentialMethod = chebyshev")'
+        write(message(2), '(a)') 'with inhomogeneous term is not implemented'
+        call messages_fatal(2)
+      end if
+
       call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
         call batch_copy_data(mesh%np, psib, psib2)
@@ -808,7 +817,6 @@ contains
 
     call batch_copy(psib, vb(1))
     if (present(inh_psib)) then
-      ASSERT(inh_psib%nst == psib%nst)
       call batch_copy_data(mesh%np, inh_psib, vb(1))
     else
       call batch_copy_data(mesh%np, psib, vb(1))
