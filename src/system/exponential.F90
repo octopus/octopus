@@ -618,7 +618,7 @@ contains
     FLOAT,                 optional, intent(in)    :: deltat2
     FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,               optional, intent(in)    :: imag_time
-    type(batch_t),         optional, intent(in)    :: inh_psib
+    type(batch_t),         optional, intent(inout) :: inh_psib
     
     integer :: ii, ist
     CMPLX :: deltat_, deltat2_
@@ -660,6 +660,10 @@ contains
     select case(te%exp_method)
     case(EXP_TAYLOR)
       call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
+      if (present(inh_psib)) then
+        call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus, &
+          inh_psib)
+      end if
 
     case(EXP_LANCZOS)
       call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
@@ -694,7 +698,7 @@ contains
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------
-  subroutine exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat, set_phase, psib2, deltat2, vmagnus)
+  subroutine exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat, set_phase, psib2, deltat2, vmagnus, inh_psib)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -705,9 +709,10 @@ contains
     type(batch_t),         optional, intent(inout) :: psib2
     CMPLX,                 optional, intent(in)    :: deltat2
     FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+    type(batch_t),         optional, intent(inout) :: inh_psib
 
     CMPLX :: zfact, zfact2
-    integer :: iter
+    integer :: iter, denom
     logical :: zfact_is_real
     type(profile_t), save :: prof
     type(batch_t) :: psi1b, hpsi1b
@@ -724,9 +729,19 @@ contains
 
     if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
 
+    if (present(inh_psib)) then
+      zfact = zfact*deltat
+      call batch_axpy(mesh%np, real(zfact), inh_psib, psib)
+
+      zfact2 = zfact2*deltat2
+      if(present(psib2)) call batch_axpy(mesh%np, real(zfact2), inh_psib, psib2)
+    end if
+
     do iter = 1, te%exp_order
-      zfact = zfact*(-M_zI*deltat)/iter
-      if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
+      denom = iter
+      if (present(inh_psib)) denom = denom + 1
+      zfact = zfact*(-M_zI*deltat)/denom
+      if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/denom
       zfact_is_real = .not. zfact_is_real
       ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
       !  in runaway case the problem is really hard to trace back: the positions
@@ -736,7 +751,11 @@ contains
       if(iter /= 1) then
         call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase, vmagnus)
       else
-        call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase, vmagnus)
+        if (present(inh_psib)) then
+          call operate_batch(hm, mesh, inh_psib, hpsi1b, ik, set_phase, vmagnus)
+        else
+          call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase, vmagnus)
+        end if
       end if
 
       if(zfact_is_real) then
