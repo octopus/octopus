@@ -395,6 +395,7 @@ contains
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
           call batch_pack(st%group%psib(ib, ik))
+          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
         end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
@@ -428,11 +429,18 @@ contains
         end select
         call profiling_out(phase_prof)
 
-        call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        if (hamiltonian_elec_inh_term(hm)) then
+          call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+            inh_psib = hm%inh_st%group%psib(ib, ik))
+        else
+          call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        end if
+
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
           call batch_unpack(st%group%psib(ib, ik))
+          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
         end if
       end do
     end do

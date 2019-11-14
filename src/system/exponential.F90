@@ -523,7 +523,6 @@ contains
 
       ! We have an inhomogeneous term.
       if( hamiltonian_elec_inh_term(hm) ) then
-
         call states_elec_get_state(hm%inh_st, mesh, ist, ik, v(:, :, 1))
         beta = zmf_nrm2(mesh, hm%d%dim, v(:, :, 1))
 
@@ -590,7 +589,25 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time)
+  ! ---------------------------------------------------------
+  !> This routine performs the operation:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi>  <-- |\psi>
+  !! \f]
+  !! If imag_time is present and is set to true, it performs instead:
+  !! \f[
+  !! \exp{ \Delta t*hm(t)}|\psi>  <-- |\psi>
+  !! \f]
+  !! If an inhomogeneous term is present, the operation is:
+  !! \f[
+  !! \exp{-i*\Delta t*hm(t)}|\psi> + \Delta t*\phi{-i*\Delta t*hm(t)}|\inh_psi>  <-- |\psi>
+  !! \f]
+  !! where:
+  !! \f[
+  !! \phi(x) = (e^x - 1)/x
+  !! \f]
+  ! ---------------------------------------------------------
+  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time, inh_psib)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -601,6 +618,7 @@ contains
     FLOAT,                 optional, intent(in)    :: deltat2
     FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,               optional, intent(in)    :: imag_time
+    type(batch_t),         optional, intent(in)    :: inh_psib
     
     integer :: ii, ist
     CMPLX :: deltat_, deltat2_
@@ -642,18 +660,27 @@ contains
     select case(te%exp_method)
     case(EXP_TAYLOR)
       call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
+
     case(EXP_LANCZOS)
       call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
+      if (present(inh_psib)) then
+        call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
+      end if
       if (present(psib2)) then
         call batch_copy_data(mesh%np, psib, psib2)
         call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
+        if (present(inh_psib)) then
+          call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus, inh_psib)
+        end if
       end if
+
     case(EXP_CHEBYSHEV)
       call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
         call batch_copy_data(mesh%np, psib, psib2)
         call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
       end if
+
     end select
 
     if(phase_correction) then
@@ -735,7 +762,7 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: Add a reference
-  subroutine exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
+  subroutine exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus, inh_psib)
     type(exponential_t),             intent(inout) :: te
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -744,6 +771,7 @@ contains
     CMPLX,                           intent(in)    :: deltat
     logical,                         intent(in)    :: set_phase
     FLOAT,                 optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
+    type(batch_t),         optional, intent(in)    :: inh_psib
 
     integer ::  iter, l, idim, bind, ii, ist
     CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
@@ -757,21 +785,33 @@ contains
     SAFE_ALLOCATE(beta(1:psib%nst))
     SAFE_ALLOCATE(res(1:psib%nst))
     SAFE_ALLOCATE(norm(1:psib%nst))
-    call mesh_batch_nrm2(mesh, psib, beta)
+    SAFE_ALLOCATE(vb(1:te%exp_order+1))
+
+    call batch_copy(psib, vb(1))
+    if (present(inh_psib)) then
+      ASSERT(inh_psib%nst == psib%nst)
+      call batch_copy_data(mesh%np, inh_psib, vb(1))
+    else
+      call batch_copy_data(mesh%np, psib, vb(1))
+    end if
+    call mesh_batch_nrm2(mesh, vb(1), beta)
 
     ! If we have a null vector, no need to compute the action of the exponential.
     if(all(abs(beta) <= CNST(1.0e-12))) then
+      SAFE_DEALLOCATE_A(beta)
+      SAFE_DEALLOCATE_A(res)
+      SAFE_DEALLOCATE_A(norm)
+      call batch_end(vb(1))
+      SAFE_DEALLOCATE_A(vb)
       call profiling_out(prof)
       POP_SUB(exponential_lanczos_batch)
       return
     end if
 
-    SAFE_ALLOCATE(vb(1:te%exp_order+1))
-    do iter = 1, te%exp_order+1
-      call batch_copy(psib, vb(iter))
-    end do
-    call batch_copy_data(mesh%np, psib, vb(1))
     call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
+    do iter = 2, te%exp_order+1
+      call batch_copy(vb(1), vb(iter))
+    end do
 
     SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
     SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
@@ -796,7 +836,11 @@ contains
         gs_scheme = te%arnoldi_gs)
 
       do ii = 1, psib%nst
-        call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+        if (present(inh_psib)) then
+          call zlalg_phi(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+        else
+          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
+        end if
 
         res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
       end do !ii
@@ -821,19 +865,27 @@ contains
       call messages_warning(1)
     end if
 
-    ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
-    call batch_scal(mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
-    !TODO: We should have a routine batch_gemv fro improve performances
-    do ii = 2, iter
-      call batch_axpy(mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
-      !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp
-      !And to recontruct here the exp(i*dt*H) for deltat2
-    end do
+    if (present(inh_psib)) then
+      ! zpsi = zpsi + deltat * nrm * V * expo(1:iter, 1) = zpsi + deltat * nrm * V * expo * V^(T) * inh_zpsi
+      do ii = 1, iter
+        call batch_axpy(mesh%np, real(deltat)*beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
+      end do
+    else
+      ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
+      call batch_scal(mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
+      !TODO: We should have a routine batch_gemv fro improve performances
+      do ii = 2, iter
+        call batch_axpy(mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
+        !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp
+        !And to recontruct here the exp(i*dt*H) for deltat2
+      end do
+    end if
 
     do iter = 1, te%exp_order+1
       call batch_end(vb(iter))
     end do
 
+    SAFE_DEALLOCATE_A(vb)
     SAFE_DEALLOCATE_A(hamilt)
     SAFE_DEALLOCATE_A(expo)
     SAFE_DEALLOCATE_A(beta)
