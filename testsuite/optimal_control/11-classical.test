@@ -8,6 +8,8 @@ Enabled    : Yes
 Input: 11-classical.01-ground_state.inp
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.89379037
 
-
 Input: 11-classical.02-oct.inp
+match ; J1 2nd iteration  ; GREPFIELD(opt-control/convergence, '##        2   ', 4) ; -1.03679212
+
+Input: 11-classical.03-oct_taylor.inp
 match ; J1 2nd iteration  ; GREPFIELD(opt-control/convergence, '##        2   ', 4) ; -1.03679212
