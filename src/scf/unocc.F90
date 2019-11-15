@@ -153,10 +153,8 @@ contains
       if (read_gs) then
         call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       end if
-      if(sys%hm%lda_u_level /= DFT_U_NONE) then
+      if(sys%hm%lda_u_level /= DFT_U_NONE) &
         call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
-        call lda_u_write_U(sys%hm%lda_u, stdout)
-      end if
       call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
