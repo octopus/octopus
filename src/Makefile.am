@@ -501,6 +501,7 @@ system_f_srcs =                                 \
 system_srcs = $(system_f_srcs)
 
 noinst_HEADERS +=                               \
+	system/current_mxll_inc.F90             \
 	system/eigen_cg_inc.F90                 \
 	system/eigen_evolution_inc.F90          \
 	system/eigen_lobpcg_inc.F90             \
