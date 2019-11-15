@@ -70,6 +70,7 @@ dist_share_DATA = \
 	11-classical.test                      \
 	11-classical.01-ground_state.inp       \
 	11-classical.02-oct.inp                \
+	11-classical.03-oct_taylor.inp         \
 	12-spintarget.test                     \
 	12-spintarget.01-ground_state.inp      \
 	12-spintarget.02-oct.inp               \
