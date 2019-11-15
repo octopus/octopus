@@ -48,7 +48,9 @@ module current_oct_m
   use types_oct_m
   use varinfo_oct_m
   use xc_oct_m
-
+  use tdfunction_oct_m
+  use states_mxll_oct_m
+  
   implicit none
 
   private

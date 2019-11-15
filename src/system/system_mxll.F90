@@ -27,7 +27,7 @@ module system_mxll_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
-  use output_mxll_oct_m
+  use output_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -48,7 +48,7 @@ module system_mxll_oct_m
   type system_mxll_t
     ! Components are public by default
     type(space_t)                :: space
-!    type(geometry_t)             :: geo
+    type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_mxll_t), pointer :: st    !< the states
     type(output_t)               :: outp  !< the output
@@ -63,7 +63,7 @@ contains
   subroutine system_mxll_init(sys)
     type(system_mxll_t), intent(inout) :: sys
 
-    type(base_states_t), pointer :: subsys_states
+!    type(base_states_t), pointer :: subsys_states
 
     type(profile_t), save :: prof
 
