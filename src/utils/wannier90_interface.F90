@@ -328,7 +328,7 @@ contains
 
       !In case the user used also a k-point path, we ignore it
       npath = 0
-      if(associated(coord_along_path)) then
+      if(associated(sb%kpoints%coord_along_path)) then
         npath = SIZE(sb%kpoints%coord_along_path)
       end if
 
