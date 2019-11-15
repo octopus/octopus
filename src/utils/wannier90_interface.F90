@@ -327,7 +327,10 @@ contains
       end if
 
       !In case the user used also a k-point path, we ignore it
-      npath = SIZE(sb%kpoints%coord_along_path)
+      npath = 0
+      if(associated(coord_along_path)) then
+        npath = SIZE(sb%kpoints%coord_along_path)
+      end if
 
       axis(1:3) = sb%kpoints%nik_axis(1:3)
       ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
