@@ -106,7 +106,7 @@ contains
   !%Variable AOTruncation
   !%Type flag
   !%Default ao_full
-  !%Section Hamiltonian::DFT+U
+  !%Section Atomic Orbitals
   !%Description
   !% This option determines how Octopus will truncate the orbitals used for LDA+U.
   !% Except for the full method, the other options are only there to get a quick idea.
@@ -140,7 +140,7 @@ contains
   !%Variable AONormalize
   !%Type logical
   !%Default yes
-  !%Section Hamiltonian::DFT+U
+  !%Section Atomic Orbitals
   !%Description
   !% If set to yes, Octopus will normalize the atomic orbitals
   !%End
@@ -150,7 +150,7 @@ contains
   !%Variable AOSubmeshForPeriodic
   !%Type logical
   !%Default no
-  !%Section Hamiltonian::DFT+U
+  !%Section Atomic Orbitals
   !%Description
   !% If set to yes, Octopus will use submeshes to internally store the orbitals with
   !% their phase instead of storing them on the mesh. This is usually slower for small
@@ -163,7 +163,7 @@ contains
   !%Variable AOLoewdin
   !%Type logical
   !%Default no
-  !%Section Hamiltonian::DFT+U
+  !%Section Atomic Orbitals
   !%Description
   !% This option determines if the atomic orbital basis is orthogonalized or not.
   !% This is done for using the Loewdin orthogonalization scheme.
