@@ -478,7 +478,7 @@ contains
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%hf_st, namespace, hm%der, hm%psolver%cube, hm%scdm)
+      call scdm_init(hm%scdm, namespace, hm%hf_st, hm%der, hm%psolver%cube)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then

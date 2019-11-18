@@ -535,9 +535,9 @@ end subroutine X(exchange_operator_hartree)
 subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(mesh_t),             intent(in)    :: mesh
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-  integer,             intent(in)    :: ik
+  type(batch_t),            intent(inout) :: psib
+  type(batch_t),            intent(inout) :: hpsib
+  integer,                  intent(in)    :: ik
 
   integer :: ist, jst, ip, idim, ik2, ibatch
   integer :: ii, jj, kk, ll, count
@@ -551,7 +551,7 @@ subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
   if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=hm%namespace)
   
   ! make sure scdm is localized
-  call X(scdm_localize)(hm%hf_st, mesh, hm%scdm)
+  call X(scdm_localize)(hm%scdm, hm%namespace, hm%hf_st, mesh)
   
   SAFE_ALLOCATE(psil(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsil(1:mesh%np, 1:hm%d%dim))

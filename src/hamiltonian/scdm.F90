@@ -109,13 +109,13 @@ contains
 !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
 !!                            selected columns of the density matrix
 !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
-  type(states_elec_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
-  type(namespace_t),   intent(in)  :: namespace
-  type(derivatives_t)              :: der
-  type(cube_t)                     :: fullcube !< cube of the full cell
-  type(scdm_t)                     :: scdm
-  logical,                optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
+subroutine scdm_init(scdm, namespace, st, der, fullcube, operate_on_scdm)
+  type(scdm_t),        intent(inout) :: scdm
+  type(namespace_t),   intent(in)    :: namespace
+  type(states_elec_t), intent(in)    :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+  type(derivatives_t), intent(in)    :: der
+  type(cube_t),        intent(in)    :: fullcube !< cube of the full cell
+  logical, optional,   intent(in)    :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
 
   integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
@@ -314,21 +314,21 @@ subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
 end subroutine scdm_init
 
 !> wrapper routine to rotate  KS states into their SCDM representation
-subroutine scdm_rotate_states(st,mesh,scdm)
+subroutine scdm_rotate_states(scdm, namespace, st, mesh)
+  type(scdm_t),        intent(inout)  :: scdm
+  type(namespace_t),   intent(in)     :: namespace
   type(states_elec_t), intent(inout)  :: st
   type(mesh_t),        intent(in)     :: mesh
-  type(scdm_t),        intent(inout)  :: scdm
   
   PUSH_SUB(scdm_rotate_states)
   
   if (.not.states_are_real(st)) then
-    call zscdm_rotate_states(st,mesh,scdm)
+    call zscdm_rotate_states(scdm, namespace, st, mesh)
   else
-    call dscdm_rotate_states(st,mesh,scdm)
+    call dscdm_rotate_states(scdm, namespace, st, mesh)
   end if
   
-  POP_SUB(scdm_rotate_states)
-  
+  POP_SUB(scdm_rotate_states)  
 end subroutine scdm_rotate_states
   
 subroutine check_box_in_index(idx,center,size,out)

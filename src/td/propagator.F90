@@ -529,7 +529,9 @@ contains
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
     !i.e. we perform the SCDM procedure and overwrite the states in st
-    if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,hm%scdm)
+    if (hm%scdm_EXX) then
+      call scdm_rotate_states(hm%scdm, namespace, st, gr%mesh)
+    end if
 
     if(present(scsteps)) scsteps = 1
    
