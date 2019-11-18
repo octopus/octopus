@@ -167,7 +167,8 @@ math_f_srcs =                                 \
 	math/splines.F90                      \
 	math/symm_op.F90                      \
 	math/tdfunction.F90                   \
-	math/young.F90
+	math/young.F90                        \
+        math/ylm_wannier.F90
 
 math_c_srcs =                                 \
 	math/checksum.c                       \
@@ -197,7 +198,7 @@ noinst_HEADERS +=                             \
 	math/root_solver_inc.F90              \
 	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
-	math/symm_op_inc.F90
+	math/symm_op_inc.F90        
 
 # Sources in species
 species_f_srcs =                                 \
@@ -674,6 +675,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-local_multipoles \
                  oct-conductivity \
                  oct-floquet \
+                 oct-wannier90 \
                  oct-unfold
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
@@ -791,6 +793,14 @@ include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEAD
 
 include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+oct_wannier90_SOURCES = $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
+                        $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+                        $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+                        utils/wannier90_interface.F90 
+oct_wannier90_LINK = $(FCLINK)
+oct_wannier90_LDADD = $(all_LIBS)
+
 
 # debug files from MacOS gcc with -g
 clean-local: clean-fdep

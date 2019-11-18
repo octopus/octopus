@@ -57,7 +57,8 @@ module scdm_oct_m
        scdm_init,         &
        dscdm_localize,    &
        zscdm_localize,    &
-       scdm_rotate_states
+       scdm_rotate_states, &
+       zscdm_rrqr
   
   type scdm_t
     private
