@@ -1,4 +1,4 @@
-7!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2008 X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -52,7 +52,8 @@ module current_oct_m
   use states_mxll_oct_m
   use unit_oct_m
   use unit_system_oct_m  
-
+  use string_oct_m
+  
   implicit none
 
   private
