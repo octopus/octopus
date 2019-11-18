@@ -16,6 +16,8 @@
 !! 02110-1301, USA.
 !!
 
+#include "global.h"
+
 module system_mxll_oct_m
   use calc_mode_par_oct_m
   use geometry_oct_m
@@ -36,6 +38,7 @@ module system_mxll_oct_m
   use sort_oct_m
   use states_mxll_oct_m
   use system_oct_m
+  use distributed_oct_m
   
   implicit none
 
@@ -44,7 +47,11 @@ module system_mxll_oct_m
     system_mxll_t,        &
     system_mxll_init,     &
     system_mxll_end
-  
+
+  integer, parameter, public ::           &
+    MULTIGRID_MX_TO_MA_EQUAL   = 1,       &
+    MULTIGRID_MX_TO_MA_LARGE   = 2
+
   type system_mxll_t
     ! Components are public by default
     type(space_t)                :: space
@@ -60,14 +67,15 @@ module system_mxll_oct_m
 contains
   
   !----------------------------------------------------------
-  subroutine system_mxll_init(sys)
+  subroutine system_mxll_init(sys, namespace)
     type(system_mxll_t), intent(inout) :: sys
+    type(namespace_t), intent(in)  :: namespace
 
 !    type(base_states_t), pointer :: subsys_states
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(system_init)
+    PUSH_SUB(system_mxll_init)
     call profiling_in(prof,"SYSTEM_INIT")
 
     SAFE_ALLOCATE(sys%gr)
@@ -83,40 +91,49 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
+
+    ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
+    !call geometry_nullify(sys%geo)
+
+    nullify(sys%geo%space, sys%geo%atom, sys%geo%catom, sys%geo%species)
+    sys%geo%natoms=0
+    sys%geo%ncatoms=0
+    sys%geo%nspecies=0
+    sys%geo%only_user_def=.false.
+    sys%geo%kinetic_energy=M_ZERO
+    sys%geo%nlpp=.false.
+    sys%geo%nlcc=.false.
+    call distributed_nullify(sys%geo%atoms_dist, 0)
+    sys%geo%reduced_coordinates=.false.
+    sys%geo%periodic_dim=0
+    sys%geo%lsize=M_ZERO
+
     
-    call geometry_nullify(sys%geo)
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
-    !call sys%st%write_info()
 
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
     
-    call parallel_init()
+    call parallel_mxll_init(sys)
 
-    !call geometry_partition(sys%geo, sys%mc)
-    !call kpoints_distribute(sys%st%d, sys%mc)
-    call states_elec_distribute_nodes(sys%st, sys%namespace, sys%mc)
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
-    if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
     call output_mxll_init(sys%outp, sys%namespace, sys%gr%sb)
 
     call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
     
-    if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
-  
     call profiling_out(prof)
-    POP_SUB(system_init)    
+    POP_SUB(system_mxll_init)    
 
   contains
 
     ! ---------------------------------------------------------
-    subroutine parallel_init(sys)
-      type(system_t), intent(inout) :: sys      
+    subroutine parallel_mxll_init(sys)
+      type(system_mxll_t), intent(inout) :: sys      
 
       integer :: index_range(4)
 
-      PUSH_SUB(system_init.parallel_init)
+      PUSH_SUB(system_mxll_init.parallel_init)
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
@@ -125,22 +142,22 @@ contains
       index_range(3) = sys%st%d%nik           ! Number of k-points
       index_range(4) = 100000                 ! Some large number
 
-      if (sys%maxwell_system) sys%mc%maxwell_mc = .true.
-
+      !sys%mc%maxwell_mc = .true.
+      
       ! create index and domain communicators
-      call multicomm_init(sys%mc, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
-        mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+      call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), &
+           &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-      POP_SUB(system_init.parallel_init)
-    end subroutine parallel_init
+      POP_SUB(system_mxll_init.parallel_init)
+    end subroutine parallel_mxll_init
 
   end subroutine system_mxll_init
 
   !----------------------------------------------------------
   subroutine system_mxll_end(sys)
-    type(system_t), intent(inout) :: sys
+    type(system_mxll_t), intent(inout) :: sys
 
-    PUSH_SUB(system_end)
+    PUSH_SUB(system_mxll_end)
 
     call hamiltonian_mxll_end(sys%hm)
 
@@ -160,13 +177,13 @@ contains
 
     SAFE_DEALLOCATE_P(sys%gr)
 
-    POP_SUB(system_end)
+    POP_SUB(system_mxll_end)
   end subroutine system_mxll_end
 
 
     !----------------------------------------------------------
-  subroutine system_check_match_maxwell_and_matter(sys, maxwell_sys, multigrid_mode)
-    type(system_t),           intent(in)  :: sys
+  subroutine system_check_match_maxwell_and_matter(sys_elec, sys_mxll, multigrid_mode)
+    type(system_t),           intent(in)  :: sys_elec
     type(system_mxll_t),      intent(in)  :: sys_mxll
     integer,        optional, intent(out) :: multigrid_mode
 
@@ -180,14 +197,14 @@ contains
       write(message(2), '(a)') 'MaxwellBoxShape == PARALLELEPIPED'
       call messages_fatal(2)
     end if
-    if (sys_mxll%gr%mesh%spacing(1) /= sys%gr%mesh%spacing(1)) then
-      if (sys_mxll%gr%mesh%spacing(1) < M_FOUR * sys%gr%sb%lsize(1)) err = err + 1
+    if (sys_mxll%gr%mesh%spacing(1) /= sys_elec%gr%mesh%spacing(1)) then
+      if (sys_mxll%gr%mesh%spacing(1) < M_FOUR * sys_elec%gr%sb%lsize(1)) err = err + 1
     end if
-    if (sys_mxll%gr%mesh%spacing(2) /= sys%gr%mesh%spacing(2)) then
-      if (sys_mxll%gr%mesh%spacing(2) < M_FOUR * sys%gr%sb%lsize(2)) err = err + 1
+    if (sys_mxll%gr%mesh%spacing(2) /= sys_elec%gr%mesh%spacing(2)) then
+      if (sys_mxll%gr%mesh%spacing(2) < M_FOUR * sys_elec%gr%sb%lsize(2)) err = err + 1
     end if
-    if (sys_mxll%gr%mesh%spacing(3) /= sys%gr%mesh%spacing(3)) then
-      if (sys_mxll%gr%mesh%spacing(3) < M_FOUR * sys%gr%sb%lsize(3)) err = err + 1
+    if (sys_mxll%gr%mesh%spacing(3) /= sys_elec%gr%mesh%spacing(3)) then
+      if (sys_mxll%gr%mesh%spacing(3) < M_FOUR * sys_elec%gr%sb%lsize(3)) err = err + 1
     end if
     if (err /= 0) then
       write(message(1), '(a)') 'The "MaxwellSpacing" for the Maxwell grid has to be equal to'
@@ -198,13 +215,13 @@ contains
       write(message(6), '(a)') '3 dimensions.'
       call messages_fatal(6)
     end if
-    if ( (sys_mxll%gr%mesh%spacing(1) == sys%gr%mesh%spacing(1)) .and. &
-         (sys_mxll%gr%mesh%spacing(2) == sys%gr%mesh%spacing(2)) .and. &
-         (sys_mxll%gr%mesh%spacing(3) == sys%gr%mesh%spacing(3)) ) then
+    if ( (sys_mxll%gr%mesh%spacing(1) == sys_elec%gr%mesh%spacing(1)) .and. &
+         (sys_mxll%gr%mesh%spacing(2) == sys_elec%gr%mesh%spacing(2)) .and. &
+         (sys_mxll%gr%mesh%spacing(3) == sys_elec%gr%mesh%spacing(3)) ) then
       multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL 
-    else if ( (sys_mxll%gr%mesh%spacing(1) >= M_FOUR * sys%gr%sb%lsize(1)) .and. &
-              (sys_mxll%gr%mesh%spacing(2) >= M_FOUR * sys%gr%sb%lsize(2)) .and. &
-              (sys_mxll%gr%mesh%spacing(3) >= M_FOUR * sys%gr%sb%lsize(3)) ) then
+    else if ( (sys_mxll%gr%mesh%spacing(1) >= M_FOUR * sys_elec%gr%sb%lsize(1)) .and. &
+              (sys_mxll%gr%mesh%spacing(2) >= M_FOUR * sys_elec%gr%sb%lsize(2)) .and. &
+              (sys_mxll%gr%mesh%spacing(3) >= M_FOUR * sys_elec%gr%sb%lsize(3)) ) then
       multigrid_mode = MULTIGRID_MX_TO_MA_LARGE
     else
       write(message(1), '(a)') 'There is no valid multigird option for current Maxwell and Matter grids.'
@@ -216,3 +233,8 @@ contains
 
 
 end module system_mxll_oct_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

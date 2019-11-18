@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2006 F. Bonafe, R. Jestaedt, H. Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
  
-! ---------------------------------------------------------
+ ! ---------------------------------------------------------
   subroutine output_mxll_init(outp, namespace, sb)
     type(output_t),       intent(out) :: outp
     type(namespace_t), target, intent(in)    :: namespace
@@ -495,8 +495,7 @@
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_electic_field_state(st%rsb, st%rs_sign, dtmp_1, st%mu(1:gr%mesh%np_part),&
-           & gr%mesh%np_part)
+      call get_electric_field_state(st%rsb, dtmp_1, st%mu(1:gr%mesh%np_part), gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "e_field_div", outp%namespace, gr%mesh, dtmp_2,&
            & fn_unit, ierr, geo=geo)
@@ -824,47 +823,7 @@
     POP_SUB(output_medium_variables_magnetic)
   end subroutine output_medium_variables_magnetic
 
-
-  !----------------------------------------------------------
-  ! subroutine output_test_mxll(st, gr, geo, dir, outp)
-  !   type(states_mxll_t),         intent(inout) :: st
-  !   type(grid_t),           intent(inout) :: gr
-  !   type(geometry_t),       intent(in)    :: geo
-  !   character(len=*),       intent(in)    :: dir
-  !   type(output_t),         intent(in)    :: outp
-
-  !   integer :: idim, ierr
-  !   character(len=MAX_PATH_LEN) :: fname
-  !   type(unit_t) :: fn_unit
-  !   FLOAT, allocatable :: dtmp(:)
-
-  !   PUSH_SUB(output_test_mxll)
-
-  !   ! Test function output (real part)
-  !   if(iand(outp%what, OPTION__MAXWELLOUTPUT__TEST_OUTPUT) /= 0) then
-  !     fn_unit = unit_one
-  !     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
-  !     do idim = 1, st%d%dim
-  !       write(fname, '(2a)') 'test_output_real-', index2axis(idim)
-  !       dtmp(1:gr%mesh%np_part) = real(st%test_output(1:gr%mesh%np_part,idim))
-  !       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp, fn_unit, ierr,&
-  !            & geo = geo)
-  !     end do
-  !     SAFE_DEALLOCATE_A(dtmp)
-  !   end if
-
-  !   ! Test function output (imaginary part)
-  !   if(iand(outp%what, OPTION__MAXWELLOUTPUT__TEST_OUTPUT) /= 0) then
-  !     fn_unit = unit_one
-  !     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
-  !     do idim = 1, st%d%dim
-  !       write(fname, '(2a)') 'test_output_imag-', index2axis(idim)
-  !       dtmp(1:gr%mesh%np_part) = aimag(st%test_output(1:gr%mesh%np_part,idim))
-  !       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp, fn_unit, ierr,&
-  !            & geo = geo)
-  !     end do
-  !     SAFE_DEALLOCATE_A(dtmp)
-  !   end if
-
-  !   POP_SUB(output_test_mxll)
-  ! end subroutine output_test_mxll  
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:

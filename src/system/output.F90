@@ -103,7 +103,10 @@ module output_oct_m
     doutput_lr,          &
     zoutput_lr,          &
     output_kick,         &
-    output_scalar_pot
+    output_scalar_pot,   &
+    output_mxll_init,    &
+    output_mxll,         &
+    output_mxll_free
 
 
   type output_bgw_t
