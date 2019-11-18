@@ -104,7 +104,10 @@ module output_oct_m
     zoutput_lr,          &
     output_kick,         &
     output_scalar_pot,   &
-    output_needs_current
+    output_needs_current, &
+    output_mxll_init,    &
+    output_mxll,         &
+    output_mxll_free
 
 
   type output_bgw_t

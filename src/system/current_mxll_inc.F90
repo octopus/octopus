@@ -1,7 +1,21 @@
+!! Copyright (C) 2002-2006 F. Bonafe, R. Jestaedt, H. Appel
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+!! 02110-1301, USA.
 
-
-
-    !----------------------------------------------------------
+  !----------------------------------------------------------
   subroutine get_rs_density_ext(st, mesh, time, rs_current_density_ext)
     type(states_mxll_t),  intent(inout) :: st
     type(mesh_t),    intent(in)    :: mesh
@@ -25,7 +39,7 @@
   end subroutine get_rs_density_ext
 
 
-    !----------------------------------------------------------
+  !----------------------------------------------------------
   subroutine external_current_init(st, namespace, mesh)
     type(states_mxll_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
@@ -109,10 +123,10 @@
           call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
           st%external_current_omega(il) = omega
           call parse_block_string(blk, il-1, 5, tdf_expression)
-          call tdf_read(st%external_current_td_function(il), trim(tdf_expression), ierr)
+          call tdf_read(st%external_current_td_function(il), namespace, trim(tdf_expression), ierr)
           if(parse_block_cols(blk, il-1) > 6) then
             call parse_block_string(blk, il-1, 6, phase_expression)
-            call tdf_read(st%external_current_td_phase(il), trim(phase_expression), ierr)
+            call tdf_read(st%external_current_td_phase(il), namespace, trim(phase_expression), ierr)
             if (ierr /= 0) then            
               write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
               write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
@@ -126,6 +140,7 @@
     end if
     POP_SUB(external_current_init)
   end subroutine external_current_init
+
 
   !----------------------------------------------------------
   subroutine external_current_calculation(st, mesh, time, current)
@@ -170,3 +185,8 @@
 
     POP_SUB(external_current_calculation)
   end subroutine external_current_calculation
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
