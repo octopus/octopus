@@ -35,8 +35,6 @@ module berry_oct_m
   private
   public ::                 &
     berry_dipole,           &
-    berry_phase_det,        &
-    berry_phase_matrix,     &
     berry_potential,        &
     berry_energy_correction
 
@@ -137,9 +135,7 @@ contains
 
     PUSH_SUB(berry_phase_matrix)
 
-    if(st%parallel_in_states) then
-      call messages_not_implemented("Berry phase parallel in states", namespace=st%namespace)
-    end if
+    ASSERT(.not. st%parallel_in_states)
 
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
@@ -197,7 +193,7 @@ contains
     CMPLX :: factor, det
 
     PUSH_SUB(berry_potential)
-    
+
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ispin = 1, st%d%nspin

@@ -142,9 +142,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
 
   PUSH_SUB(X(lr_build_dl_rho))
 
-  if(st%d%ispin == SPINORS) then
-    call messages_not_implemented('linear response density for spinors', namespace=st%namespace)
-  end if
+  ASSERT(st%d%ispin /= SPINORS)
 
   ! correction to density response due to shift in Fermi level
   ! it is zero without smearing since there is no Fermi level

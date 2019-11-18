@@ -740,6 +740,9 @@ contains
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
       if(optional_default(calc_berry, .true.)) then
+        if(st%parallel_in_states) then
+          call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
+        end if
         call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term

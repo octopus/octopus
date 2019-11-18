@@ -18,12 +18,13 @@
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
+subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, namespace)
   type(lda_u_t),       intent(inout) :: this
   type(mesh_t),        intent(in)    :: mesh
   type(derivatives_t), intent(in)    :: der
   type(states_elec_t), intent(in)    :: st
   type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: is1, is2
@@ -38,8 +39,9 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
   PUSH_SUB(compute_complex_coulomb_integrals)
 
   ASSERT(.not. st%parallel_in_states)
-  if(mesh%parallel_in_domains) &
-    call messages_not_implemented("Coulomb integrals parallel in domains", namespace=st%namespace)
+  if(mesh%parallel_in_domains) then
+    call messages_not_implemented("Coulomb integrals parallel in domains", namespace=namespace)
+  end if
 
   SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))

@@ -66,6 +66,10 @@ subroutine X(sternheimer_solve)(                           &
   
   calculate_rho = this%add_fxc .or. this%add_hartree
 
+  if (st%d%ispin == SPINORS .and. calculate_rho) then
+    call messages_not_implemented('linear response density for spinors', namespace=sys%namespace)
+  end if
+
   SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(residue(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))

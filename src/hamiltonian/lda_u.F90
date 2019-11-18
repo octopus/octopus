@@ -391,7 +391,7 @@ contains
        else
          ASSERT(.not.states_are_real(st))
          write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver)
+         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace)
        end if
      end if
 
