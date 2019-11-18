@@ -54,7 +54,7 @@ subroutine X(oct_exchange_operator)(this, mesh, hpsi, ist, ik)
      end do
 
   case(SPINORS)
-    call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors", &
+    call messages_not_implemented("Function oct_exchange_operator for spinors", &
       namespace=this%oct_st%namespace)
   end select
 
