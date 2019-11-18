@@ -669,12 +669,12 @@ contains
       end if
 
     case(EXP_LANCZOS)
+      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
       call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
       if (present(inh_psib)) then
         call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
       end if
       if (present(psib2)) then
-        call batch_copy_data(mesh%np, psib, psib2)
         call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
         if (present(inh_psib)) then
           call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus, inh_psib)
@@ -687,10 +687,9 @@ contains
         write(message(2), '(a)') 'with inhomogeneous term is not implemented'
         call messages_fatal(2)
       end if
-
+      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
       call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
-        call batch_copy_data(mesh%np, psib, psib2)
         call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
       end if
 
