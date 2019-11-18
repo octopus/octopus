@@ -106,7 +106,6 @@ module kick_oct_m
     !> In case we use a general function
     integer           :: function_mode
     character(len=200), private:: user_defined_function
-    type(namespace_t), pointer :: namespace
   end type kick_t
 
 contains
@@ -123,8 +122,6 @@ contains
     integer :: n_rows, irow, idir
 
     PUSH_SUB(kick_init)
-
-    kick%namespace => namespace
 
     !%Variable TDDeltaKickTime
     !%Type float
@@ -488,8 +485,6 @@ contains
     kick_out%function_mode = kick_in%function_mode
     kick_out%user_defined_function = kick_in%user_defined_function
 
-    kick_out%namespace => kick_in%namespace
-
     POP_SUB(kick_copy)
   end subroutine kick_copy
 
@@ -512,15 +507,14 @@ contains
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
 
-    nullify(kick%namespace)
-
     POP_SUB(kick_end)
   end subroutine kick_end
 
   ! ---------------------------------------------------------
-  subroutine kick_read(kick, iunit)
-    type(kick_t), intent(inout) :: kick
-    integer,      intent(in)    :: iunit
+  subroutine kick_read(kick, iunit, namespace)
+    type(kick_t),      intent(inout) :: kick
+    integer,           intent(in)    :: iunit
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: im, ierr
     character(len=100) :: line
@@ -567,9 +561,9 @@ contains
       backspace(iunit)
     end if
 
-    if(kick%function_mode < 0) then
+    if (kick%function_mode < 0) then
       message(1) = "No kick could be read from file."
-      call messages_fatal(1, namespace=kick%namespace)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(kick_read)

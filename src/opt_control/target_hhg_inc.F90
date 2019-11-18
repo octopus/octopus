@@ -244,9 +244,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg, namespace) result(j1)
+  FLOAT function target_j1_hhg(tg) result(j1)
     type(target_t),    intent(in) :: tg
-    type(namespace_t), intent(in) :: namespace
     
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
@@ -258,7 +257,7 @@
     ddipole = M_z0
     ddipole = tg%td_fitness
 
-    call spectrum_hsfunction_init(tg%dt, namespace, 0, maxiter, maxiter, ddipole)
+    call spectrum_hsfunction_init(tg%dt, 0, maxiter, maxiter, ddipole)
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0
