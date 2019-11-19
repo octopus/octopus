@@ -1657,7 +1657,7 @@ contains
 
     PUSH_SUB(states_elec_fermi)
 
-    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
+    call smear_find_fermi_energy(st%smear, st%namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
     call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
