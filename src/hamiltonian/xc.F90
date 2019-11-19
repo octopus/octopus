@@ -196,7 +196,7 @@ contains
     end if
 
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
-      call messages_not_implemented("LCA current functionals") ! not even in libxc!
+      call messages_not_implemented("LCA current functionals", namespace) ! not even in libxc!
 
     call messages_obsolete_variable(namespace, 'MGGAimplementation')
     call messages_obsolete_variable(namespace, 'CurrentInTau', 'XCUseGaugeIndependentKED')
