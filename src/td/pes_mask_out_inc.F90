@@ -430,7 +430,8 @@ end subroutine pes_mask_map_from_state
 ! ---------------------------------------------------------
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
-subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
+subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
+  type(namespace_t),     intent(in)    :: namespace
   type(states_elec_t),   intent(in)    :: st
   type(grid_t),          intent(in)    :: gr
   type(geometry_t),      intent(in)    :: geo
@@ -502,7 +503,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, outp%namespace, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
         RhoAB(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
@@ -528,7 +529,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
               end if
             end if
               
-            call zio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, &
+            call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, &
               PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
 
           end do
@@ -1871,12 +1872,13 @@ end subroutine pes_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
+subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   type(pes_mask_t),    intent(inout)    :: mask
   type(mesh_t),        intent(in)       :: mesh
   type(states_elec_t), intent(in)       :: st
-  character(len=*),    intent(in)       :: file
   type(output_t),      intent(in)       :: outp
+  type(namespace_t),   intent(in)       :: namespace
+  character(len=*),    intent(in)       :: file
   type(grid_t),        intent(in)       :: gr
   type(geometry_t),    intent(in)       :: geo
   integer,             intent(in)       :: iter
@@ -1894,13 +1896,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   call profiling_in(prof, "PESMASK_out")
   
   !Output info for easy post-process
-  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", outp%namespace)
+  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", namespace)
  
 
   !Photoelectron wavefunction and density in real space
   if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
-    call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
+    call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   end if
   
   if (simul_box_is_periodic(mesh%sb)) then
@@ -1967,13 +1969,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
       ! Output the full matrix in binary format for subsequent post-processing 
       if(st%d%nik == 1) then
       write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath(fn, outp%namespace), &
+      call io_binary_write(io_workpath(fn, namespace), &
         mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
                            
          
       ! Total power spectrum 
       write(fn, '(a,a)') trim(dir), '_power.sum'
-      call pes_mask_output_power_totalM(pesK,fn, outp%namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+      call pes_mask_output_power_totalM(pesK,fn, namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
                                        mask%energyMax, mask%energyStep, .false.)
       end if
 
@@ -1984,7 +1986,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
         write(fn, '(a,a)') trim(dir), '_map.pz=0'
       end if
       pol = (/M_ZERO, M_ZERO, M_ONE/)
-      call pes_mask_output_full_mapM_cut(pesK, fn, outp%namespace, mask%ll, mask%mesh%sb%dim, &
+      call pes_mask_output_full_mapM_cut(pesK, fn, namespace, mask%ll, mask%mesh%sb%dim, &
         pol = pol, dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
                                      
     end if

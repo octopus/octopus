@@ -1424,7 +1424,7 @@ contains
             end if
           end if
           do isigma = 1, em_vars%nsigma
-            call zoutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call zoutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
           end do
         else
 
@@ -1437,7 +1437,7 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call doutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call doutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
           end do
 
         end if

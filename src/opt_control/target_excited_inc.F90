@@ -91,8 +91,8 @@
 
     PUSH_SUB(target_output_excited)
     
-    call io_mkdir(trim(dir), outp%namespace)
-    call output_states(tg%est%st, namespace, gr, geo, hm, trim(dir)//'/st', outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(outp, namespace, trim(dir)//'/st', tg%est%st, gr, geo, hm)
     call excited_states_output(tg%est, trim(dir), namespace)
 
     POP_SUB(target_output_excited)

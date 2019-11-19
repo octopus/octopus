@@ -487,7 +487,7 @@ contains
           else
             call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
           end if
-          call td_write_kick(gr%mesh, sys%hm%ep%kick, sys%outp, geo, iter)
+          call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
         end if
       end if
 
@@ -575,7 +575,7 @@ contains
           call messages_warning(1)
         end if
 
-        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
+        call pes_output(td%pesv, sys%namespace, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
 
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
@@ -838,7 +838,7 @@ contains
         else
           call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
         end if
-        call td_write_kick(gr%mesh, sys%hm%ep%kick, sys%outp, geo, 0)
+        call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, 0)
       end if
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then

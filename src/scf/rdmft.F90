@@ -442,7 +442,7 @@ contains
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
         call scf_write_static(dirname, "info")
       end if
 
@@ -455,7 +455,7 @@ contains
       call messages_info(3)
       if(gs_run_) then 
         call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, namespace, gr, geo, st, hm, ks, STATIC_DIR)
+        call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
       end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter-1, ' iterations '

@@ -136,18 +136,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick(mesh, kick, outp, geo, iter)
-    type(mesh_t),     intent(in) :: mesh
-    type(kick_t),     intent(in) :: kick
-    type(output_t),   intent(in) :: outp
-    type(geometry_t), intent(in) :: geo
-    integer,          intent(in) :: iter
+  subroutine td_write_kick(outp, namespace, mesh, kick, geo, iter)
+    type(output_t),    intent(in) :: outp
+    type(namespace_t), intent(in) :: namespace
+    type(mesh_t),      intent(in) :: mesh
+    type(kick_t),      intent(in) :: kick
+    type(geometry_t),  intent(in) :: geo
+    integer,           intent(in) :: iter
 
     character(len=256) :: filename
     PUSH_SUB(td_write_kick)
 
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call output_kick(outp, mesh, geo, kick, filename)
+    call output_kick(outp, namespace, filename, mesh, geo, kick)
 
     POP_SUB(td_write_kick)
   end subroutine td_write_kick
@@ -160,7 +161,7 @@ contains
     type(output_t),           intent(out)   :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
-    type(hamiltonian_elec_t),      intent(inout) :: hm
+    type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
     type(v_ks_t),             intent(inout) :: ks
     logical,                  intent(in)    :: ions_move
@@ -862,7 +863,7 @@ contains
     
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
-      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, gr, st, writ%gs_st, iter)
+      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, namespace, gr, st, writ%gs_st, iter)
     end if
 
     !LDA+U outputs
@@ -921,11 +922,11 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, namespace, gr, geo, st, hm, ks, filename)
+    call output_all(outp, namespace, filename, gr, geo, st, hm, ks)
     if(present(dt)) then
-      call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
+      call output_scalar_pot(outp, namespace, filename, gr, geo, hm, iter*dt)
     else
-      if(iter == 0) call output_scalar_pot(outp, gr, geo, hm, filename)
+      if(iter == 0) call output_scalar_pot(outp, namespace, filename, gr, geo, hm)
     end if
  
     call profiling_out(prof)
@@ -2309,11 +2310,12 @@ contains
   !> based on projections on the GS orbitals
   !> The procedure is very similar to the td_write_proj
   ! ---------------------------------------------------------
-  subroutine td_write_n_ex(out_nex, outp, gr, st, gs_st, iter)
+  subroutine td_write_n_ex(out_nex, outp, namespace, gr, st, gs_st, iter)
     implicit none
  
     type(c_ptr),         intent(inout) :: out_nex
     type(output_t),      intent(in)    :: outp
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(inout) :: st
     type(states_elec_t), intent(in)    :: gs_st
@@ -2407,7 +2409,7 @@ contains
  
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
-  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", outp%namespace, &
+  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", namespace, &
     gr%mesh, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)

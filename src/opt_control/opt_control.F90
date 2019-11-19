@@ -154,7 +154,7 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(psi, sys%namespace, sys%gr, sys%geo, sys%hm, OCT_DIR//'initial', sys%outp)
+    call output_states(sys%outp, sys%namespace, OCT_DIR//'initial', psi, sys%gr, sys%geo, sys%hm)
     call target_output(oct_target, sys%namespace, sys%gr, OCT_DIR//'target', sys%geo, sys%hm, sys%outp)
     call states_elec_end(psi)
 

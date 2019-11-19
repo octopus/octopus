@@ -224,8 +224,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_output(pes, mesh, st, iter, outp, dt, gr, geo)
+  subroutine pes_output(pes, namespace, mesh, st, iter, outp, dt, gr, geo)
     type(pes_t),         intent(inout) :: pes
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     integer,             intent(in)    :: iter
@@ -236,11 +237,11 @@ contains
 
     PUSH_SUB(pes_output)
     
-    if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, outp%namespace, iter, dt)
+    if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, namespace, iter, dt)
 
-    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st,outp, "td.general/PESM", gr, geo,iter)
+    if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, outp%namespace, dt)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, namespace, dt)
 
     POP_SUB(pes_output)
   end subroutine pes_output

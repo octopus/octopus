@@ -192,14 +192,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm, namespace)
+  subroutine output_me(this, namespace, dir, st, gr, geo, hm)
     type(output_me_t),        intent(in)    :: this
+    type(namespace_t),        intent(in)    :: namespace
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
     type(hamiltonian_elec_t), intent(in)    :: hm
-    type(namespace_t),        intent(in)    :: namespace
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname

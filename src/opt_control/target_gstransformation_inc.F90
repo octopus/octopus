@@ -81,7 +81,7 @@
     PUSH_SUB(target_output_gstransformation)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation

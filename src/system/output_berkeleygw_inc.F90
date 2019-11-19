@@ -16,13 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
+subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   type(output_bgw_t),          intent(in)    :: bgw
+  type(namespace_t),           intent(in)    :: namespace
   character(len=*),            intent(in)    :: dir
   type(states_elec_t), target, intent(in)    :: st
   type(grid_t),                intent(in)    :: gr
   type(hamiltonian_elec_t),    intent(inout) :: hm
-  type(namespace_t),           intent(in)    :: namespace
   FLOAT,                       intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
@@ -168,13 +168,13 @@ end subroutine X(bgw_vxc_dat)
 
 ! --------------------------------------------------------- 
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
-subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax, namespace)
+subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   type(output_bgw_t),  intent(in) :: bgw
+  type(namespace_t),   intent(in) :: namespace
   character(len=*),    intent(in) :: dir
   type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   integer,             intent(in) :: ifmax(:,:)
-  type(namespace_t),   intent(in) :: namespace
 
   integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)

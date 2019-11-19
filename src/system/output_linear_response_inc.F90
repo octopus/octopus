@@ -17,16 +17,17 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
-  type(states_elec_t),  intent(inout) :: st
-  type(grid_t),         intent(in)    :: gr
-  type(lr_t),           intent(inout) :: lr
-  character(len=*),     intent(in)    :: dir
-  integer,              intent(in)    :: idir      !< direction of perturbation
-  integer,              intent(in)    :: isigma
-  type(output_t),       intent(in)    :: outp
-  type(geometry_t),     intent(in)    :: geo
-  type(unit_t),         intent(in)    :: pert_unit !< unit for perturbation
+subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pert_unit)
+  type(output_t),       intent(in) :: outp
+  type(namespace_t),    intent(in) :: namespace
+  character(len=*),     intent(in) :: dir
+  type(states_elec_t),  intent(in) :: st
+  type(grid_t),         intent(in) :: gr
+  type(lr_t),           intent(in) :: lr
+  integer,              intent(in) :: idir      !< direction of perturbation
+  integer,              intent(in) :: isigma
+  type(geometry_t),     intent(in) :: geo
+  type(unit_t),         intent(in) :: pert_unit !< unit for perturbation
 
   integer :: ik, ist, idim, ierr, is, idir2
   character(len=80) :: fname
@@ -53,7 +54,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
         else
           write(fname, '(a,i1,2a)') 'lr_density-sp', is, '-', index2axis(idir)
         end if
-        call X(io_function_output)(outp%how, dir, fname, outp%namespace, gr%mesh, lr%X(dl_rho)(:, is), &
+        call X(io_function_output)(outp%how, dir, fname, namespace, gr%mesh, lr%X(dl_rho)(:, is), &
           fn_unit / pert_unit, ierr, geo = geo)
       end do
     end if
@@ -69,7 +70,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
           else
             write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(idir2), '-', index2axis(idir)
           end if
-          call X(io_function_output)(outp%how, dir, fname, outp%namespace, &
+          call X(io_function_output)(outp%how, dir, fname, namespace, &
             gr%mesh, tmp, fn_unit / pert_unit, ierr, geo = geo)
         end do
       end do
@@ -86,14 +87,14 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
             else
               write(fname, '(a,i1,4a)') 'lr_current-sp', is, '-', index2axis(idir2), '-',  index2axis(idir)
             end if
-            call zio_function_output(outp%how, dir, fname, outp%namespace, &
+            call zio_function_output(outp%how, dir, fname, namespace, &
               gr%mesh, lr%dl_j(:, idir2, is), &
               fn_unit / pert_unit, ierr, geo = geo)
           end do
         end do
       else
         message(1) = 'No current density output for real states since it is identically zero.'
-        call messages_warning(1, namespace=st%namespace)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
 
@@ -127,7 +128,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
                   'lr_wf-st', ist, '-', index2axis(idir), sigma
               end if
             end if
-            call X(io_function_output) (outp%how, dir, fname, outp%namespace, gr%mesh, &
+            call X(io_function_output) (outp%how, dir, fname, namespace, gr%mesh, &
               lr%X(dl_psi) (1:, idim, ist, ik), fn_unit  / pert_unit, ierr, geo = geo)
           end do
         end do
@@ -161,7 +162,7 @@ subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
             end if
 
             dtmp = abs(lr%X(dl_psi) (:, idim, ist, ik))**2
-            call dio_function_output (outp%how, dir, fname, outp%namespace, gr%mesh, dtmp, &
+            call dio_function_output (outp%how, dir, fname, namespace, gr%mesh, dtmp, &
               fn_unit / pert_unit, ierr, geo = geo)
           end do
         end do
@@ -190,7 +191,7 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename1), '-sp', is, '-', index2axis(idir)
       end if
-      call X(io_function_output)(outp%how, dir, trim(fname), outp%namespace, &
+      call X(io_function_output)(outp%how, dir, trim(fname), namespace, &
         gr%mesh, lr%X(dl_de)(1:gr%mesh%np,is), unit_one / pert_unit, ierr, geo = geo)
     end do
 
@@ -200,7 +201,7 @@ contains
       else
         write(fname, '(2a,i1,2a)') trim(filename2), '-sp', is, '-', index2axis(idir)
       end if
-      call X(io_function_output)(outp%how, dir, trim(fname), outp%namespace, &
+      call X(io_function_output)(outp%how, dir, trim(fname), namespace, &
         gr%mesh, lr%X(dl_elf)(1:gr%mesh%np,is), unit_one / pert_unit, ierr, geo = geo)
     end do
 
