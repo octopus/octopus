@@ -921,7 +921,7 @@ contains
     FLOAT, allocatable :: ex_density(:)
     FLOAT, allocatable :: ec_density(:)
 
-    PUSH_SUB(output_hamiltonian)
+    PUSH_SUB(output_energy_density)
    
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
       fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
@@ -970,7 +970,7 @@ contains
       SAFE_DEALLOCATE_A(energy_density)
     end if
  
-    POP_SUB(output_hamiltonian)
+    POP_SUB(output_energy_density)
   end subroutine output_energy_density
 
   
