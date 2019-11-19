@@ -673,20 +673,6 @@
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
 
-    ! if (present(st_elec) .and. present(gr_elec) .and. present(hm_elec)) then
-    !   if(iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY_DIFF) /= 0) then
-    !     fn_unit = unit_one
-    !     SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1))
-    !     SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np_part,1))
-    !     call get_charge_density_reference(gr, gr, st, st, dtmp_1(:,1),&
-    !          & dtmp_2(:,1), density_diff_sum)
-    !     call dio_function_output(outp%how, dir, "charge_density_diff", outp%namespace, gr%mesh,&
-    !          & dtmp_2(:,1), fn_unit, ierr, geo=geo)
-    !     SAFE_DEALLOCATE_A(dtmp_1)
-    !     SAFE_DEALLOCATE_A(dtmp_2)
-    !   end if
-    ! end if
-
     POP_SUB(output_charge_density_mxll)
   end subroutine output_charge_density_mxll
 
@@ -712,7 +698,6 @@
 
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_ELECTRIC) /= 0) then
       fn_unit = units_out%length**(1-gr_elec%mesh%sb%dim)
-      !SAFE_ALLOCATE(polarization_ma_gr(1:gr_elec%mesh%np,1:gr_elec%mesh%sb%dim))
       SAFE_ALLOCATE(polarization_mx_gr(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(E_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(D_field(1:gr%mesh%np,1:st%d%dim))
@@ -742,7 +727,6 @@
       write(fname, '(1a)') 'electric_susceptibility'
       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, e_susceptibility(:),&
            & fn_unit, ierr, geo = geo)
-      !SAFE_DEALLOCATE_A(polarization_ma_gr)
       SAFE_DEALLOCATE_A(polarization_mx_gr)
       SAFE_DEALLOCATE_A(E_field)
       SAFE_DEALLOCATE_A(D_field)
@@ -776,12 +760,10 @@
 
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_MAGNETIC) /= 0) then
       fn_unit = units_out%length**(1-gr_elec%mesh%sb%dim)
-      !SAFE_ALLOCATE(magnetization_ma_gr(1:gr_elec%mesh%np,1:gr_elec%mesh%sb%dim))
       SAFE_ALLOCATE(magnetization_mx_gr(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(B_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(H_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(b_susceptibility(1:gr%mesh%np))
-      !SAFE_ALLOCATE(current(1:gr_elec%mesh%np_part,1:gr_elec%mesh%sb%dim, st_elec%d%nspin))
       !if (.not. hm%ma_mx_coupling) then
       !call get_magnetic_field_state(st%rs_transb+st%rs_longb, st%rs_sign, B_field, st%mu, gr%mesh%np)
       !else
@@ -812,12 +794,10 @@
       write(fname, '(1a)') 'magnetic_susceptibility'
       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, b_susceptibility(:),&
            & fn_unit, ierr, geo = geo)
-      !SAFE_DEALLOCATE_A(magnetization_ma_gr)
       SAFE_DEALLOCATE_A(magnetization_mx_gr)
       SAFE_DEALLOCATE_A(B_field)
       SAFE_DEALLOCATE_A(H_field)
       SAFE_DEALLOCATE_A(b_susceptibility)
-      !SAFE_DEALLOCATE_A(current)
     end if
 
     POP_SUB(output_medium_variables_magnetic)

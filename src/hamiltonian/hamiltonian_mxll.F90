@@ -778,8 +778,6 @@ contains
           hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
-!      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
-!        call maxwell_pml_calculation_via_e_b_fields(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
 
