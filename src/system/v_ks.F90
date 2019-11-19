@@ -748,7 +748,7 @@ contains
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
-      if(ks%calculate_current .and. calc_current_ ) then
+      if(ks%calculate_current .and. calc_current_ .or. hamiltonian_needs_current(hm, states_are_real(st))) then
         call states_allocate_current(st, ks%gr)
         call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
       end if      
@@ -783,7 +783,7 @@ contains
       ks%calc%total_density_alloc = .false.
     end if
 
-    if(ks%calculate_current .and. calc_current_ ) then
+    if(ks%calculate_current .and. calc_current_ .or. hamiltonian_needs_current(hm, states_are_real(st))) then
       call states_allocate_current(st, ks%gr)
       call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if

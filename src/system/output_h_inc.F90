@@ -162,6 +162,8 @@
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       ASSERT(states_are_complex(st))
+      ASSERT(associated(st%current))
+
       do is = 1, hm%d%nspin
 
         if(st%d%nspin == 1) then
