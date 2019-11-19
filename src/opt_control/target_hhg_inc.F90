@@ -385,8 +385,9 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
+  subroutine target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
     type(target_t),           intent(in)    :: tg
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
@@ -396,7 +397,7 @@
     FLOAT :: acc(MAX_DIM)
     PUSH_SUB(target_tdcalc_hhg)
 
-    call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
+    call td_calc_tacc(namespace, gr, geo, psi, hm, acc, time*tg%dt)
     tg%td_fitness(time) = acc(1)
 
     POP_SUB(target_tdcalc_hhg)

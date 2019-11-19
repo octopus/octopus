@@ -570,23 +570,24 @@ contains
  end subroutine lda_u_update_basis
 
  ! Interface for the X(update_occ_matrices) routines
- subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )
-   type(lda_u_t),             intent(inout) :: this
-   type(mesh_t),              intent(in)    :: mesh 
-   type(states_elec_t),       intent(in)    :: st
-   type(hamiltonian_elec_base_t),  intent(in)    :: hm_base 
-   type(energy_t),            intent(inout) :: energy
+ subroutine lda_u_update_occ_matrices(this, namespace, mesh, st, hm_base, energy )
+   type(lda_u_t),                 intent(inout) :: this
+   type(namespace_t),             intent(in)    :: namespace
+   type(mesh_t),                  intent(in)    :: mesh
+   type(states_elec_t),           intent(in)    :: st
+   type(hamiltonian_elec_base_t), intent(in)    :: hm_base
+   type(energy_t),                intent(inout) :: energy
 
    if(this%level == DFT_U_NONE .or. this%freeze_occ) return
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
-     call dupdate_occ_matrices(this, mesh, st, energy%dft_u)
+     call dupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u, hm_base%phase)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u, hm_base%phase)
      else
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
      end if
    end if
 

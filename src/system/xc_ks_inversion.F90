@@ -320,7 +320,7 @@ contains
     end do
     
     call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+    call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(sqrtrho)
@@ -466,7 +466,7 @@ contains
       end if
 
       call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-      call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+      call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
 
       ! Iterative inversion with fixed parameters in Stella Verstraete method
@@ -592,7 +592,7 @@ contains
     !calculate final density
 
     call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+    call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter

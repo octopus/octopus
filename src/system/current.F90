@@ -261,14 +261,15 @@ contains
   end subroutine current_batch_accumulate
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
-    type(current_t),      intent(in)    :: this
-    type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(geometry_t),     intent(in)    :: geo
-    type(states_elec_t),  intent(inout) :: st
-    FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+  subroutine current_calculate(this, namespace, der, hm, geo, st, current, current_kpt)
+    type(current_t),          intent(in)    :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(derivatives_t),      intent(inout) :: der
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    FLOAT,                    intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
+    FLOAT, pointer,           intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
@@ -316,14 +317,14 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -472,7 +473,7 @@ contains
               end if
 
               if(hm%lda_u_level /= DFT_U_NONE) then
-                call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, st%namespace, ik, psi, gpsi, &
+                call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, namespace, ik, psi, gpsi, &
                   associated(hm%hm_base%phase))
               end if
 

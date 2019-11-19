@@ -328,7 +328,7 @@ contains
       force_nlcc(:, :) = M_ZERO
     end if
     if(present(vhxc_old)) then
-      call forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
+      call forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
     else
       force_scf = M_ZERO
     end if
@@ -556,10 +556,11 @@ end subroutine forces_from_nlcc
  ! from the pseudopotential.  
  ! NTD : No idea if this is good or bad, but this is easy to implement 
  !       and works well in practice
-subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
+subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
+  type(namespace_t),              intent(in)    :: namespace
   type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   FLOAT,                          intent(out)   :: force_scf(:, :)
   FLOAT,                          intent(in)    :: vhxc_old(:,:)
 
@@ -585,7 +586,7 @@ subroutine forces_from_scf(gr, geo, hm, force_scf, vhxc_old)
       if(ps_has_density(species_ps(geo%atom(iatom)%species))) then
 
         call species_atom_density_grad(gr%mesh, gr%mesh%sb, geo%atom(iatom), &
-                 hm%namespace, hm%d%spin_channels, drho)
+                 namespace, hm%d%spin_channels, drho)
 
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels

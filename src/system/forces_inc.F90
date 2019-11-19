@@ -148,7 +148,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
-  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
@@ -330,7 +330,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end if
 
       !The Hubbard forces
-      call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
+      call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
       call batch_end(psib)

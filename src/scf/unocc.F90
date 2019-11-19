@@ -165,7 +165,7 @@ contains
 
     SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
     do ik = 1, sys%st%d%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, ik, n_filled, n_partially_filled, n_half_filled)
       occ_states(ik) = n_filled + n_partially_filled + n_half_filled
     end do
 
@@ -259,17 +259,17 @@ contains
     ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
     ! the occupations must be recalculated each time, though they do not affect the result of course.
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-    call states_elec_fermi(sys%st, sys%gr%mesh)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
+      call eigensolver_run(eigens, sys%namespace, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-      call states_elec_fermi(sys%st, sys%gr%mesh)
+      call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
 
       call write_iter_(sys%st)
 

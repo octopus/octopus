@@ -99,7 +99,7 @@ contains
     call profiling_in(prof, 'ELEC_UPDATE_H')
 
     call hamiltonian_elec_update(hm, mesh, namespace, time = time)
-    call lda_u_update_occ_matrices(hm%lda_u, mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, mesh, st, hm%hm_base, hm%energy)
 
     call profiling_out(prof)
 
@@ -163,8 +163,9 @@ contains
   end subroutine propagation_ops_elec_restore_ions
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_propagate_gauge_field(wo, hm, dt, time, save_gf)
+  subroutine propagation_ops_elec_propagate_gauge_field(wo, namespace, hm, dt, time, save_gf)
     class(propagation_ops_elec_t), intent(inout) :: wo
+    type(namespace_t),             intent(in)    :: namespace
     type(hamiltonian_elec_t),      intent(inout) :: hm
     FLOAT,                         intent(in)    :: dt
     FLOAT,                         intent(in)    :: time
@@ -181,7 +182,7 @@ contains
         call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
       end if
-      call gauge_field_propagate(hm%ep%gfield, dt, time, hm%namespace)
+      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
     end if
 
     call profiling_out(prof)
@@ -214,8 +215,9 @@ contains
   end subroutine propagation_ops_elec_restore_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_exp_apply(te, st, mesh, hm, dt)
-    type(exponential_t),      intent(inout) :: te 
+  subroutine propagation_ops_elec_exp_apply(te, namespace, st, mesh, hm, dt)
+    type(exponential_t),      intent(inout) :: te
+    type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(inout) :: st
     type(mesh_t),             intent(in)    :: mesh
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -236,9 +238,10 @@ contains
         end if
 
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, dt, inh_psib = hm%inh_st%group%psib(ib, ik))
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt, &
+            inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, dt)
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt)
         end if
 
         if (hamiltonian_elec_apply_packed(hm, mesh)) then
@@ -254,8 +257,9 @@ contains
   end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_fuse_density_exp_apply(te, st, gr, hm, dt, dt2, vmagnus)
+  subroutine propagation_ops_elec_fuse_density_exp_apply(te, namespace, st, gr, hm, dt, dt2, vmagnus)
     type(exponential_t),      intent(inout) :: te
+    type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -287,10 +291,11 @@ contains
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, deltat2 = M_TWO*dt, &
-              inh_psib = hm%inh_st%group%psib(ib, ik))
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
+              deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, deltat2 = M_TWO*dt)
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
+              deltat2 = M_TWO*dt)
           end if
 
           !use the dt propagation to calculate the density
@@ -300,10 +305,10 @@ contains
         else
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus, &
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus, &
               inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus)
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus)
           end if
 
           !use the dt propagation to calculate the density

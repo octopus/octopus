@@ -22,7 +22,8 @@
 !! one is an "excited_state".
 !!
 !! WARNING!!!!: periodic systems are not considered in these expressions.
-R_TYPE function X(states_elec_mpdotp_x)(mesh, excited_state, st, mat) result(dotp)
+R_TYPE function X(states_elec_mpdotp_x)(namespace, mesh, excited_state, st, mat) result(dotp)
+  type(namespace_t),      intent(in)  :: namespace
   type(mesh_t),           intent(in) :: mesh
   type(excited_states_t), intent(in) :: excited_state
   type(states_elec_t),    intent(in) :: st
@@ -42,12 +43,12 @@ R_TYPE function X(states_elec_mpdotp_x)(mesh, excited_state, st, mat) result(dot
   if(present(mat)) then
       mat_local = mat
   else 
-    call X(states_elec_matrix)(mesh, excited_state%st, st, mat_local)
+    call X(states_elec_matrix)(excited_state%st, st, mesh, mat_local)
   end if
 
   do jj = 1, excited_state%n_pairs
     call X(states_elec_matrix_swap)(mat_local, excited_state%pair(jj))
-    dotp = dotp + excited_state%weight(jj) * X(states_elec_mpdotp_g)(mesh, excited_state%st, st, mat_local) 
+    dotp = dotp + excited_state%weight(jj) * X(states_elec_mpdotp_g)(namespace, mesh, excited_state%st, st, mat_local)
     call X(states_elec_matrix_swap)(mat_local, excited_state%pair(jj))
   end do
 
@@ -101,7 +102,8 @@ end subroutine X(states_elec_matrix_swap)
 !!
 !! The routine directly applies Lowdin`s formula [P.-O. Lowdin,
 !! Phys. Rev. 97, 1474; Eq. 49].
-R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(st1opst2)
+R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst2) result(st1opst2)
+  type(namespace_t),     intent(in) :: namespace
   type(mesh_t),          intent(in) :: mesh
   type(states_elec_t),   intent(in) :: st1, st2, opst2
 
@@ -138,20 +140,20 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(s
   select case(ispin)
   case(UNPOLARIZED)
 
-    call X(states_elec_matrix)(mesh, st1, st2, overlap_mat)
-    call X(states_elec_matrix)(mesh, st1, opst2, op_mat)
+    call X(states_elec_matrix)(st1, st2, mesh, overlap_mat)
+    call X(states_elec_matrix)(st1, opst2, mesh, op_mat)
 
     do ik = 1, nik
 
-      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
-      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      call occupied_states(st1, namespace, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, namespace, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
@@ -202,20 +204,20 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(mesh, st1, st2, opst2) result(s
 
   case(SPIN_POLARIZED, SPINORS)
 
-    call X(states_elec_matrix) (mesh, st1, st2, overlap_mat)
-    call X(states_elec_matrix) (mesh, st1, opst2, op_mat)
+    call X(states_elec_matrix) (st1, st2, mesh, overlap_mat)
+    call X(states_elec_matrix) (st1, opst2, mesh, op_mat)
 
     do ik = 1, nik
 
-      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
-      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      call occupied_states(st1, namespace, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, namespace, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if(i1 > 0) then
@@ -267,7 +269,8 @@ end function X(states_elec_mpmatrixelement_g)
 !> Returns the dot product of two many-body states st1 and st2.
 !! \warning: it does not permit fractional occupation numbers.
 ! -------------------------------------------------------------
-R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
+R_TYPE function X(states_elec_mpdotp_g)(namespace, mesh, st1, st2, mat) result(dotp)
+  type(namespace_t),   intent(in) :: namespace
   type(mesh_t),        intent(in) :: mesh
   type(states_elec_t), intent(in) :: st1, st2
   R_TYPE, optional,    intent(in) :: mat(:, :, :)
@@ -299,7 +302,7 @@ R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
   if(present(mat)) then
     aa(1:st1%nst, 1:st2%nst, 1:st1%d%nik) = mat(1:st1%nst, 1:st2%nst, 1:st1%d%nik)
   else
-    call X(states_elec_matrix) (mesh, st1, st2, aa)
+    call X(states_elec_matrix) (st1, st2, mesh, aa)
   end if
 
   select case(ispin)
@@ -307,15 +310,15 @@ R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
 
     do ik = 1, nik
 
-      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
-      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      call occupied_states(st1, namespace, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, namespace, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(  (i1 /= i2)  .or.  (k1 /= k2) ) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp_g'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(bb(1:i1+k1, 1:i1+k1))
@@ -346,15 +349,15 @@ R_TYPE function X(states_elec_mpdotp_g)(mesh, st1, st2, mat) result(dotp)
 
     do ik = 1, nik
 
-      call occupied_states(st1, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
-      call occupied_states(st2, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
+      call occupied_states(st1, namespace, ik, i1, j1, k1, filled1, partially_filled1, half_filled1)
+      call occupied_states(st2, namespace, ik, i2, j2, k2, filled2, partially_filled2, half_filled2)
       if( (j1 > 0) .or. (j2 > 0) ) then
         message(1) = 'Cannot calculate many-body dot products with partially occupied orbitals'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(i1 /= i2) then
         message(1) = 'Internal Error: different number of occupied states in states_elec_mpdotp'
-        call messages_fatal(1, namespace=st1%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if(i1 > 0) then

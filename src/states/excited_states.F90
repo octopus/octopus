@@ -141,7 +141,7 @@ contains
 
     select case(ispin)
     case(UNPOLARIZED)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
@@ -165,9 +165,9 @@ contains
       end if
 
     case(SPIN_POLARIZED)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
-      call occupied_states(ground_state, 2, n_filled(2), n_partially_filled(2), n_half_filled(2), &
+      call occupied_states(ground_state, namespace, 2, n_filled(2), n_partially_filled(2), n_half_filled(2), &
                            filled(:, 2), partially_filled(:, 2), half_filled(:, 2))
       if(n_partially_filled(1) * n_partially_filled(2) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
@@ -178,7 +178,7 @@ contains
       n_possible_pairs = n_filled(1) * n_empty(1) + n_filled(2) * n_empty(2)
 
     case(SPINORS)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'

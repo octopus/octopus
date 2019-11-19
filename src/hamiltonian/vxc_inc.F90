@@ -390,7 +390,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
 
   if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
     functl(FUNC_C)%libvdwxc%energy = M_ZERO
-    call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
+    call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, namespace, dens, gdens, dedd, dedgd)
     if(present(ec)) then
       ec = ec + functl(FUNC_C)%libvdwxc%energy
     end if

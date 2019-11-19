@@ -164,8 +164,6 @@ module states_elec_oct_m
     logical                     :: symmetrize_density
 
     integer                     :: randomization      !< Method used to generate random states
-
-    type(namespace_t), pointer  :: namespace
     
     contains 
       procedure :: nullify => states_elec_null
@@ -228,8 +226,6 @@ contains
     nullify(st%node)
     nullify(st%ap%schedule)
 
-    nullify(st%namespace)
-
     st%packed = .false.
 
     POP_SUB(states_elec_null)
@@ -252,8 +248,6 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_elec_null(st)
-
-    st%namespace => namespace
 
     !%Variable SpinComponents
     !%Type integer
@@ -1447,8 +1441,6 @@ contains
 
     stout%randomization = stin%randomization
 
-    stout%namespace => stin%namespace
-
     POP_SUB(states_elec_copy)
   end subroutine states_elec_copy
 
@@ -1646,8 +1638,9 @@ contains
   end subroutine states_elec_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_elec_fermi(st, mesh)
+  subroutine states_elec_fermi(st, namespace, mesh)
     type(states_elec_t), intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
 
     !> Local variables.
@@ -1657,7 +1650,7 @@ contains
 
     PUSH_SUB(states_elec_fermi)
 
-    call smear_find_fermi_energy(st%smear, st%namespace, st%eigenval, st%occ, st%qtot, &
+    call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
     call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
@@ -1671,10 +1664,10 @@ contains
     if(abs(charge-st%qtot) > CNST(1e-6)) then
       message(1) = 'Occupations do not integrate to total charge.'
       write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
-      call messages_warning(2, namespace=st%namespace)
+      call messages_warning(2, namespace=namespace)
       if(charge < M_EPSILON) then
         message(1) = "There don't seem to be any electrons at all!"
-        call messages_fatal(1, namespace=st%namespace)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -2315,19 +2308,20 @@ contains
 
   ! -----------------------------------------------------------
 
-  subroutine states_elec_write_info(st)
+  subroutine states_elec_write_info(st, namespace)
     class(states_elec_t),    intent(in) :: st
+    type(namespace_t),       intent(in)    :: namespace
 
     PUSH_SUB(states_elec_write_info)
 
-    call messages_print_stress(stdout, "States", namespace=st%namespace)
+    call messages_print_stress(stdout, "States", namespace=namespace)
 
     write(message(1), '(a,f12.3)') 'Total electronic charge  = ', st%qtot
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
     write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
     call messages_info(3)
 
-    call messages_print_stress(stdout, namespace=st%namespace)
+    call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(states_elec_write_info)
   end subroutine states_elec_write_info
@@ -2396,7 +2390,7 @@ contains
 
     is_frac_occ = .false.
     do ik = 1, st%d%nik
-      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(st, namespace, ik, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
       n_occ(ik) = n_filled + n_partially_filled + n_half_filled
       n_unocc(ik) = st%nst - n_filled
@@ -2499,9 +2493,10 @@ contains
   !! The integer arrays filled, partially_filled and half_filled point
   !!   to the indices where the filled, partially filled and half_filled
   !!   orbitals are, respectively.
-  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
+  subroutine occupied_states(st, namespace, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
     type(states_elec_t),    intent(in)  :: st
+    type(namespace_t),      intent(in)  :: namespace
     integer,                intent(in)  :: ik
     integer,                intent(out) :: n_filled, n_partially_filled, n_half_filled
     integer,      optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
@@ -2532,7 +2527,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1, namespace=st%namespace)
+          call messages_fatal(1, namespace=namespace)
          end if
       end do
     case(SPIN_POLARIZED, SPINORS)
@@ -2545,7 +2540,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1, namespace=st%namespace)
+          call messages_fatal(1, namespace=namespace)
          end if
       end do
     end select

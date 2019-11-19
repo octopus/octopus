@@ -705,7 +705,7 @@ contains
       end if
 
       if (sys%ks%sic_type == SIC_ADSIC) then
-        call fxc_add_adsic(sys%ks, st, mesh, cas)
+        call fxc_add_adsic(sys%namespace, sys%ks, st, mesh, cas)
       end if
 
     end if
@@ -794,7 +794,8 @@ contains
     end subroutine solve_eps_diff
 
     ! ---------------------------------------------------------
-    subroutine fxc_add_adsic(ks, st, mesh, cas)
+    subroutine fxc_add_adsic(namespace, ks, st, mesh, cas)
+      type(namespace_t),   intent(in)    :: namespace
       type(v_ks_t),        intent(in)    :: ks
       type(states_elec_t), intent(in)    :: st
       type(mesh_t),        intent(in)    :: mesh
@@ -808,11 +809,11 @@ contains
       !Check spin and triplets
       if (st%d%ispin /= UNPOLARIZED) then
         message(1) = "Casida calculation with ADSIC not implemented for spin-polarized calculations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if (cas%triplet) then
         message(1) = "Casida calculation with ADSIC not implemented for triplet excitations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(fxc_sic(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
@@ -820,7 +821,7 @@ contains
       fxc_sic = M_ZERO
       rho = cas%rho/st%qtot
 
-      call xc_get_fxc(ks%xc, mesh, st%namespace, rho, 1, fxc_sic)
+      call xc_get_fxc(ks%xc, mesh, namespace, rho, 1, fxc_sic)
 
       cas%fxc = cas%fxc - fxc_sic/st%qtot
 

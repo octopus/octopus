@@ -1647,7 +1647,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
     do ist = 1, sys%st%nst
       if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
-          call X(hamiltonian_elec_apply)(sys%hm, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:, :, ist, ik), &
+          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:, :, ist, ik), &
             Hdl_psi(:, :, idir), ist, ik)
         end do
    
@@ -1752,17 +1752,17 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
-          call X(hamiltonian_elec_apply)(sys%hm, sys%gr%mesh, lr_b(idir)%X(dl_psi)(:,:,ist,ik),&
+          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_b(idir)%X(dl_psi)(:,:,ist,ik), &
             Hdl_b(:,:,idir), ist, ik)
-          call X(hamiltonian_elec_apply)(sys%hm, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:,:,ist,ik),&
+          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:,:,ist,ik), &
             Hdl_k(:,:,ist,idir), ist, ik)
         end do
 
         do idir1 = 1, ndir
           do idir2 = 1, ndir
-            call X(hamiltonian_elec_apply)(sys%hm, sys%gr%mesh, lr_kb(idir1, idir2)%X(dl_psi)(:,:, ist, ik),&
+            call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_kb(idir1, idir2)%X(dl_psi)(:,:, ist, ik), &
               Hdl_kb(:,:, idir1, idir2), ist, ik)
-            call X(hamiltonian_elec_apply)(sys%hm, sys%gr%mesh, &
+            call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, &
               lr_kk(max(idir1, idir2), min(idir1, idir2))%X(dl_psi)(:,:, ist, ik), Hdl_kk(:,:, idir1, idir2), ist, ik)
           end do
         end do

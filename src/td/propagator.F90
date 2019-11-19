@@ -588,7 +588,7 @@ contains
     end if
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
-    if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
+    if(update_energy_) call energy_calc_total(namespace, hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
@@ -608,7 +608,7 @@ contains
     end if
 
     !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -683,7 +683,7 @@ contains
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
-    call energy_calc_total(hm, gr, st, iunit = -1)
+    call energy_calc_total(namespace, hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)

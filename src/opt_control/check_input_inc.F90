@@ -39,27 +39,27 @@
     ! Otherwise the algorithms are bound to fail.
     select case(sys%st%d%ispin)
     case(UNPOLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = 2*n_filled + n_half_filled
       if(n_partially_filled > 0 ) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
     case(SPIN_POLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
       no_electrons = n_filled
-      call occupied_states(sys%st, 2, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 2, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled + no_electrons
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
     case(SPINORS)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'

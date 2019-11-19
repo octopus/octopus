@@ -49,7 +49,6 @@ module libvdwxc_oct_m
     integer, pointer               :: libvdwxc_ptr
     type(mesh_t)                   :: mesh
     type(cube_t)                   :: cube
-    type(namespace_t), pointer     :: namespace
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     integer                        :: functional
     logical                        :: debug
@@ -65,7 +64,7 @@ contains
 
   subroutine libvdwxc_init(libvdwxc, namespace, functional)
     type(libvdwxc_t),          intent(out) :: libvdwxc
-    type(namespace_t), target, intent(in)  :: namespace
+    type(namespace_t),         intent(in)  :: namespace
     integer,                   intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
@@ -77,7 +76,7 @@ contains
 #endif
     ASSERT(associated(libvdwxc%libvdwxc_ptr))
     libvdwxc%functional = functional
-    libvdwxc%namespace => namespace
+
     !%Variable libvdwxcDebug
     !%Type logical
     !%Section Hamiltonian::XC
@@ -101,16 +100,20 @@ contains
   subroutine libvdwxc_print(this)
     type(libvdwxc_t), intent(in) :: this
     PUSH_SUB(libvdwxc_print)
+
 #ifdef HAVE_LIBVDWXC
     call vdwxc_print(this%libvdwxc_ptr)
 #endif
+
     POP_SUB(libvdwxc_print)
   end subroutine libvdwxc_print
 
   subroutine libvdwxc_write_info(this, iunit)
     type(libvdwxc_t), intent(in) :: this
     integer,          intent(in) :: iunit
+
     PUSH_SUB(libvdwxc_write_info)
+
     write(message(1), '(2x,a)') 'Correlation'
     if(this%functional == 1) then
       write(message(2), '(4x,a)') 'vdW-DF from libvdwxc'
@@ -122,6 +125,7 @@ contains
       write(message(2), '(4x,a)') 'unknown libvdwxc functional'
     end if
     call messages_info(2, iunit)
+
     POP_SUB(libvdwxc_write_info)
   end subroutine libvdwxc_write_info
 
@@ -218,11 +222,13 @@ contains
     end if
     call vdwxc_print(this%libvdwxc_ptr)
 #endif
+
     POP_SUB(libvdwxc_set_geometry)
   end subroutine libvdwxc_set_geometry
 
-  subroutine libvdwxc_calculate(this, rho, gradrho, dedd, dedgd)
+  subroutine libvdwxc_calculate(this, namespace, rho, gradrho, dedd, dedgd)
     type(libvdwxc_t),         intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
     FLOAT, dimension(:,:),    intent(inout) :: rho !!! data type
     FLOAT, dimension(:,:,:),  intent(in)    :: gradrho
     FLOAT, dimension(:,:),    intent(inout) :: dedd
@@ -382,7 +388,7 @@ contains
         integer :: ierr
 
         call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
-          fname, this%namespace, this%mesh, arr, unit_one, ierr)
+          fname, namespace, this%mesh, arr, unit_one, ierr)
       end subroutine libvdwxc_write_array
 
     end subroutine libvdwxc_calculate
@@ -390,9 +396,11 @@ contains
   subroutine libvdwxc_end(this)
     type(libvdwxc_t), intent(inout) :: this
     PUSH_SUB(libvdwxc_end)
+
 #ifdef HAVE_LIBVDWXC
     call vdwxc_finalize(this%libvdwxc_ptr)
 #endif
+
     POP_SUB(libvdwxc_end)
   end subroutine libvdwxc_end
 

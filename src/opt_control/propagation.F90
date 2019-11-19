@@ -198,7 +198,7 @@ contains
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
 
-    call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, 0, td%max_iter)
 
     if (present(prop)) then
       call oct_prop_dump_states(prop, 0, psi, gr, ierr)
@@ -228,12 +228,12 @@ contains
 
       ! update
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, time = istep*td%dt)
-      call energy_calc_total(sys%hm, sys%gr, psi)
+      call energy_calc_total(sys%namespace, sys%hm, sys%gr, psi)
 
       if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, psi)
 
       ! if td_target
-      call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, istep, td%max_iter)
 
       ! only write in final run
       if(write_iter_) then
@@ -423,7 +423,7 @@ contains
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
-      call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
+      call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
       if (ierr /= 0) then
@@ -1138,8 +1138,8 @@ contains
          call messages_fatal(1)
        end if
        call restart_close_dir(prop%restart_load)
-       prev_overlap = zstates_elec_mpdotp(gr%mesh, stored_st, stored_st)
-       overlap = zstates_elec_mpdotp(gr%mesh, stored_st, psi)
+       prev_overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, stored_st)
+       overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, psi)
        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
           write(message(1), '(a,es13.4)') &
             "Forward-backward propagation produced an error of", abs(overlap-prev_overlap)

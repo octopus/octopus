@@ -683,7 +683,7 @@ contains
     call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
-      call energy_calc_eigenvalues(hm, ks%gr%der, st)
+      call energy_calc_eigenvalues(namespace, hm, ks%gr%der, st)
     end if
 
     POP_SUB(v_ks_calc)
@@ -743,7 +743,7 @@ contains
         if(st%parallel_in_states) then
           call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
         end if
-        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
+        call berry_potential(st, namespace, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
         ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
@@ -754,7 +754,7 @@ contains
     if(ks%frozen_hxc) then      
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
       end if
 
       POP_SUB(v_ks_calc_start)
@@ -789,7 +789,7 @@ contains
 
     if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
     nullify(ks%calc%hf_st) 
@@ -1069,9 +1069,9 @@ contains
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         if(states_are_real(st)) then
-          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
         else
-          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
           ks%calc%energy%int_dft_u   = real(ctmp)
         end if
 

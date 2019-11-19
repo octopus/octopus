@@ -388,7 +388,7 @@ contains
         call sternheimer_init(sh_mo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
       else
         call sternheimer_init(sh_mo, sys, complex_response, set_last_occ_response = em_vars%occ_response) 
-        call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
+        call sternheimer_build_kxc(sh_mo, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
       end if
       call messages_experimental("Magneto-optical response")
       allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)

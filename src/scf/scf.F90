@@ -660,7 +660,7 @@ contains
       
     end select
 
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
@@ -718,7 +718,7 @@ contains
           ks%frozen_hxc = .true.
           do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, iter)
+            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
 
             call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
@@ -738,13 +738,13 @@ contains
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
         end if
       end if
 
       ! occupations
-      call states_elec_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call states_elec_fermi(st, namespace, gr%mesh)
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
@@ -771,7 +771,7 @@ contains
       evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call energy_calc_total(hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
@@ -1014,11 +1014,11 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo) 
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
     
     if(scf%max_iter == 0) then
-      call energy_calc_eigenvalues(hm, gr%der, st)
-      call states_elec_fermi(st, gr%mesh)
+      call energy_calc_eigenvalues(namespace, hm, gr%der, st)
+      call states_elec_fermi(st, namespace, gr%mesh)
       call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
 
@@ -1180,7 +1180,7 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

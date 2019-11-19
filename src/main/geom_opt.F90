@@ -581,7 +581,7 @@ contains
     call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call energy_calc_total(g_opt%syst%namespace, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &

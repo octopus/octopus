@@ -302,14 +302,14 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
+        call dstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
+        call zstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo
@@ -327,10 +327,12 @@ contains
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization", &
-        namespace=namespace)
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization", &
-        namespace=namespace)
+      if(st%parallel_in_states) then
+        call messages_not_implemented("OutputMatrixElements=two_body with states parallelization", namespace=namespace)
+      end if
+      if(st%d%kpt%parallel) then
+        call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization", namespace=namespace)
+      end if
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
@@ -343,7 +345,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
+          lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -353,10 +356,10 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
         else
-          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint)
         end if
 

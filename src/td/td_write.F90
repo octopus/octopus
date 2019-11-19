@@ -823,11 +823,11 @@ contains
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
 
     if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, gr%sb, st, &
+      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, namespace, gr%mesh, gr%sb, st, &
         writ, dt, iter)
 
     if (writ%out(OUT_ACC)%write) then
-      call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
+      call td_write_acc(writ%out(OUT_ACC)%handle, namespace, gr, geo, st, hm, dt, iter)
     end if
       
     if(writ%out(OUT_VEL)%write) &
@@ -1522,8 +1522,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, sb, st, writ, dt, iter)
+  subroutine td_write_populations(out_populations, namespace, mesh, sb, st, writ, dt, iter)
     type(c_ptr),            intent(inout) :: out_populations
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),           intent(in)    :: mesh
     type(simul_box_t),      intent(in)    :: sb
     type(states_elec_t),    intent(inout) :: st
@@ -1541,19 +1542,19 @@ contains
     PUSH_SUB(td_write_populations)
 
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
-    call zstates_elec_matrix(mesh, writ%gs_st, st, dotprodmatrix)
+    call zstates_elec_matrix(writ%gs_st, st, mesh, dotprodmatrix)
 
 
     !See comment in zstates_elec_mpdotp
     ASSERT(.not. simul_box_is_periodic(sb))
 
     ! all processors calculate the projection
-    gsp = zstates_elec_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
+    gsp = zstates_elec_mpdotp(namespace, mesh, writ%gs_st, st, dotprodmatrix)
 
     if(writ%n_excited_states > 0) then
       SAFE_ALLOCATE(excited_state_p(1:writ%n_excited_states))
       do ist = 1, writ%n_excited_states
-        excited_state_p(ist) = zstates_elec_mpdotp(mesh, writ%excited_st(ist), st, dotprodmatrix)
+        excited_state_p(ist) = zstates_elec_mpdotp(namespace, mesh, writ%excited_st(ist), st, dotprodmatrix)
       end do
     end if
 
@@ -1601,8 +1602,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
+  subroutine td_write_acc(out_acc, namespace, gr, geo, st, hm, dt, iter)
     type(c_ptr),              intent(inout) :: out_acc
+    type(namespace_t),       intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -1637,7 +1639,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
+    call td_calc_tacc(namespace, gr, geo, st, hm, acc, dt*iter)
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_acc)
@@ -2379,7 +2381,7 @@ contains
     Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
       ikpt = states_elec_dim_get_kpoint_index(st%d, ik)
-      call zstates_elec_calc_projections(gr%mesh, st, gs_st, ik, projections, gs_nst)
+      call zstates_elec_calc_projections(st, gs_st, namespace, gr%mesh, ik, projections, gs_nst)
       do ist = 1, gs_nst
         weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 
         do uist = st%st_start, st%st_end
@@ -2679,7 +2681,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(hm, gr%mesh, st, hm_st)
+      call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

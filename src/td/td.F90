@@ -700,7 +700,7 @@ contains
       ! Initialize the occupation matrices and U for LDA+U
       ! This must be called before parsing TDFreezeOccupations and TDFreezeU
       ! in order that the code does properly the initialization.
-      call lda_u_update_occ_matrices(sys%hm%lda_u, gr%mesh, st, sys%hm%hm_base, sys%hm%energy )
+      call lda_u_update_occ_matrices(sys%hm%lda_u, sys%namespace, gr%mesh, st, sys%hm%hm_base, sys%hm%energy)
 
       if(freeze_orbitals > 0) then
         if(fromScratch) then
@@ -770,8 +770,8 @@ contains
 #endif
       call hamiltonian_elec_span(sys%hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_elec_fermi(st, gr%mesh)
-      call energy_calc_total(sys%hm, gr, st)
+      call states_elec_fermi(st, sys%namespace, gr%mesh)
+      call energy_calc_total(sys%namespace, sys%hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
       !%Type logical
@@ -970,9 +970,9 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           if(states_are_real(st)) then
-            call states_elec_rotate(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
+            call states_elec_rotate(stin, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
           else
-            call states_elec_rotate(gr%mesh, stin, rotation_matrix, iqn)
+            call states_elec_rotate(stin, namespace, gr%mesh, rotation_matrix, iqn)
           end if
 
           do ist = st%st_start, st%st_end 

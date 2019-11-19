@@ -18,8 +18,9 @@
 
 ! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag)(this, mesh, st, hm, ik, eigenval, diff)
+subroutine X(subspace_diag)(this, namespace, mesh, st, hm, ik, eigenval, diff)
   type(subspace_t),            intent(in)    :: this
+  type(namespace_t),           intent(in)    :: namespace
   type(mesh_t),                intent(in)    :: mesh
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
@@ -43,7 +44,7 @@ subroutine X(subspace_diag)(this, mesh, st, hm, ik, eigenval, diff)
       call states_elec_get_state(st, mesh, ist, ik, psi(:, :, ist))
     end do
 
-    call X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
+    call X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi, diff)
 
     do ist = st%st_start, st%st_end
       call states_elec_set_state(st, mesh, ist, ik, psi(:, :, ist))
@@ -52,7 +53,7 @@ subroutine X(subspace_diag)(this, mesh, st, hm, ik, eigenval, diff)
     SAFE_DEALLOCATE_A(psi)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
-    call X(subspace_diag_standard)(mesh, st, hm, ik, eigenval, diff)
+    call X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff)
     
   case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing
@@ -72,7 +73,8 @@ end subroutine X(subspace_diag)
 
 ! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_standard)(mesh, st, hm, ik, eigenval, diff)
+subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff)
+  type(namespace_t),           intent(in)    :: namespace
   type(mesh_t),                intent(in)    :: mesh
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
@@ -89,7 +91,7 @@ subroutine X(subspace_diag_standard)(mesh, st, hm, ik, eigenval, diff)
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
   
-  call X(subspace_diag_hamiltonian)(mesh, st, hm, ik, hmss)
+  call X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   
   ! Diagonalize the Hamiltonian in the subspace.
   ! only half of hmss has the matrix, but this is what Lapack needs
@@ -104,7 +106,7 @@ subroutine X(subspace_diag_standard)(mesh, st, hm, ik, eigenval, diff)
 
   ! Calculate the new eigenfunctions as a linear combination of the
   ! old ones.
-  call states_elec_rotate(mesh, st, hmss, ik)
+  call states_elec_rotate(st, namespace, mesh, hmss, ik)
   
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
@@ -123,7 +125,7 @@ subroutine X(subspace_diag_standard)(mesh, st, hm, ik, eigenval, diff)
       
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
@@ -152,7 +154,8 @@ end subroutine X(subspace_diag_standard)
 !> This routine diagonalises the Hamiltonian in the subspace defined by
 !! the states; this version is aware of parallelization in states but
 !! consumes more memory.
-subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
+subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi, diff)
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -185,14 +188,14 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   SAFE_ALLOCATE(hpsi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
   
-  call states_elec_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
+  call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
 
   call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
     st%d%dim*mesh%np_part, info)
 
   if(info /= 0) then
     write(message(1), '(a,i6)') "subspace diagonalization descinit for psi failed with error code ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   ! select the blocksize, we use the division used for state
@@ -209,7 +212,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1), '(a,i6)') "subspace diagonalization descinit for Hamiltonian failed with error code ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   ! calculate |hpsi> = H |psi>
@@ -219,7 +222,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
     call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
     call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
     
-    call X(hamiltonian_elec_apply_batch)(hm, mesh, psib, hpsib, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik)
     
     call batch_end(psib)
     call batch_end(hpsib)
@@ -251,7 +254,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 #ifdef HAVE_ELPA
   if (elpa_init(20170403) /= elpa_ok) then
     write(message(1),'(a)') "ELPA API version not supported"
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   endif
   elpa => elpa_allocate()
 
@@ -277,7 +280,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
   if (info /= elpa_ok) then
     write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
       elpa_strerr(info)
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   call elpa_deallocate(elpa)
@@ -294,7 +297,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev workspace query failure, error code = ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   lwork = nint(abs(rttmp))
@@ -309,7 +312,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pzheev call failure, error code = ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   SAFE_DEALLOCATE_A(work)
@@ -322,7 +325,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   lwork = nint(abs(rttmp))
@@ -333,7 +336,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
 
   if(info /= 0) then
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev call failure, error code = ", info
-    call messages_fatal(1, namespace=st%namespace)
+    call messages_fatal(1, namespace=namespace)
   end if
   
   SAFE_DEALLOCATE_A(work)
@@ -368,7 +371,7 @@ subroutine X(subspace_diag_scalapack)(mesh, st, hm, ik, eigenval, psi, diff)
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_elec_apply)(hm, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_elec_apply)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if
@@ -384,7 +387,8 @@ end subroutine X(subspace_diag_scalapack)
 ! ------------------------------------------------------
 
 !> This routine diagonalises the Hamiltonian in the subspace defined by the states.
-subroutine X(subspace_diag_hamiltonian)(mesh, st, hm, ik, hmss)
+subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
+  type(namespace_t),           intent(in)    :: namespace
   type(mesh_t),                intent(in)    :: mesh
   type(states_elec_t), target, intent(inout) :: st
   type(hamiltonian_elec_t),    intent(in)    :: hm
@@ -404,7 +408,7 @@ subroutine X(subspace_diag_hamiltonian)(mesh, st, hm, ik, hmss)
   
   do ib = st%group%block_start, st%group%block_end
     call batch_copy(st%group%psib(ib, ik), hpsib(ib))
-    call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
   if(st%are_packed() .and. accel_is_enabled()) then

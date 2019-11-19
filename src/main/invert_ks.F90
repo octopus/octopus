@@ -91,8 +91,7 @@ contains
     end do
 
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
-    call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
-                         sys%ks%ks_inversion%aux_st, sys%hm, 1)
+    call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
     
     write(message(1),'(a)') "Calculating KS potential"
@@ -117,8 +116,7 @@ contains
     
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     
-    call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
-         sys%ks%ks_inversion%aux_st, sys%hm, 1)
+    call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
     
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
 

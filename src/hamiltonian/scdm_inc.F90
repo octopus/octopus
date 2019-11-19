@@ -464,7 +464,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
 
   if(.not.do_serial) then
     
-    call states_elec_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
+    call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
     
     ! allocate local part of transpose state matrix
     SAFE_ALLOCATE(KSt(1:lnst,1:total_np))

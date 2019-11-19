@@ -146,12 +146,13 @@ end subroutine X(lda_u_apply)
 ! ---------------------------------------------------------
 !> This routine computes the values of the occupation matrices
 ! ---------------------------------------------------------
-subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
-  type(lda_u_t), intent(inout)         :: this
-  type(mesh_t),     intent(in)         :: mesh
-  type(states_elec_t),  intent(in)     :: st
-  FLOAT, intent(inout)                 :: lda_u_energy
-  CMPLX, pointer, optional             :: phase(:,:) 
+subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase)
+  type(lda_u_t),       intent(inout) :: this
+  type(namespace_t),   intent(in)    :: namespace
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  FLOAT,               intent(inout) :: lda_u_energy
+  CMPLX,     optional, pointer       :: phase(:,:) 
 
   integer :: ios, im, ik, ist, ispin, norbs, idim, inn, im2, ios2
   R_TYPE, allocatable :: psi(:,:) 
@@ -383,12 +384,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
-          call X(compute_ACBNO_U)(this, ios, st%namespace)
+          call X(compute_ACBNO_U)(this, ios, namespace)
           if(this%intersite) call X(compute_ACBNO_V)(this, ios)
         else
-          call compute_ACBNO_U_noncollinear(this, ios, st%namespace)
+          call compute_ACBNO_U_noncollinear(this, ios, namespace)
           if(this%intersite) then
-            call messages_not_implemented("Intersite interaction with spinors orbitals.", namespace=st%namespace)
+            call messages_not_implemented("Intersite interaction with spinors orbitals.", namespace=namespace)
           end if
         end if
       end do
@@ -1539,8 +1540,9 @@ end subroutine X(compute_periodic_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
- subroutine X(lda_u_force)(this, mesh, st, iq, ndim, psib, grad_psib, force, phase)
+ subroutine X(lda_u_force)(this, namespace, mesh, st, iq, ndim, psib, grad_psib, force, phase)
    type(lda_u_t),             intent(in)    :: this
+   type(namespace_t),         intent(in)    :: namespace
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
    integer,                   intent(in)    :: iq, ndim
@@ -1561,7 +1563,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%basisfromstates) return
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting with forces", namespace=st%namespace)
+    call messages_not_implemented("AMF double couting with forces", namespace=namespace)
    end if
 
    PUSH_SUB(X(lda_u_force))
@@ -1569,7 +1571,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    !TODO: Implement
    if(this%intersite) then
      message(1) = "Intersite V forces are not implemented."
-     call messages_warning(1, namespace=st%namespace)
+     call messages_warning(1, namespace=namespace)
    end if
 
    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))

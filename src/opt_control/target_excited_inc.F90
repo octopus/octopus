@@ -102,14 +102,15 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_excited(tg, gr, psi) result(j1)
-    type(target_t), intent(in) :: tg
-    type(grid_t),   intent(in) :: gr
+  FLOAT function target_j1_excited(tg, namespace, gr, psi) result(j1)
+    type(target_t),      intent(in) :: tg
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(in) :: gr
     type(states_elec_t), intent(in) :: psi
 
     PUSH_SUB(target_j1_excited)
 
-    j1 = abs(zstates_elec_mpdotp(gr%mesh, tg%est, psi))**2
+    j1 = abs(zstates_elec_mpdotp(namespace, gr%mesh, tg%est, psi))**2
 
     POP_SUB(target_j1_excited)
   end function target_j1_excited
@@ -117,9 +118,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_excited(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(in)    :: tg
-    type(grid_t),      intent(in)    :: gr
+  subroutine target_chi_excited(tg, namespace, gr, psi_in, chi_out)
+    type(target_t),         intent(in)    :: tg
+    type(namespace_t),      intent(in)    :: namespace
+    type(grid_t),           intent(in)    :: gr
     type(states_elec_t),    intent(in)    :: psi_in
     type(states_elec_t),    intent(inout) :: chi_out
 
@@ -143,13 +145,13 @@
     SAFE_ALLOCATE(mk(1:gr%mesh%np_part, 1:psi_in%d%dim))
     SAFE_ALLOCATE(lambda(1:n_pairs, 1:n_pairs))
 
-    call zstates_elec_matrix(gr%mesh, tg%est%st, psi_in, mat)
+    call zstates_elec_matrix(tg%est%st, psi_in, gr%mesh, mat)
 
     do ia = 1, n_pairs
       cI(ia) = tg%est%weight(ia)
       call zstates_elec_matrix_swap(mat, tg%est%pair(ia))
       mm(1:nst, 1:nst, 1:kpoints, ia) = mat(1:nst, 1:kpoints, 1:kpoints)
-      dI(ia) = zstates_elec_mpdotp(gr%mesh, tg%est%st, psi_in, mat)
+      dI(ia) = zstates_elec_mpdotp(namespace, gr%mesh, tg%est%st, psi_in, mat)
       if(abs(dI(ia)) > CNST(1.0e-12)) then
         do ik = 1, kpoints
           zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
