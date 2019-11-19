@@ -555,7 +555,7 @@ contains
     end do
 
     if (oct_exchange_enabled(hm%oct_exchange)) then
-      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver, hm%namespace)
+      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver, namespace)
     end if
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
@@ -1215,7 +1215,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, hm_p%namespace)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, namespace_p)
     end if
 
     j = 1
@@ -1310,7 +1310,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, hm_p%namespace)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, namespace_p)
     end if
 
     j = 1
