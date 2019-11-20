@@ -432,9 +432,9 @@ contains
     PUSH_SUB(build_rs_state)
 
     if (present(ep_field) .and. present(mu_field) .and. present(np)) then
-      do ip=1, np
-        rs_state(ip,:) = sqrt(ep_field(ip)/M_TWO) * e_field(ip,:) & 
-                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip,:)
+      do ip = 1, np
+        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
+                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
       end do
     else
       rs_state(:,:) = sqrt(P_ep/M_TWO) * e_field(:,:) + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(:,:)
@@ -490,8 +490,8 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-        rs_current_state(ip,:) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip,:)
+      do ip = 1, np
+        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
       end do
     else
       rs_current_state = M_ONE/sqrt(M_TWO*P_ep) * current_state
@@ -548,16 +548,17 @@ contains
     PUSH_SUB(get_electric_field_state)
 
     SAFE_ALLOCATE(rs_aux(1:np, 1:3))
-    do ii=1,3
-       call batch_get_state(rsb, np, ii, rs_aux(:,ii))
+    
+    do ii = 1, 3
+       call batch_get_state(rsb, np, ii, rs_aux(:, ii))
     end do
     
     if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-         electric_field(ip,:) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip,:))
+      do ip = 1, np
+         electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
       end do
     else
-      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rs_aux(:,:))
+      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rs_aux(:,:), REAL_PRECISION)
    end if
 
     SAFE_DEALLOCATE_A(rs_aux)
@@ -581,13 +582,14 @@ contains
     PUSH_SUB(get_magnetic_field_state)
 
     SAFE_ALLOCATE(rs_aux(1:np, 1:3))
-    do ii=1,3
-       call batch_get_state(rsb, np, ii, rs_aux(:,ii))
+
+    do ii = 1, 3
+       call batch_get_state(rsb, np, ii, rs_aux(:, ii))
     end do
 
     if (present(mu_field) .and. present(np)) then
-      do ip=1, np
-        magnetic_field(ip,:) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip,:))
+      do ipi = 1, np
+        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
       end do
     else
       magnetic_field(:,:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(:,:))
@@ -609,9 +611,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element)
+      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element, REAL_PRECISION)
     else
-      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element)
+      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element, REAL_PRECISION)
     end if
 
   end subroutine get_current_element
@@ -626,9 +628,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:))
+      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:), REAL_PRECISION)
     else
-      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:))
+      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:), REAL_PRECISION)
     end if
 
   end subroutine get_current_vector
@@ -646,11 +648,11 @@ contains
     PUSH_SUB(get_current_state)
 
     if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-        current_field(ip,:) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip,:))
+      do ip = 1, np
+        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip, :), REAL_PRECISION)
       end do
     else
-      current_field(:,:) = sqrt(M_TWO*P_ep) * real(rs_current_field(:,:))
+      current_field(:,:) = sqrt(M_TWO*P_ep) * real(rs_current_field(:,:), REAL_PRECISION)
     end if
 
     POP_SUB(get_current_state)
@@ -676,7 +678,7 @@ contains
 
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
-    do ip=1, st%selected_points_number
+    do ip = 1, st%selected_points_number
       call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
 !      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
       if (mesh%parallel_in_domains) then
@@ -686,9 +688,9 @@ contains
         call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
-        ztmp(:) = rs_state(pos_index_global,:)
+        ztmp(:) = rs_state(pos_index_global, :)
       end if
-      rs_state_point(:,ip) = ztmp(:)
+      rs_state_point(:, ip) = ztmp(:)
     end do
 
     SAFE_DEALLOCATE_A(ztmp_global)
@@ -700,7 +702,7 @@ contains
   !----------------------------------------------------------
   subroutine get_divergence_field(gr, field, field_div, charge_density)
     type(grid_t),    intent(in)    :: gr
-    FLOAT,           intent(inout) :: field(:,:)
+    FLOAT,           intent(in)    :: field(:,:)
     FLOAT,           intent(inout) :: field_div(:)
     logical,         intent(in)    :: charge_density
 
@@ -727,28 +729,26 @@ contains
     FLOAT,          optional, intent(in)    :: mu_field(:)
 
     integer            :: ip, ii
-    FLOAT              :: tmp_1(3), tmp_2(3)
-    FLOAT, allocatable :: e_field(:,:), b_field(:,:)
     CMPLX, allocatable :: rs_aux(:,:)
 
     PUSH_SUB(get_poynting_vector)
 
     SAFE_ALLOCATE(rs_aux(1:gr%mesh%np, 1:3))
-    do ii=1,3
-       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:,ii))
+    do ii = 1, 3
+       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
     end do
 
     if (present(ep_field) .and. present(mu_field)) then
-      do ip=1, gr%mesh%np
-        poynting_vector(ip,:) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
+      do ip = 1, gr%mesh%np
+        poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
                               * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_aux(ip,:)),rs_sign*aimag(rs_aux(ip,:)))
+                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     else
-      do ip=1, gr%mesh%np
+      do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
                               * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_aux(ip,:)),rs_sign*aimag(rs_aux(ip,:)))
+                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     end if
 
@@ -764,14 +764,13 @@ contains
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
 
     integer            :: ip
-    FLOAT              :: tmp_1(3), tmp_2(3)
-    FLOAT, allocatable :: e_field(:,:), b_field(:,:)
 
     PUSH_SUB(get_poynting_vector_plane_waves)
 
-    do ip=1, gr%mesh%np
-      poynting_vector(ip,:) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) * &
-               dcross_product(real(st%rs_state_plane_waves(ip,:)),rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
+    do ip = 1, gr%mesh%np
+      poynting_vector(ip, :) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) &
+               & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
+               & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
 
     POP_SUB(get_poynting_vector_plane_waves)
