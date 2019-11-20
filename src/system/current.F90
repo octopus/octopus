@@ -1,4 +1,4 @@
-!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2008-2019 X. Andrade, F. Bonafe, R. Jestaedt, H. Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -764,12 +764,11 @@ contains
     FLOAT,           intent(in)    :: time
     CMPLX, optional, intent(inout) :: rs_current_density_ext(:,:)
 
-    integer :: ip, idim
     FLOAT, allocatable :: current(:,:,:)
 
     PUSH_SUB(get_rs_density_ext)
 
-    SAFE_ALLOCATE(current(1:mesh%np_part, 1:mesh%sb%dim,1))  !< The 1 in the last column is a dummy to use batch routines
+    SAFE_ALLOCATE(current(1:mesh%np_part, 1:mesh%sb%dim, 1))  !< The 1 in the last column is a dummy to use batch routines
 
     call external_current_calculation(st, mesh, time, current(:,:,1))
     call build_rs_current_state(current(:,:,1), rs_current_density_ext(:,:), st%ep(:), mesh%np_part)
@@ -822,20 +821,19 @@ contains
 
       st%external_current_number = nlines
       SAFE_ALLOCATE(st%external_current_modus(nlines))
-      SAFE_ALLOCATE(st%external_current_string(MAX_DIM,nlines))
-      SAFE_ALLOCATE(st%external_current_amplitude(1:mesh%np,MAX_DIM,nlines))
+      SAFE_ALLOCATE(st%external_current_string(MAX_DIM, nlines))
+      SAFE_ALLOCATE(st%external_current_amplitude(1:mesh%np, MAX_DIM, nlines))
       SAFE_ALLOCATE(st%external_current_td_function(nlines))
       SAFE_ALLOCATE(st%external_current_omega(nlines))
       SAFE_ALLOCATE(st%external_current_td_phase(nlines))
 
       ! read all lines
       do il = 1, nlines
-        ! Check that number of columns is four or seven.
+        ! Check that number of columns is four, five, six or seven.
         ncols = parse_block_cols(blk, il - 1)
-        if((ncols  /=  4) .and. (ncols /= 6) .and. (ncols /= 7) .and. (ncols /= 5)) then
-      !  if (ncols /= 3) then
+        if((ncols  /=  4) .and. (ncols /= 5) .and. (ncols /= 6) .and. (ncols /= 7)) then
           message(1) = 'Each line in the MaxwellExternalCurrent block must have'
-          message(2) = 'four or seven columns.'
+          message(2) = 'four, five, six or or seven columns.'
           call messages_fatal(2)
         end if
 
@@ -844,16 +842,15 @@ contains
         if (st%external_current_modus(il) &
             == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idim=1, st%d%dim
+          do idimi = 1, st%d%dim
             call parse_block_string( blk, il - 1, idim, st%external_current_string(idim,il))
             call conv_to_C_string(st%external_current_string(idim,il))
           end do
-        else if (st%external_current_modus(il) &
-                 == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION)then
-          do ip=1, mesh%np
-            xx(:) = mesh%x(ip,:)
-            rr    = sqrt(sum(xx(:)**2))
-            do idim=1, st%d%dim
+        else if (st%external_current_modus(il)&
+                 & == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION)then
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords = xx)
+            do idim = 1, 3
               call parse_block_string( blk, il - 1, idim, st%external_current_string(idim,il))
               call conv_to_C_string(st%external_current_string(idim,il))
               call parse_expression(j_vector(idim), dummy(idim), st%d%dim, xx, rr, M_ZERO, &
@@ -898,29 +895,32 @@ contains
     PUSH_SUB(external_current_calculation)
 
     current(:,:) = M_ZERO
-    do jn=1, st%external_current_number
+    do jn = 1, st%external_current_number
        if (st%external_current_modus(jn) &
             &== OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
-        do ip=1, mesh%np
-          do idim=1, st%d%dim
-            xx(:) = mesh%x(ip,:)
-            rr    = sqrt(sum(xx(:)**2))
+       do ip = 1, mesh%np
+         call mesh_r(mesh, ip, rr, coords = xx)
+         do idim = 1, 3
+            !xx(:) = mesh%x(ip,:)
+            !rr    = sqrt(sum(xx(:)**2))
             tt    = time
             call parse_expression(j_vector(idim), dummy(idim), st%d%dim, xx, rr, tt, &
                  & trim(st%external_current_string(idim,jn)))
             j_vector(idim) = units_to_atomic(units_inp%energy/(units_inp%length**2),j_vector(idim))
           end do
-          current(ip,:) = current(ip,:) + j_vector(:)
+          call blas_axpy(mesh%sb%dim, M_ONE, current(ip, :), 1, jvector, 1)         
+          !current(ip,:) = current(ip,:) + j_vector(:)
         end do
      else if(st%external_current_modus(jn)&
           & == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
-        do ip=1, mesh%np
+        do ip = 1, mesh%np
            exp_arg = st%external_current_omega(jn) * time &
                  & + tdf(st%external_current_td_phase(jn),time)
            amp(:)  = st%external_current_amplitude(ip,:,jn) &
                  & * tdf(st%external_current_td_function(jn),time) 
           j_vector(:) = real(amp(:) * exp(-M_zI *(exp_arg)))
-          current(ip,:) = current(ip,:) + j_vector(:)
+          call blas_axpy(mesh%sb%dim, M_ONE, current(ip, :), 1, jvector, 1)
+          !current(ip,:) = current(ip,:) + j_vector(:)
         end do
       end if
     end do

@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 F. Bonafe, R. Jestaedt, H. Appel
+!! Copyright (C) 2019 F. Bonafe, R. Jestaedt, H. Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
  
  ! ---------------------------------------------------------
   subroutine output_mxll_init(outp, namespace, sb)
-    type(output_t),       intent(out) :: outp
-    type(namespace_t), target, intent(in)    :: namespace
-    type(simul_box_t),    intent(in)  :: sb
+    type(output_t),            intent(out) :: outp
+    type(namespace_t), target, intent(in)  :: namespace
+    type(simul_box_t),         intent(in)  :: sb
 
     PUSH_SUB(output_mxll_init)
 
@@ -207,10 +207,9 @@
     call output_coupling_potentials(hm_elec, gr_elec, geo, dir, outp)
     call output_current_density(st_mxll, gr_mxll, hm_mxll, st_elec, gr_elec, hm_elec, geo, dir, time, outp)
     call output_external_current_density(st_mxll, gr_mxll, hm_mxll, geo, dir, time, outp)
-    call output_charge_density_mxll(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec=st_elec, gr_elec=gr_elec, hm_elec=hm_elec)
+    call output_charge_density_mxll(st_mxll, gr_mxll, hm_mxll, geo, dir, outp)
     call output_medium_variables_electric(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
     call output_medium_variables_magnetic(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
-    !call output_test_output(st_mxll, gr_mxll, geo, dir, outp)
 
     POP_SUB(output_mxll)
   end subroutine output_mxll
@@ -243,7 +242,6 @@
     call output_vector_potential(st, gr, hm, geo, dir, outp)
     call output_external_current_density(st, gr, hm, geo, dir, time, outp)
     call output_charge_density_mxll(st, gr, hm, geo, dir, outp)
-    !call output_test_output(st, gr, geo, dir, outp)
 
     POP_SUB(output_mxll_free)
   end subroutine output_mxll_free
@@ -251,12 +249,12 @@
 
   ! ---------------------------------------------------------
   subroutine output_states_mxll(st, gr, hm, geo, dir, outp)
-    type(states_mxll_t),         intent(inout) :: st
-    type(grid_t),           intent(inout) :: gr
-    type(hamiltonian_mxll_t),    intent(in)    :: hm
-    type(geometry_t),       intent(in)    :: geo
-    character(len=*),       intent(in)    :: dir
-    type(output_t),         intent(in)    :: outp
+    type(states_mxll_t),      intent(inout) :: st
+    type(grid_t),             intent(inout) :: gr
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(geometry_t),         intent(in)    :: geo
+    character(len=*),         intent(in)    :: dir
+    type(output_t),           intent(in)    :: outp
 
     integer :: idim, ierr
     character(len=MAX_PATH_LEN) :: fname
@@ -268,47 +266,26 @@
     ! Electric field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
       fn_unit = units_out%energy/units_out%length
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:st%d%dim))
-      !if (.not. hm%ma_mx_coupling) then
-      !  call get_electric_field_state(st%rs_transb+st%rs_longb, dtmp, st%ep, gr%mesh%np_part)
-      !else
-        call get_electric_field_state(st%rsb, dtmp, st%ep, gr%mesh%np_part)
-      !end if
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
+      call get_electric_field_state(st%rsb, dtmp, st%ep, gr%mesh%np)
       do idim = 1, st%d%dim
          write(fname, '(2a)') 'e_field-', index2axis(idim)
          call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
               & ierr, geo = geo)
       end do
-      !if (hm%plane_waves) then
-      !  call get_electric_field_state(st%rs_state_plane_waves, dtmp, st%ep, gr%mesh%np_part)
-      !  do idim = 1, st%d%dim
-      !    write(fname, '(2a)') 'free_e_field-', index2axis(idim)
-      !    call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim),&
-      !         & fn_unit, ierr, geo = geo)
-      !  end do
-      !end if
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
     ! Magnetic field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one/units_out%length**2
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:st%d%dim))
-      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp, st%mu, gr%mesh%np_part)
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
+      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp, st%mu, gr%mesh%np)
       do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
              & ierr, geo = geo)
       end do
-      !if (hm%plane_waves) then
-      !  call get_magnetic_field_state(st%rs_state_plane_waves, st%rs_sign, dtmp, st%mu, &
-      !                                        gr%mesh%np_part)
-      !  do idim = 1, st%d%dim
-      !    write(fname, '(2a)') 'free_e_field-', index2axis(idim)
-      !    call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim),&
-      !         & fn_unit, ierr, geo = geo)
-      !  end do
-      !end if
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
@@ -318,7 +295,7 @@
 
   !----------------------------------------------------------
   subroutine output_energy_density_mxll(hm, gr, geo, dir, outp)   !< have to set unit output correctly
-    type(hamiltonian_mxll_t),       intent(in)    :: hm
+    type(hamiltonian_mxll_t),  intent(in)    :: hm
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
     character(len=*),          intent(in)    :: dir
@@ -333,10 +310,6 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY) /= 0) then
       call dio_function_output(outp%how, dir, "maxwell_energy_density", outp%namespace, gr%mesh, & 
                                hm%energy_density(:), units_out%energy/units_out%length**3, ierr, geo = geo)
-      !if (hm%plane_waves) then
-      !call dio_function_output(outp%how, dir, "free_maxwell_energy_density", outp%namespace, gr%mesh, & 
-      !                         hm%energy_density_plane_waves(:), units_out%energy/units_out%length**3, ierr, geo = geo)
-      !end if
     end if
 
     POP_SUB(output_energy_density_mxll)
@@ -345,12 +318,12 @@
 
   !----------------------------------------------------------
   subroutine output_poynting_vector(st, gr, hm, geo, dir, outp)
-    type(states_mxll_t),         intent(inout) :: st
-    type(grid_t),           intent(inout) :: gr
-    type(hamiltonian_mxll_t),    intent(in)    :: hm
-    type(geometry_t),       intent(in)    :: geo
-    character(len=*),       intent(in)    :: dir
-    type(output_t),         intent(in)    :: outp
+    type(states_mxll_t),       intent(inout) :: st
+    type(grid_t),              intent(inout) :: gr
+    type(hamiltonian_mxll_t),  intent(in)    :: hm
+    type(geometry_t),          intent(in)    :: geo
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
 
     integer :: idim, ierr
     character(len=MAX_PATH_LEN) :: fname
@@ -369,14 +342,6 @@
          call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim),&
               & fn_unit, ierr, geo = geo)
       end do
-      !if (hm%plane_waves) then
-      !  call get_poynting_vector_plane_waves(gr, st, st%rs_sign, dtmp)
-      !  do idim = 1, st%d%dim
-      !    write(fname, '(2a)') 'free_poynting_vector-', index2axis(idim)
-      !    call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim),&
-      !         & fn_unit, ierr, geo = geo)
-      !  end do
-      !end if
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
@@ -386,7 +351,7 @@
 
   !----------------------------------------------------------
   subroutine output_transverse_rs_state(st, gr, geo, dir, outp)    !< have to set unit output correctly
-    type(states_mxll_t),            intent(in)    :: st
+    type(states_mxll_t),       intent(in)    :: st
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
     character(len=*),          intent(in)    :: dir
@@ -477,7 +442,7 @@
 
   !----------------------------------------------------------
   subroutine output_divergence_rs_state(st, gr, geo, dir, outp)    !< have to set unit output correctly
-    type(states_mxll_t),            intent(in)    :: st
+    type(states_mxll_t),       intent(in)    :: st
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
     character(len=*),          intent(in)    :: dir
@@ -493,7 +458,7 @@
     ! divergence of the electric field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       call get_electric_field_state(st%rsb, dtmp_1, st%mu(1:gr%mesh%np_part), gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
@@ -506,9 +471,9 @@
     ! divergence of the magnetic field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
-     SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%d%dim))
+     SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
      SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp_1, st%mu(1:gr%mesh%np), gr%mesh%np)
+      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp_1, st%mu(1:gr%mesh%np_part), gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "b_field_div", outp%namespace, gr%mesh, dtmp_2,&
            & fn_unit, ierr, geo=geo)
@@ -532,21 +497,17 @@
     character(len=MAX_PATH_LEN) :: fname
     integer :: idim, ierr
     type(unit_t) :: fn_unit
-    FLOAT, allocatable :: dtmp(:)
 
     PUSH_SUB(output_vector_potential)
 
     ! Maxwell vector potential
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
        do idim = 1, gr%sb%dim
          write(fname, '(2a)') 'vector_potential-', index2axis(idim)
-         dtmp(1:gr%mesh%np) = hm%vector_potential(1:gr%mesh%np,idim)
-         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp, fn_unit, ierr,&
-              & geo = geo)
+         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh,&
+              & hm%vector_potential(1:gr%mesh%np,idim)dtmp, fn_unit, ierr, geo = geo)
        end do
-      SAFE_DEALLOCATE_A(dtmp)
     end if
 
     POP_SUB(output_vector_potential)
@@ -555,7 +516,7 @@
 
   !------------------------------------------------------------
   subroutine output_coupling_potentials(hm, gr, geo, dir, outp)    !< have to set unit output correctly
-    type(hamiltonian_elec_t),       intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
     character(len=*),          intent(in)    :: dir
@@ -621,10 +582,10 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__EXTERNAL_CURRENT) /= 0) then
       if (hm%current_density_ext_flag) then
         fn_unit = (unit_one/units_out%time)/(units_out%length**2)      !< test both if its the same
-        SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%d%dim))
-        SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:st%d%dim))
+        SAFE_ALLOCATE(ztmp(1:gr%mesh%np,1:st%d%dim))
+        SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
         call get_rs_density_ext(st, gr%mesh, time, ztmp)
-        call get_current_state(ztmp, dtmp, st%ep, gr%mesh%np_part)
+        call get_current_state(ztmp, dtmp, st%ep, gr%mesh%np)
         dtmp = - dtmp
         do idim = 1, st%d%dim
           write(fname, '(2a)') 'external_current-', index2axis(idim)
@@ -641,16 +602,13 @@
 
 
   !----------------------------------------------------------
-  subroutine output_charge_density_mxll(st, gr, hm, geo, dir, outp, st_elec, gr_elec, hm_elec)    !< have to set unit output correctly
+  subroutine output_charge_density_mxll(st, gr, hm, geo, dir, outp)    !< have to set unit output correctly
     type(states_mxll_t),           intent(in)    :: st
     type(grid_t),                  intent(in)    :: gr
     type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(geometry_t),              intent(in)    :: geo
     character(len=*),              intent(in)    :: dir
     type(output_t),                intent(in)    :: outp
-    type(states_elec_t),      optional, intent(in)    :: st_elec
-    type(grid_t),             optional, intent(in)    :: gr_elec
-    type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
 
     character(len=MAX_PATH_LEN) :: fname
     integer :: ierr
@@ -665,9 +623,9 @@
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np,1))
-      call get_electric_field_state(st%rsb, dtmp_1, st%ep, gr%mesh%np)
+      call get_electric_field_state(st%rsb, dtmp_1, st%ep, gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2(:,1), .true.)
-      call dio_function_output(outp%how, dir, "charge_density", outp%namespace, gr%mesh, dtmp_1(:,1),&
+      call dio_function_output(outp%how, dir, "charge_density", outp%namespace, gr%mesh, dtmp_2(:,1),&
            & fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
@@ -679,9 +637,9 @@
 
   !----------------------------------------------------------
   subroutine output_medium_variables_electric(st, gr, hm, geo, dir, outp, st_elec, gr_elec, hm_elec)    !< have to set unit output correctly
-    type(states_mxll_t),                intent(in)    :: st
+    type(states_mxll_t),           intent(in)    :: st
     type(grid_t),                  intent(in)    :: gr
-    type(hamiltonian_mxll_t),           intent(in)    :: hm
+    type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(geometry_t),              intent(in)    :: geo
     character(len=*),              intent(in)    :: dir
     type(output_t),                intent(in)    :: outp
@@ -702,28 +660,20 @@
       SAFE_ALLOCATE(E_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(D_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(e_susceptibility(1:gr%mesh%np))
-      !if (.not. hm%ma_mx_coupling) then
-      !  call get_electric_field_state(st%rs_transb+st%rs_longb, E_field, st%ep, gr%mesh%np)
-      !else
       call get_electric_field_state(st%rsb, E_field, st%ep, gr%mesh%np)
-      !end if
       polarization_ma_gr = M_ZERO
-      !do is = 1, st_elec%d%nspin
-      !  forall(ip=1:gr_elec%mesh%np, idim=1:gr_elec%sb%dim) polarization_ma_gr(ip,idim) = &
-      !         polarization_ma_gr(ip,idim) - st_elec%rho(ip,is)*(gr_elec%mesh%x(ip,idim)-hm_elec%mx_ma_coupling_points(idim,1))
-      !end do
       polarization_mx_gr = M_ZERO
-      !call dma_mesh_to_mx_mesh(st, gr, st_elec, gr_elec, polarization_ma_gr, polarization_mx_gr, 3)
-      forall(ip=1:gr%mesh%np, idim=1:st%d%dim) D_field(ip,idim) = E_field(ip,idim)*P_ep - polarization_mx_gr(ip,idim)
+      forall (ip=1:gr%mesh%np, idim=1:st%d%dim)
+        D_field(ip,idim) = E_field(ip,idim)*P_ep - polarization_mx_gr(ip,idim)
+      end forall
       do idim = 1, st%d%dim
-        !write(fname, '(2a)') 'pol_density-', index2axis(idim)
-        !call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh,&
-        !     & polarization_mx_gr(:,idim), fn_unit, ierr, geo = geo)
         write(fname, '(2a)') 'd_field-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, D_field(:,idim),&
              & fn_unit, ierr, geo = geo)
       end do
-      forall(ip=1:gr%mesh%np) e_susceptibility(ip) = sqrt(sum(D_field(ip,:)**2))/(P_ep*sqrt(sum(E_field(ip,:)**2))) - M_ONE
+      forall (ip=1:gr%mesh%np)
+        e_susceptibility(ip) = sqrt(sum(D_field(ip,:)**2))/(P_ep*sqrt(sum(E_field(ip,:)**2))) - M_ONE
+      end forall
       write(fname, '(1a)') 'electric_susceptibility'
       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, e_susceptibility(:),&
            & fn_unit, ierr, geo = geo)
@@ -739,13 +689,13 @@
 
   !----------------------------------------------------------
   subroutine output_medium_variables_magnetic(st, gr, hm, geo, dir, outp, st_elec, gr_elec, hm_elec)    !< have to set unit output correctly
-    type(states_mxll_t),                intent(in)    :: st
-    type(grid_t),                  intent(in)    :: gr
-    type(hamiltonian_mxll_t),           intent(in)    :: hm
-    type(geometry_t),              intent(in)    :: geo
-    character(len=*),              intent(in)    :: dir
-    type(output_t),                intent(in)    :: outp
-    type(grid_t),        optional, intent(inout) :: gr_elec
+    type(states_mxll_t),      intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(geometry_t),         intent(in)    :: geo
+    character(len=*),         intent(in)    :: dir
+    type(output_t),           intent(in)    :: outp
+    type(grid_t),             optional, intent(inout) :: gr_elec
     type(states_elec_t),      optional, intent(inout) :: st_elec
     type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
 
@@ -764,33 +714,20 @@
       SAFE_ALLOCATE(B_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(H_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(b_susceptibility(1:gr%mesh%np))
-      !if (.not. hm%ma_mx_coupling) then
-      !call get_magnetic_field_state(st%rs_transb+st%rs_longb, st%rs_sign, B_field, st%mu, gr%mesh%np)
-      !else
       call get_magnetic_field_state(st%rsb, st%rs_sign, B_field, st%mu, gr%mesh%np)
-      !end if
-      !call zstates_angular_momentum(st, gr, angular_momentum)
-      !call current_init(current_calc)
-      !call current_calculate(current_calc, gr_elec%der, hm_elec, geo, st_elec, current)
       magnetization_ma_gr = M_ZERO
-      !do ip=1, gr_elec%mesh%np
-      !  do is = 1, st_elec%d%nspin
-          !forall(ip=1:gr%mesh%np, idim=1:gr%sb%dim) magnetization_ma_gr(ip,idim) = magnetization_ma_gr(ip,idim) - M_HALF*st%rho(ip,is)*angular_momentum(ip,is,idim)
-      !    magnetization_ma_gr(ip,:) = magnetization_ma_gr(ip,:) + M_HALF*dcross_product(gr_elec%mesh%x(ip,:)-hm%mx_ma_coupling_points(:,1),current(ip,:,is))
-      !  end do
-      !end do
       magnetization_mx_gr = M_ZERO
-      !call dma_mesh_to_mx_mesh(st, gr, st_elec, gr_elec, magnetization_ma_gr, magnetization_mx_gr, 3)
-      forall(ip=1:gr%mesh%np, idim=1:st%d%dim) H_field(ip,idim) = B_field(ip,idim)/P_mu - magnetization_mx_gr(ip,idim)
+      forall (ip=1:gr%mesh%np, idim=1:st%d%dim)
+         H_field(ip,idim) = B_field(ip,idim)/P_mu - magnetization_mx_gr(ip,idim)
+      end forall
       do idim = 1, st%d%dim
-        !write(fname, '(2a)') 'mag_density-', index2axis(idim)
-        !call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh,&
-        !     & magnetization_mx_gr(:,idim), fn_unit, ierr, geo = geo)
         write(fname, '(2a)') 'h_field-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, H_field(:,idim),&
              & fn_unit, ierr, geo = geo)
       end do
-      forall(ip=1:gr%mesh%np) b_susceptibility(ip) = sqrt(sum(H_field(ip,:)**2))/(P_ep*sqrt(sum(B_field(ip,:)**2))) - M_ONE
+      forall(ip=1:gr%mesh%np)
+        b_susceptibility(ip) = sqrt(sum(H_field(ip,:)**2))/(P_ep*sqrt(sum(B_field(ip,:)**2))) - M_ONE
+      end forall 
       write(fname, '(1a)') 'magnetic_susceptibility'
       call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, b_susceptibility(:),&
            & fn_unit, ierr, geo = geo)
