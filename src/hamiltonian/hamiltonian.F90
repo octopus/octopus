@@ -86,6 +86,7 @@ module hamiltonian_oct_m
     hamiltonian_not_adjoint,         &
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
+    hamiltonian_needs_current,       &
     hamiltonian_update,              &
     hamiltonian_update2,             &
     hamiltonian_get_time,            &
@@ -1507,6 +1508,24 @@ contains
 
   end subroutine hamiltonian_update2
 
+  logical function hamiltonian_needs_current(hm, states_are_real)
+    type(hamiltonian_t), intent(in) :: hm
+    logical,             intent(in) :: states_are_real
+
+    hamiltonian_needs_current = .false.
+
+    if( hm%self_induced_magnetic ) then
+      if(.not. states_are_real) then
+        hamiltonian_needs_current = .true.
+      else
+        message(1) = 'No current density for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
+    end if
+
+  end function hamiltonian_needs_current
+
+  
 
 #include "undef.F90"
 #include "real.F90"

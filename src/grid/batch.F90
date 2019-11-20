@@ -292,6 +292,7 @@ contains
     this%nst = nst
     this%dim = dim
     this%current = 1
+    this%type = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     
     SAFE_ALLOCATE(this%states(1:nst))
@@ -337,6 +338,7 @@ contains
     this%nst = 0
     this%dim = 0
     this%current = 1
+    this%type = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     nullify(this%states)
 
@@ -412,6 +414,7 @@ contains
 
     ! Make sure we do not request both to copy and fill with zero at the same time
     ASSERT(.not. (copy_data_ .and. fill_zeros_))
+    bout%type = bin%type
 
     if(batch_type(bin) == TYPE_FLOAT) then
 

@@ -36,6 +36,7 @@ module types_oct_m
     integer :: itype
   end type type_t
 
+  type(type_t), public :: TYPE_NONE         = type_t(0)
   type(type_t), public :: TYPE_FLOAT        = type_t(1)
   type(type_t), public :: TYPE_CMPLX        = type_t(2)
   type(type_t), public :: TYPE_INTEGER      = type_t(3)
