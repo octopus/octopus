@@ -546,9 +546,9 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer(sys%namespace)
+            call drun_sternheimer()
           else
-            call zrun_sternheimer(sys%namespace)
+            call zrun_sternheimer()
           end if
 
         end if ! have_to_calculate
@@ -564,9 +564,9 @@ contains
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear(sys%namespace)
+        call dcalc_properties_nonlinear()
       else
-        call zcalc_properties_nonlinear(sys%namespace)
+        call zcalc_properties_nonlinear()
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
