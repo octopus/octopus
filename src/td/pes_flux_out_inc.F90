@@ -207,7 +207,8 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   else  
     
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point,  Lkpt(:,1:dim))
+            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
+            Lkpt(:,1:dim))
 
 
   end if
@@ -741,6 +742,9 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
   
   case (M_CUBIC)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces") 
+
+  case (M_PLANES)
+    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)
   
   end select
 
@@ -749,22 +753,46 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
 end subroutine pes_flux_out_energy
 
 
-
-subroutine pes_flux_out_energy_sph(pes, file, ll, pmesh, Ekin)
-  FLOAT,             intent(in) :: pes(:,:,:)
+! ---------------------------------------------------------
+subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
+  FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
   
-  PUSH_SUB(pes_flux_out_energy_sph)
+  integer :: iunit, ip, ie
+  FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
   
   
+  PUSH_SUB(pes_flux_out_energy_pln)
+
   
-  POP_SUB(pes_flux_out_energy_sph)
+  iunit = io_open(file, namespace, action='write')
+  write(iunit, '(a)') '##################################################'
+  write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                    str_center("E", 18),  str_center("P[E]", 18)
+
+  write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                    str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
+                                    str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
+  write(iunit, '(a)') '##################################################'
+  
+
+  do ie = 1, ll(3) 
+    write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
+                                    units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
+                                    sum(arpes(:,:,ie))
+  end do      
   
   
-end subroutine pes_flux_out_energy_sph
+  call io_close(iunit)
+
+
+  POP_SUB(pes_flux_out_energy_pln)
+end subroutine pes_flux_out_energy_pln
+
 
 
 

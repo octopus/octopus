@@ -99,7 +99,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
           weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
 #endif
         else
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%V_ij(inn, 0)/el_per_state
         end if
 
         do ibatch = 1, psib%nst
@@ -1511,15 +1511,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
              do imp = 1, this%orbsets(ios2)%norbs
                if(has_phase) then
                  reduced(1,im, ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                       *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp, ios2) = reduced(1,imp,ios2) - dot(1, im, ios)*R_CONJ(os%phase_shift(inn, ik)) &
-                       *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                       *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
 
                else
                  reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
-                         *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp,ios2) = reduced(1,imp,ios2) - dot(1, im, ios) &
-                         *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                         *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
                end if
              end do !imp
            end do !im

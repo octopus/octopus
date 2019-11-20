@@ -116,7 +116,8 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   else  
     
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-           kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  Lkpt(:,1:dim))
+           kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  &
+           Lkpt(:,1:dim))
 
 !       do ik = 1, kpoints_number(kpoints)
 !         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
@@ -493,7 +494,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -507,7 +508,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
 
 
-  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -811,7 +812,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   
 #if defined(HAVE_NETCDF)  
   
-  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
@@ -823,7 +824,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
 
 #endif
   
-  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
@@ -1897,7 +1898,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
  
 
   !Photoelectron wavefunction and density in real space
-  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
   end if
@@ -1912,7 +1913,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
 
   !Write the output in the td.00iter directories
   dir = file 
-  if(iand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 

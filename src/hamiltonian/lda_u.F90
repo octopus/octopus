@@ -85,7 +85,9 @@ module lda_u_oct_m
        dlda_u_force,                    &
        zlda_u_force,                    &
        lda_u_write_info,                &
-       compute_ACBNO_U_kanamori
+       compute_ACBNO_U_kanamori,        &
+       dcompute_dftu_energy,            &
+       zcompute_dftu_energy
 
 
   type lda_u_t
@@ -554,6 +556,13 @@ contains
   ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
     call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
+  else
+    !In case there is no phase, we perform the orthogonalization here
+    if(this%basis%orthogonalization) then
+      call dloewdin_orthogonalize(this%basis, st%d%kpt, namespace)
+    else
+      if(debug%info) call dloewdin_info(this%basis, st%d%kpt, namespace)
+    end if  
   end if
 
   POP_SUB(lda_u_update_basis)

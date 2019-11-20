@@ -641,6 +641,7 @@ contains
 
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
+      sb%nonorthogonal = .false.
     else
       
       
