@@ -609,8 +609,10 @@ contains
       outp%how = 0
     end if
 
+    ! At this point, we don't know whether the states will be real or complex.
+    ! We therefore pass .false. to states_are_real, and need to check for real states later.
 
-    if(output_needs_current(outp, states_are_real)) then
+    if(output_needs_current(outp, .false.)) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
