@@ -300,15 +300,15 @@ contains
 
     ! problem is about k-points for exchange
     if (simul_box_is_periodic(gr%sb)) then
-      call messages_not_implemented("Periodic system calculations for RDMFT")
+      call messages_not_implemented("Periodic system calculations for RDMFT", namespace=namespace)
     end if
 
     ! exchange routine needs all states on each processor currently
     if(st%parallel_in_states) then
-      call messages_not_implemented("RDMFT parallel in states")
+      call messages_not_implemented("RDMFT parallel in states", namespace=namespace)
     end if
 
-    call messages_print_stress(stdout, 'RDMFT Calculation')
+    call messages_print_stress(stdout, 'RDMFT Calculation', namespace=namespace)
     call messages_print_var_value(stdout, 'RDMBasis', rdm%do_basis)
  
     !set initial values
