@@ -27,16 +27,16 @@ module hamiltonian_mxll_oct_m
   use hamiltonian_elec_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
-  use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
+  use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_elec_oct_m
   use states_elec_dim_oct_m
+  use states_elec_oct_m
   use states_mxll_oct_m
 
   implicit none
@@ -293,7 +293,7 @@ contains
     call parse_variable(namespace, 'MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
       write(message(1),'(a)') 'Calculation from E and B field not implemented yet.'
-      call messages_fatal(2)
+      call messages_fatal(1)
     end if
 
     hm%rs_state_fft_map     => st%rs_state_fft_map

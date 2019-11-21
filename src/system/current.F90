@@ -27,13 +27,13 @@ module current_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use math_oct_m
-  use mesh_oct_m
   use mesh_function_oct_m
+  use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -42,17 +42,17 @@ module current_oct_m
   use projector_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use states_elec_oct_m
   use states_elec_dim_oct_m
-  use symmetrizer_oct_m
-  use types_oct_m
-  use varinfo_oct_m
-  use xc_oct_m
-  use tdfunction_oct_m
+  use states_elec_oct_m
   use states_mxll_oct_m
+  use string_oct_m
+  use symmetrizer_oct_m
+  use tdfunction_oct_m
+  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m  
-  use string_oct_m
+  use varinfo_oct_m
+  use xc_oct_m
   
   implicit none
 
@@ -843,7 +843,7 @@ contains
         if (st%external_current_modus(il) &
             == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idimi = 1, st%d%dim
+          do idim = 1, st%d%dim
             call parse_block_string( blk, il - 1, idim, st%external_current_string(idim,il))
             call conv_to_C_string(st%external_current_string(idim,il))
           end do
@@ -902,15 +902,12 @@ contains
        do ip = 1, mesh%np
          call mesh_r(mesh, ip, rr, coords = xx)
          do idim = 1, 3
-            !xx(:) = mesh%x(ip,:)
-            !rr    = sqrt(sum(xx(:)**2))
             tt    = time
             call parse_expression(j_vector(idim), dummy(idim), st%d%dim, xx, rr, tt, &
                  & trim(st%external_current_string(idim,jn)))
             j_vector(idim) = units_to_atomic(units_inp%energy/(units_inp%length**2),j_vector(idim))
           end do
-          call blas_axpy(mesh%sb%dim, M_ONE, current(ip, :), 1, jvector, 1)         
-          !current(ip,:) = current(ip,:) + j_vector(:)
+          current(ip, :) = current(ip, :) + j_vector(:)
         end do
      else if(st%external_current_modus(jn)&
           & == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
@@ -920,8 +917,7 @@ contains
            amp(:)  = st%external_current_amplitude(ip,:,jn) &
                  & * tdf(st%external_current_td_function(jn),time) 
           j_vector(:) = real(amp(:) * exp(-M_zI *(exp_arg)))
-          call blas_axpy(mesh%sb%dim, M_ONE, current(ip, :), 1, jvector, 1)
-          !current(ip,:) = current(ip,:) + j_vector(:)
+          current(ip, :) = current(ip, :) + j_vector(:)
         end do
       end if
     end do

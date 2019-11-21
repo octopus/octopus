@@ -20,6 +20,7 @@
 
 module system_mxll_oct_m
   use calc_mode_par_oct_m
+  use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -33,12 +34,11 @@ module system_mxll_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use space_oct_m
   use simul_box_oct_m
   use sort_oct_m
+  use space_oct_m
   use states_mxll_oct_m
   use system_oct_m
-  use distributed_oct_m
   
   implicit none
 
@@ -70,9 +70,7 @@ contains
   subroutine system_mxll_init(sys, namespace)
     type(system_mxll_t), intent(inout) :: sys
     type(namespace_t), intent(in)  :: namespace
-
-!    type(base_states_t), pointer :: subsys_states
-
+    
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_init)
@@ -82,31 +80,24 @@ contains
     SAFE_ALLOCATE(sys%st)
     sys%namespace = namespace
 
-!    sys%gr%maxwell_grid           = .true.
-!    sys%gr%sb%maxwell_simul_box   = .true.
-!    sys%gr%mesh%maxwell_mesh      = .true.
-!    sys%st%maxwell_states         = .true.
-!    sys%space%maxwell_space       = .true. 
-    
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
-    !call geometry_nullify(sys%geo)
 
     nullify(sys%geo%space, sys%geo%atom, sys%geo%catom, sys%geo%species)
-    sys%geo%natoms=0
-    sys%geo%ncatoms=0
-    sys%geo%nspecies=0
-    sys%geo%only_user_def=.false.
-    sys%geo%kinetic_energy=M_ZERO
-    sys%geo%nlpp=.false.
-    sys%geo%nlcc=.false.
+    sys%geo%natoms = 0
+    sys%geo%ncatoms = 0
+    sys%geo%nspecies = 0
+    sys%geo%only_user_def = .false.
+    sys%geo%kinetic_energy = M_ZERO
+    sys%geo%nlpp = .false.
+    sys%geo%nlcc = .false.
     call distributed_nullify(sys%geo%atoms_dist, 0)
-    sys%geo%reduced_coordinates=.false.
-    sys%geo%periodic_dim=0
-    sys%geo%lsize=M_ZERO
+    sys%geo%reduced_coordinates = .false.
+    sys%geo%periodic_dim = 0
+    sys%geo%lsize = M_ZERO
 
     
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
@@ -142,8 +133,6 @@ contains
       index_range(3) = sys%st%d%nik           ! Number of k-points
       index_range(4) = 100000                 ! Some large number
 
-      !sys%mc%maxwell_mc = .true.
-      
       ! create index and domain communicators
       call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), &
            &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
@@ -163,8 +152,6 @@ contains
 
     call multicomm_end(sys%mc)
 
-    !call output_mxll_end(sys%outp)
-    
     if(associated(sys%st)) then
       call states_mxll_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
@@ -197,14 +184,8 @@ contains
       write(message(2), '(a)') 'MaxwellBoxShape == PARALLELEPIPED'
       call messages_fatal(2)
     end if
-    if (sys_mxll%gr%mesh%spacing(1) /= sys_elec%gr%mesh%spacing(1)) then
-      if (sys_mxll%gr%mesh%spacing(1) < M_FOUR * sys_elec%gr%sb%lsize(1)) err = err + 1
-    end if
-    if (sys_mxll%gr%mesh%spacing(2) /= sys_elec%gr%mesh%spacing(2)) then
-      if (sys_mxll%gr%mesh%spacing(2) < M_FOUR * sys_elec%gr%sb%lsize(2)) err = err + 1
-    end if
-    if (sys_mxll%gr%mesh%spacing(3) /= sys_elec%gr%mesh%spacing(3)) then
-      if (sys_mxll%gr%mesh%spacing(3) < M_FOUR * sys_elec%gr%sb%lsize(3)) err = err + 1
+    if (any(sys_mxll%gr%mesh%spacing(:) /= sys_elec%gr%mesh%spacing(:))) then
+      if (any(sys_mxll%gr%mesh%spacing(:) < M_FOUR * sys_elec%gr%sb%lsize(:))) err = err + 1
     end if
     if (err /= 0) then
       write(message(1), '(a)') 'The "MaxwellSpacing" for the Maxwell grid has to be equal to'
@@ -215,13 +196,9 @@ contains
       write(message(6), '(a)') '3 dimensions.'
       call messages_fatal(6)
     end if
-    if ( (sys_mxll%gr%mesh%spacing(1) == sys_elec%gr%mesh%spacing(1)) .and. &
-         (sys_mxll%gr%mesh%spacing(2) == sys_elec%gr%mesh%spacing(2)) .and. &
-         (sys_mxll%gr%mesh%spacing(3) == sys_elec%gr%mesh%spacing(3)) ) then
+    if (.not. any(sys_mxll%gr%mesh%spacing(:) /= sys_elec%gr%mesh%spacing(:))) then
       multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL 
-    else if ( (sys_mxll%gr%mesh%spacing(1) >= M_FOUR * sys_elec%gr%sb%lsize(1)) .and. &
-              (sys_mxll%gr%mesh%spacing(2) >= M_FOUR * sys_elec%gr%sb%lsize(2)) .and. &
-              (sys_mxll%gr%mesh%spacing(3) >= M_FOUR * sys_elec%gr%sb%lsize(3)) ) then
+    elseif (.not. any(sys_mxll%gr%mesh%spacing(:) < M_FOUR * sys_elec%gr%sb%lsize(:))) then
       multigrid_mode = MULTIGRID_MX_TO_MA_LARGE
     else
       write(message(1), '(a)') 'There is no valid multigird option for current Maxwell and Matter grids.'

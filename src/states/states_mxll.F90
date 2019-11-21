@@ -40,13 +40,13 @@ module states_mxll_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_elec_dim_oct_m
+  use states_elec_group_oct_m
+  use states_elec_oct_m
+  use tdfunction_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use states_elec_oct_m
-  use tdfunction_oct_m
-  use states_elec_group_oct_m
   
   implicit none
 
@@ -588,7 +588,7 @@ contains
     end do
 
     if (present(mu_field) .and. present(np)) then
-      do ipi = 1, np
+      do ip = 1, np
         magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
       end do
     else
@@ -702,7 +702,7 @@ contains
   !----------------------------------------------------------
   subroutine get_divergence_field(gr, field, field_div, charge_density)
     type(grid_t),    intent(in)    :: gr
-    FLOAT,           intent(in)    :: field(:,:)
+    FLOAT,           intent(inout)    :: field(:,:)
     FLOAT,           intent(inout) :: field_div(:)
     logical,         intent(in)    :: charge_density
 
