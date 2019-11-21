@@ -2260,7 +2260,7 @@ contains
     end if
 
     mem = 0
-    qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
+   qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
         mem = mem + batch_pack_size(st%group%psib(ib, iqn))
@@ -2298,7 +2298,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+          call batch_unpack(st%group%psib(ib, iqn), copy)
         end do
       end do
     end if

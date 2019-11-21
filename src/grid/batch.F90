@@ -437,7 +437,7 @@ contains
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
-    logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
+    logical,       optional, intent(in)    :: copy_data  !< If .true. the data of new batch will be copied. Default: .false.
 
     integer :: ii, np
     logical :: pack_, copy_data_

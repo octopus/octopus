@@ -71,14 +71,18 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   failed = .false.
   prog = 0
 
+  if(pack) then
+    do ib = st%group%block_start, st%group%block_end
+      call batch_pack(st%group%psib(ib, ik))
+    end do
+  end if 
+
   do ib = st%group%block_start, st%group%block_end
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
     bsize = maxst - minst + 1
 
     psib(1)%batch => st%group%psib(ib, ik)
-
-    if(pack) call batch_pack(psib(1)%batch)
 
     call batch_copy(psib(1)%batch, resb(1)%batch)
 
@@ -103,7 +107,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     if(all(done(1:bsize) /= 0)) then
-      if(pack) call batch_unpack(st%group%psib(ib, ik))
       call batch_end(resb(1)%batch)
       cycle
     end if
@@ -219,9 +222,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
-        if(pack) call batch_pack(psib(jj)%batch)
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
-        if(pack) call batch_unpack(psib(jj)%batch, copy = .false.)
       end do
 
       call profiling_out(prof_lc)
@@ -283,8 +284,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_end(resb(niter - 1)%batch)
 
-    if(pack) call batch_unpack(st%group%psib(ib, ik))
-
     prog = prog + bsize
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) + prog, st%lnst*st%d%kpt%nlocal)
@@ -304,8 +303,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
 
-    if(pack) call batch_pack(st%group%psib(ib, ik))  
-  
     call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
     
     call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, st%group%psib(ib, ik), resb(1)%batch, ik)
@@ -322,8 +319,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     call batch_end(resb(1)%batch)
 
-    if(pack) call batch_unpack(st%group%psib(ib, ik))
-    
     nops = nops + maxst - minst + 1
   end do
 
@@ -340,6 +335,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end if
     SAFE_DEALLOCATE_P(resb(iter)%batch)
   end do
+
+  if(pack) then
+    do ib = st%group%block_start, st%group%block_end
+      call batch_unpack(st%group%psib(ib, ik))
+    end do
+  end if
 
   niter = nops
 
