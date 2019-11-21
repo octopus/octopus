@@ -506,7 +506,7 @@
        do idim = 1, gr%sb%dim
          write(fname, '(2a)') 'vector_potential-', index2axis(idim)
          call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh,&
-              & hm%vector_potential(1:gr%mesh%np,idim)dtmp, fn_unit, ierr, geo = geo)
+              & hm%vector_potential(1:gr%mesh%np,idim), fn_unit, ierr, geo = geo)
        end do
     end if
 

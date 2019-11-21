@@ -68,9 +68,9 @@ module output_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
-  use states_mxll_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
+  use states_mxll_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
