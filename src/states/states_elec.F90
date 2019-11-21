@@ -2279,7 +2279,7 @@ contains
           call messages_write(' of ')
           call messages_write(st%group%block_end - st%group%block_start + 1)
           call messages_write(' blocks will be stored in device memory.', new_line = .true.)
-          call messages_warning(namespace=st%namespace)
+          call messages_warning()
           exit qnloop
         end if
         
