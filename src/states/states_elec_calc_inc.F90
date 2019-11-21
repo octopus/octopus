@@ -1053,9 +1053,6 @@ subroutine X(states_elec_matrix)(mesh, st1, st2, aa)
           call MPI_Bcast(aa(ii, jj, ik), 1, R_MPITYPE, kk, st1%mpi_grp%comm, mpi_err)
         end do
       end do
-#else
-      write(message(1), '(a)') 'Internal error at Xstates_elec_matrix'
-      call messages_fatal(1, namespace=st1%namespace)
 #endif
 
     else
