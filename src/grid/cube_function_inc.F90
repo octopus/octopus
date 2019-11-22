@@ -77,24 +77,24 @@ subroutine X(cube_function_free_rs)(cube, cf)
   deallocated = .false.
 
   if(associated(cube%fft)) then
-     select case(cube%fft%library)
-     case(FFTLIB_PFFT)
-        if(.not. cf%forced_alloc) then
-           deallocated = .true.
-           nullify(cf%X(rs))
-        end if
-     case(FFTLIB_ACCEL)
-        if(cf%in_device_memory) then
-           deallocated = .true.
-           ASSERT(cf%in_device_memory)
-           call accel_release_buffer(cf%real_space_buffer)
-           cf%in_device_memory = .false.
-        end if
-     end select
+    select case(cube%fft%library)
+    case(FFTLIB_PFFT)
+      if(.not. cf%forced_alloc) then
+        deallocated = .true.
+        nullify(cf%X(rs))
+      end if
+    case(FFTLIB_ACCEL)
+      if(cf%in_device_memory) then
+        deallocated = .true.
+        ASSERT(cf%in_device_memory)
+        call accel_release_buffer(cf%real_space_buffer)
+        cf%in_device_memory = .false.
+      end if
+    end select
   end if
 
   if(.not. deallocated) then
-     SAFE_DEALLOCATE_P(cf%X(rs))
+    SAFE_DEALLOCATE_P(cf%X(rs))
   end if
 
   POP_SUB(X(cube_function_free_rs))
