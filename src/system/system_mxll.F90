@@ -196,9 +196,9 @@ contains
       write(message(6), '(a)') '3 dimensions.'
       call messages_fatal(6)
     end if
-    if (.not. any(sys_mxll%gr%mesh%spacing(:) /= sys_elec%gr%mesh%spacing(:))) then
+    if (all(sys_mxll%gr%mesh%spacing(:) == sys_elec%gr%mesh%spacing(:))) then
       multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL 
-    elseif (.not. any(sys_mxll%gr%mesh%spacing(:) < M_FOUR * sys_elec%gr%sb%lsize(:))) then
+    elseif (all(sys_mxll%gr%mesh%spacing(:) >= M_FOUR * sys_elec%gr%sb%lsize(:))) then
       multigrid_mode = MULTIGRID_MX_TO_MA_LARGE
     else
       write(message(1), '(a)') 'There is no valid multigird option for current Maxwell and Matter grids.'

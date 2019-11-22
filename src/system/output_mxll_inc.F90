@@ -458,9 +458,9 @@
     ! divergence of the electric field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_electric_field_state(st%rsb, dtmp_1, st%mu(1:gr%mesh%np_part), gr%mesh%np_part)
+      call get_electric_field_state(st%rsb, dtmp_1, st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "e_field_div", outp%namespace, gr%mesh, dtmp_2,&
            & fn_unit, ierr, geo=geo)
@@ -471,9 +471,9 @@
     ! divergence of the magnetic field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
-     SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
+     SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%d%dim))
      SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp_1, st%mu(1:gr%mesh%np_part), gr%mesh%np_part)
+      call get_magnetic_field_state(st%rsb, st%rs_sign, dtmp_1, st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "b_field_div", outp%namespace, gr%mesh, dtmp_2,&
            & fn_unit, ierr, geo=geo)
@@ -614,7 +614,7 @@
     integer :: ierr
     type(unit_t) :: fn_unit
     FLOAT              :: density_diff_sum
-    FLOAT, allocatable :: dtmp_1(:,:), dtmp_2(:,:)
+    FLOAT, allocatable :: dtmp_1(:,:), dtmp_2(:)
 
      PUSH_SUB(output_charge_density_mxll)
 
@@ -622,10 +622,10 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
-      SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np,1))
+      SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       call get_electric_field_state(st%rsb, dtmp_1, st%ep, gr%mesh%np_part)
-      call get_divergence_field(gr, dtmp_1, dtmp_2(:,1), .true.)
-      call dio_function_output(outp%how, dir, "charge_density", outp%namespace, gr%mesh, dtmp_2(:,1),&
+      call get_divergence_field(gr, dtmp_1, dtmp_2, .true.)
+      call dio_function_output(outp%how, dir, "charge_density", outp%namespace, gr%mesh, dtmp_2(:),&
            & fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
