@@ -22,7 +22,7 @@ Radius = 6
 
 MoveIons = no
 
-TDPropagator = caetrs
+TDPropagator = magnus
 
 TDMaxSteps = 20
 TDTimeStep = 0.1
@@ -31,7 +31,3 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
-
-
-FilterPotentials = filter_none
-

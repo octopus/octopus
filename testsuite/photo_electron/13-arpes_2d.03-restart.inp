@@ -1,0 +1,105 @@
+CalculationMode=td
+ExperimentalFeatures = yes
+FromScratch=no
+
+RestartFixedOccupations = yes
+
+## Cell ##
+
+TheoryLevel = independent_particles
+Dimensions = 2
+PeriodicDimensions = 1
+
+BoxShape = parallelepiped
+Spacing = 0.5
+
+LL = 120
+
+%LatticeParameters
+8.15| LL 
+%
+
+%LatticeVectors
+1.  | 0.
+0.  | 1.
+%
+
+U0 = 0.78
+x0 = 0.565*1.88
+y0 = 0.0
+
+
+%Species
+"tanh" | species_user_defined | potential_formula | " -U0*(1+tanh(x+x0))*(1+tanh(x0-x))*(1+tanh(y+y0))*(1+tanh(-y+y0))" | valence | 4
+%
+
+%Coordinates
+  "tanh" |   0.0   | 0.0
+%
+
+
+%KpointsGrid
+1 | 1 
+%
+
+%KPointsPath
+6
+-0.5| 0 
+0.5 | 0 
+%
+
+## LASER ##
+
+wpr = 52/27.211
+II = 1.0E9             # intensity
+EE = sqrt(II/3.51e+16) # Electric field peak amplitude
+AApr = EE * 137/wpr    # Vector potential amplitude
+TT = 10*femtosecond    # Pulse envelope
+tcpr=2*pi/wpr          # field cycle
+npr = TT/tcpr
+Tpr = tcpr*npr
+
+
+
+%TDExternalFields
+  vector_potential | 1  | 0  | 0 | wpr |"probe"
+%
+
+%TDFunctions
+  "probe"  | tdf_from_expr | 'AApr*sin(wpr*(t)/(2*npr))^2*step(Tpr-(t))*step(t)'
+%
+
+TDTimeStep = 0.2
+TDPropagationTime = Tpr
+
+############
+# PES
+############
+Lmin = 30
+
+AbsorbingBoundaries = cap
+ABCapHeight = -1.0
+%ABShape
+ Lmin | LL | "abs(y)"
+%
+
+PhotoElectronSpectrum = pes_flux
+PES_Flux_Lsize = Lmin
+
+Emin =  wpr - 0.2
+Emax =  wpr
+DE   = 0.01
+%PES_Flux_EnergyGrid
+Emin | Emax | DE
+%
+
+PES_Flux_UseMemory = no
+
+#######
+# OUT
+#######
+
+TDOutput = multipoles + energy + laser
+
+OutputInterval = 500
+RestartWriteInterval = 500

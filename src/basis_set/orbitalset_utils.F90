@@ -88,16 +88,13 @@ contains
     type(periodic_copy_t) :: pc
     FLOAT :: xat(1:MAX_DIM), xi(1:MAX_DIM)
     FLOAT :: rr
-    integer :: inn, nnn, ist, jst, ntodo
-    integer :: norbs, np_sphere, ip, idone, ios
+    integer :: inn, ist, jst
+    integer :: np_sphere, ip, ios
     type(submesh_t) :: sm
     FLOAT, allocatable :: tmp(:), vv(:), nn(:)
     FLOAT, allocatable :: orb(:,:,:)
     FLOAT, parameter :: TOL_INTERSITE = CNST(1.e-5)
     type(distributed_t) :: dist
-
-    integer :: ierr
-    type(unit_t) :: fn_unit
 
     PUSH_SUB(orbitalset_init_intersite)
 
@@ -169,7 +166,9 @@ contains
 
       call distributed_nullify(dist, this%nneighbors)
 #ifdef HAVE_MPI
-      call distributed_init(dist, this%nneighbors, MPI_COMM_WORLD, 'orbs')
+      if(.not. der%mesh%parallel_in_domains) then
+        call distributed_init(dist, this%nneighbors, MPI_COMM_WORLD, 'orbs')
+      end if
 #endif
 
       do inn = dist%start, dist%end
@@ -191,18 +190,21 @@ contains
         SAFE_ALLOCATE(vv(1:sm%np))
 
         do ist = 1, this%norbs
-          call datomic_orbital_get_submesh(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
+          call datomic_orbital_get_submesh_safe(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
                           1, orb(1:sm%np, ist,1))
         end do
          
         call submesh_shift_center(sm, sb, this%V_ij(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
 
         do ist = 1, os(ios)%norbs
-          call datomic_orbital_get_submesh(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
+          call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
                 1, orb(1:sm%np, ist,2))
         end do
 
         SAFE_ALLOCATE(tmp(1:sm%np))
+
+        !Build information needed for the direct Poisson solver on the submesh
+        call submesh_build_global(sm)
 
         call poisson_init_sm(this%poisson, psolver, der, sm)
         np_sphere = sm%np
@@ -239,9 +241,16 @@ contains
         SAFE_DEALLOCATE_A(vv)
         SAFE_DEALLOCATE_A(tmp)
 
+        call submesh_end_global(sm)
+
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
       end do !inn
+
+      if(der%mesh%parallel_in_domains) then
+        call comm_allreduce(der%mesh%mpi_grp%comm, this%coulomb_IIJJ)
+      end if
+ 
 
       if(dist%parallel) then
         call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)

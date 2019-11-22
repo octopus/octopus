@@ -78,6 +78,10 @@ dist_share_DATA =                                \
 	14-silicon_shifts.test                   \
 	15-bandstructure.01-gs.inp               \
 	15-bandstructure.02-unocc.inp            \
+        15-bandstructure.03-wannier90_setup.inp  \
+        15-bandstructure.04-wannier90_output.inp \
+        15-bandstructure.04-wannier90.win        \
+        15-bandstructure.04-wannier90.nnkp       \
 	15-bandstructure.test                    \
 	16-sodium_chain_cylinder.01-ground_state.inp      \
 	16-sodium_chain_cylinder.02-unocc.inp             \
@@ -90,7 +94,7 @@ dist_share_DATA =                                \
 	18-TiO2.01-gs.inp                        \
 	18-TiO2.test                             \
 	19-unfolding.01-gs.inp                   \
- 	19-unfolding.02-setup.inp                \
+	19-unfolding.02-setup.inp                \
 	19-unfolding.03-unocc.inp                \
 	19-unfolding.04-run.inp                  \
 	19-unfolding.test                        \

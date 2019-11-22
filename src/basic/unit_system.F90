@@ -76,6 +76,7 @@ module unit_system_oct_m
   type(unit_t),        public :: unit_kilobytes     !< For small amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_megabytes     !< For large amounts of data (natural code units are bytes)
   type(unit_t),        public :: unit_gigabytes     !< For larger amounts of data (natural code units are bytes)
+  type(unit_t),        public :: unit_eV            !< For output energies in eV.
 
   integer, parameter, public :: UNITS_ATOMIC = 0, UNITS_EVA = 1, UNITS_FS = 2
 
@@ -217,6 +218,10 @@ contains
     unit_gigabytes%factor = CNST(2.0)**30
     unit_gigabytes%abbrev = 'GiB'
     unit_gigabytes%name   = 'gibibytes'
+
+    unit_eV%abbrev = "eV"
+    unit_eV%name   = "electronvolt"
+    unit_eV%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
 
     call unit_system_get(units_inp, cinp)
     call unit_system_get(units_out, cout)

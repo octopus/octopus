@@ -87,8 +87,16 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
     end do
 #else
     do ib = convb + 1, st%group%block_end
+      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_pack(st%group%psib(ib, ik))
+      end if
+
       call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
+
+      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_unpack(st%group%psib(ib, ik))
+      end if
     end do
 #endif
 
@@ -106,10 +114,12 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
     
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
+      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_pack(st%group%psib(ib, ik))
+      end if
+
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
-
-      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_pack(st%group%psib(ib, ik))
 
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
@@ -120,8 +130,6 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
       call mesh_batch_nrm2(mesh, hpsib, diff(minst:maxst))
       call batch_end(hpsib)
 
-      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_unpack(st%group%psib(ib, ik), copy=.false.)
-
       if (debug%info) then
         do ist = minst, maxst
           write(message(1), '(a,i4,a,i4,a,i4,a,es12.6)') 'Debug: Evolution Eigensolver - ik', ik, &
@@ -130,6 +138,9 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
         end do
       end if
 
+      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        call batch_unpack(st%group%psib(ib, ik), copy=.false.)
+      end if
     end do
 
     ! And check for convergence. Note that they must be converged *in order*, so that they can be frozen.

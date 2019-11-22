@@ -21,7 +21,7 @@ Radius = 6
 
 MoveIons = yes
 
-TDPropagator = exp_mid
+TDPropagator = crank_nicolson
 
 TDMaxSteps = 20
 TDTimeStep = 0.1
@@ -30,7 +30,3 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
-
-
-FilterPotentials = filter_none
-

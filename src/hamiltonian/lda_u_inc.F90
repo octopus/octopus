@@ -99,7 +99,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
           weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
 #endif
         else
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%V_ij(inn, 0)/el_per_state
         end if
 
         do ibatch = 1, psib%nst
@@ -1511,15 +1511,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
              do imp = 1, this%orbsets(ios2)%norbs
                if(has_phase) then
                  reduced(1,im, ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                       *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp, ios2) = reduced(1,imp,ios2) - dot(1, im, ios)*R_CONJ(os%phase_shift(inn, ik)) &
-                       *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                       *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
 
                else
                  reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
-                         *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp,ios2) = reduced(1,imp,ios2) - dot(1, im, ios) &
-                         *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                         *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
                end if
              end do !imp
            end do !im
@@ -1683,7 +1679,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(inout) :: this
     R_TYPE,         intent(in)    :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_set_occupations))
 
@@ -1712,6 +1708,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  this%X(n_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                  ind = ind + 1
+                  this%X(n_alt_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                end do
+              end do
+            end do
+          end do
+        end do
+      end if
     end if
 
     POP_SUB(X(lda_u_set_occupations))
@@ -1722,7 +1736,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(in) :: this
     R_TYPE,      intent(inout) :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_get_occupations))
 
@@ -1751,6 +1765,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  occ(ind) = this%X(n_ij)(im,imp,ispin,ios,inn)
+                  ind = ind + 1
+                  occ(ind) = this%X(n_alt_ij)(im,imp,ispin,ios,inn)
+                end do
+              end do
+            end do
+          end do
+        end do 
+      end if
     end if
 
     POP_SUB(X(lda_u_get_occupations))

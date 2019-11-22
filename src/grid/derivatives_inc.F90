@@ -470,6 +470,27 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
 end subroutine X(derivatives_test)
 
+! ---------------------------------------------------------
+subroutine X(derivatives_partial)(der, ff, op_ff, dir, ghost_update, set_bc)
+  type(derivatives_t),       intent(in)   :: der
+  R_TYPE,                    intent(inout) :: ff(:)     !< (der%mesh%np_part)
+  R_TYPE,                    intent(out)   :: op_ff(:)  !< (der%mesh%np)
+  integer,                   intent(in)    :: dir
+  logical, optional,         intent(in)    :: ghost_update
+  logical, optional,         intent(in)    :: set_bc
+
+  logical :: set_bc_, ghost_update_
+
+  PUSH_SUB(X(derivatives_partial))
+
+  set_bc_ = optional_default(set_bc, .true.)
+  ghost_update_ = optional_default(ghost_update, .true.)
+
+  call X(derivatives_perform) (der%grad(dir), der, ff, op_ff, ghost_update_, set_bc_)
+
+  POP_SUB(X(derivatives_partial))
+end subroutine X(derivatives_partial)
+
 
 !! Local Variables:
 !! mode: f90

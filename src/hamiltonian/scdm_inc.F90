@@ -52,7 +52,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
 
   SAFE_ALLOCATE(JPVT(1:mesh%np_global))
-  call X(scdm_rrqr)(st,scdm, mesh, nval,scdm%root, jpvt)
+  call X(scdm_rrqr)(st,scdm, mesh, nval,scdm%root,1, jpvt)
 
   !form SCDM_matrix rows for states that are local in the scdm%st_grp
   SAFE_ALLOCATE(SCDM_matrix(1:scdm%st%lnst,nval))
@@ -402,12 +402,13 @@ end subroutine X(invert)
 !! and return the pivot vector 
 !! This is not an all-purose routien for RRQR, but only operates on the
 !! specific set stored in st
-subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
+subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
   type(states_elec_t), intent(in) :: st
   type(scdm_t), intent(in)        :: scdm  !< this is only needed for the proc_grid
   type(mesh_t), intent(in)        :: mesh
   integer, intent(in)             :: nst
   logical, intent(in)             :: root !< this is needed for serial 
+  integer, intent(in)             :: ik ! perform SCDM with this k-point
   integer, intent(out)            :: jpvt(:)
 
   integer :: total_np, nref, info, wsize
@@ -417,7 +418,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: psi(:, :)
-  integer :: ii,ist,  count, ik, lnst
+  integer :: ii,ist,  count, lnst
   logical :: do_serial
   integer :: psi_block(2), blacs_info
   integer, allocatable :: ipiv(:)
@@ -462,8 +463,6 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     
     call states_elec_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
     
-    ik = 1
-
     ! allocate local part of transpose state matrix
     SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
@@ -568,7 +567,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 #ifdef HAVE_MPI
         sender = 0
         if(state_is_local(st,ii)) then
-          call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
+          call states_elec_get_state(st, mesh, ii, ik, temp_state)
           call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
@@ -585,7 +584,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
       SAFE_ALLOCATE(temp_state(1:mesh%np,1))
       do ii = 1, nst
         ! this call is necessary becasue we want to have only np not np_part
-        call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
+        call states_elec_get_state(st, mesh, ii, ik, temp_state)
         KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
       end do
       SAFE_DEALLOCATE_A(temp_state)

@@ -79,7 +79,9 @@ module derivatives_oct_m
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
-    zderivatives_curl
+    zderivatives_curl,                  &
+    dderivatives_partial,               &
+    zderivatives_partial
 
 
   integer, parameter ::     &

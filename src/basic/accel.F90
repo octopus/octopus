@@ -132,6 +132,7 @@ module accel_oct_m
     integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
+    integer                :: warp_size
   end type accel_t
 
   type accel_mem_t
@@ -178,12 +179,16 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_subarray_gather
   type(accel_kernel_t), public, target, save :: kernel_density_real
   type(accel_kernel_t), public, target, save :: kernel_density_complex
+  type(accel_kernel_t), public, target, save :: kernel_density_spinors
   type(accel_kernel_t), public, target, save :: kernel_phase
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
+  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_real
+  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_complex
+  type(accel_kernel_t), public, target, save :: set_one
 
   ! kernels used locally
   type(accel_kernel_t), save :: set_zero
@@ -546,11 +551,13 @@ contains
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+    accel%warp_size = 1
 #endif
 #ifdef HAVE_CUDA
     call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
     call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
     call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+    call cuda_device_get_warpsize(accel%device%cuda_device, accel%warp_size)
 #endif
       
     if(mpi_grp_is_root(base_grp)) call device_info()
@@ -562,6 +569,7 @@ contains
     call accel_kernel_global_init()
 
     call accel_kernel_start_call(set_zero, 'set_zero.cl', "set_zero")
+    call accel_kernel_start_call(set_one, 'set_one.cl', "set_one")
     call accel_kernel_start_call(kernel_vpsi, 'vpsi.cl', "vpsi")
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
@@ -574,12 +582,15 @@ contains
     call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
+    call accel_kernel_start_call(kernel_density_spinors, 'density.cl', "density_spinors")
     call accel_kernel_start_call(kernel_phase, 'phase.cl', "phase")
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(kernel_mod_sqr_real, 'mod_sqr.cl', "mod_sqr_real")
+    call accel_kernel_start_call(kernel_mod_sqr_complex, 'mod_sqr.cl', "mod_sqr_complex")
 
     !%Variable AccelBenchmark
     !%Type logical
