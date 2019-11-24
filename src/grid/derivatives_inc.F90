@@ -25,14 +25,14 @@
 ! ---------------------------------------------------------
 !> These are the workhorse routines that handle the calculation of derivatives
 subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
-  type(nl_operator_t),      target, intent(in)    :: op
-  type(derivatives_t),      target, intent(in)    :: der
-  type(batch_t),            target, intent(inout) :: ff
-  type(batch_t),            target, intent(inout) :: opff
-  type(derivatives_handle_batch_t), intent(out)   :: handle
-  logical,                optional, intent(in)    :: ghost_update
-  logical,                optional, intent(in)    :: set_bc
-  FLOAT,                  optional, intent(in)    :: factor
+  type(nl_operator_t),       target, intent(in)    :: op
+  type(derivatives_t),       target, intent(in)    :: der
+  class(batch_t),            target, intent(inout) :: ff
+  class(batch_t),            target, intent(inout) :: opff
+  type(derivatives_handle_batch_t),  intent(out)   :: handle
+  logical,                 optional, intent(in)    :: ghost_update
+  logical,                 optional, intent(in)    :: set_bc
+  FLOAT,                   optional, intent(in)    :: factor
 
   PUSH_SUB(X(derivatives_batch_start))
 
@@ -115,8 +115,8 @@ end subroutine X(derivatives_batch_finish)
 subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc, factor)
   type(nl_operator_t), intent(in)    :: op
   type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: ff
-  type(batch_t),       intent(inout) :: opff
+  class(batch_t),      intent(inout) :: ff
+  class(batch_t),      intent(inout) :: opff
   logical,   optional, intent(in)    :: ghost_update
   logical,   optional, intent(in)    :: set_bc
   FLOAT,     optional, intent(in)    :: factor

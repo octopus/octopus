@@ -80,7 +80,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
 
   if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
-    call batch_copy(psib, epsib)
+    call psib%copy(epsib)
   else
     epsib => psib
   end if
@@ -749,8 +749,8 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, i
 
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
-  call batch_copy(hpsib, auxpsib, copy_data=.false.)
-  call batch_copy(hpsib, aux2psib, copy_data=.false.)
+  call hpsib%copy(auxpsib, copy_data=.false.)
+  call hpsib%copy(aux2psib, copy_data=.false.)
   
   ! Compute (T + Vnl)|psi> and store it
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, auxpsib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
@@ -826,10 +826,10 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
 
   SAFE_ALLOCATE(gradb(1:mesh%sb%dim))
 
-  call batch_copy(hpsib, divb)
+  call hpsib%copy(divb)
   
   do idir = 1, mesh%sb%dim
-    call batch_copy(hpsib, gradb(idir))
+    call hpsib%copy(gradb(idir))
     call X(derivatives_batch_perform)(hm%der%grad(idir), hm%der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
   end do
   

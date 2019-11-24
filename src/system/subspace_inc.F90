@@ -123,7 +123,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
 
       if(hamiltonian_elec_apply_packed(hm)) call batch_pack(st%group%psib(ib, ik))
       
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
@@ -407,7 +407,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_copy(st%group%psib(ib, ik), hpsib(ib))
+    call st%group%psib(ib, ik)%copy(hpsib(ib))
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   

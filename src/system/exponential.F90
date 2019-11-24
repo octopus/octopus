@@ -733,8 +733,8 @@ contains
     PUSH_SUB(exponential_taylor_series_batch)
     call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-    call batch_copy(psib, psi1b)
-    call batch_copy(psib, hpsi1b)
+    call psib%copy(psi1b)
+    call psib%copy(hpsi1b)
 
     zfact = M_z1
     zfact2 = M_z1
@@ -820,7 +820,7 @@ contains
     SAFE_ALLOCATE(norm(1:psib%nst))
     SAFE_ALLOCATE(vb(1:te%exp_order+1))
 
-    call batch_copy(psib, vb(1))
+    call psib%copy(vb(1))
     if (present(inh_psib)) then
       call batch_copy_data(mesh%np, inh_psib, vb(1))
     else
@@ -842,7 +842,7 @@ contains
 
     call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
     do iter = 2, te%exp_order+1
-      call batch_copy(vb(1), vb(iter))
+      call vb(1)%copy(vb(iter))
     end do
 
     SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
@@ -966,9 +966,9 @@ contains
     PUSH_SUB(exponential_cheby_batch)
     call profiling_in(prof, "EXP_CHEBY_BATCH")
 
-    call batch_copy(psib, psi0)
-    call batch_copy(psib, psi1)
-    call batch_copy(psib, psi2)
+    call psib%copy(psi0)
+    call psib%copy(psi1)
+    call psib%copy(psi2)
     call batch_set_zero(psi0)
     call batch_set_zero(psi1)
 

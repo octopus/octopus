@@ -122,7 +122,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))

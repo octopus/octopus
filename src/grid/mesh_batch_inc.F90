@@ -18,8 +18,8 @@
 
 subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
-  type(batch_t),     intent(in)    :: bb
+  class(batch_t),    intent(in)    :: aa
+  class(batch_t),    intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: symm         !< for the moment it is ignored
   logical, optional, intent(in)    :: reduce
@@ -206,7 +206,7 @@ end subroutine X(mesh_batch_dotp_matrix)
 
 subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
+  class(batch_t),    intent(in)    :: aa
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 
@@ -321,8 +321,8 @@ end subroutine X(mesh_batch_dotp_self)
 
 subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
-  type(batch_t),     intent(in)    :: bb
+  class(batch_t),    intent(in)    :: aa
+  class(batch_t),    intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
@@ -455,7 +455,7 @@ end subroutine X(mesh_batch_dotp_vector)
 
 subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(mesh_t),      intent(in)    :: mesh            !< The mesh descriptor.
-  type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
+  class(batch_t),    intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
   logical :: packed_on_entry
@@ -788,8 +788,8 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   normalize, overlap, norm, gs_scheme)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
-  type(batch_t),     intent(in)    :: psib(:)   !< psi(nst)
-  type(batch_t),     intent(inout) :: phib      
+  class(batch_t),    intent(in)    :: psib(:)   !< psi(nst)
+  class(batch_t),    intent(inout) :: phib      
   logical, optional, intent(in)    :: normalize
   R_TYPE,  optional, intent(out)   :: overlap(:,:) !< (nst, phib%nst)
   R_TYPE,  optional, intent(out)   :: norm(:)

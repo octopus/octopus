@@ -197,7 +197,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
+      call st%group%psib(ib, iq)%copy(psib, copy_data = .true.)
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)
@@ -209,7 +209,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! calculate the gradient
       do idir = 1, gr%mesh%sb%dim
-        call batch_copy(st%group%psib(ib, iq), grad_psib(idir))
+        call st%group%psib(ib, iq)%copy(grad_psib(idir))
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
 

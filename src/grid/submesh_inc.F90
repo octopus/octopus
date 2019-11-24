@@ -160,7 +160,7 @@ end subroutine X(submesh_copy_from_mesh)
 ! ---------------------------------------------------------
 subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   type(submesh_t),  intent(in)    :: this
-  type(batch_t),    intent(in)    :: psib
+  class(batch_t),   intent(in)    :: psib
   R_TYPE,           intent(inout) :: spsi(:,:)
 
   integer :: ip, ist, ii, m, ip_map
@@ -289,8 +289,8 @@ end function X(dsubmesh_to_mesh_dotp)
 subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(submesh_t),  intent(in)    :: this
   R_TYPE,           intent(in)    :: factor(:, :)
-  type(batch_t),    intent(in)    :: ss
-  type(batch_t),    intent(inout) :: mm
+  class(batch_t),   intent(in)    :: ss
+  class(batch_t),   intent(inout) :: mm
 
   integer :: ist, jst, idim, jdim, is, ii
   type(profile_t), save :: prof
@@ -381,8 +381,8 @@ end subroutine X(submesh_batch_add_matrix)
 !! array factor.
 subroutine X(submesh_batch_add)(this, ss, mm)
   type(submesh_t),  intent(in)    :: this
-  type(batch_t),    intent(in)    :: ss
-  type(batch_t),    intent(inout) :: mm
+  class(batch_t),   intent(in)    :: ss
+  class(batch_t),   intent(inout) :: mm
 
   integer :: ist, idim, jdim, is
 
@@ -429,8 +429,8 @@ end subroutine X(submesh_batch_add)
 
 subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   type(submesh_t),   intent(in)    :: this
-  type(batch_t),     intent(in)    :: ss
-  type(batch_t),     intent(in)    :: mm
+  class(batch_t),    intent(in)    :: ss
+  class(batch_t),    intent(in)    :: mm
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 

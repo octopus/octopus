@@ -47,7 +47,7 @@ end subroutine X(batch_init_contiguous)
 
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:, :)
 
@@ -78,8 +78,8 @@ end subroutine X(batch_add_state)
 !--------------------------------------------------------------
 
 subroutine X(batch_add_state_linear)(this, psi)
-  type(batch_t),  intent(inout) :: this
-  R_TYPE, target, intent(in)    :: psi(:)
+  class(batch_t),  intent(inout) :: this
+  R_TYPE,  target, intent(in)    :: psi(:)
 
   PUSH_SUB(X(batch_add_state_linear))
 
@@ -97,12 +97,12 @@ end subroutine X(batch_add_state_linear)
 
 !--------------------------------------------------------------
 subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
-  type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: st_start
-  integer,        intent(in)    :: st_end
-  integer,        intent(in)    :: np
-  logical, optional, intent(in) :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
-  logical, optional, intent(in) :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
+  class(batch_t),    intent(inout) :: this
+  integer,           intent(in)    :: st_start
+  integer,           intent(in)    :: st_end
+  integer,           intent(in)    :: np
+  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+  logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   integer :: ist, nst
 

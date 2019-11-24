@@ -21,8 +21,8 @@
 subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(in)    :: xx
+  class(batch_t),    intent(inout) :: yy
 
   integer :: ist, dim2, dim3
   integer :: localsize
@@ -107,12 +107,12 @@ end subroutine X(batch_axpy_const)
 ! --------------------------------------------------------------
 
 subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
-  integer,           intent(in)    :: np
-  R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
-  integer, optional, intent(in)    :: a_start
-  logical, optional, intent(in)    :: a_full
+  integer,            intent(in)    :: np
+  R_TYPE,             intent(in)    :: aa(:)
+  class(batch_t),     intent(in)    :: xx
+  class(batch_t),     intent(inout) :: yy
+  integer,  optional, intent(in)    :: a_start
+  logical,  optional, intent(in)    :: a_full
 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
@@ -227,7 +227,7 @@ end subroutine X(batch_axpy_vec)
 subroutine X(batch_scal_const)(np, aa, xx)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(inout) :: xx
+  class(batch_t),    intent(inout) :: xx
 
   R_TYPE, allocatable :: aavec(:)
   
@@ -249,7 +249,7 @@ end subroutine X(batch_scal_const)
 subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(inout) :: xx
+  class(batch_t),    intent(inout) :: xx
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
@@ -357,9 +357,9 @@ end subroutine X(batch_scal_vec)
 
 subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
+  class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(inout) :: yy
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
@@ -479,9 +479,9 @@ end subroutine X(batch_xpay_vec)
 
 subroutine X(batch_xpay_const)(np, xx, aa, yy)
   integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
+  class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(inout) :: yy
 
   integer :: minst, maxst, ii, ist
   R_TYPE, allocatable :: aavec(:)
@@ -509,7 +509,7 @@ end subroutine X(batch_xpay_const)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state1)(this, ist, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:)
@@ -599,7 +599,7 @@ end subroutine X(batch_set_state1)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state2)(this, index, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: index(:)
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:)
@@ -615,7 +615,7 @@ end subroutine X(batch_set_state2)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state3)(this, ii, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ii
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:, :)
@@ -634,7 +634,7 @@ end subroutine X(batch_set_state3)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state1)(this, ist, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:)
@@ -750,7 +750,7 @@ end subroutine X(batch_get_state1)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state2)(this, index, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: index(:)
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:)
@@ -767,7 +767,7 @@ end subroutine X(batch_get_state2)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state3)(this, ii, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: ii
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:, :)
@@ -786,7 +786,7 @@ end subroutine X(batch_get_state3)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_points)(this, sp, ep, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: sp  
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
@@ -862,7 +862,7 @@ end subroutine X(batch_get_points)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_points)(this, sp, ep, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: sp  
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
@@ -941,8 +941,8 @@ end subroutine X(batch_set_points)
 subroutine X(batch_mul)(np, ff,  xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: ff(:)
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(in)    :: xx
+  class(batch_t),    intent(inout) :: yy
 
   integer :: ist, ip
   R_TYPE :: mul

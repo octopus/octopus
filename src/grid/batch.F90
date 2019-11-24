@@ -39,7 +39,6 @@ module batch_oct_m
     batch_pack_t,                   &
     batch_t,                        &
     batch_init,                     &
-    batch_copy,                     &
     batch_copy_data,                &
     batch_end,                      &
     batch_add_state,                &
@@ -109,6 +108,8 @@ module batch_oct_m
     type(batch_pack_t),             public :: pack
     type(type_t)                           :: type !< only available if the batched is packed
     logical :: special_memory
+  contains
+    procedure :: copy => batch_copy
   end type batch_t
 
   !--------------------------------------------------------------
@@ -138,7 +139,7 @@ contains
 
   !--------------------------------------------------------------
   subroutine batch_end(this, copy)
-    type(batch_t),           intent(inout) :: this
+    class(batch_t),          intent(inout) :: this
     logical,       optional, intent(in)    :: copy
 
     PUSH_SUB(batch_end)
@@ -175,7 +176,7 @@ contains
 
   !--------------------------------------------------------------
   subroutine batch_deallocate(this)
-    type(batch_t),  intent(inout) :: this
+    class(batch_t),  intent(inout) :: this
     
     integer :: ii
     
@@ -349,7 +350,7 @@ contains
 
   !--------------------------------------------------------------
   logical function batch_is_ok(this) result(ok)
-    type(batch_t), intent(in)   :: this
+    class(batch_t), intent(in)   :: this
 
     integer :: ist
     logical :: all_assoc(1:2)
@@ -374,13 +375,14 @@ contains
   !--------------------------------------------------------------
 
   subroutine batch_copy(bin, bout, pack, copy_data)
-    type(batch_t), target,   intent(in)    :: bin
-    type(batch_t),           intent(out)   :: bout
+    class(batch_t),          intent(in)    :: bin
+    class(batch_t),          intent(out)   :: bout
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
 
     integer :: ii, np
     logical :: pack_, copy_data_
+
     PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
@@ -426,7 +428,7 @@ contains
   ! ----------------------------------------------------
   !> THREADSAFE
   type(type_t) pure function batch_type(this) result(btype)
-    type(batch_t),      intent(in)    :: this
+    class(batch_t),      intent(in)    :: this
 
     if(.not. batch_is_packed(this)) then
       if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
@@ -440,7 +442,7 @@ contains
   ! ----------------------------------------------------
   !> THREADSAFE
   integer pure function batch_status(this) result(bstatus)
-    type(batch_t),      intent(in)    :: this
+    class(batch_t),      intent(in)    :: this
 
     bstatus = this%status
   end function batch_status
@@ -448,7 +450,7 @@ contains
   ! ----------------------------------------------------
 
   logical pure function batch_is_packed(this) result(in_buffer)
-    type(batch_t),      intent(in)    :: this
+    class(batch_t),      intent(in)    :: this
 
     in_buffer = this%in_buffer_count > 0
   end function batch_is_packed
@@ -456,7 +458,7 @@ contains
   ! ----------------------------------------------------
 
   integer pure function batch_max_size(this) result(size)
-    type(batch_t),      intent(in)    :: this
+    class(batch_t),      intent(in)    :: this
 
     size = this%max_size
   end function batch_max_size
@@ -464,7 +466,7 @@ contains
   ! ----------------------------------------------------
 
   integer function batch_pack_size(this) result(size)
-    type(batch_t),      intent(inout) :: this
+    class(batch_t),      intent(inout) :: this
 
     size = batch_max_size(this)
     if(accel_is_enabled()) size = accel_padded_size(size)
@@ -475,8 +477,8 @@ contains
   ! ----------------------------------------------------
 
   subroutine batch_pack(this, copy)
-    type(batch_t),      intent(inout) :: this
-    logical, optional,  intent(in)    :: copy
+    class(batch_t),      intent(inout) :: this
+    logical,   optional, intent(in)    :: copy
 
     logical :: copy_
     type(profile_t), save :: prof, prof_copy
@@ -575,7 +577,7 @@ contains
   ! ----------------------------------------------------
 
   subroutine batch_unpack(this, copy, force)
-    type(batch_t),      intent(inout) :: this
+    class(batch_t),     intent(inout) :: this
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
@@ -622,7 +624,7 @@ contains
   ! ----------------------------------------------------
 
   subroutine batch_sync(this)
-    type(batch_t),      intent(inout) :: this
+    class(batch_t),      intent(inout) :: this
     
     type(profile_t), save :: prof
 
@@ -684,7 +686,8 @@ contains
   ! ----------------------------------------------------
 
   subroutine batch_write_to_opencl_buffer(this)
-    type(batch_t),      intent(inout)  :: this
+    class(batch_t),      intent(inout)  :: this
+
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
     type(profile_t), save :: prof_pack
@@ -762,7 +765,7 @@ contains
   ! ------------------------------------------------------------------
 
   subroutine batch_read_from_opencl_buffer(this)
-    type(batch_t),      intent(inout) :: this
+    class(batch_t),      intent(inout) :: this
 
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
@@ -834,8 +837,8 @@ contains
 
 ! ------------------------------------------------------
 integer function batch_inv_index(this, cind) result(index)
-  type(batch_t),     intent(in)    :: this
-  integer,           intent(in)    :: cind(:)
+  class(batch_t),     intent(in)    :: this
+  integer,            intent(in)    :: cind(:)
 
   do index = 1, this%nst_linear
     if(all(cind(1:this%ndims) == this%ist_idim_index(index, 1:this%ndims))) exit
@@ -848,8 +851,8 @@ end function batch_inv_index
 ! ------------------------------------------------------
 
 integer pure function batch_ist_idim_to_linear(this, cind) result(index)
-  type(batch_t),     intent(in)    :: this
-  integer,           intent(in)    :: cind(:)
+  class(batch_t),     intent(in)    :: this
+  integer,            intent(in)    :: cind(:)
   
   if(ubound(cind, dim = 1) == 1) then
     index = cind(1)
@@ -862,8 +865,8 @@ end function batch_ist_idim_to_linear
 ! ------------------------------------------------------
 
 integer pure function batch_linear_to_ist(this, linear_index) result(ist)
-  type(batch_t),     intent(in)    :: this
-  integer,           intent(in)    :: linear_index
+  class(batch_t),     intent(in)    :: this
+  integer,            intent(in)    :: linear_index
   
   ist = this%ist_idim_index(linear_index, 1)
 
@@ -872,8 +875,8 @@ end function batch_linear_to_ist
 ! ------------------------------------------------------
 
 integer pure function batch_linear_to_idim(this, linear_index) result(idim)
-  type(batch_t),     intent(in)    :: this
-  integer,           intent(in)    :: linear_index
+  class(batch_t),     intent(in)    :: this
+  integer,            intent(in)    :: linear_index
   
   idim = this%ist_idim_index(linear_index, 2)
   
@@ -882,7 +885,7 @@ end function batch_linear_to_idim
 ! ------------------------------------------------------
 
 subroutine batch_remote_access_start(this, mpi_grp, rma_win)
-  type(batch_t),   intent(inout) :: this
+  class(batch_t),  intent(inout) :: this
   type(mpi_grp_t), intent(in)    :: mpi_grp
   integer,         intent(out)   :: rma_win
 
@@ -917,8 +920,8 @@ end subroutine batch_remote_access_start
 ! ------------------------------------------------------
 
 subroutine batch_remote_access_stop(this, rma_win)
-  type(batch_t),     intent(inout) :: this
-  integer,           intent(inout) :: rma_win
+  class(batch_t),     intent(inout) :: this
+  integer,            intent(inout) :: rma_win
   
   PUSH_SUB(batch_remote_access_stop)
 
@@ -936,8 +939,8 @@ end subroutine batch_remote_access_stop
 
 subroutine batch_copy_data(np, xx, yy)
   integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(in)    :: xx
+  class(batch_t),    intent(inout) :: yy
 
   integer :: ist, dim2, dim3
   type(profile_t), save :: prof

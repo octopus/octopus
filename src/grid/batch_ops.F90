@@ -108,7 +108,7 @@ contains
   !--------------------------------------------------------------
 
   subroutine batch_set_zero(this)
-    type(batch_t),     intent(inout) :: this
+    class(batch_t),     intent(inout) :: this
 
     type(profile_t), save :: prof
     integer :: ist_linear, ist, ip
@@ -161,10 +161,10 @@ contains
 ! --------------------------------------------------------------
 
 subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
-  type(batch_t),       intent(in)    :: this
+  class(batch_t),      intent(in)    :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(accel_mem_t),  intent(inout) :: psi
+  type(accel_mem_t),   intent(inout) :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
@@ -205,10 +205,10 @@ end subroutine batch_get_points_cl
 ! --------------------------------------------------------------
 
 subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
-  type(batch_t),       intent(inout) :: this
+  class(batch_t),      intent(inout) :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(accel_mem_t),  intent(in)    :: psi
+  type(accel_mem_t),   intent(in)    :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
@@ -250,7 +250,7 @@ end subroutine batch_set_points_cl
 ! -------------------------
 
 integer pure function batch_points_block_size(this) result(block_size)
-  type(batch_t),       intent(in)    :: this
+  class(batch_t),       intent(in)    :: this
   
   block_size = 61440
 

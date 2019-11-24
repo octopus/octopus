@@ -286,7 +286,7 @@ contains
         end if
 
         if(present(dt2)) then
-          call batch_copy(st%group%psib(ib, ik), zpsib_dt)
+          call st%group%psib(ib, ik)%copy(zpsib_dt)
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)

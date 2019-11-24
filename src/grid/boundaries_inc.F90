@@ -240,9 +240,9 @@ end subroutine X(ghost_update_batch_finish)
 !! boundary conditions for the derivatives, in finite system;
 !! or set according to periodic boundary conditions.
 subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
-  type(boundaries_t),    intent(in)    :: boundaries
-  type(batch_t), target, intent(inout) :: ffb
-  CMPLX, optional,       intent(in)    :: phase_correction(:)
+  type(boundaries_t),     intent(in)    :: boundaries
+  class(batch_t), target, intent(inout) :: ffb
+  CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
 

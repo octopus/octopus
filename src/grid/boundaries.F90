@@ -343,7 +343,7 @@ contains
 
   subroutine boundaries_set_batch(this, ffb, phase_correction)
     type(boundaries_t), intent(in)    :: this
-    type(batch_t),      intent(inout) :: ffb
+    class(batch_t),     intent(inout) :: ffb
     CMPLX, optional,    intent(in)    :: phase_correction(:)
 
     PUSH_SUB(boundaries_set_batch)
