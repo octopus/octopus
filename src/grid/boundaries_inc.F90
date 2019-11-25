@@ -56,7 +56,7 @@ end subroutine X(vec_ghost_update)
 
 subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_t),    target,    intent(in)    :: vp
-  type(batch_t), target,    intent(inout) :: v_local
+  class(batch_t), target,   intent(inout) :: v_local
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset

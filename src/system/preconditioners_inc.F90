@@ -228,8 +228,8 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(batch_t),            intent(inout) :: aa
-  type(batch_t),            intent(inout) :: bb
+  class(batch_t),           intent(inout) :: aa
+  class(batch_t),           intent(inout) :: bb
   R_TYPE,         optional, intent(in)    :: omega(:)
 
   integer :: ii

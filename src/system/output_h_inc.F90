@@ -270,7 +270,7 @@
       do ik = st%d%kpt%start,st%d%kpt%end
         call density_calc_init(dens_calc, st, gr, density_tmp)
         do ib = st%group%block_start, st%group%block_end
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end do
  
         density_kpt(ik) = M_ZERO

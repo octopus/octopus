@@ -39,6 +39,7 @@ module scissor_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

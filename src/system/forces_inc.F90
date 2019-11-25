@@ -165,7 +165,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   FLOAT,  pointer :: grad_rho(:, :)
   FLOAT,  allocatable :: force_psi(:)
   FLOAT, allocatable :: symmtmp(:, :)
-  type(batch_t) :: psib, grad_psib(1:MAX_DIM)
+  type(wfs_elec_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
 
   PUSH_SUB(X(forces_from_potential))
@@ -204,7 +204,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! set the phase for periodic systems
       if(associated(hm%hm_base%phase)) then
-        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., psib)
       end if
 
       ! calculate the gradient
@@ -214,7 +214,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end do
 
       ! calculate the contribution to the density gradient
-      call X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
+      call X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
       ! the non-local potential contribution
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &

@@ -52,6 +52,7 @@ module current_oct_m
   use unit_oct_m
   use unit_system_oct_m  
   use varinfo_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
   
   implicit none
@@ -134,8 +135,8 @@ contains
     type(derivatives_t), intent(inout) :: der
     integer,             intent(in)    :: ik
     integer,             intent(in)    :: ib
-    type(batch_t),       intent(in)    :: psib
-    type(batch_t),       intent(in)    :: gpsib(:)
+    type(wfs_elec_t),    intent(in)    :: psib
+    type(wfs_elec_t),    intent(in)    :: gpsib(:)
     FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
@@ -284,8 +285,8 @@ contains
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
-    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
-    type(batch_t), allocatable :: commpsib(:)
+    type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
+    type(wfs_elec_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
@@ -325,14 +326,14 @@ contains
           call st%group%psib(ib, ik)%copy_to(hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, rpsib, hrpsib, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -397,7 +398,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
@@ -412,11 +413,11 @@ contains
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 
-            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
             if(associated(hm%hm_base%phase)) then
               do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, conjugate = .true., &
+                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, conjugate = .true., &
                   psib = commpsib(idir))
               end do
             end if

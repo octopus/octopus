@@ -43,6 +43,7 @@ module propagator_etrs_oct_m
   use states_elec_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use propagation_ops_elec_oct_m
   use xc_oct_m
 
@@ -147,7 +148,7 @@ contains
     FLOAT :: diff
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib, iter, ip
-    type(batch_t), allocatable :: psi2(:, :)
+    type(wfs_elec_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
 
@@ -430,13 +431,13 @@ contains
         call profiling_out(phase_prof)
 
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt)
         end if
 
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
           call st%group%psib(ib, ik)%do_unpack()

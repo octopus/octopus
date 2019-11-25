@@ -62,6 +62,7 @@ module forces_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use vdw_ts_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

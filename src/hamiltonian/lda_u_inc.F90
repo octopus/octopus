@@ -17,15 +17,14 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
-  type(lda_u_t),           intent(in) :: this
-  type(mesh_t),            intent(in) :: mesh
-  integer,                 intent(in) :: ik
-  type(batch_t),           intent(in) :: psib
-  type(batch_t),           intent(inout) :: hpsib
-  type(states_elec_dim_t), intent(in) :: d
-  type(simul_box_t),       intent(in) :: sb
-  logical,                 intent(in) :: has_phase !True if the wavefunction has an associated phase
+subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib, has_phase)
+  type(lda_u_t),           intent(in)    :: this
+  type(mesh_t),            intent(in)    :: mesh
+  type(wfs_elec_t),        intent(in)    :: psib
+  type(wfs_elec_t),        intent(inout) :: hpsib
+  type(states_elec_dim_t), intent(in)    :: d
+  type(simul_box_t),       intent(in)    :: sb
+  logical,                 intent(in)    :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
   R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:,:), psi(:,:)
@@ -42,7 +41,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
   SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
-  ispin = states_elec_dim_get_spin_index(d, ik)
+  ispin = states_elec_dim_get_spin_index(d, psib%ik)
   if(d%ispin == UNPOLARIZED) then
     el_per_state = 2
   else
@@ -59,7 +58,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
     call batch_get_state(psib, ibatch, mesh%np, psi)
     do ios = 1, this%norbsets
       os => this%orbsets(ios)
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, &
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, has_phase, this%basisfromstates, &
                                                   dot(1:d%dim,1:os%norbs,ios,ibatch))
     end do
   end do
@@ -96,7 +95,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
 
         if(has_phase) then
 #ifdef R_TCOMPLEX
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%phase_shift(inn, psib%ik)*os%V_ij(inn, 0)/el_per_state
 #endif
         else
           weight = os%V_ij(inn, 0)/el_per_state
@@ -131,7 +130,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
   !We add the orbitals properly weighted to hpsi
   do ios = 1, this%norbsets 
     os => this%orbsets(ios)
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced(:,:,ios))
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, has_phase, this%basisfromstates, reduced(:,:,ios))
   end do
  
   SAFE_DEALLOCATE_A(psi)
@@ -1546,8 +1545,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
    integer,                   intent(in)    :: iq, ndim
-   type(batch_t),             intent(in)    :: psib
-   type(batch_t),             intent(in)    :: grad_psib(:)
+   type(wfs_elec_t),          intent(in)    :: psib
+   type(wfs_elec_t),          intent(in)    :: grad_psib(:)
    FLOAT,                     intent(inout) :: force(:, :)
    logical,                   intent(in)    :: phase
 

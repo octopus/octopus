@@ -52,6 +52,7 @@ module test_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
@@ -242,7 +243,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
 
     PUSH_SUB(test_projector)
@@ -270,7 +271,7 @@ contains
     call batch_set_zero(epsib)
 
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
     end do
 
     do itime = 1, epsib%nst
@@ -292,7 +293,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -336,15 +337,13 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
-                                           .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, .false., .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
-                                           .true., .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), .true., .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, .true., .false., zweight)
       end if
     end do
 
@@ -374,7 +373,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: hpsib
+    type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
     type(simul_box_t) :: sb
 
@@ -430,10 +429,10 @@ contains
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       end if
     end do
@@ -563,7 +562,7 @@ contains
     end if
 
     do itime = 1, param%repetitions
-      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), CNST(1.0))
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
@@ -631,7 +630,7 @@ contains
 
     type(system_t) :: sys
     integer :: itime, ops
-    type(batch_t) :: xx, yy
+    type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
 
     PUSH_SUB(test_density_calc)
@@ -858,7 +857,7 @@ contains
   subroutine test_prints_info_batch(st, gr, psib)
     type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
-    type(batch_t),       intent(inout) :: psib
+    class(batch_t),      intent(inout) :: psib
 
     integer :: itime
 

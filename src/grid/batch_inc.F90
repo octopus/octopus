@@ -18,7 +18,7 @@
 
 !--------------------------------------------------------------
 subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
-  type(batch_t),  intent(out)   :: this
+  class(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
@@ -128,7 +128,7 @@ end subroutine X(batch_allocate)
 
 !--------------------------------------------------------------
 subroutine X(batch_allocate_temporary)(this)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t),  intent(inout) :: this
 
   integer :: ist, idim
 

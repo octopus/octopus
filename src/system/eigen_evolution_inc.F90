@@ -33,9 +33,9 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
   integer :: ib, minst, maxst, ist, iter, maxiter, conv, convb, matvec, i
   R_TYPE, allocatable :: c(:, :), zeig(:), res(:)
   FLOAT, allocatable :: eig(:)
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
 #if defined(R_TREAL)
-  type(batch_t) :: zpsib
+  type(wfs_elec_t) :: zpsib
   CMPLX, allocatable :: zpsi(:,:)
   FLOAT, allocatable :: psi(:,:)
 #endif
@@ -74,11 +74,11 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     ! type of a batch, or to modify the batch_copy_data_to routine to allow the copy between batches of
     ! different types.
     do ist = conv + 1, st%nst
-      call batch_init(zpsib, hm%d%dim, 1)
+      call wfs_elec_init(zpsib, hm%d%dim, 1, ik)
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
       call zpsib%add_state(ist, zpsi)
 
-      call exponential_apply_batch(te, namespace, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
+      call exponential_apply_batch(te, namespace, mesh, hm, zpsib, -tau, imag_time = .true.)
 
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
@@ -92,7 +92,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
         call st%group%psib(ib, ik)%do_pack()
       end if
 
-      call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
+      call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), -tau, imag_time = .true.)
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
 
       if (hamiltonian_elec_apply_packed(hm)) then
@@ -124,7 +124,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
 
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))
       st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
       call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)

@@ -84,7 +84,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
 
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
   integer             :: ib, minst, maxst
-  type(batch_t)       :: hpsib
+  type(wfs_elec_t)       :: hpsib
   type(profile_t), save :: prof_diff
   
   PUSH_SUB(X(subspace_diag_standard))
@@ -125,7 +125,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib)
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
@@ -169,7 +169,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   integer             :: ist, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol, ip, idim
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
   type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 #ifdef HAVE_ELPA
   class(elpa_t), pointer :: elpa
@@ -219,10 +219,10 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   do ist = st%st_start, st%st_end, st%d%block_size
     size = min(st%d%block_size, st%st_end - ist + 1)
     
-    call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
-    call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
+    call wfs_elec_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:), ik)
+    call wfs_elec_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:), ik)
     
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib)
     
     call psib%end()
     call hpsib%end()
@@ -397,7 +397,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
   integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
-  type(batch_t), allocatable :: hpsib(:)
+  type(wfs_elec_t), allocatable :: hpsib(:)
   integer :: sp, size, block_size
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
@@ -408,7 +408,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   
   do ib = st%group%block_start, st%group%block_end
     call st%group%psib(ib, ik)%copy_to(hpsib(ib))
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib))
   end do
   
   if(st%are_packed() .and. accel_is_enabled()) then

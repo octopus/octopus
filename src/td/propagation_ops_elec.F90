@@ -37,6 +37,7 @@ module propagation_ops_elec_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use propagation_ops_abst_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -238,10 +239,10 @@ contains
         end if
 
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt, &
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt)
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt)
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then
@@ -268,7 +269,7 @@ contains
     FLOAT, optional,          intent(in)    :: vmagnus(:,:,:)
 
     integer :: ik, ib
-    type(batch_t) :: zpsib_dt
+    type(wfs_elec_t) :: zpsib_dt
     type(density_calc_t) :: dens_calc
     type(profile_t), save :: prof
 
@@ -291,28 +292,28 @@ contains
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
               deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
               deltat2 = M_TWO*dt)
           end if
 
           !use the dt propagation to calculate the density
-          call density_calc_accumulate(dens_calc, ik, zpsib_dt)
+          call density_calc_accumulate(dens_calc, zpsib_dt)
 
           call zpsib_dt%end()
         else
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus, &
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus, &
               inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus)
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus)
           end if
 
           !use the dt propagation to calculate the density
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then

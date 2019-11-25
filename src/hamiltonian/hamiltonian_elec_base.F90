@@ -45,6 +45,7 @@ module hamiltonian_elec_base_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

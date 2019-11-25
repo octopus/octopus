@@ -111,7 +111,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     SAFE_ALLOCATE(lam_sym(1:st%nst))
     call states_elec_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
     do ib = hpsi_j%block_start, hpsi_j%block_end
-      call X(hamiltonian_elec_apply_batch) (hm, namespace, gr%mesh, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
+      call X(hamiltonian_elec_apply_batch) (hm, namespace, gr%mesh, st%group%psib(ib, ik), hpsi_j%psib(ib, ik))
     end do
   end if
 

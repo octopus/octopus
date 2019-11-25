@@ -25,6 +25,7 @@ module states_elec_group_oct_m
   use messages_oct_m
   use profiling_oct_m
   use states_elec_dim_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -38,7 +39,7 @@ module states_elec_group_oct_m
 
   type states_elec_group_t
     ! Components are public by default
-    type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
+    type(wfs_elec_t), pointer :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
     integer                  :: block_start           !< The lowest index of local blocks
     integer                  :: block_end             !< The highest index of local blocks

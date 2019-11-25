@@ -58,7 +58,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
   integer, optional,        intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
   type(profile_t), save :: prof
 
   PUSH_SUB(X(calculate_expectation_values))
@@ -77,7 +77,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
       if(hamiltonian_elec_apply_packed(hm)) then
