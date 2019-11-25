@@ -78,29 +78,29 @@ AC_DEFUN([ACX_CUDA],
 
   if test x"${enable_cuda_mpi}" == x"yes" ; then
     AC_DEFINE(HAVE_CUDA_MPI, 1, [defined if cuda-aware MPI support is enabled])
+  else
+dnl Do automatic detection of CUDA-aware MPI for OpenMPI if not enabled by hand
+    if test x"$enable_mpi" == x"yes"; then
+      AC_MSG_CHECKING([for CUDA-aware MPI])
+  
+      AC_LANG_PUSH([C])
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+      #include "mpi.h"
+      #include "mpi-ext.h"
+      #if !(defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
+      # error No CUDA support.
+      #endif
+      ]])], [acx_cudampi="yes"], [acx_cudampi="no"])
+      AC_LANG_POP([C])
+  
+      if test x"${acx_cudampi}" == x"yes" ; then
+        AC_DEFINE(HAVE_CUDA_MPI, 1, [defined if cuda-aware MPI is enabled])
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no])
+      fi
+    fi
   fi
-
-dnl Disable automatic detection of CUDA-aware MPI for OpenMPI for the moment
-dnl  if test x"$enable_mpi" == x"yes"; then
-dnl    AC_MSG_CHECKING([for CUDA-aware MPI])
-dnl
-dnl    AC_LANG_PUSH([C])
-dnl    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-dnl    #include "mpi.h"
-dnl    #include "mpi-ext.h"
-dnl    #if !(defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT)
-dnl    # error No CUDA support.
-dnl    #endif
-dnl    ]])], [acx_cudampi="yes"], [acx_cudampi="no"])
-dnl    AC_LANG_POP([C])
-dnl
-dnl    if test x"${acx_cudampi}" == x"yes" ; then
-dnl      AC_DEFINE(HAVE_CUDA_MPI, 1, [defined if cuda-aware MPI is enabled])
-dnl      AC_MSG_RESULT([yes])
-dnl    else
-dnl      AC_MSG_RESULT([no])
-dnl    fi
-dnl  fi
 
   AC_SUBST(CFLAGS_CUDA)
   AC_SUBST(LIBS_CUDA)
