@@ -13,46 +13,46 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.80434624
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.80480459
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.43120280
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.12570318
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.17260804
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.12442661
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.49914979
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 12.41396364
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -5.33613856
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.12633868
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  2.17251167
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.12466754
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.49916480
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  12.41303214
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -5.33531354
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.125000
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.125000
 match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ; 0.125000
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.280439
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ; 0.022241
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.139406
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; 0.173060
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.280487
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ; 0.022240
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.139404
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; 0.173170
 
 match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ; 0.375000
 match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ; 0.125000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ; 0.125000
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.260467
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   2', 3, 8) ; -0.001430
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.260534
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   2', 3, 8) ; -0.001429
 match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   2', 3, 16) ; 0.104514
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   2', 3, 17) ; 0.192430
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   2', 3, 17) ; 0.192534
 
 match ; k-point 3 (x) ; GREPFIELD(static/info, '#k =   3', 7) ; 0.375000
 match ; k-point 3 (y) ; GREPFIELD(static/info, '#k =   3', 8) ; 0.375000
 match ; k-point 3 (z) ; GREPFIELD(static/info, '#k =   3', 9) ; 0.125000
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   3', 3, 1) ; -0.241547
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   3', 3, 8) ; -0.017855
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   3', 3, 16) ; 0.120700
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   3', 3, 17) ; 0.207158
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   3', 3, 1) ; -0.241593
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   3', 3, 8) ; -0.017881
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   3', 3, 16) ; 0.120707
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   3', 3, 17) ; 0.207296
 
 match ; k-point 4 (x) ; GREPFIELD(static/info, '#k =   4', 7) ; 0.375000
 match ; k-point 4 (y) ; GREPFIELD(static/info, '#k =   4', 8) ; 0.375000
 match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.375000
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ; -0.224912
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ; -0.067345
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ; 0.109820
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.214726
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ; -0.224957
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ; -0.067374
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ; 0.109822
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.214753
 
 match ; geometry size  ; LINEFIELD(static/geometry.xyz,  1, 1) ;  8
 match ; geometry  4 1  ; LINEFIELD(static/geometry.xyz,  6, 2) ;  0.0
@@ -70,11 +70,11 @@ match ; crystal  70 1  ; LINEFIELD(static/crystal.xyz, 72, 2) ; -15.3
 match ; crystal  70 2  ; LINEFIELD(static/crystal.xyz, 72, 3) ; -5.1
 match ; crystal  70 3  ; LINEFIELD(static/crystal.xyz, 72, 4) ;  10.2
 
-match ; DOS E Fermi    ; LINEFIELD(static/total-dos-efermi.dat, 2, 1);   0.139406
-match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.404230
-match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.472034
-match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
-match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
+match ; DOS E Fermi    ; LINEFIELD(static/total-dos-efermi.dat, 2, 1);   0.139404
+match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.404297
+match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.471913
+match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250730
+match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.861650
 
 MPIUtil: oct-unfold
 Input: 19-unfolding.02-setup.inp
@@ -86,6 +86,6 @@ MPIUtil: oct-unfold
 Input: 19-unfolding.04-run.inp
 
 Precision : 0.002
-match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4955, 3) ; 2.161896481561E+02
-match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4956, 3) ; 2.882359093673E+02
-match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4957, 3) ; 3.371363684318E+02
+match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4955, 3) ; 2.106430851237E+02
+match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4956, 3) ; 2.826056433305E+02
+match ; AkE kpt 1 ; LINEFIELD(static/ake.dat,  4957, 3) ; 3.352844249523E+02
