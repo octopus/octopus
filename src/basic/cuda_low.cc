@@ -448,6 +448,8 @@ extern "C" void FC_FUNC_(cuda_deref, CUDA_DEREF)(CUdeviceptr ** cuda_ptr, void *
 }
 
 extern "C" void FC_FUNC_(cuda_set_stream, CUDA_SET_STREAM)(CUstream ** stream, fint * number) {
+#ifdef HAVE_CUDA
   current_stream = (*number - 1) % number_streams;
   *stream = &phStream[current_stream];
+#endif
 }
