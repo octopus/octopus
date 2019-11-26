@@ -1194,7 +1194,7 @@ contains
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
     type(namespace_t),        intent(in)    :: namespace
