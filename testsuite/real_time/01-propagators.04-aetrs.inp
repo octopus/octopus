@@ -34,3 +34,5 @@ TDEnergyUpdateIter = 1
 
 FilterPotentials = filter_none
 
+# test code path without CUDA-aware MPI for this test
+CudaAwareMPI = no
