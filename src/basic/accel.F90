@@ -182,6 +182,7 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_subarray_gather
   type(accel_kernel_t), public, target, save :: kernel_density_real
   type(accel_kernel_t), public, target, save :: kernel_density_complex
+  type(accel_kernel_t), public, target, save :: kernel_density_spinors
   type(accel_kernel_t), public, target, save :: kernel_phase
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
@@ -594,6 +595,7 @@ contains
     call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
+    call accel_kernel_start_call(kernel_density_spinors, 'density.cl', "density_spinors")
     call accel_kernel_start_call(kernel_phase, 'phase.cl', "phase")
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")

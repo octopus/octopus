@@ -19,8 +19,6 @@ Spacing = 0.6
 
 Radius = 6
 
-FilterPotentials = filter_none
-
 MixField = density
 
 ConvRelDens = 1e-8

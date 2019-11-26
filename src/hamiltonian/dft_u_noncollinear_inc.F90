@@ -62,6 +62,8 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
     norbs = os%norbs
     np_sphere = os%sphere%np
 
+    call submesh_build_global(os%sphere)
+
     call poisson_init_sm(os%poisson, psolver, der, os%sphere)
 
     ijst=0
@@ -115,6 +117,8 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
+
+    call submesh_end_global(os%sphere)
   end do !iorb
 
   if(this%orbs_dist%parallel) then

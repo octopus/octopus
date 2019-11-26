@@ -1,6 +1,7 @@
 CalculationMode = td
 
 FromScratch = yes
+ExperimentalFeatures = yes
 
 bond_length = 2.8
 
@@ -19,9 +20,9 @@ Spacing = 0.6
 
 Radius = 6
 
-MoveIons = yes
+MoveIons = no
 
-TDPropagator = exp_mid
+TDPropagator = magnus
 
 TDMaxSteps = 20
 TDTimeStep = 0.1
@@ -30,9 +31,3 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
-
-
-FilterPotentials = filter_none
-
-# test code path without CUDA-aware MPI for this test
-CudaAwareMPI = no

@@ -1,7 +1,6 @@
 CalculationMode = td
 
 FromScratch = yes
-ExperimentalFeatures = yes
 
 bond_length = 2.8
 
@@ -20,9 +19,9 @@ Spacing = 0.6
 
 Radius = 6
 
-MoveIons = no
+MoveIons = yes
 
-TDPropagator = magnus
+TDPropagator = etrs
 
 TDMaxSteps = 20
 TDTimeStep = 0.1
@@ -32,5 +31,5 @@ TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
 
+StatesMirror = yes
 
-FilterPotentials = filter_none
