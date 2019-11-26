@@ -120,20 +120,22 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, namespace, sb, nspin, dim, periodic_dim)
+  subroutine kick_init(kick, namespace, sb, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in) :: sb
     integer,           intent(in)  :: nspin
-    integer,           intent(in)  :: dim
-    integer,           intent(in)  :: periodic_dim
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir, iop, iq, iqx, iqy, iqz
     FLOAT :: norm, dot
     FLOAT :: qtemp(1:MAX_DIM)
+    integer :: dim, periodic_dim
 
     PUSH_SUB(kick_init)
+
+    dim = sb%dim
+    periodic_dim = sb%periodic_dim
 
     !%Variable TDDeltaKickTime
     !%Type float

@@ -229,7 +229,7 @@ contains
     ! lasers
     call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, namespace, gr%mesh%sb, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+    call kick_init(ep%kick, namespace, gr%mesh%sb, ispin)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
