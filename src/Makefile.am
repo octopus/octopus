@@ -419,6 +419,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/boundary_op.F90                  \
 	hamiltonian/energy.F90                       \
 	hamiltonian/epot.F90                         \
+        hamiltonian/exchange_operator.F90            \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
         hamiltonian/hamiltonian_mxll.F90             \
@@ -455,6 +456,7 @@ hamiltonian_srcs = $(hamiltonian_f_srcs) $(hamiltonian_c_srcs)
 
 noinst_HEADERS +=                                    \
         hamiltonian/dft_u_noncollinear_inc.F90       \
+        hamiltonian/exchange_operator_inc.F90        \
         hamiltonian/functionals_list.F90             \
         hamiltonian/fxc_inc.F90                      \
 	hamiltonian/hamiltonian_elec_base_inc.F90         \
