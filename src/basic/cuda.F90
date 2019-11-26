@@ -214,7 +214,13 @@ module cuda_oct_m
     end subroutine cuda_context_synchronize
 
     ! -------------------------------------------------
-        
+
+    subroutine cuda_synchronize_all_streams()
+      implicit none
+    end subroutine cuda_synchronize_all_streams
+
+    ! -------------------------------------------------
+
     subroutine cuda_launch_kernel(kernel, griddim, blockdim, shared_mem, arg_array)
       use iso_c_binding
       implicit none

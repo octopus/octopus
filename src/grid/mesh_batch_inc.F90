@@ -416,10 +416,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
         res = dot_buffer, offres = int(ist - 1, 8))
     end do
-    do ist = 1, aa%nst_linear
-      call accel_set_stream(ist)
-      call accel_finish
-    end do
+    call accel_synchronize_all_streams()
     call accel_set_stream(1)
 
     SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1))
@@ -759,10 +756,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
         res = nrm2_buffer, offres = int(ist - 1, 8))
     end do
-    do ist = 1, aa%nst_linear
-      call accel_set_stream(ist)
-      call accel_finish
-    end do
+    call accel_synchronize_all_streams()
     call accel_set_stream(1)
 
     call accel_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)

@@ -84,7 +84,8 @@ module accel_oct_m
     accel_global_memory_size,     &
     accel_max_size_per_dim,       &
     accel_get_device_pointer,     &
-    accel_set_stream
+    accel_set_stream,             &
+    accel_synchronize_all_streams
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -1885,11 +1886,25 @@ contains
 
     PUSH_SUB(accel_set_stream)
 
+#ifdef HAVE_CUDA
     call cuda_set_stream(accel%cuda_stream, stream_number)
     call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+#endif
 
     POP_SUB(accel_set_stream)
   end subroutine accel_set_stream
+
+  ! ------------------------------------------------------
+
+  subroutine accel_synchronize_all_streams()
+    PUSH_SUB(accel_synchronize_all_streams)
+
+#ifdef HAVE_CUDA
+    call cuda_synchronize_all_streams()
+#endif
+
+    POP_SUB(accel_synchronize_all_streams)
+  end subroutine accel_synchronize_all_streams
 
 #include "undef.F90"
 #include "real.F90"

@@ -374,6 +374,13 @@ extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_synchronize_all_streams, CUDA_SYNCHRONIZE_ALL_STREAMS)(){
+#ifdef HAVE_CUDA
+  for(int i = 0; i < number_streams; ++i)
+    CUDA_SAFE_CALL(cuStreamSynchronize(phStream[i]));
+#endif
+}
+
 extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   (CUfunction ** kernel, fint8 * griddim, fint8 * blockdim, fint8 * shared_mem, vector<void *> ** arg_array){
 #ifdef HAVE_CUDA
