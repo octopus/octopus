@@ -411,7 +411,7 @@ contains
     do i = 1, td%max_iter
       call update_field(i, par, gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_elec_chi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi2)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace, time = (i - 1)*td%dt)
+      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
       if(aux_fwd_propagation) then
@@ -420,7 +420,7 @@ contains
           sys%geo, sys%outp)
       end if
       call update_hamiltonian_elec_psi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace, time = (i - 1)*td%dt)
+      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
       call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
@@ -505,7 +505,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
     call propagator_run_zero_iter(sys%hm, gr, td%tr)
     call propagator_run_zero_iter(sys%hm, gr, tr_chi)
 
@@ -520,7 +520,7 @@ contains
       call oct_prop_check(prop_psi, sys%namespace, psi, gr, i)
       call update_field(i, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_elec_chi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace, time = abs(i*td%dt))
+      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
         td%ions, sys%geo, sys%outp)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
@@ -529,7 +529,7 @@ contains
         call messages_warning(1)
       end if
       call update_hamiltonian_elec_psi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace, time = abs(i*td%dt))
+      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
         td%ions, sys%geo, sys%outp)
     end do
@@ -538,7 +538,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
 
     call controlfunction_to_basis(par_chi)
     call states_elec_end(psi)
@@ -615,7 +615,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
     call propagator_run_zero_iter(sys%hm, gr, td%tr)
     call propagator_run_zero_iter(sys%hm, gr, tr_chi)
     td%dt = -td%dt
@@ -744,7 +744,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries, sys%namespace)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
 
     call propagator_end(tr_chi)
 
@@ -891,7 +891,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, namespace, hm, st, geo)
-      call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace)
     end if
 
     POP_SUB(update_hamiltonian_elec_psi)

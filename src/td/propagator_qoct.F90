@@ -79,8 +79,7 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, &
-                hm, time-dt/M_TWO)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time-dt/M_TWO)
 
     call exponential_apply_all(tr%te, gr%mesh, hm, st, dt)
 

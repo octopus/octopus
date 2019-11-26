@@ -93,7 +93,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-      call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace, time = time - dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, time = time - dt)
 
     else
 
@@ -113,7 +113,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
     
     ! propagate dt/2 with H(time - dt)
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt)
@@ -171,7 +171,7 @@ contains
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time - dt)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
 
     ! propagate dt/2 with H(t)
 
@@ -185,7 +185,7 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -287,7 +287,7 @@ contains
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
     !Update Hamiltonian
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
     !Do the time propagation for the second half of the time step
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
@@ -332,7 +332,7 @@ contains
       call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold)
     endif
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time - dt) 
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
 
     call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
@@ -384,7 +384,7 @@ contains
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 

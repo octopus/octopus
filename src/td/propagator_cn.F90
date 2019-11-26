@@ -120,8 +120,7 @@ contains
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, &
-        hm, time - dt*M_HALF)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt*M_HALF)
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end

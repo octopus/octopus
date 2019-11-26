@@ -746,10 +746,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_update(this, mesh, boundaries, namespace, time)
+  subroutine hamiltonian_elec_update(this, mesh, namespace, time)
     type(hamiltonian_elec_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
-    type(boundaries_t),       intent(in)    :: boundaries
     type(namespace_t),        intent(in)    :: namespace
     FLOAT, optional,          intent(in)    :: time
 
@@ -910,7 +909,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, boundaries, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -973,7 +972,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, boundaries, namespace, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, this%der%boundaries, namespace, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
@@ -986,7 +985,7 @@ contains
 
         if(.not. allocated(this%hm_base%projector_phases)) then
           ndim = this%d%dim
-          if(boundaries%spiralBC) ndim = ndim + 1
+          if(this%der%boundaries%spiralBC) ndim = ndim + 1
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:ndim, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
@@ -999,7 +998,7 @@ contains
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
             ndim = this%d%dim
-            if(boundaries%spiralBC) ndim = ndim + 1
+            if(this%der%boundaries%spiralBC) ndim = ndim + 1
             do idim = 1, ndim
               !$omp parallel do schedule(static)
               do ip = 1, this%hm_base%projector_matrices(imat)%npoints
@@ -1037,7 +1036,7 @@ contains
     this%geo => geo
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_elec_update(this, gr%mesh, gr%der%boundaries, namespace, time)
+    call hamiltonian_elec_update(this, gr%mesh, namespace, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change

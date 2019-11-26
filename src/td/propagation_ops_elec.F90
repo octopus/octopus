@@ -20,7 +20,6 @@
 
 module propagation_ops_elec_oct_m
   use batch_oct_m
-  use boundaries_oct_m
   use density_oct_m  
   use exponential_oct_m
   use geometry_oct_m
@@ -86,11 +85,10 @@ contains
   end subroutine
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, bnd, hm, time)
+  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, hm, time)
     type(namespace_t),        intent(in)    :: namespace
     type(states_elec_t),      intent(inout) :: st
     type(mesh_t),             intent(in)    :: mesh
-    type(boundaries_t),       intent(in)    :: bnd
     type(hamiltonian_elec_t), intent(inout) :: hm
     FLOAT,                    intent(in)    :: time
 
@@ -100,7 +98,7 @@ contains
 
     call profiling_in(prof, 'ELEC_UPDATE_H')
 
-    call hamiltonian_elec_update(hm, mesh, bnd, namespace, time = time)
+    call hamiltonian_elec_update(hm, mesh, namespace, time = time)
     call lda_u_update_occ_matrices(hm%lda_u, mesh, st, hm%hm_base, hm%energy)
 
     call profiling_out(prof)
@@ -192,12 +190,11 @@ contains
   end subroutine propagation_ops_elec_propagate_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, mesh, bnd)
+  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, mesh)
     class(propagation_ops_elec_t), intent(in)    :: wo
     type(namespace_t),             intent(in)    :: namespace
     type(hamiltonian_elec_t),      intent(inout) :: hm
     type(mesh_t),                  intent(in)    :: mesh
-    type(boundaries_t),            intent(in)    :: bnd
 
     type(profile_t), save :: prof
 
@@ -208,7 +205,7 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_set_vec_pot(hm%ep%gfield, wo%vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
-      call hamiltonian_elec_update(hm, mesh, bnd, namespace)
+      call hamiltonian_elec_update(hm, mesh, namespace)
     end if
 
     call profiling_out(prof)

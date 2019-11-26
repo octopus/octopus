@@ -421,8 +421,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, gr%der%boundaries,  &
-                 sys%namespace, time = td%dt*td%iter)
+      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -1145,7 +1144,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace, time = td%dt*td%iter)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
       end if
     end if
 

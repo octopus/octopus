@@ -2749,7 +2749,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace, time=Tcycle+it*dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_elec_apply_all(hm, gr%mesh, st, hm_st)
 
@@ -2897,7 +2897,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace, time=M_ZERO)
+    call hamiltonian_elec_update(hm, gr%mesh, namespace, time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

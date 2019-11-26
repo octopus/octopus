@@ -594,7 +594,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace)
+          call hamiltonian_elec_update(hm, gr%mesh, namespace)
           if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
             if (ks%oep%level == XC_OEP_FULL) then
               do is = 1, st%d%nspin
@@ -850,7 +850,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace)
         
       case(OPTION__MIXFIELD__STATES)
 

@@ -365,7 +365,7 @@ contains
         call density_calc(stphi, gr, stphi%rho)
         call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
-        call hamiltonian_elec_update(hm, gr%mesh, gr%der%boundaries, namespace, time = tau)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       call zhamiltonian_elec_apply_all(hm, gr%mesh, stphi, hst)
@@ -395,7 +395,7 @@ contains
       call prepare_inh()
       call hamiltonian_elec_adjoint(hm)
 
-      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, tau)
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, tau)
 
       call zhamiltonian_elec_apply_all(hm, gr%mesh, stchi, hchi)
       call hamiltonian_elec_not_adjoint(hm)
@@ -561,7 +561,7 @@ contains
       call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver)
     end if
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time - dt)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
 
     rhs1 = M_z0
     do ik = kp1, kp2
@@ -615,7 +615,7 @@ contains
         vpsl1_op = hm%ep%vpsl
       end if
 
-      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, hm, time)
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
@@ -817,8 +817,7 @@ contains
         vpsl1_op = hm%ep%vpsl
       end if
 
-      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, &
-             hm, time - dt + c(1)*dt)
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt + c(1)*dt)
 
       vhxc1_op = hm%vhxc
       t_op  = time - dt + c(1) * dt
@@ -856,8 +855,7 @@ contains
         vpsl2_op = hm%ep%vpsl
       end if
 
-      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, gr%der%boundaries, &
-              hm, time - dt + c(2)*dt)
+      call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt + c(2)*dt)
 
       vhxc2_op = hm%vhxc
       t_op  = time - dt + c(2) * dt
@@ -1022,7 +1020,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + c(1)*dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(1)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1047,7 +1045,7 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + c(2)*dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(2)*dt_op)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1117,7 +1115,7 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
 
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + c(1)*dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(1)*dt_op)
 
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1144,7 +1142,7 @@ contains
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
 
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + c(2)*dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + c(2)*dt_op)
 
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1207,7 +1205,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1302,7 +1300,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, bnd_p, hm_p, t_op + dt_op)
+    call propagation_ops_elec_update_hamiltonian(namespace_p, st_p, mesh_p, hm_p, t_op + dt_op)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0

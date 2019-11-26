@@ -1186,9 +1186,9 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_elec_update(hm, ks%gr%mesh, ks%gr%der%boundaries, namespace, time = ks%calc%time)
+      call hamiltonian_elec_update(hm, ks%gr%mesh, namespace, time = ks%calc%time)
     else
-      call hamiltonian_elec_update(hm, ks%gr%mesh, ks%gr%der%boundaries, namespace)
+      call hamiltonian_elec_update(hm, ks%gr%mesh, namespace)
     end if
 
 
