@@ -22,6 +22,7 @@ module xc_oct_m
   use distributed_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use exchange_operator_oct_m
   use global_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -69,7 +70,9 @@ module xc_oct_m
     type(xc_functl_t), public :: kernel(2,2)
     FLOAT,             public   :: kernel_lrc_alpha  !< long-range correction alpha parameter for kernel in solids
 
-    FLOAT,             public   :: exx_coef          !< amount of EXX to add for the hybrids
+    FLOAT, public   :: cam_omega                !< Cam coefficients omega, alpha, beta
+    FLOAT, public   :: cam_alpha                !< amount of EXX to add for the hybrids
+    FLOAT, public   :: cam_beta
     logical                     :: use_gi_ked        !< should we use the gauge-independent kinetic energy density?
 
     integer :: xc_density_correction
@@ -78,6 +81,9 @@ module xc_oct_m
     logical :: xcd_minimum
     logical :: xcd_normalize
     logical :: parallel
+
+    !> For hybrid calculations, use of the density-based mixing parameter
+    logical :: useMVORB
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -108,11 +114,14 @@ contains
       call xc_functl_write_info(xcs%functional(ifunc, 1), iunit)
     end do
     
-    if(xcs%exx_coef /= M_ZERO) then
+    if(xcs%cam_alpha+xcs%cam_beta /= M_ZERO) then
       write(message(1), '(1x)')
-      write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
+      write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%cam_alpha
+      if(xcs%cam_beta > M_EPSILON) &
+        write(message(2), '(a,f8.5)') "Exact exchange mixing for the short-range part = ", xcs%cam_beta
       call messages_info(2, iunit)
     end if
+
 
     POP_SUB(xc_write_info)
   end subroutine xc_write_info
@@ -164,7 +173,6 @@ contains
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
 
     ! Take care of hybrid functionals (they appear in the correlation functional)
-    xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
       .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
       .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
@@ -182,10 +190,25 @@ contains
       ! get the mixing coefficient for hybrids
       if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
          bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
-        call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
+        call XC_F90(hyb_cam_coef)(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
+                                     xcs%cam_alpha, xcs%cam_beta)
+
+        !%Variable DensityBasedMixing
+        !%Type logical
+        !%Default false
+        !%Section Hamiltonian
+        !%Description
+        !% (Experimental) If set to yes, Octopus will use the density-based mixing 
+        !% parameter as proposed in Marues et al. PRB 83 035119 (2011).
+        !%End
+        call parse_variable(namespace, 'DensityBasedMixing', .false., xcs%useMVORB)
+        if(xcs%useMVORB) call messages_experimental('DensityBasedMixing')
+
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
-        xcs%exx_coef = M_ONE
+        xcs%cam_omega = M_ZERO
+        xcs%cam_alpha = M_ONE
+        xcs%cam_beta = M_ZERO
       end if
 
       ! reset certain variables
@@ -351,7 +374,7 @@ contains
 
     PUSH_SUB(xc_is_orbital_dependent)
 
-    xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
+    xc_is_orbital_dependent = (xcs%cam_alpha+xcs%cam_beta) /= M_ZERO .or. &
       bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
       bitand(xcs%family, XC_FAMILY_MGGA) /= 0
 

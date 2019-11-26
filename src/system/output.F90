@@ -32,6 +32,7 @@ module output_oct_m
   use etsf_io
   use etsf_io_tools
 #endif
+  use exchange_operator_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
@@ -646,7 +647,7 @@ contains
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
     type(output_t),           intent(in)    :: outp
     character(len=*),         intent(in)    :: dir
 
@@ -899,16 +900,16 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, namespace, grp)
-    type(hamiltonian_elec_t),  intent(in) :: hm
-    type(v_ks_t),              intent(in) :: ks
-    type(states_elec_t),       intent(in) :: st
-    type(derivatives_t),       intent(in) :: der
-    character(len=*),          intent(in) :: dir
-    type(output_t),            intent(in) :: outp
-    type(geometry_t),          intent(in) :: geo
-    type(grid_t),              intent(in) :: gr
-    type(namespace_t),         intent(in) :: namespace
-    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
+    type(hamiltonian_elec_t),  intent(in)    :: hm
+    type(v_ks_t),              intent(inout) :: ks
+    type(states_elec_t),       intent(in)    :: st
+    type(derivatives_t),       intent(in)    :: der
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
+    type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
+    type(namespace_t),         intent(in)    :: namespace
+    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
@@ -943,7 +944,7 @@ contains
       ASSERT(.not. gr%have_fine_mesh)
 
       call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-        -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
+        -minval(st%eigenval(st%nst,:)), st%qtot, exxop, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end forall

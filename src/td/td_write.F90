@@ -906,7 +906,7 @@ contains
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
     type(output_t),           intent(in)    :: outp
     type(geometry_t),         intent(in)    :: geo
     integer,                  intent(in)    :: iter
