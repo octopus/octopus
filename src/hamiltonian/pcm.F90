@@ -144,6 +144,7 @@ module pcm_oct_m
     integer                          :: info_unit        !< unit for pcm info file
     integer, public                  :: counter          !< used to print the number of SCF or TD iterations in energy_calc
     character(len=80)                :: input_cavity     !< file name containing the geometry of the VdW cavity
+    character(len=80)                :: ext_matrix       !< file name with z external PCM matrix
     integer                          :: update_iter      !< how often the pcm potential is updated
     integer, public                  :: iter             !< update iteration counter    
     integer                          :: calc_method      !< which method should be used to obtain the pcm potential
@@ -925,17 +926,18 @@ contains
     SAFE_ALLOCATE(pcm%matrix(1:pcm%n_tesserae, 1:pcm%n_tesserae))
     pcm%matrix = M_ZERO
 
-    !%Variable PCMExtMatrix
-    !%Type string
-    !%Section Hamiltonian::PCM
-    !%Description
-    !%Checks whether the PCM matrix is calculated in octopus
-    !%or read from a external file
-    !%End
-    call parse_variable('PCMExtMatrix', '', pcm%ext_matrix)
+      !%Variable PCMExtMatrix
+      !%Type string
+      !%Section Hamiltonian::PCM
+      !%Description
+      !%Checks whether the PCM matrix is calculated in octopus
+      !%or read from a external file
+      !%End
+      call parse_variable(namespace, 'PCMExtMatrix', '', pcm%ext_matrix)
 
-    if (pcm%ext_matrix == '') then
+    check_ext_matrix: if (pcm%ext_matrix == '') then
      call pcm_matrix(pcm%epsilon_0, pcm%tess, pcm%n_tesserae, pcm%matrix) 
+     message(1) = "Info: PCM response matrix has been calculated"
  
      if (mpi_grp_is_root(mpi_world)) then
        pcmmat_unit = io_open(PCM_DIR//'pcm_matrix.out', pcm%namespace, action='write')
@@ -952,7 +954,7 @@ contains
        if (gamess_benchmark) call io_close(pcmmat_gamess_unit)
      end if
     else
-       pcmmat_unit = io_open(trim(pcm%ext_matrix), action='read')
+       pcmmat_unit = io_open(trim(pcm%ext_matrix), pcm%namespace, action='read')
        do jtess = 1, pcm%n_tesserae
          do itess = 1, pcm%n_tesserae
            read(pcmmat_unit,*) pcm%matrix(itess,jtess)
@@ -961,7 +963,7 @@ contains
        call io_close(pcmmat_unit)     
        message(1) = "Info: PCM response matrix has been read from the file "//trim(pcm%ext_matrix)
        call messages_info(1)
-    end if
+    end if check_ext_matrix
 
 #ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
