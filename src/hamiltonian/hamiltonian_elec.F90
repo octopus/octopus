@@ -1326,10 +1326,9 @@ contains
   ! CFM4 propagator. It updates the Hamiltonian by considering a
   ! weighted sum of the external potentials at times time(1) and time(2),
   ! weighted by alpha(1) and alpha(2).
-  subroutine hamiltonian_elec_update2(this, mesh, boundaries, time, mu)
+  subroutine hamiltonian_elec_update2(this, mesh, time, mu)
     type(hamiltonian_elec_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(boundaries_t),  intent(in)    :: boundaries
     FLOAT,               intent(in)    :: time(1:2)
     FLOAT,               intent(in)    :: mu(1:2)
 
@@ -1493,7 +1492,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, boundaries, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
