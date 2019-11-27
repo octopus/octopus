@@ -532,6 +532,7 @@ contains
       ks%vdw_self_consistent = .false.
     end if
     
+    nullify(ks%calc%hf_st)
     
     POP_SUB(v_ks_init)
 
@@ -800,6 +801,11 @@ contains
     end if
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+      if(.not. associated(ks%calc%hf_st)) then
+        SAFE_ALLOCATE(ks%calc%hf_st)
+        call states_elec_copy(ks%calc%hf_st, st)
+      end if
+
       if(st%parallel_in_states) then
         if(accel_is_enabled()) then
           call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
@@ -1195,7 +1201,6 @@ contains
         ! swap the states object
         if(ks%calc%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(ks%calc%hf_st)
         
-        ! swap the states object
         select case(ks%theory_level)
           case(HARTREE_FOCK)
             call exchange_operator_reinit(exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
