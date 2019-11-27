@@ -332,14 +332,14 @@ contains
     ! write bands (full or downfolded)
     if(mpi_world%rank==0) then
       file=987254
-      open(unit=file,file=filename)
+      file = io_open(filename, sys%namespace, action = 'write')
       do ik=1,nik
         do ist=1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
       end do
-      close(file)
+      call io_close(file)
     endif
     
     if(.not.downfolding) then
@@ -358,14 +358,14 @@ contains
     
       if(mpi_world%rank==0) then
         filename='trivial_floquet_bands'
-        open(unit=file,file=filename)
+        file = io_open(filename, sys%namespace, action = 'write')
         do ik=1,nik
           do ist=1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')
         end do
-        close(file)
+        call io_close(file)
       endif
      end if
   

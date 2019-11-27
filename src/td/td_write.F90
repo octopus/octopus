@@ -804,7 +804,7 @@ contains
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
-      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
+      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, namespace, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -2462,12 +2462,13 @@ contains
   end subroutine calc_projections
 
 
-  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
+  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, namespace, iter)
     type(c_ptr),         intent(inout) :: out_proj_kp
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
     type(states_elec_t), intent(inout) :: gs_st
+    type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: iter
 
     CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
@@ -2508,7 +2509,7 @@ contains
       if(mpi_world%rank==0) then
         write(filename2,'(I10)') ik
         filename2 = trim(adjustl(filename1))//'_ik_'//trim(adjustl(filename2))
-        open(unit=file,file=filename2)
+        file = io_open(filename2, namespace, action='write')
       end if
       ! get all states at ik that are locally stored (ground state and td-states)
       do ist=gs_st%st_start,gs_st%st_end
@@ -2550,7 +2551,7 @@ contains
             write(file,'(I3,1x,I3,1x,e12.6,1x,e12.6,2x)') ist, jst, proj(ist,jst)
           end do
         end do
-        close(file)
+        call io_close(file)
       end if
 
   end do! ik            
@@ -2785,14 +2786,14 @@ contains
     ! write bands (full or downfolded)
     if(mpi_world%rank==0) then
       file=987254
-      open(unit=file,file=filename)
+      file = io_open(filename, namespace, action = 'write')
       do ik=1,nik
         do ist=1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
       end do
-      close(file)
+      call io_close(file)
     endif
     
     if(.not.downfolding) then
@@ -2811,14 +2812,14 @@ contains
     
       if(mpi_world%rank==0) then
         filename='trivial_floquet_bands'
-        open(unit=file,file=filename)
+        file = io_open(filename, namespace, action = 'write')
         do ik=1,nik
           do ist=1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')
         end do
-        close(file)
+        call io_close(file)
       endif
      end if
   
