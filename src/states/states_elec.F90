@@ -1378,6 +1378,8 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
+    call loct_pointer_copy(stout%node, stin%node)
+
     if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
     stout%calc_eigenval = stin%calc_eigenval
