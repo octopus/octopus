@@ -108,6 +108,11 @@ contains
 
     ASSERT(associated(this%group%psib))
 
+    if(this%mpi_grp%size == 1) then 
+      POP_SUB(states_elec_parallel_remote_access_start)
+      return
+    end if
+
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
     
     do iqn = this%d%kpt%start, this%d%kpt%end
@@ -116,6 +121,7 @@ contains
           call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
+           print *, this%mpi_grp%rank, iqn, ib
           ! create an empty window
           call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, &
             MPI_INFO_NULL, this%mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)
@@ -133,6 +139,8 @@ contains
     type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
+
+    if(.not.allocated(this%group%rma_win)) return
     
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
@@ -172,6 +180,9 @@ contains
     
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
+      call profiling_out(prof)
+      POP_SUB(states_elec_parallel_get_block)
+      return
     else
       SAFE_ALLOCATE(psib)
       call batch_init(psib, this%d%dim, this%group%block_size(ib))
@@ -181,7 +192,9 @@ contains
       else
         call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
-      
+
+      ASSERT(allocated(this%group%rma_win))      
+
       call batch_pack(psib, copy = .false.)
       
 #ifdef HAVE_MPI2
