@@ -535,9 +535,8 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
     hvar(1:np, ispin, 1) = M_ZERO
 
     !* hartree
-    if (abs(coeff_hartree) > M_EPSILON) then
-      call lalg_axpy(np, coeff_hartree, hartree, hvar(:, ispin, 1))
-    end if
+   if (abs(coeff_hartree) > M_EPSILON) &
+     hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + coeff_hartree * hartree(1:np)
     
     !* fxc
     if(present(fxc)) then
