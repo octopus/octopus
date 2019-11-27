@@ -51,7 +51,10 @@ module io_oct_m
     io_file_exists,      &
     io_dir_exists,       &
     io_get_open_count,   &
-    io_get_close_count
+    io_get_close_count,  &
+    io_incr_open_count,  &
+    io_incr_close_count, &
+    io_incr_counters
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
@@ -773,6 +776,33 @@ contains
     count = io_close_count
 
   end function io_get_close_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_open_count()
+
+    io_open_count = io_open_count + 1
+
+  end subroutine io_incr_open_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_close_count()
+
+    io_close_count = io_close_count + 1
+
+  end subroutine io_incr_close_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_counters(iio)
+    integer, intent(in) :: iio
+
+    integer :: open_count
+   
+    open_count = int(iio/100)
+    io_open_count = io_open_count + open_count
+    io_close_count = io_close_count + iio - open_count * 100
+
+  end subroutine io_incr_counters
+
 
 end module io_oct_m
 

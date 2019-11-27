@@ -382,19 +382,20 @@ contains
       call messages_print_stress(stdout, "IO profiling information")
       io_open_count = io_get_open_count()
       io_close_count = io_get_close_count()
-      write(message(1), '(a,i10)') 'Number of file opened = ', io_open_count
-      write(message(2), '(a,i10)') 'Number of file closed = ', io_close_count
+      write(message(1), '(a,i10)') 'Number of file open  = ', io_open_count
+      write(message(2), '(a,i10)') 'Number of file close = ', io_close_count
 #ifdef HAVE_MPI
       call MPI_Allreduce(io_open_count, io_open_count_red, 1, MPI_INTEGER8, MPI_SUM, &
                             mpi_world%comm, mpi_err)
       call MPI_Allreduce(io_close_count, io_close_count_red, 1, MPI_INTEGER8, MPI_SUM, &
                             mpi_world%comm, mpi_err)
-      write(message(3), '(a,i10)') 'Global number of file opened = ', io_open_count_red
-      write(message(4), '(a,i10)') 'Global number of file closed = ', io_close_count_red
+      write(message(3), '(a,i10)') 'Global number of file open  = ', io_open_count_red
+      write(message(4), '(a,i10)') 'Global number of file close = ', io_close_count_red
       call messages_info(4)
 #else
       call messages_info(2)
 #endif
+      call messages_print_stress(stdout)
     end if
 
     POP_SUB(profiling_end)
