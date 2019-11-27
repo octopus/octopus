@@ -27,7 +27,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
   integer, allocatable :: diag(:), off1(:), off2(:)
-  logical :: set_null
   FLOAT :: kpoint(3)
   R_TYPE, allocatable :: psi(:,:), psi2(:), xpsi(:,:)
   CMPLX, allocatable :: mtxel(:,:), mtxel_x(:,:)
@@ -61,15 +60,11 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
   end if
   SAFE_ALLOCATE(mtxel(1:ndiag + noffdiag, 1:st%d%nspin))
 
-  set_null = .false.
   
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', namespace, action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
-    if(.not. associated(hm%hf_st)) then
-      hm%hf_st => st
-      set_null = .true.
-    end if
+    call exchange_operator_reinit(exxop, st, M_ONE, M_ZERO, M_ZERO)
     SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
   end if
 
@@ -139,8 +134,6 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
     end if
   end do
 
-  if(set_null) nullify(hm%hf_st)
-  
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
   SAFE_DEALLOCATE_A(psi)

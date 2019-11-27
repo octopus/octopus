@@ -1235,7 +1235,7 @@ contains
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-      -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+      -minval(st%eigenval(st%nst, :)), st%qtot, exxop vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
