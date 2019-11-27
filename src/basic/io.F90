@@ -49,11 +49,15 @@ module io_oct_m
     iopar_find_line,     &
     io_skip_header,      &
     io_file_exists,      &
-    io_dir_exists
+    io_dir_exists,       &
+    io_get_open_count,   &
+    io_get_close_count
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
   character(len=MAX_PATH_LEN) :: work_dir    !< name of the output directory
+  integer(8), save :: io_open_count
+  integer(8), save :: io_close_count
 
 contains
 
@@ -69,6 +73,9 @@ contains
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
+
+    io_open_count = 0
+    io_close_count = 0
 
     ! cannot use push/pop before initializing io
 
@@ -418,6 +425,8 @@ contains
           action=trim(action), position=trim(position_), iostat=iostat)
       end if
 
+      io_open_count = io_open_count + 1
+
       if(iostat /= 0) then
         call io_free(iunit)
         iunit = -1
@@ -460,6 +469,7 @@ contains
 
     if(mpi_grp_is_root(grp_)) then
       close(iunit)
+      io_close_count = io_close_count + 1
       call io_free(iunit)
       iunit = -1
     end if
@@ -750,7 +760,19 @@ contains
 
   end subroutine io_skip_header
 
+  ! ---------------------------------------------------------
+  integer(8) pure function io_get_open_count() result(count)
+    
+    count = io_open_count
+  
+  end function io_get_open_count
 
+  ! ---------------------------------------------------------
+  integer(8) pure function io_get_close_count() result(count)
+
+    count = io_close_count
+
+  end function io_get_close_count
 
 end module io_oct_m
 

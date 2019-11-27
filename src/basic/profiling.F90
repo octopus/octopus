@@ -135,7 +135,8 @@ module profiling_oct_m
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
        PROFILING_MEMORY_FULL = 4, &
-       PROFILING_LIKWID      = 8
+       PROFILING_LIKWID      = 8, &
+       PROFILING_IO          = 16
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
@@ -212,6 +213,8 @@ contains
     !% log is reported of every allocation and deallocation.
     !%Option likwid 8
     !% Enable instrumentation using LIKWID.
+    !%Option prof_io 16
+    !% Count the number of file open and close.
     !%End
 
     call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
@@ -323,6 +326,7 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer :: ii
     real(8), parameter :: megabyte = 1048576.0_8
+    integer(8) :: io_open_count, io_close_count, io_open_count_red, io_close_count_red
 
     if(.not. in_profiling_mode) return
     PUSH_SUB(profiling_end)
@@ -371,6 +375,25 @@ contains
     if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
 #ifdef HAVE_LIKWID
       call likwid_markerClose()
+#endif
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_IO) /= 0) then
+      call messages_print_stress(stdout, "IO profiling information")
+      io_open_count = io_get_open_count()
+      io_close_count = io_get_close_count()
+      write(message(1), '(a,i10)') 'Number of file opened = ', io_open_count
+      write(message(2), '(a,i10)') 'Number of file closed = ', io_close_count
+#ifdef HAVE_MPI
+      call MPI_Allreduce(io_open_count, io_open_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      call MPI_Allreduce(io_close_count, io_close_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      write(message(3), '(a,i10)') 'Global number of file opened = ', io_open_count_red
+      write(message(4), '(a,i10)') 'Global number of file closed = ', io_close_count_red
+      call messages_info(4)
+#else
+      call messages_info(2)
 #endif
     end if
 
@@ -1065,6 +1088,7 @@ contains
     end if
 
   end subroutine profiling_memory_deallocate
+
 
 end module profiling_oct_m
 
