@@ -26,6 +26,7 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
+  use system_mxll_oct_m
   implicit none
 
   private
@@ -47,6 +48,7 @@ contains
     character(len=128) :: system_name
     type(block_t) :: blk
     type(system_t) :: system_elec
+    type(system_mxll_t) :: system_mxll
     class(*), allocatable :: system
     class(*), pointer :: sys_ptr
     
@@ -71,6 +73,8 @@ contains
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
           allocate(system_t::system)
+        case (SYSTEM_MAXWLL)
+          allocate(system_mxll_t::system)
         case default
           call messages_input_error('Systems')
         end select
@@ -85,6 +89,8 @@ contains
         select type (sys_ptr)
         type is (system_t)
           call system_init(sys_ptr, namespace_t(system_name))
+        type is (system_mxll_t)
+          call system_mxll_init(sys_ptr, namespace_t(system_name))
         end select
         call systems%next()
       end do
@@ -96,6 +102,8 @@ contains
       select type (sys_ptr)
       type is (system_t)
         call system_init(sys_ptr, global_namespace)
+      type is (system_mxll_t)
+        call system_mxll_init(sys_ptr, global_namespace)
       end select
     end if
 
@@ -115,6 +123,8 @@ contains
       select type (sys)
       type is (system_t)
         call system_end(sys)
+      type is (system_mxll_t)
+        call system_mxll_end(sys)
       end select
       call systems%next()
     end do

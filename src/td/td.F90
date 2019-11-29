@@ -353,7 +353,8 @@ contains
   ! ---------------------------------------------------------
   
   subroutine td_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
+    !    type(system_t), target, intent(inout) :: sys
+    class(*), target, intent(inout) :: sys
     logical,                intent(inout) :: fromScratch
 
     type(td_t)                   :: td

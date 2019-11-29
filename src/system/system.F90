@@ -43,6 +43,7 @@ module system_oct_m
   use sort_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use system_abst_oct_m
   use v_ks_oct_m
   use xc_oct_m
 
@@ -55,16 +56,10 @@ module system_oct_m
     system_end,           &
     system_h_setup
 
-  type system_t
+  type, extends(system_abst_t) :: system_t
     ! Components are public by default
-    type(space_t)                :: space
-    type(geometry_t)             :: geo
-    type(grid_t),        pointer :: gr    !< the mesh
     type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
-    type(output_t)               :: outp  !< the output
-    type(multicomm_t)            :: mc    !< index and domain communicators
-    type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   end type system_t
   

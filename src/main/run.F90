@@ -82,6 +82,7 @@ module run_oct_m
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
     CM_TEST               =  19,  &
+    CM_MAXWELL_FREE       =  20,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -176,8 +177,20 @@ contains
     do while (systems%has_more_values())
       sys => systems%current()
       select type (sys)
-      type is (system_t)
+      type is (system_mxll_t)
+        select case(calc_mode_id)
+        case (CM_MAXWELL_FREE)
+           P_c   =  CNST(137.035999139)
+           P_ep  =  M_ONE/(M_FOUR*M_Pi)
+           P_mu  =  M_FOUR*M_PI/(P_c**2)
 
+           call td_run(sys, fromScratch)
+        case default
+           message(1) = "Maxwell systems currently support only Maxwell free propagation"
+           call messages_info(1)
+        end select
+        
+      type is (system_t)
         if (sys%hm%pcm%run_pcm) then
           select case (calc_mode_id)
           case (CM_GS)
