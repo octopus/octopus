@@ -248,7 +248,9 @@ contains
         end if
 
         if(st%parallel_in_states) then
+#ifdef HAVE_MPI
           call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, ierr)
+#endif
         end if
 
         aa = M_ZERO
