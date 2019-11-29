@@ -802,6 +802,13 @@ contains
     end if
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+      if(associated(ks%calc%hf_st)) then
+        if(ks%calc%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(ks%calc%hf_st)
+        call states_elec_end(ks%calc%hf_st)
+        SAFE_DEALLOCATE_P(ks%calc%hf_st)
+        nullify(ks%calc%hf_st)
+      end if
+
       if(.not. associated(ks%calc%hf_st)) then
         SAFE_ALLOCATE(ks%calc%hf_st)
         call states_elec_copy(ks%calc%hf_st, st)

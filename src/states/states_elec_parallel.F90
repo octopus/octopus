@@ -121,7 +121,6 @@ contains
           call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
-           print *, this%mpi_grp%rank, iqn, ib
           ! create an empty window
           call MPI_Win_create(0, int(0, MPI_ADDRESS_KIND), 1, &
             MPI_INFO_NULL, this%mpi_grp%comm, this%group%rma_win(ib, iqn), mpi_err)

@@ -172,8 +172,8 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
 
   end if
 
-  if(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then
+  if(xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_GGA .or. &
+         xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_MGGA) then
     if(xcs%useMVORB) call calc_mvorb_alpha()
 
     if(exx_op%user_defined_cam) then

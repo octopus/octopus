@@ -173,6 +173,10 @@ contains
     xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
 
     ! Take care of hybrid functionals (they appear in the correlation functional)
+    xcs%cam_omega = M_ZERO
+    xcs%cam_alpha = M_ZERO
+    xcs%cam_beta = M_ZERO
+
     ll =  (hartree_fock) &
       .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
       .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
