@@ -329,6 +329,10 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
   end do
 
   if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, eigen_full)
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, eigen_full)
+    call comm_allreduce(st%mpi_grp%comm, st%eigenval)
+  end if
 
   diff(:) = sqrt(abs(eigen_full(:)))
   SAFE_DEALLOCATE_A(eigen_full)
