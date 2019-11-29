@@ -39,6 +39,7 @@ module output_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -69,6 +70,7 @@ module output_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
+  use states_mxll_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
@@ -101,7 +103,10 @@ module output_oct_m
     doutput_lr,          &
     zoutput_lr,          &
     output_kick,         &
-    output_scalar_pot
+    output_scalar_pot,   &
+    output_mxll_init,    &
+    output_mxll,         &
+    output_mxll_free
 
 
   type output_bgw_t
@@ -1564,6 +1569,8 @@ contains
 #include "output_states_inc.F90"
 
 #include "output_h_inc.F90"
+
+#include "output_mxll_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
