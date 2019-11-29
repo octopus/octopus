@@ -1363,7 +1363,8 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(.not. st%are_packed() .or. .not. accel_is_enabled()) then
+  if(.not. st%are_packed() .or. .not. accel_is_enabled() .or. &
+     (st%parallel_in_states .and. .not. accel_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(80, hardware%l2%size/(8*st%nst))
@@ -1418,7 +1419,6 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
   else if(accel_is_enabled()) then
 
     ASSERT(ubound(overlap, dim = 1) == st%nst)
-    ASSERT(.not. st%parallel_in_states)
     
     call accel_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call accel_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
@@ -1427,7 +1427,10 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1437,13 +1440,24 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
+      if(st%parallel_in_states) then
+        call accel_read_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
+        call accel_write_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+      end if
+
       call X(accel_herk)(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
-        n = int(st%nst, 8), k = int(size, 8), &
+        n = int(st%nst, 8), k = int(size*st%d%dim, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
+      call accel_finish()
     end do
+
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psi)
+    end if
 
     call accel_finish()
 
@@ -1482,18 +1496,21 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
-
   end if
 
 ! Debug output
+!if(mpi_grp_is_root(mpi_world)) then
+!  do ib = 1, st%nst
+!    do jb = 1, st%nst
 !#ifndef R_TREAL
-!  do ist = 1, st%nst
-!    do jst = 1, st%nst
-!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ist, jst)), ' ',  aimag(overlap(ist, jst)), ' '
+!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ib, jb)), ' ',  aimag(overlap(ib, jb)), ' '
+!#else
+!      write(12, '(e12.6,a)', advance = 'no') overlap(ib, jb), ' '
+!#endif
 !    end do
 !      write(12, *) ' ' 
 !  end do
-!#endif
+!end if
 
   call profiling_out(prof)
 
