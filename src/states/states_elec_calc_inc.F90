@@ -207,10 +207,18 @@ contains
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
     R_TYPE, allocatable :: psii0(:, :)
+    integer :: method, ierr
     
     PUSH_SUB(X(states_elec_orthogonalization_full).mgs)
 
-    if(st%parallel_in_states) then
+    ! set method to MGS in case this method is called as bof from cholesky
+    method = st%d%orth_method
+    if(method == OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL) then
+      method = OPTION__STATESORTHOGONALIZATION__MGS
+    end if
+
+    if(st%parallel_in_states .and. &
+       method /= OPTION__STATESORTHOGONALIZATION__MGS) then
       message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
@@ -223,20 +231,31 @@ contains
 
     do ist = 1, nst
 
-      call states_elec_get_state(st, mesh, ist, ik, psii)
-
       !The different algorithms are given in Giraud et al., 
       !Computers and Mathematics with Applications 50, 1069 (2005).
-      select case(st%d%orth_method)
+      select case(method)
       case(OPTION__STATESORTHOGONALIZATION__MGS)
-        ! renormalize
-        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
-        do idim = 1, st%d%dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-        end do
-        call states_elec_set_state(st, mesh, ist, ik, psii)
+
+        if(ist >= st%st_start .and. ist <= st%st_end) then
+          call states_elec_get_state(st, mesh, ist, ik, psii)
+
+          ! renormalize
+          cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+          do idim = 1, st%d%dim
+            call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+          end do
+          call states_elec_set_state(st, mesh, ist, ik, psii)
+        end if
+
+        if(st%parallel_in_states) then
+          call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, ierr)
+        end if
+
+        aa = M_ZERO
+
         ! calculate the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
         end do
@@ -244,6 +263,7 @@ contains
  
         ! subtract the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           do idim = 1, st%d%dim
             call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
@@ -252,6 +272,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__CGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         ! calculate the projections first with the same vector
         do jst = 1, ist - 1
@@ -269,6 +291,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__DRCGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         !double step reorthogonalization
         do is = 1, 2
@@ -299,7 +323,8 @@ contains
       end select
 
       !In case of modified Gram-Schmidt, this was done before.
-      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+      if(method == OPTION__STATESORTHOGONALIZATION__CGS .or. &
+         method == OPTION__STATESORTHOGONALIZATION__DRCGS) then
         ! renormalize
         cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
