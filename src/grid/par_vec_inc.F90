@@ -86,11 +86,13 @@ end subroutine X(vec_scatter)
 !> Reverse operation of Xvec_scatter.
 !! All v_locals from the nodes are packed together
 !! into v on node root in correct order.
-subroutine X(vec_gather)(vp, root, v, v_local)
+subroutine X(vec_gather)(vp, root, v_local, v)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
-  R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
+  R_TYPE,     optional, intent(out) :: v(:) !< in order to prevent uninitialized pointer errors,
+                                            !< this is optional, so that mpi ranks not expecint an output
+                                            !< do not have to pass a null pointer.
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.

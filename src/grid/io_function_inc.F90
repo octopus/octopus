@@ -507,7 +507,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
 
       do ivd = 1, vector_dim
 #ifdef HAVE_MPI        
-        call vec_gather(mesh%vp, root_, ff_global(:, ivd), ff(:, ivd))
+        call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
 #endif
       end do
       
@@ -756,7 +756,7 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
       !present, but to avoid it we will have to find out all if the
       !processes are members of the domain line where the root of grp
       !lives
-      call vec_gather(mesh%vp, root_, ff_global, ff)
+      call vec_gather(mesh%vp, root_, ff, ff_global)
     else
       ff_global => ff
     end if
