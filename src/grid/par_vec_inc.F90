@@ -29,8 +29,8 @@
 subroutine X(vec_scatter)(vp, root, v, v_local)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
-  R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
+  R_TYPE,     intent(in)  :: v(:)
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.

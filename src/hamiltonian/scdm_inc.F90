@@ -166,7 +166,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   do ii=1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
 #ifdef HAVE_MPI
-    call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+    call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
 #endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do

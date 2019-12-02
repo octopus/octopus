@@ -76,7 +76,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call vec_scatter(mesh%vp, mesh%vp%root, ff_global, ff)
+      call vec_scatter(mesh%vp, mesh%vp%root, ff, ff_global)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)

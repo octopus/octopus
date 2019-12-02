@@ -644,7 +644,7 @@ subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
 
     if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-      call vec_scatter(mesh%vp, 0, hpsi(:, 1), hpsil(:, 1))
+      call vec_scatter(mesh%vp, 0, hpsil(:, 1), hpsi(:, 1))
 #endif
     else
       hpsil(1:mesh%np, 1:hm%d%dim) = hpsi(1:mesh%np, 1:hm%d%dim)
