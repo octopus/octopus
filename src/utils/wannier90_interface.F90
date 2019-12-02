@@ -1054,7 +1054,8 @@ contains
         SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
         orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
       
-        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED)
+        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, &
+                                        kpt_max = w90_num_kpts)
       
         SAFE_DEALLOCATE_A(rr)
       end do
