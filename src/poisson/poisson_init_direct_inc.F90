@@ -238,12 +238,10 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   logical              :: include_diag
 
-#ifdef HAVE_MPI
   FLOAT                :: xg(MAX_DIM)
   FLOAT                :: qg, pg                        ! for dressed orbitals
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
-#endif
 
   PUSH_SUB(poisson_solve_direct)
   
@@ -308,7 +306,6 @@ subroutine poisson_solve_direct(this, pot, rho)
     prefactor = prefactor / (this%der%mesh%volume_element**(M_ONE/this%der%mesh%sb%dim))
   end if
 
-#ifdef HAVE_MPI
   if(this%der%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
     SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
@@ -382,8 +379,10 @@ subroutine poisson_solve_direct(this, pot, rho)
       tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
     end do
 
+#ifdef HAVE_MPI
     call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
-    
+#endif
+
     do ip = 1, this%der%mesh%np_global
       if (part_v(ip) == this%der%mesh%vp%partno) then
         pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
@@ -394,7 +393,6 @@ subroutine poisson_solve_direct(this, pot, rho)
     SAFE_DEALLOCATE_A(tmp)
 
   else ! serial mode
-#endif
     
     do ip = 1, this%der%mesh%np - 4 + 1, 4
 
@@ -611,9 +609,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       
     end do
     
-#ifdef HAVE_MPI
   end if
-#endif
 
   POP_SUB(poisson_solve_direct) 
 end subroutine poisson_solve_direct
