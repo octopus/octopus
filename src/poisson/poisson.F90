@@ -991,6 +991,7 @@ contains
 
     PUSH_SUB(poisson_init_sm)
 
+    this%dressed = .false.
     this%theta = M_ZERO
 
     this%nslaves = 0
