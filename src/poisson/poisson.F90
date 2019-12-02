@@ -712,7 +712,9 @@ contains
 
     has_cube = .false.
 
-    SAFE_DEALLOCATE_A(this%dressed_lambda)
+    if (this%dressed) then
+      SAFE_DEALLOCATE_A(this%dressed_lambda)
+    end if
 
     select case(this%method)
     case(POISSON_FFT)
