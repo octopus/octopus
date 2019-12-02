@@ -193,7 +193,6 @@ contains
    
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
-    call exchange_operator_nullify(exxop)
     
     ! the user knows what he wants, give her that
     if(parse_is_defined(namespace, 'TheoryLevel')) then
@@ -511,8 +510,6 @@ contains
       ks%vdw_self_consistent = .false.
     end if
     
-    nullify(ks%calc%hf_st)
-    
     POP_SUB(v_ks_init)
 
   contains
@@ -593,18 +590,6 @@ contains
     case(HARTREE_FOCK)      
       call xc_end(ks%xc)
     end select
-
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
-      if(associated(ks%calc%hf_st)) then
-        if(ks%calc%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(ks%calc%hf_st)
-        call states_elec_end(ks%calc%hf_st)
-        SAFE_DEALLOCATE_P(ks%calc%hf_st)
-        nullify(ks%calc%hf_st)
-      end if
-    end if
-
-
-    call exchange_operator_end(exxop)
 
     POP_SUB(v_ks_end)
   end subroutine v_ks_end
@@ -777,39 +762,22 @@ contains
       call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
+    nullify(ks%calc%hf_st)
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
-      if(associated(ks%calc%hf_st)) then
-        if(ks%calc%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(ks%calc%hf_st)
-        call states_elec_end(ks%calc%hf_st)
-        SAFE_DEALLOCATE_P(ks%calc%hf_st)
-        nullify(ks%calc%hf_st)
-      end if
+      SAFE_ALLOCATE(ks%calc%hf_st)
+      call states_elec_copy(ks%calc%hf_st, st)
 
-      if(.not. associated(ks%calc%hf_st)) then
-        SAFE_ALLOCATE(ks%calc%hf_st)
-        call states_elec_copy(ks%calc%hf_st, st)
-
-        if(st%parallel_in_states) then
-          if(accel_is_enabled()) then
-            call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
-            call messages_new_line()
-            call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
-            call messages_new_line()
-            call messages_write("or disable acceleration using 'DisableAccel = yes'.")
-            call messages_fatal()
-          end if
-          call states_elec_parallel_remote_access_start(ks%calc%hf_st)
+      if(st%parallel_in_states) then
+        if(accel_is_enabled()) then
+          call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
+          call messages_new_line()
+          call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
+          call messages_new_line()
+          call messages_write("or disable acceleration using 'DisableAccel = yes'.")
+          call messages_fatal()
         end if
+        call states_elec_parallel_remote_access_start(ks%calc%hf_st)
       end if
-
-      select case(ks%theory_level)
-        case(HARTREE_FOCK)
-          call exchange_operator_reinit(exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
-        case(HARTREE)
-          call exchange_operator_reinit(exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
-        case(RDMFT)
-          call exchange_operator_reinit(exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
-      end select
     end if
 
 
@@ -910,7 +878,7 @@ contains
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, &
-            -minval(st%eigenval(st%nst,:)), qsp(ispin), exxop, vxc_sic)
+            -minval(st%eigenval(st%nst,:)), qsp(ispin), hm%exxop, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -965,21 +933,21 @@ contains
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, exxop, ks%calc%vxc, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, exxop, ks%calc%vxc, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, exxop, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, exxop, ks%calc%vxc)
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc)
         end if
       end if
 
@@ -1187,6 +1155,27 @@ contains
       
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+      end if
+
+      
+      ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+
+        ! swap the states object
+        if(associated(hm%exxop%st)) then
+          if(hm%exxop%st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%exxop%st)
+          call states_elec_end(hm%exxop%st)
+          SAFE_DEALLOCATE_P(hm%exxop%st)
+        end if
+
+        select case(ks%theory_level)
+        case(HARTREE_FOCK)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
+        case(HARTREE)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
+        case(RDMFT)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
+        end select
       end if
 
     end if
