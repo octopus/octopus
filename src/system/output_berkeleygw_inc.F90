@@ -134,6 +134,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
     end if
   end do
 
+  if(bgw%calc_exchange) nullify(hm%exxop%st)
+
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
   SAFE_DEALLOCATE_A(psi)
