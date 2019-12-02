@@ -173,6 +173,8 @@ module hamiltonian_elec_oct_m
 
     logical, private :: time_zero
 
+    type(exchange_operator_t), public :: exxop
+
   contains
   
     procedure :: is_hermitian => hamiltonian_elec_hermitian
@@ -495,7 +497,8 @@ contains
     call scissor_nullify(hm%scissor)
 
     !Cam parameters are irrelevant here and are updated later
-    call exchange_operator_init(exxop, namespace, hm%d, gr%sb, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+    call exchange_operator_nullify(hm%exxop)
+    call exchange_operator_init(hm%exxop, namespace, hm%d, gr%sb, gr%mesh, M_ONE, M_ZERO, M_ZERO)
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
@@ -605,7 +608,7 @@ contains
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
-    call exchange_operator_end(exxop)
+    call exchange_operator_end(hm%exxop)
     call lda_u_end(hm%lda_u)
 
     SAFE_DEALLOCATE_P(hm%energy)

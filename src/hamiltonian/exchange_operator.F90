@@ -67,7 +67,7 @@ module exchange_operator_oct_m
     exchange_operator_rdmft_occ_apply
 
   type exchange_operator_t
-    type(states_elec_t), pointer :: st
+    type(states_elec_t), public, pointer :: st
     FLOAT :: cam_omega
     FLOAT :: cam_alpha
     FLOAT :: cam_beta
@@ -79,8 +79,6 @@ module exchange_operator_oct_m
     type(namespace_t), pointer :: namespace
   end type exchange_operator_t
  
-  type(exchange_operator_t), save, public :: exxop 
-
 contains
 
   subroutine exchange_operator_nullify(this)
@@ -164,6 +162,11 @@ contains
 
     PUSH_SUB(exchange_operator_end)
 
+    if(associated(this%st)) then
+      if(this%st%parallel_in_states) call states_elec_parallel_remote_access_stop(this%st)
+      call states_elec_end(this%st)
+      SAFE_DEALLOCATE_P(this%st)
+    end if
     nullify(this%st)
 
     POP_SUB(exchange_operator_end)

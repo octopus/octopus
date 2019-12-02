@@ -49,7 +49,7 @@ end subroutine X(exchange_operator_single)
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver, rdmft)
-  type(exchange_operator_t), intent(inout) :: this
+  type(exchange_operator_t), intent(in)    :: this
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   integer,                   intent(in)    :: ik
@@ -174,7 +174,7 @@ end subroutine X(exchange_operator_apply)
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator_hartree_apply) (this, der, st_d, ik, exx_coef, psib, hpsib, psolver)
-  type(exchange_operator_t), intent(inout) :: this
+  type(exchange_operator_t), intent(in)    :: this
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   integer,                   intent(in)    :: ik
@@ -250,7 +250,7 @@ end subroutine X(exchange_operator_hartree_apply)
 ! scdm_EXX
 ! ---------------------------------------------------------
 subroutine X(exchange_operator_scdm_apply) (this, der, st_d, psib, hpsib, ik, exx_coef, hartree, psolver)
-  type(exchange_operator_t), intent(inout) :: this
+  type(exchange_operator_t), intent(in)    :: this
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   type(batch_t),             intent(inout) :: psib

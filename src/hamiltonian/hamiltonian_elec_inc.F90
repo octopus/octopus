@@ -136,7 +136,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
 
   ! multiply with occupation number
   if (hm%theory_level == RDMFT .and. bitand(TERM_RDMFT_OCC, terms_) /= 0) then
-    call exchange_operator_rdmft_occ_apply(exxop, mesh, ik, hpsib)
+    call exchange_operator_rdmft_occ_apply(hm%exxop, mesh, ik, hpsib)
   endif
   
   if (bitand(TERM_OTHERS, terms_) /= 0) then
@@ -145,19 +145,19 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree_apply)(exxop, hm%der, hm%d, ik, exxop%cam_alpha, epsib, hpsib, hm%psolver)
+      call X(exchange_operator_hartree_apply)(hm%exxop, hm%der, hm%d, ik, hm%exxop%cam_alpha, epsib, hpsib, hm%psolver)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
-        call X(exchange_operator_scdm_apply)(exxop, hm%der, hm%d, epsib, hpsib, ik, exxop%cam_alpha, &
+        call X(exchange_operator_scdm_apply)(hm%exxop, hm%der, hm%d, epsib, hpsib, ik, hm%exxop%cam_alpha, &
                           hm%theory_level == HARTREE, hm%psolver)
       else
         ! standard HF 
-        call X(exchange_operator_apply)(exxop, hm%der, hm%d, ik, epsib, hpsib, hm%psolver, .false.)
+        call X(exchange_operator_apply)(hm%exxop, hm%der, hm%d, ik, epsib, hpsib, hm%psolver, .false.)
       end if
 
     case(RDMFT)
-      call X(exchange_operator_apply)(exxop, hm%der, hm%d, ik, epsib, hpsib, hm%psolver, .true.)
+      call X(exchange_operator_apply)(hm%exxop, hm%der, hm%d, ik, epsib, hpsib, hm%psolver, .true.)
     end select
     call profiling_out(prof_exx)
     

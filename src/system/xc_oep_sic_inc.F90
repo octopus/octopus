@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
+subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec, exxop)
   type(xc_t),          intent(inout) :: xcs
   type(grid_t),        intent(in)    :: gr
   type(poisson_t),     intent(in)    :: psolver
@@ -27,6 +27,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
   integer,             intent(in)    :: is
   type(xc_oep_t),      intent(inout) :: oep
   FLOAT,               intent(inout) :: ex, ec
+  type(exchange_operator_t), intent(in) :: exxop
 
   integer  :: ist
   FLOAT :: ex2, ec2, ex_, ec_, edummy
