@@ -196,7 +196,6 @@ subroutine X(sternheimer_solve)(                           &
             end if
 
             if(sternheimer_have_inhomog(this)) then
-              !forall(idim = 1:st%d%dim, ip = 1:mesh%np)
               do idim = 1, st%d%dim
                 call lalg_axpy(mesh%np, R_TOTYPE(M_ONE), this%X(inhomog)(:, idim, ist, ik-st%d%kpt%start + 1, sigma), &
                                    rhs(:, idim, ii))
