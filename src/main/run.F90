@@ -27,6 +27,7 @@ module run_oct_m
   use global_oct_m
   use ground_state_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use invert_ks_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -48,6 +49,7 @@ module run_oct_m
   use restart_oct_m
   use static_pol_oct_m
   use system_oct_m
+  use system_mxll_oct_m
   use td_oct_m
   use test_oct_m
   use unit_system_oct_m
@@ -180,11 +182,11 @@ contains
       type is (system_mxll_t)
         select case(calc_mode_id)
         case (CM_MAXWELL_FREE)
-           P_c   =  CNST(137.035999139)
-           P_ep  =  M_ONE/(M_FOUR*M_Pi)
-           P_mu  =  M_FOUR*M_PI/(P_c**2)
+           !call td_run(sys, fromScratch)
+           call system_mxll_init(sys, namespace)
+           ! initialization of Maxwell Hamiltonian "maxwell_hm"
+           call hamiltonian_mxll_init(sys%hm, namespace, sys%gr, sys%st)
 
-           call td_run(sys, fromScratch)
         case default
            message(1) = "Maxwell systems currently support only Maxwell free propagation"
            call messages_info(1)

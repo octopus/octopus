@@ -59,25 +59,21 @@ AC_DEFUN([ACX_FFTW],
 
   if test ! -z "$with_fftw_prefix"; then
     LIBS_FFTW="-L$with_fftw_prefix/lib"
-    LIBS="$LIBS_FFTW -lfftw3 $acx_fftw_save_LIBS"
-    dnl We do not append -lfftw3 at the end, as we might need to prefix other libraries
   else
     LIBS_FFTW=""
-    LIBS=""
   fi
 
+  dnl We do not append -lfftw3 at the end, as we might need to prefix other libraries
+
+  LIBS="$LIBS_FFTW -lfftw3 $acx_fftw_save_LIBS"
   AC_LINK_IFELSE($fftw_program, [acx_fftw_ok=yes], [acx_fftw_ok=no])
 
-  if test ! -z "$with_fftw_prefix"; then
-    AC_MSG_RESULT([$acx_fftw_ok ($FCFLAGS_FFTW $LIBS_FFTW -lfftw3)])
-  else
-    AC_MSG_RESULT([$acx_fftw_ok ($FCFLAGS_FFTW $LIBS_FFTW)])  
-  fi
+  AC_MSG_RESULT([$acx_fftw_ok ($FCFLAGS_FFTW $LIBS_FFTW -lfftw3)])
 
   if test x$acx_fftw_ok != xyes; then
     AC_MSG_ERROR([Could not find required fftw library])
   fi
- 
+
   AC_DEFINE(HAVE_FFTW3, 1, [Define if FFTW3 is available])
 
   dnl NOW CHECK WHETHER THE MULTITHREADED VERSION IS AVALIABLE
@@ -146,10 +142,8 @@ AC_DEFUN([ACX_FFTW],
     fi
   fi
 
-  if test ! -z "$with_fftw_prefix"; then
-    dnl now we append -lfftw3
-    LIBS_FFTW="$LIBS_FFTW -lfftw3"
-  fi
+  dnl now we append -lfftw3
+  LIBS_FFTW="$LIBS_FFTW -lfftw3"
 
   CFLAGS_FFTW="$FCFLAGS_FFTW"
   AC_SUBST(FCFLAGS_FFTW)

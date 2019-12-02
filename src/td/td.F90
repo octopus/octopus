@@ -59,6 +59,8 @@ module td_oct_m
   use states_elec_calc_oct_m
   use states_elec_restart_oct_m
   use system_oct_m
+  use system_abst_oct_m
+  use system_mxll_oct_m
   use td_write_oct_m
   use types_oct_m
   use unit_oct_m
@@ -353,8 +355,8 @@ contains
   ! ---------------------------------------------------------
   
   subroutine td_run(sys, fromScratch)
-    !    type(system_t), target, intent(inout) :: sys
-    class(*), target, intent(inout) :: sys
+    class(system_abst_t), target, intent(inout) :: sys
+    !class(*), target, intent(inout) :: sys
     logical,                intent(inout) :: fromScratch
 
     type(td_t)                   :: td
@@ -372,6 +374,9 @@ contains
     type(restart_t)              :: restart_load, restart_dump
 
     PUSH_SUB(td_run)
+
+    select type (sys)
+    type is (system_t)
 
     ! some shortcuts
     gr  => sys%gr
@@ -391,7 +396,7 @@ contains
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-      end if 
+      end if
     else
       call states_elec_allocate_wfns(st, gr%mesh)
       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
@@ -402,7 +407,7 @@ contains
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
-    
+
     if (gauge_field_is_applied(sys%hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(sys%ks, .true.)
@@ -433,13 +438,13 @@ contains
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
         call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
-      end if  
+      end if
     end if
 
     call td_write_init(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%ks, &
       ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), &
       sys%hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
-
+    
     if(td%scissor > M_EPSILON) then
       call scissor_init(sys%hm%scissor, sys%namespace, st, gr, sys%hm%d, td%scissor, sys%mc)
     end if
@@ -465,7 +470,7 @@ contains
     end if
 
     if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, gr%mesh)) call st%pack()
-    
+
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
@@ -533,6 +538,10 @@ contains
     call td_write_end(write_handler)
     call end_()
 
+    type is (system_mxll_t)
+
+    end select
+
     POP_SUB(td_run)
 
   contains
@@ -549,6 +558,9 @@ contains
     ! ---------------------------------------------------------
     subroutine check_point()
       PUSH_SUB(td_run.check_point)
+
+      select type (sys)
+      type is (system_t)
 
       write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
         units_from_atomic(units_out%time, iter*td%dt), &
@@ -596,6 +608,7 @@ contains
           call print_header()
         end if
       end if
+      end select
 
       POP_SUB(td_run.check_point)
     end subroutine check_point
@@ -604,10 +617,15 @@ contains
     subroutine end_()
       PUSH_SUB(td_run.end_)
 
+      select type (sys)
+      type is (system_t)
+
       ! free memory
       call states_elec_deallocate_wfns(st)
       call td_end(td)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
+
+      end select
 
       POP_SUB(td_run.end_)
     end subroutine end_
@@ -622,6 +640,9 @@ contains
 
       PUSH_SUB(td_run.init_wfs)
 
+      select type (sys)
+      type is (system_t)
+      
       !%Variable TDFreezeOrbitals
       !%Type integer
       !%Default 0
@@ -821,6 +842,8 @@ contains
         end if
       end if
 
+      end select
+
       POP_SUB(td_run.init_wfs)
     end subroutine init_wfs
 
@@ -829,6 +852,9 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
+      select type (sys)
+      type is (system_t)
+      
       call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
@@ -847,6 +873,8 @@ contains
         call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
       end if
 
+      end select
+
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter
 
@@ -856,6 +884,9 @@ contains
     subroutine td_read_coordinates() 
       integer :: iatom, iter, iunit
       PUSH_SUB(td_run.td_read_coordinates)
+
+      select type (sys)
+      type is (system_t)
 
       call io_assign(iunit)
       open(unit = iunit, file = io_workpath('td.general/coordinates', sys%namespace), action='read', status='old')
@@ -888,6 +919,8 @@ contains
       end do
 
       call io_close(iunit)
+      end select
+      
       POP_SUB(td_run.td_read_coordinates)
     end subroutine td_read_coordinates
 
