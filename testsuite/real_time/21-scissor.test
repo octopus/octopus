@@ -10,6 +10,7 @@ Input      : 21-scissor.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.41747450
 
+Processors : 1
 Input      : 21-scissor.02-td.inp
 match ; Energy [step   1] ; LINEFIELD(td.general/energy, -51, 3) ; -4.174740792701e-01
 match ; Energy [step  25] ; LINEFIELD(td.general/energy, -26, 3) ; -4.173622359143e-01
