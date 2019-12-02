@@ -1196,9 +1196,9 @@ contains
         case(HARTREE_FOCK)
           call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
         case(HARTREE)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
         case(RDMFT)
-          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ZERO)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
         end select
       end if
 
