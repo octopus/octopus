@@ -1500,19 +1500,19 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
   end if
 
-! Debug output
-!if(mpi_grp_is_root(mpi_world)) then
-!  do ib = 1, st%nst
-!    do jb = 1, st%nst
-!#ifndef R_TREAL
-!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ib, jb)), ' ',  aimag(overlap(ib, jb)), ' '
-!#else
-!      write(12, '(e12.6,a)', advance = 'no') overlap(ib, jb), ' '
-!#endif
-!    end do
-!      write(12, *) ' ' 
-!  end do
-!end if
+  ! Debug output
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    do ib = 1, st%nst
+      do jb = 1, st%nst
+#ifndef R_TREAL
+        write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ib, jb)), ' ',  aimag(overlap(ib, jb)), ' '
+#else
+        write(12, '(e12.6,a)', advance = 'no') overlap(ib, jb), ' '
+#endif
+      end do
+      write(12, *) ' ' 
+    end do
+  end if
 
   call profiling_out(prof)
 
