@@ -96,11 +96,10 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
 end subroutine X(orbitalset_get_coefficients)
 
 
-subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, has_phase, basisfromstates, dot)
+subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, basisfromstates, dot)
   type(orbitalset_t),   intent(in) :: os
   integer,              intent(in) :: ndim
   type(wfs_elec_t),     intent(in) :: psib
-  logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
   logical,              intent(in) :: basisfromstates
   R_TYPE,            intent(inout) :: dot(:,:,:)
 
@@ -115,7 +114,7 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, has_phase, basisfromsta
   SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
   do ist = 1, psib%nst
     call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-    call X(orbitalset_get_coefficients)(os, ndim, psi, psib%ik, has_phase, basisfromstates, &
+    call X(orbitalset_get_coefficients)(os, ndim, psi, psib%ik, psib%has_phase, basisfromstates, &
                                                   dot(1:ndim,1:os%norbs,ist))
   end do
   SAFE_DEALLOCATE_A(psi)
@@ -184,11 +183,10 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
 end subroutine X(orbitalset_add_to_psi)
 
 
-subroutine X(orbitalset_add_to_batch)(os, ndim, psib, has_phase, basisfromstates, weight)
+subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
   type(orbitalset_t),   intent(in)    :: os
   integer,              intent(in)    :: ndim
   type(wfs_elec_t),     intent(inout) :: psib
-  logical,              intent(in)    :: has_phase !True if the wavefunction has an associated phase
   logical,              intent(in)    :: basisfromstates
   R_TYPE,               intent(in)    :: weight(:,:)
 
@@ -212,7 +210,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, has_phase, basisfromstates
     do ist = 1, psib%nst
       call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
       !In case of phase, we have to apply the conjugate of the phase here
-      if(has_phase) then
+      if(psib%has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do idim = 1, ndim
@@ -258,7 +256,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, has_phase, basisfromstates
     select case(psib%status())
     case(BATCH_NOT_PACKED)
       !
-      if(has_phase) then
+      if(psib%has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do sp = 1, os%sphere%mesh%np, block_size
@@ -323,7 +321,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, has_phase, basisfromstates
 
     case(BATCH_PACKED)
       !
-      if(has_phase) then
+      if(psib%has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do sp = 1, os%sphere%mesh%np, block_size

@@ -528,6 +528,10 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, psib, projecti
   nreal = nst
 #endif
 
+  if(psib%has_phase) then
+    ASSERT(allocated(this%projector_phases))
+  end if
+
   if(psib%is_packed() .and. accel_is_enabled()) then
 
     call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
@@ -743,6 +747,10 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, projection, v
 #else
   nreal = nst
 #endif
+
+  if(vpsib%has_phase) then
+    ASSERT(allocated(this%projector_phases))
+  end if
 
   ! reduce the projections
   if(mesh%parallel_in_domains) then

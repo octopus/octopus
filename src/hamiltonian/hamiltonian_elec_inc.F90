@@ -89,6 +89,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   if(apply_phase .and. set_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
     call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
+    hpsib%has_phase = .true.
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
@@ -174,7 +175,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, epsib, hpsib, apply_phase)
+    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, epsib, hpsib)
   end if  
 
   if(apply_phase .and. set_phase) then
@@ -270,7 +271,8 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   call hpsib%add_state(ist, hpsi)
 
   if(present(set_phase)) then
-    psib%has_phase = .not.set_phase
+    psib%has_phase = .not. set_phase
+    hpsib%has_phase = .not. set_phase
   end if 
 
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, terms = terms, set_bc = set_bc)

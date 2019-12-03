@@ -17,14 +17,13 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib)
   type(lda_u_t),           intent(in)    :: this
   type(mesh_t),            intent(in)    :: mesh
   type(wfs_elec_t),        intent(in)    :: psib
   type(wfs_elec_t),        intent(inout) :: hpsib
   type(states_elec_dim_t), intent(in)    :: d
   type(simul_box_t),       intent(in)    :: sb
-  logical,                 intent(in)    :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
   R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:,:), psi(:,:)
@@ -58,7 +57,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib, has_phase)
     call batch_get_state(psib, ibatch, mesh%np, psi)
     do ios = 1, this%norbsets
       os => this%orbsets(ios)
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, has_phase, this%basisfromstates, &
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, psib%has_phase, this%basisfromstates, &
                                                   dot(1:d%dim,1:os%norbs,ios,ibatch))
     end do
   end do
@@ -93,7 +92,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib, has_phase)
       do inn = 1, os%nneighbors
         ios2 = os%map_os(inn) 
 
-        if(has_phase) then
+        if(psib%has_phase) then
 #ifdef R_TCOMPLEX
           weight = os%phase_shift(inn, psib%ik)*os%V_ij(inn, 0)/el_per_state
 #endif
@@ -130,7 +129,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib, has_phase)
   !We add the orbitals properly weighted to hpsi
   do ios = 1, this%norbsets 
     os => this%orbsets(ios)
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, has_phase, this%basisfromstates, reduced(:,:,ios))
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, this%basisfromstates, reduced(:,:,ios))
   end do
  
   SAFE_DEALLOCATE_A(psi)
