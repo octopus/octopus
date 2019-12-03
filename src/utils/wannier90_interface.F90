@@ -480,19 +480,19 @@ contains
     end if
 
     ! ---- actual interface work ----------
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_MMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_MMN) /= 0) then
       call create_wannier90_mmn(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
       call write_unk(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       call create_wannier90_amn(sys%gr%mesh, sys%gr%sb,sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
       call create_wannier90_eig()
     end if
 
@@ -621,7 +621,7 @@ contains
       band_index(ii) = itemp
     end do
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       ! parse file again for definitions of projections
       w90_nnkp = io_open(trim(filename), namespace, action='read', position='rewind')
 
