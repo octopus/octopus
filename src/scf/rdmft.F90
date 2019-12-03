@@ -528,7 +528,7 @@ contains
       end if
 
       if (hm%psolver%dressed) then
-        call calc_photon_number(photon_number_state, photon_number, ekin_state, epot_state)
+        call calc_photon_number(gr, st, hm, photon_number_state, photon_number, ekin_state, epot_state)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
         end if
@@ -573,97 +573,98 @@ contains
 
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
-    
-    ! ---------------------------------------------------------
-    subroutine calc_photon_number(photon_number_state, photon_number, ekin_state, epot_state)
-      FLOAT, intent(out) :: photon_number_state(st%nst)
-      FLOAT, intent(out) :: photon_number
-      FLOAT, intent(out) :: ekin_state(st%nst)
-      FLOAT, intent(out) :: epot_state(st%nst)
-
-      integer :: ist, ip
-      FLOAT   :: qq, q_square_exp, laplace_exp
-      FLOAT, allocatable :: psi(:, :), psi_q_square(:,:)
-      FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
-
-      PUSH_SUB(scf_rdmft.calc_photon_number)
-
-      SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-      SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np_part, 1:st%d%dim))
-      SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-      SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-
-      photon_number = M_ZERO
-
-      do ist = 1, st%nst
-        call states_elec_get_state(st, gr%mesh, ist, 1, psi)
-
-        grad_psi = M_ZERO
-        grad_square_psi = M_ZERO
-        laplace_exp = M_ZERO
-
-        ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
-        call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
-        call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
-        laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
-        ekin_state(ist) = -M_HALF*laplace_exp
-
-        ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
-        psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
-        q_square_exp = dmf_dotp(gr%mesh, psi(:,1 ), psi_q_square(:, 1))
-        epot_state(ist) = M_HALF * hm%psolver%dressed_omega * hm%psolver%dressed_omega * q_square_exp
-
-        !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
-        !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-        photon_number_state(ist) = -M_HALF*laplace_exp / hm%psolver%dressed_omega + M_HALF * hm%psolver%dressed_omega * q_square_exp
-        photon_number_state(ist) = photon_number_state(ist) - M_HALF
-
-        !! N_phot_total= sum_ist occ_ist*N_phot(ist)
-        photon_number = photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
-      end do
-
-      photon_number =  photon_number - st%qtot/M_TWO
-
-      SAFE_DEALLOCATE_A(psi)
-      SAFE_DEALLOCATE_A(grad_psi)
-
-      POP_SUB(scf_rdmft.calc_photon_number)
-    end subroutine calc_photon_number
-
-    ! ---------------------------------------------------------
-    subroutine calc_maxFO (hm, st, gr, rdm)
-      type(rdm_t),               intent(inout) :: rdm
-      type(grid_t),              intent(in)    :: gr
-      type(hamiltonian_elec_t),  intent(inout) :: hm
-      type(states_elec_t),       intent(inout) :: st
-    
-      FLOAT, allocatable ::  lambda(:,:), FO(:,:)
-      integer :: ist, jst
-      
-      PUSH_SUB(scf_rdmft.calc_maxFO)
-      
-      SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
-      SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
-      
-      ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
-      lambda = M_ZERO
-      FO = M_ZERO
-      call construct_lambda(hm, st, gr, lambda, rdm)
-
-      !Set up FO matrix to check maxFO
-      do ist = 1, st%nst
-        do jst = 1, ist - 1
-          FO(jst, ist) = - (lambda(jst, ist) - lambda(ist ,jst))
-        end do
-      end do
-      rdm%maxFO = maxval(abs(FO))
-
-      SAFE_DEALLOCATE_A(lambda) 
-      SAFE_DEALLOCATE_A(FO)
-      
-      POP_SUB(scf_rdmft.calc_maxFO)
-    end subroutine calc_maxFO
   end subroutine scf_rdmft
+    
+  ! ---------------------------------------------------------
+  subroutine calc_maxFO (hm, st, gr, rdm)
+    type(rdm_t),               intent(inout) :: rdm
+    type(grid_t),              intent(in)    :: gr
+    type(hamiltonian_elec_t),  intent(inout) :: hm
+    type(states_elec_t),       intent(inout) :: st
+
+    FLOAT, allocatable ::  lambda(:,:), FO(:,:)
+    integer :: ist, jst
+
+    PUSH_SUB(scf_rdmft.calc_maxFO)
+
+    SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst))
+    SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
+
+    ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
+    lambda = M_ZERO
+    FO = M_ZERO
+    call construct_lambda(hm, st, gr, lambda, rdm)
+
+    !Set up FO matrix to check maxFO
+    do ist = 1, st%nst
+      do jst = 1, ist - 1
+        FO(jst, ist) = - (lambda(jst, ist) - lambda(ist ,jst))
+      end do
+    end do
+    rdm%maxFO = maxval(abs(FO))
+
+    SAFE_DEALLOCATE_A(lambda)
+    SAFE_DEALLOCATE_A(FO)
+
+    POP_SUB(scf_rdmft.calc_maxFO)
+  end subroutine calc_maxFO
+
+  ! ---------------------------------------------------------
+  subroutine calc_photon_number(gr, st, hm, photon_number_state, photon_number, ekin_state, epot_state)
+    type(grid_t),             intent(in)  :: gr
+    type(states_elec_t),      intent(in)  :: st
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    FLOAT,                    intent(out) :: photon_number_state(:)
+    FLOAT,                    intent(out) :: photon_number
+    FLOAT,                    intent(out) :: ekin_state(:)
+    FLOAT,                    intent(out) :: epot_state(:)
+
+    integer :: ist, ip
+    FLOAT   :: qq, q_square_exp, laplace_exp
+    FLOAT, allocatable :: psi(:, :), psi_q_square(:, :)
+    FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:, :)
+
+    PUSH_SUB(scf_rdmft.calc_photon_number)
+
+    SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
+    SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np_part, 1))
+    SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+
+    photon_number = M_ZERO
+
+    do ist = 1, st%nst
+      call states_elec_get_state(st, gr%mesh, ist, 1, psi)
+
+      grad_psi = M_ZERO
+      grad_square_psi = M_ZERO
+      laplace_exp = M_ZERO
+
+      ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
+      call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .true.)
+      call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .true.)
+      laplace_exp = dmf_dotp(gr%mesh, psi(:, 1), grad_square_psi(:, 2))
+      ekin_state(ist) = -M_HALF*laplace_exp
+
+      ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
+      psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
+      q_square_exp = dmf_dotp(gr%mesh, psi(:, 1), psi_q_square(:, 1))
+      epot_state(ist) = M_HALF * hm%psolver%dressed_omega * hm%psolver%dressed_omega * q_square_exp
+
+      !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
+      !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
+      photon_number_state(ist) = -M_HALF*laplace_exp / hm%psolver%dressed_omega + M_HALF * hm%psolver%dressed_omega * q_square_exp
+      photon_number_state(ist) = photon_number_state(ist) - M_HALF
+
+      !! N_phot_total= sum_ist occ_ist*N_phot(ist)
+      photon_number = photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(grad_psi)
+
+    POP_SUB(scf_rdmft.calc_photon_number)
+  end subroutine calc_photon_number
 
   ! ---------------------------------------------------------
   
