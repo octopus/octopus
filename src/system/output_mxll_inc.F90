@@ -204,47 +204,18 @@
     call output_longitudinal_rs_state(st_mxll, gr_mxll, geo, dir, outp)
     call output_divergence_rs_state(st_mxll, gr_mxll, geo, dir, outp)
     call output_vector_potential(st_mxll, gr_mxll, hm_mxll, geo, dir, outp)
-    call output_coupling_potentials(hm_elec, gr_elec, geo, dir, outp)
-    call output_current_density(st_mxll, gr_mxll, hm_mxll, st_elec, gr_elec, hm_elec, geo, dir, time, outp)
     call output_external_current_density(st_mxll, gr_mxll, hm_mxll, geo, dir, time, outp)
     call output_charge_density_mxll(st_mxll, gr_mxll, hm_mxll, geo, dir, outp)
-    call output_medium_variables_electric(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
-    call output_medium_variables_magnetic(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
+
+    if (present(hm_elec) .and. present(gr_elec) .and. present(st_elec)) then
+      call output_coupling_potentials(hm_elec, gr_elec, geo, dir, outp)
+      call output_current_density(st_mxll, gr_mxll, hm_mxll, st_elec, gr_elec, hm_elec, geo, dir, time, outp)
+      call output_medium_variables_electric(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
+      call output_medium_variables_magnetic(st_mxll, gr_mxll, hm_mxll, geo, dir, outp, st_elec, gr_elec, hm_elec)
+    end if
 
     POP_SUB(output_mxll)
   end subroutine output_mxll
-
-
-  ! ---------------------------------------------------------
-  subroutine output_mxll_free(outp, gr, st, hm, time, geo, dir)
-    type(output_t),                intent(in)    :: outp
-    type(states_mxll_t),           intent(inout) :: st
-    type(hamiltonian_mxll_t),      intent(in)    :: hm
-    type(grid_t),                  intent(inout) :: gr
-    FLOAT,                         intent(in)    :: time
-    type(geometry_t),              intent(inout) :: geo
-    character(len=*),              intent(in)    :: dir
-
-    PUSH_SUB(output_mxll_free)
-
-    if(outp%what /= 0) then
-      message(1) = "Info: Writing output to " // trim(dir)
-      call messages_info(1)
-      call io_mkdir(dir, outp%namespace)
-    endif
-
-    call output_states_mxll(st, gr, hm, geo, dir, outp)
-    call output_energy_density_mxll(hm, gr, geo, dir, outp)
-    call output_poynting_vector(st, gr, hm, geo, dir, outp)
-    call output_transverse_rs_state(st, gr, geo, dir, outp)
-    call output_longitudinal_rs_state(st, gr, geo, dir, outp)
-    call output_divergence_rs_state(st, gr, geo, dir, outp)
-    call output_vector_potential(st, gr, hm, geo, dir, outp)
-    call output_external_current_density(st, gr, hm, geo, dir, time, outp)
-    call output_charge_density_mxll(st, gr, hm, geo, dir, outp)
-
-    POP_SUB(output_mxll_free)
-  end subroutine output_mxll_free
 
 
   ! ---------------------------------------------------------
@@ -456,7 +427,7 @@
     PUSH_SUB(output_divergence_rs_state)
 
     ! divergence of the electric field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
@@ -464,21 +435,21 @@
       call get_electric_field_state(st%rsb, gr%mesh, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "e_field_div", outp%namespace, gr%mesh, dtmp_2,&
-           & fn_unit, ierr, geo=geo)
+        & fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
 
     ! divergence of the magnetic field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
       call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "b_field_div", outp%namespace, gr%mesh, dtmp_2,&
-           & fn_unit, ierr, geo=geo)
+        & fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
