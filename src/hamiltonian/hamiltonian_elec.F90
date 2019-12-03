@@ -1058,14 +1058,6 @@ contains
       apply = .false.
     end if
     
-    if(this%scissor%apply) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as the scissor operator is enabled.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')

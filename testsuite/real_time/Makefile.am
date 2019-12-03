@@ -116,6 +116,10 @@ dist_share_DATA =                      \
         19-td_move_ions.03-td_restart.inp \
         20-pcm-local-field-absorption.01-gs.inp        \
         20-pcm-local-field-absorption.02-td_prop_eom.inp   \
-        20-pcm-local-field-absorption.test
+        20-pcm-local-field-absorption.test               \
+	21-scissor.test             \
+	21-scissor.01-gs.inp        \
+	21-scissor.02-td.inp        \
+	21-scissor.03-spectrum.inp
 
 CLEANFILES = *~ *.bak
