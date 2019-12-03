@@ -302,11 +302,7 @@ contains
 
       PUSH_SUB(profiling_init.get_output_dir)
 
-      prof_vars%file_number = '0000'
-
-      if(mpi_world%size > 1) then
-        write(prof_vars%file_number, '(i6.6)') mpi_world%rank
-      end if
+      write(prof_vars%file_number, '(i6.6)') mpi_world%rank
 
       prof_vars%output_dir = 'profiling'
 
