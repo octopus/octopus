@@ -414,6 +414,7 @@ contains
           call states_elec_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
           if (conv .or. iter == max_iter) then
+            call states_elec_end(st)
             call states_elec_copy(st, states_save)
           end if
         
