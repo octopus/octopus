@@ -165,6 +165,8 @@ module profiling_oct_m
     character(len=6)         :: file_number
 
     logical                  :: all_nodes
+
+    logical                  :: output_yaml
   end type profile_vars_t
 
   type(profile_vars_t), target, public :: prof_vars
@@ -290,6 +292,16 @@ contains
       call likwid_markerInit()
 #endif
     end if
+
+    !%Variable ProfilingOutputYAML
+    !%Default no
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether the profiling output is additionally
+    !% written to a YAML file.
+    !%End
+    call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
 
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
@@ -906,6 +918,36 @@ contains
     end do
 
     call io_close(iunit)
+
+    if(prof_vars%output_yaml) then
+      filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number//'.yaml'
+      iunit = io_open(trim(filename), namespace, action='write')
+      if(iunit < 0) then
+        message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
+        call messages_warning(1)
+        POP_SUB(profiling_output)
+        return
+      end if
+      write(iunit, '(2a)') 'schema: [num_calls, total_time, total_throughput, ', &
+       'total_bandwidth, self_time, self_throughput, self_bandwidth]'
+      write(iunit, '(a)') 'data:'
+
+      do ii = 1, prof_vars%last_profile
+        prof =>  prof_vars%profile_list(position(ii))%p
+        if(profile_num_calls(prof) == 0) cycle
+        write(iunit, '(a,a,a,i6,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a)')         &
+             '  ', profile_label(prof), ': [',     &
+             profile_num_calls(prof),        ', ', &
+             profile_total_time(prof),       ', ', &
+             profile_total_throughput(prof), ', ', &
+             profile_total_bandwidth(prof),  ', ', &
+             profile_self_time(prof),        ', ', &
+             profile_self_throughput(prof),  ', ', &
+             profile_self_bandwidth(prof),   ']'
+      end do
+
+      call io_close(iunit)
+    end if
 
     SAFE_DEALLOCATE_A(selftime)
     SAFE_DEALLOCATE_A(position)
