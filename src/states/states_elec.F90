@@ -1378,6 +1378,7 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
+    SAFE_DEALLOCATE_P(stout%node)
     call loct_pointer_copy(stout%node, stin%node)
 
     if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
