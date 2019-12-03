@@ -768,10 +768,10 @@ contains
 
     PUSH_SUB(get_rs_density_ext)
 
-    SAFE_ALLOCATE(current(1:mesh%np_part, 1:mesh%sb%dim, 1))  !< The 1 in the last column is a dummy to use batch routines
+    SAFE_ALLOCATE(current(1:mesh%np, 1:mesh%sb%dim, 1))  !< The 1 in the last column is a dummy to use batch routines
 
     call external_current_calculation(st, mesh, time, current(:,:,1))
-    call build_rs_current_state(current(:,:,1), rs_current_density_ext(:,:), st%ep(:), mesh%np_part)
+    call build_rs_current_state(current(:,:,1), mesh, rs_current_density_ext(:,:), st%ep(:), mesh%np)
     rs_current_density_ext = - rs_current_density_ext
 
     SAFE_DEALLOCATE_A(current)

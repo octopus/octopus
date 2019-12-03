@@ -419,26 +419,28 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine build_rs_state(e_field, b_field, rs_sign, rs_state, ep_field, mu_field, np)
+  subroutine build_rs_state(e_field, b_field, rs_sign, rs_state, mesh, ep_field, mu_field, np)
     FLOAT,             intent(in)    :: e_field(:,:), b_field(:,:)
     CMPLX,             intent(inout) :: rs_state(:,:)
     integer,           intent(in)    :: rs_sign
+    type(mesh_t),      intent(in)    :: mesh
     FLOAT,   optional, intent(in)    :: ep_field(:)
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     PUSH_SUB(build_rs_state)
 
-    if (present(ep_field) .and. present(mu_field) .and. present(np)) then
-      do ip = 1, np
+    do ip = 1, np_
+      if (present(ep_field) .and. present(mu_field)) then
         rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
-      end do
-    else
-      rs_state(:,:) = sqrt(P_ep/M_TWO) * e_field(:,:) + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(:,:)
-    end if 
+      else
+        rs_state(ip, :) = sqrt(P_ep/M_TWO) * e_field(ip, :) &
+                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
+      end if 
+    end do
 
     POP_SUB(build_rs_state)
 
@@ -479,23 +481,25 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine build_rs_current_state(current_state, rs_current_state, ep_field, np)
+  subroutine build_rs_current_state(current_state, mesh, rs_current_state, ep_field, np)
     FLOAT,             intent(in)    :: current_state(:,:)
+    type(mesh_t),      intent(in)    :: mesh
     CMPLX,             intent(inout) :: rs_current_state(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     ! no PUSH_SUB, called too often
-
-    if (present(ep_field) .and. present(np)) then
-      do ip = 1, np
+    np_ = optional_default(np, mesh%np)
+ 
+    do ip = 1, np_
+      if (present(ep_field)) then
         rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
-      end do
-    else
-      rs_current_state = M_ONE/sqrt(M_TWO*P_ep) * current_state
-    end if
+      else
+        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
+      end if
+    end do
 
   end subroutine build_rs_current_state
 
@@ -536,30 +540,32 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_electric_field_state(rsb, electric_field, ep_field, np)
+  subroutine get_electric_field_state(rsb, mesh, electric_field, ep_field, np)
     type(batch_t),     intent(in)    :: rsb
+    type(mesh_t),      intent(in)    :: mesh
     FLOAT,             intent(inout) :: electric_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
     CMPLX, allocatable :: rs_aux(:,:)
-    integer :: ip, ii
+    integer :: ip, ii, np_
 
     PUSH_SUB(get_electric_field_state)
 
-    SAFE_ALLOCATE(rs_aux(1:np, 1:3))
+    np_ = optional_default(np, mesh%np)
+    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
     
     do ii = 1, 3
-       call batch_get_state(rsb, np, ii, rs_aux(:, ii))
+       call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
     end do
-    
-    if (present(ep_field) .and. present(np)) then
-      do ip = 1, np
-         electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
-      end do
-    else
-      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rs_aux(:,:), REAL_PRECISION)
-   end if
+     
+    do ip = 1, np_
+      if (present(ep_field)) then
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
+      else 
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
+      end if
+    end do
 
     SAFE_DEALLOCATE_A(rs_aux)
 
@@ -569,31 +575,34 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_state(rsb, rs_sign, magnetic_field, mu_field, np)
+  subroutine get_magnetic_field_state(rsb, mesh, rs_sign, magnetic_field, mu_field, np)
     type(batch_t),     intent(in)    :: rsb
+    type(mesh_t),      intent(in)    :: mesh
     integer,           intent(in)    :: rs_sign
     FLOAT,             intent(inout) :: magnetic_field(:,:)
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
     CMPLX, allocatable :: rs_aux(:,:)
-    integer :: ip, ii
+    integer :: ip, ii, np_
 
     PUSH_SUB(get_magnetic_field_state)
 
-    SAFE_ALLOCATE(rs_aux(1:np, 1:3))
+    np_ = optional_default(np, mesh%np)
+    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
 
     do ii = 1, 3
-       call batch_get_state(rsb, np, ii, rs_aux(:, ii))
+      call batch_get_state(rsb, np, ii, rs_aux(:, ii))
     end do
 
-    if (present(mu_field) .and. present(np)) then
-      do ip = 1, np
+    
+    do ip = 1, np_
+      if (present(mu_field)) then
         magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
-      end do
-    else
-      magnetic_field(:,:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(:,:))
-   end if
+      else
+        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
+      end if
+   end do
 
    SAFE_DEALLOCATE_A(rs_aux)
 
@@ -637,23 +646,26 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_current_state(rs_current_field, current_field, ep_field, np)
+  subroutine get_current_state(rs_current_field, current_field, mesh, ep_field, np)
     CMPLX,             intent(in)    :: rs_current_field(:,:)
     FLOAT,             intent(inout) :: current_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
+    type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     PUSH_SUB(get_current_state)
+    
+    np_ = optional_default(np, mesh%np)
 
-    if (present(ep_field) .and. present(np)) then
-      do ip = 1, np
+    do ip = 1, np_
+      if (present(ep_field)) then
         current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip, :), REAL_PRECISION)
-      end do
-    else
-      current_field(:,:) = sqrt(M_TWO*P_ep) * real(rs_current_field(:,:), REAL_PRECISION)
-    end if
+      else
+        current_field(ip, :) = sqrt(M_TWO*P_ep) * real(rs_current_field(ip, :), REAL_PRECISION)
+      end if
+    end do
 
     POP_SUB(get_current_state)
 
@@ -702,7 +714,7 @@ contains
   !----------------------------------------------------------
   subroutine get_divergence_field(gr, field, field_div, charge_density)
     type(grid_t),    intent(in)    :: gr
-    FLOAT,           intent(inout)    :: field(:,:)
+    FLOAT,           intent(inout) :: field(:,:)
     FLOAT,           intent(inout) :: field_div(:)
     logical,         intent(in)    :: charge_density
 
