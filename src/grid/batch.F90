@@ -109,6 +109,7 @@ module batch_oct_m
     type(type_t)                           :: type !< only available if the batched is packed
     logical :: special_memory
   contains
+    procedure :: batches_are_compatible
     procedure :: copy => batch_copy
   end type batch_t
 
@@ -949,9 +950,7 @@ subroutine batch_copy_data(np, xx, yy)
   PUSH_SUB(batch_copy_data)
   call profiling_in(prof, "BATCH_COPY_DATA")
 
-  ASSERT(batch_type(yy) == batch_type(xx))
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
+  call xx%batches_are_compatible(yy)
 
   select case(batch_status(xx))
   case(BATCH_DEVICE_PACKED)
@@ -992,6 +991,23 @@ subroutine batch_copy_data(np, xx, yy)
   call profiling_out(prof)
   POP_SUB(batch_copy_data)
 end subroutine batch_copy_data
+
+! --------------------------------------------------------------
+
+subroutine batches_are_compatible(xx, yy)
+  class(batch_t),    intent(in) :: xx
+  class(batch_t),    intent(in) :: yy
+
+  PUSH_SUB(batches_are_compatible)
+
+  ASSERT(batch_type(yy) == batch_type(xx))
+  ASSERT(xx%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(xx) == batch_status(yy))
+  ASSERT(xx%dim == yy%dim)
+
+  POP_SUB(batches_are_compatible)
+
+end subroutine batches_are_compatible
 
 #include "real.F90"
 #include "batch_inc.F90"
