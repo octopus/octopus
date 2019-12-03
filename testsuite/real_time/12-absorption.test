@@ -14,6 +14,10 @@ Input      : 12-absorption.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -5.81823431
 
+match ; IO Profiling files open ;  GREPFIELD(out, 'Number of file open', 6) ; 45
+match ; IO Profiling files close ; GREPFIELD(out, 'Number of file close', 6) ; 46
+
+
 Processors : 4
 Input      : 12-absorption.02-td.inp
 match ; Energy [step   1] ; LINEFIELD(td.general/energy, -101, 3) ; -5.818234898217e+00
