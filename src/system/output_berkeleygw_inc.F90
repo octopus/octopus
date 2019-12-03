@@ -64,7 +64,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', namespace, action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
-    call exchange_operator_reinit(hm%exxop, st, M_ONE, M_ZERO, M_ZERO)
+    call exchange_operator_reinit(hm%exxop, st, M_ZERO, M_ONE, M_ZERO)
     SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
   end if
 
