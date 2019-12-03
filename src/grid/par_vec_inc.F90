@@ -26,7 +26,7 @@
 !! Scatters a vector v to all nodes in vp with respect to
 !! to point -> node mapping in vp.
 !! v_local has at least to be of size vp%np_local.
-subroutine X(vec_scatter)(vp, root, v, v_local)
+subroutine X(vec_scatter)(vp, root, v_local, v)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
   R_TYPE,     intent(out) :: v_local(:)
