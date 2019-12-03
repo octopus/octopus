@@ -26,6 +26,7 @@ UseFineMesh = yes
 ExperimentalFeatures = yes
 
 ProfilingMode = prof_time
+ProfilingOutputYAML = yes
 
 LCAOAlternative = yes
 
