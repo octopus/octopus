@@ -30,6 +30,7 @@ subroutine X(wfs_elec_init_contiguous)(this, dim, st_start, st_end, psi, ik)
   PUSH_SUB(X(wfs_elec_init_contiguous))
 
   this%ik = ik
+  this%has_phase = .false.
   call batch_init(this%batch_t, dim,  st_start, st_end, psi)
 
   POP_SUB(X(wfs_elec_init_contiguous))

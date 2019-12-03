@@ -17,17 +17,16 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc, set_phase)
-  type(hamiltonian_elec_t),   intent(in)    :: hm
-  type(namespace_t),          intent(in)    :: namespace
-  type(mesh_t),               intent(in)    :: mesh
-  type(wfs_elec_t),   target, intent(inout) :: psib
-  type(wfs_elec_t),   target, intent(inout) :: hpsib
-  integer, optional,          intent(in)    :: terms
-  logical, optional,          intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
-  logical, optional,          intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+  type(hamiltonian_elec_t),    intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  type(wfs_elec_t),    target, intent(inout) :: psib
+  type(wfs_elec_t),    target, intent(inout) :: hpsib
+  integer,           optional, intent(in)    :: terms
+  logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-  logical :: apply_phase, pack, set_phase_
+  logical :: apply_phase, pack, set_phase
   type(wfs_elec_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -40,10 +39,14 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
-  set_phase_ = optional_default(set_phase, .true.)  
+
+  !By default the phase is dictated by apply_phase
+  !and for electronic wavefunctions, we get set_phase from the has_phase flag
+  set_phase = .not. psib%has_phase
+
   ! OpenCL is not supported for the phase correction at the moment
-  if(.not.set_phase_) then
-    if(psib%status() == BATCH_DEVICE_PACKED) set_phase_ = .true.
+  if (.not. set_phase) then
+    if(psib%status() == BATCH_DEVICE_PACKED) set_phase = .true.
   end if
 
   ASSERT(psib%is_ok())
@@ -63,28 +66,28 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(optional_default(set_bc, .true.)) then
-    if(apply_phase .and. .not.set_phase_) then
+    if(apply_phase .and. .not.set_phase) then
       ! apply phase correction while setting boundary -> memory needs to be
       ! accessed only once
-      call boundaries_set(hm%der%boundaries, psib, phase_correction=hm%hm_base%phase_corr(:, psib%ik))
+      call boundaries_set(hm%der%boundaries, psib, phase_correction = hm%hm_base%phase_corr(:, psib%ik))
     else
       call boundaries_set(hm%der%boundaries, psib)
     end if
   else
     ! This should never happen: the phase correction should be always only
     ! applied when also setting the boundary conditions.
-    ASSERT(.not.(apply_phase .and. .not.set_phase_))
+    ASSERT(.not.(apply_phase .and. .not. set_phase))
   end if
 
 
-  if(apply_phase .and. set_phase_) then
+  if(apply_phase .and. set_phase) then
     SAFE_ALLOCATE(epsib)
     call psib%copy_to(epsib)
   else
     epsib => psib
   end if
 
-  if(apply_phase .and. set_phase_) then ! we copy psi to epsi applying the exp(i k.r) phase
+  if(apply_phase .and. set_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
     call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
   end if
 
@@ -174,7 +177,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, epsib, hpsib, apply_phase)
   end if  
 
-  if(apply_phase .and. set_phase_) then
+  if(apply_phase .and. set_phase) then
     call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, .true., hpsib)
     call epsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
@@ -266,7 +269,11 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   call wfs_elec_init(hpsib, hm%d%dim, 1, ik)
   call hpsib%add_state(ist, hpsi)
 
-  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, terms = terms, set_bc = set_bc, set_phase = set_phase)
+  if(present(set_phase)) then
+    psib%has_phase = .not.set_phase
+  end if 
+
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, terms = terms, set_bc = set_bc)
 
   call psib%end()
   call hpsib%end()
@@ -746,8 +753,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
   call hpsib%copy_to(aux2psib, copy_data=.false.)
   
   ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, auxpsib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, auxpsib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders|psi>
   call auxpsib%copy_data_to(mesh%np, hpsib)
@@ -765,8 +771,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
 
   ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
   call batch_mul(mesh%np, vmagnus(1:mesh%np, ispin, 1), psib, auxpsib)
-  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, auxpsib, aux2psib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, auxpsib, aux2psib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL)
   call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
 
   call auxpsib%end()

@@ -759,12 +759,12 @@ contains
       !  the code stops in ZAXPY below without saying why.
 
       if(iter /= 1) then
-        call operate_batch(hm, namespace, mesh, psi1b, hpsi1b, set_phase, vmagnus)
+        call operate_batch(hm, namespace, mesh, psi1b, hpsi1b, vmagnus)
       else
         if (present(inh_psib)) then
-          call operate_batch(hm, namespace, mesh, inh_psib, hpsi1b, set_phase, vmagnus)
+          call operate_batch(hm, namespace, mesh, inh_psib, hpsi1b, vmagnus)
         else
-          call operate_batch(hm, namespace, mesh, psib, hpsi1b, set_phase, vmagnus)
+          call operate_batch(hm, namespace, mesh, psib, hpsi1b, vmagnus)
         end if
       end if
 
@@ -850,7 +850,7 @@ contains
     do iter = 1, te%exp_order
 
       !to apply the Hamiltonian
-      call operate_batch(hm, namespace, mesh, vb(iter), vb(iter+1), set_phase, vmagnus)
+      call operate_batch(hm, namespace, mesh, vb(iter), vb(iter+1), vmagnus)
 
       if(hm%is_hermitian()) then
         l = max(1, iter - 1)
@@ -971,7 +971,7 @@ contains
       call psi1%copy_data_to(mesh%np, psi2)
       call psi0%copy_data_to(mesh%np, psi1)
 
-      call operate_batch(hm, namespace, mesh, psi1, psi0, set_phase, vmagnus)
+      call operate_batch(hm, namespace, mesh, psi1, psi0, vmagnus)
       zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
       call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
@@ -994,21 +994,20 @@ contains
   end subroutine exponential_cheby_batch
 
 
-  subroutine operate_batch(hm, namespace, mesh, psib, hpsib, set_phase, vmagnus)
+  subroutine operate_batch(hm, namespace, mesh, psib, hpsib, vmagnus)
     type(hamiltonian_elec_t),           intent(inout) :: hm
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
     type(wfs_elec_t),                   intent(inout) :: psib
     type(wfs_elec_t),                   intent(inout) :: hpsib
-    logical,                            intent(in)    :: set_phase
     FLOAT,                    optional, intent(in)    :: vmagnus(mesh%np, hm%d%nspin, 2)
 
     PUSH_SUB(operate_batch)
     
     if (present(vmagnus)) then
-      call zhamiltonian_elec_apply_magnus(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase = set_phase)
+      call zhamiltonian_elec_apply_magnus(hm, namespace, mesh, psib, hpsib, vmagnus)
     else
-      call zhamiltonian_elec_apply_batch(hm, namespace, mesh, psib, hpsib, set_phase = set_phase)
+      call zhamiltonian_elec_apply_batch(hm, namespace, mesh, psib, hpsib)
     end if
 
     POP_SUB(operate_batch)

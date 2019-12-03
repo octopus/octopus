@@ -351,6 +351,8 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
     call accel_finish()
   end select
 
+  psib%has_phase = .not. conjugate
+
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_elec_base_phase))
 end subroutine X(hamiltonian_elec_base_phase)

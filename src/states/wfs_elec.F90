@@ -34,6 +34,7 @@ module wfs_elec_oct_m
   type, extends(batch_t) :: wfs_elec_t
     private
     integer, public :: ik
+    logical, public :: has_phase
   contains
     procedure :: copy_to => wfs_elec_copy_to
     procedure :: check_compatibility_with => wfs_elec_check_compatibility_with
@@ -59,6 +60,7 @@ contains
     PUSH_SUB(wfs_elec_init_empty)
 
     this%ik = ik
+    this%has_phase = .false.
     call batch_init(this%batch_t, dim, nst)
 
     POP_SUB(wfs_elec_init_empty)
@@ -76,6 +78,7 @@ contains
     select type (dest)
     class is (wfs_elec_t)
       dest%ik = this%ik
+      dest%has_phase = this%has_phase
       call this%batch_t%copy_to(dest%batch_t, pack, copy_data)
     class default
       message(1) = "Internal error: imcompatible batches in wfs_elec_copy_to."
@@ -96,6 +99,7 @@ contains
     select type (target)
     class is (wfs_elec_t)
       ASSERT(this%ik == target%ik)
+      ASSERT(this%has_phase .eqv. target%has_phase)
     class default
       message(1) = "Internal error: imcompatible batches in wfs_elec_check_compatibility_with."
       call messages_fatal(1)
@@ -113,6 +117,7 @@ contains
     PUSH_SUB(wfs_elec_end)
 
     this%ik = -1
+    this%has_phase = .false.
     call this%batch_t%end(copy)
 
     POP_SUB(wfs_elec_end)
