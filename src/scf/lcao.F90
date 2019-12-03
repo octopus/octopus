@@ -24,7 +24,6 @@ module lcao_oct_m
   use batch_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
-  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -1009,13 +1008,13 @@ contains
           factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
          
           if(states_are_real(st)) then
-            call dget_ao(this, st, gr%mesh, geo, gr%der%boundaries, iorb, 1, dorbital, use_psi = .true.)
+            call dget_ao(this, st, gr%mesh, geo, iorb, 1, dorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
             end do
           else
-            call zget_ao(this, st, gr%mesh, geo, gr%der%boundaries, iorb, 1, zorbital, use_psi = .true.)
+            call zget_ao(this, st, gr%mesh, geo, iorb, 1, zorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*abs(zorbital(ip, 1))**2

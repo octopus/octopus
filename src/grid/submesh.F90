@@ -78,9 +78,6 @@ module submesh_oct_m
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
-    logical               :: spiral
-    CMPLX,        pointer :: phase_spiral(:)
-    
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
@@ -111,8 +108,6 @@ contains
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)
-    sm%spiral = .false.
-    nullify(sm%phase_spiral)
 
     sm%np_global = -1
 
@@ -122,11 +117,10 @@ contains
 
   ! -------------------------------------------------------------
 
-  subroutine submesh_init(this, sb, mesh, bnd, center, rc)
+  subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
     type(mesh_t), target, intent(in)     :: mesh
-    type(boundaries_t),   intent(in)     :: bnd
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
@@ -150,8 +144,6 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
-
-    this%spiral = .false.
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -290,17 +282,6 @@ contains
     call sort(this%map, order)
 
     forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
-
-    if(bnd%spiralBC) then
-      this%spiral = .true.
-      SAFE_ALLOCATE(this%phase_spiral(1:this%np))
-      do ip = 1, this%np
-        this%phase_spiral(ip) = exp(+M_zI*sum((this%x(ip,1:sb%dim)-mesh%x(this%map(ip),1:sb%dim))*bnd%spiral_q(1:sb%dim)))
-      end do
-    else
-      nullify(this%phase_spiral)
-    end if
-
 
     !check whether points overlap
     
@@ -489,7 +470,6 @@ contains
       this%np = -1
       SAFE_DEALLOCATE_P(this%map)
       SAFE_DEALLOCATE_P(this%x)
-      SAFE_DEALLOCATE_P(this%phase_spiral)
     end if
 
     POP_SUB(submesh_end)

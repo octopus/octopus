@@ -20,7 +20,6 @@
 
 module species_pot_oct_m
   use atom_oct_m
-  use boundaries_oct_m
   use curvilinear_oct_m
   use global_oct_m
   use io_function_oct_m
@@ -545,12 +544,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, namespace, pos, mesh, boundaries, rho)
+  subroutine species_get_density(species, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     type(namespace_t),          intent(in)  :: namespace
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
-    type(boundaries_t),         intent(in)  :: boundaries
     FLOAT,                      intent(out) :: rho(:)
 
     type(root_solver_t) :: rs
@@ -582,7 +580,7 @@ contains
     case(SPECIES_PSEUDO, SPECIES_PSPIO)
       ps => species_ps(species)
 
-      call submesh_init(sphere, mesh%sb, mesh, boundaries, pos, spline_cutoff_radius(ps%nlr, threshold))
+      call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
       
       forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)

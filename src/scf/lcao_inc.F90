@@ -22,13 +22,12 @@
 !> This routine fills state psi with an atomic orbital -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, boundaries, psi, spin_channel, add)
+subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel, add)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(in)    :: st
   type(geometry_t), target, intent(in)    :: geo
-  type(boundaries_t),       intent(in)    :: boundaries
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
   logical, optional,        intent(in)    :: add
@@ -64,7 +63,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, boundaries, psi, s
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
   
-  call submesh_init(sphere, mesh%sb, mesh, boundaries, geo%atom(iatom)%x, radius)
+  call submesh_init(sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
@@ -135,7 +134,7 @@ subroutine X(lcao_simple)(this, st, gr, geo, start)
       if(ist < lcao_start) cycle
 
       call states_elec_get_state(st, gr%mesh, ist, iqn, orbital)
-      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, gr%der%boundaries, orbital, ispin, add = .true.)
+      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, orbital, ispin, add = .true.)
       call states_elec_set_state(st, gr%mesh, ist, iqn, orbital)
       
     end do
@@ -225,7 +224,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   do n1 = 1, this%norbs
     
     do ispin = 1, st%d%spin_channels
-      call X(get_ao)(this, st, gr%mesh, geo, gr%der%boundaries, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
+      call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
 #ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
@@ -245,7 +244,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     do n2 = n1, this%norbs
       do ispin = 1, st%d%spin_channels
 
-        call X(get_ao)(this, st, gr%mesh, geo, gr%der%boundaries, n2, ispin, lcaopsi2, use_psi = .true.)
+        call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .true.)
 
         overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
         overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
@@ -341,7 +340,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
       
-      call X(get_ao)(this, st, gr%mesh, geo, gr%der%boundaries, n2, ispin, lcaopsi2, use_psi = .false.)
+      call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
         if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
@@ -409,7 +408,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
       this%cst(iorb, ispin) = ist
       this%ck(iorb, ispin) = ik
 
-      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, gr%der%boundaries, ao, ispin)
+      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
       call states_elec_set_state(st, gr%mesh, ist, ik, ao)
 
       if(ispin < st%d%spin_channels) then
@@ -437,7 +436,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
 
     do iorb = iorb, this%norbs
       do ispin = 1, st%d%spin_channels
-        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, gr%der%boundaries, ao, ispin)
+        call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
         this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = ao(1:gr%mesh%np, 1:st%d%dim)
       end do
     end do
@@ -454,12 +453,11 @@ end subroutine X(init_orbitals)
 
 
 ! ---------------------------------------------------------
-subroutine X(get_ao)(this, st, mesh, geo, boundaries, iorb, ispin, ao, use_psi)
+subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   type(lcao_t),        intent(inout) :: this
   type(states_elec_t), intent(in)    :: st
   type(mesh_t),        intent(in)    :: mesh
   type(geometry_t),    intent(in)    :: geo
-  type(boundaries_t),  intent(in)    :: boundaries
   integer,             intent(in)    :: iorb
   integer,             intent(in)    :: ispin
   R_TYPE,              intent(out)   :: ao(:, :)
@@ -473,7 +471,7 @@ subroutine X(get_ao)(this, st, mesh, geo, boundaries, iorb, ispin, ao, use_psi)
     if(use_psi .and. this%initialized_orbitals) then
       call states_elec_get_state(st, mesh, this%cst(iorb, ispin), this%ck(iorb, ispin), ao)
     else
-      call X(lcao_atomic_orbital)(this, iorb, mesh, st, geo, boundaries, ao, ispin)
+      call X(lcao_atomic_orbital)(this, iorb, mesh, st, geo, ao, ispin)
     end if
   end if
 
@@ -519,7 +517,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     norbs = species_niwfs(geo%atom(iatom)%species)
 
     ! initialize the radial grid
-    call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, gr%der%boundaries, geo%atom(iatom)%x, this%radius(iatom))
+    call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
     ! FIXME: the second argument should be dim = st%d%dim, not 1!
     call batch_init(this%orbitals(iatom), 1, this%mult*norbs)

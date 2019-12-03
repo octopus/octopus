@@ -674,7 +674,7 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(geo%atom(ia)%species)
-      call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, gr%der%boundaries, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
+      call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
 
     if(geo%atoms_dist%parallel) then
@@ -744,7 +744,7 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, der%boundaries, rho)
+        call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
@@ -780,7 +780,7 @@ contains
 
         radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
 
-        call submesh_init(sphere, der%mesh%sb, der%mesh, der%boundaries, geo%atom(iatom)%x, radius)
+        call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
         SAFE_ALLOCATE(vl(1:sphere%np))
 
         call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)

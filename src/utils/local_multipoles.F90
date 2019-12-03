@@ -941,7 +941,7 @@ contains
 
     SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
-      call species_get_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, sys%gr%mesh, sys%gr%der%boundaries, ffs)
+      call species_get_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, sys%gr%mesh, ffs)
       do is = 1, sys%st%d%nspin
         ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
       end do

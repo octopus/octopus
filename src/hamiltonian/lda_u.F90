@@ -345,10 +345,10 @@ contains
      call orbitalbasis_init(this%basis, namespace)
 
      if (states_are_real(st)) then
-       call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
+       call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
          this%skipSOrbitals, this%useAllOrbitals)
      else
-       call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
+       call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
          this%skipSOrbitals, this%useAllOrbitals)
      end if
      this%orbsets => this%basis%orbsets
@@ -516,10 +516,10 @@ contains
 
   !We now reconstruct the basis
   if (states_are_real(st)) then
-    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
+    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   else
-    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
+    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   end if
   this%orbsets => this%basis%orbsets

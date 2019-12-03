@@ -704,7 +704,7 @@ contains
          
        radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
          
-       call submesh_init(sphere, der%mesh%sb, der%mesh, der%boundaries, geo%atom(iatom)%x, radius)
+       call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
        SAFE_ALLOCATE(vl(1:sphere%np))
        
        call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)

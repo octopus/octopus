@@ -170,6 +170,7 @@ contains
     FLOAT, allocatable :: md(:, :)
     type(submesh_t) :: sphere
     FLOAT :: cosqr, sinqr
+    CMPLX, allocatable :: phase_spiral(:)
 
     PUSH_SUB(magnetic_local_moments)
 
@@ -178,17 +179,23 @@ contains
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
-      call submesh_init(sphere, mesh%sb, mesh, boundaries, geo%atom(ia)%x, rr)
-     
-      if(sphere%spiral) then 
+      call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
+
+      if(boundaries%spiral) then 
+        SAFE_ALLOCATE(phase_spiral(1:sphere%np))
+        do is = 1, sphere%np
+          phase_spiral(is) = exp(+M_zI*sum((sphere%x(is,1:mesh%sb%dim)-mesh%x(sphere%map(is),1:mesh%sb%dim)) &
+                                       *boundaries%spiral_q(1:mesh%sb%dim)))
+        end do
+
         if(mesh%sb%dim>= 3) then
           lmm(1,ia) = M_ZERO
           lmm(2,ia) = M_ZERO
  
           do is = 1, sphere%np
             !There is a factor of 1/2 in phase_spiral
-            cosqr = real(sphere%phase_spiral(is), REAL_PRECISION)
-            sinqr = aimag(sphere%phase_spiral(is))
+            cosqr = real(phase_spiral(is), REAL_PRECISION)
+            sinqr = aimag(phase_spiral(is))
             lmm(1,ia) = lmm(1,ia)+md(sphere%map(is),1)*cosqr - md(sphere%map(is),2)*sinqr
             lmm(2,ia) = lmm(2,ia)+md(sphere%map(is),1)*sinqr + md(sphere%map(is),2)*cosqr
           end do
@@ -196,8 +203,10 @@ contains
           lmm(2,ia) = lmm(2,ia)*mesh%volume_element
           lmm(3,ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,3), reduce = .false.)
         else
-          ASSERT(.not.sphere%spiral)
+          ASSERT(.not.boundaries%spiral)
         end if
+
+        SAFE_DEALLOCATE_A(phase_spiral)
       else
         do idir = 1, max(mesh%sb%dim, 3)
           lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir), reduce = .false.)

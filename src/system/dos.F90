@@ -317,7 +317,7 @@ contains
           do work = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
-              call dget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
+              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
@@ -325,7 +325,7 @@ contains
               end do
              norm = sqrt(norm)
             else
-              call zget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
+              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim

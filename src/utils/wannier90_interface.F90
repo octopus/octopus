@@ -1023,7 +1023,7 @@ contains
       
         ! cartesian coordinate of orbital center
         center(1:3) =  matmul(sb%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
-        call submesh_init(orbitals(iw)%sphere, sb, mesh, sys%gr%der%boundaries, center, orbitals(iw)%radius)
+        call submesh_init(orbitals(iw)%sphere, sb, mesh, center, orbitals(iw)%radius)
       
         ! make transpose table of submesh points for use in pwscf routine
         SAFE_ALLOCATE(rr(1:3,orbitals(iw)%sphere%np))
