@@ -45,7 +45,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
-  pack = hamiltonian_elec_apply_packed(hm, gr%mesh)
+  pack = hamiltonian_elec_apply_packed(hm)
 
   SAFE_ALLOCATE(lambda(1:st%nst))
   SAFE_ALLOCATE(psib(1:niter))
@@ -385,7 +385,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
 
   sd_steps = niter
   
-  pack = hamiltonian_elec_apply_packed(hm, gr%mesh)
+  pack = hamiltonian_elec_apply_packed(hm)
 
   SAFE_ALLOCATE(me1(1:2, 1:st%d%block_size))
   SAFE_ALLOCATE(me2(1:4, 1:st%d%block_size))

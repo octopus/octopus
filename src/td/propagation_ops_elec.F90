@@ -232,7 +232,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_pack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -244,7 +244,7 @@ contains
           call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt)
         end if
 
-        if (hamiltonian_elec_apply_packed(hm, mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_unpack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -280,7 +280,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_pack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -315,7 +315,7 @@ contains
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end if
 
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_unpack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
         end if

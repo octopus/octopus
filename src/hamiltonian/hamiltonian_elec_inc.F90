@@ -54,7 +54,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
 
   apply_phase = associated(hm%hm_base%phase)
 
-  pack = hamiltonian_elec_apply_packed(hm, mesh) &
+  pack = hamiltonian_elec_apply_packed(hm) &
     .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
     .and. terms_ == TERM_ALL
 

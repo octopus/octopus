@@ -213,7 +213,7 @@ contains
     type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
 
-    integer :: iline, icol
+    integer :: iline, icol, il
     integer :: ncols
     type(block_t) :: blk
     type(profile_t), save :: prof
@@ -504,6 +504,32 @@ contains
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
+
+    if (hm%apply_packed .and. accel_is_enabled()) then
+      ! Check if we can actually apply the hamiltonian packed
+      if (gr%mesh%use_curvilinear) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (.not. simul_box_is_periodic(gr%mesh%sb)) then
+        do il = 1, hm%ep%no_lasers
+          if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
+            hm%apply_packed = .false.
+            call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
+            call messages_warning(namespace=namespace)
+            exit
+          end if
+        end do
+      end if
+    end if
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
@@ -1014,7 +1040,22 @@ contains
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, time)
-   
+
+    ! Check if projectors are still compatible with apply_packed on GPU
+    if (this%apply_packed .and. accel_is_enabled()) then
+      if (this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (hamiltonian_elec_base_projector_self_overlap(this%hm_base)) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
+        call messages_warning(namespace=namespace)
+      end if
+    end if
+
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
@@ -1044,60 +1085,10 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical function hamiltonian_elec_apply_packed(this, mesh) result(apply)
+  logical function hamiltonian_elec_apply_packed(this) result(apply)
     type(hamiltonian_elec_t),   intent(in) :: this
-    type(mesh_t),          intent(in) :: mesh
-
-    logical, save :: warning_shown = .false.
 
     apply = this%apply_packed
-    ! comment these out; they are tested in the test suite
-    !if(mesh%use_curvilinear) apply = .false.
-    !if(hamiltonian_elec_base_has_magnetic(this%hm_base)) apply = .false.
-    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    
-    !if(this%family_is_mgga_with_exc)  apply = .false.
-    ! keep these checks; currently no tests for these in the test suite
-
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) then
-      call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
-      call messages_warning(namespace=this%namespace)
-      apply = .false.
-    end if
-    
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
-        call messages_warning(namespace=this%namespace)
-      end if
-      apply = .false.
-    end if
-
-    if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
-        call messages_warning(namespace=this%namespace)
-      end if
-      apply = .false.
-    end if
-    
-    if(mesh%use_curvilinear .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
-        call messages_warning(namespace=this%namespace)
-      end if
-      apply = .false.
-    end if
-    
-    if(hamiltonian_elec_base_projector_self_overlap(this%hm_base) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
-        call messages_warning(namespace=this%namespace)
-      end if
-      apply = .false.
-    end if
-
-    warning_shown = .true.
 
   end function hamiltonian_elec_apply_packed
 

@@ -406,7 +406,7 @@ contains
 
     !Initialize external potential
     call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
@@ -416,7 +416,7 @@ contains
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
 
-    if(hamiltonian_elec_apply_packed(sys%hm, sys%gr%der%mesh)) then
+    if(hamiltonian_elec_apply_packed(sys%hm)) then
       call batch_pack(sys%st%group%psib(1, 1))
       call batch_pack(hpsib, copy = .false.)
     end if

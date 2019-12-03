@@ -261,7 +261,7 @@ contains
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
     call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
 
     do iter = 1, max_iter
       call eigensolver_run(eigens, sys%namespace, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
@@ -315,7 +315,7 @@ contains
 
     if(.not. bandstructure_mode) call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) &
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) &
       call sys%st%unpack()
 
     if(any(eigens%converged(:) < occ_states(:))) then

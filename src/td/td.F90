@@ -463,7 +463,7 @@ contains
       call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
     end if
 
-    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, gr%mesh)) call st%pack()
+    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st%pack()
     
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
@@ -525,7 +525,7 @@ contains
 
     end do propagation
 
-    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, gr%mesh)) call st%unpack()
+    if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st%unpack()
 
     call restart_end(restart_dump)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)

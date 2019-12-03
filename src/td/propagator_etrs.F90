@@ -363,7 +363,7 @@ contains
     end if
 
     ! copy vold to a cl buffer
-    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm)) then
       if(family_is_mgga_with_exc(hm%xc)) then
         call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
       end if
@@ -393,7 +393,7 @@ contains
       ispin = states_elec_dim_get_spin_index(st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_pack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -438,7 +438,7 @@ contains
 
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_unpack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -447,7 +447,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm)) then
       call accel_release_buffer(phase_buff)
     end if
 

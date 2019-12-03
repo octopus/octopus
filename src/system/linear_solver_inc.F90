@@ -135,12 +135,12 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, x
 
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
 
-    if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if (hamiltonian_elec_apply_packed(hm)) then
       call batch_pack(xb)
       call batch_pack(yb)
     end if
     call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
-    if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if (hamiltonian_elec_apply_packed(hm)) then
       call batch_unpack(yb)
       call batch_unpack(xb)
     end if

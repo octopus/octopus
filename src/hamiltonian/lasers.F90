@@ -96,7 +96,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function laser_kind(laser)
+  integer pure elemental function laser_kind(laser)
     type(laser_t), intent(in) :: laser
 
     ! no push_sub allowed in pure function
