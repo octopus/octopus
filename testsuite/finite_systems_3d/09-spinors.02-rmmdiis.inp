@@ -19,3 +19,7 @@ Eigensolver = rmmdiis
 FilterPotentials = filter_none
 
 MixField = density
+
+# check different algorithms for this test
+StatesOrthogonalization = cholesky_serial
+SubspaceDiagonalization = standard
