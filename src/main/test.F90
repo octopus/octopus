@@ -47,6 +47,7 @@ module test_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
+  use subspace_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
@@ -107,6 +108,8 @@ contains
     !% Tests the exponential of the Hamiltonian
     !%Option boundaries 11
     !% Tests the boundaries conditions
+    !%Option subspace_diag 12
+    !% Tests the subspace diagonalization
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -208,6 +211,8 @@ contains
       call test_exponential(param, namespace)
     case(OPTION__TESTMODE__BOUNDARIES)
       call test_boundaries(param, namespace)
+    case(OPTION__TESTMODE__SUBSPACE_DIAG)
+      call test_subspace_diagonalization(param, namespace)
     end select
   
     POP_SUB(test_run)
@@ -570,6 +575,54 @@ contains
 
     POP_SUB(test_exponential)
   end subroutine test_exponential
+
+
+  ! ---------------------------------------------------------
+  subroutine test_subspace_diagonalization(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    integer :: itime
+    type(subspace_t) :: sdiag
+
+    PUSH_SUB(test_subspace_diagonalization)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing boundary conditions')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+
+    call subspace_init(sdiag, sys%namespace, sys%st, no_sd = .false.)
+
+    do itime = 1, param%repetitions
+      if(states_are_real(sys%st)) then
+        call dsubspace_diag(sdiag, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+      else
+        call zsubspace_diag(sdiag, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+      end if
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_subspace_diagonalization)
+  end subroutine test_subspace_diagonalization
+
 
 
 ! ---------------------------------------------------------
