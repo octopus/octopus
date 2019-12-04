@@ -82,7 +82,10 @@ dist_share_DATA =                                  \
 	24-boundaries.01-jellium.inp               \
 	24-boundaries.test                         \
 	25-subspace.01-jellium.inp                 \
-	25-subspace.test
+	25-subspace.test                           \
+	26-batch_ops.01-jellium.inp                \
+	26-batch_ops.test
+
 
 
 CLEANFILES = *~ *.bak

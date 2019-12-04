@@ -110,6 +110,8 @@ contains
     !% Tests the boundaries conditions
     !%Option subspace_diag 12
     !% Tests the subspace diagonalization
+    !%Option batch_ops 13
+    !% Tests the batch operations
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -213,6 +215,8 @@ contains
       call test_boundaries(param, namespace)
     case(OPTION__TESTMODE__SUBSPACE_DIAG)
       call test_subspace_diagonalization(param, namespace)
+    case(OPTION__TESTMODE__BATCH_OPS)
+      call test_batch_ops(param, namespace)
     end select
   
     POP_SUB(test_run)
@@ -623,6 +627,67 @@ contains
     POP_SUB(test_subspace_diagonalization)
   end subroutine test_subspace_diagonalization
 
+
+  ! ---------------------------------------------------------
+  subroutine test_batch_ops(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+    
+    type(system_t) :: sys
+    integer :: itime, ops
+    type(batch_t) :: xx, yy
+
+    PUSH_SUB(test_density_calc)
+
+    !%Variable TestBatchOps
+    !%Type integer
+    !%Default ops_axpy
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides which part of the Hamiltonian is applied.
+    !%Option ops_axpy 0
+    !% Test batch_axpy operation
+    !%Option ops_scal 1
+    !% Apply batch_scal operation
+    !%End
+    call parse_variable(namespace, 'TestBatchOps', 0, ops)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing density calculation')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
+    call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+
+ 
+    do itime = 1, param%repetitions
+      select case(ops)
+        case(OPTION__TESTBATCHOPS__OPS_AXPY)
+          call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy) 
+        case(OPTION__TESTBATCHOPS__OPS_SCAL) 
+          call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
+      end select
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, yy)
+
+    call batch_end(xx)
+    call batch_end(yy)
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_batch_ops
 
 
 ! ---------------------------------------------------------
