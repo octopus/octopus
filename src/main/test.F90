@@ -26,7 +26,9 @@ module test_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
+  use exponential_oct_m
   use global_oct_m
+  use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
   use mesh_function_oct_m
@@ -100,7 +102,11 @@ contains
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
     !%Option density_calc 9
-    !%Calculation of the density.
+    !% Calculation of the density.
+    !%Option exp_apply 10
+    !% Tests the exponential of the Hamiltonian
+    !%Option boundaries 11
+    !% Tests the boundaries conditions
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -198,6 +204,10 @@ contains
       call test_hamiltonian(param, namespace)
     case(OPTION__TESTMODE__DENSITY_CALC)
       call test_density_calc(param, namespace)
+    case(OPTION__TESTMODE__EXP_APPLY)
+      call test_exponential(param, namespace)
+    case(OPTION__TESTMODE__BOUNDARIES)
+      call test_boundaries(param, namespace)
     end select
   
     POP_SUB(test_run)
@@ -227,7 +237,6 @@ contains
     type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
-    type(epot_t) :: ep
     type(batch_t), pointer :: epsib
     integer :: itime
 
@@ -338,14 +347,7 @@ contains
       call batch_unpack(epsib, force = .true.)
     end if
 
-    do itime = 1, epsib%nst
-      if(states_are_real(sys%st)) then 
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%dpsi)
-      else
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%zpsi)
-      end if
-      call messages_info(1)
-    end do
+    call test_prints_info_batch(sys%st, sys%gr, epsib)
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -434,16 +436,9 @@ contains
     if(batch_is_packed(hpsib)) then
       call batch_unpack(hpsib, force = .true.)
     end if
-    
-    do itime = 1, hpsib%nst
-      if(states_are_real(sys%st)) then 
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%dpsi)
-      else
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%zpsi)
-      end if
-      call messages_info(1)
-    end do
 
+    call test_prints_info_batch(sys%st, sys%gr, hpsib)
+    
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
@@ -490,6 +485,91 @@ contains
     POP_SUB(test_density_calc)
   end subroutine test_density_calc
 
+
+  ! ---------------------------------------------------------
+  subroutine test_boundaries(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    integer :: itime
+
+    PUSH_SUB(test_density_calc)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing boundary conditions')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    do itime = 1, param%repetitions
+      call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_boundaries
+
+
+   ! ---------------------------------------------------------
+  subroutine test_exponential(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    type(exponential_t) :: te
+    integer :: itime
+
+    PUSH_SUB(test_exponential)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing exponential')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+
+    !Initialize external potential
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+
+    call exponential_init(te, namespace)
+
+    if(hamiltonian_elec_apply_packed(sys%hm, sys%gr%der%mesh)) then
+      call batch_pack(sys%st%group%psib(1, 1))
+    end if
+
+    do itime = 1, param%repetitions
+      call exponential_apply_batch(te, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call exponential_end(te)
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_exponential)
+  end subroutine test_exponential
 
 
 ! ---------------------------------------------------------
@@ -619,6 +699,35 @@ contains
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
   
+  ! ---------------------------------------------------------
+
+  subroutine test_prints_info_batch(st, gr, psib)
+    type(states_elec_t), intent(in)    :: st
+    type(grid_t),        intent(in)    :: gr
+    type(batch_t),       intent(inout) :: psib
+
+    integer :: itime
+
+    PUSH_SUB(test_prints_info_batch)
+
+    if(batch_is_packed(psib)) then
+      call batch_unpack(psib, force = .true.)
+    end if
+
+    do itime = 1, psib%nst
+      if(states_are_real(st)) then
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, &
+                                                                   psib%states(itime)%dpsi)
+      else
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, &
+                                                                   psib%states(itime)%zpsi)
+      end if
+      call messages_info(1)
+    end do
+
+    POP_SUB(test_prints_info_batch)
+
+  end subroutine test_prints_info_batch
 
 end module test_oct_m
 
