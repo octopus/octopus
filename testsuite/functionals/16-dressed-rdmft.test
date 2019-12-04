@@ -21,6 +21,9 @@ match ; dHF total mode occupation  ; GREPFIELD(static/info, 'Total mode occupati
 Input: 16-dressed-rdmft.03-rdmft.inp
 Precision: 0.001
 match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; dRDMFT converged energy           ; GREPFIELD(static/info, 'Total Energy ', 4) ; -8.8897928205E-01
-match ; dRDMFT highest occupation number  ; GREPFIELD(static/info, '1 ', 2) ; 1.923978398613
-match ; dRDMFT total mode occupation  ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 1.083972306023
+Precision: 0.005
+match ; dRDMFT converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.890756973365
+Precision: 0.01
+match ; dRDMFT highest occupation number ; GREPFIELD(static/info, '1 ', 2) ; 1.9282295705235
+Precision: 0.007
+match ; dRDMFT total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 1.079263282593
