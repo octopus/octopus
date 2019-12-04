@@ -485,7 +485,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     SAFE_ALLOCATE(phi(1:mesh%np, aa%dim))
 
-    if(aa%dim) then
+    if(aa%dim == 1) then
       !Here we compute the complex conjuguate of the dot product first and then
       !we take the conjugate at the end
       if(mesh%use_curvilinear) then
@@ -573,7 +573,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
   case(BATCH_PACKED)
 
-    if(xx%dim) then 
+    if(xx%dim == 1) then 
 
       call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
                             xx%nst_linear, aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
