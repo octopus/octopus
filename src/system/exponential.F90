@@ -624,7 +624,6 @@ contains
     
     integer :: ii, ist
     CMPLX :: deltat_, deltat2_
-    logical :: phase_correction
 
     PUSH_SUB(exponential_apply_batch)
 
@@ -650,36 +649,23 @@ contains
       if (present(deltat2)) deltat2_ = TOCMPLX(deltat2, M_ZERO)
     end if
 
-    ! check if we only want a phase correction for the boundary points
-    phase_correction = .false.
-    if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
-
-    !We apply the phase only to np points, and the phase for the np+1 to np_part points
-    !will be treated as a phase correction in the Hamiltonian
-    if(phase_correction) then
-      call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .false., psib)
-    end if
-
     select case(te%exp_method)
     case(EXP_TAYLOR)
-      call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, .not.phase_correction, psib2, deltat2_, &
-        vmagnus)
+      call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus)
       if (present(inh_psib)) then
-        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, .not.phase_correction, psib2, deltat2_, &
-          vmagnus, inh_psib)
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus, inh_psib)
       end if
 
     case(EXP_LANCZOS)
       if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
-      call exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat_, .not.phase_correction, vmagnus)
+      call exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat_, vmagnus)
       if (present(inh_psib)) then
-        call exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat_, .not.phase_correction, vmagnus, inh_psib)
+        call exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat_, vmagnus, inh_psib)
       end if
       if (present(psib2)) then
-        call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, deltat2_, .not.phase_correction, vmagnus)
+        call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, deltat2_, vmagnus)
         if (present(inh_psib)) then
-          call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, deltat2_, .not.phase_correction, vmagnus, inh_psib)
+          call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, deltat2_, vmagnus, inh_psib)
         end if
       end if
 
@@ -690,32 +676,24 @@ contains
         call messages_fatal(2)
       end if
       if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
-      call exponential_cheby_batch(te, namespace, mesh, hm, psib, deltat, .not.phase_correction, vmagnus)
+      call exponential_cheby_batch(te, namespace, mesh, hm, psib, deltat, vmagnus)
       if (present(psib2)) then
-        call exponential_cheby_batch(te, namespace, mesh, hm, psib2, deltat2, .not.phase_correction, vmagnus)
+        call exponential_cheby_batch(te, namespace, mesh, hm, psib2, deltat2, vmagnus)
       end if
 
     end select
 
-    if(phase_correction) then
-      call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., psib)
-      if(present(psib2)) then
-        call zhamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., psib2)
-      end if
-    end if
-    
     POP_SUB(exponential_apply_batch)
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------
-  subroutine exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat, set_phase, psib2, deltat2, vmagnus, inh_psib)
+  subroutine exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat, psib2, deltat2, vmagnus, inh_psib)
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
     type(hamiltonian_elec_t),           intent(inout) :: hm
     type(wfs_elec_t),                   intent(inout) :: psib
     CMPLX,                              intent(in)    :: deltat
-    logical,                            intent(in)    :: set_phase
     type(wfs_elec_t),         optional, intent(inout) :: psib2
     CMPLX,                    optional, intent(in)    :: deltat2
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
@@ -791,14 +769,13 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: Add a reference
-  subroutine exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat, set_phase, vmagnus, inh_psib)
+  subroutine exponential_lanczos_batch(te, namespace, mesh, hm, psib, deltat, vmagnus, inh_psib)
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
     type(hamiltonian_elec_t),           intent(inout) :: hm
     type(wfs_elec_t),                   intent(inout) :: psib
     CMPLX,                              intent(in)    :: deltat
-    logical,                            intent(in)    :: set_phase
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     type(wfs_elec_t),         optional, intent(in)    :: inh_psib
 
@@ -943,14 +920,13 @@ contains
   !!  od;
   !!  ChebySum := 0.5*(u0 - u2);
   !! \endverbatim
-  subroutine exponential_cheby_batch(te, namespace, mesh, hm, psib, deltat, set_phase, vmagnus)
+  subroutine exponential_cheby_batch(te, namespace, mesh, hm, psib, deltat, vmagnus)
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
     type(hamiltonian_elec_t),           intent(inout) :: hm
     type(wfs_elec_t),                   intent(inout) :: psib
     FLOAT,                              intent(in)    :: deltat
-    logical,                            intent(in)    :: set_phase
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
 
     integer :: j

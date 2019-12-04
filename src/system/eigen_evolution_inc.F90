@@ -78,7 +78,9 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
       call zpsib%add_state(ist, zpsi)
 
+      call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, zpsib)
       call exponential_apply_batch(te, namespace, mesh, hm, zpsib, -tau, imag_time = .true.)
+      call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, zpsib)
 
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
@@ -92,7 +94,9 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
         call st%group%psib(ib, ik)%do_pack()
       end if
 
+      call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
       call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), -tau, imag_time = .true.)
+      call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
 
       if (hamiltonian_elec_apply_packed(hm)) then

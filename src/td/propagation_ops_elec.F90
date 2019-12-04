@@ -27,6 +27,7 @@ module propagation_ops_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
   use mesh_oct_m
@@ -238,12 +239,14 @@ contains
           if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
           call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
           call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt)
         end if
+        call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
           call st%group%psib(ib, ik)%do_unpack()
@@ -291,6 +294,7 @@ contains
           if(st%group%psib(ib, ik)%is_packed()) call zpsib_dt%do_pack(copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
+          call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
               deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
@@ -298,12 +302,15 @@ contains
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
               deltat2 = M_TWO*dt)
           end if
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, zpsib_dt)
 
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, zpsib_dt)
 
           call zpsib_dt%end()
         else
+          call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus, &
@@ -311,6 +318,7 @@ contains
           else
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus)
           end if
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
 
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))

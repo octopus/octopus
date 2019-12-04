@@ -27,6 +27,7 @@ module propagator_etrs_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
@@ -430,12 +431,14 @@ contains
         end select
         call profiling_out(phase_prof)
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
           call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
           call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt)
         end if
+        call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
 
         call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
 
