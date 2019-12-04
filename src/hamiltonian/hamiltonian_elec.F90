@@ -91,6 +91,7 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_adjoint,             &
     hamiltonian_elec_not_adjoint,         &
     hamiltonian_elec_epot_generate,       &
+    hamiltonian_elec_needs_current,       &
     hamiltonian_elec_update,              &
     hamiltonian_elec_update2,             &
     hamiltonian_elec_get_time,            &
@@ -1539,6 +1540,24 @@ contains
    POP_SUB(hamiltonian_elec_set_vhxc)
  end subroutine hamiltonian_elec_set_vhxc
 
+ logical function hamiltonian_elec_needs_current(hm, states_are_real)
+    type(hamiltonian_elec_t), intent(in) :: hm
+    logical,                  intent(in) :: states_are_real
+
+    hamiltonian_elec_needs_current = .false.
+
+    if( hm%self_induced_magnetic ) then
+      if(.not. states_are_real) then
+        hamiltonian_elec_needs_current = .true.
+      else
+        message(1) = 'No current density for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
+    end if
+
+  end function hamiltonian_elec_needs_current
+
+  
 
 #include "undef.F90"
 #include "real.F90"

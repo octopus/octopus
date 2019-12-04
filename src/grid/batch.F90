@@ -336,6 +336,7 @@ contains
     this%nst = nst
     this%dim = dim
     this%current = 1
+    this%type = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     
     SAFE_ALLOCATE(this%states(1:nst))
@@ -382,6 +383,7 @@ contains
     this%nst = 0
     this%dim = 0
     this%current = 1
+    this%type = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont, this%spsicont, this%cpsicont)
     nullify(this%states)
 
@@ -446,6 +448,8 @@ contains
     call batch_init_empty(bout, bin%dim, bin%nst)
 
     copy_data_ = optional_default(copy_data, .false.)
+
+    bout%type = bin%type
 
     if(batch_type(bin) == TYPE_FLOAT) then
 

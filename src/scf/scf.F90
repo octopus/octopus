@@ -979,7 +979,7 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
       call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 
