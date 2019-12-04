@@ -6,9 +6,13 @@ TheoryLevel = rdmft
 RDMBasis = yes
 RDMHartreeFock = yes
 
+BoxShape = parallelepiped
+Lsize = 6.5
+Spacing = 0.55
+
 # Necessary Parameters for electron-photon coupling
-om=1.0
-lam=1.0
+om = 1.0
+lam = 1.0
 Nelec = 2.0
 
 DressedOrbitals = yes
@@ -25,16 +29,16 @@ DressedElectrons = Nelec
 # additional potential due to the dressed state construction:
 # 	vd(x,q) = 0.5*om^2*y^2 -sq12*om*lam*y*x +1/2*lam^2*x^2
 %Species
-  "dressedhelium" | species_user_defined | potential_formula | "-2/(1+x^2)^(1/2) +0.5*om^2*y^2 -1/sqrt(Nelec)*om*lam*y*x +1/2*lam^2*x^2" | valence | Nelec
+ "dressedhelium" | species_user_defined | potential_formula | "-2/(1+x^2)^(1/2) +0.5*om^2*y^2 -1/sqrt(Nelec)*om*lam*y*x +1/2*lam^2*x^2" | valence | Nelec
 %
 
 %Coordinates
-  "dressedhelium" | 0 | 0 
+ "dressedhelium" | 0 | 0 
 %
 
-BoxShape = parallelepiped
-Lsize = 6.5
-Spacing = 0.55
 Extrastates = 5
 
+RDMToleranceFO = 1e-6
+RDMConvEner = 1e-7
 
+RestartWrite = no

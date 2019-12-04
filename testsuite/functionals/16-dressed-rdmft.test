@@ -5,7 +5,6 @@ Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes
 
-Processors: 4
 
 Input: 16-dressed-rdmft.01-ip.inp
 match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
