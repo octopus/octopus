@@ -31,6 +31,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
@@ -636,6 +637,7 @@ contains
     type(system_t) :: sys
     integer :: itime, ops
     type(batch_t) :: xx, yy
+    FLOAT, allocatable :: tmp(:)
 
     PUSH_SUB(test_density_calc)
 
@@ -646,9 +648,11 @@ contains
     !%Description
     !% Decides which part of the Hamiltonian is applied.
     !%Option ops_axpy 0
-    !% Test batch_axpy operation
+    !% Tests batch_axpy operation
     !%Option ops_scal 1
-    !% Apply batch_scal operation
+    !% Tests batch_scal operation
+    !%Option ops_nrm2 2
+    !% Tests batch_nrm2 operation
     !%End
     call parse_variable(namespace, 'TestBatchOps', 0, ops)
 
@@ -668,6 +672,7 @@ contains
     call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
     call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
 
+    SAFE_ALLOCATE(tmp(1:xx%nst))
  
     do itime = 1, param%repetitions
       select case(ops)
@@ -675,10 +680,21 @@ contains
           call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy) 
         case(OPTION__TESTBATCHOPS__OPS_SCAL) 
           call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
+        case(OPTION__TESTBATCHOPS__OPS_NRM2)
+          call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
       end select
     end do
 
-    call test_prints_info_batch(sys%st, sys%gr, yy)
+    if(ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+      do itime = 1, xx%nst
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, tmp(itime)
+        call messages_info(1)  
+      end do
+    else
+      call test_prints_info_batch(sys%st, sys%gr, yy)
+    end if
+
+    SAFE_DEALLOCATE_A(tmp)
 
     call batch_end(xx)
     call batch_end(yy)
