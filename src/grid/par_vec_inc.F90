@@ -90,8 +90,8 @@ subroutine X(vec_gather)(vp, root, v_local, v)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v_local(:)
-  R_TYPE,     optional, intent(out) :: v(:) !< in order to prevent uninitialized pointer errors,
-                                            !< this is optional, so that mpi ranks not expecint an output
+  R_TYPE,     optional, intent(out) :: v(:) !< in order to prevent unassociated pointer errors,
+                                            !< this is optional, so that mpi ranks not expecting an output
                                             !< do not have to pass a null pointer.
 
   integer              :: ii        !< Counter.
