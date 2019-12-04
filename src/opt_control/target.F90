@@ -572,7 +572,7 @@ contains
     case(oct_tg_exclude_state)
       j1 = target_j1_exclude(gr, tg, psi)
     case(oct_tg_hhg)
-      j1 = target_j1_hhg(tg)
+      j1 = target_j1_hhg(tg, namespace)
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)

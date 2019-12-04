@@ -348,7 +348,7 @@ program propagation_spectrum
       in_file(2) = io_open(trim(fname_in) // '.cos', default_namespace, action='read', status='old', die=.false.)
 
       out_file(1) = io_open(trim(fname_out), default_namespace, action='write')
-      call spectrum_dyn_structure_factor(spectrum, in_file(1), in_file(2), out_file(1))
+      call spectrum_dyn_structure_factor(spectrum, default_namespace, in_file(1), in_file(2), out_file(1))
       call io_close(in_file(1))
       call io_close(out_file(1))
 

@@ -275,7 +275,7 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
 
       call messages_experimental("Runge-Kutta 4 propagator")
@@ -292,7 +292,7 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
 
       call messages_experimental("Runge-Kutta 2 propagator")
@@ -308,13 +308,13 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
     case(PROP_MAGNUS)
       call messages_experimental("Magnus propagator")
       if (family_is_mgga_with_exc) then
         message(1) = "Magnus propagator with MGGA"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_QOCT_TDDFT_PROPAGATOR)
@@ -339,7 +339,7 @@ contains
          tr%method /= PROP_RUNGE_KUTTA2 .and. &
          tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -382,7 +382,7 @@ contains
 
       if(tr%method /= PROP_ETRS) then
         call messages_write('TDStepsWithSelfConsistency only works with the ETRS propagator')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
     end if
 
@@ -674,7 +674,7 @@ contains
 
     !TODO: we should update the occupation matrices here 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      call messages_not_implemented("DFT+U with propagator_dt_bo")  
+      call messages_not_implemented("DFT+U with propagator_dt_bo", namespace=namespace)
     end if
 
     call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = iter*dt)

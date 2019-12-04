@@ -55,7 +55,8 @@ end subroutine flip_sign_Lkpt_idx
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
-subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+  type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
@@ -259,13 +260,13 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
     
     if (err == -1) then
       call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if 
 
     if (err > 1) then
       call messages_write('Illformed momentum-space mesh: more than one point with p = 0 coordinate.')
       call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if 
 
   end if
@@ -277,7 +278,7 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
 
   if (err == -2) then
     call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
   end if 
   
  
@@ -660,14 +661,15 @@ end subroutine pes_mask_fullmap
 !!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
-  FLOAT,           intent(in)    :: pesK(:,:,:)
-  FLOAT,           intent(in)    :: Lk(:,:)
-  integer,         intent(in)    :: ll(:)
-  integer,         intent(in)    :: dim
-  FLOAT, pointer,  intent(inout) :: cube_f(:)
-  type(qshep_t),   intent(out)   :: interp
-  FLOAT, optional, intent(in)   :: pmesh(:,:,:,:)  
+subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
+  type(namespace_t), intent(in)    :: namespace
+  FLOAT,             intent(in)    :: pesK(:,:,:)
+  FLOAT,             intent(in)    :: Lk(:,:)
+  integer,           intent(in)    :: ll(:)
+  integer,           intent(in)    :: dim
+  FLOAT, pointer,    intent(inout) :: cube_f(:)
+  type(qshep_t),     intent(out)   :: interp
+  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)  
   
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
@@ -684,7 +686,7 @@ subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
   !check dim
   if (dim  <  2 .or. dim > 3) then
     message(1) = "This interpolator works only for 2 <= dim <= 3." 
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
   
   SAFE_ALLOCATE(cube_f(1:np))
@@ -1034,7 +1036,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
       print *,rotation(3,:)
     end if
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
 
     ntodo = product(ll(1:2))
     idone = 0 
@@ -1208,11 +1210,11 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1329,11 +1331,11 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1460,11 +1462,11 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1763,7 +1765,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
     ! Interpolate the output
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -2108,9 +2110,10 @@ end subroutine pes_mask_write_info
 ! ---------------------------------------------------------
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_dump(restart, mask, st, ierr)
-  type(restart_t),     intent(in)  :: restart
+subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
   type(pes_mask_t),    intent(in)  :: mask
+  type(namespace_t),   intent(in)  :: namespace
+  type(restart_t),     intent(in)  :: restart
   type(states_elec_t), intent(in)  :: st
   integer,             intent(out) :: ierr
 
@@ -2178,7 +2181,7 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
           if (err /= 0) then
             err2 = err2 + 1
             message(1) = "Unable to write PES mask restart data to '"//trim(path)//"'."
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           end if
         end if
 
@@ -2202,9 +2205,10 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
 end subroutine pes_mask_dump
 
 ! ---------------------------------------------------------
-subroutine pes_mask_load(restart, mask, st, ierr)
-  type(restart_t),     intent(in)    :: restart
+subroutine pes_mask_load(mask, namespace, restart, st, ierr)
   type(pes_mask_t),    intent(inout) :: mask
+  type(namespace_t),   intent(in)    :: namespace
+  type(restart_t),     intent(in)    :: restart
   type(states_elec_t), intent(inout) :: st
   integer,             intent(out)   :: ierr
 
@@ -2265,8 +2269,8 @@ subroutine pes_mask_load(restart, mask, st, ierr)
     if (rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
       message(1) = "PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
       message(2) = "I will restart mapping from the previous context."
-      call messages_warning(2)
-      call pes_mask_restart_map(mask, st, rr)
+      call messages_warning(2, namespace=namespace)
+      call pes_mask_restart_map(mask, namespace, st, rr)
     end if
   end if
 
@@ -2282,8 +2286,9 @@ end subroutine pes_mask_load
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_restart_map(mask, st, RR)
+subroutine pes_mask_restart_map(mask, namespace, st, RR)
   type(pes_mask_t),    intent(inout) :: mask
+  type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
   FLOAT,               intent(in)    :: RR(2)
 
@@ -2303,7 +2308,7 @@ subroutine pes_mask_restart_map(mask, st, RR)
 
   SAFE_ALLOCATE(psi(1:mask%mesh%np))
 
-  call pes_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
+  call pes_mask_generate_mask_function(mask, namespace, mask%mesh, mask%shape, RR, M_old)
   
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end

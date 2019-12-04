@@ -123,7 +123,7 @@ contains
 
     PUSH_SUB(spectrum_init)
     
-    call messages_print_stress(stdout, "Spectrum Options")
+    call messages_print_stress(stdout, "Spectrum Options", namespace=namespace)
 
     !%Variable PropagationSpectrumType
     !%Type integer
@@ -212,7 +212,7 @@ contains
     if(spectrum%method == SPECTRUM_COMPRESSED_SENSING .and. spectrum%damp /= SPECTRUM_DAMP_NONE) then
       message(1) = 'Using damping with compressed sensing, this is not required'
       message(2) = 'and can introduce noise in the spectra.'
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
     end if
 
     !%Variable PropagationSpectrumTransform
@@ -319,7 +319,7 @@ contains
     call parse_variable(namespace, 'PropagationSpectrumSigmaDiagonalization', .false., spectrum%sigma_diag)
     call messages_print_var_value(stdout, 'PropagationSpectrumSigmaDiagonalization', spectrum%sigma_diag)
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(spectrum_init)
   end subroutine spectrum_init
@@ -636,24 +636,24 @@ contains
           (.not.(dt .app. ref_dt))         .or. &
           (lmax /= ref_lmax) ) then
         write(message(1),'(a)') 'The multipoles and reference multipoles files do not match.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if(lmax /= 1) then
       message(1) = 'Multipoles file should contain the dipole -- and only the dipole.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(kick%function_mode /= KICK_FUNCTION_DIPOLE) then
       message(1) = "Kick function must have been dipole to run this utility."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(kick%pol_dir < 1) then
       message(1) = "Kick polarization direction is not set. Probably no kick was used."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
@@ -1068,7 +1068,7 @@ contains
     ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
     if (lmax /= 1) then
       message(1) = 'Multipoles file should contain the dipole -- and only the dipole.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
@@ -1153,10 +1153,11 @@ contains
   end subroutine spectrum_dipole_power
 
   ! ---------------------------------------------------------
-  subroutine spectrum_dyn_structure_factor(spectrum, in_file_sin, in_file_cos, out_file)
-    type(spectrum_t), intent(inout) :: spectrum
-    integer,          intent(in)    :: in_file_sin, in_file_cos
-    integer,          intent(in)    :: out_file
+  subroutine spectrum_dyn_structure_factor(spectrum, namespace, in_file_sin, in_file_cos, out_file)
+    type(spectrum_t),  intent(inout) :: spectrum
+    type(namespace_t), intent(in)    :: namespace
+    integer,           intent(in)    :: in_file_sin, in_file_cos
+    integer,           intent(in)    :: out_file
 
     character(len=20) :: header_string
     integer :: time_steps, time_steps_sin, time_steps_cos
@@ -1197,12 +1198,12 @@ contains
     end if
 
     ! get time_steps and dt, and make sure that dt is the same in the two files
-    call spectrum_count_time_steps(in_file_sin, time_steps_sin, dt_sin)
-    call spectrum_count_time_steps(in_file_cos, time_steps_cos, dt_cos)
+    call spectrum_count_time_steps(namespace, in_file_sin, time_steps_sin, dt_sin)
+    call spectrum_count_time_steps(namespace, in_file_cos, time_steps_cos, dt_cos)
 
     if(dt_sin /= dt_cos) then
       message(1) = "dt is different in ftchds.cos and ftchds.sin!"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     time_steps = min(time_steps_sin, time_steps_cos)
@@ -1472,9 +1473,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_hsfunction_min(aa, bb, omega_min, func_min)
-    FLOAT, intent(in)  :: aa, bb
-    FLOAT, intent(out) :: omega_min, func_min
+  subroutine spectrum_hsfunction_min(namespace, aa, bb, omega_min, func_min)
+    type(namespace_t), intent(in)  :: namespace
+    FLOAT,             intent(in)  :: aa, bb
+    FLOAT,             intent(out) :: omega_min, func_min
 
     integer :: ierr, ie
     FLOAT :: xx, hsval, minhsval, ww, xa, xb, hxa, hxb
@@ -1526,7 +1528,7 @@ contains
     if(ierr /= 0) then
       write(message(1),'(a,f14.6,a)') 'spectrum_hsfunction_min: The maximum at', xx,' was not properly converged.'
       write(message(2),'(a,i12)')      'Error code: ', ierr
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
     end if
     call hsfunction(xx, hsval)
     omega_min = xx
@@ -2178,7 +2180,7 @@ contains
       ! output
       omega = w0
       do while(omega <= spectrum%max_energy)
-        call spectrum_hsfunction_min(omega - w0, omega + w0, xx, hsval)
+        call spectrum_hsfunction_min(namespace, omega - w0, omega + w0, xx, hsval)
 
         write(iunit, '(1x,2e20.8)') units_from_atomic(units_out%energy, xx), &
           units_from_atomic((units_out%length / units_out%time)**2, -hsval)
@@ -2279,7 +2281,7 @@ contains
       call unit_system_get(file_units, UNITS_ATOMIC)
     end if
 
-    call spectrum_count_time_steps(iunit, time_steps, dt)
+    call spectrum_count_time_steps(namespace, iunit, time_steps, dt)
     dt = units_to_atomic(file_units%time, dt) ! units_out is OK
 
     POP_SUB(spectrum_mult_info)
@@ -2288,10 +2290,11 @@ contains
 
 
   ! ---------------------------------------------------------  
-  subroutine spectrum_count_time_steps(iunit, time_steps, dt)
-    integer, intent(in)  :: iunit
-    integer, intent(out) :: time_steps
-    FLOAT,   intent(out) :: dt
+  subroutine spectrum_count_time_steps(namespace, iunit, time_steps, dt)
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(in)  :: iunit
+    integer,           intent(out) :: time_steps
+    FLOAT,             intent(out) :: dt
 
     FLOAT :: t1, t2, dummy
     integer :: trash
@@ -2312,7 +2315,7 @@ contains
     
     if(time_steps < 3) then
       message(1) = "Empty file?"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(count_time_steps)
@@ -2351,7 +2354,7 @@ contains
 
     if(energy_steps < 3) then
       message(1) = "Empty multipole file?"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(spectrum_cross_section_info)
@@ -2398,7 +2401,7 @@ contains
 
     if(time_steps < 3) then
       message(1) = "Empty file?"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     rewind(iunit)

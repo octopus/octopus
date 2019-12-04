@@ -244,8 +244,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg) result(j1)
+  FLOAT function target_j1_hhg(tg, namespace) result(j1)
     type(target_t),    intent(in) :: tg
+    type(namespace_t), intent(in) :: namespace
     
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
@@ -261,7 +262,7 @@
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0
-      call spectrum_hsfunction_min(ww - aa, ww + aa, omega, maxhh)
+      call spectrum_hsfunction_min(namespace, ww - aa, ww + aa, omega, maxhh)
       j1 = j1 + tg%hhg_alpha(jj) * log(-maxhh)
     end do
     call spectrum_hsfunction_end()

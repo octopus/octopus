@@ -312,7 +312,7 @@ contains
 
     !See comment in zstates_elec_mpdotp
     if(simul_box_is_periodic(gr%sb) .and. writ%out(OUT_POPULATIONS)%write) then
-      call messages_not_implemented("TDOutput populations for periodic systems")
+      call messages_not_implemented("TDOutput populations for periodic systems", namespace=namespace)
     end if
 
 
@@ -320,7 +320,7 @@ contains
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
         message(1) = "TDOutput option td_kpoint_occup and td_floquet do not work with domain parallelization"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -336,14 +336,14 @@ contains
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
     call messages_obsolete_variable(namespace, 'TDDipoleLmax', 'TDMultipoleLmax')
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
       message(1) = 'If harmonic spectrum is to be calculated, atoms should not be allowed to move.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     rmin = geometry_min_distance(geo)
@@ -363,12 +363,12 @@ contains
 
       if(st%parallel_in_states .and. writ%out(OUT_POPULATIONS)%write) then
         message(1) = "Options TDOutput = populations are not implemented for parallel in states."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if (writ%out(OUT_N_EX)%write .and. st%parallel_in_states ) then
         message(1) = "Options TDOutput = n_excited_el is not implemented for parallel in states."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
@@ -389,7 +389,7 @@ contains
           writ%gs_st%st_end = writ%gs_st%nst
         if(ierr /= 0) then
           message(1) = "Unable to read states information."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
  
         ! do this only when not calculating populations, since all states are needed then
@@ -441,7 +441,7 @@ contains
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
         message(1) = "Unable to read wavefunctions for TDOutput."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       call restart_end(restart_gs)
     end if
@@ -511,7 +511,7 @@ contains
     call parse_variable(namespace, 'TDOutputComputeInterval', 50, writ%compute_interval)
     if(writ%compute_interval < 0) then
       message(1) = "TDOutputComputeInterval must be >= 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
 
@@ -2619,7 +2619,7 @@ contains
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
     if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
     endif
 
     ! get time of one cycle

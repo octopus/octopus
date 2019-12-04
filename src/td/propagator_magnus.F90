@@ -99,7 +99,7 @@ contains
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
           write(message(1),'(a)') 'The Magnus propagator cannot be used with magnetic fields, or'
           write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
       end do
     end do
@@ -135,7 +135,7 @@ contains
 
     if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
       message(1) = "The commutator-free Magnus expansion cannot be used with moving ions or gauge fields"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     PUSH_SUB(propagator_dt.td_cfmagnus4)

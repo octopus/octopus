@@ -365,7 +365,7 @@ contains
     ! copy vold to a cl buffer
     if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm)) then
       if(family_is_mgga_with_exc(hm%xc)) then
-        call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
+        call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals', namespace=namespace)
       end if
       pnp = accel_padded_size(gr%mesh%np)
       call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
