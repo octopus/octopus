@@ -21,6 +21,7 @@
 module td_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
+  use current_oct_m
   use density_oct_m
   use energy_calc_oct_m
   use forces_oct_m
@@ -58,6 +59,7 @@ module td_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_restart_oct_m
+  use states_mxll_oct_m
   use system_oct_m
   use system_abst_oct_m
   use system_mxll_oct_m
@@ -123,56 +125,14 @@ contains
 
   subroutine td_init(td, sys)
     type(td_t),            intent(inout) :: td
-    type(system_t),        intent(inout) :: sys
+    class(system_abst_t),        intent(inout) :: sys
 
     integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
 
     PUSH_SUB(td_init)
 
-    call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
-
-    td%iter = 0
-
-    !%Variable TDIonicTimeScale
-    !%Type float
-    !%Default 1.0
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% This variable defines the factor between the timescale of ionic
-    !% and electronic movement. It allows reasonably fast
-    !% Born-Oppenheimer molecular-dynamics simulations based on
-    !% Ehrenfest dynamics. The value of this variable is equivalent to
-    !% the role of <math>\mu</math> in Car-Parrinello. Increasing it
-    !% linearly accelerates the time step of the ion
-    !% dynamics, but also increases the deviation of the system from the
-    !% Born-Oppenheimer surface. The default is 1, which means that both
-    !% timescales are the same. Note that a value different than 1
-    !% implies that the electrons will not follow physical behaviour.
-    !%
-    !% According to our tests, values around 10 are reasonable, but it
-    !% will depend on your system, mainly on the width of the gap.
-    !%
-    !% Important: The electronic time step will be the value of
-    !% <tt>TDTimeStep</tt> divided by this variable, so if you have determined an
-    !% optimal electronic time step (that we can call <i>dte</i>), it is
-    !% recommended that you define your time step as:
-    !%
-    !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
-    !%
-    !% so you will always use the optimal electronic time step
-    !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
-    !%End
-    call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
-
-    if (td%mu <= M_ZERO) then
-      write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
-      call messages_fatal(1)
-    end if
-
-    call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
-
-    !%Variable TDTimeStep
+        !%Variable TDTimeStep
     !%Type float
     !%Section Time-Dependent::Propagation
     !%Description
@@ -246,6 +206,52 @@ contains
       message(2) = '(TDMaxSteps <= 1)'
       call messages_fatal(2)
     end if
+
+
+    select type (sys)
+    type is (system_t)
+      
+    call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
+
+    td%iter = 0
+
+    !%Variable TDIonicTimeScale
+    !%Type float
+    !%Default 1.0
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% This variable defines the factor between the timescale of ionic
+    !% and electronic movement. It allows reasonably fast
+    !% Born-Oppenheimer molecular-dynamics simulations based on
+    !% Ehrenfest dynamics. The value of this variable is equivalent to
+    !% the role of <math>\mu</math> in Car-Parrinello. Increasing it
+    !% linearly accelerates the time step of the ion
+    !% dynamics, but also increases the deviation of the system from the
+    !% Born-Oppenheimer surface. The default is 1, which means that both
+    !% timescales are the same. Note that a value different than 1
+    !% implies that the electrons will not follow physical behaviour.
+    !%
+    !% According to our tests, values around 10 are reasonable, but it
+    !% will depend on your system, mainly on the width of the gap.
+    !%
+    !% Important: The electronic time step will be the value of
+    !% <tt>TDTimeStep</tt> divided by this variable, so if you have determined an
+    !% optimal electronic time step (that we can call <i>dte</i>), it is
+    !% recommended that you define your time step as:
+    !%
+    !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
+    !%
+    !% so you will always use the optimal electronic time step
+    !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
+    !%End
+    call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
+
+    if (td%mu <= M_ZERO) then
+      write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
+      call messages_fatal(1)
+    end if
+
+    call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
 
     ! now the photoelectron stuff
     call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, &
@@ -333,6 +339,8 @@ contains
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
 
+    end select
+  
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -375,15 +383,15 @@ contains
 
     PUSH_SUB(td_run)
 
-    select type (sys)
-    type is (system_t)
-
     ! some shortcuts
     gr  => sys%gr
     geo => sys%geo
     st  => sys%st
 
     call td_init(td, sys)
+
+    select type (sys)
+    type is (system_t)
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
@@ -540,6 +548,200 @@ contains
 
     type is (system_mxll_t)
 
+      td%energy_update_iter = 1
+      call external_current_init(st, gr%mesh)
+
+      ! call mesh_mapping(sys_elec%gr, sys_mxll%gr)
+      ! allocate and nullify a bunch_of arrays of st
+      
+      call states_mxll_allocate(st, gr%mesh)    
+
+    ! hm%plane_waves_apply = .true.
+    ! hm%spatial_constant_apply = .true.
+    ! call bc_init(hm%bc, gr, st, gr%sb, hm%geo, td%dt/td%tr%inter_steps, td%tr%bc_add_ab_region)
+    ! bc_bounds(:,:) = hm%bc%bc_bounds(:,:)
+    ! call inner_and_outer_points_mapping(gr%mesh, st, bc_bounds)
+    ! dt_bounds(2,:) = bc_bounds(1,:)
+    ! dt_bounds(1,:) = bc_bounds(1,:) - gr%der%order * gr%mesh%spacing(:)
+    ! call surface_grid_points_mapping(gr%mesh, st, dt_bounds)
+
+    ! ! Restart stuff
+    
+    ! ! initialization of fft variables
+    ! fft_check = .false. 
+    ! if (td%tr%op_method == OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT) fft_check = .true.
+    ! do idim=1, st%d%dim
+    !   if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) fft_check = .true.
+    ! end do
+    
+    ! if (fft_check) then
+    !   hm%cube%cube    = .true.
+    !   ! Documentation in cube.F90
+    !   call parse_variable('FFTLibrary', FFTLIB_FFTW, fft_library)
+    !   call cube_init(hm%cube, sys%gr%mesh%idx%ll, sys%gr%sb, fft_type=FFT_COMPLEX, fft_library=fft_library,&
+    !                  nn_out=ll, dont_optimize=.true., mpi_grp=sys%gr%mesh%mpi_grp, need_partition=.true., &
+    !                  spacing=sys%gr%mesh%spacing)
+    !   call rs_state_to_cube_map(sys%gr, hm, st)
+    !   if (hm%cube%parallel_in_domains) then
+    !     call mesh_cube_parallel_map_init(hm%mesh_cube_map, sys%gr%der%mesh, hm%cube)
+    !   end if
+    ! end if
+
+    ! if (fromScratch) then
+    !   call restart_initq(restart, RESTART_MAXWELL, RESTART_TYPE_LOAD, st%dom_st_kpt_mpi_grp, ierr, &
+    !                     mesh=gr%mesh, exact=.true.)          
+    !   if (parse_is_defined('UserDefinedInitialMaxwellStates')) then
+    !     call states_read_user_def(gr%mesh, st, rs_state_init)
+    !     st%rs_state = st%rs_state + rs_state_init
+    !     if (td%tr%bc_plane_waves) then
+    !       st%rs_state_plane_waves = rs_state_init
+    !     end if
+    !     if (td%tr%bc_constant) &
+    !       st%rs_state_const(:) = rs_state_init(gr%mesh%idx%lxyz_inv(0,0,0),:)
+    !       call constant_boundaries_calculation(td%tr%bc_constant, hm%bc, &
+    !                                                    hm, st, st%rs_state)
+    !   end if
+    !   call restart_end(restart)
+    ! end if
+
+    ! if (parse_is_defined('UserDefinedInitialMaxwellStates')) then
+    !   SAFE_DEALLOCATE_A(rs_state_init)
+    ! end if
+
+    ! call hamiltonian_mxll_update(hm, gr%mesh, st, time = td%iter*td%dt)
+
+
+    ! ! calculate Maxwell energy density
+    ! call energy_mxll_density_calc(gr, st, st%rs_state, hm%energy_density(:), & 
+    !                                  hm%e_energy_density(:), hm%b_energy_density(:), &
+    !                                  hm%plane_waves, &
+    !                                  st%rs_state_plane_waves, hm%energy_density_plane_waves(:))
+
+    ! ! calculate Maxwell energy
+    ! call energy_mxll_calc(gr, st, hm, st%rs_state, hm%energy, &
+    !                          hm%e_energy, hm%b_energy, hm%energy_boundaries, &
+    !                          st%rs_state_plane_waves, hm%energy_plane_waves)
+
+    ! st%rs_state_trans = st%rs_state
+                 
+    ! call td_write_mxll_init(write_handler, gr, st, hm, td%iter, td%max_iter, td%dt)
+
+    ! call get_rs_state_at_point(st%selected_points_rs_state(:,:),           &
+    !                                    st%rs_state,                                &
+    !                                    st%selected_points_coordinate(:,:),         &
+    !                                    st, gr%mesh)
+
+    ! if(td%iter == 0) then
+    !    call td_write_mxll_iter(write_handler, gr, st, hm, td%dt, 0)
+    !    call td_write_maxwell_free_data(write_handler, gr, st, hm, geo, &
+    !                                            sys%outp, 0, td%dt)
+    ! end if
+
+    ! !call td_check_trotter(td, sys, h)
+    ! td%iter = td%iter + 1
+
+    ! call restart_init(restart_dump, RESTART_TD_MAXWELL, RESTART_TYPE_DUMP, st%dom_st_kpt_mpi_grp, &
+    !                   ierr, mesh=gr%mesh)
+
+    ! call messages_print_stress(stdout, "Time-Dependent Simulation")
+
+    ! write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
+    ! call messages_info(1)
+    ! call messages_print_stress(stdout)
+
+    ! write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') 0,                  &
+    !       units_from_atomic(units_out%time, M_ZERO),                         &
+    !       units_from_atomic(units_out%energy, hm%energy),    &
+    !       M_ZERO
+    ! call messages_info(1)
+
+    ! etime = loct_clock()
+    ! propagation: do iter = td%iter, td%max_iter
+
+    !   stopping = clean_stop(sys%mc%master_comm)
+    !   call profiling_in(prof, "TIME_STEP")
+
+    !   ! Propagation
+
+    !   ! calculation of external RS density at time (time-dt)
+    !   rs_current_density_ext_t1 = M_z0
+    !   if (hm%current_density_ext_flag) then
+    !     call get_rs_density_ext(st, gr%mesh, iter*td%dt-td%dt, rs_current_density_ext_t1)
+    !   end if
+
+    !   ! calculation of external RS density at time (time)
+    !   rs_current_density_ext_t2 = M_z0
+    !   if (hm%current_density_ext_flag) then
+    !     call get_rs_density_ext(st, gr%mesh, iter*td%dt, rs_current_density_ext_t2)
+    !   end if
+
+    !   rs_charge_density_ext_t1 = M_z0
+
+    !   rs_charge_density_ext_t2 = M_z0
+
+    !   ! Propagation dt with H_maxwell
+    !   call propagation_etrs(hm, gr, st, td%tr, st%rs_state, &
+    !     rs_current_density_ext_t1, rs_current_density_ext_t2,       &
+    !     rs_charge_density_ext_t1, rs_charge_density_ext_t2, iter*td%dt-td%dt, td%dt, &
+    !     st%rs_state)
+
+    !   st%rs_state_trans = st%rs_state
+
+    !   ! calculate Maxwell energy density
+    !   call energy_density_calc(gr, st, st%rs_state, hm%energy_density, &
+    !     hm%e_energy_density, hm%b_energy_density, hm%plane_waves, &
+    !     st%rs_state_plane_waves, hm%energy_density_plane_waves)
+
+    !   ! calculate Maxwell energy
+    !   call energy_calc(gr, st, hm, st%rs_state, hm%energy, &
+    !     hm%e_energy, hm%b_energy, hm%energy_boundaries, &
+    !     st%rs_state_plane_waves, hm%energy_plane_waves)
+
+    !   ! calculate Maxwell energy rate -- not necessary
+    !   ! calculate Maxwell energy of incident waves -- not necessary
+
+    !   ! get RS state values for selected points
+    !   call get_rs_state_at_point(st%selected_points_rs_state,           &
+    !                                      st%rs_state,                           &
+    !                                      st%selected_points_coordinate,         &
+    !                                      st, gr%mesh)
+
+    !   write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') iter,           &
+    !     units_from_atomic(units_out%time, iter*td%dt),                     &
+    !     units_from_atomic(units_out%energy, hm%energy),    &
+    !     loct_clock() - etime
+    !   call messages_info(1)
+    !   etime = loct_clock()
+
+    !   call td_write_mxll_iter(write_handler, gr, st, hm, td%dt, iter)
+
+    !   ! write down data
+    !   if ((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
+    !        iter == td%max_iter .or. stopping) then
+    !     call td_write_maxwell_free_data(write_handler, gr, st, hm, geo, sys%outp, iter, td%dt)
+    !   end if
+
+    !   if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
+    !     call td_dump(restart_dump, gr, st, hm, td, iter, ierr)
+    !     if (ierr /= 0) then
+    !       message(1) = "Unable to write time-dependent restart information."
+    !       call messages_warning(1)
+    !     end if
+    !   end if
+
+    !   call profiling_out(prof)
+    !   if (stopping) exit
+
+    ! end do propagation
+
+    ! if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_unpack(st)
+
+    ! call restart_end(restart_dump)
+
+    ! ! free memory
+    ! call states_deallocate_wfns(st)
+    call states_end(st)
+      
     end select
 
     POP_SUB(td_run)
