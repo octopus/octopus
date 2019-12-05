@@ -249,7 +249,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   PUSH_SUB(X(boundaries_set_batch))
   call profiling_in(set_bc_prof, 'SET_BC')
   
-  ASSERT(batch_type(ffb) == R_TYPE_VAL)
+  ASSERT(ffb%type() == R_TYPE_VAL)
   ! phase correction not implemented for OpenCL
   if(present(phase_correction)) then
     ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
@@ -284,7 +284,7 @@ contains
     select case(ffb%status())
     case(BATCH_DEVICE_PACKED)
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
-      call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
+      call accel_set_buffer_to_zero(ffb%pack%buffer, ffb%type(), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call accel_finish()
 
     case(BATCH_PACKED)

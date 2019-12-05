@@ -446,7 +446,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
         size = min(block_size, mesh%np - sp + 1)
 
         do ib = st%group%block_start, st%group%block_end
-          ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+          ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
           call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do

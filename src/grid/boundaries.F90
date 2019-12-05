@@ -348,9 +348,9 @@ contains
 
     PUSH_SUB(boundaries_set_batch)
     
-    if(batch_type(ffb) == TYPE_FLOAT) then 
+    if(ffb%type() == TYPE_FLOAT) then 
       call dboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_CMPLX) then 
+    else if(ffb%type() == TYPE_CMPLX) then 
       call zboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)

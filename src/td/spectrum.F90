@@ -2503,7 +2503,7 @@ contains
       end select
     end do
             
-    if(batch_type(time_function) == TYPE_CMPLX) then
+    if(time_function%type() == TYPE_CMPLX) then
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
           time_function%states_linear(ii)%zpsi(itime) = weight(itime)*time_function%states_linear(ii)%zpsi(itime)
@@ -2561,8 +2561,8 @@ contains
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(time_function%status() == energy_function%status())
     ASSERT(time_function%status() == BATCH_NOT_PACKED)
-    ASSERT(batch_type(time_function) == TYPE_FLOAT)
-    ASSERT(batch_type(energy_function) == TYPE_FLOAT)
+    ASSERT(time_function%type() == TYPE_FLOAT)
+    ASSERT(energy_function%type() == TYPE_FLOAT)
 
     energy_steps = nint((energy_end-energy_start) / energy_step) + 1 
 

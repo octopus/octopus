@@ -68,7 +68,7 @@ contains
     
     PUSH_SUB(mesh_batch_nrm2)
     
-    if(batch_type(aa) == TYPE_FLOAT) then
+    if(aa%type() == TYPE_FLOAT) then
       call dpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     else
       call zpriv_mesh_batch_nrm2(mesh, aa, nrm2)

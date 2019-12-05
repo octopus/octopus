@@ -47,8 +47,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   PUSH_SUB(X(nl_operator_operate_batch))
 
   ASSERT(fi%status() == fo%status())
-  ASSERT(batch_type(fi) == R_TYPE_VAL)
-  ASSERT(batch_type(fo) == R_TYPE_VAL)
+  ASSERT(fi%type() == R_TYPE_VAL)
+  ASSERT(fo%type() == R_TYPE_VAL)
 
   ASSERT(fi%nst_linear == fo%nst_linear)
 

@@ -40,7 +40,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
-  this%type = R_TYPE_VAL
+  this%type_of = R_TYPE_VAL
 
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)

@@ -743,9 +743,9 @@ contains
     PUSH_SUB(poisson_solve_batch)
 
     ASSERT(potb%nst_linear == rhob%nst_linear)
-    ASSERT(batch_type(potb) == batch_type(rhob))
+    ASSERT(potb%type() == rhob%type())
 
-    if(batch_type(potb) == TYPE_FLOAT) then
+    if(potb%type() == TYPE_FLOAT) then
       do ii = 1, potb%nst_linear
         call dpoisson_solve(this, potb%states_linear(ii)%dpsi, rhob%states_linear(ii)%dpsi, all_nodes)
       end do

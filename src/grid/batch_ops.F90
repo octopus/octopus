@@ -119,10 +119,10 @@ contains
 
     select case(this%status())
     case(BATCH_DEVICE_PACKED)
-      call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
+      call accel_set_buffer_to_zero(this%pack%buffer, this%type(), product(this%pack%size))
 
     case(BATCH_PACKED)
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         !$omp parallel do schedule(static)
         do ip = 1, this%pack%size(2)
           do ist = 1, this%pack%size(1)
@@ -179,7 +179,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
 
   case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
+    tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
 
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
@@ -223,7 +223,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
   case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(batch_type(this))&
+    tsize = types_get_size(this%type())&
       /types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
 

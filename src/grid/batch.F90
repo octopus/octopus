@@ -47,12 +47,10 @@ module batch_oct_m
     batch_deallocate,               &
     batch_pack,                     &
     batch_unpack,                   &
-    batch_type,                     &
     batch_inv_index,                &
     batch_ist_idim_to_linear,       &
     batch_linear_to_ist,            &
     batch_linear_to_idim,           &
-    batch_pack_size,                &
     batch_remote_access_start,      &
     batch_remote_access_stop
   
@@ -103,14 +101,16 @@ module batch_oct_m
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
-    type(type_t)                           :: type !< only available if the batched is packed
+    type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
   contains
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
+    procedure :: pack_size => batch_pack_size
     procedure :: status => batch_status
+    procedure :: type => batch_type
   end type batch_t
 
   !--------------------------------------------------------------
@@ -259,9 +259,9 @@ contains
 
     PUSH_SUB(batch_allocate_temporary)
     
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
       call dbatch_allocate_temporary(this)
-    else if(batch_type(this) == TYPE_CMPLX) then
+    else if(this%type() == TYPE_CMPLX) then
       call zbatch_allocate_temporary(this)
     end if
 
@@ -284,7 +284,7 @@ contains
     this%nst = nst
     this%dim = dim
     this%current = 1
-    this%type = TYPE_NONE
+    this%type_of = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont)
     
     SAFE_ALLOCATE(this%states(1:nst))
@@ -327,7 +327,7 @@ contains
     this%nst = 0
     this%dim = 0
     this%current = 1
-    this%type = TYPE_NONE
+    this%type_of = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont)
     nullify(this%states)
 
@@ -390,9 +390,9 @@ contains
 
     copy_data_ = optional_default(copy_data, .false.)
 
-    bout%type = bin%type
+    bout%type_of = bin%type_of
 
-    if(batch_type(bin) == TYPE_FLOAT) then
+    if(bin%type() == TYPE_FLOAT) then
 
       np = 0
       do ii = 1, bin%nst_linear
@@ -401,7 +401,7 @@ contains
 
       call dbatch_allocate(bout, 1, bin%nst, np)
 
-    else if(batch_type(bin) == TYPE_CMPLX) then
+    else if(bin%type() == TYPE_CMPLX) then
       np = 0
       do ii = 1, bin%nst_linear
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
@@ -435,7 +435,7 @@ contains
       if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
       if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
     else
-      btype = this%type
+      btype = this%type_of
     end if
      
   end function batch_type
@@ -463,7 +463,7 @@ contains
 
     size = this%max_size
     if(accel_is_enabled()) size = accel_padded_size(size)
-    size = size*pad_pow2(this%nst_linear)*types_get_size(batch_type(this))
+    size = size*pad_pow2(this%nst_linear)*types_get_size(this%type())
 
   end function batch_pack_size
 
@@ -485,23 +485,23 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. this%is_packed()) then
-      this%type = batch_type(this)
+      this%type_of = this%type()
       this%pack%size(1) = pad_pow2(this%nst_linear)
       this%pack%size(2) = this%max_size
 
       if(accel_is_enabled()) this%pack%size(2) = accel_padded_size(this%pack%size(2))
 
       this%pack%size_real = this%pack%size
-      if(type_is_complex(batch_type(this))) this%pack%size_real(1) = 2*this%pack%size_real(1)
+      if(type_is_complex(this%type())) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(accel_is_enabled()) then
         this%status_of = BATCH_DEVICE_PACKED
-        call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
+        call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack%size))
       else
         this%status_of = BATCH_PACKED
-        if(batch_type(this) == TYPE_FLOAT) then
+        if(this%type() == TYPE_FLOAT) then
           SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
-        else if(batch_type(this) == TYPE_CMPLX) then
+        else if(this%type() == TYPE_CMPLX) then
           SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         end if
       end if
@@ -531,7 +531,7 @@ contains
       integer :: ist, ip, sp, ep, bsize
       
  
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
 
         bsize = hardware%dblock_size
       
@@ -545,7 +545,7 @@ contains
           end forall
         end do
 
-      else if(batch_type(this) == TYPE_CMPLX) then
+      else if(this%type() == TYPE_CMPLX) then
 
         bsize = hardware%zblock_size
 
@@ -561,7 +561,7 @@ contains
 
       end if
 
-      call profiling_count_transfers(this%nst_linear*this%pack%size(2), batch_type(this))
+      call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
       
     end subroutine pack_copy
 
@@ -642,7 +642,7 @@ contains
     subroutine unpack_copy()
       integer :: ist, ip
 
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
 
         do ist = 1, this%nst_linear
           ASSERT(associated(this%states_linear(ist)%dpsi))
@@ -655,7 +655,7 @@ contains
           end forall
         end do
         
-      else if(batch_type(this) == TYPE_CMPLX) then
+      else if(this%type() == TYPE_CMPLX) then
 
         do ist = 1, this%nst_linear
           ASSERT(associated(this%states_linear(ist)%zpsi))
@@ -670,7 +670,7 @@ contains
         
       end if
       
-      call profiling_count_transfers(this%nst_linear*this%pack%size(2), batch_type(this))
+      call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
       
     end subroutine unpack_copy
 
@@ -692,9 +692,9 @@ contains
 
     if(this%nst_linear == 1) then
       ! we can copy directly
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         call accel_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
-      else if(batch_type(this) == TYPE_CMPLX) then
+      else if(this%type() == TYPE_CMPLX) then
         call accel_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
       else
         ASSERT(.false.)
@@ -703,7 +703,7 @@ contains
     else
       ! we copy to a temporary array and then we re-arrange data
 
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         kernel => dpack
       else
         kernel => zpack
@@ -711,14 +711,14 @@ contains
       
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
-      call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), unroll*this%pack%size(2))
+      call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), unroll*this%pack%size(2))
       
       do ist = 1, this%nst_linear, unroll
         
         ! copy a number 'unroll' of states to the buffer
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
 
-          if(batch_type(this) == TYPE_FLOAT) then
+          if(this%type() == TYPE_FLOAT) then
             call accel_write_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
               offset = (ist2 - ist)*this%pack%size(2))
           else
@@ -737,7 +737,7 @@ contains
         call profiling_in(prof_pack, "CL_PACK")
         call accel_kernel_run(kernel, (/this%pack%size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
 
-        if(batch_type(this) == TYPE_FLOAT) then
+        if(this%type() == TYPE_FLOAT) then
           call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
         else
           call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
@@ -771,7 +771,7 @@ contains
 
     if(this%nst_linear == 1) then
       ! we can copy directly
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         call accel_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
       else
         call accel_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
@@ -781,9 +781,9 @@ contains
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
 
       ! we use a kernel to move to a temporary array and then we read
-      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), unroll*this%pack%size(2))
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), unroll*this%pack%size(2))
 
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         kernel => dunpack
       else
         kernel => zunpack
@@ -799,7 +799,7 @@ contains
         call profiling_in(prof_unpack, "CL_UNPACK")
         call accel_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, accel_max_workgroup_size()/unroll/))
 
-        if(batch_type(this) == TYPE_FLOAT) then
+        if(this%type() == TYPE_FLOAT) then
           call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
         else
           call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
@@ -811,7 +811,7 @@ contains
         ! copy a number 'unroll' of states from the buffer
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
           
-          if(batch_type(this) == TYPE_FLOAT) then
+          if(this%type() == TYPE_FLOAT) then
             call accel_read_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
               offset = (ist2 - ist)*this%pack%size(2))
           else
@@ -889,17 +889,17 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
   if(mpi_grp%size > 1) then
     call batch_pack(this)
     
-    if(batch_type(this) == TYPE_CMPLX) then
+    if(this%type() == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
+      call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+        types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
     
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(batch_type(this)), MPI_ADDRESS_KIND), &
-        types_get_size(batch_type(this)), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
+      call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+        types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     end if
     
@@ -962,7 +962,7 @@ subroutine batch_copy_data(np, xx, yy)
     call accel_finish()
 
   case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_FLOAT) then
+    if(yy%type() == TYPE_FLOAT) then
       call blas_copy(np*xx%pack%size(1), xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
     else
       call blas_copy(np*xx%pack%size(1), xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
@@ -971,7 +971,7 @@ subroutine batch_copy_data(np, xx, yy)
   case(BATCH_NOT_PACKED)
     !$omp parallel do private(ist)
     do ist = 1, yy%nst_linear
-      if(batch_type(yy) == TYPE_CMPLX) then
+      if(yy%type() == TYPE_CMPLX) then
         call blas_copy(np, xx%states_linear(ist)%zpsi(1), 1, yy%states_linear(ist)%zpsi(1), 1)
       else
         call blas_copy(np, xx%states_linear(ist)%dpsi(1), 1, yy%states_linear(ist)%dpsi(1), 1)
@@ -992,7 +992,7 @@ subroutine batch_check_compatibility_with(this, yy)
 
   PUSH_SUB(batch_check_compatibility_with)
 
-  ASSERT(batch_type(yy) == batch_type(this))
+  ASSERT(this%type() == yy%type())
   ASSERT(this%nst_linear == yy%nst_linear)
   ASSERT(this%status() == yy%status())
   ASSERT(this%dim == yy%dim)

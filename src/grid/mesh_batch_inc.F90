@@ -440,7 +440,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(batch_type(aa))/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_vector))
@@ -469,7 +469,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   PUSH_SUB(X(mesh_batch_exchange_points))
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
-  ASSERT(batch_type(aa) == R_TYPE_VAL)
+  ASSERT(aa%type() == R_TYPE_VAL)
   packed_on_entry = aa%status() == BATCH_NOT_PACKED
   if (packed_on_entry) then
     call batch_unpack(aa, force=.true.)
