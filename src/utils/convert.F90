@@ -683,8 +683,8 @@ contains
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
               c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, min_energy, max_energy, &
               spectrum%energy_step, wdrho_b)
-        call batch_end(tdrho_b)
-        call batch_end(wdrho_b)
+        call tdrho_b%end
+        call wdrho_b%end
         do e_point = e_start, e_end
           point_tmp(read_count, e_point) = - wdrho_a(e_point, 1, 1)
         end do

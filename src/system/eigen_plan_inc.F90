@@ -181,8 +181,8 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb, ik)
       INCR(matvec, blk)
 
-      call batch_end(vvb)
-      call batch_end(avb)
+      call vvb%end
+      call avb%end
 
       ! Here we calculate the last blk columns of H = V^T A V. We do not need the lower
       ! part of the matrix since it is symmetric (LAPACK routine only needs the upper triangle).

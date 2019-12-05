@@ -105,7 +105,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     if(all(done(1:bsize) /= 0)) then
       if(pack) call st%group%psib(ib, ik)%do_unpack
-      call batch_end(resb(1)%batch)
+      call resb(1)%batch%end
       cycle
     end if
 
@@ -213,7 +213,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
         end if
       end do
 
-      call batch_end(resb(iter)%batch)
+      call resb(iter)%batch%end
 
       call profiling_in(prof_lc, "RMMDIIS_LC")
 
@@ -276,13 +276,13 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     ! we can remove most of the batches
     do iter = 1, niter
-      if(iter /= 1) call batch_end(psib(iter)%batch)
-      if(iter /= niter - 1) call batch_end(resb(iter)%batch)
+      if(iter /= 1) call psib(iter)%batch%end
+      if(iter /= niter - 1) call resb(iter)%batch%end
     end do
 
     call resb(niter - 1)%batch%copy_data_to(gr%mesh%np, st%group%psib(ib, ik))
 
-    call batch_end(resb(niter - 1)%batch)
+    call resb(niter - 1)%batch%end
 
     if(pack) call st%group%psib(ib, ik)%do_unpack
 
@@ -321,7 +321,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     
     call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen_full(minst:maxst), reduce = .false.)
     
-    call batch_end(resb(1)%batch)
+    call resb(1)%batch%end
 
     if(pack) call st%group%psib(ib, ik)%do_unpack
     
@@ -462,8 +462,8 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
 
     if(pack) call st%group%psib(ib, ik)%do_unpack
 
-    call batch_end(resb)
-    call batch_end(kresb)
+    call resb%end
+    call kresb%end
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  maxst, st%lnst*st%d%kpt%nlocal)

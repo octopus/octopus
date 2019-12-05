@@ -783,8 +783,8 @@ contains
 
     end do
 
-    call batch_end(psi1b)
-    call batch_end(hpsi1b)
+    call psi1b%end
+    call hpsi1b%end
 
     call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
 
@@ -833,7 +833,7 @@ contains
       SAFE_DEALLOCATE_A(beta)
       SAFE_DEALLOCATE_A(res)
       SAFE_DEALLOCATE_A(norm)
-      call batch_end(vb(1))
+      call vb(1)%end
       SAFE_DEALLOCATE_A(vb)
       call profiling_out(prof)
       POP_SUB(exponential_lanczos_batch)
@@ -914,7 +914,7 @@ contains
     end if
 
     do iter = 1, te%exp_order+1
-      call batch_end(vb(iter))
+      call vb(iter)%end
     end do
 
     SAFE_DEALLOCATE_A(vb)
@@ -989,9 +989,9 @@ contains
     call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
     call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
 
-    call batch_end(psi0)
-    call batch_end(psi1)
-    call batch_end(psi2)
+    call psi0%end
+    call psi1%end
+    call psi2%end
 
     call profiling_out(prof)
 

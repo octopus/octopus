@@ -118,7 +118,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       psi_p(:,1,1) = psi(1:mesh%np)
       call batch_init (wfbatch, 1, 1, 1, psi_p)
       call X(mesh_batch_exchange_points) (mesh, wfbatch, forward_map=forward_map_gamma)
-      call batch_end(wfbatch)
+      call wfbatch%end
     else
       psi_p(forward_map_gamma(1:mesh%np),1,1) = psi(1:mesh%np)
     end if

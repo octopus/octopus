@@ -39,7 +39,6 @@ module batch_oct_m
     batch_pack_t,                   &
     batch_t,                        &
     batch_init,                     &
-    batch_end,                      &
     batch_add_state,                &
     batch_inv_index,                &
     batch_ist_idim_to_linear,       &
@@ -106,6 +105,7 @@ module batch_oct_m
     procedure :: deallocate => batch_deallocate
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
+    procedure :: end => batch_end
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
     procedure :: pack_size => batch_pack_size

@@ -197,8 +197,8 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
     call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
     
-    call batch_end(psi1b)
-    call batch_end(psi2b)
+    call psi1b%end
+    call psi2b%end
 
   end if
   SAFE_DEALLOCATE_P(xpsi1_)

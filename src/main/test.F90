@@ -278,7 +278,7 @@ contains
       call messages_info(1)
     end do
 
-    call batch_end(epsib)
+    call epsib%end
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
@@ -359,7 +359,7 @@ contains
     SAFE_DEALLOCATE_A(ddot)
     SAFE_DEALLOCATE_A(zdot)
 
-    call batch_end(epsib)
+    call epsib%end
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
@@ -444,7 +444,7 @@ contains
 
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
 
-    call batch_end(hpsib, copy = .false.)
+    call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
@@ -679,8 +679,8 @@ contains
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_SCAL) /= 0) then
@@ -695,8 +695,8 @@ contains
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_NRM2) /= 0) then
@@ -718,8 +718,8 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     call states_elec_deallocate_wfns(sys%st)

@@ -319,7 +319,7 @@
    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
       spectrum%energy_step, ftcurrb)
-   call batch_end(ftcurrb)
+   call ftcurrb%end
 
    call batch_init(ftcurrb, space%dim)
    do ii = 1, space%dim
@@ -329,8 +329,8 @@
      istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
      spectrum%energy_step, ftcurrb)
       
-   call batch_end(ftcurrb)
-   call batch_end(currb)
+   call ftcurrb%end
+   call currb%end
 
 
    !and print the spectrum
@@ -409,14 +409,14 @@
     call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr)
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
-    call batch_end(ftheatcurrb)
+    call ftheatcurrb%end
 
     call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr(:, :, 2:2))
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
-    call batch_end(ftheatcurrb)
+    call ftheatcurrb%end
     
-    call batch_end(heatcurrb)
+    call heatcurrb%end
 
 
     !and print the spectrum

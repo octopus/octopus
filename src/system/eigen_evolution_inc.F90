@@ -83,7 +83,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
       call states_elec_set_state(st, mesh, ist, ik, psi)
-      call batch_end(zpsib)
+      call zpsib%end
       matvec = matvec + te%exp_order
     end do
 #else
@@ -129,7 +129,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
       call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)
       call mesh_batch_nrm2(mesh, hpsib, diff(minst:maxst))
-      call batch_end(hpsib)
+      call hpsib%end
 
       if (debug%info) then
         do ist = minst, maxst

@@ -949,7 +949,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
       call X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
-      call batch_end(hpsib, copy = .false.)
+      call hpsib%end(copy = .false.)
 
     end do
     
