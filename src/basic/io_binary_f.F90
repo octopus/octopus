@@ -21,6 +21,7 @@
 
 module io_binary_oct_m
   use global_oct_m
+  use io_oct_m
   use messages_oct_m
   use mpi_oct_m
   use profiling_oct_m
@@ -64,21 +65,23 @@ module io_binary_oct_m
   end interface io_binary_read_parallel
 
   interface
-    subroutine get_info_binary(np, type, file_size, ierr, fname)
+    subroutine get_info_binary(np, type, file_size, ierr, iio, fname)
       integer,             intent(out)   :: np        !< Number of points of the mesh, written in the header
       integer,             intent(out)   :: type      !< Type of number
       integer,             intent(out)   :: file_size !< The actual size of the file
       integer,             intent(out)   :: ierr      
+      integer,             intent(inout) :: iio
       character(len=*),    intent(in)    :: fname
     end subroutine get_info_binary
   end interface
 
   interface
-    subroutine write_header(np_global, type, ierr, fname)
-      integer,             intent(in)  :: np_global
-      integer,             intent(in)  :: type
-      integer,             intent(out) :: ierr      
-      character(len=*),    intent(in)  :: fname
+    subroutine write_header(np_global, type, ierr, iio, fname)
+      integer,             intent(in)    :: np_global
+      integer,             intent(in)    :: type
+      integer,             intent(out)   :: ierr 
+      integer,             intent(inout) :: iio     
+      character(len=*),    intent(in)    :: fname
     end subroutine write_header
   end interface
 
@@ -116,6 +119,7 @@ contains
       amode = MPI_MODE_RDONLY
     end if
     call MPI_File_open(comm, fname, amode, MPI_INFO_NULL, file_handle, mpi_err)
+    call io_incr_open_count()
 
     if(mpi_err == 0) then
       call MPI_File_set_atomicity(file_handle, .true., mpi_err)
@@ -140,7 +144,8 @@ contains
     PUSH_SUB(io_binary_parallel_end)
 
 #ifdef HAVE_MPI2
-      call MPI_File_close(file_handle, mpi_err)
+    call MPI_File_close(file_handle, mpi_err)
+    call io_incr_close_count()
 #else
     message(1) = "Internal error: cannot call io_binary parallel routines without MPI2."
     call messages_fatal(1)
@@ -159,12 +164,15 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer :: read_np, number_type, file_size
+    integer :: read_np, number_type, file_size, iio
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_binary)
 
-    call get_info_binary(read_np, number_type, file_size, ierr, fname)
+    iio = 0
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, fname)
+    call io_incr_counters(iio)
+ 
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (debug%info) then
@@ -194,12 +202,14 @@ contains
     complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer :: read_np, number_type, file_size
+    integer :: read_np, number_type, file_size, iio
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_parallel)
 
-    call get_info_binary(read_np, number_type, file_size, ierr, fname)
+    iio = 0
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, fname)
+    call io_incr_counters(iio)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (debug%info) then
@@ -226,11 +236,13 @@ contains
     integer,             intent(out)   :: file_size
     integer,             intent(out)   :: ierr
 
-    integer :: type
+    integer :: type, iio
     
     PUSH_SUB(io_binary_get_info)
 
-    call get_info_binary(np, type, file_size, ierr, trim(fname))
+    iio = 0
+    call get_info_binary(np, type, file_size, ierr, iio, trim(fname))
+    call io_incr_counters(iio)
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info

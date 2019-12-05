@@ -857,7 +857,7 @@ contains
       PUSH_SUB(td_run.td_read_coordinates)
 
       call io_assign(iunit)
-      open(unit = iunit, file = io_workpath('td.general/coordinates', sys%namespace), action='read', status='old')
+      iunit = io_open(io_workpath('td.general/coordinates', sys%namespace), sys%namespace, action='read', status='old')
 
       if(iunit < 0) then
         message(1) = "Could not open file '"//trim(io_workpath('td.general/coordinates', sys%namespace))//"'."
