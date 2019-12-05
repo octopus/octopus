@@ -89,14 +89,14 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
 #else
     do ib = convb + 1, st%group%block_end
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack
       end if
 
       call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
 
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_unpack
       end if
     end do
 #endif
@@ -116,7 +116,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack
       end if
 
       minst = states_elec_block_min(st, ib)
@@ -140,7 +140,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       end if
 
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik), copy=.false.)
+        call st%group%psib(ib, ik)%do_unpack(copy=.false.)
       end if
     end do
 

@@ -349,7 +349,7 @@ contains
     end do
 
     if(epsib%is_packed()) then
-      call batch_unpack(epsib, force = .true.)
+      call epsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, epsib)
@@ -424,8 +424,8 @@ contains
     call sys%st%group%psib(1, 1)%copy(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
-      call batch_pack(hpsib, copy = .false.)
+      call sys%st%group%psib(1, 1)%do_pack
+      call hpsib%do_pack(copy = .false.)
     end if
 
     do itime = 1, param%repetitions
@@ -439,7 +439,7 @@ contains
     end do
 
     if(hpsib%is_packed()) then
-      call batch_unpack(hpsib, force = .true.)
+      call hpsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
@@ -559,7 +559,7 @@ contains
     call exponential_init(te, namespace)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
+      call sys%st%group%psib(1, 1)%do_pack()
     end if
 
     do itime = 1, param%repetitions
@@ -865,7 +865,7 @@ contains
     PUSH_SUB(test_prints_info_batch)
 
     if (psib%is_packed()) then
-      call batch_unpack(psib, force = .true.)
+      call psib%do_unpack(force = .true.)
     end if
 
     do itime = 1, psib%nst

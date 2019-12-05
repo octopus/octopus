@@ -193,7 +193,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call st%group%psib(ib, ik)%copy(psi2(ib, ik))
-        if(st%group%psib(ib, ik)%is_packed()) call batch_pack(psi2(ib, ik), copy = .false.)
+        if(st%group%psib(ib, ik)%is_packed()) call psi2(ib, ik)%do_pack(copy = .false.)
         call st%group%psib(ib, ik)%copy_data_to(gr%mesh%np, psi2(ib, ik))
       end do
     end do
@@ -394,8 +394,8 @@ contains
 
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack
         end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
@@ -439,8 +439,8 @@ contains
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack
         end if
       end do
     end do

@@ -2276,7 +2276,7 @@ contains
           exit qnloop
         end if
         
-        call batch_pack(st%group%psib(ib, iqn), copy)
+        call st%group%psib(ib, iqn)%do_pack(copy)
       end do
     end do qnloop
 
@@ -2298,7 +2298,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          if(st%group%psib(ib, iqn)%is_packed()) call batch_unpack(st%group%psib(ib, iqn), copy)
+          if(st%group%psib(ib, iqn)%is_packed()) call st%group%psib(ib, iqn)%do_unpack(copy)
         end do
       end do
     end if

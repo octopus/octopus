@@ -121,7 +121,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_pack(st%group%psib(ib, ik))
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack
       
       call st%group%psib(ib, ik)%copy(hpsib)
 
@@ -131,7 +131,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
 
       call batch_end(hpsib)
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       
     end do
 

@@ -233,8 +233,8 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack
         end if
 
         if (hamiltonian_elec_inh_term(hm)) then
@@ -245,8 +245,8 @@ contains
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack
         end if
       end do
     end do
@@ -281,13 +281,13 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack
         end if
 
         if(present(dt2)) then
           call st%group%psib(ib, ik)%copy(zpsib_dt)
-          if(st%group%psib(ib, ik)%is_packed()) call batch_pack(zpsib_dt, copy = .false.)
+          if(st%group%psib(ib, ik)%is_packed()) call zpsib_dt%do_pack(copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
@@ -316,8 +316,8 @@ contains
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack
         end if
       end do
     end do

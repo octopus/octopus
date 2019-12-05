@@ -72,7 +72,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       maxst = states_elec_block_max(st, ib)
 
       if(hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack
       end if
       
       call st%group%psib(ib, ik)%copy(hpsib)
@@ -81,7 +81,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
       if(hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+        call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       end if
 
       call batch_end(hpsib)

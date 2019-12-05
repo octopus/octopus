@@ -400,8 +400,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     end forall
 
     if(packstates) then
-      call batch_pack(ffb)
-      call batch_pack(opffb, copy = .false.)
+      call ffb%do_pack
+      call opffb%do_pack(copy = .false.)
     end if
 
     if(repetitions > 1) then
@@ -415,7 +415,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     etime = (loct_clock() - stime)/dble(repetitions)
 
     if(packstates) then
-      call batch_unpack(opffb)
+      call opffb%do_unpack
     end if
 
     forall(ip = 1:this%mesh%np)

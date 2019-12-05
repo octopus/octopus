@@ -184,7 +184,7 @@ contains
         call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
       
-      call batch_pack(psib, copy = .false.)
+      call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)

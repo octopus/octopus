@@ -44,8 +44,6 @@ module batch_oct_m
     dbatch_allocate,                &
     zbatch_allocate,                &
     batch_deallocate,               &
-    batch_pack,                     &
-    batch_unpack,                   &
     batch_inv_index,                &
     batch_ist_idim_to_linear,       &
     batch_linear_to_ist,            &
@@ -106,6 +104,8 @@ module batch_oct_m
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
     procedure :: copy_data_to => batch_copy_data_to
+    procedure :: do_pack => batch_do_pack
+    procedure :: do_unpack => batch_do_unpack
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
     procedure :: pack_size => batch_pack_size
@@ -157,7 +157,7 @@ contains
         SAFE_DEALLOCATE_A(this%pack%zpsi)
       end if
     else if(this%is_packed()) then
-      call batch_unpack(this, copy, force = .true.)
+      call this%do_unpack(copy, force = .true.)
     end if
 
     if(this%is_allocated) then
@@ -413,7 +413,7 @@ contains
 
     pack_ = bin%is_packed()
     if(present(pack)) pack_ = pack
-    if(pack_) call batch_pack(bout, copy = .false.)
+    if(pack_) call bout%do_pack(copy = .false.)
 
     do ii = 1, bout%nst
       bout%states(ii)%ist = bin%states(ii)%ist
@@ -469,7 +469,7 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_pack(this, copy)
+  subroutine batch_do_pack(this, copy)
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
 
@@ -478,7 +478,7 @@ contains
 
     ! no push_sub, called too frequently
 
-    call profiling_in(prof, "BATCH_PACK")
+    call profiling_in(prof, "BATCH_DO_PACK")
     ASSERT(this%is_ok())
 
     copy_ = .true.
@@ -565,11 +565,11 @@ contains
       
     end subroutine pack_copy
 
-  end subroutine batch_pack
+  end subroutine batch_do_pack
 
   ! ----------------------------------------------------
 
-  subroutine batch_unpack(this, copy, force)
+  subroutine batch_do_unpack(this, copy, force)
     class(batch_t),     intent(inout) :: this
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
@@ -577,9 +577,9 @@ contains
     logical :: copy_
     type(profile_t), save :: prof
 
-    PUSH_SUB(batch_unpack)
+    PUSH_SUB(batch_do_unpack)
 
-    call profiling_in(prof, "BATCH_UNPACK")
+    call profiling_in(prof, "BATCH_DO_UNPACK")
 
     if(this%is_packed()) then
 
@@ -610,9 +610,9 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(batch_unpack)
+    POP_SUB(batch_do_unpack)
 
-  end subroutine batch_unpack
+  end subroutine batch_do_unpack
 
   ! ----------------------------------------------------
 
@@ -887,7 +887,7 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
   ASSERT(.not. accel_is_enabled())
   
   if(mpi_grp%size > 1) then
-    call batch_pack(this)
+    call this%do_pack
     
     if(this%type() == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
@@ -922,7 +922,7 @@ subroutine batch_remote_access_stop(this, rma_win)
 #ifdef HAVE_MPI2
     call MPI_Win_free(rma_win, mpi_err)
 #endif
-    call batch_unpack(this)
+    call this%do_unpack
   end if
   
   POP_SUB(batch_remote_access_stop)

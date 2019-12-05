@@ -59,8 +59,8 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
     .and. terms_ == TERM_ALL
 
   if(pack) then
-    call batch_pack(psib)
-    call batch_pack(hpsib, copy = .false.)
+    call psib%do_pack
+    call hpsib%do_pack(copy = .false.)
   end if
 
   if(optional_default(set_bc, .true.)) then
@@ -182,8 +182,8 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
   end if
 
   if(pack) then
-    call batch_unpack(psib, copy = .false.)
-    call batch_unpack(hpsib)
+    call psib%do_unpack(copy = .false.)
+    call hpsib%do_unpack
   end if
 
   POP_SUB(X(hamiltonian_elec_apply_batch))

@@ -317,7 +317,7 @@ contains
         ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
-          call batch_pack(st%group%psib(ib, ik), copy = .true.)
+          call st%group%psib(ib, ik)%do_pack(copy = .true.)
 
           call st%group%psib(ib, ik)%copy(hpsib)
           call st%group%psib(ib, ik)%copy(rhpsib)
@@ -371,7 +371,7 @@ contains
 
           end do
 
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+          call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
           call batch_end(hpsib)
           call batch_end(rhpsib)
@@ -392,7 +392,7 @@ contains
           ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
 
-            call batch_pack(st%group%psib(ib, ik), copy = .true.)
+            call st%group%psib(ib, ik)%do_pack(copy = .true.)
             call st%group%psib(ib, ik)%copy(epsib)
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
@@ -428,7 +428,7 @@ contains
             end do
 
             call batch_end(epsib)
-            call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+            call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
           end do
         end do
