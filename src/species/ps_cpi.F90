@@ -68,7 +68,7 @@ contains
     inquire(file = filename, exist = found)
     if(.not.found) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
     iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
@@ -123,17 +123,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_cpi_process(ps_cpi, lloc)
-    type(ps_cpi_t), intent(inout) :: ps_cpi
-    integer,        intent(in)    :: lloc
+  subroutine ps_cpi_process(ps_cpi, lloc, namespace)
+    type(ps_cpi_t),    intent(inout) :: ps_cpi
+    integer,           intent(in)    :: lloc
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(ps_cpi_process)
 
     ! check norm of rphi
-    call ps_in_grid_check_rphi(ps_cpi%ps_grid)
+    call ps_in_grid_check_rphi(ps_cpi%ps_grid, namespace)
 
     ! Fix the local potential. Final argument is the core radius
-    call ps_in_grid_vlocal(ps_cpi%ps_grid, lloc, M_THREE)
+    call ps_in_grid_vlocal(ps_cpi%ps_grid, lloc, M_THREE, namespace)
 
     ! Calculate kb cosines and norms
     call ps_in_grid_kb_cosines(ps_cpi%ps_grid, lloc)

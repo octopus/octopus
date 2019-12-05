@@ -388,7 +388,7 @@ contains
         call sternheimer_init(sh_mo, sys, complex_response, set_ham_var = 0, set_last_occ_response = em_vars%occ_response) 
       else
         call sternheimer_init(sh_mo, sys, complex_response, set_last_occ_response = em_vars%occ_response) 
-        call sternheimer_build_kxc(sh_mo, sys%gr%mesh, sys%st, sys%ks)
+        call sternheimer_build_kxc(sh_mo, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
       end if
       call messages_experimental("Magneto-optical response")
       allocate_rho_mo = sternheimer_add_fxc(sh_mo) .or. sternheimer_add_hartree(sh_mo)
@@ -546,9 +546,9 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer(sys%namespace)
+            call drun_sternheimer()
           else
-            call zrun_sternheimer(sys%namespace)
+            call zrun_sternheimer()
           end if
 
         end if ! have_to_calculate
@@ -564,9 +564,9 @@ contains
       end do ! ifactor
 
       if(states_are_real(sys%st)) then
-        call dcalc_properties_nonlinear(sys%namespace)
+        call dcalc_properties_nonlinear()
       else
-        call zcalc_properties_nonlinear(sys%namespace)
+        call zcalc_properties_nonlinear()
       end if
 
       last_omega = em_vars%freq_factor(em_vars%nfactor) * em_vars%omega(iomega)
@@ -1424,7 +1424,7 @@ contains
             end if
           end if
           do isigma = 1, em_vars%nsigma
-            call zoutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call zoutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
           end do
         else
 
@@ -1437,7 +1437,7 @@ contains
           end if
 
           do isigma = 1, em_vars%nsigma
-            call doutput_lr(st, gr, em_vars%lr(idir, isigma, ifactor), dirname, idir, isigma, outp, geo, units_out%force)
+            call doutput_lr(outp, namespace, dirname, st, gr, em_vars%lr(idir, isigma, ifactor), idir, isigma, geo, units_out%force)
           end do
 
         end if

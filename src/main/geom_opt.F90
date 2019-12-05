@@ -133,7 +133,7 @@ contains
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
 
     !Minimize
     select case(g_opt%method)
@@ -177,7 +177,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()
   
     ! print out geometry
     call from_coords(g_opt, coords)
@@ -571,7 +571,8 @@ contains
 
     if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, g_opt%syst%namespace, rotate = .false.)
 
-    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
+    call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
+      warn_if_not = .false., die_if_not = .true.)
 
     call geometry_write_xyz(g_opt%geo, './work-geom', g_opt%syst%namespace, append = .true.)
 
@@ -580,7 +581,7 @@ contains
     call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call energy_calc_total(g_opt%syst%namespace, g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
     call scf_run(g_opt%scfv, g_opt%syst%namespace, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &
@@ -646,7 +647,7 @@ contains
     
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
-    call io_mkdir('geom', g_opt%syst%outp%namespace)
+    call io_mkdir('geom', g_opt%syst%namespace)
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last', g_opt%syst%namespace)
 
@@ -654,17 +655,17 @@ contains
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
-          g_opt%syst%outp%namespace)
+          g_opt%syst%namespace)
       else
         call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
-          g_opt%syst%outp%namespace, write_forces = .true.)
+          g_opt%syst%namespace, write_forces = .true.)
       end if
     end if
 
     call from_coords(g_opt, coords)
 
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim('geom/optimization.log'), g_opt%syst%outp%namespace, &
+      iunit = io_open(trim('geom/optimization.log'), g_opt%syst%namespace, &
         action = 'write', position = 'append')
 
       if(geom_iter == 1) then

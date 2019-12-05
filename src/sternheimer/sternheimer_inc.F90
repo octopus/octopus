@@ -66,6 +66,10 @@ subroutine X(sternheimer_solve)(                           &
   
   calculate_rho = this%add_fxc .or. this%add_hartree
 
+  if (st%d%ispin == SPINORS .and. calculate_rho) then
+    call messages_not_implemented('linear response density for spinors', namespace=sys%namespace)
+  end if
+
   SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(residue(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(conv_iters(1:nsigma, st%st_start:st%st_end))
@@ -215,7 +219,7 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%gr, sys%st, ik, &
+          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%namespace, sys%hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
 

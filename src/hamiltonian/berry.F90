@@ -24,6 +24,7 @@ module berry_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -35,8 +36,6 @@ module berry_oct_m
   private
   public ::                 &
     berry_dipole,           &
-    berry_phase_det,        &
-    berry_phase_matrix,     &
     berry_potential,        &
     berry_energy_correction
 
@@ -137,9 +136,7 @@ contains
 
     PUSH_SUB(berry_phase_matrix)
 
-    if(st%parallel_in_states) then
-      call messages_not_implemented("Berry phase parallel in states")
-    end if
+    ASSERT(.not. st%parallel_in_states)
 
     SAFE_ALLOCATE(tmp(1:mesh%np))
     SAFE_ALLOCATE(phase(1:mesh%np))
@@ -187,8 +184,9 @@ contains
   !! \f[
   !! E * (e L / 2 \pi) Im e^{i 2 \pi r / L} / z  
   !! \f]
-  subroutine berry_potential(st, mesh, E_field, pot)
+  subroutine berry_potential(st, namespace, mesh, E_field, pot)
     type(states_elec_t), intent(in)  :: st
+    type(namespace_t),   intent(in)  :: namespace
     type(mesh_t),        intent(in)  :: mesh
     FLOAT,               intent(in)  :: E_field(:) !< (mesh%sb%dim)
     FLOAT,               intent(out) :: pot(:,:)   !< (mesh%np, st%d%nspin)
@@ -197,7 +195,7 @@ contains
     CMPLX :: factor, det
 
     PUSH_SUB(berry_potential)
-    
+
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ispin = 1, st%d%nspin
@@ -211,7 +209,7 @@ contains
             ! If det = 0, mu = -infinity, so this condition should never be reached
             ! if things are working properly.
             write(message(1),*) "Divide by zero: dir = ", idir, " Berry-phase determinant = ", det
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
           pot(1:mesh%np, ispin) = pot(1:mesh%np, ispin) + &
             aimag(factor * exp(M_PI * M_zI * mesh%x(1:mesh%np, idir) / mesh%sb%lsize(idir)))

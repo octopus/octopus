@@ -275,7 +275,7 @@ contains
 
     if(any(this%freq(1:this%num_modes) < -M_EPSILON)) then
       message(1) = "There are imaginary vibrational frequencies (represented as negative)."
-      call messages_warning(1)
+      call messages_warning(1, namespace=this%namespace)
     end if
 
     do imode = 1, this%num_modes

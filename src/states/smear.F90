@@ -75,12 +75,12 @@ contains
 
   !--------------------------------------------------
   subroutine smear_init(this, namespace, ispin, fixed_occ, integral_occs, kpoints)
-    type(smear_t),     intent(out) :: this
-    type(namespace_t), intent(in)    :: namespace
-    integer,           intent(in)  :: ispin
-    logical,           intent(in)  :: fixed_occ
-    logical,           intent(in)  :: integral_occs
-    type(kpoints_t),   intent(in)  :: kpoints
+    type(smear_t),             intent(out) :: this
+    type(namespace_t),         intent(in)  :: namespace
+    integer,                   intent(in)  :: ispin
+    logical,                   intent(in)  :: fixed_occ
+    logical,                   intent(in)  :: integral_occs
+    type(kpoints_t),           intent(in)  :: kpoints
 
     PUSH_SUB(smear_init)
 
@@ -148,7 +148,7 @@ contains
 
       if(this%nik_factor == 0) then
         message(1) = "k-point weights in KPoints or KPointsReduced blocks must be rational numbers for semiconducting smearing."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -189,12 +189,13 @@ contains
 
 
   !--------------------------------------------------
-  subroutine smear_find_fermi_energy(this, eigenvalues, occupations, &
+  subroutine smear_find_fermi_energy(this, namespace, eigenvalues, occupations, &
     qtot, nik, nst, kweights)
-    type(smear_t),   intent(inout) :: this
-    FLOAT,           intent(in)    :: eigenvalues(:,:), occupations(:,:)
-    FLOAT,           intent(in)    :: qtot, kweights(:)
-    integer,         intent(in)    :: nik, nst
+    type(smear_t),     intent(inout) :: this
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(in)    :: eigenvalues(:,:), occupations(:,:)
+    FLOAT,             intent(in)    :: qtot, kweights(:)
+    integer,           intent(in)    :: nik, nst
 
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
@@ -211,7 +212,7 @@ contains
       message(1) = 'Not enough states'
       write(message(2),'(6x,a,f12.6,a,i10)')'(total charge = ', qtot, &
         ' max charge = ', maxq
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     conv = .true.
@@ -304,7 +305,7 @@ contains
 
       if(.not.conv) then
         message(1) = 'Fermi: did not converge.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
     end if
@@ -420,12 +421,11 @@ contains
 
     ! no PUSH_SUB, called too often
 
+    ! smear_delta_function is not defined for SMEAR_FIXED_OCC
+    ASSERT(this%method /= SMEAR_FIXED_OCC)
+    
     deltaf = M_ZERO
     select case(this%method)
-    case(SMEAR_FIXED_OCC)
-      message(1) = "smear_delta_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
-
     case(SMEAR_SEMICONDUCTOR)
       if(abs(xx) <= M_EPSILON) &
         deltaf = this%ef_occ
@@ -479,12 +479,11 @@ contains
 
     PUSH_SUB(smear_step_function)
 
+    ! smear_step_function is not defined for SMEAR_FIXED_OCC
+    ASSERT(this%method /= SMEAR_FIXED_OCC)
+
     stepf = M_ZERO
     select case(this%method)
-    case(SMEAR_FIXED_OCC)
-      message(1) = "smear_step_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
-
     case(SMEAR_SEMICONDUCTOR)
       if(xx > M_ZERO) then
         stepf = M_ONE
@@ -552,12 +551,11 @@ contains
 
     PUSH_SUB(smear_entropy_function)
 
+    ! smear_entropy_function is not defined for SMEAR_FIXED_OCC
+    ASSERT(this%method /= SMEAR_FIXED_OCC)
+
     entropyf = M_ZERO
     select case(this%method)
-    case(SMEAR_FIXED_OCC)
-      message(1) = "smear_entropy_function is not defined for SMEAR_FIXED_OCC."
-      call messages_fatal(1)
-
     case(SMEAR_SEMICONDUCTOR)
 
     case(SMEAR_FERMI_DIRAC)

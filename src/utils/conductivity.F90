@@ -125,7 +125,7 @@
       iunit = io_open('td.general/coordinates', default_namespace, action='read')
 
       call io_skip_header(iunit)
-      call spectrum_count_time_steps(iunit, ntime, deltat)
+      call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
       call io_close(iunit)
 
       nvel = geo%natoms*space%dim
@@ -190,7 +190,7 @@
       if(iunit > 0) then
         
         call io_skip_header(iunit)
-        call spectrum_count_time_steps(iunit, ntime, deltat)
+        call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
         ntime = ntime + 1
 
         call io_skip_header(iunit)
@@ -226,7 +226,7 @@
 
         if(ntime == 1) then
           call io_skip_header(iunit)
-          call spectrum_count_time_steps(iunit, ntime, deltat)
+          call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
           ntime = ntime + 1  
         end if
         

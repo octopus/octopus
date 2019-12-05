@@ -93,7 +93,7 @@ contains
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
-    call sys%st%write_info()
+    call sys%st%write_info(sys%namespace)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
@@ -194,7 +194,7 @@ contains
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
     calc_current_ = optional_default(calc_current, .true.)
-    call states_elec_fermi(sys%st, sys%gr%mesh)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
 
@@ -217,8 +217,8 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
-    call energy_calc_total(sys%hm, sys%gr, sys%st)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+    call energy_calc_total(sys%namespace, sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)
   end subroutine system_h_setup
