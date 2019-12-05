@@ -65,6 +65,7 @@ module linear_solver_oct_m
 
   type linear_solver_args_t
     private
+    type(namespace_t),        pointer :: namespace
     type(linear_solver_t),    pointer :: ls
     type(hamiltonian_elec_t), pointer :: hm
     type(grid_t),             pointer :: gr
@@ -171,7 +172,7 @@ contains
     call parse_variable(namespace, "LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
-    call messages_print_stress(stdout, trim(message(1)))
+    call messages_print_stress(stdout, trim(message(1)), namespace=namespace)
     
     ! solver 
     select case(this%solver)
@@ -205,7 +206,7 @@ contains
 
     call messages_info(1)
     
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
       call messages_experimental("Multigrid linear solver")

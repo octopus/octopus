@@ -416,7 +416,7 @@ contains
          sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(sys%st, scdm, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
+      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands

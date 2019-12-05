@@ -99,9 +99,9 @@
           do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
             
             if(states_are_real(tg%st)) then
-              call states_elec_rotate(gr%mesh, tmp_st, real(rotation_matrix, REAL_PRECISION), iqn)
+              call states_elec_rotate(tmp_st, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
             else
-              call states_elec_rotate(gr%mesh, tmp_st, rotation_matrix, iqn)
+              call states_elec_rotate(tmp_st, namespace, gr%mesh, rotation_matrix, iqn)
             end if
 
             do ist = tg%st%st_start, tg%st%st_end 
@@ -340,20 +340,21 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_density(tg, gr, dir, geo, outp)
-    type(target_t),   intent(in) :: tg
-    type(grid_t),     intent(in) :: gr
-    character(len=*), intent(in) :: dir
-    type(geometry_t), intent(in) :: geo
-    type(output_t),   intent(in) :: outp
+  subroutine target_output_density(tg, namespace, gr, dir, geo, outp)
+    type(target_t),    intent(in) :: tg
+    type(namespace_t), intent(in) :: namespace
+    type(grid_t),      intent(in) :: gr
+    character(len=*),  intent(in) :: dir
+    type(geometry_t),  intent(in) :: geo
+    type(output_t),    intent(in) :: outp
 
     integer :: ierr
     PUSH_SUB(target_output_density)
     
-    call io_mkdir(trim(dir), outp%namespace)
+    call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
       if(tg%density_weight > M_ZERO) then
-        call dio_function_output(outp%how, trim(dir), 'density_target', outp%namespace, gr%mesh, &
+        call dio_function_output(outp%how, trim(dir), 'density_target', namespace, gr%mesh, &
           tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
       end if
     end if

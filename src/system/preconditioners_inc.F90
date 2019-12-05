@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
+subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
   type(preconditioner_t),   intent(in)    :: pre
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   R_TYPE,                   intent(inout) :: a(:,:)
@@ -60,7 +61,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   case default
    write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
-   call messages_fatal(1)
+   call messages_fatal(1, namespace=namespace)
 
   end select
 
@@ -222,8 +223,9 @@ end subroutine X(preconditioner_apply)
 
 ! ----------------------------------------
 
-subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
+subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   type(preconditioner_t),   intent(in)    :: pre
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(batch_t),            intent(inout) :: aa
@@ -250,7 +252,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, gr, hm, psia, psib, omega(ii))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, omega(ii))
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)

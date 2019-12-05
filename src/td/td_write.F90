@@ -136,18 +136,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_kick(mesh, kick, outp, geo, iter)
-    type(mesh_t),     intent(in) :: mesh
-    type(kick_t),     intent(in) :: kick
-    type(output_t),   intent(in) :: outp
-    type(geometry_t), intent(in) :: geo
-    integer,          intent(in) :: iter
+  subroutine td_write_kick(outp, namespace, mesh, kick, geo, iter)
+    type(output_t),    intent(in) :: outp
+    type(namespace_t), intent(in) :: namespace
+    type(mesh_t),      intent(in) :: mesh
+    type(kick_t),      intent(in) :: kick
+    type(geometry_t),  intent(in) :: geo
+    integer,           intent(in) :: iter
 
     character(len=256) :: filename
     PUSH_SUB(td_write_kick)
 
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call output_kick(outp, mesh, geo, kick, filename)
+    call output_kick(outp, namespace, filename, mesh, geo, kick)
 
     POP_SUB(td_write_kick)
   end subroutine td_write_kick
@@ -160,7 +161,7 @@ contains
     type(output_t),           intent(out)   :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
-    type(hamiltonian_elec_t),      intent(inout) :: hm
+    type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
     type(v_ks_t),             intent(inout) :: ks
     logical,                  intent(in)    :: ions_move
@@ -311,7 +312,7 @@ contains
 
     !See comment in zstates_elec_mpdotp
     if(simul_box_is_periodic(gr%sb) .and. writ%out(OUT_POPULATIONS)%write) then
-      call messages_not_implemented("TDOutput populations for periodic systems")
+      call messages_not_implemented("TDOutput populations for periodic systems", namespace=namespace)
     end if
 
 
@@ -319,7 +320,7 @@ contains
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
         message(1) = "TDOutput option td_kpoint_occup and td_floquet do not work with domain parallelization"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -335,14 +336,14 @@ contains
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
     call messages_obsolete_variable(namespace, 'TDDipoleLmax', 'TDMultipoleLmax')
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
       message(1) = 'If harmonic spectrum is to be calculated, atoms should not be allowed to move.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     rmin = geometry_min_distance(geo)
@@ -362,12 +363,12 @@ contains
 
       if(st%parallel_in_states .and. writ%out(OUT_POPULATIONS)%write) then
         message(1) = "Options TDOutput = populations are not implemented for parallel in states."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if (writ%out(OUT_N_EX)%write .and. st%parallel_in_states ) then
         message(1) = "Options TDOutput = n_excited_el is not implemented for parallel in states."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
@@ -388,7 +389,7 @@ contains
           writ%gs_st%st_end = writ%gs_st%nst
         if(ierr /= 0) then
           message(1) = "Unable to read states information."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
  
         ! do this only when not calculating populations, since all states are needed then
@@ -440,7 +441,7 @@ contains
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
         message(1) = "Unable to read wavefunctions for TDOutput."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       call restart_end(restart_gs)
     end if
@@ -510,7 +511,7 @@ contains
     call parse_variable(namespace, 'TDOutputComputeInterval', 50, writ%compute_interval)
     if(writ%compute_interval < 0) then
       message(1) = "TDOutputComputeInterval must be >= 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
 
@@ -822,11 +823,11 @@ contains
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
 
     if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, gr%sb, st, &
+      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, namespace, gr%mesh, gr%sb, st, &
         writ, dt, iter)
 
     if (writ%out(OUT_ACC)%write) then
-      call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
+      call td_write_acc(writ%out(OUT_ACC)%handle, namespace, gr, geo, st, hm, dt, iter)
     end if
       
     if(writ%out(OUT_VEL)%write) &
@@ -862,7 +863,7 @@ contains
     
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
-      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, gr, st, writ%gs_st, iter)
+      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, namespace, gr, st, writ%gs_st, iter)
     end if
 
     !LDA+U outputs
@@ -921,11 +922,11 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, namespace, gr, geo, st, hm, ks, filename)
+    call output_all(outp, namespace, filename, gr, geo, st, hm, ks)
     if(present(dt)) then
-      call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
+      call output_scalar_pot(outp, namespace, filename, gr, geo, hm, iter*dt)
     else
-      if(iter == 0) call output_scalar_pot(outp, gr, geo, hm, filename)
+      if(iter == 0) call output_scalar_pot(outp, namespace, filename, gr, geo, hm)
     end if
  
     call profiling_out(prof)
@@ -1521,8 +1522,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, sb, st, writ, dt, iter)
+  subroutine td_write_populations(out_populations, namespace, mesh, sb, st, writ, dt, iter)
     type(c_ptr),            intent(inout) :: out_populations
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),           intent(in)    :: mesh
     type(simul_box_t),      intent(in)    :: sb
     type(states_elec_t),    intent(inout) :: st
@@ -1540,19 +1542,19 @@ contains
     PUSH_SUB(td_write_populations)
 
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
-    call zstates_elec_matrix(mesh, writ%gs_st, st, dotprodmatrix)
+    call zstates_elec_matrix(writ%gs_st, st, mesh, dotprodmatrix)
 
 
     !See comment in zstates_elec_mpdotp
     ASSERT(.not. simul_box_is_periodic(sb))
 
     ! all processors calculate the projection
-    gsp = zstates_elec_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
+    gsp = zstates_elec_mpdotp(namespace, mesh, writ%gs_st, st, dotprodmatrix)
 
     if(writ%n_excited_states > 0) then
       SAFE_ALLOCATE(excited_state_p(1:writ%n_excited_states))
       do ist = 1, writ%n_excited_states
-        excited_state_p(ist) = zstates_elec_mpdotp(mesh, writ%excited_st(ist), st, dotprodmatrix)
+        excited_state_p(ist) = zstates_elec_mpdotp(namespace, mesh, writ%excited_st(ist), st, dotprodmatrix)
       end do
     end if
 
@@ -1600,8 +1602,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
+  subroutine td_write_acc(out_acc, namespace, gr, geo, st, hm, dt, iter)
     type(c_ptr),              intent(inout) :: out_acc
+    type(namespace_t),       intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -1636,7 +1639,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
+    call td_calc_tacc(namespace, gr, geo, st, hm, acc, dt*iter)
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_acc)
@@ -2309,11 +2312,12 @@ contains
   !> based on projections on the GS orbitals
   !> The procedure is very similar to the td_write_proj
   ! ---------------------------------------------------------
-  subroutine td_write_n_ex(out_nex, outp, gr, st, gs_st, iter)
+  subroutine td_write_n_ex(out_nex, outp, namespace, gr, st, gs_st, iter)
     implicit none
  
     type(c_ptr),         intent(inout) :: out_nex
     type(output_t),      intent(in)    :: outp
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(inout) :: st
     type(states_elec_t), intent(in)    :: gs_st
@@ -2377,7 +2381,7 @@ contains
     Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
       ikpt = states_elec_dim_get_kpoint_index(st%d, ik)
-      call zstates_elec_calc_projections(gr%mesh, st, gs_st, ik, projections, gs_nst)
+      call zstates_elec_calc_projections(st, gs_st, namespace, gr%mesh, ik, projections, gs_nst)
       do ist = 1, gs_nst
         weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 
         do uist = st%st_start, st%st_end
@@ -2407,7 +2411,7 @@ contains
  
   ! now write down the k-resolved part
   write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
-  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", outp%namespace, &
+  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", namespace, &
     gr%mesh, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)
@@ -2616,7 +2620,7 @@ contains
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
     if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
     endif
 
     ! get time of one cycle
@@ -2678,7 +2682,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(hm, gr%mesh, namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(hm, gr%mesh, st, hm_st)
+      call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

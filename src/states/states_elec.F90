@@ -235,7 +235,7 @@ contains
   ! ---------------------------------------------------------
   subroutine states_elec_init(st, namespace, gr, geo)
     type(states_elec_t), target, intent(inout) :: st
-    type(namespace_t),           intent(in)    :: namespace
+    type(namespace_t), target,   intent(in)    :: namespace
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
 
@@ -248,7 +248,6 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_elec_null(st)
-
 
     !%Variable SpinComponents
     !%Type integer
@@ -280,7 +279,7 @@ contains
     if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
       message(2) = "Use KPointsUseTimeReversal = no."
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
       
 
@@ -328,7 +327,7 @@ contains
     call parse_variable(namespace, 'TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable ExtraStates
@@ -351,12 +350,12 @@ contains
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(ntot > 0 .and. nempty > 0) then
       message(1) = 'You cannot set TotalStates and ExtraStates at the same time.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable ExtraStatesToConverge
@@ -375,12 +374,12 @@ contains
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
       message(2) = '(0 <= ExtraStatesToConverge)'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     if(nempty_conv > nempty) then
       message(1) = 'You cannot set ExtraStatesToConverge to an higer value than ExtraStates.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! For non-periodic systems this should just return the Gamma point
@@ -393,7 +392,7 @@ contains
     if(st%qtot < -M_EPSILON) then
       write(message(1),'(a,f12.6,a)') 'Total charge = ', st%qtot, ' < 0'
       message(2) = 'Check Species and ExcessCharge.'
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     endif
 
     select case(st%d%ispin)
@@ -420,7 +419,7 @@ contains
     if(ntot > 0) then
       if(ntot < st%nst) then
         message(1) = 'TotalStates is smaller than the number of states required by the system.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       st%nst = ntot
@@ -430,7 +429,7 @@ contains
     st%nst = st%nst + nempty
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable StatesBlockSize
@@ -466,7 +465,7 @@ contains
     call parse_variable(namespace, 'StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     st%d%block_size = min(st%d%block_size, st%nst)
@@ -733,21 +732,21 @@ contains
       ncols = parse_block_cols(blk, 0)
       if(ncols > st%nst) then
         message(1) = "Too many columns in block Occupations."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         call messages_input_error("Occupations")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
         message(1) = "Wrong number of rows in block Occupations."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         call messages_input_error("Occupations")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
           message(1) = "All rows in block Occupations must have the same number of columns."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
           call messages_input_error("Occupations")
         end if
       end do
@@ -785,7 +784,7 @@ contains
         message(1) = "To balance charge, the first column in block Occupations is taken to refer to state"
         write(message(2),'(a,i6,a)') "number ", start_pos, " but there are too many columns for the number of states."
         write(message(3),'(a,i6,a)') "Solution: set ExtraStates = ", start_pos + ncols - st%nst
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=namespace)
       end if
 
       do ik = 1, st%d%nik
@@ -863,7 +862,7 @@ contains
     if(.not. smear_is_semiconducting(st%smear) .and. .not. st%smear%method == SMEAR_FIXED_OCC) then
       if(.not. unoccupied_states) then
         call messages_write('Smearing needs unoccupied states (via ExtraStates or TotalStates) to be useful.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
     end if
 
@@ -875,7 +874,7 @@ contains
     if(abs(charge - st%qtot) > CNST(1e-6)) then
       message(1) = "Initial occupations do not integrate to total charge."
       write(message(2), '(6x,f12.6,a,f12.6)') charge, ' != ', st%qtot
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     end if
 
     st%uniform_occ = smear_is_semiconducting(st%smear) .and. .not. unoccupied_states
@@ -883,7 +882,7 @@ contains
     if(.not. st%calc_eigenval .and. .not. st%uniform_occ) then
       call messages_write('Calculation of the eigenvalues is required with unoccupied states', new_line = .true.)
       call messages_write('or smearing.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
     POP_SUB(states_elec_read_initial_occs)
@@ -1639,8 +1638,9 @@ contains
   end subroutine states_elec_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_elec_fermi(st, mesh)
+  subroutine states_elec_fermi(st, namespace, mesh)
     type(states_elec_t), intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
 
     !> Local variables.
@@ -1650,7 +1650,7 @@ contains
 
     PUSH_SUB(states_elec_fermi)
 
-    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
+    call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
     call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
@@ -1664,10 +1664,10 @@ contains
     if(abs(charge-st%qtot) > CNST(1e-6)) then
       message(1) = 'Occupations do not integrate to total charge.'
       write(message(2), '(6x,f12.8,a,f12.8)') charge, ' != ', st%qtot
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       if(charge < M_EPSILON) then
         message(1) = "There don't seem to be any electrons at all!"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -1764,7 +1764,7 @@ contains
 
     if(st%scalapack_compatible) then
       if(multicomm_have_slaves(mc)) &
-        call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)")
+        call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)", namespace=namespace)
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
     else
       call blacs_proc_grid_nullify(st%dom_st_proc_grid)
@@ -1782,7 +1782,7 @@ contains
       if(st%nst < st%mpi_grp%size) then
         message(1) = "Have more processors than necessary"
         write(message(2),'(i4,a,i4,a)') st%mpi_grp%size, " processors and ", st%nst, " states."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
@@ -2308,19 +2308,20 @@ contains
 
   ! -----------------------------------------------------------
 
-  subroutine states_elec_write_info(st)
+  subroutine states_elec_write_info(st, namespace)
     class(states_elec_t),    intent(in) :: st
+    type(namespace_t),       intent(in)    :: namespace
 
     PUSH_SUB(states_elec_write_info)
 
-    call messages_print_stress(stdout, "States")
+    call messages_print_stress(stdout, "States", namespace=namespace)
 
     write(message(1), '(a,f12.3)') 'Total electronic charge  = ', st%qtot
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
     write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
     call messages_info(3)
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(states_elec_write_info)
   end subroutine states_elec_write_info
@@ -2389,7 +2390,7 @@ contains
 
     is_frac_occ = .false.
     do ik = 1, st%d%nik
-      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(st, namespace, ik, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
       n_occ(ik) = n_filled + n_partially_filled + n_half_filled
       n_unocc(ik) = st%nst - n_filled
@@ -2492,9 +2493,10 @@ contains
   !! The integer arrays filled, partially_filled and half_filled point
   !!   to the indices where the filled, partially filled and half_filled
   !!   orbitals are, respectively.
-  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
+  subroutine occupied_states(st, namespace, ik, n_filled, n_partially_filled, n_half_filled, &
                              filled, partially_filled, half_filled)
     type(states_elec_t),    intent(in)  :: st
+    type(namespace_t),      intent(in)  :: namespace
     integer,                intent(in)  :: ik
     integer,                intent(out) :: n_filled, n_partially_filled, n_half_filled
     integer,      optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
@@ -2525,7 +2527,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
          end if
       end do
     case(SPIN_POLARIZED, SPINORS)
@@ -2538,7 +2540,7 @@ contains
           if(present(partially_filled)) partially_filled(n_partially_filled) = ist
         elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
           write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
          end if
       end do
     end select

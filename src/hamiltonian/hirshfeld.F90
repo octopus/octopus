@@ -109,7 +109,8 @@ contains
         pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%mesh%sb, icell) 
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos, this%st%d%nspin, atom_density)
+        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), namespace, &
+          pos, this%st%d%nspin, atom_density)
 
         forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
       
@@ -273,9 +274,10 @@ contains
 
   ! -----------------------------------------------
   !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-  subroutine hirshfeld_position_derivative(this, der, iatom, jatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, der, namespace, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
     type(derivatives_t),       intent(in)    :: der
+    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     integer,                   intent(in)    :: jatom
     FLOAT,                     intent(in)    :: density(:, :)
@@ -324,7 +326,7 @@ contains
 
       pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), &
+      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
@@ -343,7 +345,7 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+          call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), namespace, &
                                        pos_i, this%st%d%nspin, &
                                        atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 

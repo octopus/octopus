@@ -468,7 +468,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
 
         call messages_write('No orbital with half-occupancy found. TPA output is not written.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
 
         POP_SUB(states_elec_write_tpa)
         return
@@ -500,7 +500,7 @@ contains
 
         if(mpi_grp_is_root(mpi_world)) then
           call messages_write('Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.')
-          call messages_warning()
+          call messages_warning(namespace=namespace)
         end if
 
       else ! correct size

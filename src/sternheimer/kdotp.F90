@@ -259,13 +259,15 @@ contains
 
       errornorm = M_ZERO
       if(states_are_real(sys%st)) then 
-        call doutput_lr(sys%st, sys%gr, kdotp_vars%lr(1, idir), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+        call doutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
+          units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin)), 8))
         end do
       else
-        call zoutput_lr(sys%st, sys%gr, kdotp_vars%lr(1, idir), KDOTP_DIR, idir, 1, sys%outp, sys%geo, units_out%force)
+        call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
+          units_out%force)
 
         do ispin = 1, sys%st%d%nspin
           errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin)), 8))

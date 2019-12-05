@@ -346,7 +346,7 @@ contains
         print *,rotation(3,:)
       end if
 
-      call pes_out_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+      call pes_out_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
 
       ntodo = product(ll(1:2))
       idone = 0
@@ -473,7 +473,8 @@ contains
   !!  qshep interpolator opbject (interp).
   !
   ! ---------------------------------------------------------
-  subroutine pes_out_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+  subroutine pes_out_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
+    type(namespace_t), intent(in)  :: namespace
     FLOAT,           intent(in)    :: pesK(:,:,:)
     FLOAT,           intent(in)    :: Lk(:,:)
     integer,         intent(in)    :: ll(:)
@@ -497,7 +498,7 @@ contains
     !check dim
     if (dim  <  2 .or. dim > 3) then
       message(1) = "This interpolator works only for 2 <= dim <= 3."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(cube_f(1:np))

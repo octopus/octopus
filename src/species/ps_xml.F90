@@ -21,6 +21,7 @@
 module ps_xml_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use pseudo_oct_m
 
@@ -63,11 +64,12 @@ module ps_xml_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_xml_init(this, filename, fmt, ierr)
-    type(ps_xml_t),   intent(inout) :: this
-    character(len=*), intent(in)    :: filename
-    integer,          intent(in)    :: fmt
-    integer,          intent(out)   :: ierr
+  subroutine ps_xml_init(this, namespace, filename, fmt, ierr)
+    type(ps_xml_t),    intent(inout) :: this
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: filename
+    integer,           intent(in)    :: fmt
+    integer,           intent(out)   :: ierr
 
     integer :: ll, ii, ic, jc
     type(pseudo_t) :: pseudo
@@ -80,32 +82,32 @@ contains
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     if(ierr == PSEUDO_STATUS_UNKNOWN_FORMAT) then
       call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "'")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_ULTRASOFT) then
       call messages_write("Ultrasoft pseudopotential file '" // trim(filename) // "' not supported")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_PAW) then
       call messages_write("PAW pseudopotential file '" // trim(filename) // "' not supported")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
     if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     this%initialized = .true.
@@ -135,7 +137,7 @@ contains
           call messages_write("The pseudopotential file '"//trim(filename)//"' does not contain")
           call messages_new_line()
           call messages_write("the wave functions. Octopus cannot use it.")
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
 
         call pseudo_radial_function(pseudo, ll, this%wavefunction(1, ll))
@@ -196,7 +198,7 @@ contains
       call pseudo_nlcc_density(pseudo, this%nlcc_density(1))
     end if
 
-    if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this)
+    if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this, namespace)
 
     this%pseudo = pseudo
     
@@ -205,8 +207,9 @@ contains
 
   ! ---------------------------------------------------------
   !> checks normalization of the pseudo wavefunctions
-  subroutine ps_xml_check_normalization(this)
-    type(ps_xml_t), intent(in) :: this
+  subroutine ps_xml_check_normalization(this, namespace)
+    type(ps_xml_t),    intent(in) :: this
+    type(namespace_t), intent(in) :: namespace
     
     integer :: ll, ip
     FLOAT   :: nrm, rr
@@ -226,7 +229,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", ll, ' is not normalized'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
     end do

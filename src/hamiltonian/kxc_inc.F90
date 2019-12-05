@@ -19,9 +19,10 @@
 
 ! ---------------------------------------------------------
 ! this is for the third derivative of Exc
-subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
+subroutine xc_get_kxc(xcs, mesh, namespace, rho, ispin, kxc)
   type(xc_t), target, intent(in)    :: xcs
   type(mesh_t),       intent(in)    :: mesh
+  type(namespace_t),  intent(in)    :: namespace
   FLOAT,              intent(in)    :: rho(:, :)
   integer,            intent(in)    :: ispin
   FLOAT,              intent(inout) :: kxc(:,:,:,:)
@@ -39,7 +40,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
 
   if(bitand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
     message(1) = "Only LDA functionals are authorized for now in XCKernel."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   if(ispin == UNPOLARIZED) then
@@ -51,7 +52,7 @@ subroutine xc_get_kxc(xcs, mesh, rho, ispin, kxc)
   do ixc = 1, 2
     if(bitand(functl(ixc)%flags, XC_FLAGS_HAVE_KXC) == 0) then
       message(1) = "Cannot calculate kernel derivative. This functional does not have Kxc available."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
   end do
 
@@ -122,7 +123,7 @@ contains
         dens(i, 2) = max(d(2), M_ZERO)
       case(SPINORS)
         message(1) = 'Do not know how to handle spinors.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
     end do
 

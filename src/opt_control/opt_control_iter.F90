@@ -59,7 +59,6 @@ module opt_control_iter_oct_m
     integer            :: convergence_iunit
     integer            :: velocities_iunit
     logical            :: dump_intermediate
-    type(namespace_t), pointer :: namespace
   end type oct_iterator_t
 
 contains
@@ -68,7 +67,7 @@ contains
   ! ---------------------------------------------------------
   subroutine oct_iterator_init(iterator, namespace, par)
     type(oct_iterator_t),      intent(inout) :: iterator
-    type(namespace_t), target, intent(in)    :: namespace        
+    type(namespace_t),         intent(in)    :: namespace
     type(controlfunction_t),   intent(in)    :: par
 
     PUSH_SUB(oct_iterator_init)
@@ -129,7 +128,6 @@ contains
     iterator%bestJ1_fluence  = M_ZERO
     iterator%bestJ1_J        = M_ZERO
     iterator%bestJ1_ctr_iter = 0
-    iterator%namespace => namespace
 
     SAFE_ALLOCATE(iterator%best_par)
     call controlfunction_copy(iterator%best_par, par)
@@ -176,18 +174,19 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function iteration_manager(j1, par, par_prev, iterator) result(stoploop)
-    FLOAT, intent(in) :: j1
-    type(controlfunction_t), intent(in)  :: par
-    type(controlfunction_t), intent(in)  :: par_prev
-    type(oct_iterator_t), intent(inout) :: iterator
+  logical function iteration_manager(namespace, j1, par, par_prev, iterator) result(stoploop)
+    type(namespace_t),       intent(in)    :: namespace
+    FLOAT,                   intent(in)    :: j1
+    type(controlfunction_t), intent(in)    :: par
+    type(controlfunction_t), intent(in)    :: par_prev
+    type(oct_iterator_t),    intent(inout) :: iterator
 
     FLOAT :: fluence, jfunctional, j2, delta
     logical :: bestj1
 
     PUSH_SUB(iteration_manager)
 
-    if(iterator%dump_intermediate) call iterator_write(iterator, par)
+    if(iterator%dump_intermediate) call iterator_write(namespace, iterator, par)
 
     stoploop = .false.
 
@@ -236,7 +235,7 @@ contains
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
       if(.not.iterator%dump_intermediate) call controlfunction_write(OCT_DIR//'laser.bestJ1', &
-        iterator%best_par, iterator%namespace)
+        iterator%best_par, namespace)
     end if
 
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
@@ -260,7 +259,7 @@ contains
     FLOAT :: j1, j2, fluence, delta
     PUSH_SUB(iteration_manager_direct)
 
-    if(iterator%dump_intermediate) call iterator_write(iterator, par)
+    if(iterator%dump_intermediate) call iterator_write(sys%namespace, iterator, par)
 
     fluence = controlfunction_fluence(par)
     j2 = controlfunction_j2(par)
@@ -337,7 +336,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine iterator_write(iterator, par)
+  subroutine iterator_write(namespace, iterator, par)
+    type(namespace_t),              intent(in) :: namespace
     type(oct_iterator_t),           intent(in) :: iterator
     type(controlfunction_t),        intent(in) :: par
 
@@ -346,7 +346,7 @@ contains
     PUSH_SUB(iterator_write)
 
     write(filename,'(a,i4.4)') OCT_DIR//'laser.', iterator%ctr_iter
-    call controlfunction_write(filename, par, iterator%namespace)
+    call controlfunction_write(filename, par, namespace)
 
     POP_SUB(iterator_write)
   end subroutine iterator_write
