@@ -454,11 +454,12 @@ contains
       if(.not. gamma_only_) then
         ncols = parse_block_cols(blk, 0)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
+          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but should have ', dim
           if(ncols < dim) then
             call messages_fatal(1)
           else
-            call messages_warning(1)
+            write(message(2),'(a)') 'Continuing, but ignoring the additional values.'
+            call messages_warning(2)
           end if
         end if
         do ii = 1, dim
