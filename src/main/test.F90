@@ -556,19 +556,19 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
 
     call exponential_init(te, namespace)
 
-    if(hamiltonian_elec_apply_packed(sys%hm, sys%gr%der%mesh)) then
+    if(hamiltonian_elec_apply_packed(sys%hm)) then
       call batch_pack(sys%st%group%psib(1, 1))
     end if
 
     do itime = 1, param%repetitions
-      call exponential_apply_batch(te, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
@@ -605,7 +605,7 @@ contains
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
@@ -614,9 +614,9 @@ contains
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dsubspace_diag(sdiag, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+        call dsubspace_diag(sdiag, sys%namespace, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
       else
-        call zsubspace_diag(sdiag, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+        call zsubspace_diag(sdiag, sys%namespace, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
       end if
     end do
 
