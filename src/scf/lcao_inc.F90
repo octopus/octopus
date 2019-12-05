@@ -1201,7 +1201,7 @@ end subroutine X(lcao_alt_wf)
 
     PUSH_SUB(X(lcao_alt_get_orbital))
 
-    if(.not. batch_is_ok(orbitalb)) then
+    if(.not. orbitalb%is_ok()) then
 
       call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 

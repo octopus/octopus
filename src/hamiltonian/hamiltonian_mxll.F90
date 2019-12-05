@@ -421,8 +421,8 @@ contains
 
     ASSERT(batch_status(psib) == batch_status(hpsib))
 
-    ASSERT(batch_is_ok(psib))
-    ASSERT(batch_is_ok(hpsib))
+    ASSERT(psib%is_ok())
+    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment

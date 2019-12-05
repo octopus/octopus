@@ -2469,7 +2469,7 @@ contains
 
     PUSH_SUB(signal_damp)
 
-    ASSERT(batch_is_ok(time_function))
+    ASSERT(time_function%is_ok())
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
 
     SAFE_ALLOCATE(weight(time_start:time_end))
@@ -2556,8 +2556,8 @@ contains
 
     PUSH_SUB(fourier_transform)
     
-    ASSERT(batch_is_ok(time_function))
-    ASSERT(batch_is_ok(energy_function))
+    ASSERT(time_function%is_ok())
+    ASSERT(energy_function%is_ok())
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)

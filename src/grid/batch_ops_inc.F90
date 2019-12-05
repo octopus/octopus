@@ -31,7 +31,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   PUSH_SUB(X(batch_axpy_const))
   call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
 
-  call xx%batches_are_compatible(yy)
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
@@ -123,7 +123,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
-  call xx%batches_are_compatible(yy)
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
@@ -369,7 +369,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   PUSH_SUB(X(batch_xpay_vec))
   call profiling_in(xpay_prof, "BATCH_XPAY")
 
-  call xx%batches_are_compatible(yy)
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
@@ -948,7 +948,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")
 
-  call xx%batches_are_compatible(yy)
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)

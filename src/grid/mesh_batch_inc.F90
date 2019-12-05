@@ -44,7 +44,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
   conj = .false.
 
-  call aa%batches_are_compatible(bb)
+  call aa%check_compatibility_with(bb)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.
@@ -337,7 +337,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   cproduct_ = optional_default(cproduct, .false.)
   
-  call aa%batches_are_compatible(bb)
+  call aa%check_compatibility_with(bb)
 
   status = batch_status(aa)
   ASSERT(batch_status(bb) == status)
@@ -810,7 +810,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   ss = R_TOTYPE(M_ZERO)
 
   do ist = 1, nst
-    call phib%batches_are_compatible(psib(ist))
+    call phib%check_compatibility_with(psib(ist))
   end do
 
   drcgs = .false.

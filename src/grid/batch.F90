@@ -46,7 +46,6 @@ module batch_oct_m
     zbatch_allocate,                &
     batch_deallocate,               &
     batch_is_packed,                &
-    batch_is_ok,                    &
     batch_pack,                     &
     batch_unpack,                   &
     batch_status,                   &
@@ -109,8 +108,9 @@ module batch_oct_m
     type(type_t)                           :: type !< only available if the batched is packed
     logical :: special_memory
   contains
-    procedure :: batches_are_compatible
+    procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
+    procedure :: is_ok => batch_is_ok
   end type batch_t
 
   !--------------------------------------------------------------
@@ -487,7 +487,7 @@ contains
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_PACK")
-    ASSERT(batch_is_ok(this))
+    ASSERT(this%is_ok())
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
@@ -696,7 +696,7 @@ contains
 
     PUSH_SUB(batch_write_to_opencl_buffer)
 
-    ASSERT(batch_is_ok(this))
+    ASSERT(this%is_ok())
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -775,7 +775,7 @@ contains
 
     PUSH_SUB(batch_read_from_opencl_buffer)
 
-    ASSERT(batch_is_ok(this))
+    ASSERT(this%is_ok())
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -950,7 +950,7 @@ subroutine batch_copy_data(np, xx, yy)
   PUSH_SUB(batch_copy_data)
   call profiling_in(prof, "BATCH_COPY_DATA")
 
-  call xx%batches_are_compatible(yy)
+  call xx%check_compatibility_with(yy)
 
   select case(batch_status(xx))
   case(BATCH_DEVICE_PACKED)
@@ -994,20 +994,20 @@ end subroutine batch_copy_data
 
 ! --------------------------------------------------------------
 
-subroutine batches_are_compatible(xx, yy)
-  class(batch_t),    intent(in) :: xx
+subroutine batch_check_compatibility_with(this, yy)
+  class(batch_t),    intent(in) :: this
   class(batch_t),    intent(in) :: yy
 
-  PUSH_SUB(batches_are_compatible)
+  PUSH_SUB(batch_check_compatibility_with)
 
-  ASSERT(batch_type(yy) == batch_type(xx))
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
-  ASSERT(xx%dim == yy%dim)
+  ASSERT(batch_type(yy) == batch_type(this))
+  ASSERT(this%nst_linear == yy%nst_linear)
+  ASSERT(batch_status(this) == batch_status(yy))
+  ASSERT(this%dim == yy%dim)
 
-  POP_SUB(batches_are_compatible)
+  POP_SUB(batch_check_compatibility_with)
 
-end subroutine batches_are_compatible
+end subroutine batch_check_compatibility_with
 
 #include "real.F90"
 #include "batch_inc.F90"
