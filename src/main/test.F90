@@ -265,7 +265,7 @@ contains
 
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call sys%st%group%psib(1, 1)%copy(epsib)
+    call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
 
@@ -314,7 +314,7 @@ contains
     if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
-    call sys%st%group%psib(1, 1)%copy(epsib, copy_data = .true.)
+    call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace)
@@ -421,7 +421,7 @@ contains
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
     SAFE_ALLOCATE(hpsib)
-    call sys%st%group%psib(1, 1)%copy(hpsib)
+    call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
       call sys%st%group%psib(1, 1)%do_pack
@@ -671,8 +671,8 @@ contains
       message(1) = 'Info: Testing axpy'
       call messages_info(1)
 
-      call sys%st%group%psib(1, 1)%copy(xx, copy_data = .true.)
-      call sys%st%group%psib(1, 1)%copy(yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
@@ -687,8 +687,8 @@ contains
       message(1) = 'Info: Testing scal'
       call messages_info(1)
 
-      call sys%st%group%psib(1, 1)%copy(xx, copy_data = .true.)
-      call sys%st%group%psib(1, 1)%copy(yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
@@ -703,8 +703,8 @@ contains
       message(1) = 'Info: Testing nrm2'
       call messages_info(1)
 
-      call sys%st%group%psib(1, 1)%copy(xx, copy_data = .true.)
-      call sys%st%group%psib(1, 1)%copy(yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       SAFE_ALLOCATE(tmp(1:xx%nst))
 

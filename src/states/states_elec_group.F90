@@ -132,7 +132,7 @@ contains
 
       do iqn = qn_start, qn_end
         do ib = group_out%block_start, group_out%block_end
-          call group_in%psib(ib, iqn)%copy(group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
+          call group_in%psib(ib, iqn)%copy_to(group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
         end do
       end do
       

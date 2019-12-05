@@ -75,7 +75,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
         call st%group%psib(ib, ik)%do_pack
       end if
       
-      call st%group%psib(ib, ik)%copy(hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        

@@ -831,13 +831,13 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
   SAFE_ALLOCATE(exception_saved(1:gr%mesh%np, 1:st%d%dim, 1:xb%nst))
 
-  call xb%copy(vvb)
-  call xb%copy(res)
-  call xb%copy(zzb)
-  call xb%copy(qqb)
-  call xb%copy(ppb)
-  call xb%copy(deltax)
-  call xb%copy(deltar)
+  call xb%copy_to(vvb)
+  call xb%copy_to(res)
+  call xb%copy_to(zzb)
+  call xb%copy_to(qqb)
+  call xb%copy_to(ppb)
+  call xb%copy_to(deltax)
+  call xb%copy_to(deltar)
 
   call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, xb, vvb)
 

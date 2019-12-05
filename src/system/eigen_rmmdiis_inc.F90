@@ -81,7 +81,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     if(pack) call psib(1)%batch%do_pack
 
-    call psib(1)%batch%copy(resb(1)%batch)
+    call psib(1)%batch%copy_to(resb(1)%batch)
 
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
@@ -109,12 +109,12 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       cycle
     end if
 
-    call psib(1)%batch%copy(psib(2)%batch)
+    call psib(1)%batch%copy_to(psib(2)%batch)
 
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb(1)%batch, psib(2)%batch)
 
-    call psib(1)%batch%copy(resb(2)%batch)
+    call psib(1)%batch%copy_to(resb(2)%batch)
 
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch, ik)
     nops = nops + bsize
@@ -147,7 +147,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) then
-        call psib(iter - 1)%batch%copy(psib(iter)%batch)
+        call psib(iter - 1)%batch%copy_to(psib(iter)%batch)
         call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb(iter - 1)%batch, psib(iter)%batch)
       end if
 
@@ -155,7 +155,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       call batch_xpay(gr%mesh%np, psib(iter - 1)%batch, lambda, psib(iter)%batch)
 
       if(iter > 2) then
-         call psib(iter)%batch%copy(resb(iter)%batch)
+         call psib(iter)%batch%copy_to(resb(iter)%batch)
       end if
 
       ! calculate the residual
@@ -227,7 +227,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       call profiling_out(prof_lc)
 
-      call psib(iter)%batch%copy(resb(iter)%batch)
+      call psib(iter)%batch%copy_to(resb(iter)%batch)
 
       ! re-calculate the residual
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch, ik)
@@ -307,7 +307,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     if(pack) call st%group%psib(ib, ik)%do_pack
   
-    call st%group%psib(ib, ik)%copy(resb(1)%batch)
+    call st%group%psib(ib, ik)%copy_to(resb(1)%batch)
     
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch, ik)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
@@ -403,8 +403,8 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
 
     if(pack) call st%group%psib(ib, ik)%do_pack
 
-    call st%group%psib(ib, ik)%copy(resb)
-    call st%group%psib(ib, ik)%copy(kresb)
+    call st%group%psib(ib, ik)%copy_to(resb)
+    call st%group%psib(ib, ik)%copy_to(kresb)
 
     do isd = 1, sd_steps
 

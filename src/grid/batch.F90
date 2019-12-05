@@ -94,7 +94,7 @@ module batch_oct_m
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
-    procedure :: copy => batch_copy
+    procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
     procedure :: deallocate => batch_deallocate
     procedure :: do_pack => batch_do_pack
@@ -375,56 +375,57 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, pack, copy_data)
-    class(batch_t),          intent(in)    :: bin
-    class(batch_t),          intent(out)   :: bout
-    logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
+  subroutine batch_copy_to(this, dest, pack, copy_data)
+    class(batch_t),          intent(in)    :: this
+    class(batch_t),          intent(out)   :: dest
+    logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
 
     integer :: ii, np
     logical :: pack_, copy_data_
 
-    PUSH_SUB(batch_copy)
+    PUSH_SUB(batch_copy_to)
 
-    call batch_init_empty(bout, bin%dim, bin%nst)
+    call batch_init_empty(dest, this%dim, this%nst)
 
     copy_data_ = optional_default(copy_data, .false.)
 
-    bout%type_of = bin%type_of
 
-    if(bin%type() == TYPE_FLOAT) then
+    dest%type_of = this%type_of
+
+    if(this%type() == TYPE_FLOAT) then
 
       np = 0
-      do ii = 1, bin%nst_linear
-        np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
+      do ii = 1, this%nst_linear
+        np = max(np, ubound(this%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call bout%dallocate(1, bin%nst, np)
+      call dest%dallocate(1, this%nst, np)
 
-    else if(bin%type() == TYPE_CMPLX) then
+    else if(this%type() == TYPE_CMPLX) then
       np = 0
-      do ii = 1, bin%nst_linear
-        np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
+      do ii = 1, this%nst_linear
+        np = max(np, ubound(this%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call bout%zallocate(1, bin%nst, np)
+      call dest%zallocate(1, this%nst, np)
 
     end if
 
-    pack_ = bin%is_packed()
+    pack_ = this%is_packed()
     if(present(pack)) pack_ = pack
-    if(pack_) call bout%do_pack(copy = .false.)
+    if(pack_) call dest%do_pack(copy = .false.)
 
-    do ii = 1, bout%nst
-      bout%states(ii)%ist = bin%states(ii)%ist
+    do ii = 1, dest%nst
+      dest%states(ii)%ist = this%states(ii)%ist
     end do
 
-    bout%ist_idim_index(1:bin%nst_linear, 1:bin%ndims) = bin%ist_idim_index(1:bin%nst_linear, 1:bin%ndims)
+    dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
 
-    if(copy_data_) call bin%copy_data_to(np, bout)
+    if(copy_data_) call this%copy_data_to(np, dest)
     
-    POP_SUB(batch_copy)
-  end subroutine batch_copy
+    POP_SUB(batch_copy_to)
+  end subroutine batch_copy_to
 
   ! ----------------------------------------------------
   !> THREADSAFE
@@ -986,16 +987,16 @@ end subroutine batch_copy_data_to
 
 ! --------------------------------------------------------------
 
-subroutine batch_check_compatibility_with(this, yy)
+subroutine batch_check_compatibility_with(this, target)
   class(batch_t),    intent(in) :: this
-  class(batch_t),    intent(in) :: yy
+  class(batch_t),    intent(in) :: target
 
   PUSH_SUB(batch_check_compatibility_with)
 
-  ASSERT(this%type() == yy%type())
-  ASSERT(this%nst_linear == yy%nst_linear)
-  ASSERT(this%status() == yy%status())
-  ASSERT(this%dim == yy%dim)
+  ASSERT(this%type() == target%type())
+  ASSERT(this%nst_linear == target%nst_linear)
+  ASSERT(this%status() == target%status())
+  ASSERT(this%dim == target%dim)
 
   POP_SUB(batch_check_compatibility_with)
 

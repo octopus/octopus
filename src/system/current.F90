@@ -319,10 +319,10 @@ contains
 
           call st%group%psib(ib, ik)%do_pack(copy = .true.)
 
-          call st%group%psib(ib, ik)%copy(hpsib)
-          call st%group%psib(ib, ik)%copy(rhpsib)
-          call st%group%psib(ib, ik)%copy(rpsib)
-          call st%group%psib(ib, ik)%copy(hrpsib)
+          call st%group%psib(ib, ik)%copy_to(hpsib)
+          call st%group%psib(ib, ik)%copy_to(rhpsib)
+          call st%group%psib(ib, ik)%copy_to(rpsib)
+          call st%group%psib(ib, ik)%copy_to(hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
@@ -393,7 +393,7 @@ contains
           do ib = st%group%block_start, st%group%block_end
 
             call st%group%psib(ib, ik)%do_pack(copy = .true.)
-            call st%group%psib(ib, ik)%copy(epsib)
+            call st%group%psib(ib, ik)%copy_to(epsib)
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
@@ -408,7 +408,7 @@ contains
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
             do idir = 1, der%mesh%sb%dim
-              call st%group%psib(ib, ik)%copy(commpsib(idir))
+              call st%group%psib(ib, ik)%copy_to(commpsib(idir))
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 
