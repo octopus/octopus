@@ -67,6 +67,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   integer :: idir, jj, delta
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM), spacing_new(-1:1)
   logical :: out
+  real(8), parameter :: DELTA_ = CNST(1e-12)
 
   PUSH_SUB(mesh_init_stage_1)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -97,9 +98,10 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       chi(idir) = real(jj, REAL_PRECISION)*mesh%spacing(idir)
       if ( mesh%use_curvilinear ) then
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
-        out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
+        out = x(idir) > sb%lsize(idir) + DELTA_
       else
-        out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
+        ! do the same comparison here as in simul_box_in_box_vec
+        out = chi(idir) > sb%lsize(idir) + DELTA_
       end if
     end do
     mesh%idx%nr(2, idir) = jj - 1
