@@ -70,6 +70,7 @@ dist_share_DATA =                                \
 	13-primitive.01-diamond.inp              \
 	13-primitive.02-graphene.inp             \
 	13-primitive.03-bcc_iron.inp             \
+	13-primitive.04-masked_periodic_boundaries.inp \
 	14-silicon_shifts.01-gs.inp              \
 	14-silicon_shifts.02-td.inp              \
 	14-silicon_shifts.03-td_parstates.inp    \
