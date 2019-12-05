@@ -280,7 +280,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       if(iter /= niter - 1) call batch_end(resb(iter)%batch)
     end do
 
-    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%group%psib(ib, ik))
+    call resb(niter - 1)%batch%copy_data_to(gr%mesh%np, st%group%psib(ib, ik))
 
     call batch_end(resb(niter - 1)%batch)
 

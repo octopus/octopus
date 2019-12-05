@@ -757,7 +757,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, i
     set_phase = set_phase)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders|psi>
-  call batch_copy_data(mesh%np, auxpsib, hpsib)
+  call auxpsib%copy_data_to(mesh%np, hpsib)
   call X(hamiltonian_elec_external)(hm, mesh, psib, hpsib)
   if (hm%bc%abtype == IMAGINARY_ABSORBING) then
     call batch_mul(mesh%np, hm%bc%mf(1:mesh%np), psib, aux2psib)

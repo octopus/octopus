@@ -194,7 +194,7 @@ contains
       do ib = st%group%block_start, st%group%block_end
         call st%group%psib(ib, ik)%copy(psi2(ib, ik))
         if(st%group%psib(ib, ik)%is_packed()) call batch_pack(psi2(ib, ik), copy = .false.)
-        call batch_copy_data(gr%mesh%np, st%group%psib(ib, ik), psi2(ib, ik))
+        call st%group%psib(ib, ik)%copy_data_to(gr%mesh%np, psi2(ib, ik))
       end do
     end do
 
@@ -225,7 +225,7 @@ contains
         ! we are not converged, restore the states
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, psi2(ib, ik), st%group%psib(ib, ik))
+            call psi2(ib, ik)%copy_data_to(gr%mesh%np, st%group%psib(ib, ik))
           end do
         end do
       end if

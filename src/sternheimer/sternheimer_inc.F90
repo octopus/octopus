@@ -160,7 +160,7 @@ subroutine X(sternheimer_solve)(                           &
 
         if(sternheimer_have_rhs(this)) then
           call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1))
-          call batch_copy_data(mesh%np, orhsb, rhsb)
+          call orhsb%copy_data_to(mesh%np, rhsb)
           call batch_end(orhsb)
         else
           call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, &

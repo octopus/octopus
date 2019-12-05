@@ -842,7 +842,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
   call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, xb, vvb)
 
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
-  call batch_copy_data(gr%mesh%np, vvb, res)
+  call vvb%copy_data_to(gr%mesh%np, res)
 
   call mesh_batch_nrm2(gr%mesh, vvb, rho)
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
@@ -914,7 +914,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
     end do
 
     if(iter == 1) then
-      call batch_copy_data(gr%mesh%np, zzb, qqb)
+      call zzb%copy_data_to(gr%mesh%np, qqb)
     else
       call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
     end if
@@ -966,11 +966,11 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
     if(iter == 1) then
 
-      call batch_copy_data(gr%mesh%np, qqb, deltax)
+      call qqb%copy_data_to(gr%mesh%np, deltax)
       call batch_scal(gr%mesh%np, eta*alpha, deltax, a_full = .false.)
       call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
       
-      call batch_copy_data(gr%mesh%np, ppb, deltar)
+      call ppb%copy_data_to(gr%mesh%np, deltar)
       call batch_scal(gr%mesh%np, eta, deltar, a_full = .false.)
       call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 

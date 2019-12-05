@@ -245,7 +245,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
 
   else if(pre%which == PRE_NONE) then
 
-    call batch_copy_data(gr%der%mesh%np, aa, bb)
+    call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
     SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))

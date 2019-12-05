@@ -71,7 +71,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
 #if defined(R_TREAL)
     ! The application of the exponential for the real case is still done one state at a time, as we need
     ! to do a couple of type conversions. To avoid this, we need either a function to convert the
-    ! type of a batch, or to modify the batch_copy_data routine to allow the copy between batches of
+    ! type of a batch, or to modify the batch_copy_data_to routine to allow the copy between batches of
     ! different types.
     do ist = conv + 1, st%nst
       call batch_init(zpsib, hm%d%dim, 1)

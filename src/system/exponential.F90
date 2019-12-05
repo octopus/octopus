@@ -672,7 +672,7 @@ contains
       end if
 
     case(EXP_LANCZOS)
-      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+      if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
       call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
       if (present(inh_psib)) then
         call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
@@ -690,7 +690,7 @@ contains
         write(message(2), '(a)') 'with inhomogeneous term is not implemented'
         call messages_fatal(2)
       end if
-      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+      if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
       call exponential_cheby_batch(te, namespace, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
         call exponential_cheby_batch(te, namespace, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
@@ -740,7 +740,7 @@ contains
     zfact2 = M_z1
     zfact_is_real = .true.
 
-    if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+    if(present(psib2)) call psib%copy_data_to(mesh%np, psib2)
 
     if (present(inh_psib)) then
       zfact = zfact*deltat
@@ -779,7 +779,7 @@ contains
         if(present(psib2)) call batch_axpy(mesh%np, zfact2, hpsi1b, psib2)
       end if
 
-      if(iter /= te%exp_order) call batch_copy_data(mesh%np, hpsi1b, psi1b)
+      if(iter /= te%exp_order) call hpsi1b%copy_data_to(mesh%np, psi1b)
 
     end do
 
@@ -822,9 +822,9 @@ contains
 
     call psib%copy(vb(1))
     if (present(inh_psib)) then
-      call batch_copy_data(mesh%np, inh_psib, vb(1))
+      call inh_psib%copy_data_to(mesh%np, vb(1))
     else
-      call batch_copy_data(mesh%np, psib, vb(1))
+      call psib%copy_data_to(mesh%np, vb(1))
     end if
     call mesh_batch_nrm2(mesh, vb(1), beta)
 
@@ -973,8 +973,8 @@ contains
     call batch_set_zero(psi1)
 
     do j = te%exp_order - 1, 0, -1
-      call batch_copy_data(mesh%np, psi1, psi2)
-      call batch_copy_data(mesh%np, psi0, psi1)
+      call psi1%copy_data_to(mesh%np, psi2)
+      call psi0%copy_data_to(mesh%np, psi1)
 
       call operate_batch(hm, namespace, mesh, psi1, psi0, ik, set_phase, vmagnus)
       zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
@@ -985,7 +985,7 @@ contains
       call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
     end do
 
-    call batch_copy_data(mesh%np, psi0, psib)
+    call psi0%copy_data_to(mesh%np, psib)
     call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
     call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
 

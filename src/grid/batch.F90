@@ -39,7 +39,6 @@ module batch_oct_m
     batch_pack_t,                   &
     batch_t,                        &
     batch_init,                     &
-    batch_copy_data,                &
     batch_end,                      &
     batch_add_state,                &
     dbatch_allocate,                &
@@ -106,6 +105,7 @@ module batch_oct_m
   contains
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
+    procedure :: copy_data_to => batch_copy_data_to
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
     procedure :: pack_size => batch_pack_size
@@ -421,7 +421,7 @@ contains
 
     bout%ist_idim_index(1:bin%nst_linear, 1:bin%ndims) = bin%ist_idim_index(1:bin%nst_linear, 1:bin%ndims)
 
-    if(copy_data_) call batch_copy_data(np, bin, bout)
+    if(copy_data_) call bin%copy_data_to(np, bout)
     
     POP_SUB(batch_copy)
   end subroutine batch_copy
@@ -930,59 +930,59 @@ end subroutine batch_remote_access_stop
 
 ! --------------------------------------------------------------
 
-subroutine batch_copy_data(np, xx, yy)
+subroutine batch_copy_data_to(this, np, dest)
+  class(batch_t),    intent(in)    :: this
   integer,           intent(in)    :: np
-  class(batch_t),    intent(in)    :: xx
-  class(batch_t),    intent(inout) :: yy
+  class(batch_t),    intent(inout) :: dest
 
   integer :: ist, dim2, dim3
   type(profile_t), save :: prof
   integer :: localsize
 
-  PUSH_SUB(batch_copy_data)
-  call profiling_in(prof, "BATCH_COPY_DATA")
+  PUSH_SUB(batch_copy_data_to)
+  call profiling_in(prof, "BATCH_COPY_DATA_TO")
 
-  call xx%check_compatibility_with(yy)
+  call this%check_compatibility_with(dest)
 
-  select case(xx%status())
+  select case(this%status())
   case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(kernel_copy, 0, np)
-    call accel_set_kernel_arg(kernel_copy, 1, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel_copy, 2, log2(xx%pack%size_real(1)))
-    call accel_set_kernel_arg(kernel_copy, 3, yy%pack%buffer)
-    call accel_set_kernel_arg(kernel_copy, 4, log2(yy%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 1, this%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 2, log2(this%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 3, dest%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 4, log2(dest%pack%size_real(1)))
     
-    localsize = accel_kernel_workgroup_size(kernel_copy)/yy%pack%size_real(1)
+    localsize = accel_kernel_workgroup_size(kernel_copy)/dest%pack%size_real(1)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
     
-    call accel_kernel_run(kernel_copy, (/yy%pack%size_real(1), dim2, dim3/), (/yy%pack%size_real(1), localsize, 1/))
+    call accel_kernel_run(kernel_copy, (/dest%pack%size_real(1), dim2, dim3/), (/dest%pack%size_real(1), localsize, 1/))
     
     call accel_finish()
 
   case(BATCH_PACKED)
-    if(yy%type() == TYPE_FLOAT) then
-      call blas_copy(np*xx%pack%size(1), xx%pack%dpsi(1, 1), 1, yy%pack%dpsi(1, 1), 1)
+    if(dest%type() == TYPE_FLOAT) then
+      call blas_copy(np*this%pack%size(1), this%pack%dpsi(1, 1), 1, dest%pack%dpsi(1, 1), 1)
     else
-      call blas_copy(np*xx%pack%size(1), xx%pack%zpsi(1, 1), 1, yy%pack%zpsi(1, 1), 1)
+      call blas_copy(np*this%pack%size(1), this%pack%zpsi(1, 1), 1, dest%pack%zpsi(1, 1), 1)
     end if
 
   case(BATCH_NOT_PACKED)
     !$omp parallel do private(ist)
-    do ist = 1, yy%nst_linear
-      if(yy%type() == TYPE_CMPLX) then
-        call blas_copy(np, xx%states_linear(ist)%zpsi(1), 1, yy%states_linear(ist)%zpsi(1), 1)
+    do ist = 1, dest%nst_linear
+      if(dest%type() == TYPE_CMPLX) then
+        call blas_copy(np, this%states_linear(ist)%zpsi(1), 1, dest%states_linear(ist)%zpsi(1), 1)
       else
-        call blas_copy(np, xx%states_linear(ist)%dpsi(1), 1, yy%states_linear(ist)%dpsi(1), 1)
+        call blas_copy(np, this%states_linear(ist)%dpsi(1), 1, dest%states_linear(ist)%dpsi(1), 1)
       end if
     end do
 
   end select
 
   call profiling_out(prof)
-  POP_SUB(batch_copy_data)
-end subroutine batch_copy_data
+  POP_SUB(batch_copy_data_to)
+end subroutine batch_copy_data_to
 
 ! --------------------------------------------------------------
 

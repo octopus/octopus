@@ -400,7 +400,7 @@ contains
               call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
-              call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
+              call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
             !The call to individual derivatives_perfom routines returns the derivatives along
