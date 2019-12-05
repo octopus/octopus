@@ -116,7 +116,7 @@ contains
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then
-        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions")
+        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions", namespace=namespace)
       end if
 
       select case(axis_type)
@@ -140,14 +140,14 @@ contains
         call axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
       write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
 
-      if(axis_type /= NONE) call geometry_rotate(geo, x1, x2, to)
+      if(axis_type /= NONE) call geometry_rotate(geo, namespace, x1, x2, to)
 
     end if
 
@@ -325,11 +325,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_rotate(geo, from, from2, to)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,            intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,            intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+  subroutine geometry_rotate(geo, namespace, from, from2, to)
+    type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
 
     integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
@@ -339,7 +340,7 @@ contains
     PUSH_SUB(geometry_rotate)
 
     if(geo%space%dim /= 3) &
-      call messages_not_implemented("geometry_rotate in other than 3 dimensions")
+      call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
 
     ! initialize matrices
     m1 = M_ZERO

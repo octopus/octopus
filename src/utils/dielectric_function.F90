@@ -110,7 +110,7 @@ program dielectric_function
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
-  call spectrum_count_time_steps(in_file, time_steps, dt)
+  call spectrum_count_time_steps(default_namespace, in_file, time_steps, dt)
 
   if(parse_is_defined(default_namespace, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
@@ -134,7 +134,7 @@ program dielectric_function
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
-    call spectrum_count_time_steps(ref_file, time_steps_ref, dt_ref)
+    call spectrum_count_time_steps(default_namespace, ref_file, time_steps_ref, dt_ref)
     if(time_steps_ref < time_steps) then
       message(1) = "The reference calculation does not contain enought time steps"
       call messages_fatal(1)

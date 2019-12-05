@@ -36,7 +36,8 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
+subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
+  type(namespace_t),           intent(in)    :: namespace
   type(derivatives_t),         intent(in)    :: der
   type(poisson_t),             intent(in)    :: psolver
   type(states_elec_t), target, intent(in)    :: st
@@ -60,7 +61,8 @@ subroutine X(oep_x) (der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
   call profiling_in(C_PROFILING_XC_EXX, 'XC_EXX')
   PUSH_SUB(X(oep_x))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(der%mesh%sb%kpoints%reduced%npoints > 1) &
+    call messages_not_implemented("exchange operator with k-points", namespace=namespace)
 
   socc = M_ONE / st%smear%el_per_state
   !

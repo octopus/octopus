@@ -17,12 +17,13 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(oct_exchange_operator)(this, mesh, hpsi, ist, ik)
-  type(oct_exchange_t), intent(in)   :: this
+subroutine X(oct_exchange_operator)(this, namespace, mesh, hpsi, ist, ik)
+  type(oct_exchange_t), intent(in)    :: this
+  type(namespace_t),    intent(in)    :: namespace
   type(mesh_t),         intent(in)    :: mesh
-  R_TYPE,              intent(inout) :: hpsi(:, :)
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
+  R_TYPE,               intent(inout) :: hpsi(:, :)
+  integer,              intent(in)    :: ist
+  integer,              intent(in)    :: ik
 
   integer :: ik2
   R_TYPE, allocatable :: psi(:, :), psi2(:, :)
@@ -54,7 +55,8 @@ subroutine X(oct_exchange_operator)(this, mesh, hpsi, ist, ik)
      end do
 
   case(SPINORS)
-    call messages_not_implemented("Function oct_exchange_operator_all for spin_polarized or spinors")
+    call messages_not_implemented("Function oct_exchange_operator for spinors", &
+      namespace=namespace)
   end select
 
   SAFE_DEALLOCATE_A(psi)

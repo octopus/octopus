@@ -624,7 +624,7 @@ contains
 
     ! Read whatever may be read from the block
     if(row>=0) then
-      call read_from_block(blk, row, spec, read_data)
+      call read_from_block(namespace, blk, row, spec, read_data)
       call parse_block_end(blk)
 
       ASSERT(read_data > 0)
@@ -643,7 +643,7 @@ contains
 
    if(read_data == 0) then
       message(1) = 'Species '//trim(spec%label)//' not found.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(species_read)
@@ -965,13 +965,13 @@ contains
       if(max(local_radius, this%ps%rc_max) > CNST(6.0)) then
         call messages_write("One of the radii of your pseudopotential's localized parts seems", new_line = .true.)
         call messages_write("unusually large; check that your pseudopotential is correct.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       if(orbital_radius > CNST(20.0)) then
         call messages_write("The radius of the atomic orbitals given by your pseudopotential seems", new_line = .true.)
         call messages_write("unusually large; check that your pseudopotential is correct.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       if(debug%info) then
@@ -1687,11 +1687,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_from_block(blk, row, spec, read_data)
-    type(block_t),   intent(in)    :: blk
-    integer,         intent(in)    :: row
-    type(species_t), intent(inout) :: spec
-    integer,         intent(out)   :: read_data
+  subroutine read_from_block(namespace, blk, row, spec, read_data)
+    type(namespace_t), intent(in)    :: namespace
+    type(block_t),     intent(in)    :: blk
+    integer,           intent(in)    :: row
+    type(species_t),   intent(inout) :: spec
+    integer,           intent(out)   :: read_data
 
     integer :: ncols, icol, flag, set_read_data, ierr
     type(element_t) :: element
@@ -1712,7 +1713,7 @@ contains
       call messages_write('Found  a species  with the old format.  Please update', new_line = .true.)
       call messages_write('the Species block to the new format, where the second', new_line = .true.)
       call messages_write('column indicates the type of the species.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     ! now we convert back to positive
@@ -1873,7 +1874,7 @@ contains
       case(OPTION__SPECIES__DB_FILE)
         call messages_write("The 'db_file' option for 'Species' block is obsolete. Please use", new_line = .true.)
         call messages_write("the option 'set' or the variable 'PseudopotentialSet' instead.")
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
 
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
@@ -1989,7 +1990,7 @@ contains
 
         if(set_read_data == 0) then
           call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
         
       end if
@@ -1998,7 +1999,7 @@ contains
       
       if(.not. element_valid(element)) then
         call messages_write('Cannot determine the element for species '//trim(spec%label)//'.')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
 
       spec%z = element_atomic_number(element)
@@ -2022,7 +2023,7 @@ contains
           call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", &
                               new_line = .true.)
           call messages_write("You can specify the vdW radius in %Species block.")
-          call messages_warning()
+          call messages_warning(namespace=namespace)
         end if
         call messages_write('Info: default vdW radius for species '//trim(spec%label)//':')
         call messages_write(spec%vdw_radius)

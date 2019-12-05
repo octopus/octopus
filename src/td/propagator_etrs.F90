@@ -87,7 +87,7 @@ contains
       SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt, dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt, dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -97,7 +97,7 @@ contains
 
     else
 
-      call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, CNST(0.5)*dt)
+      call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, CNST(0.5)*dt)
 
     end if
 
@@ -107,7 +107,7 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                time, ionic_scale*dt, move_ions = move_ions)
 
-    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
@@ -116,7 +116,7 @@ contains
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
     
     ! propagate dt/2 with H(time - dt)
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, CNST(0.5)*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_DEALLOCATE_A(vhxc_t1)
@@ -164,7 +164,7 @@ contains
     call messages_info()
 
     !Propagate the states to t+dt/2 and compute the density at t+dt
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt, dt)
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -179,7 +179,7 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
                 time, ionic_scale*dt, move_ions = move_ions)
 
-    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
@@ -202,10 +202,10 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
-      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -274,7 +274,7 @@ contains
     PUSH_SUB(td_aetrs)
 
     ! propagate half of the time step with H(time - dt)
-    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     !Get the potentials from the interpolator
     call propagation_ops_elec_interpolate_get(gr%mesh, hm, tr%vksold)
@@ -284,13 +284,13 @@ contains
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
-    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     !Update Hamiltonian
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
     !Do the time propagation for the second half of the time step
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, M_HALF*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, M_HALF*dt)
 
     POP_SUB(td_aetrs)
   end subroutine td_aetrs
@@ -338,7 +338,7 @@ contains
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
-    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     call v_ks_calc_finish(ks, hm, namespace)
 
@@ -363,9 +363,9 @@ contains
     end if
 
     ! copy vold to a cl buffer
-    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm)) then
       if(family_is_mgga_with_exc(hm%xc)) then
-        call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
+        call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals', namespace=namespace)
       end if
       pnp = accel_padded_size(gr%mesh%np)
       call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
@@ -382,7 +382,7 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
-    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
@@ -393,7 +393,7 @@ contains
       ispin = states_elec_dim_get_spin_index(st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_pack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -430,15 +430,15 @@ contains
         call profiling_out(phase_prof)
 
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(tr%te, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         end if
 
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
-        if (hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+        if (hamiltonian_elec_apply_packed(hm)) then
           call batch_unpack(st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
         end if
@@ -447,7 +447,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm)) then
       call accel_release_buffer(phase_buff)
     end if
 

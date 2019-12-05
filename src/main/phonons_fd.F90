@@ -174,7 +174,7 @@ contains
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total (hm, gr, st)
+        call energy_calc_total (namespace, hm, gr, st)
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
@@ -190,7 +190,7 @@ contains
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total(hm, gr, st)
+        call energy_calc_total(namespace, hm, gr, st)
         call scf_mix_clear(scf)
         call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms

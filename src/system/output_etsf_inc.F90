@@ -28,12 +28,13 @@
 !!
 !! \note to keep things clean, new data MUST be added following this
 !! scheme and using functions.
-subroutine output_etsf(st, gr, geo, dir, outp)
+subroutine output_etsf(outp, namespace, dir, st, gr, geo)
+  type(output_t),         intent(in) :: outp
+  type(namespace_t),      intent(in) :: namespace
+  character(len=*),       intent(in) :: dir
   type(states_elec_t),    intent(in) :: st
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
-  character(len=*),       intent(in) :: dir
-  type(output_t),         intent(in) :: outp
 
   type(cube_t) :: dcube, zcube
   type(cube_function_t) :: cf
@@ -53,9 +54,9 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 #endif
 
   !Create a cube
-  call cube_init(dcube, gr%mesh%idx%ll, gr%sb, outp%namespace, &
+  call cube_init(dcube, gr%mesh%idx%ll, gr%sb, namespace, &
     fft_type=FFT_REAL, dont_optimize = .true.)
-  call cube_init(zcube, gr%mesh%idx%ll, gr%sb, outp%namespace, &
+  call cube_init(zcube, gr%mesh%idx%ll, gr%sb, namespace, &
     fft_type=FFT_COMPLEX, dont_optimize = .true.)
   call cube_function_null(cf)
   
@@ -70,12 +71,13 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
 
-      call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", geometry_dims, geometry_flags, ncid)
+      call output_etsf_file_init(dir//"/geometry-etsf.nc", "Crystallographic_data file", &
+        geometry_dims, geometry_flags, ncid, namespace)
 
-      call output_etsf_geometry_write(geo, gr%sb, ncid)
+      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data)
+      if (.not. lstat) call output_etsf_error(error_data, namespace)
     end if
   end if
 
@@ -86,15 +88,16 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
     call output_etsf_density_dims(st, dcube, density_dims, density_flags)
 
-    call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, density_flags, ncid)
+    call output_etsf_file_init(dir//"/density-etsf.nc", "Density file", density_dims, &
+      density_flags, ncid, namespace)
 
-    call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid)
+    call output_etsf_density_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_geometry_write(geo, gr%sb, ncid)
+      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
 
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data)
+      if (.not. lstat) call output_etsf_error(error_data, namespace)
     end if
 
     call dcube_function_free_rs(dcube, cf)
@@ -104,9 +107,9 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states")
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states", namespace=namespace)
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k")
+      call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k", namespace=namespace)
 
     call dcube_function_alloc_rs(dcube, cf)
 
@@ -115,18 +118,19 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_electrons_dims(st, wfs_dims, wfs_flags)
     call output_etsf_wfs_rsp_dims(st, dcube, wfs_dims, wfs_flags)
 
-    call output_etsf_file_init(dir//"/wfs-etsf.nc", "Wavefunctions file", wfs_dims, wfs_flags, ncid)
+    call output_etsf_file_init(dir//"/wfs-etsf.nc", "Wavefunctions file", wfs_dims, wfs_flags, ncid, &
+      namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_electrons_write(st, ncid)
-      call output_etsf_geometry_write(geo, gr%sb, ncid)
-      call output_etsf_kpoints_write(gr%sb, ncid)
+      call output_etsf_electrons_write(st, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
+      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
     end if
-    call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid)
+    call output_etsf_wfs_rsp_write(st, gr%mesh, dcube, cf, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data)
+      if (.not. lstat) call output_etsf_error(error_data, namespace)
     end if
     
     call dcube_function_free_rs(dcube, cf)
@@ -136,9 +140,9 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states")
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states", namespace=namespace)
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k")
+      call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k", namespace=namespace)
 
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
@@ -150,19 +154,20 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     call output_etsf_basisdata_dims(pw_flags)
     call output_etsf_wfs_pw_dims(shell, pw_dims, pw_flags)
 
-    call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid)
+    call output_etsf_file_init(dir//"/wfs-pw-etsf.nc", "Wavefunctions file", pw_dims, pw_flags, ncid, &
+      namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
-      call output_etsf_electrons_write(st, ncid)
-      call output_etsf_geometry_write(geo, gr%sb, ncid)
-      call output_etsf_kpoints_write(gr%sb, ncid)
-      call output_etsf_basisdata_write(gr%mesh, shell, ncid)
+      call output_etsf_electrons_write(st, ncid, namespace)
+      call output_etsf_geometry_write(geo, gr%sb, ncid, namespace)
+      call output_etsf_kpoints_write(gr%sb, ncid, namespace)
+      call output_etsf_basisdata_write(gr%mesh, shell, ncid, namespace)
     end if
-    call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid, namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
-      if (.not. lstat) call output_etsf_error(error_data)
+      if (.not. lstat) call output_etsf_error(error_data, namespace)
     end if
 
     call fourier_shell_end(shell)
@@ -180,12 +185,13 @@ end subroutine output_etsf
 #ifdef HAVE_ETSF_IO
 ! --------------------------------------------------------
 
-subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
+subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid, namespace)
   character(len=*),        intent(in)    :: filename
   character(len=*),        intent(in)    :: filetype
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
   integer,                 intent(out)   :: ncid
+  type(namespace_t),       intent(in)    :: namespace
 
   logical :: lstat
   type(etsf_io_low_error) :: error_data
@@ -198,27 +204,28 @@ subroutine output_etsf_file_init(filename, filetype, dims, flags, ncid)
   ! result of the matches in the testsuite, will change when the version name is updated.
   call etsf_io_data_init(filename, flags, dims, filetype, "Created by " // &
     PACKAGE_STRING, lstat, error_data, overwrite = .true., k_dependent = .false.)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   call etsf_io_low_open_modify(ncid, filename, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   call etsf_io_low_set_write_mode(ncid, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   POP_SUB(output_etsf_file_init)
 end subroutine output_etsf_file_init
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_error(error_data)
+subroutine output_etsf_error(error_data, namespace)
   type(etsf_io_low_error), intent(in) :: error_data
+  type(namespace_t),       intent(in) :: namespace
 
   PUSH_SUB(output_etsf_error)
   
   call output_etsf_io_low_error_handle(error_data)
   message(1) = "ETSF_IO returned a fatal error. See message above."
-  call messages_fatal(1, only_root_writes = .true.)
+  call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 
   POP_SUB(output_etsf_error)
 end subroutine output_etsf_error
@@ -244,10 +251,11 @@ end subroutine output_etsf_geometry_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_geometry_write(geo, sb, ncid)
+subroutine output_etsf_geometry_write(geo, sb, ncid, namespace)
   type(geometry_t),       intent(in)    :: geo
   type(simul_box_t),      intent(in)    :: sb
   integer,                intent(in)    :: ncid
+  type(namespace_t),      intent(in)    :: namespace
 
   type(etsf_geometry) :: geometry
   integer :: idir, isymm, ispecies, i, j
@@ -313,7 +321,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   end do
 
   call etsf_io_geometry_put(ncid, geometry, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
   
   ! Free the geometry container
   SAFE_DEALLOCATE_P(geometry%primitive_vectors)
@@ -347,9 +355,10 @@ end subroutine output_etsf_kpoints_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_kpoints_write(sb, ncid)
+subroutine output_etsf_kpoints_write(sb, ncid, namespace)
   type(simul_box_t),      intent(in)    :: sb
   integer,                intent(in)    :: ncid
+  type(namespace_t),      intent(in)    :: namespace
   
   type(etsf_kpoints), target :: kpoints
   integer  :: nkpoints, ikpoint
@@ -371,7 +380,7 @@ subroutine output_etsf_kpoints_write(sb, ncid)
   end do
   
   call etsf_io_kpoints_put(ncid, kpoints, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   SAFE_DEALLOCATE_P(kpoints%reduced_coordinates_of_kpoints)
   SAFE_DEALLOCATE_P(kpoints%kpoint_weights)
@@ -403,9 +412,10 @@ end subroutine output_etsf_electrons_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_electrons_write(st, ncid)
+subroutine output_etsf_electrons_write(st, ncid, namespace)
   type(states_elec_t), intent(in)    :: st
   integer,             intent(in)    :: ncid
+  type(namespace_t),   intent(in)    :: namespace
 
   type(etsf_electrons) :: electrons
   type(etsf_io_low_error)  :: error_data
@@ -435,7 +445,7 @@ subroutine output_etsf_electrons_write(st, ncid)
   end do
 
   call etsf_io_electrons_put(ncid, electrons, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   SAFE_DEALLOCATE_P(electrons%number_of_electrons)
   SAFE_DEALLOCATE_P(electrons%eigenvalues%data3D)
@@ -467,12 +477,13 @@ end subroutine output_etsf_density_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
+subroutine output_etsf_density_write(st, mesh, cube, cf, ncid, namespace)
   type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
   integer,               intent(in)    :: ncid
+  type(namespace_t),     intent(in)    :: namespace
 
   type(etsf_main) :: main
   type(etsf_io_low_error)  :: error_data
@@ -510,7 +521,7 @@ subroutine output_etsf_density_write(st, mesh, cube, cf, ncid)
 
   if(mpi_grp_is_root(mpi_world)) then
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if (.not. lstat) call output_etsf_error(error_data, namespace)
   end if
 
   SAFE_DEALLOCATE_P(main%density%data4D)
@@ -546,12 +557,13 @@ end subroutine output_etsf_wfs_rsp_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
+subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid, namespace)
   type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
   integer,               intent(in)    :: ncid
+  type(namespace_t),     intent(in)    :: namespace
 
   integer :: ist, ispin, ik, idim, nspin, zdim, nkpoints, n(3)
   type(etsf_main) :: main
@@ -613,7 +625,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid)
 
   if(mpi_grp_is_root(mpi_world)) then
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if (.not. lstat) call output_etsf_error(error_data, namespace)
   end if
     
   SAFE_DEALLOCATE_A(local_wfs)
@@ -637,10 +649,11 @@ end subroutine output_etsf_basisdata_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_basisdata_write(mesh, shell, ncid)
+subroutine output_etsf_basisdata_write(mesh, shell, ncid, namespace)
   type(mesh_t),          intent(in)    :: mesh
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
+  type(namespace_t),     intent(in)    :: namespace
 
   type(etsf_basisdata) :: basisdata
   type(etsf_io_low_error) :: error_data
@@ -652,7 +665,7 @@ subroutine output_etsf_basisdata_write(mesh, shell, ncid)
   if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
     message(1) = 'Cannot generate a ETSF plane-wave wave-functions file,'
     message(2) = 'spacing is not the same for each direction.'
-    call messages_fatal(2)
+    call messages_fatal(2, namespace=namespace)
   end if
 
   SAFE_ALLOCATE(basisdata%basis_set)
@@ -670,7 +683,7 @@ subroutine output_etsf_basisdata_write(mesh, shell, ncid)
   basisdata%reduced_coordinates_of_plane_waves%data2D(1:3, 1:ng) = shell%red_gvec(1:3, 1:ng)
 
   call etsf_io_basisdata_put(ncid, basisdata, lstat, error_data = error_data)
-  if (.not. lstat) call output_etsf_error(error_data)
+  if (.not. lstat) call output_etsf_error(error_data, namespace)
 
   SAFE_DEALLOCATE_P(basisdata%basis_set)
   SAFE_DEALLOCATE_P(basisdata%kinetic_energy_cutoff)
@@ -700,13 +713,14 @@ end subroutine output_etsf_wfs_pw_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
+subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid, namespace)
   type(states_elec_t),   intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
   type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
+  type(namespace_t),     intent(in)    :: namespace
 
   type(etsf_main) :: main
   type(etsf_io_low_error)  :: error_data
@@ -762,10 +776,10 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
   if(mpi_grp_is_root(mpi_world)) then
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if (.not. lstat) call output_etsf_error(error_data, namespace)
 
     call etsf_io_tools_set_time_reversal_symmetry(ncid, .false., lstat, error_data)
-    if (.not. lstat) call output_etsf_error(error_data)
+    if (.not. lstat) call output_etsf_error(error_data, namespace)
   end if
 
   SAFE_DEALLOCATE_A(local_wfs)

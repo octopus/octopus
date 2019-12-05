@@ -20,13 +20,13 @@
 !
 !> routine for output of model many-body quantities.
 !
-subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
-  type(states_elec_t),    intent(in)    :: st
-  type(namespace_t),      intent(in)    :: namespace
-  type(grid_t),           intent(in)    :: gr ! may have to revert to intent inout if some subroutine complains
-  character(len=*),       intent(in)    :: dir
-  type(geometry_t),       intent(in)    :: geo
+subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
   type(output_t),         intent(in)    :: outp
+  type(namespace_t),      intent(in)    :: namespace
+  character(len=*),       intent(in)    :: dir
+  type(grid_t),           intent(in)    :: gr
+  type(states_elec_t),    intent(in)    :: st
+  type(geometry_t),       intent(in)    :: geo
 
   integer :: mm
   integer :: ierr, iunit
@@ -108,7 +108,7 @@ subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
-      call X(io_function_output)(outp%how, trim(dirname), trim(filename), outp%namespace, &
+      call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, &
         gr%mesh, wf, fn_unit, ierr, geo = geo)
     end if
 

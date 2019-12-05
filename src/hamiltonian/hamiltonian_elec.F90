@@ -178,6 +178,8 @@ module hamiltonian_elec_oct_m
 
     logical, private :: time_zero
 
+    type(namespace_t), pointer :: namespace
+
   contains
   
     procedure :: is_hermitian => hamiltonian_elec_hermitian
@@ -203,7 +205,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
-    type(namespace_t),                          intent(in)    :: namespace
+    type(namespace_t),                  target, intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -211,7 +213,7 @@ contains
     type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
 
-    integer :: iline, icol
+    integer :: iline, icol, il
     integer :: ncols
     type(block_t) :: blk
     type(profile_t), save :: prof
@@ -227,6 +229,8 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
+
+    hm%namespace => namespace
 
     !%Variable ParticleMass
     !%Type float
@@ -254,7 +258,7 @@ contains
     if(parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       call messages_experimental('RashbaSpinOrbitCoupling')
     end if
@@ -453,8 +457,8 @@ contains
 
     call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
     if (hm%pcm%run_pcm) then
-      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
-      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh")
+      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
     end if
     
     !%Variable SCDM_EXX
@@ -469,12 +473,12 @@ contains
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
+        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)", namespace=namespace)
       end if
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%hf_st, namespace, hm%der, hm%psolver%cube, hm%scdm)
+      call scdm_init(hm%scdm, namespace, hm%hf_st, hm%der, hm%psolver%cube)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -482,7 +486,7 @@ contains
       call messages_experimental('Hartree-Fock parallel in states')
 #else
       call messages_write('Hartree-Fock parallel in states required MPI 2')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
 #endif
     end if
 
@@ -500,6 +504,32 @@ contains
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
+
+    if (hm%apply_packed .and. accel_is_enabled()) then
+      ! Check if we can actually apply the hamiltonian packed
+      if (gr%mesh%use_curvilinear) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (.not. simul_box_is_periodic(gr%mesh%sb)) then
+        do il = 1, hm%ep%no_lasers
+          if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
+            hm%apply_packed = .false.
+            call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
+            call messages_warning(namespace=namespace)
+            exit
+          end if
+        end do
+      end if
+    end if
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
@@ -619,6 +649,8 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(hm%energy)
+
+    nullify(hm%namespace)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
     POP_SUB(hamiltonian_elec_end)
@@ -1008,7 +1040,22 @@ contains
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, time)
-   
+
+    ! Check if projectors are still compatible with apply_packed on GPU
+    if (this%apply_packed .and. accel_is_enabled()) then
+      if (this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (hamiltonian_elec_base_projector_self_overlap(this%hm_base)) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
+        call messages_warning(namespace=namespace)
+      end if
+    end if
+
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
@@ -1038,60 +1085,10 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical function hamiltonian_elec_apply_packed(this, mesh) result(apply)
+  logical function hamiltonian_elec_apply_packed(this) result(apply)
     type(hamiltonian_elec_t),   intent(in) :: this
-    type(mesh_t),          intent(in) :: mesh
-
-    logical, save :: warning_shown = .false.
 
     apply = this%apply_packed
-    ! comment these out; they are tested in the test suite
-    !if(mesh%use_curvilinear) apply = .false.
-    !if(hamiltonian_elec_base_has_magnetic(this%hm_base)) apply = .false.
-    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    
-    !if(this%family_is_mgga_with_exc)  apply = .false.
-    ! keep these checks; currently no tests for these in the test suite
-
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) then
-      call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
-      call messages_warning()
-      apply = .false.
-    end if
-    
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
-    if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-    
-    if(mesh%use_curvilinear .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-    
-    if(hamiltonian_elec_base_projector_self_overlap(this%hm_base) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
-    warning_shown = .true.
 
   end function hamiltonian_elec_apply_packed
 

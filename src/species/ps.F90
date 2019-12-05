@@ -197,14 +197,14 @@ contains
 
     if(ps%file_format == PSEUDO_FORMAT_FILE_NOT_FOUND) then
       call messages_write("Cannot open pseudopotential file '"//trim(filename)//"'.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
                           new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     ps%label   = label
@@ -237,7 +237,7 @@ contains
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
                        " is larger than number available in pseudopotential."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -251,7 +251,7 @@ contains
         ps%llocal = user_llocal
       end if
       
-      call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
+      call ps_psf_process(ps_psf, namespace, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
@@ -284,7 +284,7 @@ contains
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
                        " is larger than number available in pseudopotential."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -298,10 +298,10 @@ contains
       end if
       
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_process(ps_cpi, ps%llocal)
+        call ps_cpi_process(ps_cpi, ps%llocal, namespace)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal)
+        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal, namespace)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
@@ -317,7 +317,7 @@ contains
       ps%llocal    = -1
       ps%lmax    = ps_hgh%l_max
 
-      call hgh_process(ps_hgh)
+      call hgh_process(ps_hgh, namespace)
       call logrid_copy(ps_hgh%g, ps%g)
 
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
@@ -327,7 +327,7 @@ contains
         xml_warned = .true.
       end if
       
-      call ps_xml_init(ps_xml, trim(filename), ps%file_format, ierr)
+      call ps_xml_init(ps_xml, namespace, trim(filename), ps%file_format, ierr)
 
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
@@ -1437,8 +1437,9 @@ contains
   end function ps_has_nlcc
   
   !---------------------------------------
-  FLOAT function ps_density_volume(ps) result(volume)
-    type(ps_t), intent(in) :: ps
+  FLOAT function ps_density_volume(ps, namespace) result(volume)
+    type(ps_t),        intent(in) :: ps
+    type(namespace_t), intent(in) :: namespace
 
     integer :: ip, ispin
     FLOAT :: rr
@@ -1449,7 +1450,7 @@ contains
     
     if (.not. ps_has_density(ps)) then
        message(1) = "The pseudopotential does not contain an atomic density"
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
