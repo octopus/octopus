@@ -817,7 +817,7 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ASSERT(.not. batch_is_packed(psib))
+  ASSERT(.not. psib%is_packed())
   
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 

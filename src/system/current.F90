@@ -239,7 +239,7 @@ contains
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
-        if(batch_is_packed(psib)) then
+        if(psib%is_packed()) then
           do idir = 1, der%mesh%sb%dim
             !$omp parallel do
             do ip = 1, der%mesh%np

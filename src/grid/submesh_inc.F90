@@ -298,7 +298,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
-  ASSERT(.not. batch_is_packed(ss))
+  ASSERT(.not. ss%is_packed())
   
   select case(batch_status(mm))
   case(BATCH_DEVICE_PACKED)
@@ -388,8 +388,8 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
   PUSH_SUB(X(submesh_batch_add))
 
-  ASSERT(.not. batch_is_packed(ss))
-  ASSERT(.not. batch_is_packed(mm))
+  ASSERT(.not. ss%is_packed())
+  ASSERT(.not. mm%is_packed())
   
   ASSERT(mm%nst == ss%nst)
 
@@ -439,8 +439,8 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
 
-  ASSERT(.not. batch_is_packed(ss))
-  ASSERT(.not. batch_is_packed(mm))
+  ASSERT(.not. ss%is_packed())
+  ASSERT(.not. mm%is_packed())
 
   if(this%mesh%use_curvilinear) then
 

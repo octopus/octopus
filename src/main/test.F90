@@ -348,7 +348,7 @@ contains
       end if
     end do
 
-    if(batch_is_packed(epsib)) then
+    if(epsib%is_packed()) then
       call batch_unpack(epsib, force = .true.)
     end if
 
@@ -438,7 +438,7 @@ contains
       end if
     end do
 
-    if(batch_is_packed(hpsib)) then
+    if(hpsib%is_packed()) then
       call batch_unpack(hpsib, force = .true.)
     end if
 
@@ -864,7 +864,7 @@ contains
 
     PUSH_SUB(test_prints_info_batch)
 
-    if(batch_is_packed(psib)) then
+    if (psib%is_packed()) then
       call batch_unpack(psib, force = .true.)
     end if
 

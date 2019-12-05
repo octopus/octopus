@@ -134,7 +134,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   call batch_init(handle%ghost_send, 1, v_local%nst_linear)
   call X(batch_allocate)(handle%ghost_send, 1, v_local%nst_linear, subarray_size(vp%ghost_spoints))
 
-  if(batch_is_packed(v_local)) call batch_pack(handle%ghost_send, copy = .false.)
+  if(v_local%is_packed()) call batch_pack(handle%ghost_send, copy = .false.)
 
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)

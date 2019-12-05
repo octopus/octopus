@@ -65,7 +65,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(present(ghost_update)) ghost_update_ = ghost_update
 
   if(op%mesh%parallel_in_domains .and. ghost_update_) then
-    ASSERT(.not. batch_is_packed(fi))
+    ASSERT(.not. fi%is_packed())
     
     do ist = 1, fi%nst_linear
 #ifdef HAVE_MPI
@@ -89,7 +89,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
+    else if(accel_is_enabled() .and. fi%is_packed() .and. fo%is_packed()) then
       use_opencl = .true.
       call operate_opencl()
     else if(X(function_global) == OP_FORTRAN) then
@@ -107,7 +107,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       nri_loc = nri
 #endif
       
-      if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+      if(fi%is_packed() .and. fo%is_packed()) then
         
         ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
         ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)

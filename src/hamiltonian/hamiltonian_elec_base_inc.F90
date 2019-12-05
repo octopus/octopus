@@ -68,9 +68,9 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
   pot_is_cmplx = .false.
   if(present(Impotential)) pot_is_cmplx = .true.
 
-  if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
-    ASSERT(batch_is_packed(psib))
-    ASSERT(batch_is_packed(vpsib))
+  if(psib%is_packed() .or. vpsib%is_packed()) then
+    ASSERT(psib%is_packed())
+    ASSERT(vpsib%is_packed())
   end if
 
   select case(batch_status(psib))
@@ -528,7 +528,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
   nreal = nst
 #endif
 
-  if(batch_is_packed(psib) .and. accel_is_enabled()) then
+  if(psib%is_packed() .and. accel_is_enabled()) then
 
     call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack%size_real(1))
@@ -636,7 +636,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
     if(npoints == 0) cycle
 
     if(.not. allocated(this%projector_phases)) then
-      if(batch_is_packed(psib)) then
+      if(psib%is_packed()) then
         
         !$omp parallel do private(ist, ip)
         do ip = 1, npoints
@@ -658,7 +658,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
 
     else
       
-      if(batch_is_packed(psib)) then
+      if(psib%is_packed()) then
         !$omp parallel do private(ist)
         do ip = 1, npoints
           do ist = 1, nst
@@ -752,7 +752,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
     call profiling_out(reduce_prof)
   end if
 
-  if(batch_is_packed(vpsib) .and. accel_is_enabled()) then
+  if(vpsib%is_packed() .and. accel_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
       ! only do this if we have points of some projector matrices
@@ -839,7 +839,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
 
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
-        if(batch_is_packed(vpsib)) then
+        if(vpsib%is_packed()) then
           !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             forall(ist = 1:nst)
@@ -858,7 +858,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
         end if
       else
         ! and copy the points from the local buffer to its position
-        if(batch_is_packed(vpsib)) then
+        if(vpsib%is_packed()) then
           !$omp parallel do private(ip, ist, phase) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             phase = conjg(this%projector_phases(ip, imat, ik))
@@ -1027,7 +1027,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
   ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))  
-  ASSERT(.not. (batch_is_packed(psi1b) .and. accel_is_enabled()))
+  ASSERT(.not. (psi1b%is_packed() .and. accel_is_enabled()))
   
   nst = psi1b%nst_linear
 #ifdef R_TCOMPLEX
@@ -1054,7 +1054,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
       call profiling_in(prof_matelement_gather, "PROJ_MAT_ELEM_GATHER")
 
       ! collect all the points we need in a continuous array
-      if(batch_is_packed(psi1b)) then
+      if(psi1b%is_packed()) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
             psi(0, ist, ip) = psi1b%pack%X(psi)(ist, pmat%map(ip))
@@ -1229,7 +1229,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
   call profiling_in(prof, "COMMUTATOR")
 
-  ASSERT(batch_is_packed(psib))
+  ASSERT(psib%is_packed())
 
   nst = psib%nst_linear
 #ifdef R_TCOMPLEX
@@ -1238,7 +1238,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   nreal = nst
 #endif
 
-  if(batch_is_packed(psib) .and. accel_is_enabled()) then
+  if(psib%is_packed() .and. accel_is_enabled()) then
     call X(commutator_opencl)()
     call profiling_out(prof)
     POP_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))

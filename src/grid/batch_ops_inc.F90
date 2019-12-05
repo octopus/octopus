@@ -130,7 +130,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #endif
 
   effsize = yy%nst_linear
-  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
@@ -266,7 +266,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 #endif
 
   effsize = xx%nst_linear
-  if(batch_is_packed(xx)) effsize = xx%pack%size(1)
+  if(xx%is_packed()) effsize = xx%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
@@ -376,7 +376,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #endif
 
   effsize = yy%nst_linear
-  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO

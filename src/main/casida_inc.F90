@@ -322,8 +322,8 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   ilin = batch_inv_index(st%group%psib(iblock, kk), (/ii, idim/))
   alin = batch_inv_index(st%group%psib(ablock, kk), (/ia, idim/))
 
-  ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
-  ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
+  ASSERT(.not. st%group%psib(iblock, kk)%is_packed())
+  ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
 
   do ip = 1, mesh%np
     rho(ip) = R_CONJ(st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)(ip))*st%group%psib(ablock, kk)%states_linear(alin)%X(psi)(ip)

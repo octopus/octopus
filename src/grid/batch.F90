@@ -45,7 +45,6 @@ module batch_oct_m
     dbatch_allocate,                &
     zbatch_allocate,                &
     batch_deallocate,               &
-    batch_is_packed,                &
     batch_pack,                     &
     batch_unpack,                   &
     batch_status,                   &
@@ -111,6 +110,7 @@ module batch_oct_m
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
     procedure :: is_ok => batch_is_ok
+    procedure :: is_packed => batch_is_packed
   end type batch_t
 
   !--------------------------------------------------------------
@@ -145,7 +145,7 @@ contains
 
     PUSH_SUB(batch_end)
 
-    if(this%is_allocated .and. batch_is_packed(this)) then
+    if(this%is_allocated .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
       this%status = BATCH_NOT_PACKED
       this%in_buffer_count = 1
@@ -156,7 +156,7 @@ contains
         SAFE_DEALLOCATE_A(this%pack%dpsi)
         SAFE_DEALLOCATE_A(this%pack%zpsi)
       end if
-    else if(batch_is_packed(this)) then
+    else if(this%is_packed()) then
       call batch_unpack(this, copy, force = .true.)
     end if
 
@@ -360,7 +360,7 @@ contains
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
     ok = ok .and. ubound(this%states_linear, dim = 1) == this%nst_linear
-    if(ok .and. .not. batch_is_packed(this)) then
+    if(ok .and. .not. this%is_packed()) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.
       do ist = 1, this%nst_linear
@@ -411,7 +411,7 @@ contains
 
     end if
 
-    pack_ = batch_is_packed(bin)
+    pack_ = bin%is_packed()
     if(present(pack)) pack_ = pack
     if(pack_) call batch_pack(bout, copy = .false.)
 
@@ -431,7 +431,7 @@ contains
   type(type_t) pure function batch_type(this) result(btype)
     class(batch_t),      intent(in)    :: this
 
-    if(.not. batch_is_packed(this)) then
+    if(.not. this%is_packed()) then
       if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
       if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
     else
@@ -492,7 +492,7 @@ contains
     copy_ = .true.
     if(present(copy)) copy_ = copy
 
-    if(.not. batch_is_packed(this)) then
+    if(.not. this%is_packed()) then
       this%type = batch_type(this)
       this%pack%size(1) = pad_pow2(this%nst_linear)
       this%pack%size(2) = batch_max_size(this)
@@ -589,7 +589,7 @@ contains
 
     call profiling_in(prof, "BATCH_UNPACK")
 
-    if(batch_is_packed(this)) then
+    if(this%is_packed()) then
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
@@ -631,7 +631,7 @@ contains
 
     PUSH_SUB(batch_sync)
 
-    if(batch_is_packed(this)) then
+    if(this%is_packed()) then
       call profiling_in(prof, "BATCH_UNPACK_COPY")
       
       if(accel_is_enabled()) then
