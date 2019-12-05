@@ -39,9 +39,7 @@ module batch_oct_m
     batch_pack_t,                   &
     batch_t,                        &
     batch_init,                     &
-    batch_add_state,                &
-    batch_remote_access_start,      &
-    batch_remote_access_stop
+    batch_add_state
   
   !--------------------------------------------------------------
   type batch_state_t
@@ -109,6 +107,8 @@ module batch_oct_m
     procedure :: linear_to_idim => batch_linear_to_idim
     procedure :: linear_to_ist => batch_linear_to_ist
     procedure :: pack_size => batch_pack_size
+    procedure :: remote_access_start => batch_remote_access_start
+    procedure :: remote_access_stop => batch_remote_access_stop
     procedure :: status => batch_status
     procedure :: type => batch_type
   end type batch_t
