@@ -233,8 +233,9 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, mesh, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time)
+  subroutine exponential_apply(te, namespace, mesh, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time)
     type(exponential_t),      intent(inout) :: te
+    type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(hamiltonian_elec_t), intent(in)    :: hm
     integer,                  intent(in)    :: ist
@@ -282,7 +283,7 @@ contains
             'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
           write(message(3), '(a)') &
             'Taylor expansion ("TDExponentialMethod = taylor") method.'
-          call messages_fatal(3)
+          call messages_fatal(3, namespace=namespace)
         end select
       end if
     end if
@@ -320,9 +321,9 @@ contains
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
-        call zmagnus(hm, mesh, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
+        call zmagnus(hm, namespace, mesh, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
-        call zhamiltonian_elec_apply(hm, mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply(hm, namespace, mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -511,7 +512,7 @@ contains
 
         if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
           write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
@@ -565,7 +566,7 @@ contains
 
           if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
             write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           end if
 
           do idim = 1, hm%d%dim
@@ -607,8 +608,9 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply_batch(te, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time, inh_psib)
+  subroutine exponential_apply_batch(te, namespace, mesh, hm, psib, ik, deltat, psib2, deltat2, vmagnus, imag_time, inh_psib)
     type(exponential_t),             intent(inout) :: te
+    type(namespace_t),               intent(in)    :: namespace
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     integer,                         intent(in)    :: ik
@@ -642,7 +644,7 @@ contains
         write(message(1), '(a)') 'Imaginary time evolution can only be performed with the Lanczos'
         write(message(2), '(a)') 'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
         write(message(3), '(a)') 'Taylor expansion ("TDExponentialMethod = taylor") method.'
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=namespace)
       end select
     else
       deltat_ = TOCMPLX(deltat, M_ZERO)
@@ -662,22 +664,23 @@ contains
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
-      call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus)
+      call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, &
+        vmagnus)
       if (present(inh_psib)) then
-        call exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, vmagnus, &
-          inh_psib)
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, psib2, deltat2_, &
+          vmagnus, inh_psib)
       end if
 
     case(EXP_LANCZOS)
       if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
-      call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
+      call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
       if (present(inh_psib)) then
-        call exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
+        call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
       end if
       if (present(psib2)) then
-        call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
+        call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus)
         if (present(inh_psib)) then
-          call exponential_lanczos_batch(te, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus, inh_psib)
+          call exponential_lanczos_batch(te, namespace, mesh, hm, psib2, ik, deltat2_, .not.phase_correction, vmagnus, inh_psib)
         end if
       end if
 
@@ -688,9 +691,9 @@ contains
         call messages_fatal(2)
       end if
       if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
-      call exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
+      call exponential_cheby_batch(te, namespace, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
-        call exponential_cheby_batch(te, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
+        call exponential_cheby_batch(te, namespace, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
       end if
 
     end select
@@ -706,8 +709,10 @@ contains
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------
-  subroutine exponential_taylor_series_batch(te, mesh, hm, psib, ik, deltat, set_phase, psib2, deltat2, vmagnus, inh_psib)
+  subroutine exponential_taylor_series_batch(te, namespace, mesh, hm, psib, ik, deltat, set_phase, psib2, deltat2, vmagnus, &
+    inh_psib)
     type(exponential_t),             intent(inout) :: te
+    type(namespace_t),               intent(in)    :: namespace
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     type(batch_t),                   intent(inout) :: psib
@@ -757,12 +762,12 @@ contains
       !  the code stops in ZAXPY below without saying why.
 
       if(iter /= 1) then
-        call operate_batch(hm, mesh, psi1b, hpsi1b, ik, set_phase, vmagnus)
+        call operate_batch(hm, namespace, mesh, psi1b, hpsi1b, ik, set_phase, vmagnus)
       else
         if (present(inh_psib)) then
-          call operate_batch(hm, mesh, inh_psib, hpsi1b, ik, set_phase, vmagnus)
+          call operate_batch(hm, namespace, mesh, inh_psib, hpsi1b, ik, set_phase, vmagnus)
         else
-          call operate_batch(hm, mesh, psib, hpsi1b, ik, set_phase, vmagnus)
+          call operate_batch(hm, namespace, mesh, psib, hpsi1b, ik, set_phase, vmagnus)
         end if
       end if
 
@@ -789,8 +794,9 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: Add a reference
-  subroutine exponential_lanczos_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus, inh_psib)
+  subroutine exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat, set_phase, vmagnus, inh_psib)
     type(exponential_t),             intent(inout) :: te
+    type(namespace_t),               intent(in)    :: namespace
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     integer,                         intent(in)    :: ik
@@ -848,7 +854,7 @@ contains
     do iter = 1, te%exp_order
 
       !to apply the Hamiltonian
-      call operate_batch(hm, mesh, vb(iter), vb(iter+1), ik, set_phase, vmagnus)
+      call operate_batch(hm, namespace, mesh, vb(iter), vb(iter+1), ik, set_phase, vmagnus)
 
       if(hm%is_hermitian()) then
         l = max(1, iter - 1)
@@ -888,7 +894,7 @@ contains
 
     if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
       write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 
     if (present(inh_psib)) then
@@ -941,8 +947,9 @@ contains
   !!  od;
   !!  ChebySum := 0.5*(u0 - u2);
   !! \endverbatim
-  subroutine exponential_cheby_batch(te, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
+  subroutine exponential_cheby_batch(te, namespace, mesh, hm, psib, ik, deltat, set_phase, vmagnus)
     type(exponential_t),             intent(inout) :: te
+    type(namespace_t),               intent(in)    :: namespace
     type(mesh_t),                    intent(in)    :: mesh
     type(hamiltonian_elec_t),        intent(inout) :: hm
     integer,                         intent(in)    :: ik
@@ -969,7 +976,7 @@ contains
       call batch_copy_data(mesh%np, psi1, psi2)
       call batch_copy_data(mesh%np, psi0, psi1)
 
-      call operate_batch(hm, mesh, psi1, psi0, ik, set_phase, vmagnus)
+      call operate_batch(hm, namespace, mesh, psi1, psi0, ik, set_phase, vmagnus)
       zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
       call batch_axpy(mesh%np, -hm%spectral_middle_point, psi1, psi0)
@@ -992,8 +999,9 @@ contains
   end subroutine exponential_cheby_batch
 
 
-  subroutine operate_batch(hm, mesh, psib, hpsib, ik, set_phase, vmagnus)
+  subroutine operate_batch(hm, namespace, mesh, psib, hpsib, ik, set_phase, vmagnus)
     type(hamiltonian_elec_t),        intent(inout) :: hm
+    type(namespace_t),               intent(in)    :: namespace
     type(mesh_t),                    intent(in)    :: mesh
     type(batch_t),                   intent(inout) :: psib
     type(batch_t),                   intent(inout) :: hpsib
@@ -1004,9 +1012,9 @@ contains
     PUSH_SUB(operate_batch)
 
     if (present(vmagnus)) then
-      call zhamiltonian_elec_apply_magnus(hm, mesh, psib, hpsib, ik, vmagnus, set_phase = set_phase)
+      call zhamiltonian_elec_apply_magnus(hm, namespace, mesh, psib, hpsib, ik, vmagnus, set_phase = set_phase)
     else
-      call zhamiltonian_elec_apply_batch(hm, mesh, psib, hpsib, ik, set_phase = set_phase)
+      call zhamiltonian_elec_apply_batch(hm, namespace, mesh, psib, hpsib, ik, set_phase = set_phase)
     end if
 
     POP_SUB(operate_batch)
@@ -1016,8 +1024,9 @@ contains
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
   !! Hamiltonian hm.
-  subroutine exponential_apply_all(te, mesh, hm, st, deltat, order)
+  subroutine exponential_apply_all(te, namespace, mesh, hm, st, deltat, order)
     type(exponential_t),      intent(inout) :: te
+    type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(inout) :: mesh
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(states_elec_t),      intent(inout) :: st
@@ -1041,9 +1050,9 @@ contains
       zfact = zfact * deltat / i
       
       if (i == 1) then
-        call zhamiltonian_elec_apply_all(hm, mesh, st, hst1)
+        call zhamiltonian_elec_apply_all(hm, namespace, mesh, st, hst1)
       else
-        call zhamiltonian_elec_apply_all(hm, mesh, st1, hst1)
+        call zhamiltonian_elec_apply_all(hm, namespace, mesh, st1, hst1)
       end if
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -1079,9 +1088,9 @@ contains
         zfact = zfact * deltat / (i+1)
       
         if (i == 1) then
-          call zhamiltonian_elec_apply_all(hm, mesh, hm%inh_st, hst1)
+          call zhamiltonian_elec_apply_all(hm, namespace, mesh, hm%inh_st, hst1)
         else
-          call zhamiltonian_elec_apply_all(hm, mesh, st1, hst1)
+          call zhamiltonian_elec_apply_all(hm, namespace, mesh, st1, hst1)
         end if
 
         do ik = st%d%kpt%start, st%d%kpt%end

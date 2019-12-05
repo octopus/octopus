@@ -757,16 +757,16 @@ contains
 
       if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
         if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+          call dlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
         else
-          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+          call zlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
         end if
       else
         call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
-        call states_elec_fermi(sys%st, sys%gr%mesh)
+        call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
         call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
@@ -799,14 +799,14 @@ contains
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_elec_orthogonalize(sys%st, sys%gr%mesh)
+      call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
         call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
-          call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
+          call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
         end if
 
       end if
@@ -816,7 +816,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_elec_orthogonalize(sys%st, sys%gr%mesh)
+        call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
       end if
 
     end if

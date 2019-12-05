@@ -96,7 +96,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function laser_kind(laser)
+  integer pure elemental function laser_kind(laser)
     type(laser_t), intent(in) :: laser
 
     ! no push_sub allowed in pure function
@@ -385,7 +385,7 @@ contains
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
-            call messages_warning(2)
+            call messages_warning(2, namespace=namespace)
           end if
         else
           call tdf_init(lasers(il)%phi)
@@ -435,7 +435,7 @@ contains
           if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
             message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         end do
       end do

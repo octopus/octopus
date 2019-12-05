@@ -21,6 +21,7 @@
 module ps_psf_file_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_in_grid_oct_m
 
@@ -59,10 +60,11 @@ module ps_psf_file_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_file_read(unit, ascii, psf)
+  subroutine ps_psf_file_read(unit, ascii, psf, namespace)
     integer,             intent(in)    :: unit
     logical,             intent(in)    :: ascii
     type(ps_psf_file_t), intent(inout) :: psf
+    type(namespace_t),   intent(in)    :: namespace
 
     integer  :: ndown, nup, i, l
     character(len=70) :: aux_s
@@ -123,7 +125,7 @@ contains
       if(l /= ndown-1) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
       
       psf%vps(2:, ndown) = psf%vps(2:, ndown) / psf%rofi(2:)
@@ -143,7 +145,7 @@ contains
       if( (l /= nup) .and. (psf%irel == 'rel') ) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
       psf%vso(2:, nup) = psf%vso(2:, nup) / psf%rofi(2:)

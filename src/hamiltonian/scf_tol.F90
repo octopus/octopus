@@ -123,7 +123,7 @@ contains
       message(1) = "Input: Not all convergence criteria can be <= 0"
       message(2) = "Please set one of the following to a nonzero value:"
       message(3) = "LRConvAbsDens | LRConvRelDens"
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
     end if
 
     !%Variable LRTolScheme

@@ -22,7 +22,8 @@
 ! ---------------------------------------------------------
 !> Driver for the LOBPCG eigensolver that performs a per-block,
 !! per-k-point iteration.
-subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
+subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -85,13 +86,13 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
         call states_elec_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
       end do
     
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
+      call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
         ik, pre, tol, n_matvec, conv, diff, constr = psi_constr)
 
       SAFE_DEALLOCATE_A(psi_constr)
       
     else
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, &
+      call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
     end if
 
@@ -137,8 +138,9 @@ end subroutine X(eigensolver_lobpcg)
 !!
 !! There is also a wiki page at
 !! http://octopus-code.org/wiki/Developers:LOBPCG
-subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
+subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, constr)
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -303,14 +305,14 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=namespace)
   end if
 
   ! Get initial Ritz-values and -vectors.
   call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
   call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
 
-  call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
   
   call batch_end(psib)
   call batch_end(hpsib)
@@ -325,7 +327,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: Rayleigh-Ritz procedure for initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=namespace)
   end if
   call X(block_matr_mul)(psi, ritz_vec, tmp, xpsi = all_ev, xres = all_ev)
   call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
@@ -367,7 +369,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, gr, hm, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, res(:, :, ist), tmp(:, :, ist))
       call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, ist), res(:, :, ist))
     end do
 
@@ -385,7 +387,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       message(1) = 'Big problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
       write(message(3), '(a,i6)') 'in iteration #', iter
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
       exit iteration
     end if
 
@@ -403,7 +405,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
     end if
 
     niter = niter + lnuc
@@ -424,7 +426,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       if(no_bof) then
         message(1) = 'Problem: orthonormalization of conjugate directions failed'
         write(message(2), '(a,i6)') 'in iteration #', iter
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
         ! Set directions to zero.
         ! FIXME: they should not be included in the subspace at all in this case.
         ! (the code has to be cleaned up anyway, so this can be done then).
@@ -517,7 +519,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     if(no_bof) then
       message(1) = 'Problem: Rayleigh-Ritz procedure failed'
       write(message(2), '(a,i6)') 'in iteration #', iter
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       exit iteration
     end if
 

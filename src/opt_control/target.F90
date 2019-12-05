@@ -386,11 +386,11 @@ contains
     case(oct_tg_userdefined) 
       call target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
     case(oct_tg_jdensity)
-      call target_output_density(tg, gr, dir, geo, outp)
+      call target_output_density(tg, namespace, gr, dir, geo, outp)
     case(oct_tg_local)
-      call target_output_local(tg, gr, dir, geo, outp)
+      call target_output_local(tg, namespace, gr, dir, geo, outp)
     case(oct_tg_td_local)
-      call target_output_tdlocal(tg, gr, dir, geo, outp)
+      call target_output_tdlocal(tg, namespace, gr, dir, geo, outp)
     case(oct_tg_hhg)
       call target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
     case(oct_tg_hhgnew)
@@ -410,8 +410,9 @@ contains
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(tg, hm, gr, geo, psi, time, max_time)
+  subroutine target_tdcalc(tg, namespace, hm, gr, geo, psi, time, max_time)
     type(target_t),           intent(inout) :: tg
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
@@ -433,7 +434,7 @@ contains
     case(oct_tg_td_local)
       call target_tdcalc_tdlocal(tg, gr, psi, time)
     case(oct_tg_hhg)
-      call target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
+      call target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
     case(oct_tg_jdensity)
       call target_tdcalc_density(tg, gr, psi, time)
     case default
@@ -542,7 +543,7 @@ contains
   !! the time-dependent case.
   FLOAT function target_j1(tg, namespace, gr, qcpsi, geo) result(j1)
     type(target_t),             intent(inout)   :: tg
-    type(namespace_t),          intent(in)      :: namespace
+    type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(in)      :: gr
     type(opt_control_state_t),  intent(inout)   :: qcpsi
     type(geometry_t), optional, intent(in)      :: geo
@@ -557,7 +558,7 @@ contains
     case(oct_tg_groundstate)
       j1 = target_j1_groundstate(tg, gr, psi)
     case(oct_tg_excited)
-      j1 = target_j1_excited(tg, gr, psi)
+      j1 = target_j1_excited(tg, namespace, gr, psi)
     case(oct_tg_gstransformation)
       j1 = target_j1_gstransformation(tg, gr, psi)
     case(oct_tg_userdefined)
@@ -590,12 +591,13 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(tg, gr, qcpsi_in, qcchi_out, geo)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(in)    :: gr
+  subroutine target_chi(tg, namespace, gr, qcpsi_in, qcchi_out, geo)
+    type(target_t),                    intent(inout) :: tg
+    type(namespace_t),                 intent(in)    :: namespace
+    type(grid_t),                      intent(in)    :: gr
     type(opt_control_state_t), target, intent(inout) :: qcpsi_in
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
-    type(geometry_t),  intent(in)    :: geo
+    type(geometry_t),                  intent(in)    :: geo
 
     FLOAT, pointer :: q(:, :), p(:, :)
     type(states_elec_t), pointer :: psi_in, chi_out
@@ -609,7 +611,7 @@ contains
 
       call target_chi_groundstate(tg, gr, psi_in, chi_out)
     case(oct_tg_excited) 
-      call target_chi_excited(tg, gr, psi_in, chi_out)
+      call target_chi_excited(tg, namespace, gr, psi_in, chi_out)
     case(oct_tg_gstransformation)
       call target_chi_gstransformation(tg, gr, psi_in, chi_out)
     case(oct_tg_userdefined)

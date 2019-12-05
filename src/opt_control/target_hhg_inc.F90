@@ -215,7 +215,7 @@
     PUSH_SUB(target_output_hhg)
     
     call io_mkdir(trim(dir), namespace)
-    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -258,11 +258,11 @@
     ddipole = M_z0
     ddipole = tg%td_fitness
 
-    call spectrum_hsfunction_init(tg%dt, namespace, 0, maxiter, maxiter, ddipole)
+    call spectrum_hsfunction_init(tg%dt, 0, maxiter, maxiter, ddipole)
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0
-      call spectrum_hsfunction_min(ww - aa, ww + aa, omega, maxhh)
+      call spectrum_hsfunction_min(namespace, ww - aa, ww + aa, omega, maxhh)
       j1 = j1 + tg%hhg_alpha(jj) * log(-maxhh)
     end do
     call spectrum_hsfunction_end()
@@ -386,8 +386,9 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
+  subroutine target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
     type(target_t),           intent(in)    :: tg
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(inout) :: geo
@@ -397,7 +398,7 @@
     FLOAT :: acc(MAX_DIM)
     PUSH_SUB(target_tdcalc_hhg)
 
-    call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
+    call td_calc_tacc(namespace, gr, geo, psi, hm, acc, time*tg%dt)
     tg%td_fitness(time) = acc(1)
 
     POP_SUB(target_tdcalc_hhg)

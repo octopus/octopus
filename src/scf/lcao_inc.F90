@@ -100,8 +100,9 @@ end subroutine X(lcao_atomic_orbital)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_simple)(this, st, gr, geo, start)
+subroutine X(lcao_simple)(this, namespace, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
+  type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
@@ -141,7 +142,7 @@ subroutine X(lcao_simple)(this, st, gr, geo, start)
 
     ! if we don't have all states we can't orthogonalize right now
     if(st%nst <= this%norbs) then
-      call X(states_elec_orthogonalization_full)(st, gr%mesh, iqn)
+      call X(states_elec_orthogonalization_full)(st, namespace, gr%mesh, iqn)
     end if
 
   end do
@@ -238,7 +239,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
     do ik = kstart, kend
       ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply)(hm, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs
@@ -645,7 +646,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
         call batch_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi)
 
         call X(submesh_batch_add)(this%sphere(iatom), this%orbitals(iatom), psib)
-        call X(hamiltonian_elec_apply_batch)(hm, gr%mesh, psib, hpsib, ik)
+        call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
 
         do jatom = 1, geo%natoms
           if(.not. this%calc_atom(jatom)) cycle
