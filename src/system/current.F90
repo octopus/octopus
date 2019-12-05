@@ -835,7 +835,7 @@ contains
         if((ncols  /=  4) .and. (ncols /= 5) .and. (ncols /= 6) .and. (ncols /= 7)) then
           message(1) = 'Each line in the MaxwellExternalCurrent block must have'
           message(2) = 'four, five, six or or seven columns.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         call parse_block_integer(blk, il - 1, 0, st%external_current_modus(il))
@@ -870,7 +870,7 @@ contains
             if (ierr /= 0) then            
               write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
               write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
-              call messages_warning(2)
+              call messages_warning(2, namespace=namespace)
             end if
           else
             call tdf_init(st%external_current_td_phase(il))
