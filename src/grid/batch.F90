@@ -41,9 +41,6 @@ module batch_oct_m
     batch_init,                     &
     batch_end,                      &
     batch_add_state,                &
-    dbatch_allocate,                &
-    zbatch_allocate,                &
-    batch_deallocate,               &
     batch_inv_index,                &
     batch_ist_idim_to_linear,       &
     batch_linear_to_ist,            &
@@ -101,9 +98,12 @@ module batch_oct_m
     type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
   contains
+    procedure ::  dallocate => dbatch_allocate
+    procedure ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: copy => batch_copy
     procedure :: copy_data_to => batch_copy_data_to
+    procedure :: deallocate => batch_deallocate
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: is_ok => batch_is_ok
@@ -161,7 +161,7 @@ contains
     end if
 
     if(this%is_allocated) then
-      call batch_deallocate(this)
+      call this%deallocate
     end if
 
     nullify(this%dpsicont)
@@ -399,7 +399,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call dbatch_allocate(bout, 1, bin%nst, np)
+      call bout%dallocate(1, bin%nst, np)
 
     else if(bin%type() == TYPE_CMPLX) then
       np = 0
@@ -407,7 +407,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call zbatch_allocate(bout, 1, bin%nst, np)
+      call bout%zallocate(1, bin%nst, np)
 
     end if
 

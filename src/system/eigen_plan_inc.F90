@@ -169,7 +169,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
 
       call batch_init(vvb, st%d%dim, blk)
       call batch_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:))
-      call X(batch_allocate)(vvb, d1 + 1, d1 + blk, gr%mesh%np_part)
+      call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk

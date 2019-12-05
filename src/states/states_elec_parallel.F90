@@ -179,9 +179,9 @@ contains
       call batch_init(psib, this%d%dim, this%group%block_size(ib))
 
       if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
       
       call psib%do_pack(copy = .false.)

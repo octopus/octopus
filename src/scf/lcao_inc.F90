@@ -1206,7 +1206,7 @@ end subroutine X(lcao_alt_wf)
       call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
       ! allocate memory
-      call X(batch_allocate)(orbitalb, 1, norbs, sphere%np)
+      call orbitalb%X(allocate)(1, norbs, sphere%np)
       
       ! generate the orbitals
       do iorb = 1, norbs

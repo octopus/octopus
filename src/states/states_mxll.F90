@@ -328,23 +328,23 @@ contains
     PUSH_SUB(states_mxll_allocate)
 
     call batch_init(st%rsb, st%d%dim, 1)
-    call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rsb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rsb)
 
     call batch_init(st%rs_transb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_transb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_transb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_transb)
  
     call batch_init(st%rs_longb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_longb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_longb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_longb)
 
     call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_curr_dens_rest1b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest1b)
     
     call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_curr_dens_rest2b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative
