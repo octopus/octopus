@@ -33,6 +33,7 @@ module mesh_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
@@ -107,6 +108,9 @@ module mesh_oct_m
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
+
+    logical :: masked_periodic_boundaries
+    character(len=256) :: periodic_boundary_mask
   contains
     procedure :: load => mesh_load
     procedure :: dump => mesh_dump
@@ -774,6 +778,7 @@ contains
     integer,      intent(in)    :: ip
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
+    FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
     
     ! no push_sub, called too frequently
 
@@ -787,6 +792,12 @@ contains
     end do
     
     ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
+
+    if(mesh%masked_periodic_boundaries .and. ipp /= ip) then
+      call mesh_r(mesh, ipp, rr, coords = xx)
+      call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
+      if(int(ufn_re) == 0) ipp = ip
+    end if 
     
   end function mesh_periodic_point
   

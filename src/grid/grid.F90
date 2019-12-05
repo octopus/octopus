@@ -195,6 +195,19 @@ contains
       end if
     end if
 
+    !%Variable PeriodicBoundaryMask
+    !%Type block
+    !%Section Mesh
+    !%Description
+    !% Defines a mask for which periodic boundaries are replaced by zero boundary conditions.
+    !%End
+    if(parse_block(namespace, 'PeriodicBoundaryMask', blk) < 0) then
+      gr%mesh%masked_periodic_boundaries = .false.
+    else
+      gr%mesh%masked_periodic_boundaries = .true.
+      call parse_block_string(blk, 0, 0, gr%mesh%periodic_boundary_mask)
+    end if
+
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, namespace, gr%sb, geo, grid_spacing)
 
