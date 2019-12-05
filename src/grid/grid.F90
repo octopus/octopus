@@ -199,13 +199,14 @@ contains
     !%Type block
     !%Section Mesh
     !%Description
-    !% Defines a mask for which periodic boundaries are replaced by zero boundary conditions.
+    !% (Experimental) Defines a mask for which periodic boundaries are replaced by zero boundary conditions.
     !%End
     if(parse_block(namespace, 'PeriodicBoundaryMask', blk) < 0) then
       gr%mesh%masked_periodic_boundaries = .false.
     else
       gr%mesh%masked_periodic_boundaries = .true.
       call parse_block_string(blk, 0, 0, gr%mesh%periodic_boundary_mask)
+      call messages_experimental('PeriodicBoundaryMask')
     end if
 
     ! initialize curvilinear coordinates
