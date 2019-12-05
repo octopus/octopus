@@ -40,15 +40,18 @@
     implicit none
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvel, ivel
+    integer :: istart, iend, energy_steps, out_file
     FLOAT, allocatable :: time(:), velocities(:, :)
-    FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
+    FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :)
     FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
+    CMPLX, allocatable :: invdielectric(:, :)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
     type(grid_t)     :: gr
-    type(states_elec_t)    :: st
+    type(states_elec_t) :: st
+    type(block_t)     :: blk
     type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
     FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
     integer :: ifreq, max_freq
@@ -56,9 +59,10 @@
     FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
     type(namespace_t) :: default_namespace    
+    character(len=120) :: header
     
     ! Initialize stuff
-    call global_init(is_serial = .true.)		 
+    call global_init(is_serial = .true.) 
 
     call getopt_init(ierr)
     call getopt_end()
@@ -111,7 +115,7 @@
 
     call grid_init_stage_0(gr, default_namespace, geo, space)
     call states_elec_init(st, default_namespace, gr, geo)
-    
+
     if(from_forces) then
 
       call messages_write('Info: Reading coordinates from td.general/coordinates')
@@ -121,40 +125,7 @@
       iunit = io_open('td.general/coordinates', default_namespace, action='read')
 
       call io_skip_header(iunit)
-
-      ntime = 1
-      iter = 1
-
-      ! check the number of time steps we will read
-      do
-        read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime, &
-          ((geo%atom(ii)%x(jj), jj = 1, 3), ii = 1, geo%natoms), &
-          ((geo%atom(ii)%v(jj), jj = 1, 3), ii = 1, geo%natoms)
-
-        curtime = units_to_atomic(units_out%time, curtime)
-
-        if(ierr /= 0 .or. curtime >= spectrum%end_time) then
-          iter = iter - 1	! last iteration is not valid
-          ntime = ntime - 1
-          exit
-        end if
-
-        if(iter /= read_iter + 1) then
-          call messages_write("Error while reading file 'td.general/coordinates',", new_line = .true.)
-          call messages_write('expected iteration ')
-          call messages_write(iter - 1)
-          call messages_write(', got iteration ')
-          call messages_write(read_iter)
-          call messages_write('.')
-          call messages_fatal()
-        end if
-
-        ! ntime counts how many steps are gonna be used
-        if (curtime >= spectrum%start_time .and. mod(iter, skip) == 0) ntime = ntime + 1 
-
-        iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
-      end do
-
+      call spectrum_count_time_steps(iunit, ntime, deltat)
       call io_close(iunit)
 
       nvel = geo%natoms*space%dim
@@ -178,7 +149,7 @@
         curtime = units_to_atomic(units_out%time, curtime)
 
         if(ierr /= 0 .or. curtime >= spectrum%end_time) then
-          iter = iter - 1	! last iteration is not valid
+          iter = iter - 1 ! last iteration is not valid
           ntime = ntime - 1
           exit
         end if
@@ -209,60 +180,27 @@
 
     else !from_forces
 
+      vel0(:) = M_ONE
+
       call messages_write('Info: Reading total current from td.general/total_current')
       call messages_info()
 
-      ! Opens the coordinates files.
       iunit = io_open('td.general/total_current', default_namespace, action='read')
-
-      call io_skip_header(iunit)
-
-      ntime = 1
-      iter = 1
-
-      ! check the number of time steps we will read
-      do
-        read(unit = iunit, iostat = ierr, fmt = *) read_iter, curtime
-
-        curtime = units_to_atomic(units_out%time, curtime)
-
-        if(ierr /= 0 .or. curtime >= spectrum%end_time) then
-          iter = iter - 1	! last iteration is not valid
-          ntime = ntime - 1
-          exit
-        end if
-        
-        if(iter /= read_iter + 1) then
-          call messages_write("Error while reading file 'td.general/total_current',", new_line = .true.)
-          call messages_write('expected iteration ')
-          call messages_write(iter - 1)
-          call messages_write(', got iteration ')
-          call messages_write(read_iter)
-          call messages_write('.')
-          call messages_fatal()
-        end if
-        
-        ! ntime counts how many steps are gonna be used
-        if (curtime >= spectrum%start_time .and. mod(iter, skip) == 0) ntime = ntime + 1 
-
-        iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
-      end do
-      
-      call io_close(iunit)
-
-      SAFE_ALLOCATE(total_current(1:3, 1:ntime))
-      SAFE_ALLOCATE(heat_current(1:3, 1:ntime))
-      SAFE_ALLOCATE(time(1:ntime))
-      
-      iunit = io_open('td.general/total_current', default_namespace, action='read', status='old', die=.false.)
       
       if(iunit > 0) then
         
         call io_skip_header(iunit)
+        call spectrum_count_time_steps(iunit, ntime, deltat)
+        ntime = ntime + 1
+
+        call io_skip_header(iunit)
+
+        SAFE_ALLOCATE(total_current(1:space%dim, 1:ntime))
+        SAFE_ALLOCATE(heat_current(1:space%dim, 1:ntime))
+        SAFE_ALLOCATE(time(1:ntime))
         
         do iter = 1, ntime
-          read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-            total_current(1, iter), total_current(2, iter), total_current(3, iter)
+          read(iunit, *) read_iter, time(iter), (total_current(ii, iter), ii = 1, space%dim)
         end do
         
         call io_close(iunit)
@@ -270,114 +208,136 @@
       else
         
         call messages_write("Cannot find the 'td.general/total_current' file.")
-        call messages_write(" Conductivity will only be calculated from the forces")
+        call messages_write("Conductivity will only be calculated from the forces")
         call messages_warning()
+
+        ntime = 1
+        SAFE_ALLOCATE(total_current(1:space%dim, 1:ntime))
+        SAFE_ALLOCATE(heat_current(1:space%dim, 1:ntime))
+        SAFE_ALLOCATE(time(1:ntime))
         
-        total_current(1:3, 1:ntime) = CNST(0.0)
+        total_current(1:space%dim, 1:ntime) = M_ZERO
         
       end if
 
-         iunit = io_open('td.general/total_heat_current', default_namespace, action='read', status='old', die=.false.)
+      iunit = io_open('td.general/total_heat_current', default_namespace, action='read', status='old', die=.false.)
       
       if(iunit > 0) then
+
+        if(ntime == 1) then
+          call io_skip_header(iunit)
+          call spectrum_count_time_steps(iunit, ntime, deltat)
+          ntime = ntime + 1  
+        end if
         
         call io_skip_header(iunit)
         
         do iter = 1, ntime
-          read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
-            heat_current(1, iter), heat_current(2, iter), heat_current(3, iter)
-          !write(*,*)heat_current(1, iter), heat_current(2, iter), heat_current(3, iter)
-       end do
+          read(iunit, *) read_iter, time(iter), (heat_current(ii, iter), ii = 1, space%dim)
+        end do
         
        call io_close(iunit)
        
       else
         
         call messages_write("Cannot find the 'td.general/heat_current' file.")
-        call messages_write(" Conductivity will only be calculated from the forces")
+        call messages_write("Thermal conductivity will only be calculated from the forces")
         call messages_warning()
         
-        heat_current(1:3, 1:ntime) = CNST(0.0)
+        heat_current(1:space%dim, 1:ntime) = M_ZERO
         
       end if
    end if
    
-    deltat = time(2) - time(1)
-      
 
-    SAFE_ALLOCATE(curr(ntime, 1:3, 1:1))
-    SAFE_ALLOCATE(heatcurr(ntime, 1:3, 1:1))
-    integral = CNST(0.0)
+   SAFE_ALLOCATE(curr(ntime, 1:space%dim))
+   SAFE_ALLOCATE(heatcurr(ntime, 1:space%dim, 1:1))
+   integral = M_ZERO
 
-    if(from_forces) iunit = io_open('td.general/current_from_forces', default_namespace, action='write')
+   if(from_forces) iunit = io_open('td.general/current_from_forces', default_namespace, action='write')
 
-    do iter = 1, ntime
+   do iter = 1, ntime
 
-      if(from_forces) then
-        if(iter == 1) then
-          vel0 = CNST(0.0)
-          ivel = 1
-          do ii = 1, geo%natoms
-            do jj = 1, space%dim
-              vel0(jj) = vel0(jj) + velocities(ivel, iter)/dble(geo%natoms)
-              ivel = ivel + 1
-            end do
-          end do
-        end if
+     if(from_forces) then
+       if(iter == 1) then
+         vel0 = M_ZERO
+         ivel = 1
+         do ii = 1, geo%natoms
+           do jj = 1, space%dim
+             vel0(jj) = vel0(jj) + velocities(ivel, iter)/dble(geo%natoms)
+             ivel = ivel + 1
+           end do
+         end do
+       end if
         
-        velcm = CNST(0.0)
-        current = CNST(0.0)
+       velcm = M_ZERO
+       current = M_ZERO
         
-        ivel = 1
-        do ii = 1, geo%natoms
-          do jj = 1, space%dim
-            velcm(jj) = velcm(jj) + velocities(ivel, iter)/dble(geo%natoms)
-            current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%rcell_volume*(velocities(ivel, iter) - vel0(jj))
-            ivel = ivel + 1
-          end do
-        end do
+       ivel = 1
+       do ii = 1, geo%natoms
+         do jj = 1, space%dim
+           velcm(jj) = velcm(jj) + velocities(ivel, iter)/dble(geo%natoms)
+           current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%rcell_volume*(velocities(ivel, iter) - vel0(jj))
+           ivel = ivel + 1
+         end do
+       end do
         
-        integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume + current(1))
-        integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
+       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume + current(1))
+       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
 
-        curr(iter, 1:space%dim, 1) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
+       curr(iter, 1:space%dim) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
        
-      else
-        curr(iter, 1:space%dim, 1) = total_current(1:space%dim, iter)/sb%rcell_volume
-        heatcurr(iter,1:space%dim,1)=heat_current(1:space%dim,iter)/sb%rcell_volume
-      end if
+     else
+       curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%rcell_volume
+       heatcurr(iter,1:space%dim, 1) = heat_current(1:space%dim, iter)/sb%rcell_volume
+     end if
         
-      if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim, 1)
+     if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim)
       
-    end do
+   end do
 
-    if(from_forces) call io_close(iunit)
-    SAFE_ALLOCATE(ftcurr(1:max_freq, 1:3, 1:2))
+   if(from_forces) call io_close(iunit)
 
-    ftcurr = M_ONE
+   ! Find out the iteration numbers corresponding to the time limits.
+   call spectrum_fix_time_limits(spectrum, ntime, deltat, istart, iend, max_freq)
+   istart = max(1, istart)
+   energy_steps = spectrum_nenergy_steps(spectrum)
 
-    call batch_init(currb, 3, 1, 1, curr)
+   SAFE_ALLOCATE(ftcurr(1:energy_steps, 1:space%dim, 1:2))
 
-    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, M_ZERO, deltat, currb)
+   call batch_init(currb, space%dim)
+   do ii = 1, space%dim
+     call batch_add_state(currb, curr(:, ii))
+   end do
 
-    call batch_init(ftcurrb, 3, 1, 1, ftcurr)
-    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, currb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftcurrb)
-    call batch_end(ftcurrb)
+   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, deltat, currb)
 
-    call batch_init(ftcurrb, 3, 1, 1, ftcurr(:, :, 2:2))
-    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, currb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftcurrb)
-    call batch_end(ftcurrb)
+   call batch_init(ftcurrb, space%dim)
+   do ii = 1, space%dim
+     call batch_add_state(ftcurrb, ftcurr(:, ii, 1))
+   end do
+   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
+      spectrum%energy_step, ftcurrb)
+   call batch_end(ftcurrb)
+
+   call batch_init(ftcurrb, space%dim)
+   do ii = 1, space%dim
+     call batch_add_state(ftcurrb, ftcurr(:, ii, 2))
+   end do
+   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+     istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
+     spectrum%energy_step, ftcurrb)
+      
+   call batch_end(ftcurrb)
+   call batch_end(currb)
+
+
+   !and print the spectrum
+   iunit = io_open('td.general/conductivity', default_namespace, action='write')
+
     
-    call batch_end(currb)
-
-
-    !and print the spectrum
-    iunit = io_open('td.general/conductivity', default_namespace, action='write')
-
-    
-    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+   write(unit = iunit, iostat = ierr, fmt = '(a)') &
       '###########################################################################################################################'
     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
     write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
@@ -387,19 +347,58 @@
 
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
-    do ifreq = 1, max_freq
+
+    if( .not. from_forces .and. parse_is_defined(default_namespace, 'GaugeVectorField')) then
+      if(parse_block(default_namespace, 'GaugeVectorField', blk) == 0) then
+        do ii = 1, space%dim
+          call parse_block_float(blk, 0, ii - 1, vel0(ii))
+        end do
+        call parse_block_end(blk)
+      end if
+      vel0(1:space%dim) = vel0(1:space%dim) / P_C
+      v0 = sqrt(sum(vel0(1:space%dim)**2))
+    end if
+
+
+    do ifreq = 1, energy_steps
       ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
-           transpose(ftcurr(ifreq, 1:3, 1:2)/v0)
-      !write(*,*)ifreq, ftcurr(ifreq, 1:3, 1:2)
+           transpose(ftcurr(ifreq, 1:space%dim, 1:2)/v0)
     end do
     
     call io_close(iunit)
     
+
+    !Compute the inverse dielectric function from the conductivity
+    ! We have \chi = -i \sigma / \omega
+    ! and \epsilon^-1 = 1 + 4 \pi \chi
+    SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
+    do ifreq = 1, energy_steps
+      ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+
+      invdielectric(1:space%dim, ifreq) = (vel0(1:space%dim) + M_FOUR * M_PI * &
+                  TOCMPLX(ftcurr(ifreq, 1:space%dim, 2),-ftcurr(ifreq, 1:space%dim, 1)) / ww )/v0
+
+    end do
+
+    out_file = io_open('td.general/inverse_dielectric_function_from_current', default_namespace, action='write')
+    write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+    write(out_file,'(a)') trim(header)
+    do ifreq = 1, energy_steps
+    ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+    write(out_file, '(7e15.6)') ww,                                         &
+         real(invdielectric(1, ifreq), REAL_PRECISION), aimag(invdielectric(1, ifreq)), &
+         real(invdielectric(2, ifreq), REAL_PRECISION), aimag(invdielectric(2, ifreq)), &
+         real(invdielectric(3, ifreq), REAL_PRECISION), aimag(invdielectric(3, ifreq))
+    end do
+    call io_close(out_file)
+
     SAFE_DEALLOCATE_A(ftcurr)
+    SAFE_DEALLOCATE_A(invdielectric)
+
     
 !!!!!!!!!!!!!!!!!!!!!
-    SAFE_ALLOCATE(ftheatcurr(1:max_freq, 1:3, 1:2))
+    SAFE_ALLOCATE(ftheatcurr(1:energy_steps, 1:3, 1:2))
 
     ftheatcurr = M_ONE
 
@@ -435,7 +434,7 @@
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
 
-    do ifreq = 1, max_freq
+    do ifreq = 1, energy_steps
       ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
         transpose(ftheatcurr(ifreq, 1:3, 1:2)/v0)

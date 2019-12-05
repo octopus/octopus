@@ -608,19 +608,21 @@ contains
       end if
 
     case(BATCH_DEVICE_PACKED)
-      call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
+      if(boundaries%nper > 0) then
+        call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
 
-      call accel_set_kernel_arg(kernel, 0, boundaries%nper)
-      call accel_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
-      call accel_set_kernel_arg(kernel, 2, ffb%pack%buffer)
-      call accel_set_kernel_arg(kernel, 3, log2(ffb%pack%size_real(1)))
+        call accel_set_kernel_arg(kernel, 0, boundaries%nper)
+        call accel_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
+        call accel_set_kernel_arg(kernel, 2, ffb%pack%buffer)
+        call accel_set_kernel_arg(kernel, 3, log2(ffb%pack%size_real(1)))
 
-      wgsize = accel_kernel_workgroup_size(kernel)/ffb%pack%size_real(1)
+        wgsize = accel_kernel_workgroup_size(kernel)/ffb%pack%size_real(1)
 
-      call accel_kernel_run(kernel, (/ffb%pack%size_real(1), pad(boundaries%nper, wgsize)/), &
-        (/ffb%pack%size_real(1), wgsize/))
+        call accel_kernel_run(kernel, (/ffb%pack%size_real(1), pad(boundaries%nper, wgsize)/), &
+          (/ffb%pack%size_real(1), wgsize/))
 
-      call accel_finish()
+        call accel_finish()
+      end if
 
     end select
 

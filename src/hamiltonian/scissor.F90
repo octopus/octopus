@@ -89,7 +89,7 @@ contains
 
   call messages_print_stress(stdout, "TDScissor")
 
-  if(this%gs_st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states")
+  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states")
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains")
 
   this%apply = .true.

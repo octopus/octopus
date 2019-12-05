@@ -669,14 +669,14 @@ contains
       do ik = kp1, kp2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            dres = dres + zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik), reduce = .false.)
+            dres = dres + (zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik), reduce = .false.))**2
           end do
         end do
       end do
 
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, dres)
-      
-      if(dres < tr%scf_threshold) exit
+
+      if(sqrt(dres) < tr%scf_threshold) exit
     end do
 
     zphi = k2
@@ -938,15 +938,15 @@ contains
       do ik = kp1, kp2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            dres = dres + zmf_nrm2(gr%mesh, k1(:, idim, ist, ik) - oldk1(:, idim, ist, ik))
-            dres = dres + zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik))
+            dres = dres + (zmf_nrm2(gr%mesh, k1(:, idim, ist, ik) - oldk1(:, idim, ist, ik)))**2
+            dres = dres + (zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik)))**2
           end do
         end do
       end do
       if(sp_parallel) call comm_allreduce(sp_comm, dres)
       !write(*, *) 'Residual = ', dres
 
-      if(dres < tr%scf_threshold) exit
+      if(sqrt(dres) < tr%scf_threshold) exit
     end do
 
 

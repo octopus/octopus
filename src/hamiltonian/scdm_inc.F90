@@ -166,7 +166,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   do ii=1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
 #ifdef HAVE_MPI
-    call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+    call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
 #endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do
@@ -568,7 +568,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, ik, jpvt)
         sender = 0
         if(state_is_local(st,ii)) then
           call states_elec_get_state(st, mesh, ii, ik, temp_state)
-          call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np,1), state_global)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
         call comm_allreduce(mpi_world%comm,sender)
