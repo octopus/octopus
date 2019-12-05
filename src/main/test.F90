@@ -552,7 +552,7 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
