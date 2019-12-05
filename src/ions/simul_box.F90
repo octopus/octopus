@@ -1216,8 +1216,8 @@ contains
       SAFE_DEALLOCATE_P(list)
 
     case(PARALLELEPIPED, HYPERCUBE) 
-      llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
-      ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
+      llimit(1:sb%dim) = nearest(-sb%lsize(1:sb%dim), -M_ONE)
+      ulimit(1:sb%dim) = nearest( sb%lsize(1:sb%dim),  M_ONE)
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
 
       forall(ip = 1:npoints)
