@@ -219,7 +219,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
           do idim = 1, ndim
             idim_orb = min(idim,os%ndim)
-            bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+            bind = psib%ist_idim_to_linear((/ist, idim/))
             do iorb = 1, os%norbs
               call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind),os%eorb_mesh(1:os%sphere%mesh%np,iorb,idim_orb,ik), &
                                    psi(1:os%sphere%mesh%np,idim))
@@ -229,7 +229,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
           do iorb = 1, os%norbs
             do idim = 1, ndim
               idim_orb = min(idim,os%ndim)
-              bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+              bind = psib%ist_idim_to_linear((/ist, idim/))
               call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,iorb,ik), &
                                   psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
             end do
@@ -240,7 +240,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         do iorb = 1, os%norbs
           do idim = 1, ndim
             idim_orb = min(idim,os%ndim)
-            bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+            bind = psib%ist_idim_to_linear((/ist, idim/))
             if(basisfromstates) then
               call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind), os%X(orb)(1:os%sphere%mesh%np,idim_orb,iorb), &
                                   psi(1:os%sphere%mesh%np,idim))
@@ -266,7 +266,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
           do sp = 1, os%sphere%mesh%np, block_size
             size = min(block_size, os%sphere%mesh%np - sp + 1)
             do ist = 1, psib%nst_linear
-              idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+              idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%eorb_mesh(sp,1,idim,ik), &
                     os%sphere%mesh%np, weight(1,ist), 1, R_TOTYPE(M_ONE),            & 
                        psib%states_linear(ist)%zpsi(sp), 1)
@@ -275,7 +275,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         else
           SAFE_ALLOCATE(sorb(1:os%sphere%np))
           do ist = 1, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+            idim = min(psib%linear_to_idim(ist),os%ndim)
             sorb(:) = R_TOTYPE(M_ZERO)
             do sp = 1, os%sphere%np, block_size
               size = min(block_size, os%sphere%np - sp + 1)
@@ -298,7 +298,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
           do sp = 1, os%sphere%mesh%np, block_size
             size = min(block_size, os%sphere%mesh%np - sp + 1)
             do ist = 1, psib%nst_linear
-              idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+              idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%X(orb)(sp,idim,1), &
                     os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
                        psib%states_linear(ist)%X(psi)(sp), 1)
@@ -307,7 +307,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         else
           SAFE_ALLOCATE(sorb(1:os%sphere%np))
           do ist = 1, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+            idim = min(psib%linear_to_idim(ist),os%ndim)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)
@@ -333,10 +333,10 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
             ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
             do iorb = 1, os%norbs
               do ist = 1, psib%nst_linear - 4 + 1, 4
-                idim1 = min(batch_linear_to_idim(psib,ist), os%ndim)
-                idim2 = min(batch_linear_to_idim(psib,ist+1), os%ndim)
-                idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
-                idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
+                idim1 = min(psib%linear_to_idim(ist), os%ndim)
+                idim2 = min(psib%linear_to_idim(ist+1), os%ndim)
+                idim3 = min(psib%linear_to_idim(ist+2), os%ndim)
+                idim4 = min(psib%linear_to_idim(ist+3), os%ndim)
 
                 do ip = sp,ep
                   psib%pack%zpsi(ist,ip) = &
@@ -351,7 +351,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
               end do
 
               do ist = ist, psib%nst_linear
-                idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+                idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip=sp,ep
                   psib%pack%zpsi(ist,ip) = &
                      psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,iorb,idim,ik)
@@ -363,7 +363,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         else
           SAFE_ALLOCATE(sorb(1:os%sphere%np))
           do ist = 1, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+            idim = min(psib%linear_to_idim(ist), os%ndim)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)
@@ -385,10 +385,10 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
             do sp = 1, os%sphere%mesh%np, block_size
               ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
               do ist = 1, psib%nst_linear - 4 + 1, 4
-                idim1 = min(batch_linear_to_idim(psib,ist), os%ndim)
-                idim2 = min(batch_linear_to_idim(psib,ist+1), os%ndim)
-                idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
-                idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
+                idim1 = min(psib%linear_to_idim(ist), os%ndim)
+                idim2 = min(psib%linear_to_idim(ist+1), os%ndim)
+                idim3 = min(psib%linear_to_idim(ist+2), os%ndim)
+                idim4 = min(psib%linear_to_idim(ist+3), os%ndim)
 
                 do ip = sp,ep
                   psib%pack%X(psi)(ist,ip) = &
@@ -403,7 +403,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
               end do
 
               do ist = ist, psib%nst_linear
-                idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+                idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip=sp,ep
                   psib%pack%X(psi)(ist,ip) = &
                      psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
@@ -414,7 +414,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
         else
           SAFE_ALLOCATE(sorb(1:os%sphere%np))
           do ist = 1, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+            idim = min(psib%linear_to_idim(ist), os%ndim)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)

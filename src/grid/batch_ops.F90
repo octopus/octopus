@@ -180,7 +180,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_DEVICE_PACKED)
 
     tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
-    offset = batch_linear_to_ist(this, 1) - 1
+    offset = this%linear_to_ist(1) - 1
 
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
@@ -225,7 +225,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
 
     tsize = types_get_size(this%type())&
       /types_get_size(TYPE_FLOAT)
-    offset = batch_linear_to_ist(this, 1) - 1
+    offset = this%linear_to_ist(1) - 1
 
     call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     

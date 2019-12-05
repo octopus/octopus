@@ -163,7 +163,7 @@ contains
           if(abs(ww) <= M_EPSILON) cycle
 
           do idim = 1, st%d%dim
-            ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+            ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
             call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
             call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
           end do
@@ -339,7 +339,7 @@ contains
               if(ww <= M_EPSILON) cycle
 
               do idim = 1, st%d%dim
-                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+                ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
                 call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))

@@ -489,7 +489,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     case(BATCH_NOT_PACKED)
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/)) 
+        ibind = batch%inv_index((/ist, idim/)) 
         ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
@@ -529,7 +529,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     select case(batch%status())
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/))
+        ibind = batch%inv_index((/ist, idim/))
         call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)

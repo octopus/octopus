@@ -338,7 +338,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     !$omp parallel do private(ist, idim, jdim, jst, is, ii)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
-        ii = batch_ist_idim_to_linear(mm, (/ist, idim/))
+        ii = mm%ist_idim_to_linear((/ist, idim/))
         
         ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
         jdim = min(idim, ss%dim)

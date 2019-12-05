@@ -803,7 +803,7 @@ contains
            case(BATCH_NOT_PACKED)
              overlap(band_index(ist)) = M_z0
              do idim = 1, st%d%dim
-               ibind = batch_inv_index(batch, (/ist, idim/))
+               ibind = batch%inv_index((/ist, idim/))
                overlap(band_index(ist)) = overlap(band_index(ist)) + &
                     zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
              end do

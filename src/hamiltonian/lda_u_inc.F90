@@ -70,8 +70,8 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
     !
     os => this%orbsets(ios)
     do ibatch = 1, psib%nst
-      bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
-      bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
+      bind1 = psib%ist_idim_to_linear((/ibatch, 1/))
+      bind2 = psib%ist_idim_to_linear((/ibatch, 2/))
       do im = 1,os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         do imp = 1, os%norbs
@@ -103,8 +103,8 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
         end if
 
         do ibatch = 1, psib%nst
-          bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
-          bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
+          bind1 = psib%ist_idim_to_linear((/ibatch, 1/))
+          bind2 = psib%ist_idim_to_linear((/ibatch, 2/))
           do im = 1, os%norbs
             do imp = 1, this%orbsets(ios2)%norbs
               if(d%ispin /= SPINORS) then

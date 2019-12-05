@@ -76,9 +76,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           if(mesh%use_curvilinear) then
 
             do ist = 1, aa%nst
-              indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+              indb = aa%ist_idim_to_linear((/ist, idim/))
               do jst = 1, bb%nst
-                jndb = batch_ist_idim_to_linear(bb, (/jst, idim/))
+                jndb = bb%ist_idim_to_linear((/jst, idim/))
 
                 ss = M_ZERO
                 do ip = sp, ep
@@ -92,9 +92,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           else
 
             do ist = 1, aa%nst
-              indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+              indb = aa%ist_idim_to_linear((/ist, idim/))
               do jst = 1, bb%nst
-                jndb = batch_ist_idim_to_linear(bb, (/jst, idim/))
+                jndb = bb%ist_idim_to_linear((/jst, idim/))
 
                 dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
                   blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
@@ -261,9 +261,9 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         if(mesh%use_curvilinear) then
 
           do ist = 1, aa%nst
-            indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+            indb = aa%ist_idim_to_linear((/ist, idim/))
             do jst = 1, ist
-              jndb = batch_ist_idim_to_linear(aa, (/jst, idim/))
+              jndb = aa%ist_idim_to_linear((/jst, idim/))
               ss = M_ZERO
               do ip = sp, ep
                 ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*aa%states_linear(jndb)%X(psi)(ip)
@@ -276,9 +276,9 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         else
 
           do ist = 1, aa%nst
-            indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+            indb = aa%ist_idim_to_linear((/ist, idim/))
             do jst = 1, ist
-              jndb = batch_ist_idim_to_linear(aa, (/jst, idim/))
+              jndb = aa%ist_idim_to_linear((/jst, idim/))
               dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
                 blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, aa%states_linear(jndb)%X(psi)(sp), 1)
             end do
@@ -347,7 +347,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
            reduce = .false., dotu = cproduct_)
       end do
@@ -396,7 +396,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + mesh%volume_element*tmp(indb)
       end do
     end do
@@ -427,7 +427,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + mesh%volume_element*cltmp(indb, 1)
       end do
     end do
@@ -686,7 +686,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%states_linear(indb)%X(psi), reduce = .false.))
       end do
     end do
@@ -736,7 +736,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
@@ -764,7 +764,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb))
       end do
     end do

@@ -117,7 +117,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
               lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
@@ -131,7 +131,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       case(BATCH_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
               lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
@@ -230,7 +230,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
@@ -246,7 +246,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       case(BATCH_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &

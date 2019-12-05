@@ -41,7 +41,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
   case(BATCH_NOT_PACKED)
     do idir = 1, gr%mesh%sb%dim
       do ii = 1, psib%nst_linear
-        ist = batch_linear_to_ist(psib, ii)
+        ist = psib%linear_to_ist(ii)
       
         ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
         if(abs(ff) <= M_EPSILON) cycle
@@ -59,7 +59,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
   case(BATCH_PACKED)
     do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
+      ist = psib%linear_to_ist(ii)
       
       ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
       if(abs(ff) <= M_EPSILON) cycle
@@ -83,7 +83,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
     weights = CNST(0.0)
     do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
+      ist = psib%linear_to_ist(ii)
       weights(ii) = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
     end do
 

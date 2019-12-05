@@ -40,10 +40,6 @@ module batch_oct_m
     batch_t,                        &
     batch_init,                     &
     batch_add_state,                &
-    batch_inv_index,                &
-    batch_ist_idim_to_linear,       &
-    batch_linear_to_ist,            &
-    batch_linear_to_idim,           &
     batch_remote_access_start,      &
     batch_remote_access_stop
   
@@ -106,8 +102,12 @@ module batch_oct_m
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
+    procedure :: inv_index => batch_inv_index
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
+    procedure :: ist_idim_to_linear => batch_ist_idim_to_linear
+    procedure :: linear_to_idim => batch_linear_to_idim
+    procedure :: linear_to_ist => batch_linear_to_ist
     procedure :: pack_size => batch_pack_size
     procedure :: status => batch_status
     procedure :: type => batch_type

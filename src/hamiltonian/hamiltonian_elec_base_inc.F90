@@ -1176,7 +1176,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
     ff(1:ndim) = CNST(0.0)
     
     do ii = 1, psi1b%nst_linear
-      ist = batch_linear_to_ist(psi1b, ii)
+      ist = psi1b%linear_to_ist(ii)
       if(st%d%kweights(iqn)*abs(st%occ(ist, iqn)) <= M_EPSILON) cycle
       do iproj = 1, nprojs
         do idir = 1, ndim

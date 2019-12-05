@@ -135,8 +135,8 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
 
@@ -271,8 +271,8 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 
   aa_linear = M_ZERO
   do ist = 1, xx%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
   
@@ -381,8 +381,8 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
 
@@ -484,7 +484,7 @@ subroutine X(batch_xpay_const)(np, xx, aa, yy)
   maxst = -HUGE(maxst)
   
   do ii = 1, xx%nst_linear
-    ist = batch_linear_to_ist(xx, ii)
+    ist = xx%linear_to_ist(ii)
     minst = min(minst, ist)
     maxst = max(maxst, ist)
   end do
@@ -601,7 +601,7 @@ subroutine X(batch_set_state2)(this, index, np, psi)
   PUSH_SUB(X(batch_set_state2))
 
   ASSERT(this%nst_linear > 0)
-  call X(batch_set_state1)(this, batch_inv_index(this, index), np, psi)
+  call X(batch_set_state1)(this, this%inv_index(index), np, psi)
 
   POP_SUB(X(batch_set_state2))
 end subroutine X(batch_set_state2)
@@ -752,7 +752,7 @@ subroutine X(batch_get_state2)(this, index, np, psi)
   PUSH_SUB(X(batch_get_state2))
 
   ASSERT(this%nst_linear > 0)
-  call X(batch_get_state1)(this, batch_inv_index(this, index), np, psi)
+  call X(batch_get_state1)(this, this%inv_index(index), np, psi)
 
   POP_SUB(X(batch_get_state2))
 end subroutine X(batch_get_state2)
@@ -801,16 +801,16 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
     if(this%type() == TYPE_FLOAT) then
       
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%dpsi(sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%zpsi(sp:ep)
       end do
 
@@ -823,8 +823,8 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           psi(ist, idim, ip) = this%pack%dpsi(ii, ip)
         end do
       end do
@@ -835,8 +835,8 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           psi(ist, idim, ip) = this%pack%zpsi(ii, ip)
         end do
       end do
@@ -878,16 +878,16 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
     if(this%type() == TYPE_FLOAT) then
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         this%states_linear(ii)%dpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         this%states_linear(ii)%zpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
@@ -900,8 +900,8 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           this%pack%dpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do
@@ -912,8 +912,8 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           this%pack%zpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do

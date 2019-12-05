@@ -319,8 +319,8 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
 
   ! FIXME: need to take into account spinor dimension here, not just 1
   idim = 1
-  ilin = batch_inv_index(st%group%psib(iblock, kk), (/ii, idim/))
-  alin = batch_inv_index(st%group%psib(ablock, kk), (/ia, idim/))
+  ilin = st%group%psib(iblock, kk)%inv_index((/ii, idim/))
+  alin = st%group%psib(ablock, kk)%inv_index((/ia, idim/))
 
   ASSERT(.not. st%group%psib(iblock, kk)%is_packed())
   ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
