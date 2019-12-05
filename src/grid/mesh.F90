@@ -793,8 +793,8 @@ contains
     
     ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
 
-    if(mesh%masked_periodic_boundaries .and. ipp /= ip) then
-      call mesh_r(mesh, ipp, rr, coords = xx)
+    if(mesh%masked_periodic_boundaries) then
+      call mesh_r(mesh, ip, rr, coords = xx)
       call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
       if(int(ufn_re) == 0) ipp = ip
     end if 
