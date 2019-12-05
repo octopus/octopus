@@ -455,7 +455,11 @@ contains
         ncols = parse_block_cols(blk, 0)
         if(ncols /= dim) then
           write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
-          call messages_fatal(1)
+          if(ncols < dim) then
+            call messages_fatal(1)
+          else
+            call messages_warning(1)
+          end if
         end if
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
