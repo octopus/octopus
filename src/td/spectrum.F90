@@ -1352,9 +1352,9 @@ contains
     call batch_init(respb, 1)
     call batch_init(imspb, 1)
 
-    call batch_add_state(angularb, angular(:, 1))
-    call batch_add_state(respb, resp)
-    call batch_add_state(imspb, imsp)
+    call angularb%add_state(angular(:, 1))
+    call respb%add_state(resp)
+    call imspb%add_state(imsp)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
@@ -1913,9 +1913,9 @@ contains
       call batch_init(sps_batch, 1)
       call batch_init(spc_batch, 1)
 
-      call batch_add_state(acc_batch, racc)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call acc_batch%add_state(racc)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -2020,9 +2020,9 @@ contains
       call batch_init(sps_batch, 1)
       call batch_init(spc_batch, 1)
 
-      call batch_add_state(acc_batch, racc)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call acc_batch%add_state(racc)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, &
@@ -2126,9 +2126,9 @@ contains
       call batch_init(sps_batch, 1)
       call batch_init(spc_batch, 1)
 
-      call batch_add_state(cur_batch, rcur)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call cur_batch%add_state(rcur)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, cur_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)

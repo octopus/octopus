@@ -76,7 +76,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     do ist = conv + 1, st%nst
       call batch_init(zpsib, hm%d%dim, 1)
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
-      call batch_add_state(zpsib, ist, zpsi)
+      call zpsib%add_state(ist, zpsi)
 
       call exponential_apply_batch(te, namespace, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
 

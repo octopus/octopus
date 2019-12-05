@@ -307,14 +307,14 @@
 
    call batch_init(currb, space%dim)
    do ii = 1, space%dim
-     call batch_add_state(currb, curr(:, ii))
+     call currb%add_state(curr(:, ii))
    end do
 
    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, deltat, currb)
 
    call batch_init(ftcurrb, space%dim)
    do ii = 1, space%dim
-     call batch_add_state(ftcurrb, ftcurr(:, ii, 1))
+     call ftcurrb%add_state(ftcurr(:, ii, 1))
    end do
    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
@@ -323,7 +323,7 @@
 
    call batch_init(ftcurrb, space%dim)
    do ii = 1, space%dim
-     call batch_add_state(ftcurrb, ftcurr(:, ii, 2))
+     call ftcurrb%add_state(ftcurr(:, ii, 2))
    end do
    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
      istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &

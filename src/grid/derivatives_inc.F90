@@ -150,11 +150,11 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
 
   ASSERT(ubound(ff, DIM=1) >= der%mesh%np_part)
 
-  call batch_init     (batch_ff, 1)
-  call batch_add_state(batch_ff, ff)
+  call batch_init(batch_ff, 1)
+  call batch_ff%add_state(ff)
 
-  call batch_init     (batch_op_ff, 1)
-  call batch_add_state(batch_op_ff, op_ff)
+  call batch_init(batch_op_ff, 1)
+  call batch_op_ff%add_state(op_ff)
 
   ASSERT(batch_ff%is_ok())
   ASSERT(batch_op_ff%is_ok())

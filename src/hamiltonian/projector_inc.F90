@@ -33,9 +33,9 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   PUSH_SUB(X(project_psi))
 
   call batch_init(psib, dim, 1)
-  call batch_add_state(psib, 1, psi)
+  call psib%add_state(1, psi)
   call batch_init(ppsib, dim, 1)
-  call batch_add_state(ppsib, 1, ppsi)
+  call ppsib%add_state(1, ppsi)
 
   call X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 

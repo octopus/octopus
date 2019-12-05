@@ -664,7 +664,7 @@ subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
   PUSH_SUB(X(boundaries_set_single))
 
   call batch_init     (batch_ff, 1)
-  call batch_add_state(batch_ff, ff)
+  call batch_ff%add_state(ff)
 
   ASSERT(batch_ff%is_ok())
 

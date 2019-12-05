@@ -470,11 +470,11 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   PUSH_SUB(X(nl_operator_operate))
 
-  call batch_init     (batch_fi, 1)
-  call batch_add_state(batch_fi, fi)
+  call batch_init(batch_fi, 1)
+  call batch_fi%add_state(fi)
 
-  call batch_init     (batch_fo, 1)
-  call batch_add_state(batch_fo, fo)
+  call batch_init(batch_fo, 1)
+  call batch_fo%add_state(fo)
 
   call X(nl_operator_operate_batch)(op, batch_fi, batch_fo, ghost_update, profile, points)
 

@@ -263,9 +263,9 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   PUSH_SUB(X(hamiltonian_elec_apply))
   
   call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
+  call psib%add_state(ist, psi)
   call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call hpsib%add_state(ist, hpsi)
 
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
                                        set_phase = set_phase)
@@ -359,9 +359,9 @@ subroutine X(exchange_operator_single)(hm, namespace, mesh, ist, ik, psi, hpsi, 
   PUSH_SUB(X(exchange_operator_single))
 
   call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
+  call psib%add_state(ist, psi)
   call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call hpsib%add_state(ist, hpsi)
 
   call X(exchange_operator)(hm, namespace, mesh, ik, psib, hpsib, exx_coef)
 

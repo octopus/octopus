@@ -38,8 +38,7 @@ module batch_oct_m
     batch_state_l_t,                &
     batch_pack_t,                   &
     batch_t,                        &
-    batch_init,                     &
-    batch_add_state
+    batch_init
   
   !--------------------------------------------------------------
   type batch_state_t
@@ -91,6 +90,11 @@ module batch_oct_m
     type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
   contains
+    procedure :: dbatch_add_state
+    procedure :: zbatch_add_state
+    procedure :: dbatch_add_state_linear
+    procedure :: zbatch_add_state_linear
+    generic   :: add_state => dbatch_add_state, zbatch_add_state, dbatch_add_state_linear, zbatch_add_state_linear
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
@@ -120,13 +124,6 @@ module batch_oct_m
     module procedure dbatch_init_contiguous
     module procedure zbatch_init_contiguous
   end interface batch_init
-
-  interface batch_add_state
-    module procedure dbatch_add_state
-    module procedure zbatch_add_state
-    module procedure dbatch_add_state_linear
-    module procedure zbatch_add_state_linear
-  end interface batch_add_state
 
   integer, public, parameter :: &
     BATCH_NOT_PACKED     = 0,   &

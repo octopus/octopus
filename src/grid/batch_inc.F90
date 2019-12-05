@@ -37,7 +37,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, psi(:, :, ist))
+    call this%add_state(ist, psi(:, :, ist))
   end do
 
   this%type_of = R_TYPE_VAL
@@ -120,7 +120,7 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   this%mirror = optional_default(mirror, .false.)  
   
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
+    call this%add_state(ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_allocate))

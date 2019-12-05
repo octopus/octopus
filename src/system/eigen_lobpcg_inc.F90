@@ -400,8 +400,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     
     do i = 1, lnuc
       ist = luc(i)
-      call batch_add_state(psib, ist, res(:, :, ist))
-      call batch_add_state(hpsib, ist, h_res(:, :, ist))
+      call psib%add_state(ist, res(:, :, ist))
+      call hpsib%add_state(ist, h_res(:, :, ist))
     end do
 
     if(lnuc > 0) then

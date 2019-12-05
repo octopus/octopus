@@ -349,7 +349,7 @@ contains
    
 !    Another alternative
 !    call batch_init(st%rs_state_transb, hm%d%dim, 1)
-!    call batch_add_state(st%rs_state_transb, 1, st%rs_state_trans)
+!    call st%rs_state_transb%add_state(1, st%rs_state_trans)
 !    call st%rs_state_transb%end
 
     POP_SUB(states_mxll_allocate)
