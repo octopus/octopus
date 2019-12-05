@@ -35,9 +35,9 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
   PUSH_SUB(X(density_accumulate_grad))
 
-  ASSERT(batch_status(psib) == batch_status(grad_psib(1)))
+  ASSERT(psib%status() == grad_psib(1)%status())
 
-  select case(batch_status(psib))
+  select case(psib%status())
   case(BATCH_NOT_PACKED)
     do idir = 1, gr%mesh%sb%dim
       do ii = 1, psib%nst_linear

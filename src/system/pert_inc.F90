@@ -32,7 +32,7 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
   
   PUSH_SUB(X(pert_apply_batch))
 
-  ASSERT(batch_status(f_in) == batch_status(f_out))
+  ASSERT(f_in%status() == f_out%status())
   
   SAFE_ALLOCATE(fi(1:gr%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(fo(1:gr%mesh%np, 1:hm%d%dim))
@@ -60,7 +60,7 @@ contains
   subroutine electric()
     integer :: ii, ip
 
-    select case(batch_status(f_in))
+    select case(f_in%status())
       
     case(BATCH_NOT_PACKED)
       do ii = 1, f_in%nst_linear

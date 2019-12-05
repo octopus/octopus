@@ -73,7 +73,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
   ! first post the receptions
-  select case(batch_status(v_local))
+  select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
     if(.not. accel%cuda_mpi) then
@@ -139,7 +139,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
 
-  if(batch_status(v_local) == BATCH_DEVICE_PACKED) then
+  if(v_local%status() == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
@@ -149,7 +149,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
   end if
 
-  select case(batch_status(v_local))
+  select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
     do ipart = 1, vp%npart
@@ -213,7 +213,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 
-  if(batch_status(handle%v_local) == BATCH_DEVICE_PACKED) then
+  if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
     ! synchronize the operate_map kernel for the inner points
     call accel_finish()
@@ -252,7 +252,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   ASSERT(batch_type(ffb) == R_TYPE_VAL)
   ! phase correction not implemented for OpenCL
   if(present(phase_correction)) then
-    ASSERT(batch_status(ffb) /= BATCH_DEVICE_PACKED)
+    ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
   end if
 
   ! The boundary points are at different locations depending on the presence
@@ -281,7 +281,7 @@ contains
 
     PUSH_SUB(X(boundaries_set_batch).zero_boundaries)
 
-    select case(batch_status(ffb))
+    select case(ffb%status())
     case(BATCH_DEVICE_PACKED)
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
       call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
@@ -395,10 +395,10 @@ contains
       maxrecv = maxval(boundaries%nrecv(1:npart))
 
       ldbuffer = ffb%nst_linear
-      if(batch_status(ffb) == BATCH_DEVICE_PACKED) ldbuffer = ffb%pack%size(1)
+      if(ffb%status() == BATCH_DEVICE_PACKED) ldbuffer = ffb%pack%size(1)
       SAFE_ALLOCATE(sendbuffer(1:ldbuffer, 1:maxsend, 1:npart))
 
-      select case(batch_status(ffb))
+      select case(ffb%status())
 
       case(BATCH_NOT_PACKED)
 
@@ -489,7 +489,7 @@ contains
       SAFE_DEALLOCATE_A(recv_disp)
       SAFE_DEALLOCATE_A(sendbuffer)
 
-      select case(batch_status(ffb))
+      select case(ffb%status())
 
       case(BATCH_NOT_PACKED)
 
@@ -579,7 +579,7 @@ contains
 
     end if
 
-    select case(batch_status(ffb))
+    select case(ffb%status())
 
     case(BATCH_NOT_PACKED)
 

@@ -73,7 +73,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
 
-  ASSERT(batch_status(psib) /= BATCH_DEVICE_PACKED)
+  ASSERT(psib%status() /= BATCH_DEVICE_PACKED)
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
@@ -114,7 +114,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       if(ns < 1) cycle
 
       ! copy psi to the small spherical grid
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
           bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
@@ -227,7 +227,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     !  print *, ll, lpsi(1, 1:dim)  
   
       !put the result back in the complete grid
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
           bind = batch_ist_idim_to_linear(psib, (/ist, idim/))

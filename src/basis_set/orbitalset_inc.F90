@@ -208,7 +208,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
   ! This routine uses blocking to optimize cache usage.   
   block_size = hardware%X(block_size)
 
-  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_DEVICE_PACKED) then
+  if(os%sphere%mesh%use_curvilinear .or. psib%status() == BATCH_DEVICE_PACKED) then
     !
     SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
     do ist = 1, psib%nst
@@ -257,7 +257,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
     !
   else
     !
-    select case(batch_status(psib))
+    select case(psib%status())
     case(BATCH_NOT_PACKED)
       !
       if(has_phase) then

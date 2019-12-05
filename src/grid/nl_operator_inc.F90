@@ -46,7 +46,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
-  ASSERT(batch_status(fi) == batch_status(fo))
+  ASSERT(fi%status() == fo%status())
   ASSERT(batch_type(fi) == R_TYPE_VAL)
   ASSERT(batch_type(fo) == R_TYPE_VAL)
 
@@ -185,7 +185,7 @@ contains
 
     nn = op%stencil%size
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 
@@ -232,7 +232,7 @@ contains
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 

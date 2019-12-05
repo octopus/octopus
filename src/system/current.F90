@@ -154,7 +154,7 @@ contains
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
  
-    if(st%d%ispin == SPINORS .or. (batch_status(psib) == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
+    if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
         do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
@@ -189,7 +189,7 @@ contains
         end do
       end do
 
-    else if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+    else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
       

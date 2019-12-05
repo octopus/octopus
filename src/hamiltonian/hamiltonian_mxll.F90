@@ -419,7 +419,7 @@ contains
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
 
-    ASSERT(batch_status(psib) == batch_status(hpsib))
+    ASSERT(psib%status() == hpsib%status())
 
     ASSERT(psib%is_ok())
     ASSERT(hpsib%is_ok())

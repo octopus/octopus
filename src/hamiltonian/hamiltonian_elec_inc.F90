@@ -37,14 +37,14 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
-  ASSERT(batch_status(psib) == batch_status(hpsib))
+  ASSERT(psib%status() == hpsib%status())
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
   set_phase_ = optional_default(set_phase, .true.)  
   ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(batch_status(psib) == BATCH_DEVICE_PACKED) set_phase_ = .true.
+    if(psib%status() == BATCH_DEVICE_PACKED) set_phase_ = .true.
   end if
 
   ASSERT(psib%is_ok())
@@ -220,7 +220,7 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+  if(psib%status() == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call accel_write_buffer(vpsl_buff, mesh%np, vpsl)

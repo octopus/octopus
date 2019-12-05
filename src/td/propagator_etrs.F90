@@ -399,7 +399,7 @@ contains
         end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
-        select case(batch_status(st%group%psib(ib, ik)))
+        select case(st%group%psib(ib, ik)%status())
         case(BATCH_NOT_PACKED)
           do ip = 1, gr%mesh%np
             vv = vold(ip, ispin)

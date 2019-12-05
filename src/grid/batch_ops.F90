@@ -117,7 +117,7 @@ contains
 
     call profiling_in(prof, "BATCH_SET_ZERO")
 
-    select case(batch_status(this))
+    select case(this%status())
     case(BATCH_DEVICE_PACKED)
       call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
 
@@ -173,7 +173,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_get_points_cl)
   call profiling_in(get_points_prof, "GET_POINTS")
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
@@ -217,7 +217,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_set_points_cl)
   call profiling_in(set_points_prof, "SET_POINTS")
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 

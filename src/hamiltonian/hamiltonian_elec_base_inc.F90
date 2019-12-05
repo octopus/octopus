@@ -26,7 +26,7 @@ subroutine X(hamiltonian_elec_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   PUSH_SUB(X(hamiltonian_elec_base_local))
 
-  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+  if(psib%status() == BATCH_DEVICE_PACKED) then
     ASSERT(.not. allocated(this%Impotential))
     call X(hamiltonian_elec_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
@@ -73,7 +73,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
     ASSERT(vpsib%is_packed())
   end if
 
-  select case(batch_status(psib))
+  select case(psib%status())
   case(BATCH_DEVICE_PACKED)
     ASSERT(.not. pot_is_cmplx) ! not implemented
 
@@ -274,7 +274,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
   src_ => psib
   if(present(src)) src_ => src
 
-  select case(batch_status(psib))
+  select case(psib%status())
   case(BATCH_PACKED)
 
     if(conjugate) then
@@ -1026,7 +1026,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_force))
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
-  ASSERT(batch_status(psi1b) == batch_status(psi2b(1)))  
+  ASSERT(psi1b%status() == psi2b(1)%status())
   ASSERT(.not. (psi1b%is_packed() .and. accel_is_enabled()))
   
   nst = psi1b%nst_linear

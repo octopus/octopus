@@ -485,7 +485,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
  
     !To understand this, one should look at states_elec_get_states and batch_get_states routines 
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
@@ -526,7 +526,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     end if
     
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
         ibind = batch_inv_index(batch, (/ist, idim/))

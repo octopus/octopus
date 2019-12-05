@@ -47,7 +47,6 @@ module batch_oct_m
     batch_deallocate,               &
     batch_pack,                     &
     batch_unpack,                   &
-    batch_status,                   &
     batch_type,                     &
     batch_inv_index,                &
     batch_ist_idim_to_linear,       &
@@ -101,7 +100,7 @@ module batch_oct_m
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,                 pointer, public :: dpsicont(:, :, :)
     CMPLX,                 pointer, public :: zpsicont(:, :, :)
-    integer                                :: status
+    integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
     type(type_t)                           :: type !< only available if the batched is packed
@@ -111,6 +110,7 @@ module batch_oct_m
     procedure :: copy => batch_copy
     procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
+    procedure :: status => batch_status
   end type batch_t
 
   !--------------------------------------------------------------
@@ -147,7 +147,7 @@ contains
 
     if(this%is_allocated .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
-      this%status = BATCH_NOT_PACKED
+      this%status_of = BATCH_NOT_PACKED
       this%in_buffer_count = 1
       
       if(accel_is_enabled()) then
@@ -302,7 +302,7 @@ contains
 
     this%max_size = 0
     this%in_buffer_count = 0
-    this%status = BATCH_NOT_PACKED
+    this%status_of = BATCH_NOT_PACKED
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -340,7 +340,7 @@ contains
 
     this%max_size = 0
     this%in_buffer_count = 0
-    this%status = BATCH_NOT_PACKED
+    this%status_of = BATCH_NOT_PACKED
 
     this%ndims = 1
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -445,7 +445,7 @@ contains
   integer pure function batch_status(this) result(bstatus)
     class(batch_t),      intent(in)    :: this
 
-    bstatus = this%status
+    bstatus = this%status_of
   end function batch_status
   
   ! ----------------------------------------------------
@@ -458,18 +458,10 @@ contains
 
   ! ----------------------------------------------------
 
-  integer pure function batch_max_size(this) result(size)
-    class(batch_t),      intent(in)    :: this
-
-    size = this%max_size
-  end function batch_max_size
-
-  ! ----------------------------------------------------
-
   integer function batch_pack_size(this) result(size)
     class(batch_t),      intent(inout) :: this
 
-    size = batch_max_size(this)
+    size = this%max_size
     if(accel_is_enabled()) size = accel_padded_size(size)
     size = size*pad_pow2(this%nst_linear)*types_get_size(batch_type(this))
 
@@ -495,7 +487,7 @@ contains
     if(.not. this%is_packed()) then
       this%type = batch_type(this)
       this%pack%size(1) = pad_pow2(this%nst_linear)
-      this%pack%size(2) = batch_max_size(this)
+      this%pack%size(2) = this%max_size
 
       if(accel_is_enabled()) this%pack%size(2) = accel_padded_size(this%pack%size(2))
 
@@ -503,10 +495,10 @@ contains
       if(type_is_complex(batch_type(this))) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(accel_is_enabled()) then
-        this%status = BATCH_DEVICE_PACKED
+        this%status_of = BATCH_DEVICE_PACKED
         call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
       else
-        this%status = BATCH_PACKED
+        this%status_of = BATCH_PACKED
         if(batch_type(this) == TYPE_FLOAT) then
           SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
         else if(batch_type(this) == TYPE_CMPLX) then
@@ -602,7 +594,7 @@ contains
         if(copy_) call batch_sync(this)
         
         ! now deallocate
-        this%status = BATCH_NOT_PACKED
+        this%status_of = BATCH_NOT_PACKED
         this%in_buffer_count = 1
 
         if(accel_is_enabled()) then
@@ -952,7 +944,7 @@ subroutine batch_copy_data(np, xx, yy)
 
   call xx%check_compatibility_with(yy)
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(kernel_copy, 0, np)
     call accel_set_kernel_arg(kernel_copy, 1, xx%pack%buffer)
@@ -1002,7 +994,7 @@ subroutine batch_check_compatibility_with(this, yy)
 
   ASSERT(batch_type(yy) == batch_type(this))
   ASSERT(this%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(this) == batch_status(yy))
+  ASSERT(this%status() == yy%status())
   ASSERT(this%dim == yy%dim)
 
   POP_SUB(batch_check_compatibility_with)

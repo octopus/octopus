@@ -37,7 +37,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then
 
@@ -140,7 +140,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     aa_linear(ist) = aa(iaa)
   end do
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
@@ -276,7 +276,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     aa_linear(ist) = aa(iaa)
   end do
   
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     if(batch_type(xx) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
@@ -386,7 +386,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     aa_linear(ist) = aa(iaa)
   end do
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
@@ -523,7 +523,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
 #ifdef R_TREAL
@@ -649,7 +649,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   ASSERT(batch_type(this) /= TYPE_CMPLX)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
     if(batch_type(this) == TYPE_FLOAT) then
       !$omp parallel do
@@ -795,7 +795,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   ASSERT(batch_type(this) /= TYPE_CMPLX)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
 
     if(batch_type(this) == TYPE_FLOAT) then
@@ -872,7 +872,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
 
     if(batch_type(this) == TYPE_FLOAT) then
@@ -954,7 +954,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
 
-  select case(batch_status(yy))
+  select case(yy%status())
   case(BATCH_DEVICE_PACKED)
 
 #if defined(R_TREAL)

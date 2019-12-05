@@ -52,7 +52,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   use_blas = .false.
   
-  select case(batch_status(aa))
+  select case(aa%status())
   case(BATCH_NOT_PACKED)
     use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
@@ -171,7 +171,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
   end select
 
-  if(batch_status(aa) /= BATCH_DEVICE_PACKED) then
+  if(aa%status() /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
       call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
     else
@@ -220,7 +220,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ! some limitations of the current implementation
   ASSERT(ubound(dot, dim = 1) >= aa%nst .and. ubound(dot, dim = 2) >= aa%nst)
 
-  if(batch_status(aa) /= BATCH_NOT_PACKED) then
+  if(aa%status() /= BATCH_NOT_PACKED) then
     call X(mesh_batch_dotp_matrix)(mesh, aa, aa, dot, reduce)
     POP_SUB(X(mesh_batch_dotp_self))
     return
@@ -339,8 +339,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   
   call aa%check_compatibility_with(bb)
 
-  status = batch_status(aa)
-  ASSERT(batch_status(bb) == status)
+  status = aa%status()
+  ASSERT(bb%status() == status)
 
   select case(status)
   case(BATCH_NOT_PACKED)
@@ -470,7 +470,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)
-  packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
+  packed_on_entry = aa%status() == BATCH_NOT_PACKED
   if (packed_on_entry) then
     call batch_unpack(aa, force=.true.)
   end if
@@ -681,7 +681,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   PUSH_SUB(X(priv_mesh_batch_nrm2))
   call profiling_in(prof, 'MESH_BATCH_NRM2')
 
-  select case(batch_status(aa))
+  select case(aa%status())
   case(BATCH_NOT_PACKED)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO

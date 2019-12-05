@@ -799,7 +799,7 @@ contains
            if(exclude_list(ist)) cycle
 
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
-           select case(batch_status(batch))
+           select case(batch%status())
            case(BATCH_NOT_PACKED)
              overlap(band_index(ist)) = M_z0
              do idim = 1, st%d%dim

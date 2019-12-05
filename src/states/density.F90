@@ -144,7 +144,7 @@ contains
 
     if (.not. this%gr%have_fine_mesh) then 
 
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         select case (this%st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)

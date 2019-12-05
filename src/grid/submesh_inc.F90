@@ -169,9 +169,9 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   call profiling_in(prof, "SM_CP_MESH_BATCH")
   PUSH_SUB(X(submesh_copy_from_mesh_batch))
 
-  ASSERT(batch_status(psib)/= BATCH_DEVICE_PACKED)
+  ASSERT(psib%status()/= BATCH_DEVICE_PACKED)
 
-  select case(batch_status(psib))
+  select case(psib%status())
     case(BATCH_NOT_PACKED)
       do ist = 1, psib%nst_linear
         !$omp parallel do
@@ -300,7 +300,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
 
   ASSERT(.not. ss%is_packed())
   
-  select case(batch_status(mm))
+  select case(mm%status())
   case(BATCH_DEVICE_PACKED)
     ASSERT(.false.)
 
