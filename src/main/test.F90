@@ -66,16 +66,16 @@ module test_oct_m
   end type test_parameters_t
 
   public :: test_run
-  
+
 contains
 
   ! ---------------------------------------------------------
   subroutine test_run(namespace)
     type(namespace_t),       intent(in)    :: namespace
-        
+
     type(test_parameters_t) :: param
     integer :: test_mode
-    
+
     PUSH_SUB(test_run)
 
     call messages_obsolete_variable(namespace, 'WhichTest', 'TestMode')
@@ -97,7 +97,7 @@ contains
     !%Option ion_interaction 5
     !% Tests the ion-ion interaction routines.
     !%Option projector 6
-    !% Tests the code that applies the nonlocal part of the pseudopotentials 
+    !% Tests the code that applies the nonlocal part of the pseudopotentials
     !% in case of spin-orbit coupling
     !%Option dft_u 7
     !% Tests the DFT+U part of the code for projections on the basis.
@@ -118,7 +118,7 @@ contains
 
     call messages_obsolete_variable(namespace, 'TestDerivatives', 'TestType')
     call messages_obsolete_variable(namespace, 'TestOrthogonalization', 'TestType')
-  
+
     !%Variable TestType
     !%Type integer
     !%Default all
@@ -141,7 +141,7 @@ contains
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
     endif
-  
+
     !%Variable TestRepetitions
     !%Type integer
     !%Default 1
@@ -154,9 +154,9 @@ contains
     !%
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
-    !%End  
+    !%End
     call parse_variable(namespace, 'TestRepetitions', 1, param%repetitions)
-  
+
     !%Variable TestMinBlockSize
     !%Type integer
     !%Default 1
@@ -190,7 +190,7 @@ contains
     call messages_print_var_value(stdout, "TestMinBlockSize", param%min_blocksize)
     call messages_print_var_value(stdout, "TestMaxBlockSize", param%max_blocksize)
     call messages_print_stress(stdout)
-  
+
     select case(test_mode)
     case(OPTION__TESTMODE__HARTREE)
       call test_hartree(param, namespace)
@@ -219,7 +219,7 @@ contains
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
     end select
-  
+
     POP_SUB(test_run)
   end subroutine test_run
 
@@ -245,7 +245,7 @@ contains
   subroutine test_projector(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -263,21 +263,21 @@ contains
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-  
+
     !Initialize external potential
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
-  
-   
+
+
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
 
     call batch_set_zero(epsib)
-    
+
     do itime = 1, param%repetitions
       call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
-    
+
     do itime = 1, epsib%nst
       write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
       call messages_info(1)
@@ -295,7 +295,7 @@ contains
   subroutine test_dft_u(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -377,7 +377,7 @@ contains
   subroutine test_hamiltonian(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
@@ -423,7 +423,7 @@ contains
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
 
-    call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
+    call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
@@ -448,7 +448,7 @@ contains
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
-    
+
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
@@ -463,7 +463,7 @@ contains
   subroutine test_density_calc(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     integer :: itime
 
@@ -633,7 +633,7 @@ contains
   subroutine test_batch_ops(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     integer :: itime, ops
     type(batch_t) :: xx, yy
@@ -647,11 +647,13 @@ contains
     !%Section Utilities::oct-test
     !%Description
     !% Decides which part of the Hamiltonian is applied.
-    !%Option ops_axpy 0
+    !%Option ops_all 0
     !% Tests batch_axpy operation
-    !%Option ops_scal 1
+    !%Option ops_axpy 1
+    !% Tests batch_axpy operation
+    !%Option ops_scal 2
     !% Tests batch_scal operation
-    !%Option ops_nrm2 2
+    !%Option ops_nrm2 4
     !% Tests batch_nrm2 operation
     !%End
     call parse_variable(namespace, 'TestBatchOps', 0, ops)
@@ -673,25 +675,34 @@ contains
     call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
 
     SAFE_ALLOCATE(tmp(1:xx%nst))
- 
-    do itime = 1, param%repetitions
-      select case(ops)
-        case(OPTION__TESTBATCHOPS__OPS_AXPY)
-          call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy) 
-        case(OPTION__TESTBATCHOPS__OPS_SCAL) 
-          call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
-        case(OPTION__TESTBATCHOPS__OPS_NRM2)
-          call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
-      end select
-    end do
 
-    if(ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
+       ops == OPTION__TESTBATCHOPS__OPS_AXPY) then
+      do itime = 1, param%repetitions
+        call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
+      end do
+      call test_prints_info_batch(sys%st, sys%gr, yy)
+
+    else if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
+            ops == OPTION__TESTBATCHOPS__OPS_SCAL) then
+      do itime = 1, param%repetitions
+        call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
+      end do
+      call test_prints_info_batch(sys%st, sys%gr, yy)
+
+    else if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
+            ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+      do itime = 1, param%repetitions
+        call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
+      end do
       do itime = 1, xx%nst
         write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, tmp(itime)
-        call messages_info(1)  
+        call messages_info(1)
       end do
+
     else
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      write(message(1), '(a)') "Error: wrong option for test mode!"
+      call messages_fatal(1)
     end if
 
     SAFE_DEALLOCATE_A(tmp)
@@ -710,7 +721,7 @@ contains
   subroutine test_derivatives(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
 
     PUSH_SUB(test_derivatives)
@@ -732,7 +743,7 @@ contains
     if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
       call sderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
-   
+
     if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
       call cderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
@@ -747,7 +758,7 @@ contains
   subroutine test_orthogonalization(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
     integer :: itime
 
@@ -788,7 +799,7 @@ contains
   subroutine test_interpolation(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
-    
+
     type(system_t) :: sys
 
     PUSH_SUB(test_interpolation)
@@ -824,7 +835,7 @@ contains
 
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
-    
+
     type(system_t) :: sys
 
     PUSH_SUB(test_ion_interaction)
@@ -837,7 +848,7 @@ contains
 
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
-  
+
   ! ---------------------------------------------------------
 
   subroutine test_prints_info_batch(st, gr, psib)
