@@ -760,10 +760,10 @@ contains
   
   !----------------------------------------------------------
   subroutine get_rs_density_ext(st, mesh, time, rs_current_density_ext)
-    type(states_mxll_t),  intent(inout) :: st
-    type(mesh_t),    intent(in)    :: mesh
-    FLOAT,           intent(in)    :: time
-    CMPLX, optional, intent(inout) :: rs_current_density_ext(:,:)
+    type(states_mxll_t), intent(inout) :: st
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: time
+    CMPLX,     optional, intent(inout) :: rs_current_density_ext(:,:)
 
     FLOAT, allocatable :: current(:,:,:)
 
@@ -771,8 +771,8 @@ contains
 
     SAFE_ALLOCATE(current(1:mesh%np, 1:mesh%sb%dim, 1))  !< The 1 in the last column is a dummy to use batch routines
 
-    call external_current_calculation(st, mesh, time, current(:,:,1))
-    call build_rs_current_state(current(:,:,1), mesh, rs_current_density_ext(:,:), st%ep(:), mesh%np)
+    call external_current_calculation(st, mesh, time, current(:, :, 1))
+    call build_rs_current_state(current(:, :, 1), mesh, rs_current_density_ext(:, :), st%ep(:), mesh%np)
     rs_current_density_ext = - rs_current_density_ext
 
     SAFE_DEALLOCATE_A(current)
@@ -784,11 +784,11 @@ contains
   !----------------------------------------------------------
   subroutine external_current_init(st, namespace, mesh)
     type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
-    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),        intent(in)    :: mesh
+    type(namespace_t),   intent(in)    :: namespace
 
     type(block_t)        :: blk
-    integer              :: ip, il, nlines, ncols, idim, ierr
+    integer              :: ip, il, nlines, ncols, idir, ierr
     FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(MAX_DIM), rr, omega
     character(len=1024)  :: tdf_expression, phase_expression
 
@@ -840,25 +840,23 @@ contains
 
         call parse_block_integer(blk, il - 1, 0, st%external_current_modus(il))
 
-        if (st%external_current_modus(il) &
-            == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
+        if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idim = 1, st%d%dim
-            call parse_block_string( blk, il - 1, idim, st%external_current_string(idim,il))
-            call conv_to_C_string(st%external_current_string(idim,il))
+          do idir = 1, st%d%dim
+            call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
+            call conv_to_C_string(st%external_current_string(idir, il))
           end do
-        else if (st%external_current_modus(il)&
-                 & == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION)then
+        else if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, coords = xx)
-            do idim = 1, 3
-              call parse_block_string( blk, il - 1, idim, st%external_current_string(idim,il))
-              call conv_to_C_string(st%external_current_string(idim,il))
-              call parse_expression(j_vector(idim), dummy(idim), st%d%dim, xx, rr, M_ZERO, &
-                                    st%external_current_string(idim,il))
-              j_vector(idim) = units_to_atomic(units_inp%energy/(units_inp%length**2),j_vector(idim))
+            do idir = 1, st%d%dim
+              call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
+              call conv_to_C_string(st%external_current_string(idir, il))
+              call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, M_ZERO, &
+                st%external_current_string(idir, il))
+              j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
             end do
-            st%external_current_amplitude(ip,:,il) = j_vector(:)
+            st%external_current_amplitude(ip, 1:st%d%dim, il) = j_vector(1:st%d%dim)
           end do
           call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
           st%external_current_omega(il) = omega
@@ -889,7 +887,7 @@ contains
     FLOAT,          intent(in)    :: time
     FLOAT,          intent(inout) :: current(:,:)
 
-    integer :: ip, jn, idim, il
+    integer :: ip, jn, idir, il
     FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), omega, shift, width, amp(MAX_DIM)
     CMPLX   :: exp_arg
 
@@ -897,27 +895,24 @@ contains
 
     current(:,:) = M_ZERO
     do jn = 1, st%external_current_number
-       if (st%external_current_modus(jn) &
-            &== OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
-       do ip = 1, mesh%np
-         call mesh_r(mesh, ip, rr, coords = xx)
-         do idim = 1, 3
-            tt    = time
-            call parse_expression(j_vector(idim), dummy(idim), st%d%dim, xx, rr, tt, &
-                 & trim(st%external_current_string(idim,jn)))
-            j_vector(idim) = units_to_atomic(units_inp%energy/(units_inp%length**2),j_vector(idim))
-          end do
-          current(ip, :) = current(ip, :) + j_vector(:)
-        end do
-     else if(st%external_current_modus(jn)&
-          & == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+      if (st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
         do ip = 1, mesh%np
-           exp_arg = st%external_current_omega(jn) * time &
-                 & + tdf(st%external_current_td_phase(jn),time)
-           amp(:)  = st%external_current_amplitude(ip,:,jn) &
-                 & * tdf(st%external_current_td_function(jn),time) 
-          j_vector(:) = real(amp(:) * exp(-M_zI *(exp_arg)))
-          current(ip, :) = current(ip, :) + j_vector(:)
+          call mesh_r(mesh, ip, rr, coords = xx)
+          do idir = 1, st%d%dim
+            tt = time
+            call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, tt, &
+              & trim(st%external_current_string(idir,jn)))
+            j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
+          end do
+          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+        end do
+
+      else if(st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+        do ip = 1, mesh%np
+          exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
+          amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
+          j_vector(1:st%d%dim) = real(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
+          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
         end do
       end if
     end do
