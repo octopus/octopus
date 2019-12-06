@@ -44,6 +44,7 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use propagator_verlet_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -901,13 +902,16 @@ contains
 
   end subroutine test_prints_info_batch
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
 
   subroutine test_celestial_dynamics(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
     type(celestial_body_t) :: sun, earth, moon
+    type(propagator_verlet_t) :: sun_prop, earth_prop, moon_prop
+    integer :: it, Nstep, internal_loop
+    logical :: all_done
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -917,25 +921,73 @@ contains
     call messages_info()
 
     !Initialize subsystems
-    sun%init()
-    earth%init()
-    moon%init()
+    !Initial conditions are taken from
+    !https://ssd.jpl.nasa.gov/horizons.cgi#top.
+    call sun%init()
+    call earth%init()
+    call moon%init()
+    !At the moment we set the parameters by hand. In the future, this job should be done from
+    !parsing informations
+    sun%mass =  CNST(1.98855E30)
+    earth%mass = CNST(5.97237E24)
+    moon%mass = CNST(7.342E22)
+    sun%pos(1:2)   = (/ M_ZERO, M_ZERO/)
+    sun%vel(1:2)   = (/ M_ZERO, M_ZERO/)
+    sun%acc(1:2)   = (/ M_ZERO, M_ZERO/)
+    earth%pos(1:2) = (/ CNST(149598023000.0), M_ZERO/)
+    earth%vel(1:2) = (/ M_ZERO, CNST(29780.0)/)
+    earth%acc(1:2) = (/ M_ZERO, M_ZERO/)
+    moon%pos(1:2)  = (/ CNST(149982422000.0), M_ZERO/)
+    moon%vel(1:2)  = (/ M_ZERO, CNST(30902.0)/)
+    moon%acc(1:2)  = (/ M_ZERO, M_ZERO/)
 
     !Define interactions manually
-    sun%add_interaction_partner(earth)
-    sun%add_interaction_partner(moon)
-    earth%add_interaction_partner(moon)
-    earth%add_interaction_partner(sun)
-    moon%add_interaction_partner(earth)
-    moon%add_interaction_partner(sun)
+    call sun%add_interaction_partner(earth)
+    call sun%add_interaction_partner(moon)
+    call earth%add_interaction_partner(moon)
+    call earth%add_interaction_partner(sun)
+    call moon%add_interaction_partner(earth)
+    call moon%add_interaction_partner(sun)
+
+    !Allocate receivers
+    call sun%allocate_receiv_structure()
+    call earth%allocate_receiv_structure()
+    call moon%allocate_receiv_structure()
 
     !Creates Verlet propagators
+    call prop_sun%init(M_ZERO, CNST(0.1))
+    call prop_earth%init(M_ZERO, CNST(0.1))
+    call prop_moon%init(M_ZERO, :CNST(0.1))
 
     !Associate them to subsystems
-    sun%define_propagation_scheme(prop_sun, CNST(0.1))
-    sun%define_propagation_scheme(prop_earth, CNST(0.1))
-    sun%define_propagation_scheme(prop_moon, CNST(0.1))
+    call sun%set_propagator(prop_sun)
+    call sun%set_propagator(prop_earth)
+    call sun%set_propagator(prop_moon)
 
+
+    Nstep = 1000
+    do it = 1, Nstep
+
+      all_done = .false.
+      internal_loop = 1
+
+      prop_sun%rewind()
+      prop_earth%rewind()
+      prop_moon%rewind()
+
+      do while(.not. all_done .and. internal_loop < 1000)
+
+        call sun%system_dt(prop_sun)
+        call earth%system_dt(prop_earth)
+        call moon%system_dt(prop_moon)
+
+        !We check the exit condition
+        all_done = prop_sun%step_is_done() && prop_earth%step_is_done() && prop_moon%step_is_done()
+        INCR(internal_loop, 1)
+      end do
+
+      print *, it, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
+    end do
 
 
     POP_SUB(test_celestial_dynamics)

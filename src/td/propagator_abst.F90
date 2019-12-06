@@ -39,12 +39,14 @@ module propagator_abst_oct_m
 
     FLOAT, public :: internal_time
     FLOAT, public :: dt
-    logical :: done
+    logical :: step_done
 
   contains
     !Below are the list of operations that needs to be implemented
     procedure(propagator_init), deferred    :: init
     procedure :: get_td_operation => propagator_get_tdop
+    procedure :: step_is_done => propagator_step_is_done
+    procedure :: rewind => propagator_rewind
   end type propagator_abst_t
 
   abstract interface
@@ -63,7 +65,7 @@ contains
     PUSH_SUB(propagator_rewind)
 
     call prop%list%rewind()
-    prop%done = .false.
+    prop%step_done = .false.
 
     POP_SUB(propagator_rewind)
   end subroutine propagator_rewind
@@ -73,7 +75,7 @@ contains
 
     PUSH_SUB(propagator_finished)
 
-    prop%done = .true.
+    prop%step_done = .true.
 
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
@@ -97,6 +99,13 @@ contains
 
     POP_SUB(propagator_get_tdop)
   end function propagator_get_tdop
+
+  logical pure function propagator_step_is_done(prop) result(step_is_done)
+    class(propagator_abst_t), intent(in) :: prop
+
+    step_is_done = prop%step_done
+
+  end function propagator_step_is_done
 
 end module propagator_abst_oct_m
 
