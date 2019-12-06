@@ -20,8 +20,31 @@
 AC_DEFUN([ACX_FFTW],
 [
   
-  acx_fftw_ok=no
+acx_fftw_ok=no
 
+dnl FIRST CHECK FOR THE BASE FFTW
+AC_MSG_CHECKING([for fftw])
+
+fftw_program="AC_LANG_PROGRAM([],[
+  use, intrinsic :: iso_c_binding
+  implicit none
+
+  include 'fftw3.f03'
+
+  type(C_PTR) :: plan
+  integer(C_INT) :: n0
+  COMPLEX(C_DOUBLE_COMPLEX) :: in(10),out(10)
+  integer(C_INT) :: sign=FFTW_FORWARD
+  INTEGER(C_INT) :: flags
+
+  plan = fftw_plan_dft_1d(n0, in, out, sign, flags)
+])"
+
+AC_LINK_IFELSE($fftw_program, [acx_fftw_ok=yes], [acx_fftw_ok=no])
+
+if test x"$acx_fftw_ok" == xyes; then
+  AC_MSG_RESULT([$acx_fftw_ok (no extra flags needed, provided by other library or flags)])
+else
   dnl BACKUP LIBS AND FCFLAGS
   acx_fftw_save_LIBS="$LIBS"
   acx_fftw_save_FCFLAGS="$FCFLAGS"
@@ -36,24 +59,6 @@ AC_DEFUN([ACX_FFTW],
       *)  FCFLAGS_FFTW="-I$with_fftw_prefix/include" ;;
     esac
   fi
-
-  dnl FIRST CHECK FOR THE BASE FFTW
-  AC_MSG_CHECKING([for fftw])
-
-  fftw_program="AC_LANG_PROGRAM([],[
-    use, intrinsic :: iso_c_binding
-    implicit none
-
-    include 'fftw3.f03'
-
-    type(C_PTR) :: plan
-    integer(C_INT) :: n0
-    COMPLEX(C_DOUBLE_COMPLEX) :: in(10),out(10)
-    integer(C_INT) :: sign=FFTW_FORWARD
-    INTEGER(C_INT) :: flags
-
-    plan = fftw_plan_dft_1d(n0, in, out, sign, flags)
-  ])"
 
   FCFLAGS="$FCFLAGS_FFTW $acx_fftw_save_FCFLAGS"
 
@@ -152,5 +157,6 @@ AC_DEFUN([ACX_FFTW],
 
   FCFLAGS="$acx_fftw_save_FCFLAGS"
   LIBS="$acx_fftw_save_LIBS"
+fi
 
 ])
