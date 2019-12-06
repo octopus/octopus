@@ -672,8 +672,6 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
-    SAFE_ALLOCATE(tmp(1:xx%nst))
-
     if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
        ops == OPTION__TESTBATCHOPS__OPS_AXPY) then
       message(1) = 'Info: Testing axpy'
@@ -716,6 +714,8 @@ contains
       call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
       call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
 
+      SAFE_ALLOCATE(tmp(1:xx%nst))
+
       do itime = 1, param%repetitions
         call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
       end do
@@ -724,11 +724,11 @@ contains
         call messages_info(1)
       end do
 
+      SAFE_DEALLOCATE_A(tmp)
+
       call batch_end(xx)
       call batch_end(yy)
     end if
-
-    SAFE_DEALLOCATE_A(tmp)
 
     call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
