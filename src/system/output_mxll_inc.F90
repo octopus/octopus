@@ -93,10 +93,10 @@
     !% Must be >= 0. If it is 0, then no output is written. 
     !%End
     call parse_variable(namespace, 'MaxwellOutputInterval', 50, outp%output_interval)
-    if(outp%output_interval < 0) then
+    if (outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1, namespace=namespace)
-    endif
+    end if
 
     !%Variable MaxwellOutputInterval
     !%Type integer
@@ -112,10 +112,10 @@
     !% Must be >= 0. If it is 0, then no output is written. 
     !%End
     call parse_variable(namespace, 'MaxwellOutputInterval', 50, outp%output_interval)
-    if(outp%output_interval < 0) then
+    if (outp%output_interval < 0) then
       message(1) = "MaxwellOutputInterval must be >= 0."
       call messages_fatal(1, namespace=namespace)
-    endif
+    end if
 
     !%Variable MaxwellOutputIterDir
     !%Default "output_iter"
@@ -129,9 +129,9 @@
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable(namespace, 'MaxwellOutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
+    if (outp%what /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir, namespace)
-    endif
+    end if
     call add_last_slash(outp%iter_dir)
 
     !%Variable MaxwellRestartWriteInterval
@@ -143,28 +143,28 @@
     !% <tt>MaxwellRestartWriteInterval</tt> variable. (Other output is controlled by <tt>MaxwellOutputInterval</tt>.)
     !%End
     call parse_variable(namespace, 'MaxwellRestartWriteInterval', 50, outp%restart_write_interval)
-    if(outp%restart_write_interval <= 0) then
+    if (outp%restart_write_interval <= 0) then
       message(1) = "MaxwellRestartWriteInterval must be > 0."
       call messages_fatal(1, namespace=namespace)
-    endif
+    end if
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD) /= 0) then
       outp%wfs_list = trim("1-3")
     end if
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_CURRENT) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_CURRENT) /= 0) then
       outp%wfs_list = trim("1-3")
     end if
 
@@ -176,14 +176,14 @@
 
   ! ---------------------------------------------------------
   subroutine output_mxll(outp, namespace, gr_mxll, st_mxll, hm_mxll, time, geo, dir, gr_elec, st_elec, hm_elec)
-    type(output_t),                intent(in)    :: outp
-    type(namespace_t),             intent(in)    :: namespace
-    type(states_mxll_t),           intent(inout) :: st_mxll
-    type(hamiltonian_mxll_t),      intent(in)    :: hm_mxll
-    type(grid_t),                  intent(inout) :: gr_mxll
-    FLOAT,                         intent(in)    :: time
-    type(geometry_t),              intent(inout) :: geo
-    character(len=*),              intent(in)    :: dir
+    type(output_t),                     intent(in)    :: outp
+    type(namespace_t),                  intent(in)    :: namespace
+    type(states_mxll_t),                intent(inout) :: st_mxll
+    type(hamiltonian_mxll_t),           intent(in)    :: hm_mxll
+    type(grid_t),                       intent(inout) :: gr_mxll
+    FLOAT,                              intent(in)    :: time
+    type(geometry_t),                   intent(inout) :: geo
+    character(len=*),                   intent(in)    :: dir
     type(grid_t),             optional, intent(inout) :: gr_elec
     type(states_elec_t),      optional, intent(inout) :: st_elec
     type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
@@ -235,27 +235,25 @@
     PUSH_SUB(output_states_mxll)
 
     ! Electric field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
       fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
       call get_electric_field_state(st%rsb, gr%mesh, dtmp, st%ep, gr%mesh%np)
       do idim = 1, st%d%dim
-         write(fname, '(2a)') 'e_field-', index2axis(idim)
-         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-              & ierr, geo = geo)
+        write(fname, '(2a)') 'e_field-', index2axis(idim)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
     ! Magnetic field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one/units_out%length**2
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
       call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp, st%mu, gr%mesh%np)
       do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-             & ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -279,9 +277,9 @@
     PUSH_SUB(output_energy_density_mxll)
 
     ! Maxell energy density
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY) /= 0) then
-      call dio_function_output(outp%how, dir, "maxwell_energy_density", namespace, gr%mesh, & 
-                               hm%energy_density(:), units_out%energy/units_out%length**3, ierr, geo = geo)
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY) /= 0) then
+      call dio_function_output(outp%how, dir, "maxwell_energy_density", namespace, gr%mesh, hm%energy_density(:), &
+        units_out%energy/units_out%length**3, ierr, geo = geo)
     end if
 
     POP_SUB(output_energy_density_mxll)
@@ -306,14 +304,13 @@
     PUSH_SUB(output_poynting_vector)
 
     ! Maxwell Poynting vector
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__POYNTING_VECTOR) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__POYNTING_VECTOR) /= 0) then
       fn_unit = units_out%energy/(units_out%time*units_out%length**2)
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-       call get_poynting_vector(gr, st, st%rsb, st%rs_sign, dtmp, st%ep, st%mu)
-       do idim = 1, st%d%dim
-         write(fname, '(2a)') 'poynting_vector-', index2axis(idim)
-         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim),&
-              & fn_unit, ierr, geo = geo)
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
+      call get_poynting_vector(gr, st, st%rsb, st%rs_sign, dtmp, st%ep, st%mu)
+      do idim = 1, st%d%dim
+        write(fname, '(2a)') 'poynting_vector-', index2axis(idim)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -339,14 +336,13 @@
     PUSH_SUB(output_transverse_rs_state)
 
     ! transverse component of the electric field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
       call get_electric_field_state(st%rs_transb, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'e_field_trans-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-             & ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -358,8 +354,7 @@
       call get_magnetic_field_state(st%rs_transb, gr%mesh, st%rs_sign, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'b_field_trans-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-             & ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -385,28 +380,25 @@
     PUSH_SUB(output_longitudinal_rs_state)
 
     ! longitudinal component of the electric field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
       call get_electric_field_state(st%rs_longb, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
-      do idim=1, st%d%dim
+      do idim = 1, st%d%dim
         write(fname, '(2a)') 'e_field_long-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-             & ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
 
     ! longitudinal component of the magnetic field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_magnetic_field_state(st%rs_longb, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), &
-                                            gr%mesh%np)
-      do idim=1, st%d%dim
+      call get_magnetic_field_state(st%rs_longb, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), gr%mesh%np)
+      do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field_long-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), fn_unit,&
-             & ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -434,13 +426,12 @@
     ! divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
       call get_electric_field_state(st%rsb, gr%mesh, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
-      call dio_function_output(outp%how, dir, "e_field_div", namespace, gr%mesh, dtmp_2,&
-        & fn_unit, ierr, geo=geo)
+      call dio_function_output(outp%how, dir, "e_field_div", namespace, gr%mesh, dtmp_2, fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
@@ -451,10 +442,9 @@
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
-      call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
+      call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp_1(1:gr%mesh%np, :), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
-      call dio_function_output(outp%how, dir, "b_field_div", namespace, gr%mesh, dtmp_2,&
-        & fn_unit, ierr, geo=geo)
+      call dio_function_output(outp%how, dir, "b_field_div", namespace, gr%mesh, dtmp_2, fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
@@ -480,13 +470,13 @@
     PUSH_SUB(output_vector_potential)
 
     ! Maxwell vector potential
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_VECTOR_POTENTIAL) /= 0) then
       fn_unit = unit_one
-       do idim = 1, gr%sb%dim
-         write(fname, '(2a)') 'vector_potential-', index2axis(idim)
-         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh,&
-              & hm%vector_potential(1:gr%mesh%np,idim), fn_unit, ierr, geo = geo)
-       end do
+      do idim = 1, gr%sb%dim
+        write(fname, '(2a)') 'vector_potential-', index2axis(idim)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, hm%vector_potential(1:gr%mesh%np, idim), fn_unit, &
+          ierr, geo = geo)
+      end do
     end if
 
     POP_SUB(output_vector_potential)
@@ -561,7 +551,7 @@
     PUSH_SUB(output_external_current_density)
 
      ! Maxwell current density
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__EXTERNAL_CURRENT) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__EXTERNAL_CURRENT) /= 0) then
       if (hm%current_density_ext_flag) then
         fn_unit = (unit_one/units_out%time)/(units_out%length**2)      !< test both if its the same
         SAFE_ALLOCATE(ztmp(1:gr%mesh%np,1:st%d%dim))
@@ -571,8 +561,7 @@
         dtmp = - dtmp
         do idim = 1, st%d%dim
           write(fname, '(2a)') 'external_current-', index2axis(idim)
-          call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:,idim), &
-            fn_unit, ierr, geo = geo)
+          call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
         end do
         SAFE_DEALLOCATE_A(ztmp)
         SAFE_DEALLOCATE_A(dtmp)
@@ -602,14 +591,13 @@
      PUSH_SUB(output_charge_density_mxll)
 
     ! charge density calculated by the divergence of the electric field
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       call get_electric_field_state(st%rsb, gr%mesh, dtmp_1, st%ep, gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .true.)
-      call dio_function_output(outp%how, dir, "charge_density", namespace, gr%mesh, dtmp_2(:), &
-        fn_unit, ierr, geo=geo)
+      call dio_function_output(outp%how, dir, "charge_density", namespace, gr%mesh, dtmp_2(:), fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
       SAFE_DEALLOCATE_A(dtmp_2)
     end if
@@ -638,7 +626,7 @@
 
     PUSH_SUB(output_medium_variables_electric)
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_ELECTRIC) /= 0) then
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_ELECTRIC) /= 0) then
       fn_unit = units_out%length**(1-gr_elec%mesh%sb%dim)
       SAFE_ALLOCATE(polarization_mx_gr(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(E_field(1:gr%mesh%np,1:st%d%dim))
@@ -647,20 +635,18 @@
       call get_electric_field_state(st%rsb, gr%mesh, E_field, st%ep, gr%mesh%np)
       polarization_ma_gr = M_ZERO
       polarization_mx_gr = M_ZERO
-      forall (ip=1:gr%mesh%np, idim=1:st%d%dim)
-        D_field(ip,idim) = E_field(ip,idim)*P_ep - polarization_mx_gr(ip,idim)
-      end forall
       do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          D_field(ip, idim) = E_field(ip, idim)*P_ep - polarization_mx_gr(ip, idim)
+        end do
         write(fname, '(2a)') 'd_field-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, D_field(:,idim), &
-          fn_unit, ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, D_field(:, idim), fn_unit, ierr, geo = geo)
       end do
-      forall (ip=1:gr%mesh%np)
-        e_susceptibility(ip) = sqrt(sum(D_field(ip,:)**2))/(P_ep*sqrt(sum(E_field(ip,:)**2))) - M_ONE
-      end forall
+      do ip = 1, gr%mesh%np
+        e_susceptibility(ip) = sqrt(sum(D_field(ip, :)**2))/(P_ep*sqrt(sum(E_field(ip, :)**2))) - M_ONE
+      end do
       write(fname, '(1a)') 'electric_susceptibility'
-      call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, e_susceptibility(:), &
-        fn_unit, ierr, geo = geo)
+      call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, e_susceptibility(:), fn_unit, ierr, geo = geo)
       SAFE_DEALLOCATE_A(polarization_mx_gr)
       SAFE_DEALLOCATE_A(E_field)
       SAFE_DEALLOCATE_A(D_field)
@@ -673,13 +659,13 @@
 
   !----------------------------------------------------------
   subroutine output_medium_variables_magnetic(outp, namespace, dir, st, gr, hm, geo, st_elec, gr_elec, hm_elec)    !< have to set unit output correctly
-    type(output_t),           intent(in)    :: outp
-    type(namespace_t),        intent(in)    :: namespace
-    character(len=*),         intent(in)    :: dir
-    type(states_mxll_t),      intent(in)    :: st
-    type(grid_t),             intent(in)    :: gr
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(geometry_t),         intent(in)    :: geo
+    type(output_t),                     intent(in)    :: outp
+    type(namespace_t),                  intent(in)    :: namespace
+    character(len=*),                   intent(in)    :: dir
+    type(states_mxll_t),                intent(in)    :: st
+    type(grid_t),                       intent(in)    :: gr
+    type(hamiltonian_mxll_t),           intent(in)    :: hm
+    type(geometry_t),                   intent(in)    :: geo
     type(grid_t),             optional, intent(inout) :: gr_elec
     type(states_elec_t),      optional, intent(inout) :: st_elec
     type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
@@ -693,29 +679,27 @@
 
     PUSH_SUB(output_medium_variables_magnetic)
 
-    if(iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_MAGNETIC) /= 0) then
-      fn_unit = units_out%length**(1-gr_elec%mesh%sb%dim)
-      SAFE_ALLOCATE(magnetization_mx_gr(1:gr%mesh%np,1:st%d%dim))
-      SAFE_ALLOCATE(B_field(1:gr%mesh%np,1:st%d%dim))
-      SAFE_ALLOCATE(H_field(1:gr%mesh%np,1:st%d%dim))
+    if (iand(outp%what, OPTION__MAXWELLOUTPUT__MEDIUM_VARIABLES_MAGNETIC) /= 0) then
+      fn_unit = units_out%length**(1 - gr_elec%mesh%sb%dim)
+      SAFE_ALLOCATE(magnetization_mx_gr(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(B_field(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(H_field(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(b_susceptibility(1:gr%mesh%np))
       call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, B_field, st%mu, gr%mesh%np)
       magnetization_ma_gr = M_ZERO
       magnetization_mx_gr = M_ZERO
-      forall (ip=1:gr%mesh%np, idim=1:st%d%dim)
-         H_field(ip,idim) = B_field(ip,idim)/P_mu - magnetization_mx_gr(ip,idim)
-      end forall
       do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          H_field(ip, idim) = B_field(ip,idim)/P_mu - magnetization_mx_gr(ip, idim)
+        end do
         write(fname, '(2a)') 'h_field-', index2axis(idim)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, H_field(:,idim), &
-          fn_unit, ierr, geo = geo)
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, H_field(:, idim), fn_unit, ierr, geo = geo)
       end do
-      forall(ip=1:gr%mesh%np)
-        b_susceptibility(ip) = sqrt(sum(H_field(ip,:)**2))/(P_ep*sqrt(sum(B_field(ip,:)**2))) - M_ONE
-      end forall 
+      do ip = 1, gr%mesh%np
+        b_susceptibility(ip) = sqrt(sum(H_field(ip, :)**2))/(P_ep*sqrt(sum(B_field(ip,:)**2))) - M_ONE
+      end do
       write(fname, '(1a)') 'magnetic_susceptibility'
-      call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, b_susceptibility(:),&
-        fn_unit, ierr, geo = geo)
+      call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, b_susceptibility(:), fn_unit, ierr, geo = geo)
       SAFE_DEALLOCATE_A(magnetization_mx_gr)
       SAFE_DEALLOCATE_A(B_field)
       SAFE_DEALLOCATE_A(H_field)
