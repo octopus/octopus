@@ -676,7 +676,7 @@ contains
 
     if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
        ops == OPTION__TESTBATCHOPS__OPS_AXPY) then
-      messages(1) = 'Info: Testing axpy'
+      message(1) = 'Info: Testing axpy'
       call messages_info(1)
 
       call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
@@ -693,7 +693,7 @@ contains
 
     if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
        ops == OPTION__TESTBATCHOPS__OPS_SCAL) then
-      messages(1) = 'Info: Testing scal'
+      message(1) = 'Info: Testing scal'
       call messages_info(1)
 
       call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
@@ -710,7 +710,7 @@ contains
 
     if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
        ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
-      messages(1) = 'Info: Testing nrm2'
+      message(1) = 'Info: Testing nrm2'
       call messages_info(1)
 
       call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
