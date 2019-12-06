@@ -60,9 +60,9 @@ AC_DEFUN([ACX_FFTW],
   if test ! -z "$with_fftw_prefix"; then
     LIBS_FFTW="-L$with_fftw_prefix/lib"
     LIBS="$LIBS_FFTW -lfftw3 $acx_fftw_save_LIBS"
-    dnl We do not append -lfftw3 at the end, as we might need to prefix other libraries
   else
     LIBS_FFTW=""
+    dnl We do not append -lfftw3 at the end, as we might need to prefix other libraries
     LIBS=""
   fi
 
