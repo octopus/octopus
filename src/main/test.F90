@@ -400,7 +400,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable(namespace, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(namespace, 'TestHamiltonianApply', OPTION__TESTHAMILTONIANAPPLY__TERM_ALL, terms)
     if(terms==0) terms = huge(1)
 
 
@@ -552,7 +552,7 @@ contains
 
     call system_init(sys, namespace)
 
-    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
@@ -749,6 +749,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
+    integer :: itime
 
     PUSH_SUB(test_orthogonalization)
 
@@ -764,13 +765,17 @@ contains
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      do itime = 1, param%repetitions
+        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      end do
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      do itime = 1, param%repetitions
+        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      end do
     end if
 
     call system_end(sys)
