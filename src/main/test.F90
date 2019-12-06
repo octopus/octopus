@@ -643,7 +643,7 @@ contains
 
     !%Variable TestBatchOps
     !%Type integer
-    !%Default ops_axpy
+    !%Default ops_all
     !%Section Utilities::oct-test
     !%Description
     !% Decides which part of the Hamiltonian is applied.
@@ -656,11 +656,12 @@ contains
     !%Option ops_nrm2 4
     !% Tests batch_nrm2 operation
     !%End
-    call parse_variable(namespace, 'TestBatchOps', 0, ops)
+    call parse_variable(namespace, 'TestBatchOps', &
+      OPTION__TESTBATCHOPS__OPS_ALL, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call messages_write('Info: Testing density calculation')
+    call messages_write('Info: Testing batch operations')
     call messages_new_line()
     call messages_new_line()
     call messages_info()
@@ -671,44 +672,63 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
-    call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-    call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
-
     SAFE_ALLOCATE(tmp(1:xx%nst))
 
     if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
        ops == OPTION__TESTBATCHOPS__OPS_AXPY) then
+      call messages_write('Info: Testing axpy')
+      call messages_info()
+
+      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
+      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-    else if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
-            ops == OPTION__TESTBATCHOPS__OPS_SCAL) then
+      call batch_end(xx)
+      call batch_end(yy)
+    end if
+
+    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
+       ops == OPTION__TESTBATCHOPS__OPS_SCAL) then
+      call messages_write('Info: Testing scal')
+      call messages_info()
+
+      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
+      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-    else if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
-            ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+      call batch_end(xx)
+      call batch_end(yy)
+    end if
+
+    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
+       ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+      call messages_write('Info: Testing nrm2')
+      call messages_info()
+
+      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
+      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+
       do itime = 1, param%repetitions
         call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
       end do
       do itime = 1, xx%nst
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, tmp(itime)
+        write(message(1),'(a,i1,3x,e13.6)') "Nrm2 norm state  ", itime, tmp(itime)
         call messages_info(1)
       end do
 
-    else
-      write(message(1), '(a)') "Error: wrong option for test mode!"
-      call messages_fatal(1)
+      call batch_end(xx)
+      call batch_end(yy)
     end if
 
     SAFE_DEALLOCATE_A(tmp)
-
-    call batch_end(xx)
-    call batch_end(yy)
 
     call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
