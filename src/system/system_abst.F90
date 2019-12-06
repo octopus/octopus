@@ -39,6 +39,10 @@ module system_abst_oct_m
     VERLET_SYNC_DT               = 4,  &
     UPDATE_INTERACTION           = 5
 
+  integer, public, parameter ::        &
+    TOTAL_CURRENT                = 1
+
+
   type, abstract :: system_abst_t
     private
 
@@ -48,6 +52,8 @@ module system_abst_oct_m
     procedure(system_do_td_op), deferred :: do_td_operation
     procedure(system_pull_interaction), deferred :: pull_interaction
     procedure(system_get_needed_quantity), deferred :: get_needed_quantity
+    procedure :: add_interaction_partner
+    procedure(system_set_propagator), deferred :: set_propagator
   end type system_abst_t
 
   abstract interface
@@ -63,16 +69,39 @@ module system_abst_oct_m
       class(system_abst_t),     intent(inout) :: remote
       integer,                  intent(in)    :: interaction
     end subroutine system_pull_interaction
+
+    integer function system_get_needed_quantity(sys)
+      import system_abst_t
+      class(system_abst_t),     intent(in) :: sys
+    end function system_get_needed_quantity
+
+    subroutine system_set_propagator(sys, prop)
+      import system_abst_t
+      import propagator_abst_t
+      class(system_abst_t),             intent(inout) :: sys
+      class(propagator_abst_t), target, intent(in)    :: prop
+    end subroutine system_set_propagator
   end interface
 
 contains
+
+   subroutine add_interaction_partner(sys, remote)
+     class(system_abst_t),     intent(inout) :: sys
+     class(system_abst_t),     intent(in)    :: remote
+
+     PUSH_SUB(add_interaction_partner)
+
+     call sys%interactions%add_node(remote)
+
+     POP_SUB(add_interaction_partner)
+   end subroutine add_interaction_partner
 
   subroutine system_dt(this, prop)
     class(system_abst_t),     intent(inout) :: this
     class(propagator_abst_t), intent(inout) :: prop
 
-    integer :: tdop
-    class(*), pointer :: inter
+    integer :: tdop, inter
+    class(*), pointer :: sys
 
     PUSH_SUB(system_dt)
 
@@ -85,13 +114,15 @@ contains
 
     case(UPDATE_INTERACTION)
 
+      inter = this%get_needed_quantity()
+
       ! Loop over systems
       call this%interactions%rewind()
       do while (this%interactions%has_more_values())
-        inter => this%interactions%current()
-        select type (inter)
-        type is (interaction_t)
-          call this%pull_interaction(inter)
+        sys => this%interactions%current()
+        select type (sys)
+        class is (system_abst_t)
+          call this%pull_interaction(sys, inter)
         class default
           message(1) = "Unknow system type."
           call messages_fatal(1)
