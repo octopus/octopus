@@ -499,6 +499,7 @@ system_f_srcs =                                 \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
+	system/system_abst.F90                  \
 	system/system_mxll.F90                  \
 	system/v_ks.F90                         \
 	system/xc_ks_inversion.F90              \
@@ -558,6 +559,7 @@ td_f_srcs =                                 \
 	td/pes_out.F90                      \
 	td/pes_spm.F90                      \
 	td/potential_interpolation.F90      \
+	td/propagator_abst.F90              \
 	td/propagator_base.F90              \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
@@ -565,6 +567,7 @@ td_f_srcs =                                 \
 	td/propagator.F90                   \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
+	td/propagator_verlet.F90            \
 	td/propagator_rk.F90                \
 	td/spectrum.F90                     \
 	td/td_calc.F90                      \
