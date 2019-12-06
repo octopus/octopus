@@ -454,8 +454,13 @@ contains
       if(.not. gamma_only_) then
         ncols = parse_block_cols(blk, 0)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
-          call messages_fatal(1, namespace=namespace)
+          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but should have ', dim
+          if(ncols < dim) then
+            call messages_fatal(1, namespace=namespace)
+          else
+            write(message(2),'(a)') 'Continuing, but ignoring the additional values.'
+            call messages_warning(2, namespace=namespace)
+          end if
         end if
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
