@@ -27,12 +27,15 @@ module gauge_field_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use propagator_abst_oct_m
   use restart_oct_m
   use simul_box_oct_m
+  use space_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
+  use system_abst_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -59,7 +62,7 @@ module gauge_field_oct_m
     gauge_field_end,                      &
     gauge_field_get_force
 
-  type gauge_field_t
+  type, extends(system_abst_t)  :: gauge_field_t
     private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
@@ -71,6 +74,15 @@ module gauge_field_oct_m
     logical, public :: with_gauge_field
     integer :: dynamics
     FLOAT   :: kicktime 
+
+    class(propagator_abst_t), pointer :: prop
+
+  contains
+    procedure :: do_td_operation => gauge_field_do_td
+    procedure :: pull_interaction => gauge_field_pull
+    procedure :: get_needed_quantity => gauge_field_needed_quantity
+    procedure :: set_propagator => gauge_field_set_prop
+    procedure :: allocate_receiv_structure => gauge_field_alloc_receiver
   end type gauge_field_t
 
 contains
@@ -95,13 +107,13 @@ contains
 
     PUSH_SUB(gauge_field_init)
 
+    this%namespace = namespace
     this%with_gauge_field = .false.
     this%vecpot = M_ZERO
     this%vecpot_vel = M_ZERO
     this%vecpot_acc = M_ZERO
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
-    this%ndim = sb%dim
 
     !%Variable GaugeFieldDynamics
     !%Type integer
@@ -273,11 +285,10 @@ contains
   end subroutine gauge_field_get_vec_pot_acc
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_propagate(this, dt, time, namespace)
+  subroutine gauge_field_propagate(this, dt, time)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
-    type(namespace_t),    intent(in)    :: namespace
     
     logical, save :: warning_shown = .false.
     integer :: idim
@@ -305,7 +316,7 @@ contains
 
         write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
         write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
-        call messages_warning(2, namespace=namespace)
+        call messages_warning(2, namespace=this%namespace)
       end if
     end do
     POP_SUB(gauge_field_propagate)
@@ -469,6 +480,113 @@ contains
     POP_SUB(gauge_field_get_force)
   end subroutine gauge_field_get_force
 
+  ! ---------------------------------------------------------
+  subroutine gauge_field_alloc_receiver(this)
+    class(gauge_field_t),          intent(inout) :: this
+
+    PUSH_SUB(gauge_field_alloc_receiver)
+
+
+    POP_SUB(gauge_field_alloc_receiver)
+
+  end subroutine gauge_field_alloc_receiver
+
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_do_td(this, operation)
+    class(gauge_field_t),  intent(inout) :: this
+    integer,               intent(in)    :: operation
+
+    PUSH_SUB(gauge_field_do_td)
+
+    select case(operation)
+    case(VERLET_SYNC_DT)
+
+      this%prop%internal_time = this%prop%internal_time + this%prop%dt
+
+    case(VERLET_UPDATE_POS)
+
+      call gauge_field_propagate(this, this%prop%dt, this%prop%internal_time)
+      call this%prop%list%next()
+
+    case(VERLET_COMPUTE_ACC)
+
+      !TODO
+      call this%prop%list%next()
+
+    case(VERLET_COMPUTE_VEL)
+
+      call gauge_field_propagate_vel(this, this%prop%dt)
+      call this%prop%list%next()
+
+    case default
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
+
+   POP_SUB(gauge_field_do_td)
+
+  end subroutine gauge_field_do_td
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_pull(sys, remote, interaction, partner_index)
+    class(gauge_field_t),  intent(inout) :: sys
+    class(system_abst_t),  intent(inout) :: remote
+    integer,               intent(in)    :: interaction
+    integer,               intent(in)    :: partner_index
+
+    PUSH_SUB(gauge_field_pull)
+
+    select case(interaction)
+    case(TOTAL_CURRENT)
+      select case(sys%dynamics)
+
+      !No interaction
+      !This should not be treated like that
+      case(OPTION__GAUGEFIELDDYNAMICS__NONE)
+        sys%force(1:sys%ndim) = M_ZERO
+
+      case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
+        !TODO
+        sys%force(1:sys%ndim) = M_ZERO
+      ! remote%get_integrated_current_on(Jintegrated)
+      ! use it here (copy to accelaration)
+      end select
+
+    case default
+      message(1) = "Unsupported pull interaction."
+      call messages_fatal(1, namespace=sys%namespace)
+    end select
+
+   POP_SUB(gauge_field_pull)
+
+  end subroutine gauge_field_pull
+
+  ! ---------------------------------------------------------
+  integer function gauge_field_needed_quantity(sys)
+    class(gauge_field_t),  intent(in) :: sys
+
+    PUSH_SUB(gauge_field_needed_quantity)
+
+    gauge_field_needed_quantity = TOTAL_CURRENT
+
+    POP_SUB(gauge_field_needed_quantity)
+
+  end function gauge_field_needed_quantity
+
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_set_prop(sys, prop)
+    class(gauge_field_t),          intent(inout) :: sys
+    class(propagator_abst_t), target, intent(in) :: prop
+
+    PUSH_SUB(gauge_field_set_prop)
+
+    sys%prop => prop
+
+    POP_SUB(gauge_field_set_prop)
+
+  end subroutine gauge_field_set_prop
 
 end module gauge_field_oct_m
 

@@ -184,7 +184,7 @@ contains
         call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
       end if
-      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     call profiling_out(prof)

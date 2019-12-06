@@ -580,7 +580,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
@@ -669,7 +669,7 @@ contains
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt, namespace)
+      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
     end if
 
     !TODO: we should update the occupation matrices here 
