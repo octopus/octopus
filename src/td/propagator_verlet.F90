@@ -36,7 +36,7 @@ module propagator_verlet_oct_m
     private
 
     contains
-    procedure init => propagator_verlet_init
+    procedure :: init => propagator_verlet_init
   end type propagator_verlet_t
 
 contains

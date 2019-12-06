@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use celestial_body_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -114,6 +115,9 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
+    !%Calculation of the density.
+    !%Option celestial_dynamics 17
+    !% Test of celestial dynamics using multisystems
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -214,6 +218,8 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
+    case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
+      call test_celestial_dynamics(param, namespace)
     end select
 
     POP_SUB(test_run)
@@ -894,6 +900,46 @@ contains
     POP_SUB(test_prints_info_batch)
 
   end subroutine test_prints_info_batch
+
+   ! ---------------------------------------------------------
+
+  subroutine test_celestial_dynamics(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(celestial_body_t) :: sun, earth, moon
+
+    PUSH_SUB(test_celestial_dynamics)
+
+    call messages_write('Info: Testing celestial dynamics using multisystems')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    !Initialize subsystems
+    sun%init()
+    earth%init()
+    moon%init()
+
+    !Define interactions manually
+    sun%add_interaction_partner(earth)
+    sun%add_interaction_partner(moon)
+    earth%add_interaction_partner(moon)
+    earth%add_interaction_partner(sun)
+    moon%add_interaction_partner(earth)
+    moon%add_interaction_partner(sun)
+
+    !Creates Verlet propagators
+
+    !Associate them to subsystems
+    sun%define_propagation_scheme(prop_sun, CNST(0.1))
+    sun%define_propagation_scheme(prop_earth, CNST(0.1))
+    sun%define_propagation_scheme(prop_moon, CNST(0.1))
+
+
+
+    POP_SUB(test_celestial_dynamics)
+  end subroutine test_celestial_dynamics
 
 end module test_oct_m
 
