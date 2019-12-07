@@ -11,4 +11,8 @@ match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.150000E+01
 match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.150000E+01
 match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.150000E+01
 match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.150000E+01
+match ; Nrm2 norm state  1; GREPFIELD(out, 'Nrm2 norm state  1', 5) ; 0.100000E+01
+match ; Nrm2 norm state  2; GREPFIELD(out, 'Nrm2 norm state  2', 5) ; 0.100000E+01
+match ; Nrm2 norm state  3; GREPFIELD(out, 'Nrm2 norm state  3', 5) ; 0.100000E+01
+match ; Nrm2 norm state  4; GREPFIELD(out, 'Nrm2 norm state  4', 5) ; 0.100000E+01
 
