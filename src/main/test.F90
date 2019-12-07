@@ -642,22 +642,22 @@ contains
     PUSH_SUB(test_density_calc)
 
     !%Variable TestBatchOps
-    !%Type integer
-    !%Default ops_all
+    !%Type flag
+    !%Default ops_axpy + ops_scal + ops_nrm2
     !%Section Utilities::oct-test
     !%Description
     !% Decides which part of the Hamiltonian is applied.
-    !%Option ops_all 0
+    !%Option ops_axpy bit(1)
     !% Tests batch_axpy operation
-    !%Option ops_axpy 1
-    !% Tests batch_axpy operation
-    !%Option ops_scal 2
+    !%Option ops_scal bit(2)
     !% Tests batch_scal operation
-    !%Option ops_nrm2 4
+    !%Option ops_nrm2 bit(3)
     !% Tests batch_nrm2 operation
     !%End
-    call parse_variable(namespace, 'TestBatchOps', &
-      OPTION__TESTBATCHOPS__OPS_ALL, ops)
+    ops = OPTION__TESTBATCHOPS__OPS_AXPY &
+        + OPTION__TESTBATCHOPS__OPS_SCAL &
+        + OPTION__TESTBATCHOPS__OPS_NRM2
+    call parse_variable(namespace, 'TestBatchOps', ops, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
@@ -672,8 +672,7 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
-    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
-       ops == OPTION__TESTBATCHOPS__OPS_AXPY) then
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_AXPY) /= 0) then
       message(1) = 'Info: Testing axpy'
       call messages_info(1)
 
@@ -689,8 +688,7 @@ contains
       call batch_end(yy)
     end if
 
-    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
-       ops == OPTION__TESTBATCHOPS__OPS_SCAL) then
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_SCAL) /= 0) then
       message(1) = 'Info: Testing scal'
       call messages_info(1)
 
@@ -706,8 +704,7 @@ contains
       call batch_end(yy)
     end if
 
-    if(ops == OPTION__TESTBATCHOPS__OPS_ALL .or. &
-       ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_NRM2) /= 0) then
       message(1) = 'Info: Testing nrm2'
       call messages_info(1)
 
