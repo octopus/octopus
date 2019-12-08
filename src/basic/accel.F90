@@ -641,10 +641,6 @@ contains
     call parse_variable(namespace, 'CudaAwareMPI', default, accel%cuda_mpi)
     if(accel%cuda_mpi) then
       call messages_write("Using CUDA-aware MPI.")
-      call messages_new_line()
-      call messages_write("If you use more than one rank per GPU, make sure to run the NVIDIA MPS daemon.")
-      call messages_new_line()
-      call messages_write("Otherwise, you may get incorrect results.")
       call messages_info()
     end if
 
