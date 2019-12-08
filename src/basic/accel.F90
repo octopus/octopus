@@ -82,7 +82,8 @@ module accel_oct_m
     clfft_print_error,            &
     accel_local_memory_size,      &
     accel_global_memory_size,     &
-    accel_max_size_per_dim
+    accel_max_size_per_dim,       &
+    accel_get_device_pointer
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -126,12 +127,14 @@ module accel_oct_m
     type(cl_command_queue) :: command_queue
 #endif
     type(c_ptr)            :: cublas_handle
+    type(c_ptr)            :: cuda_stream
     type(c_ptr)            :: module_map
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
+    logical                :: cuda_mpi
     integer                :: warp_size
   end type accel_t
 
@@ -224,6 +227,15 @@ module accel_oct_m
       zaccel_set_kernel_arg_data,   &
       accel_set_kernel_arg_local
   end interface accel_set_kernel_arg
+
+  interface accel_get_device_pointer
+    module procedure iaccel_get_device_pointer_1
+    module procedure iaccel_get_device_pointer_2
+    module procedure daccel_get_device_pointer_1, zaccel_get_device_pointer_1
+    module procedure daccel_get_device_pointer_2, zaccel_get_device_pointer_2
+    module procedure saccel_get_device_pointer_1, caccel_get_device_pointer_1
+    module procedure saccel_get_device_pointer_2, caccel_get_device_pointer_2
+  end interface accel_get_device_pointer
 
   type(profile_t), save :: prof_read, prof_write
 
@@ -371,7 +383,8 @@ contains
 
 #ifdef HAVE_CUDA
     if(idevice<0) idevice = 0
-    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, accel%cuda_stream, &
+      idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
     call messages_info(1, all_nodes = .true.)
@@ -380,7 +393,7 @@ contains
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .true.
 
-    call cublas_init(accel%cublas_handle)
+    call cublas_init(accel%cublas_handle, accel%cuda_stream)
 #endif
     
 #ifdef HAVE_OPENCL
@@ -606,6 +619,29 @@ contains
     
     if(run_benchmark) then
       call opencl_check_bandwidth()
+    end if
+
+    !%Variable CudaAwareMPI
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% If Octopus was compiled with CUDA support and MPI support and if the MPI
+    !% implementation is CUDA-aware (i.e., it supports communication using device pointers),
+    !% this switch can be set to true to use the CUDA-aware MPI features. The advantage
+    !% of this approach is that it can do, e.g., peer-to-peer copies between devices without
+    !% going through the host memmory.
+    !% The default is false, except when the configure switch --enable-cudampi is set, in which
+    !% case this variable is set to true.
+    !%End
+#ifdef HAVE_CUDA_MPI
+    default = .true.
+#else
+    default = .false.
+#endif
+    call parse_variable(namespace, 'CudaAwareMPI', default, accel%cuda_mpi)
+    if(accel%cuda_mpi) then
+      call messages_write("Using CUDA-aware MPI.")
+      call messages_info()
     end if
 
     call messages_print_stress(stdout)
@@ -1838,7 +1874,7 @@ contains
   end function accel_max_size_per_dim
 
   ! ------------------------------------------------------
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "accel_inc.F90"
