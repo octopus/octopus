@@ -663,6 +663,8 @@ contains
       photon_number = photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
     end do
 
+    photon_number =  photon_number - st%qtot/M_TWO
+
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(grad_psi)
 
