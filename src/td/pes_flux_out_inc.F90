@@ -18,8 +18,9 @@
 
 
 ! Wrapper function
-subroutine pes_flux_pmesh(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
+  type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)            
@@ -43,7 +44,7 @@ subroutine pes_flux_pmesh(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, 
   ! not implemented
 
   case (M_PLANES)
-    call pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+    call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
   
   end select
   
@@ -137,8 +138,9 @@ end function flatten_indices
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
-subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
+  type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
@@ -207,7 +209,8 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   else  
     
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point,  Lkpt(:,1:dim))
+            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
+            Lkpt(:,1:dim))
 
 
   end if
@@ -289,7 +292,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
           
             if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
               write(message(1),'(a)')'This condition should never happen something bad is going on.'
-              call messages_fatal(1)
+              call messages_fatal(1, namespace=namespace)
               err = -2 
             end if
       
@@ -326,14 +329,14 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
     
     if (err == -1) then
       call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if 
 
     if (err > 1) then
       call messages_write('More than one point with p = 0 coordinate.')
       call messages_new_line()
       call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if 
 
   end if
@@ -344,7 +347,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
 
   if (err == -2) then
     call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
   end if 
   
  
@@ -736,11 +739,11 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
   select case (this%shape)
   
   case (M_SPHERICAL)
-    call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces")
+    call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces", namespace=namespace)
   ! not needed
   
   case (M_CUBIC)
-    call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces") 
+    call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
 
   case (M_PLANES)
     call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)

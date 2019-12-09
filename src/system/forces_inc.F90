@@ -82,7 +82,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x, namespace) .and. ep%ignore_external_ions) then
       cycle
     end if
     
@@ -148,7 +148,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
-  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
@@ -279,7 +279,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
                 if(iatom_symm > geo%natoms) then
                   write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
                   write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-                  call messages_fatal(2)
+                  call messages_fatal(2, namespace=namespace)
                 end if
 
                 do idir = 1, gr%mesh%sb%dim
@@ -330,7 +330,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end if
 
       !The Hubbard forces
-      call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
+      call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
       call batch_end(psib)

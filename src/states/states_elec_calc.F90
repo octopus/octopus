@@ -41,6 +41,7 @@ module states_elec_calc_oct_m
   use mesh_function_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use namespace_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m
@@ -92,8 +93,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_orthogonalize(st, mesh)
+  subroutine states_elec_orthogonalize(st, namespace, mesh)
     type(states_elec_t),  intent(inout) :: st
+    type(namespace_t),    intent(in)    :: namespace
     type(mesh_t),         intent(in)    :: mesh
 
     integer :: ik
@@ -102,9 +104,9 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       if (states_are_real(st)) then
-        call dstates_elec_orthogonalization_full(st, mesh, ik)
+        call dstates_elec_orthogonalization_full(st, namespace, mesh, ik)
       else
-        call zstates_elec_orthogonalization_full(st, mesh, ik)
+        call zstates_elec_orthogonalization_full(st, namespace, mesh, ik)
       end if
     end do
 

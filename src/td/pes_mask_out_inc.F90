@@ -55,7 +55,8 @@ end subroutine flip_sign_Lkpt_idx
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
-subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+  type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
@@ -116,7 +117,8 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   else  
     
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-           kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  Lkpt(:,1:dim))
+           kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  &
+           Lkpt(:,1:dim))
 
 !       do ik = 1, kpoints_number(kpoints)
 !         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
@@ -258,13 +260,13 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
     
     if (err == -1) then
       call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if 
 
     if (err > 1) then
       call messages_write('Illformed momentum-space mesh: more than one point with p = 0 coordinate.')
       call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if 
 
   end if
@@ -276,7 +278,7 @@ subroutine pes_mask_pmesh(dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
 
   if (err == -2) then
     call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
   end if 
   
  
@@ -429,7 +431,8 @@ end subroutine pes_mask_map_from_state
 ! ---------------------------------------------------------
 !> Write the photoelectron wavefunctions in real space
 ! ---------------------------------------------------------
-subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
+subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
+  type(namespace_t),     intent(in)    :: namespace
   type(states_elec_t),   intent(in)    :: st
   type(grid_t),          intent(in)    :: gr
   type(geometry_t),      intent(in)    :: geo
@@ -493,7 +496,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
   call density_calc_end(dens_calc)
 
   ! THE OUTPUT 
-  if(iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
@@ -501,13 +504,13 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
       else
         write(fname, '(a,i1)') 'pes_den-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, outp%namespace, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, namespace, gr%fine%mesh, &
         RhoAB(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
 
-  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
@@ -527,7 +530,7 @@ subroutine pes_mask_output_states(st, gr, geo, dir, outp, mask)
               end if
             end if
               
-            call zio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, &
+            call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, &
               PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
 
           end do
@@ -658,14 +661,15 @@ end subroutine pes_mask_fullmap
 !!  qshep interpolator opbject (interp).
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
-  FLOAT,           intent(in)    :: pesK(:,:,:)
-  FLOAT,           intent(in)    :: Lk(:,:)
-  integer,         intent(in)    :: ll(:)
-  integer,         intent(in)    :: dim
-  FLOAT, pointer,  intent(inout) :: cube_f(:)
-  type(qshep_t),   intent(out)   :: interp
-  FLOAT, optional, intent(in)   :: pmesh(:,:,:,:)  
+subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
+  type(namespace_t), intent(in)    :: namespace
+  FLOAT,             intent(in)    :: pesK(:,:,:)
+  FLOAT,             intent(in)    :: Lk(:,:)
+  integer,           intent(in)    :: ll(:)
+  integer,           intent(in)    :: dim
+  FLOAT, pointer,    intent(inout) :: cube_f(:)
+  type(qshep_t),     intent(out)   :: interp
+  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)  
   
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
@@ -682,7 +686,7 @@ subroutine pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
   !check dim
   if (dim  <  2 .or. dim > 3) then
     message(1) = "This interpolator works only for 2 <= dim <= 3." 
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
   
   SAFE_ALLOCATE(cube_f(1:np))
@@ -811,7 +815,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   
 #if defined(HAVE_NETCDF)  
   
-  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
@@ -823,7 +827,7 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
 
 #endif
   
-  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
@@ -1032,7 +1036,7 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
       print *,rotation(3,:)
     end if
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
 
     ntodo = product(ll(1:2))
     idone = 0 
@@ -1206,11 +1210,11 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1327,11 +1331,11 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1458,11 +1462,11 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   !in 1D we do not interpolate 
   if (  (dim  ==  1) ) then 
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1761,7 +1765,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
     ! Interpolate the output
   else
 
-    call pes_mask_interpolator_init(pesK, Lk, ll, dim, cube_f, interp)
+    call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp)
 
     select case(dim)
     case(2)
@@ -1870,12 +1874,13 @@ end subroutine pes_mask_write_power_total
 !! of PES data
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
+subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   type(pes_mask_t),    intent(inout)    :: mask
   type(mesh_t),        intent(in)       :: mesh
   type(states_elec_t), intent(in)       :: st
-  character(len=*),    intent(in)       :: file
   type(output_t),      intent(in)       :: outp
+  type(namespace_t),   intent(in)       :: namespace
+  character(len=*),    intent(in)       :: file
   type(grid_t),        intent(in)       :: gr
   type(geometry_t),    intent(in)       :: geo
   integer,             intent(in)       :: iter
@@ -1893,13 +1898,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   call profiling_in(prof, "PESMASK_out")
   
   !Output info for easy post-process
-  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", outp%namespace)
+  if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", namespace)
  
 
   !Photoelectron wavefunction and density in real space
-  if(iand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  iand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
-    call  pes_mask_output_states(st, gr, geo, dir, outp, mask)
+    call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   end if
   
   if (simul_box_is_periodic(mesh%sb)) then
@@ -1912,7 +1917,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
 
   !Write the output in the td.00iter directories
   dir = file 
-  if(iand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
+  if(bitand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 
@@ -1966,13 +1971,13 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
       ! Output the full matrix in binary format for subsequent post-processing 
       if(st%d%nik == 1) then
       write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath(fn, outp%namespace), &
+      call io_binary_write(io_workpath(fn, namespace), &
         mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
                            
          
       ! Total power spectrum 
       write(fn, '(a,a)') trim(dir), '_power.sum'
-      call pes_mask_output_power_totalM(pesK,fn, outp%namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
+      call pes_mask_output_power_totalM(pesK,fn, namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
                                        mask%energyMax, mask%energyStep, .false.)
       end if
 
@@ -1983,7 +1988,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
         write(fn, '(a,a)') trim(dir), '_map.pz=0'
       end if
       pol = (/M_ZERO, M_ZERO, M_ONE/)
-      call pes_mask_output_full_mapM_cut(pesK, fn, outp%namespace, mask%ll, mask%mesh%sb%dim, &
+      call pes_mask_output_full_mapM_cut(pesK, fn, namespace, mask%ll, mask%mesh%sb%dim, &
         pol = pol, dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
                                      
     end if
@@ -2105,9 +2110,10 @@ end subroutine pes_mask_write_info
 ! ---------------------------------------------------------
 !
 ! ---------------------------------------------------------
-subroutine pes_mask_dump(restart, mask, st, ierr)
-  type(restart_t),     intent(in)  :: restart
+subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
   type(pes_mask_t),    intent(in)  :: mask
+  type(namespace_t),   intent(in)  :: namespace
+  type(restart_t),     intent(in)  :: restart
   type(states_elec_t), intent(in)  :: st
   integer,             intent(out) :: ierr
 
@@ -2175,7 +2181,7 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
           if (err /= 0) then
             err2 = err2 + 1
             message(1) = "Unable to write PES mask restart data to '"//trim(path)//"'."
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           end if
         end if
 
@@ -2199,9 +2205,10 @@ subroutine pes_mask_dump(restart, mask, st, ierr)
 end subroutine pes_mask_dump
 
 ! ---------------------------------------------------------
-subroutine pes_mask_load(restart, mask, st, ierr)
-  type(restart_t),     intent(in)    :: restart
+subroutine pes_mask_load(mask, namespace, restart, st, ierr)
   type(pes_mask_t),    intent(inout) :: mask
+  type(namespace_t),   intent(in)    :: namespace
+  type(restart_t),     intent(in)    :: restart
   type(states_elec_t), intent(inout) :: st
   integer,             intent(out)   :: ierr
 
@@ -2262,8 +2269,8 @@ subroutine pes_mask_load(restart, mask, st, ierr)
     if (rr(1) /= mask%mask_r(1) .or. rr(2) /= mask%mask_r(2)) then
       message(1) = "PhotoElectronSpectrum = pes_mask : The mask parameters have changed."
       message(2) = "I will restart mapping from the previous context."
-      call messages_warning(2)
-      call pes_mask_restart_map(mask, st, rr)
+      call messages_warning(2, namespace=namespace)
+      call pes_mask_restart_map(mask, namespace, st, rr)
     end if
   end if
 
@@ -2279,8 +2286,9 @@ end subroutine pes_mask_load
 
 
 ! ---------------------------------------------------------
-subroutine pes_mask_restart_map(mask, st, RR)
+subroutine pes_mask_restart_map(mask, namespace, st, RR)
   type(pes_mask_t),    intent(inout) :: mask
+  type(namespace_t),   intent(in)    :: namespace
   type(states_elec_t), intent(inout) :: st
   FLOAT,               intent(in)    :: RR(2)
 
@@ -2300,7 +2308,7 @@ subroutine pes_mask_restart_map(mask, st, RR)
 
   SAFE_ALLOCATE(psi(1:mask%mesh%np))
 
-  call pes_mask_generate_mask_function(mask,mask%mesh,mask%shape, RR, M_old)
+  call pes_mask_generate_mask_function(mask, namespace, mask%mesh, mask%shape, RR, M_old)
   
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end

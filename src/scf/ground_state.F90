@@ -115,7 +115,7 @@ contains
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, calc_eigenval = .false.)
+      call system_h_setup(sys, calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
@@ -123,7 +123,7 @@ contains
     ! run self-consistency
     call scf_state_info(sys%st)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
@@ -145,7 +145,7 @@ contains
     call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()
 
     ! clean up
     call states_elec_deallocate_wfns(sys%st)

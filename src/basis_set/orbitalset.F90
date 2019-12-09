@@ -173,25 +173,28 @@ contains
 
 
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
-  subroutine orbitalset_update_phase(os, sb, kpt, spin_polarized, vec_pot, vec_pot_var)
+  subroutine orbitalset_update_phase(os, sb, kpt, spin_polarized, vec_pot, vec_pot_var, kpt_max)
     type(orbitalset_t),            intent(inout) :: os
     type(simul_box_t),             intent(in)    :: sb
     type(distributed_t),           intent(in)    :: kpt
     logical,                       intent(in)    :: spin_polarized
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+    integer, optional,             intent(in)    :: kpt_max
 
     integer :: ns, iq, is, ikpoint, im, idim
     FLOAT   :: kr, kpoint(1:MAX_DIM), dx(1:MAX_DIM)
-    integer :: ndim
-    integer :: inn
+    integer :: ndim, inn, kpt_end
 
     PUSH_SUB(orbitalset_update_phase)
 
     ns = os%sphere%np
     ndim = sb%dim
 
-    do iq = kpt%start, kpt%end
+    kpt_end = kpt%end
+    if(present(kpt_max)) kpt_end = min(kpt_max, kpt_end)
+
+    do iq = kpt%start, kpt_end
       !This is durty but avoids to refer to states_get_kpoint_index
       if(spin_polarized) then
         ikpoint = 1 + (iq - 1)/2

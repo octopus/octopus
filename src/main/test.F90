@@ -26,9 +26,12 @@ module test_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
+  use exponential_oct_m
   use global_oct_m
+  use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
@@ -45,6 +48,7 @@ module test_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
+  use subspace_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
@@ -100,7 +104,15 @@ contains
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
     !%Option density_calc 9
-    !%Calculation of the density.
+    !% Calculation of the density.
+    !%Option exp_apply 10
+    !% Tests the exponential of the Hamiltonian
+    !%Option boundaries 11
+    !% Tests the boundaries conditions
+    !%Option subspace_diag 12
+    !% Tests the subspace diagonalization
+    !%Option batch_ops 13
+    !% Tests the batch operations
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -198,6 +210,14 @@ contains
       call test_hamiltonian(param, namespace)
     case(OPTION__TESTMODE__DENSITY_CALC)
       call test_density_calc(param, namespace)
+    case(OPTION__TESTMODE__EXP_APPLY)
+      call test_exponential(param, namespace)
+    case(OPTION__TESTMODE__BOUNDARIES)
+      call test_boundaries(param, namespace)
+    case(OPTION__TESTMODE__SUBSPACE_DIAG)
+      call test_subspace_diagonalization(param, namespace)
+    case(OPTION__TESTMODE__BATCH_OPS)
+      call test_batch_ops(param, namespace)
     end select
   
     POP_SUB(test_run)
@@ -227,7 +247,6 @@ contains
     type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
-    type(epot_t) :: ep
     type(batch_t), pointer :: epsib
     integer :: itime
 
@@ -338,14 +357,7 @@ contains
       call batch_unpack(epsib, force = .true.)
     end if
 
-    do itime = 1, epsib%nst
-      if(states_are_real(sys%st)) then 
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%dpsi)
-      else
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%zpsi)
-      end if
-      call messages_info(1)
-    end do
+    call test_prints_info_batch(sys%st, sys%gr, epsib)
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -388,7 +400,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable(namespace, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(namespace, 'TestHamiltonianApply', OPTION__TESTHAMILTONIANAPPLY__TERM_ALL, terms)
     if(terms==0) terms = huge(1)
 
 
@@ -406,7 +418,7 @@ contains
 
     !Initialize external potential
     call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
@@ -416,17 +428,17 @@ contains
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
 
-    if(hamiltonian_elec_apply_packed(sys%hm, sys%gr%der%mesh)) then
+    if(hamiltonian_elec_apply_packed(sys%hm)) then
       call batch_pack(sys%st%group%psib(1, 1))
       call batch_pack(hpsib, copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
           set_bc = .false.)
       end if
     end do
@@ -434,16 +446,9 @@ contains
     if(batch_is_packed(hpsib)) then
       call batch_unpack(hpsib, force = .true.)
     end if
-    
-    do itime = 1, hpsib%nst
-      if(states_are_real(sys%st)) then 
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%dpsi)
-      else
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%zpsi)
-      end if
-      call messages_info(1)
-    end do
 
+    call test_prints_info_batch(sys%st, sys%gr, hpsib)
+    
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
@@ -491,6 +496,215 @@ contains
   end subroutine test_density_calc
 
 
+  ! ---------------------------------------------------------
+  subroutine test_boundaries(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    integer :: itime
+
+    PUSH_SUB(test_density_calc)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing boundary conditions')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    do itime = 1, param%repetitions
+      call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_boundaries
+
+
+   ! ---------------------------------------------------------
+  subroutine test_exponential(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    type(exponential_t) :: te
+    integer :: itime
+
+    PUSH_SUB(test_exponential)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing exponential')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+
+    !Initialize external potential
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+
+    call exponential_init(te, namespace)
+
+    if(hamiltonian_elec_apply_packed(sys%hm)) then
+      call batch_pack(sys%st%group%psib(1, 1))
+    end if
+
+    do itime = 1, param%repetitions
+      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call exponential_end(te)
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_exponential)
+  end subroutine test_exponential
+
+
+  ! ---------------------------------------------------------
+  subroutine test_subspace_diagonalization(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t) :: sys
+    integer :: itime
+    type(subspace_t) :: sdiag
+
+    PUSH_SUB(test_subspace_diagonalization)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing boundary conditions')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
+    call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo)
+
+    call subspace_init(sdiag, sys%namespace, sys%st, no_sd = .false.)
+
+    do itime = 1, param%repetitions
+      if(states_are_real(sys%st)) then
+        call dsubspace_diag(sdiag, sys%namespace, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+      else
+        call zsubspace_diag(sdiag, sys%namespace, sys%gr%mesh, sys%st, sys%hm, 1, sys%st%eigenval(:, 1))
+      end if
+    end do
+
+    call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_subspace_diagonalization)
+  end subroutine test_subspace_diagonalization
+
+
+  ! ---------------------------------------------------------
+  subroutine test_batch_ops(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+    
+    type(system_t) :: sys
+    integer :: itime, ops
+    type(batch_t) :: xx, yy
+    FLOAT, allocatable :: tmp(:)
+
+    PUSH_SUB(test_density_calc)
+
+    !%Variable TestBatchOps
+    !%Type integer
+    !%Default ops_axpy
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides which part of the Hamiltonian is applied.
+    !%Option ops_axpy 0
+    !% Tests batch_axpy operation
+    !%Option ops_scal 1
+    !% Tests batch_scal operation
+    !%Option ops_nrm2 2
+    !% Tests batch_nrm2 operation
+    !%End
+    call parse_variable(namespace, 'TestBatchOps', 0, ops)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing density calculation')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
+    call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+
+    SAFE_ALLOCATE(tmp(1:xx%nst))
+ 
+    do itime = 1, param%repetitions
+      select case(ops)
+        case(OPTION__TESTBATCHOPS__OPS_AXPY)
+          call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy) 
+        case(OPTION__TESTBATCHOPS__OPS_SCAL) 
+          call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
+        case(OPTION__TESTBATCHOPS__OPS_NRM2)
+          call mesh_batch_nrm2(sys%gr%mesh, yy, tmp)
+      end select
+    end do
+
+    if(ops == OPTION__TESTBATCHOPS__OPS_NRM2) then
+      do itime = 1, xx%nst
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, tmp(itime)
+        call messages_info(1)  
+      end do
+    else
+      call test_prints_info_batch(sys%st, sys%gr, yy)
+    end if
+
+    SAFE_DEALLOCATE_A(tmp)
+
+    call batch_end(xx)
+    call batch_end(yy)
+
+    call states_elec_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_batch_ops
+
 
 ! ---------------------------------------------------------
   subroutine test_derivatives(param, namespace)
@@ -535,6 +749,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
     
     type(system_t) :: sys
+    integer :: itime
 
     PUSH_SUB(test_orthogonalization)
 
@@ -550,13 +765,17 @@ contains
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      do itime = 1, param%repetitions
+        call dstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      end do
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_elec_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
+      do itime = 1, param%repetitions
+        call zstates_elec_calc_orth_test(sys%st, sys%namespace, sys%gr%mesh, sys%gr%sb)
+      end do
     end if
 
     call system_end(sys)
@@ -619,6 +838,35 @@ contains
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
   
+  ! ---------------------------------------------------------
+
+  subroutine test_prints_info_batch(st, gr, psib)
+    type(states_elec_t), intent(in)    :: st
+    type(grid_t),        intent(in)    :: gr
+    type(batch_t),       intent(inout) :: psib
+
+    integer :: itime
+
+    PUSH_SUB(test_prints_info_batch)
+
+    if(batch_is_packed(psib)) then
+      call batch_unpack(psib, force = .true.)
+    end if
+
+    do itime = 1, psib%nst
+      if(states_are_real(st)) then
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, &
+                                                                   psib%states(itime)%dpsi)
+      else
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, &
+                                                                   psib%states(itime)%zpsi)
+      end if
+      call messages_info(1)
+    end do
+
+    POP_SUB(test_prints_info_batch)
+
+  end subroutine test_prints_info_batch
 
 end module test_oct_m
 

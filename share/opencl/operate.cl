@@ -74,7 +74,7 @@ __kernel void operate_map(const int np,
   const int lip = get_local_id(1);
     
 #ifdef INDIRECT
-  const int ip  = indirect[ipd];
+  const int ip  = (ipd<np) ? indirect[ipd] : 0;
 #else
 #define ip ipd
 #endif

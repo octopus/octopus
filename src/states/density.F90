@@ -142,67 +142,119 @@ contains
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
 
-    if(this%st%d%ispin /= SPINORS .and. .not. this%gr%have_fine_mesh) then 
+    if (.not. this%gr%have_fine_mesh) then 
 
       select case(batch_status(psib))
       case(BATCH_NOT_PACKED)
-        if(states_are_real(this%st)) then
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)
+          if(states_are_real(this%st)) then
+            do ist = 1, psib%nst
+              if(abs(weight(ist)) <= M_EPSILON) cycle
+              !$omp parallel do simd schedule(static)
+              do ip = 1, this%gr%mesh%np
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+              end do
+            end do
+          else
+            do ist = 1, psib%nst
+              if(abs(weight(ist)) <= M_EPSILON) cycle
+              !$omp parallel do schedule(static)
+              do ip = 1, this%gr%mesh%np
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                  real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
+              end do
+            end do
+          end if
+        case (SPINORS)
           do ist = 1, psib%nst
             if(abs(weight(ist)) <= M_EPSILON) cycle
-            !$omp parallel do simd schedule(static)
-            do ip = 1, this%gr%mesh%np
-              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+            !$omp parallel do schedule(static) private(psi1, psi2, term)
+            do ip = 1, this%gr%mesh%np          
+              psi1 = psib%states(ist)%zpsi(ip, 1)
+              psi2 = psib%states(ist)%zpsi(ip, 2)
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
+              term = weight(ist)*psi1*conjg(psi2)
+              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
-        else
-          do ist = 1, psib%nst
-            if(abs(weight(ist)) <= M_EPSILON) cycle
+        end select
+
+      case(BATCH_PACKED)
+
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)
+          if(states_are_real(this%st)) then
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
-              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
+              do ist = 1, psib%nst
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+              end do
             end do
-          end do
-        end if
-      case(BATCH_PACKED)
-        if(states_are_real(this%st)) then
-          !$omp parallel do schedule(static)
+          else
+            !$omp parallel do schedule(static)
+            do ip = 1, this%gr%mesh%np
+              do ist = 1, psib%nst
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                  real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
+              end do
+            end do
+          end if
+        case (SPINORS)
+          ASSERT(mod(psib%nst_linear, 2) == 0)
+          !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+              psi1 = psib%pack%zpsi(2*ist - 1, ip)
+              psi2 = psib%pack%zpsi(2*ist,     ip)
+              term = weight(ist)*psi1*conjg(psi2)
+
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
+              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
-        else
-          !$omp parallel do schedule(static)
-          do ip = 1, this%gr%mesh%np
-            do ist = 1, psib%nst
-              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-               real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
-            end do
-          end do
-        end if
+        end select
+
       case(BATCH_DEVICE_PACKED)
         if(.not. this%packed) call density_calc_pack(this)
-
-        if(states_are_real(this%st)) then
-          kernel => kernel_density_real
-        else
-          kernel => kernel_density_complex
-        end if
 
         call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
         call accel_write_buffer(buff_weight, psib%nst, weight)
 
-        call accel_set_kernel_arg(kernel, 0, psib%nst)
-        call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
-        call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
-        call accel_set_kernel_arg(kernel, 3, buff_weight)
-        call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-        call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
-        call accel_set_kernel_arg(kernel, 6, this%buff_density)
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)        
+          if(states_are_real(this%st)) then
+            kernel => kernel_density_real
+          else
+            kernel => kernel_density_complex
+          end if
+
+          call accel_set_kernel_arg(kernel, 0, psib%nst)
+          call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+          call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
+          call accel_set_kernel_arg(kernel, 3, buff_weight)
+          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 6, this%buff_density)
+        
+        case (SPINORS)
+          kernel => kernel_density_spinors
+
+          call accel_set_kernel_arg(kernel, 0, psib%nst)
+          call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+          call accel_set_kernel_arg(kernel, 2, this%pnp)
+          call accel_set_kernel_arg(kernel, 3, buff_weight)
+          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 6, this%buff_density)
+        end select
 
         wgsize = accel_kernel_workgroup_size(kernel)
-        
+
         call accel_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
 
         call accel_finish()
@@ -212,6 +264,8 @@ contains
       end select
 
     else if(this%gr%have_fine_mesh) then
+      ! Non-collinear density not implemented with fine grid
+      ASSERT(this%st%d%ispin /= SPINORS)
 
       SAFE_ALLOCATE(psi(1:this%gr%mesh%np_part))
       SAFE_ALLOCATE(fpsi(1:this%gr%fine%mesh%np))
@@ -251,38 +305,7 @@ contains
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(fpsi)
       SAFE_DEALLOCATE_A(sqpsi)
-      
-    else !SPINORS
 
-      ! in this case wavefunctions are always complex
-      ASSERT(.not. this%gr%have_fine_mesh)
-
-      SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
-
-
-      do ist = 1, psib%nst
-        if(abs(weight(ist)) <= M_EPSILON) cycle
-
-        call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
-        
-        !$omp parallel do schedule(static) private(psi1, psi2, term)
-        do ip = 1, this%gr%fine%mesh%np
-          
-          psi1 = zpsi(ip, 1)
-          psi2 = zpsi(ip, 2)
-
-          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
-          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
-
-          term = weight(ist)*psi1*conjg(psi2)
-          this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
-          this%density(ip, 4) = this%density(ip, 4) + aimag(term)
-
-        end do
-      end do
-
-      SAFE_DEALLOCATE_A(zpsi)
-      
     end if
 
     SAFE_DEALLOCATE_A(weight)
@@ -411,7 +434,7 @@ contains
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
       write(message(2),'(a)') 'the total number. The program has to stop.'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     ASSERT(states_are_complex(st))

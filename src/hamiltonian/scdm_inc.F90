@@ -19,11 +19,11 @@
 !> this performs the SCDM localization, transforming the original set of states KS (Kohn-Sham)
 !! into the set SCDM, by first performing RRQR and then Cholesky for orthogonalization
 
-subroutine X(scdm_localize)(st,mesh,scdm)
-
-  type(states_elec_t), intent(in) :: st !< this contains the non-localize set KS (for now from hm%hf_st which is confusing)
-  type(mesh_t), intent(in)   :: mesh
-  type(scdm_t) :: scdm
+subroutine X(scdm_localize)(scdm, namespace, st, mesh)
+  type(scdm_t)                       :: scdm
+  type(namespace_t),   intent(in)    :: namespace
+  type(states_elec_t), intent(in)    :: st !< this contains the non-localize set KS (for now from hm%hf_st which is confusing)
+  type(mesh_t),        intent(in)    :: mesh
 
   integer :: ii, jj, kk, ll, vv, count, ip, nval, info,i1, i2, i3, idim, j1, j2, j3
   integer, allocatable :: JPVT(:)
@@ -49,10 +49,11 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
-  if (st%d%nik /= 1 .or. st%d%dim /= 1) call messages_not_implemented("SCDM with k-points or dims")
+  if (st%d%nik /= 1 .or. st%d%dim /= 1) &
+    call messages_not_implemented("SCDM with k-points or dims", namespace=namespace)
 
   SAFE_ALLOCATE(JPVT(1:mesh%np_global))
-  call X(scdm_rrqr)(st,scdm, mesh, nval,scdm%root, jpvt)
+  call X(scdm_rrqr)(scdm, namespace, st, mesh, nval, scdm%root, 1, jpvt)
 
   !form SCDM_matrix rows for states that are local in the scdm%st_grp
   SAFE_ALLOCATE(SCDM_matrix(1:scdm%st%lnst,nval))
@@ -118,10 +119,10 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   if (info /= 0) then
     if (info < 0) then
       write(message(1),'(A28,I2)') 'Illegal argument in DPOTRF: ', info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     else
       message(1) = 'Fail of Cholesky, not pos-semi-def '
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     stop
   end if
@@ -166,7 +167,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   do ii=1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
 #ifdef HAVE_MPI
-    call vec_scatter(mesh%vp, 0, lxyz_global, lxyz_local)
+    call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
 #endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do
@@ -210,7 +211,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     do idim=1,3
       if(out_of_index_range(idim).and.idim > mesh%sb%periodic_dim) then
         message(1) = 'SCDM box out of index range in non-periodic dimension'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end do
 
@@ -229,7 +230,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
           ! can only be out of mesh in periodic direction
           if(idim > mesh%sb%periodic_dim ) then
             message(1) = 'SCDM box out of mesh in non-periodic dimension'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
         end if
       end do
@@ -292,7 +293,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
     ! check that box is well defined now
     if(minval(temp_box) <= 0.or.maxval(temp_box) > mesh%np_global ) then
       message(1) = 'SCDM box mapping failed'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     scdm%box(:,:,:,vv) = temp_box(:,:,:)
@@ -345,19 +346,20 @@ subroutine X(scdm_localize)(st,mesh,scdm)
 end subroutine X(scdm_localize)
 
 !> rotate states from KS to SCDM representation and construct SCDM states
-subroutine X(scdm_rotate_states)(st,mesh,scdm)
-  type(states_elec_t), intent(inout)  :: st
-  type(mesh_t),      intent(in)       :: mesh
-  type(scdm_t),      intent(inout)    :: scdm
+subroutine X(scdm_rotate_states)(scdm, namespace, st, mesh)
+  type(scdm_t),        intent(inout) :: scdm
+  type(namespace_t),   intent(in)    :: namespace
+  type(states_elec_t), intent(inout) :: st
+  type(mesh_t),        intent(in)    :: mesh
 
   PUSH_SUB(X(scdm_rotate_states))
 
   ! create localized SCDM representation of the states in st
   scdm_is_local = .false.
-  call X(scdm_localize)(st,mesh,scdm)
+  call X(scdm_localize)(scdm, namespace, st, mesh)
 
   ! overwrite state object with the scdm states
-  call states_elec_copy(st,scdm%st)
+  call states_elec_copy(st, scdm%st)
 
   POP_SUB(X(scdm_rotate_states))
 
@@ -402,13 +404,15 @@ end subroutine X(invert)
 !! and return the pivot vector 
 !! This is not an all-purose routien for RRQR, but only operates on the
 !! specific set stored in st
-subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
-  type(states_elec_t), intent(in) :: st
-  type(scdm_t), intent(in)        :: scdm  !< this is only needed for the proc_grid
-  type(mesh_t), intent(in)        :: mesh
-  integer, intent(in)             :: nst
-  logical, intent(in)             :: root !< this is needed for serial 
-  integer, intent(out)            :: jpvt(:)
+subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
+  type(scdm_t),        intent(in)  :: scdm  !< this is only needed for the proc_grid
+  type(namespace_t),   intent(in)  :: namespace
+  type(states_elec_t), intent(in)  :: st
+  type(mesh_t),        intent(in)  :: mesh
+  integer,             intent(in)  :: nst
+  logical,             intent(in)  :: root !< this is needed for serial
+  integer,             intent(in)  :: ik ! perform SCDM with this k-point
+  integer,             intent(out) :: jpvt(:)
 
   integer :: total_np, nref, info, wsize
   R_TYPE, allocatable :: tau(:), work(:)
@@ -417,7 +421,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: psi(:, :)
-  integer :: ii,ist,  count, ik, lnst
+  integer :: ii,ist,  count, lnst
   logical :: do_serial
   integer :: psi_block(2), blacs_info
   integer, allocatable :: ipiv(:)
@@ -445,12 +449,12 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifndef HAVE_SCALAPACK
      message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
-     call messages_warning(1)
+     call messages_warning(1, namespace=namespace)
      do_serial = .true.
 #else
      if(.not.st%scalapack_compatible) then
         message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         do_serial = .true.
      end if
 #endif
@@ -460,10 +464,8 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 
   if(.not.do_serial) then
     
-    call states_elec_parallel_blacs_blocksize(st, mesh, psi_block, total_np)
+    call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
     
-    ik = 1
-
     ! allocate local part of transpose state matrix
     SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
@@ -496,7 +498,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
      
     if(blacs_info /= 0) then
        write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
     end if
     
     nref = min(nst, total_np)
@@ -518,7 +520,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
     
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
      
     wsize = nint(R_REAL(tmp))
@@ -536,7 +538,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf call failed with error code: ', blacs_info
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     SAFE_DEALLOCATE_A(work)
      
@@ -568,8 +570,8 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
 #ifdef HAVE_MPI
         sender = 0
         if(state_is_local(st,ii)) then
-          call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
-          call vec_gather(mesh%vp, 0, state_global, temp_state(1:mesh%np,1))
+          call states_elec_get_state(st, mesh, ii, ik, temp_state)
+          call vec_gather(mesh%vp, 0, temp_state(1:mesh%np,1), state_global)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
         call comm_allreduce(mpi_world%comm,sender)
@@ -585,7 +587,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
       SAFE_ALLOCATE(temp_state(1:mesh%np,1))
       do ii = 1, nst
         ! this call is necessary becasue we want to have only np not np_part
-        call states_elec_get_state(st, mesh, ii, st%d%nik, temp_state)
+        call states_elec_get_state(st, mesh, ii, ik, temp_state)
         KSt(ii,:) = st%occ(ii,1)*temp_state(:,1)
       end do
       SAFE_DEALLOCATE_A(temp_state)
@@ -605,7 +607,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
       endif
       if (info /= 0) then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
       end if
 
       wsize = work(1)
@@ -622,7 +624,7 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
       endif
       if (info /= 0)then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
       end if
       SAFE_DEALLOCATE_A(work)
     endif

@@ -48,6 +48,7 @@ module propagator_cn_oct_m
   public ::                    &
     td_crank_nicolson
 
+  type(namespace_t),        pointer, private :: namespace_p
   type(mesh_t),             pointer, private :: mesh_p
   type(hamiltonian_elec_t), pointer, private :: hm_p
   type(propagator_t),       pointer, private :: tr_p
@@ -60,7 +61,7 @@ contains
   !> Crank-Nicolson propagator
   subroutine td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, use_sparskit)
     type(hamiltonian_elec_t), target, intent(inout) :: hm
-    type(namespace_t),                intent(in)    :: namespace
+    type(namespace_t),        target, intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
     type(propagator_t),       target, intent(inout) :: tr
@@ -84,7 +85,7 @@ contains
 #ifndef HAVE_SPARSKIT
     if(use_sparskit) then
       message(1) = "Cannot use SPARSKIT in Crank-Nicolson propagator: not compiled with SPARSKIT support."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 #endif
 
@@ -92,9 +93,10 @@ contains
     np = gr%mesh%np
 
     ! define pointer and variables for usage in td_zop, td_zopt routines
-    mesh_p    => gr%mesh
-    hm_p      => hm
-    tr_p      => tr
+    namespace_p => namespace
+    mesh_p      => gr%mesh
+    hm_p        => hm
+    tr_p        => tr
     dt_op = dt
     t_op  = time - dt/M_TWO
     dim_op = st%d%dim
@@ -127,7 +129,7 @@ contains
       do ist = st%st_start, st%st_end
 
         call states_elec_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
-        call exponential_apply(tr%te, gr%mesh, hm, zpsi_rhs, ist, ik, dt/M_TWO)
+        call exponential_apply(tr%te, namespace, gr%mesh, hm, zpsi_rhs, ist, ik, dt/M_TWO)
 
         if(hamiltonian_elec_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
@@ -157,7 +159,7 @@ contains
           if(.not.converged) then
             write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
             write(message(2),'(a,es14.4)') 'propagator did not converge: Residual = ', dres
-            call messages_warning(2)
+            call messages_warning(2, namespace=namespace)
           end if
 
         end if
@@ -202,7 +204,7 @@ contains
         M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) = real(zpsi(1:mesh_p%np, idim))
@@ -239,7 +241,7 @@ contains
         M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) =    real(zpsi(1:mesh_p%np, idim))
@@ -269,7 +271,7 @@ contains
       zpsi(1:mesh_p%np, idim) = x((idim-1)*mesh_p%np+1:idim*mesh_p%np)
     end forall
 
-    call exponential_apply(tr_p%te, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
+    call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       y((idim-1)*mesh_p%np+1:idim*mesh_p%np) = zpsi(1:mesh_p%np, idim)

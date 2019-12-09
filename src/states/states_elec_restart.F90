@@ -78,12 +78,12 @@ contains
     call states_elec_look(restart, kpoints, dim, nst, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read states information."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(st%parallel_in_states) then
       message(1) = "Internal error: cannot use states_elec_look_and_load when parallel in states."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! Resize st%occ, retaining information there
@@ -129,7 +129,7 @@ contains
     call states_elec_load(restart, namespace, st, gr, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(states_elec_look_and_load)
@@ -325,7 +325,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_elec_load(restart, namespace, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
+  subroutine states_elec_load(restart, namespace, st, gr, ierr, iter, lr, lowest_missing, label, verbose, skip)
     type(restart_t),            intent(in)    :: restart
     type(namespace_t),          intent(in)    :: namespace
     type(states_elec_t),        intent(inout) :: st
@@ -336,6 +336,7 @@ contains
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
+    logical,          optional, intent(in)    :: skip(:) !< A mask for reading or skipping the states. For expert use only.
 
     integer              :: states_elec_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo
@@ -366,6 +367,10 @@ contains
     ! make sure these intent(out)`s are initialized no matter what
     if (present(lowest_missing)) lowest_missing = 1
     if (present(iter)) iter = 0
+
+    if (present(skip)) then
+      ASSERT(ubound(skip, dim = 1) == st%nst)
+    end if
 
     if (restart_skip(restart)) then
       ierr = -1
@@ -439,18 +444,18 @@ contains
       read(lines(3), *) str, ik
       if(idim == 2 .and. st%d%dim == 1) then
         write(message(1),'(a)') 'Incompatible restart information: saved calculation is spinors, this one is not.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**2
       end if
       if(idim == 1 .and. st%d%dim == 2) then
         write(message(1),'(a)') 'Incompatible restart information: this calculation is spinors, saved one is not.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**3
       end if
       if(ik < st%d%nik) then
         write(message(1),'(a)') 'Incompatible restart information: not enough k-points.'
         write(message(2),'(2(a,i6))') 'Expected ', st%d%nik, ' > Read ', ik
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
       ! We will check that they are the right k-points later, so we do not need to put a specific error here.
     end if
@@ -467,11 +472,11 @@ contains
       read(lines(2), '(a)') str
       if (str(2:8) == 'Complex') then
         message(1) = "Cannot read real states from complex wavefunctions."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**6
       else if (str(2:5) /= 'Real') then 
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
     ! complex can be restarted from real, so there is no problem.
@@ -550,7 +555,7 @@ contains
             write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
             write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
             write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
-            call messages_warning(3)
+            call messages_warning(3, namespace=namespace)
           end if
           restart_file_present(idim, ist, ik) = .false.
         end if
@@ -599,6 +604,10 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
+        if(present(skip)) then
+          if(skip(ist)) cycle
+        end if
+
         do idim = 1, st%d%dim
 
           if (.not. restart_file_present(idim, ist, ik)) then
@@ -672,7 +681,7 @@ contains
     end if
 #endif
 
-    if (.not. present(lr)) call fill_random()
+    if (.not. present(lr) .and. .not. present(skip)) call fill_random()
     ! it is better to initialize lr wfns to zero
 
     SAFE_DEALLOCATE_A(filled)
@@ -690,11 +699,17 @@ contains
       else
         write(str, '(a,i5)') 'Reading states information for linear response.'
       end if
-      call messages_print_stress(stdout, trim(str))
-      write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
-           st%nst * st%d%nik * st%d%dim, ' could be read.'
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
+      if(.not. present(skip)) then
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+             st%nst * st%d%nik * st%d%dim, ' could be read.'
+      else
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+             st%nst * st%d%nik * st%d%dim, ' were loaded.'
+        ierr = 0
+      end if
       call messages_info(1)
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     message(1) = 'Info: States reading done.'
@@ -1141,7 +1156,7 @@ contains
     !%End
     if(parse_block(namespace, 'UserDefinedStates', blk) == 0) then
 
-      call messages_print_stress(stdout, trim('Substitution of orbitals'))
+      call messages_print_stress(stdout, trim('Substitution of orbitals'), namespace=namespace)
 
       ! find out how many lines (i.e. states) the block has
       nstates = parse_block_n(blk)
@@ -1155,7 +1170,7 @@ contains
         if(ncols  <  5 .or. ncols > 6) then
           message(1) = 'Each line in the UserDefinedStates block must have'
           message(2) = 'five or six columns.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         call parse_block_integer(blk, ib - 1, 0, idim)
@@ -1217,13 +1232,13 @@ contains
                 if (ierr > 0) then
                   message(1) = 'Could not read the file!'
                   write(message(2),'(a,i1)') 'Error code: ', ierr
-                  call messages_fatal(2)
+                  call messages_fatal(2, namespace=namespace)
                 end if
 
               case default
                 message(1) = 'Wrong entry in UserDefinedStates, column 4.'
                 message(2) = 'You may state "formula" or "file" here.'
-                call messages_fatal(2)
+                call messages_fatal(2, namespace=namespace)
               end select
 
               call states_elec_set_state(st, mesh, id, is, ik, zpsi(:, 1))
@@ -1243,7 +1258,7 @@ contains
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'
                 message(2) = '"normalize_yes" or "normalize_no"'
-                call messages_fatal(2)
+                call messages_fatal(2, namespace=namespace)
               end select
 
             end do
@@ -1255,11 +1270,11 @@ contains
       SAFE_DEALLOCATE_A(zpsi)
 
       call parse_block_end(blk)
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
 
     else
       message(1) = "'UserDefinedStates' has to be specified as block."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(states_elec_read_user_def_orbitals)

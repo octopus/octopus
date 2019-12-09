@@ -99,7 +99,7 @@ contains
         case(E_FIELD_MAGNETIC, E_FIELD_VECTOR_POTENTIAL)
           write(message(1),'(a)') 'The Magnus propagator cannot be used with magnetic fields, or'
           write(message(2),'(a)') 'with an electric field described in the velocity gauge.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
       end do
     end do
@@ -107,7 +107,7 @@ contains
     tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
     tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt, vmagnus = tr%vmagnus)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, dt, vmagnus = tr%vmagnus)
 
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)
@@ -135,7 +135,7 @@ contains
 
     if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
       message(1) = "The commutator-free Magnus expansion cannot be used with moving ions or gauge fields"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     PUSH_SUB(propagator_dt.td_cfmagnus4)
@@ -163,13 +163,13 @@ contains
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
     call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     ! propagate by dt/2 
-    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
     call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     ! propagate by dt/2
     !TODO: fuse this with density calc
-    call propagation_ops_elec_exp_apply(tr%te, st, gr%mesh, hm, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     call density_calc(st, gr, st%rho)
 

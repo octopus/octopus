@@ -21,6 +21,7 @@ module states_abst_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use types_oct_m
   use varinfo_oct_m
 
@@ -62,9 +63,11 @@ module states_abst_oct_m
       class(states_abst_t), intent(inout) :: st
     end subroutine set_zero
 
-    subroutine write_info(st)
+    subroutine write_info(st, namespace)
       import states_abst_t
+      import namespace_t
       class(states_abst_t), intent(in) :: st
+      type(namespace_t),    intent(in) :: namespace
     end subroutine write_info
 
     subroutine pack(st, copy)

@@ -21,6 +21,7 @@
 module unocc_oct_m
   use density_oct_m
   use eigensolver_oct_m
+  use energy_calc_oct_m
   use global_oct_m
   use output_oct_m
   use hamiltonian_elec_oct_m
@@ -154,7 +155,7 @@ contains
         call states_elec_load(restart_load_gs, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
       end if
       if(sys%hm%lda_u_level /= DFT_U_NONE) &
-        call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
+        call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, sys%hm%energy%dft_u, ierr)
       call states_elec_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
       call restart_end(restart_load_gs)
@@ -164,7 +165,7 @@ contains
 
     SAFE_ALLOCATE(occ_states(1:sys%st%d%nik))
     do ik = 1, sys%st%d%nik
-      call occupied_states(sys%st, ik, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, ik, n_filled, n_partially_filled, n_half_filled)
       occ_states(ik) = n_filled + n_partially_filled + n_half_filled
     end do
 
@@ -258,17 +259,17 @@ contains
     ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
     ! the occupations must be recalculated each time, though they do not affect the result of course.
     ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-    call states_elec_fermi(sys%st, sys%gr%mesh)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
+      call eigensolver_run(eigens, sys%namespace, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
-      call states_elec_fermi(sys%st, sys%gr%mesh)
+      call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
 
       call write_iter_(sys%st)
 
@@ -305,7 +306,7 @@ contains
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
             .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
+        call output_all(sys%outp, sys%namespace, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
       end if
      
       if(converged .or. forced_finish) exit
@@ -314,7 +315,7 @@ contains
 
     if(.not. bandstructure_mode) call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) &
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) &
       call sys%st%unpack()
 
     if(any(eigens%converged(:) < occ_states(:))) then
@@ -338,7 +339,7 @@ contains
     end if
  
 
-    call output_all(sys%outp, sys%namespace, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
 
     call end_()
     POP_SUB(unocc_run)

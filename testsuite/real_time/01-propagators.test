@@ -10,54 +10,126 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 01-propagators.01-gs.inp
-Precision  : 2e-07
+Precision  : 2e-08
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ;  Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00351994
+match ;  Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -10.60766056
 
 Processors : 4
 Input      : 01-propagators.02-expmid.inp
-Precision  : 4e-08
-match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
-match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459088457585
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060719416988e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265519345043e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.015025871940e-02
 
 Processors : 4
-Input      : 01-propagators.03-etrs.inp
-Precision  : 4e-08
-match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
-match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459378049224
+Input      : 01-propagators.03-etrs_taylor.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060719266768e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265544549033e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.015157757163e-02
 
 Processors : 4
-Input      : 01-propagators.04-aetrs.inp
-Precision  : 4e-08
-match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
-match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459088457585
+Input      : 01-propagators.04-etrs_lanczos.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ;  -1.060719262029e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265872738889e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.015620386631e-02
 
 Processors : 4
-Input      : 01-propagators.05-caetrs.inp
-Precision  : 1.0e-6
-match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.792570054855e-10
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.573150610309e-02
+Input      : 01-propagators.05-etrs_chebyshev.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.059387293795e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.269362690211e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 7.761355363566e-02
 
 Processors : 4
-Input      : 01-propagators.06-cn.inp
-Precision  : 4e-08
-match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
-match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.14590017869645
+Input      : 01-propagators.06-aetrs.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060719416988e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265519345043e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.015025871940e-02
 
 Processors : 4
-Input      : 01-propagators.07-magnus.inp
-Precision  : 1.0e-6
-match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  4.623203248455e-15
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.572485252216e-02
+Input      : 01-propagators.07-caetrs.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060727190223e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.108731121235e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.015025871940e-02
 
 Processors : 4
-Input      : 01-propagators.08-exprk4.inp
-Precision  : 1.0e-6
-match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.508228999799e-10
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.571300736633e-02
+Input      : 01-propagators.08-cn.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060719322423e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265313977663e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013129181460e-02
 
 Processors : 4
-Input      : 01-propagators.09-cfmagnus4.inp
-Precision  : 1.0e-6
-match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.508228999799e-10
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.571300736633e-02
+Input      : 01-propagators.09-magnus.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060727269526e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.108636377991e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013129181460e-02
+
+Processors : 4
+Input      : 01-propagators.10-exprk4.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060727368488e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.108487096990e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013129181460e-02
+
+Processors : 4
+Input      : 01-propagators.11-cfmagnus4.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.060727226692e+01
+Precision  : 2e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.108491961584e-01
+Precision  : 2e-8
+match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 8.598284205179e-02
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013129181460e-02

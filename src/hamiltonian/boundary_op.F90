@@ -107,11 +107,11 @@ contains
     end if
 
     if(this%abtype == EXTERIOR) &
-      call messages_not_implemented('Exterior complex scaling')
+      call messages_not_implemented('Exterior complex scaling', namespace=namespace)
 
     if(this%abtype /= NOT_ABSORBING) then
       write(str, '(a,i5)') 'Absorbing Boundaries'
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
 
       !%Variable ABCapHeight
       !%Type float
@@ -195,7 +195,7 @@ contains
           call messages_info(2)
         case default
           message(1) = "Input: ABShape block must have at least 2 columns."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end select
 
         call parse_block_end(blk)

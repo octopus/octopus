@@ -74,8 +74,8 @@
 
     PUSH_SUB(target_output_exclude)
     
-    call io_mkdir(trim(dir), outp%namespace)
-    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
     POP_SUB(target_output_exclude)
   end subroutine target_output_exclude

@@ -62,7 +62,11 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
 
   if (in_line .and. mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff_global, ff)
+    if (i_am_root) then
+      call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff, ff_global)
+    else
+      call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff)
+    end if
 #endif
   end if
   

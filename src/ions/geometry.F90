@@ -127,7 +127,7 @@ contains
 
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! copy information from xyz to geo
@@ -157,7 +157,7 @@ contains
       if(.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
       geo%ncatoms = xyz%n
       write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
@@ -217,7 +217,7 @@ contains
       
       if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end do atoms2
 
@@ -228,13 +228,13 @@ contains
     ispin = min(2, ispin)
 
     if(print_info_) then
-      call messages_print_stress(stdout, "Species")
+      call messages_print_stress(stdout, "Species", namespace=namespace)
     end if
     do i = 1, geo%nspecies
       call species_build(geo%species(i), namespace, ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     !%Variable SpeciesTimeDependent

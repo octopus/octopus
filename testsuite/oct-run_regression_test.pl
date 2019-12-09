@@ -332,6 +332,19 @@ while ($_ = <TESTSUITE>) {
             }
         }
 
+        elsif ( $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            $command = "$exec_directory/$1";
+            if( ! -x "$command") {
+                $command = "$exec_directory/../utils/$1";
+            }
+            $report{$testname}{"util"} = $1;
+        
+            if( ! -x "$command") {
+                die255("Cannot find utility '$1'.");
+            }
+        }
+
+
         elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
             # FIXME: enforce this is "serial" or numeric
             $np = $1;
@@ -552,6 +565,16 @@ sub run_match_new {
             $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
         } else {
             $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
+        }
+
+     
+    } elsif ($func eq "LINEFIELD_ABS") { # function LINE(filename, line, field_re, field_im)
+        check_num_args(4, 4, $#par, $func);
+        if ($par[1] < 0) { # negative number means from end of file
+            $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
+            $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf sqrt(\$$par[2]*\$$par[2] + \$$par[3]*\$$par[3])}' $par[0]";
+        } else {
+            $shell_command = "awk '(NR==$par[1]) {printf sqrt(\$$par[2]*\$$par[2] + \$$par[3]*\$$par[3]) }' $par[0]";
         }
 
     } elsif ($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
