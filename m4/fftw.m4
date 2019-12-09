@@ -40,7 +40,12 @@ fftw_program="AC_LANG_PROGRAM([],[
   plan = fftw_plan_dft_1d(n0, in, out, sign, flags)
 ])"
 
+dnl use LAPACK/BLAS libs
+acx_fftw_lapack_save_LIBS="$LIBS"
+LIBS="$LIBS_LAPACK $LIBS_BLAS $LIBS $FLIBS"
 AC_LINK_IFELSE($fftw_program, [acx_fftw_ok=yes], [acx_fftw_ok=no])
+dnl reset the LIBS
+LIBS="$acx_fftw_lapack_save_LIBS"
 
 if test x"$acx_fftw_ok" == xyes; then
   AC_MSG_RESULT([$acx_fftw_ok (no extra flags needed, provided by other library or flags)])
