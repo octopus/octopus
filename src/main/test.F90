@@ -221,7 +221,7 @@ contains
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
-      call test_celestial_dynamics(param, namespace)
+      call test_celestial_dynamics(param)
     end select
 
     POP_SUB(test_run)
@@ -905,10 +905,10 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_celestial_dynamics(param, namespace)
+  subroutine test_celestial_dynamics(param)
     type(test_parameters_t), intent(in) :: param
-    type(namespace_t),       intent(in) :: namespace
 
+    type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
     type(celestial_body_t) :: sun, earth, moon
     type(propagator_verlet_t) :: prop_sun, prop_earth, prop_moon
     integer :: it, Nstep, internal_loop, iunit
@@ -922,26 +922,15 @@ contains
     call messages_new_line()
     call messages_info()
 
+    global_namespace = namespace_t("")
+    earth_namespace = namespace_t("Earth")
+    moon_namespace = namespace_t("Moon")
+    sun_namespace = namespace_t("Sun")
+
     !Initialize subsystems
-    !Initial conditions are taken from
-    !https://ssd.jpl.nasa.gov/horizons.cgi#top.
-    call sun%init()
-    call earth%init()
-    call moon%init()
-    !At the moment we set the parameters by hand. In the future, this job should be done from
-    !parsing informations
-    sun%mass =  CNST(1.98855E30)
-    earth%mass = CNST(5.97237E24)
-    moon%mass = CNST(7.342E22)
-    sun%pos(1:2)   = (/ M_ZERO, M_ZERO/)
-    sun%vel(1:2)   = (/ M_ZERO, M_ZERO/)
-    sun%acc(1:2)   = (/ M_ZERO, M_ZERO/)
-    earth%pos(1:2) = (/ CNST(149598023000.0), M_ZERO/)
-    earth%vel(1:2) = (/ M_ZERO, CNST(29780.0)/)
-    earth%acc(1:2) = (/ M_ZERO, M_ZERO/)
-    moon%pos(1:2)  = (/ CNST(149982422000.0), M_ZERO/)
-    moon%vel(1:2)  = (/ M_ZERO, CNST(30902.0)/)
-    moon%acc(1:2)  = (/ M_ZERO, M_ZERO/)
+    call sun%init(sun_namespace)
+    call earth%init(earth_namespace)
+    call moon%init(moon_namespace)
 
     !Define interactions manually
     call sun%add_interaction_partner(earth)
@@ -957,7 +946,7 @@ contains
     call moon%allocate_receiv_structure()
 
     !Creates Verlet propagators
-    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), dt)
+    call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
     call prop_sun%init(M_ZERO, dt)
     call prop_earth%init(M_ZERO, dt)
     call prop_moon%init(M_ZERO, dt)
@@ -967,10 +956,10 @@ contains
     call earth%set_propagator(prop_earth)
     call moon%set_propagator(prop_moon)
 
-    iunit = io_open('celestial_dynamics.dat', namespace, action='write')
+    iunit = io_open('celestial_dynamics.dat', global_namespace, action='write')
     write(iunit, '(i5,6(e13.6,1x))') 0, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
 
-    call parse_variable(namespace, 'TDMaxSteps', 1000, Nstep)
+    call parse_variable(global_namespace, 'TDMaxSteps', 1000, Nstep)
     do it = 1, Nstep
 
       all_done = .false.
