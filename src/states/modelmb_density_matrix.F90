@@ -104,7 +104,7 @@ contains
 
     if(parse_block(namespace, 'DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
-     call messages_fatal(1)
+     call messages_fatal(1, namespace=namespace)
     end if
    
     ncols = parse_block_cols(blk, 0)

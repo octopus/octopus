@@ -81,7 +81,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time-dt/M_TWO)
 
-    call exponential_apply_all(tr%te, gr%mesh, hm, st, dt)
+    call exponential_apply_all(tr%te, namespace, gr%mesh, hm, st, dt)
 
     call density_calc(st, gr, st%rho)
 

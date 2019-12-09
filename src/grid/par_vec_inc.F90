@@ -26,11 +26,11 @@
 !! Scatters a vector v to all nodes in vp with respect to
 !! to point -> node mapping in vp.
 !! v_local has at least to be of size vp%np_local.
-subroutine X(vec_scatter)(vp, root, v, v_local)
+subroutine X(vec_scatter)(vp, root, v_local, v)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
-  R_TYPE,     intent(in)  :: v(:)
   R_TYPE,     intent(out) :: v_local(:)
+  R_TYPE,     intent(in)  :: v(:)
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
@@ -86,11 +86,13 @@ end subroutine X(vec_scatter)
 !> Reverse operation of Xvec_scatter.
 !! All v_locals from the nodes are packed together
 !! into v on node root in correct order.
-subroutine X(vec_gather)(vp, root, v, v_local)
+subroutine X(vec_gather)(vp, root, v_local, v)
   type(pv_t), intent(in)  :: vp
   integer,    intent(in)  :: root
-  R_TYPE,     intent(out) :: v(:)
   R_TYPE,     intent(in)  :: v_local(:)
+  R_TYPE,     optional, intent(out) :: v(:) !< in order to prevent unassociated pointer errors,
+                                            !< this is optional, so that mpi ranks not expecting an output
+                                            !< do not have to pass a null pointer.
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.

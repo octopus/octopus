@@ -710,10 +710,10 @@ contains
       read(lines(2), '(a)') str
       if (str(2:8) == 'Complex') then
         message(1) = "Cannot read real states from complex wavefunctions."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       else if (str(2:5) /= 'Real') then
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
     ! complex can be restarted from real, so there is no problem.
@@ -767,7 +767,7 @@ contains
 
         if (.not. restart_file_present(idim, ist)) then
           write(message(1), '(a,i3,a)') "Cannot read states ", ist, "from the projection folder"
-          call messages_fatal(1)            
+          call messages_fatal(1, namespace=namespace)
         end if
 
         if (states_are_real(st)) then

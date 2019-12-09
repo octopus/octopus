@@ -67,6 +67,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   integer :: idir, jj, delta
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM), spacing_new(-1:1)
   logical :: out
+  real(8), parameter :: DELTA_ = CNST(1e-12)
 
   PUSH_SUB(mesh_init_stage_1)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -97,9 +98,10 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
       chi(idir) = real(jj, REAL_PRECISION)*mesh%spacing(idir)
       if ( mesh%use_curvilinear ) then
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
-        out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
+        out = x(idir) > sb%lsize(idir) + DELTA_
       else
-        out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
+        ! do the same comparison here as in simul_box_in_box_vec
+        out = chi(idir) > sb%lsize(idir) + DELTA_
       end if
     end do
     mesh%idx%nr(2, idir) = jj - 1
@@ -164,12 +166,13 @@ end subroutine mesh_init_stage_1
 !> This subroutine checks if every grid point belongs to the internal
 !! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
 !! how many points has the mesh and the enlargement.
-subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
+subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(geometry_t),    intent(in)    :: geo
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
+  type(namespace_t),   intent(in)    :: namespace
 
   integer :: il, ik, ix, iy, iz, is
   integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
@@ -247,7 +250,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
       end do
 
-      call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
+      call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         ! With multiresolution, only inner (not enlargement) points are marked now

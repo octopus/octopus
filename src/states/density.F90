@@ -434,7 +434,7 @@ contains
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
       write(message(2),'(a)') 'the total number. The program has to stop.'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     ASSERT(states_are_complex(st))

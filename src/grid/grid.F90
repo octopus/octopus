@@ -218,7 +218,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
 
@@ -256,7 +256,7 @@ contains
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
 
       call derivatives_nullify(gr%fine%der)      
       call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)

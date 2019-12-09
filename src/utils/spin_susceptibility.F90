@@ -80,9 +80,9 @@ program spin_susceptibility
   rewind(in_file)
   read(in_file,*)
   read(in_file,*)
-  call kick_read(kick, in_file)
+  call kick_read(kick, in_file, namespace)
   call io_skip_header(in_file)
-  call spectrum_count_time_steps(in_file, time_steps, dt)
+  call spectrum_count_time_steps(namespace, in_file, time_steps, dt)
 
   time_steps = time_steps + 1
 

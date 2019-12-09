@@ -365,8 +365,8 @@ contains
       else
         call hamiltonian_elec_update(hm, gr%mesh, namespace, time = tau)
       end if
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
-      call zhamiltonian_elec_apply_all(hm, gr%mesh, stphi, hst)
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
+      call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, stphi, hst)
     end subroutine f_psi
 
     subroutine f_ions(tau)
@@ -395,7 +395,7 @@ contains
 
       call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, tau)
 
-      call zhamiltonian_elec_apply_all(hm, gr%mesh, stchi, hchi)
+      call zhamiltonian_elec_apply_all(hm, namespace, gr%mesh, stchi, hchi)
       call hamiltonian_elec_not_adjoint(hm)
 
 
@@ -555,7 +555,7 @@ contains
     end do
 
     if (oct_exchange_enabled(hm%oct_exchange)) then
-      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver)
+      call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, hm%xc, hm%psolver, namespace)
     end if
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
@@ -563,13 +563,13 @@ contains
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
       do ist = st1, st2
         if(oct_exchange_enabled(hm%oct_exchange)) then
-          call zoct_exchange_operator(hm%oct_exchange, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
+          call zoct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
@@ -607,7 +607,7 @@ contains
       end if
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time, dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -669,14 +669,14 @@ contains
       do ik = kp1, kp2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            dres = dres + zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik), reduce = .false.)
+            dres = dres + (zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik), reduce = .false.))**2
           end do
         end do
       end do
 
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, dres)
-      
-      if(dres < tr%scf_threshold) exit
+
+      if(sqrt(dres) < tr%scf_threshold) exit
     end do
 
     zphi = k2
@@ -808,7 +808,7 @@ contains
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -820,7 +820,7 @@ contains
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -846,7 +846,7 @@ contains
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
-        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt, namespace)
         call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
@@ -858,7 +858,7 @@ contains
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -938,15 +938,15 @@ contains
       do ik = kp1, kp2
         do ist = st1, st2
           do idim = 1, st%d%dim
-            dres = dres + zmf_nrm2(gr%mesh, k1(:, idim, ist, ik) - oldk1(:, idim, ist, ik))
-            dres = dres + zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik))
+            dres = dres + (zmf_nrm2(gr%mesh, k1(:, idim, ist, ik) - oldk1(:, idim, ist, ik)))**2
+            dres = dres + (zmf_nrm2(gr%mesh, k2(:, idim, ist, ik) - oldk2(:, idim, ist, ik)))**2
           end do
         end do
       end do
       if(sp_parallel) call comm_allreduce(sp_comm, dres)
       !write(*, *) 'Residual = ', dres
 
-      if(dres < tr%scf_threshold) exit
+      if(sqrt(dres) < tr%scf_threshold) exit
     end do
 
 
@@ -1029,7 +1029,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1054,7 +1054,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1125,7 +1125,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1152,7 +1152,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1215,7 +1215,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, namespace_p)
     end if
 
     j = 1
@@ -1226,7 +1226,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1245,7 +1245,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, mesh_p, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1310,7 +1310,7 @@ contains
           end do
         end do
       end do
-      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver)
+      call oct_exchange_prepare(hm_p%oct_exchange, mesh_p, zpsi_, hm_p%xc, hm_p%psolver, namespace_p)
     end if
 
     j = 1
@@ -1321,7 +1321,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1341,7 +1341,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, mesh_p, opzpsi, ist, ik)
+          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

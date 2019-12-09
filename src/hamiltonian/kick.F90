@@ -123,7 +123,7 @@ contains
   subroutine kick_init(kick, namespace, sb, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
-    type(simul_box_t), intent(in) :: sb
+    type(simul_box_t), intent(in)  :: sb
     integer,           intent(in)  :: nspin
 
     type(block_t) :: blk
@@ -377,7 +377,7 @@ contains
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
         if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
           message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -410,7 +410,7 @@ contains
     ! for non-dipole, it is more complicated to check whether it is actually in the periodic direction
     if(periodic_dim > 0 .and. kick%delta_strength_mode /= KICK_MAGNON_MODE) then
       message(1) = "Kicks cannot be applied correctly in periodic directions."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 
     !%Variable TDMomentumTransfer
@@ -683,9 +683,10 @@ contains
   end subroutine kick_end
 
   ! ---------------------------------------------------------
-  subroutine kick_read(kick, iunit)
-    type(kick_t), intent(inout) :: kick
-    integer,      intent(in)    :: iunit
+  subroutine kick_read(kick, iunit, namespace)
+    type(kick_t),      intent(inout) :: kick
+    integer,           intent(in)    :: iunit
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: im, ierr
     character(len=100) :: line
@@ -743,9 +744,9 @@ contains
       backspace(iunit)
     end if
 
-    if(kick%function_mode < 0) then
+    if (kick%function_mode < 0) then
       message(1) = "No kick could be read from file."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(kick_read)

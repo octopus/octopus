@@ -170,7 +170,7 @@ contains
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end do
 
@@ -206,7 +206,7 @@ contains
       call messages_input_error('PES_Flux_Shape')
     if(this%shape == M_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Shape', this%shape)
 
@@ -300,7 +300,7 @@ contains
           call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
           call messages_new_line()
           call messages_write('Specify the location of the parallelepiped with block PES_Flux_Lsize.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end select
         call messages_write('PES_Flux_Lsize not specified. Using default values.')
         call messages_info()
@@ -328,7 +328,7 @@ contains
         case default
           message(1) = 'PES_Flux_Radius not specified. No default values available for this box shape.'
           message(2) = 'Specify the radius of the sphere with variable PES_Flux_Radius.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
         message(1) = 'PES_Flux_Radius not specified. Using default values.'
         call messages_info(1)
@@ -799,7 +799,7 @@ contains
         call messages_write("Using a path in reciprocal space with PES_Flux_BZones > 1.")
         call messages_new_line()
         call messages_write("This may cause unphysical results if the path crosses the 1st BZ boundary.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
 !         call get_kpath_perp_direction(sb%kpoints, idim)
 !         if (idim > 0 ) NBZ(idim) = 1
       end if 

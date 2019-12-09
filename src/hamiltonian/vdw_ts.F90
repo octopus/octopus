@@ -124,9 +124,9 @@ contains
     SAFE_ALLOCATE(this%derivative_coeff(1:geo%natoms))
 
     do ispecies = 1, geo%nspecies
-      call get_vdw_param(species_label(geo%species(ispecies)), &
+      call get_vdw_param(namespace, species_label(geo%species(ispecies)), &
         this%c6free(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
-      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)))
+      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)), namespace)
     end do
 
     do ispecies = 1, geo%nspecies
@@ -421,7 +421,7 @@ contains
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        call hirshfeld_position_derivative(hirshfeld, der, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         force_vdw(1:sb%dim, jatom)= force_vdw(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
@@ -472,11 +472,12 @@ contains
 
   !------------------------------------------
   
-  subroutine get_vdw_param(atom, c6, alpha, r0)
-    character(len=*), intent(in)  :: atom
-    FLOAT,            intent(out) :: c6
-    FLOAT,            intent(out) :: alpha
-    FLOAT,            intent(out) :: r0
+  subroutine get_vdw_param(namespace, atom, c6, alpha, r0)
+    type(namespace_t), intent(in)  :: namespace
+    character(len=*),  intent(in)  :: atom
+    FLOAT,             intent(out) :: c6
+    FLOAT,             intent(out) :: alpha
+    FLOAT,             intent(out) :: r0
 
     PUSH_SUB(get_vdw_param)
     
@@ -745,7 +746,7 @@ contains
     case default
       
       call messages_write('vdw ts: reference free atom parameters not available for species '//trim(atom))
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
       
     end select
 

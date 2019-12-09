@@ -23,6 +23,7 @@ module oct_exchange_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_elec_oct_m
@@ -109,12 +110,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_exchange_prepare(this, mesh, psi, xc, psolver)
+  subroutine oct_exchange_prepare(this, mesh, psi, xc, psolver, namespace)
     type(oct_exchange_t), intent(inout) :: this
     type(mesh_t),         intent(in)    :: mesh
     CMPLX,                intent(in)    :: psi(:, :, :, :)
     type(xc_t),           intent(in)    :: xc
     type(poisson_t),      intent(in)    :: psolver
+    type(namespace_t),    intent(in)    :: namespace
 
     integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)
@@ -158,7 +160,7 @@ contains
     end select
 
     this%oct_fxc = M_ZERO
-    call xc_get_fxc(xc, mesh, this%oct_st%rho, this%oct_st%d%ispin, this%oct_fxc)
+    call xc_get_fxc(xc, mesh, namespace, this%oct_st%rho, this%oct_st%d%ispin, this%oct_fxc)
 
     SAFE_DEALLOCATE_A(psi2)
     POP_SUB(oct_exchange_prepare)

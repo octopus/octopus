@@ -229,9 +229,10 @@ contains
   end subroutine messages_end
 
   ! ---------------------------------------------------------
-  subroutine messages_fatal(no_lines, only_root_writes)
-    integer, optional, intent(in) :: no_lines
-    logical, optional, intent(in) :: only_root_writes
+  subroutine messages_fatal(no_lines, only_root_writes, namespace)
+    integer,           optional, intent(in) :: no_lines
+    logical,           optional, intent(in) :: only_root_writes
+    type(namespace_t), optional, intent(in) :: namespace
 
     integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
@@ -304,6 +305,13 @@ contains
     write(msg, '(a)') '*** Fatal Error (description follows)'
     call flush_msg(stderr, msg)
 
+    if(present(namespace)) then
+      if(len_trim(namespace%get()) > 0) then
+        write(msg, '(3a)') '* In namespace ', trim(namespace%get()), ':'
+        call flush_msg(stderr, msg)
+      end if
+    end if
+
 #ifdef HAVE_MPI
     if(.not. only_root_writes_ .or. .not. mpi_grp_is_root(mpi_world)) then
       call flush_msg(stderr, shyphens)
@@ -352,9 +360,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_warning(no_lines, all_nodes)
-    integer, optional, intent(in) :: no_lines
-    logical, optional, intent(in) :: all_nodes
+  subroutine messages_warning(no_lines, all_nodes, namespace)
+    integer,           optional, intent(in) :: no_lines
+    logical,           optional, intent(in) :: all_nodes
+    type(namespace_t), optional, intent(in) :: namespace
 
     integer :: il, no_lines_
     logical :: have_to_write
@@ -384,6 +393,13 @@ contains
       call flush_msg(stderr, '')
       write(msg, '(a)') '** Warning:'
       call flush_msg(stderr, msg)
+
+      if(present(namespace)) then
+        if(len_trim(namespace%get()) > 0) then
+          write(msg, '(3a)') '** In namespace ', trim(namespace%get()), ':'
+          call flush_msg(stderr, msg)
+        end if
+      end if
 
 #ifdef HAVE_MPI
       if(all_nodes_) then
@@ -792,14 +808,16 @@ contains
   end subroutine messages_print_var_option_4
   
   ! ---------------------------------------------------------
-  subroutine messages_print_stress(iunit, msg)
-    integer,                    intent(in) :: iunit
-    character(len=*), optional, intent(in) :: msg
+  subroutine messages_print_stress(iunit, msg, namespace)
+    integer,                     intent(in) :: iunit
+    character(len=*),  optional, intent(in) :: msg
+    type(namespace_t), optional, intent(in) :: namespace
 
     integer, parameter :: max_len = 70
 
     integer :: ii, jj, length
     character(len=70) :: str
+    character(len=max_len) :: msg_combined
 
     if(.not.mpi_grp_is_root(mpi_world)) return
 
@@ -809,7 +827,22 @@ contains
     end if
 
     if(present(msg)) then
-      length = len(msg)
+      ! make sure we do not get a segfault for too long messages
+      if(len_trim(msg) > max_len) then
+        msg_combined = trim(msg(1:max_len))
+      else
+        msg_combined = trim(msg)
+      end if
+      if(present(namespace)) then
+        ! check if we are below the maximum length
+        if(len_trim(msg) + len_trim(namespace%get()) + 1 < max_len) then
+          ! only change message if namespace non-empty
+          if(len_trim(namespace%get()) > 0) then
+            msg_combined = trim(msg) // " " // trim(namespace%get())
+          end if
+        end if
+      end if
+      length = len_trim(msg_combined)
 
       str = ''
       jj = 1
@@ -823,7 +856,7 @@ contains
       jj = jj + 1
      
       do ii = 1, length
-        str(jj:jj) = msg(ii:ii)
+        str(jj:jj) = msg_combined(ii:ii)
         jj = jj + 1
       end do
 
@@ -1167,13 +1200,14 @@ contains
 
 
   ! ------------------------------------------------------------
-  subroutine messages_not_implemented(feature)
-    character(len=*), intent(in) :: feature
+  subroutine messages_not_implemented(feature, namespace)
+    character(len=*),            intent(in) :: feature
+    type(namespace_t), optional, intent(in) :: namespace
 
     PUSH_SUB(messages_not_implemented)
 
     message(1) = trim(feature)//" not implemented."
-    call messages_fatal(1, only_root_writes = .true.)
+    call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 
     POP_SUB(messages_not_implemented)
   end subroutine messages_not_implemented

@@ -32,6 +32,7 @@ module projector_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_oct_m
   use rkb_projector_oct_m
@@ -133,9 +134,10 @@ contains
   end function projector_is
 
   !---------------------------------------------------------
-  subroutine projector_init(p, atm, dim, reltype)
+  subroutine projector_init(p, atm, namespace, dim, reltype)
     type(projector_t),    intent(inout) :: p
     type(atom_t), target, intent(in)    :: atm
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: dim
     integer,              intent(in)    :: reltype
 
@@ -165,7 +167,7 @@ contains
         p%type = PROJ_RKB
       else
         call messages_write("Spin-orbit coupling for species '"//trim(species_label(atm%species))//" is not available.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
     end if
     

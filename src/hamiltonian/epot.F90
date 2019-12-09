@@ -176,7 +176,7 @@ contains
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
-      call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
+      call messages_not_implemented("FilterPotentials different from filter_none with MGGA", namespace=namespace)
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
     do ispec = 1, geo%nspecies
@@ -192,7 +192,7 @@ contains
     if(geo%ncatoms > 0) then
 
       if(simul_box_is_periodic(gr%mesh%sb)) &
-        call messages_not_implemented("classical atoms in periodic systems")
+        call messages_not_implemented("classical atoms in periodic systems", namespace=namespace)
       
       !%Variable ClassicalPotential
       !%Type integer
@@ -255,10 +255,10 @@ contains
         if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
           message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
           if(nik == 1) then
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           else
             message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
-            call messages_warning(2)
+            call messages_warning(2, namespace=namespace)
           end if
         end if
       end do
@@ -336,7 +336,7 @@ contains
       case(2)
         if(gr%sb%periodic_dim == 2) then
           message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
       case(3)
@@ -345,15 +345,15 @@ contains
         ! 1D-periodic: only Bx. 2D-periodic or 3D-periodic: not allowed. Other gauges could allow 2D-periodic case.
         if(gr%sb%periodic_dim >= 2) then
           message(1) = "In 3D, StaticMagneticField cannot be applied when the system is 2D- or 3D-periodic."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         else if(gr%sb%periodic_dim == 1 .and. any(abs(ep%B_field(2:3)) > M_ZERO)) then
           message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the y- and z-directions."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end select
       call parse_block_end(blk)
 
-      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3')
+      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3', namespace=namespace)
 
       ! Compute the vector potential
       SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
@@ -366,7 +366,7 @@ contains
           if(gr%sb%periodic_dim == 1) then
             message(1) = "For 2D system, 1D-periodic, StaticMagneticField can only be "
             message(2) = "applied for StaticMagneticField2DGauge = linear_y."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
           do ip = 1, gr%mesh%np
             grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
@@ -425,7 +425,7 @@ contains
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
@@ -530,7 +530,7 @@ contains
       if(ierr /= 0) then
         call messages_write("You have enabled the GlobalForce option but Octopus could not find")
         call messages_write("the '"//trim(function_name)//"' function in the TDFunctions block.")
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
 
     else
@@ -626,7 +626,7 @@ contains
     if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
+      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
         call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
@@ -660,15 +660,15 @@ contains
     SAFE_DEALLOCATE_A(density)
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
+    call ion_interaction_calculate(ep%ion_interaction, geo, sb, namespace, ep%ignore_external_ions, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%species)) cycle
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
+      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), atm, namespace, st%d%dim, ep%reltype)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end

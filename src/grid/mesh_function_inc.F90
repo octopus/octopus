@@ -447,7 +447,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif
@@ -496,7 +496,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
 #else
   call lalg_copy(mesh%np_global, ff, f_global)
 #endif

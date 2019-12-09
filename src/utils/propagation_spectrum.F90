@@ -136,7 +136,7 @@ program propagation_spectrum
         call messages_info(4)
         
         ! OK, so we only have one file. Now we have to see what it has inside.
-        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
+        call spectrum_mult_info(default_namespace, in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
         eq_axes = kick%pol_equiv_axes
         if(eq_axes == 3) then
           calculate_tensor = .true.
@@ -172,7 +172,7 @@ program propagation_spectrum
           call messages_fatal(2)
         end if
         
-        call spectrum_mult_info(in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
+        call spectrum_mult_info(default_namespace, in_file(1), nspin, kick, time_steps, dt, file_units, lmax=lmax)
         eq_axes = kick%pol_equiv_axes
         
         if(eq_axes == 3) then
@@ -248,9 +248,9 @@ program propagation_spectrum
 
         out_file(1) = io_open(trim(fname)//'_vector', default_namespace, action='write')
         if(.not.reference_multipoles) then
-          call spectrum_cross_section(namespace, in_file(1), out_file(1), spectrum)
+          call spectrum_cross_section(spectrum, namespace, in_file(1), out_file(1))
         else
-          call spectrum_cross_section(namespace, in_file(1), out_file(1), spectrum, ref_file)
+          call spectrum_cross_section(spectrum, namespace, in_file(1), out_file(1), ref_file)
         end if
         call io_close(in_file(1))
         call io_close(out_file(1))
@@ -267,9 +267,9 @@ program propagation_spectrum
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), default_namespace, action='write')
           if(.not.reference_multipoles) then
-            call spectrum_cross_section(namespace, in_file(ii), out_file(ii), spectrum)
+            call spectrum_cross_section(spectrum, namespace, in_file(ii), out_file(ii))
           else
-            call spectrum_cross_section(namespace, in_file(ii), out_file(ii), spectrum, ref_file)
+            call spectrum_cross_section(spectrum, namespace, in_file(ii), out_file(ii), ref_file)
           end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
@@ -304,7 +304,7 @@ program propagation_spectrum
       end if
 
       out_file(1) = io_open(trim(fname_out), default_namespace, action='write')
-      call spectrum_dipole_power(in_file(1), out_file(1), spectrum)
+      call spectrum_dipole_power(spectrum, default_namespace, in_file(1), out_file(1))
 
       call io_close(in_file(1))
       call io_close(out_file(1))
@@ -328,7 +328,7 @@ program propagation_spectrum
       end if
 
       out_file(1) = io_open(trim(fname_out), default_namespace, action='write')
-      call spectrum_rotatory_strength(in_file(1), out_file(1), spectrum)
+      call spectrum_rotatory_strength(spectrum, default_namespace, in_file(1), out_file(1))
 
       call io_close(in_file(1))
       call io_close(out_file(1))
@@ -348,7 +348,7 @@ program propagation_spectrum
       in_file(2) = io_open(trim(fname_in) // '.cos', default_namespace, action='read', status='old', die=.false.)
 
       out_file(1) = io_open(trim(fname_out), default_namespace, action='write')
-      call spectrum_dyn_structure_factor(in_file(1), in_file(2), out_file(1), spectrum)
+      call spectrum_dyn_structure_factor(spectrum, default_namespace, in_file(1), in_file(2), out_file(1))
       call io_close(in_file(1))
       call io_close(out_file(1))
 
