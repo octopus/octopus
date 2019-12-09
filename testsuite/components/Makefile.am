@@ -76,6 +76,16 @@ dist_share_DATA =                                  \
 	21-hamiltonian_apply.01-Si.inp             \
 	21-hamiltonian_apply.test                  \
         22-density_calc.01-Si.inp                  \
-        22-density_calc.test
+        22-density_calc.test                       \
+	23-exponential_apply.01-jellium.inp        \
+	23-exponential_apply.test                  \
+	24-boundaries.01-jellium.inp               \
+	24-boundaries.test                         \
+	25-subspace.01-jellium.inp                 \
+	25-subspace.test                           \
+	26-batch_ops.01-jellium.inp                \
+	26-batch_ops.test
+
+
 
 CLEANFILES = *~ *.bak

@@ -386,14 +386,14 @@ program photoelectron_spectrum
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
     SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
-    call pes_mask_pmesh(dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)  
+    call pes_mask_pmesh(default_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)
 
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
     ! Lp is allocated inside pes_flux_pmesh to comply with the 
     ! declinations of the different surfaces
     SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
     Ekin = M_ZERO
-    call pes_flux_pmesh(pflux, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp, Ekin)    
+    call pes_flux_pmesh(pflux, default_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp, Ekin)
   end select
    
   

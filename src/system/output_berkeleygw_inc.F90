@@ -16,13 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
+subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   type(output_bgw_t),          intent(in)    :: bgw
+  type(namespace_t),           intent(in)    :: namespace
   character(len=*),            intent(in)    :: dir
   type(states_elec_t), target, intent(in)    :: st
   type(grid_t),                intent(in)    :: gr
   type(hamiltonian_elec_t),    intent(inout) :: hm
-  type(namespace_t),           intent(in)    :: namespace
   FLOAT,                       intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
@@ -35,8 +35,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
 
 #ifdef HAVE_BERKELEYGW
 
-  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
-  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
+  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
   if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', namespace, action='write')
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))
@@ -103,7 +103,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:, :) = M_ZERO
-          call X(exchange_operator_single)(hm%exxop, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
+          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         end if
       end do
@@ -116,7 +116,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
-          call X(exchange_operator_single)(hm%exxop, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
+          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         end if
       end do
@@ -154,7 +154,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, namespace, vxc)
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
   POP_SUB(X(bgw_vxc_dat))
@@ -163,13 +163,13 @@ end subroutine X(bgw_vxc_dat)
 
 ! --------------------------------------------------------- 
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
-subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax, namespace)
+subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   type(output_bgw_t),  intent(in) :: bgw
+  type(namespace_t),   intent(in) :: namespace
   character(len=*),    intent(in) :: dir
   type(states_elec_t), intent(in) :: st
   type(grid_t),        intent(in) :: gr
   integer,             intent(in) :: ifmax(:,:)
-  type(namespace_t),   intent(in) :: namespace
 
   integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)

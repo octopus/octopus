@@ -96,7 +96,7 @@ contains
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     call io_close(iunit)
 
@@ -149,8 +149,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_process(psp)
-    type(ps_hgh_t), intent(inout) :: psp
+  subroutine hgh_process(psp, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: l, i, ierr
     FLOAT, pointer :: ptr(:)
@@ -174,12 +175,12 @@ contains
 
     ! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
     ! are obtained, but not the real ones!!!
-    call solve_schroedinger(psp, ierr)
+    call solve_schroedinger(psp, ierr, namespace)
     if(ierr /= 0) then ! If the wavefunctions could not be found, we set its number to zero.
       write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
       write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
       write(message(3),'(a)') 'convergence properties.'
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
       psp%conf%p = 0
     end if
 
@@ -531,9 +532,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine solve_schroedinger(psp, ierr)
-    type(ps_hgh_t), intent(inout) :: psp
-    integer,        intent(out)   :: ierr
+  subroutine solve_schroedinger(psp, ierr, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    integer,           intent(out)   :: ierr
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
     FLOAT :: vtot, a2b4, diff, nonl
@@ -634,7 +636,7 @@ contains
         if (e > CNST(1.0e-5)) then
           write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
           write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
-          call messages_warning(2)
+          call messages_warning(2, namespace=namespace)
         end if
       end do
 

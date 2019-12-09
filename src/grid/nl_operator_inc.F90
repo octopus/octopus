@@ -441,7 +441,12 @@ contains
       end select
     end if
     
-    call accel_finish()
+    ! when doing the inner points the synchronization is done
+    ! in X(ghost_update_batch_finish) after a Waitall call to
+    ! overlap communication and computation
+    if(points_ /= OP_INNER) then
+      call accel_finish()
+    end if
 
     call accel_release_buffer(buff_weights)
 

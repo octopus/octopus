@@ -214,7 +214,7 @@ contains
 
    ASSERT(.not. (level == DFT_U_NONE))
 
-   call messages_print_stress(stdout, "DFT+U")
+   call messages_print_stress(stdout, "DFT+U", namespace=namespace)
    if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
    this%level = level
 
@@ -249,7 +249,7 @@ contains
    call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
    if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
    if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
-     call messages_not_implemented("AMF double couting with spinors.")
+     call messages_not_implemented("AMF double couting with spinors.", namespace=namespace)
    end if
 
    if( this%level == DFT_U_ACBN0 ) then
@@ -299,7 +299,7 @@ contains
      call parse_variable(namespace, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
      call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
      if(this%rot_inv .and. st%d%ispin == SPINORS ) then
-       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.", namespace=namespace)
      end if
 
      !%Variable ACBN0IntersiteInteraction
@@ -320,7 +320,7 @@ contains
        !This is a non local operator. To make this working, one probably needs to apply the 
        ! symmetries to the generalized occupation matrices 
        if(gr%sb%kpoints%use_symmetries) then
-         call messages_not_implemented("Intersite interaction with kpoint symmetries")
+         call messages_not_implemented("Intersite interaction with kpoint symmetries", namespace=namespace)
        end if
  
        !%Variable ACBN0IntersiteCutoff
@@ -333,7 +333,7 @@ contains
        call parse_variable(namespace, 'ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
        if(abs(this%intersite_radius) < M_EPSILON) then
          call messages_write("ACBN0IntersiteCutoff must be greater than 0")
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
      end if
 
@@ -391,7 +391,7 @@ contains
        else
          ASSERT(.not.states_are_real(st))
          write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver)
+         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace)
        end if
      end if
 
@@ -410,7 +410,7 @@ contains
        this%maxnorbs = parse_block_n(blk) 
        if(this%maxnorbs <1) then
          write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
        SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
        do is = 1, this%maxnorbs
@@ -419,7 +419,7 @@ contains
        call parse_block_end(blk)
      else
        write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
      end if
 
      if (states_are_real(st)) then
@@ -447,7 +447,7 @@ contains
 
    end if
 
-   call messages_print_stress(stdout)
+   call messages_print_stress(stdout, namespace=namespace)
 
    POP_SUB(lda_u_init)
  end subroutine lda_u_init
@@ -570,23 +570,24 @@ contains
  end subroutine lda_u_update_basis
 
  ! Interface for the X(update_occ_matrices) routines
- subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )
-   type(lda_u_t),             intent(inout) :: this
-   type(mesh_t),              intent(in)    :: mesh 
-   type(states_elec_t),       intent(in)    :: st
-   type(hamiltonian_elec_base_t),  intent(in)    :: hm_base 
-   type(energy_t),            intent(inout) :: energy
+ subroutine lda_u_update_occ_matrices(this, namespace, mesh, st, hm_base, energy )
+   type(lda_u_t),                 intent(inout) :: this
+   type(namespace_t),             intent(in)    :: namespace
+   type(mesh_t),                  intent(in)    :: mesh
+   type(states_elec_t),           intent(in)    :: st
+   type(hamiltonian_elec_base_t), intent(in)    :: hm_base
+   type(energy_t),                intent(inout) :: energy
 
    if(this%level == DFT_U_NONE .or. this%freeze_occ) return
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
-     call dupdate_occ_matrices(this, mesh, st, energy%dft_u)
+     call dupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u, hm_base%phase)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u, hm_base%phase)
      else
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
      end if
    end if
 

@@ -748,7 +748,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
     kxc = M_ZERO
     ! not spin polarized so far
-    call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
+    call xc_get_kxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, kxc(:, :, :, :))
   end if
   
   message(1) = "Reading vib_modes density for calculating excited-state forces."

@@ -223,7 +223,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_elec_apply_all(sys%hm, gr%mesh, st, hm_st)
+      call zhamiltonian_elec_apply_all(sys%hm, default_namespace, gr%mesh, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0
@@ -332,14 +332,14 @@ contains
     ! write bands (full or downfolded)
     if(mpi_world%rank==0) then
       file=987254
-      open(unit=file,file=filename)
+      file = io_open(filename, sys%namespace, action = 'write')
       do ik=1,nik
         do ist=1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
       end do
-      close(file)
+      call io_close(file)
     endif
     
     if(.not.downfolding) then
@@ -358,14 +358,14 @@ contains
     
       if(mpi_world%rank==0) then
         filename='trivial_floquet_bands'
-        open(unit=file,file=filename)
+        file = io_open(filename, sys%namespace, action = 'write')
         do ik=1,nik
           do ist=1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')
         end do
-        close(file)
+        call io_close(file)
       endif
      end if
   

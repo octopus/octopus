@@ -17,7 +17,8 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, converged, ik, diff, tau)
+  type(namespace_t),                intent(in)    :: namespace
   type(mesh_t),             target, intent(in)    :: mesh
   type(states_elec_t),              intent(inout) :: st
   type(hamiltonian_elec_t), target, intent(inout) :: hm
@@ -77,7 +78,7 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
       call batch_add_state(zpsib, ist, zpsi)
 
-      call exponential_apply_batch(te, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
+      call exponential_apply_batch(te, namespace, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
 
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
@@ -87,14 +88,14 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
     end do
 #else
     do ib = convb + 1, st%group%block_end
-      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+      if (hamiltonian_elec_apply_packed(hm)) then
         call batch_pack(st%group%psib(ib, ik))
       end if
 
-      call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
+      call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
 
-      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+      if (hamiltonian_elec_apply_packed(hm)) then
         call batch_unpack(st%group%psib(ib, ik))
       end if
     end do
@@ -110,11 +111,11 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
       c(1:st%nst, i) = c(1:st%nst, i)/sqrt(eig(i))
     end do
 
-    call states_elec_rotate(mesh, st, c, ik)
+    call states_elec_rotate(st, namespace, mesh, c, ik)
     
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
-      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+      if (hamiltonian_elec_apply_packed(hm)) then
         call batch_pack(st%group%psib(ib, ik))
       end if
 
@@ -123,7 +124,7 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
 
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))
       st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
       call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)
@@ -138,7 +139,7 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
         end do
       end if
 
-      if (hamiltonian_elec_apply_packed(hm, mesh)) then
+      if (hamiltonian_elec_apply_packed(hm)) then
         call batch_unpack(st%group%psib(ib, ik), copy=.false.)
       end if
     end do

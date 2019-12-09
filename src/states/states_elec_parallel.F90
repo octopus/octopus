@@ -24,6 +24,7 @@ module states_elec_parallel_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -49,8 +50,9 @@ module states_elec_parallel_oct_m
   
 contains
 
-  subroutine states_elec_parallel_blacs_blocksize(st, mesh, blocksize, total_np)
+  subroutine states_elec_parallel_blacs_blocksize(st, namespace, mesh, blocksize, total_np)
     type(states_elec_t),  intent(in)    :: st
+    type(namespace_t),    intent(in)    :: namespace
     type(mesh_t),         intent(in)    :: mesh
     integer,              intent(out)   :: blocksize(2)
     integer,              intent(out)   :: total_np
@@ -68,7 +70,7 @@ contains
     if(.not. st%scalapack_compatible) then
       message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
       message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     end if
     
     if (mesh%parallel_in_domains) then
