@@ -20,7 +20,6 @@
 
 module dos_oct_m
   use atomic_orbital_oct_m
-  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -143,7 +142,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, boundaries, namespace)
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_elec_t),      intent(in) :: st
@@ -151,7 +150,6 @@ contains
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
     type(hamiltonian_elec_t), intent(in) :: hm
-    type(boundaries_t),       intent(in) :: boundaries
     type(namespace_t),        intent(in) :: namespace
 
     integer :: ie, ik, ist, is, ns, maxdos

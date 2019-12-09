@@ -1031,8 +1031,7 @@ contains
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
-          geo, gr%mesh, gr%der%boundaries, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if

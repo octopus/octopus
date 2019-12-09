@@ -20,7 +20,6 @@
 
 module states_elec_io_oct_m
   use atomic_orbital_oct_m
-  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -633,7 +632,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, boundaries, phase, vec_pot, vec_pot_var)
+  subroutine states_elec_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),         intent(in)      :: dir
     type(namespace_t),        intent(in)      :: namespace
     integer,                  intent(in)      :: nst
@@ -641,7 +640,6 @@ contains
     type(simul_box_t),        intent(in)      :: sb
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
-    type(boundaries_t),       intent(in)      :: boundaries
     CMPLX, pointer                            :: phase(:, :)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)

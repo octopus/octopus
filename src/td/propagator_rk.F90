@@ -20,7 +20,6 @@
 
 module propagator_rk_oct_m
   use batch_ops_oct_m
-  use boundaries_oct_m
   use comm_oct_m
   use density_oct_m
   use forces_oct_m
@@ -62,7 +61,6 @@ module propagator_rk_oct_m
   type(mesh_t),             pointer,     private :: mesh_p
   type(hamiltonian_elec_t), pointer,     private :: hm_p
   type(states_elec_t),      pointer,     private :: st_p
-  type(boundaries_t),       pointer,     private :: bnd_p
   type(propagator_t),       pointer,     private :: tr_p
   type(namespace_t),        pointer,     private :: namespace_p
   integer,                               private :: dim_op
@@ -535,7 +533,6 @@ contains
     hm_p      => hm
     tr_p      => tr
     st_p      => st
-    bnd_p     => gr%der%boundaries
     namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
@@ -763,7 +760,6 @@ contains
     hm_p      => hm
     tr_p      => tr
     st_p      => st
-    bnd_p     => gr%der%boundaries
     namespace_p => namespace
     dt_op = dt
     t_op  = time - dt/M_TWO
