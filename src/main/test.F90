@@ -32,6 +32,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
@@ -909,9 +910,10 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(celestial_body_t) :: sun, earth, moon
-    type(propagator_verlet_t) :: sun_prop, earth_prop, moon_prop
-    integer :: it, Nstep, internal_loop
+    type(propagator_verlet_t) :: prop_sun, prop_earth, prop_moon
+    integer :: it, Nstep, internal_loop, iunit
     logical :: all_done
+    FLOAT :: dt
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -955,25 +957,28 @@ contains
     call moon%allocate_receiv_structure()
 
     !Creates Verlet propagators
-    call prop_sun%init(M_ZERO, CNST(0.1))
-    call prop_earth%init(M_ZERO, CNST(0.1))
-    call prop_moon%init(M_ZERO, :CNST(0.1))
+    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), dt)
+    call prop_sun%init(M_ZERO, dt)
+    call prop_earth%init(M_ZERO, dt)
+    call prop_moon%init(M_ZERO, dt)
 
     !Associate them to subsystems
     call sun%set_propagator(prop_sun)
-    call sun%set_propagator(prop_earth)
-    call sun%set_propagator(prop_moon)
+    call earth%set_propagator(prop_earth)
+    call moon%set_propagator(prop_moon)
 
+    iunit = io_open('celestial_dynamics.dat', namespace, action='write')
+    write(iunit, '(i5,6(e13.6,1x))') 0, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
 
-    Nstep = 1000
+    call parse_variable(namespace, 'TDMaxSteps', 1000, Nstep)
     do it = 1, Nstep
 
       all_done = .false.
       internal_loop = 1
 
-      prop_sun%rewind()
-      prop_earth%rewind()
-      prop_moon%rewind()
+      call prop_sun%rewind()
+      call prop_earth%rewind()
+      call prop_moon%rewind()
 
       do while(.not. all_done .and. internal_loop < 1000)
 
@@ -982,12 +987,15 @@ contains
         call moon%system_dt(prop_moon)
 
         !We check the exit condition
-        all_done = prop_sun%step_is_done() && prop_earth%step_is_done() && prop_moon%step_is_done()
+        all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
         INCR(internal_loop, 1)
       end do
 
-      print *, it, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
+      write(stdout,'(a,i5)') 'Iteraction : ', it
+      write(iunit, '(i5,6(1x,e13.6))') it, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
     end do
+
+    call io_close(iunit)
 
 
     POP_SUB(test_celestial_dynamics)
