@@ -134,6 +134,7 @@ contains
       do ip = 1, this%nb_partners
         this%tot_force(1:this%ndim) = this%tot_force(1:this%ndim) + this%forces(1:this%ndim, ip)
       end do
+      this%tot_force(1:this%ndim) = this%tot_force(1:this%ndim) / this%mass
       call this%prop%list%next()
 
     case(VERLET_COMPUTE_VEL)
@@ -163,7 +164,7 @@ contains
 
     PUSH_SUB(celestial_body_pull)
 
-    GG = CNST(1.0)
+    GG = CNST(6.67430e-11)
 
     select case(interaction)
     case(FORCE)

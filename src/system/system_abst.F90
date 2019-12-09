@@ -143,6 +143,8 @@ contains
         counter = counter + 1
       end do
 
+      call prop%list%next()
+
     case default
       call this%do_td_operation(tdop)
     end select

@@ -1,0 +1,6 @@
+CalculationMode = test
+
+TestMode = celestial_dynamics
+
+TDTimeStep = 5000
+TDMaxSteps = 10000

@@ -1,0 +1,10 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test celestial
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 27-celestial_dynamics.01-three_body.inp
+match ; Sun pos x ; LINEFIELD(celestial_dynamics.dat, -1, 2) ; 0.225356E+08
