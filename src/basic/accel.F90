@@ -83,7 +83,9 @@ module accel_oct_m
     accel_local_memory_size,      &
     accel_global_memory_size,     &
     accel_max_size_per_dim,       &
-    accel_get_device_pointer
+    accel_get_device_pointer,     &
+    accel_set_stream,             &
+    accel_synchronize_all_streams
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -189,8 +191,6 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
-  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_real
-  type(accel_kernel_t), public, target, save :: kernel_mod_sqr_complex
   type(accel_kernel_t), public, target, save :: set_one
 
   ! kernels used locally
@@ -602,8 +602,6 @@ contains
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
-    call accel_kernel_start_call(kernel_mod_sqr_real, 'mod_sqr.cl', "mod_sqr_real")
-    call accel_kernel_start_call(kernel_mod_sqr_complex, 'mod_sqr.cl', "mod_sqr_complex")
 
     !%Variable AccelBenchmark
     !%Type logical
@@ -1874,6 +1872,31 @@ contains
   end function accel_max_size_per_dim
 
   ! ------------------------------------------------------
+
+  subroutine accel_set_stream(stream_number)
+    integer, intent(in) :: stream_number
+
+    PUSH_SUB(accel_set_stream)
+
+#ifdef HAVE_CUDA
+    call cuda_set_stream(accel%cuda_stream, stream_number)
+    call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+#endif
+
+    POP_SUB(accel_set_stream)
+  end subroutine accel_set_stream
+
+  ! ------------------------------------------------------
+
+  subroutine accel_synchronize_all_streams()
+    PUSH_SUB(accel_synchronize_all_streams)
+
+#ifdef HAVE_CUDA
+    call cuda_synchronize_all_streams()
+#endif
+
+    POP_SUB(accel_synchronize_all_streams)
+  end subroutine accel_synchronize_all_streams
 
 #include "undef.F90"
 #include "real.F90"
