@@ -608,7 +608,8 @@ contains
 
    integer :: ios
 
-   if(boundaries%spiralBC) call messages_not_implemented("DFT+U with spiral boundary conditions.")
+   if(boundaries%spiralBC) call messages_not_implemented("DFT+U with spiral boundary conditions.", &
+                                                            namespace=namespace)
  
    !In this case there is no phase difference, as the basis come from states on the full 
    !grid and not from spherical meshes around the atoms
