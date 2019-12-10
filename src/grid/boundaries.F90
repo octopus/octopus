@@ -186,11 +186,11 @@ contains
             call messages_experimental("SpiralBoundaryCondition")
           else 
             message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
         else
          message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
-         call messages_fatal(1) 
+         call messages_fatal(1, namespace=namespace) 
         end if
       end if
 

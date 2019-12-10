@@ -469,7 +469,7 @@ contains
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,1), CNST(1e-5))) then
             message(1) = "The TDMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to TDMomemtumTransfer."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         end do
       end if
@@ -501,13 +501,13 @@ contains
         norm = sqrt(sum(kick%easy_axis(1:3)**2))
         if(norm < CNST(1e-9)) then
           message(1) = "TDEasyAxis norm is too small."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         kick%easy_axis(1:3) = kick%easy_axis(1:3)/norm
         call parse_block_end(blk)
       else
         message(1) = "For magnons, the variable TDEasyAxis must be defined."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       !We first two vectors defining a basis in the transverse plane
@@ -534,7 +534,7 @@ contains
       if(parse_is_defined(namespace, 'TDMomentumTransfer') &
             .and. parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
         message(1) = "TDMomentumTransfer and TDMultipleMomentumTransfer cannot be defined at the same time."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if(parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
@@ -561,7 +561,7 @@ contains
         !%End
         if(parse_block(namespace, 'TDMultipleMomentumTransfer', blk) /= 0) then
           write(message(1),'(a)') 'Internal error while reading TDMultipleMomentumTransfer.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         do idir = 1, 3
@@ -591,7 +591,7 @@ contains
                     message(1) = "The TDMultipleMomentumTransfer breaks (at least) one " &
                                       // "of the symmetries used to reduce the k-points."
                     message(2) = "Set SymmetryBreakDir accordingly."
-                    call messages_fatal(2)
+                    call messages_fatal(2, namespace=namespace)
                   end if
                 end do
               end if
@@ -607,7 +607,7 @@ contains
 
     if(kick%delta_strength_mode == KICK_MAGNON_MODE .and. kick%qkick_mode /= QKICKMODE_EXP) then
       message(1) = "For magnons, the kick mode must be exponential."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(kick_init)
