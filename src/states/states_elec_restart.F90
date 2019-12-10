@@ -1283,6 +1283,8 @@ contains
   end subroutine states_elec_read_user_def_orbitals
 
   ! ---------------------------------------------------------
+  ! This is needed as for the generalized Bloch theorem we need to label 
+  ! the states from the expectation value of Sz computed from the GS.
   subroutine states_elec_dump_spin(restart, st, gr, ierr)
     type(restart_t),      intent(in)  :: restart
     type(states_elec_t),  intent(in)  :: st
