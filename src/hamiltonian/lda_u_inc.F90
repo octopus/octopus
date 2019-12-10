@@ -1537,21 +1537,23 @@ end subroutine X(compute_periodic_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
- subroutine X(lda_u_force)(this, mesh, st, iq, ndim, psib, grad_psib, force, phase)
+ subroutine X(lda_u_force)(this, mesh, st, iq, ndim, natoms, psib, grad_psib, force, phase)
    type(lda_u_t),             intent(in)    :: this
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
-   integer,                   intent(in)    :: iq, ndim
+   integer,                   intent(in)    :: iq, ndim, natoms
    type(batch_t),             intent(in)    :: psib
    type(batch_t),             intent(in)    :: grad_psib(:)
    FLOAT,                     intent(inout) :: force(:, :)
    logical,                   intent(in)    :: phase
 
-   integer :: ios, iatom, ibatch, ist, im, imp, ispin, idir
+   integer :: ios, iatom, ib, ist, im, imp, ispin, idir
+   integer :: ios2, iatom2, inn, ia
    type(orbitalset_t), pointer  :: os
    R_TYPE :: ff(1:ndim)
    R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
-   R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
+   R_TYPE, allocatable :: dot(:,:,:,:), gdot(:,:,:,:,:), gradn(:,:,:,:)
+   R_TYPE, allocatable :: ffV(:,:), gradnIJ(:,:,:,:,:,:)
    FLOAT :: weight
 
    if(this%level == DFT_U_NONE) return
@@ -1565,67 +1567,104 @@ end subroutine X(compute_periodic_coulomb_integrals)
    PUSH_SUB(X(lda_u_force))
 
    !TODO: Implement
-   if(this%intersite) then
-     message(1) = "Intersite V forces are not implemented."
+   if(this%intersite .and. st%d%ispin == SPINORS) then
+     message(1) = "Intersite V forces with spinors are not implemented."
      call messages_warning(1)
    end if
 
    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
    SAFE_ALLOCATE(gpsi(1:mesh%np, 1:st%d%dim))
-   SAFE_ALLOCATE(dot(1:st%d%dim, 1:this%maxnorbs))
-   SAFE_ALLOCATE(gdot(1:st%d%dim, 1:this%maxnorbs,1:ndim))
+   SAFE_ALLOCATE(dot(1:st%d%dim, 1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
+   dot(1:st%d%dim, 1:this%maxnorbs, 1:this%norbsets, 1:psib%nst) = M_ZERO
+   SAFE_ALLOCATE(gdot(1:st%d%dim, 1:this%maxnorbs,1:ndim, 1:this%norbsets, 1:psib%nst))
+   gdot(1:st%d%dim, 1:this%maxnorbs,1:ndim, 1:this%norbsets, 1:psib%nst) = M_ZERO
    SAFE_ALLOCATE(gradn(1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:ndim))
+   if(this%intersite) then
+     SAFE_ALLOCATE(ffV(1:ndim, 1:natoms))
+     SAFE_ALLOCATE(gradnIJ(1:2,1:this%maxnorbs,1:this%maxnorbs,1:this%nspins,1:ndim,1:this%maxneighbors))
+   end if
 
    ispin = states_elec_dim_get_spin_index(st%d, iq)
 
-   do ios = 1, this%norbsets 
+   !We first compute the projection on the localized orbitals
+   do ib = 1, psib%nst
+     ist = psib%states(ib)%ist
+     weight = st%d%kweights(iq)*st%occ(ist, iq)
+     if(weight < CNST(1.0e-10)) cycle
+
+     call batch_get_state(psib, ib, mesh%np, psi)
+     !No phase here, this is already added
+     !We first compute the matrix elemets <orb_m| \psi>
+     !taking into account phase correction if needed   
+     ! 
+     do ios = 1, this%norbsets
+       os => this%orbsets(ios)
+       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, this%basisfromstates, &
+                                                  dot(1:st%d%dim, 1:os%norbs, ios, ib))
+     end do
+
+     do idir = 1, ndim
+       call batch_get_state(grad_psib(idir), ib, mesh%np, gpsi)     
+       do ios = 1, this%norbsets
+         os => this%orbsets(ios)
+         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, &
+                     this%basisfromstates, gdot(1:st%d%dim, 1:os%norbs,idir, ios, ib))
+       end do
+     end do
+   end do
+
+   do ios = 1, this%norbsets
      os => this%orbsets(ios)
      iatom = os%iatom
 
      gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = R_TOTYPE(M_ZERO)
+     gradnIJ(1:2,1:os%norbs,1:os%norbs,1:this%nspins,1:ndim,1:this%maxneighbors) = R_TOTYPE(M_ZERO)
 
-     do ibatch = 1, psib%nst
-       ist = psib%states(ibatch)%ist
+     do ib = 1, psib%nst
+       ist = psib%states(ib)%ist
        weight = st%d%kweights(iq)*st%occ(ist, iq)
        if(weight < CNST(1.0e-10)) cycle
 
-       call batch_get_state(psib, ibatch, mesh%np, psi)
-       !No phase here, this is already added
-
-       !We first compute the matrix elemets <\psi | orb_m>
-       !taking into account phase correction if needed   
-       ! 
-       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, this%basisfromstates, dot)
-
        do idir = 1, ndim
-         call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
-         !We first compute the matrix elemets <\psi | orb_m>
-         !taking into account phase correction if needed 
-         ! 
-         !No phase here, this is already added
-
-         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, &
-                     this%basisfromstates, gdot(1:st%d%dim,1:os%norbs,idir))
-
          if(st%d%ispin /= SPINORS) then
            do im = 1, os%norbs
              gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
-                                          + weight*(gdot(1,1:os%norbs,idir)*R_CONJ(dot(1,im)) &
-                                                   +R_CONJ(gdot(1,im,idir))*dot(1,1:os%norbs))
-           end do
-         else
+                                     + weight*(gdot(1,1:os%norbs,idir,ios,ib)*R_CONJ(dot(1,im,ios,ib)) &
+                                              +R_CONJ(gdot(1,im,idir,ios,ib))*dot(1,1:os%norbs,ios,ib))
+             if(this%intersite) then
+               !Loop over nearest neighbors
+               do inn = 1, os%nneighbors
+                 ios2 = os%map_os(inn)
+                 do imp = 1, this%orbsets(ios2)%norbs
+                   if(phase) then
+                     gradnIJ(1,im,imp,ispin,idir,inn) = gradnIJ(1,im,imp,ispin,idir, inn) &
+                    +  weight*R_CONJ(os%phase_shift(inn,iq))*gdot(1,imp,idir,ios2,ib)*R_CONJ(dot(1,im,ios,ib))
+                     gradnIJ(2,im,imp,ispin,idir,inn) = gradnIJ(2,im,imp,ispin,idir, inn) &
+                    +  weight*R_CONJ(os%phase_shift(inn,iq))*R_CONJ(gdot(1,im,idir,ios,ib))*dot(1,imp,ios2,ib)
+
+                   else
+                     gradnIJ(1,im,imp,ispin,idir,inn) = gradnIJ(1,im,imp,ispin,idir, inn) &
+                    +  weight*gdot(1,imp,idir,ios2,ib)*R_CONJ(dot(1,im,ios,ib)) 
+                     gradnIJ(2,im,imp,ispin,idir,inn) = gradnIJ(2,im,imp,ispin,idir, inn) &
+                    +  weight*R_CONJ(gdot(1,im,idir,ios,ib))*dot(1,imp,ios2,ib)
+                   end if
+                 end do !imp
+               end do !inn
+              end if !intersite
+            end do
+          else
            do im = 1, os%norbs
              do ispin = 1, this%spin_channels
                gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
-                                            + weight*(gdot(ispin,1:os%norbs,idir)*R_CONJ(dot(ispin,im)) &
-                                                     +R_CONJ(gdot(ispin,im,idir))*dot(ispin,1:os%norbs))
+                             + weight*(gdot(ispin,1:os%norbs,idir,ios,ib)*R_CONJ(dot(ispin,im,ios,ib)) &
+                                      +R_CONJ(gdot(ispin,im,idir,ios,ib))*dot(ispin,1:os%norbs,ios,ib))
              end do
              gradn(1:os%norbs,im,3,idir) = gradn(1:os%norbs,im,3,idir) &
-                                            + weight*(gdot(1,1:os%norbs,idir)*R_CONJ(dot(2,im)) &
-                                                     +R_CONJ(gdot(2,im,idir))*dot(1,1:os%norbs))
+                                    + weight*(gdot(1,1:os%norbs,idir,ios,ib)*R_CONJ(dot(2,im,ios,ib)) &
+                                             +R_CONJ(gdot(2,im,idir,ios,ib))*dot(1,1:os%norbs,ios,ib))
              gradn(1:os%norbs,im,4,idir) = gradn(1:os%norbs,im,4,idir) &
-                                            + weight*(gdot(2,1:os%norbs,idir)*R_CONJ(dot(1,im)) &
-                                                     +R_CONJ(gdot(1,im,idir))*dot(2,1:os%norbs))
+                                    + weight*(gdot(2,1:os%norbs,idir,ios,ib)*R_CONJ(dot(1,im,ios,ib)) &
+                                             +R_CONJ(gdot(1,im,idir,ios,ib))*dot(2,1:os%norbs,ios,ib))
            end do
            
          end if
@@ -1641,6 +1680,33 @@ end subroutine X(compute_periodic_coulomb_integrals)
          end do !imp
        ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
        end do !im
+
+       if(this%intersite) then
+         ffV = R_TOTYPE(M_ZERO)
+         do im = 1, os%norbs 
+           !Loop over nearest neighbors
+           do inn = 1, os%nneighbors
+             ios2 = os%map_os(inn)
+             iatom2 = this%orbsets(ios2)%iatom
+             do imp = 1, this%orbsets(ios2)%norbs
+               ffV(1:ndim,iatom2) = ffV(1:ndim,iatom2) + R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn)) &
+                                         * gradnIJ(1,im,imp,ispin,1:ndim,inn)/st%smear%el_per_state & 
+                                         * os%V_ij(inn, 0) * M_HALF
+               ffV(1:ndim,iatom2) = ffV(1:ndim,iatom2) + this%X(n_IJ)(im,imp,ispin,ios,inn) &
+                                         * gradnIJ(2,im,imp,ispin,1:ndim,inn)/st%smear%el_per_state &
+                                         * os%V_ij(inn, 0) * M_HALF
+                                           
+               ffV(1:ndim,iatom) = ffV(1:ndim,iatom) + R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn))   &
+                                         * gradnIJ(2,im,imp,ispin,1:ndim,inn)/st%smear%el_per_state &
+                                         * os%V_ij(inn, 0) * M_HALF
+               ffV(1:ndim,iatom) = ffV(1:ndim,iatom) + this%X(n_IJ)(im,imp,ispin,ios,inn)   &
+                                         * gradnIJ(1,im,imp,ispin,1:ndim,inn)/st%smear%el_per_state &
+                                         * os%V_ij(inn, 0) * M_HALF
+             end do
+           end do
+         end do
+       end if
+
      else
        ff(1:ndim) = M_ZERO
        do ispin = 1, st%d%nspin
@@ -1659,10 +1725,21 @@ end subroutine X(compute_periodic_coulomb_integrals)
      ! We convert the force to Cartesian coordinates
      ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
      if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
-        ff(1:ndim) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ff(1:ndim))
-      end if
+       ff(1:ndim) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ff(1:ndim))
+       if(this%intersite) then
+         do ia = 1, natoms
+           ffV(1:ndim,ia) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ffV(1:ndim,ia)) 
+         end do
+       end if
+     end if
 
-     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim))
+     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim), REAL_PRECISION)
+
+     if(this%intersite) then
+       do ia = 1, natoms
+         force(1:ndim, ia) = force(1:ndim, ia) + real(ffV(1:ndim,ia), REAL_PRECISION)
+       end do
+     end if
    end do !ios
 
    SAFE_DEALLOCATE_A(psi)
@@ -1670,6 +1747,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_DEALLOCATE_A(dot)
    SAFE_DEALLOCATE_A(gdot)
    SAFE_DEALLOCATE_A(gradn)
+   SAFE_DEALLOCATE_A(ffV)
+   SAFE_DEALLOCATE_A(gradnIJ)
 
    POP_SUB(X(lda_u_force))
  end subroutine X(lda_u_force)
