@@ -1027,13 +1027,13 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
   end do
 
-  call vvb%end
-  call res%end
-  call zzb%end
-  call qqb%end
-  call ppb%end
-  call deltax%end
-  call deltar%end
+  call vvb%end()
+  call res%end()
+  call zzb%end()
+  call qqb%end()
+  call ppb%end()
+  call deltax%end()
+  call deltar%end()
 
   SAFE_DEALLOCATE_A(exception_saved)
   SAFE_DEALLOCATE_A(rho)

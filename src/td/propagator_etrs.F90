@@ -247,7 +247,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call psi2(ib, ik)%end
+        call psi2(ib, ik)%end()
       end do
     end do
 

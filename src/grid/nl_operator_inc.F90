@@ -478,8 +478,8 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   call X(nl_operator_operate_batch)(op, batch_fi, batch_fo, ghost_update, profile, points)
 
-  call batch_fi%end
-  call batch_fo%end
+  call batch_fi%end()
+  call batch_fo%end()
 
   POP_SUB(X(nl_operator_operate))
 end subroutine X(nl_operator_operate)

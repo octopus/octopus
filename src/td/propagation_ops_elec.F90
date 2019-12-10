@@ -301,7 +301,7 @@ contains
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, ik, zpsib_dt)
 
-          call zpsib_dt%end
+          call zpsib_dt%end()
         else
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then

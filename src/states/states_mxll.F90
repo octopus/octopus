@@ -350,7 +350,7 @@ contains
 !    Another alternative
 !    call batch_init(st%rs_state_transb, hm%d%dim, 1)
 !    call st%rs_state_transb%add_state(1, st%rs_state_trans)
-!    call st%rs_state_transb%end
+!    call st%rs_state_transb%end()
 
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
@@ -362,11 +362,11 @@ contains
     PUSH_SUB(states_mxll_end)
 
     call states_elec_dim_end(st%d)
-    call st%rsb%end
-    call st%rs_transb%end
-    call st%rs_longb%end
-    call st%rs_curr_dens_rest1b%end
-    call st%rs_curr_dens_rest2b%end
+    call st%rsb%end()
+    call st%rs_transb%end()
+    call st%rs_longb%end()
+    call st%rs_curr_dens_rest1b%end()
+    call st%rs_curr_dens_rest2b%end()
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)

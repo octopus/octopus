@@ -467,7 +467,7 @@ contains
 
           call batch_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi)
           call density_calc_accumulate(dens_calc, ik, psib)
-          call psib%end
+          call psib%end()
           SAFE_DEALLOCATE_A(psi)
           
           exit

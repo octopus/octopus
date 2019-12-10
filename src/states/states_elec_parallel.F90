@@ -221,7 +221,7 @@ contains
     if(this%group%block_is_local(ib, iqn)) then
       nullify(psib)
     else
-      call psib%end
+      call psib%end()
       SAFE_DEALLOCATE_P(psib)
     end if
     

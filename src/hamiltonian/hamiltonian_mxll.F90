@@ -486,8 +486,8 @@ contains
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !
-!    call psib%end
-!    call hpsib%end
+!    call psib%end()
+!    call hpsib%end()
 
     call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
 

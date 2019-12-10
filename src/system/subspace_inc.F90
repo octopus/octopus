@@ -129,7 +129,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
-      call hpsib%end
+      call hpsib%end()
 
       if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       
@@ -224,8 +224,8 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
     
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik)
     
-    call psib%end
-    call hpsib%end
+    call psib%end()
+    call hpsib%end()
   end do
 
   ! We need to set to zero some extra parts of the array
@@ -520,7 +520,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
   
   do ib = st%group%block_start, st%group%block_end
-    call hpsib(ib)%end
+    call hpsib(ib)%end()
   end do
   
   SAFE_DEALLOCATE_A(hpsib)

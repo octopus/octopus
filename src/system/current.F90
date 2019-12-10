@@ -373,10 +373,10 @@ contains
 
           call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
-          call hpsib%end
-          call rhpsib%end
-          call rpsib%end
-          call hrpsib%end
+          call hpsib%end()
+          call rhpsib%end()
+          call rpsib%end()
+          call hrpsib%end()
 
         end do
       end do
@@ -424,10 +424,10 @@ contains
             call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
-              call commpsib(idir)%end
+              call commpsib(idir)%end()
             end do
 
-            call epsib%end
+            call epsib%end()
             call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
           end do

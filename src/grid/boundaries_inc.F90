@@ -229,7 +229,7 @@ subroutine X(ghost_update_batch_finish)(handle)
     end if
   end if
 
-  call handle%ghost_send%end
+  call handle%ghost_send%end()
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))
@@ -670,7 +670,7 @@ subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
 
   call X(boundaries_set_batch)(boundaries, batch_ff, phase_correction=phase_correction)
 
-  call batch_ff%end
+  call batch_ff%end()
   POP_SUB(X(boundaries_set_single))
 
 end subroutine X(boundaries_set_single)

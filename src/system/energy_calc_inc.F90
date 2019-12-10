@@ -84,7 +84,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
         call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       end if
 
-      call hpsib%end
+      call hpsib%end()
 
     end do
   end do

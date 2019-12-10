@@ -270,8 +270,8 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
                                        set_phase = set_phase)
 
-  call psib%end
-  call hpsib%end
+  call psib%end()
+  call hpsib%end()
   
 
   POP_SUB(X(hamiltonian_elec_apply))
@@ -365,8 +365,8 @@ subroutine X(exchange_operator_single)(hm, namespace, mesh, ist, ik, psi, hpsi, 
 
   call X(exchange_operator)(hm, namespace, mesh, ik, psib, hpsib, exx_coef)
 
-  call psib%end
-  call hpsib%end
+  call psib%end()
+  call hpsib%end()
 
   POP_SUB(X(exchange_operator_single))
 end subroutine X(exchange_operator_single)
@@ -776,8 +776,8 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, i
     set_phase = set_phase)
   call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
 
-  call auxpsib%end
-  call aux2psib%end
+  call auxpsib%end()
+  call aux2psib%end()
 
   POP_SUB(X(hamiltonian_elec_apply_magnus))
 end subroutine X(hamiltonian_elec_apply_magnus)
@@ -859,10 +859,10 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
   call batch_axpy(mesh%np, CNST(-1.0), divb, hpsib)
 
   do idir = 1, mesh%sb%dim
-    call gradb(idir)%end
+    call gradb(idir)%end()
   end do
 
-  call divb%end
+  call divb%end()
   
   SAFE_DEALLOCATE_A(gradb)
   SAFE_DEALLOCATE_A(grad)

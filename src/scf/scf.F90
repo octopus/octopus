@@ -988,7 +988,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call psioutb(ib, iqn)%end
+          call psioutb(ib, iqn)%end()
         end do
       end do
       

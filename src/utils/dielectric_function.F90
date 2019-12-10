@@ -213,9 +213,9 @@ program dielectric_function
     spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
-  call vecpotb%end
-  call ftrealb%end
-  call ftimagb%end
+  call vecpotb%end()
+  call ftrealb%end()
+  call ftimagb%end()
 
   SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
   SAFE_ALLOCATE(dielectric(1:space%dim, 1:energy_steps))

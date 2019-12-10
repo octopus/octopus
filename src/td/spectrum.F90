@@ -709,8 +709,8 @@ contains
       call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
        istart + 1, iend + 1, kick%time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-      call dipoleb%end
-      call sigmab%end
+      call dipoleb%end()
+      call sigmab%end()
 
     end if
 
@@ -981,8 +981,8 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       istart + 1, iend + 1, kick_time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-    call dipoleb%end
-    call sigmab%end
+    call dipoleb%end()
+    call sigmab%end()
 
     ! real part of the polarizability
 
@@ -995,8 +995,8 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart + 1, iend + 1, kick_time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-    call dipoleb%end
-    call sigmab%end
+    call dipoleb%end()
+    call sigmab%end()
 
     SAFE_ALLOCATE(eps(1:no_e))
 
@@ -1109,9 +1109,9 @@ contains
       power(ie, :, :) = (transform_sin(ie, :, :)**2 + transform_cos(ie, :, :)**2)
     end do
 
-    call dipoleb%end
-    call transformb_cos%end
-    call transformb_sin%end
+    call dipoleb%end()
+    call transformb_cos%end()
+    call transformb_sin%end()
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(transform_sin)
@@ -1363,9 +1363,9 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, angularb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, imspb)
 
-    call angularb%end
-    call respb%end
-    call imspb%end
+    call angularb%end()
+    call respb%end()
+    call imspb%end()
     
     sum1 = M_Z0
     sum2 = M_Z0
@@ -1928,9 +1928,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call acc_batch%end
-      call sps_batch%end
-      call spc_batch%end
+      call acc_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(racc)
 
@@ -2037,9 +2037,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call acc_batch%end
-      call sps_batch%end
-      call spc_batch%end
+      call acc_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(racc)
 
@@ -2141,9 +2141,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call cur_batch%end
-      call sps_batch%end
-      call spc_batch%end
+      call cur_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(rcur)
 

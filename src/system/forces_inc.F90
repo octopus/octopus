@@ -333,9 +333,9 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
-      call psib%end
+      call psib%end()
       do idir = 1, gr%mesh%sb%dim
-        call grad_psib(idir)%end
+        call grad_psib(idir)%end()
       end do
 
     end do

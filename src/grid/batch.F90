@@ -158,7 +158,7 @@ contains
     end if
 
     if(this%is_allocated) then
-      call this%deallocate
+      call this%deallocate()
     end if
 
     nullify(this%dpsicont)
@@ -920,7 +920,7 @@ subroutine batch_remote_access_stop(this, rma_win)
 #ifdef HAVE_MPI2
     call MPI_Win_free(rma_win, mpi_err)
 #endif
-    call this%do_unpack
+    call this%do_unpack()
   end if
   
   POP_SUB(batch_remote_access_stop)

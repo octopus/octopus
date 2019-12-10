@@ -278,7 +278,7 @@ contains
       call messages_info(1)
     end do
 
-    call epsib%end
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
@@ -359,7 +359,7 @@ contains
     SAFE_DEALLOCATE_A(ddot)
     SAFE_DEALLOCATE_A(zdot)
 
-    call epsib%end
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)

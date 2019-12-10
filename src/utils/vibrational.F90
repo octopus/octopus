@@ -235,8 +235,8 @@
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
 
-    call vafb%end
-    call ftvafb%end
+    call vafb%end()
+    call ftvafb%end()
 
 
     !and print the spectrum
