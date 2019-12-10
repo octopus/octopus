@@ -123,6 +123,7 @@ module poisson_oct_m
     type(poisson_libisf_t) :: libisf_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
+    FLOAT :: charge
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
     logical, public :: dressed
@@ -149,11 +150,12 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, label, theta, qq, solver)
+  subroutine poisson_init(this, namespace, der, mc, charge, label, theta, qq, solver)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
+    FLOAT,                       intent(in)  :: charge
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
@@ -1348,7 +1350,8 @@ contains
 
   end function poisson_is_async
 
-#include "poisson_init_direct_inc.F90"
+#include "poisson_init_inc.F90"
+#include "poisson_direct_inc.F90"
 #include "poisson_direct_sm_inc.F90"
 
 #include "undef.F90"
