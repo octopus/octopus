@@ -91,15 +91,3 @@ match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -1.669001
 match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -1.657139
 match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.009311
 
-Input      : 13-primitive.04-masked_periodic_boundaries.inp
-
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -10.29909984
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -19.80012852
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.30683860
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -9.65543510
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.28585353
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.45179896
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  11.30173935
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  11.59239391
