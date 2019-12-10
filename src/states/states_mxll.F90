@@ -321,11 +321,32 @@ contains
   
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
-  subroutine states_mxll_allocate(st, mesh)
+  subroutine states_mxll_allocate(st, mesh, td)
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
+    type(td_t),             intent(in)      :: td
+
 
     PUSH_SUB(states_mxll_allocate)
+
+    SAFE_ALLOCATE(st%energy_rate(1:td%max_iter)) 
+    SAFE_ALLOCATE(st%delta_energy(1:td%max_iter))
+    SAFE_ALLOCATE(st%energy_via_flux_calc(1:td%max_iter))
+    SAFE_ALLOCATE(st%trans_energy_rate(1:td%max_iter))
+    SAFE_ALLOCATE(st%trans_delta_energy(1:td%max_iter))
+    SAFE_ALLOCATE(st%trans_energy_via_flux_calc(1:td%max_iter))
+    SAFE_ALLOCATE(st%plane_waves_energy_rate(1:td%max_iter))
+    SAFE_ALLOCATE(st%plane_waves_delta_energy(1:td%max_iter))
+    SAFE_ALLOCATE(st%plane_waves_energy_via_flux_calc(1:td%max_iter))
+    st%energy_rate = M_ZERO
+    st%delta_energy = M_ZERO
+    st%energy_via_flux_calc = M_ZERO
+    st%trans_energy_rate = M_ZERO
+    st%trans_delta_energy = M_ZERO
+    st%trans_energy_via_flux_calc = M_ZERO
+    st%plane_waves_energy_rate = M_ZERO
+    st%plane_waves_delta_energy = M_ZERO
+    st%plane_waves_energy_via_flux_calc = M_ZERO
 
     call batch_init(st%rsb, st%d%dim, 1)
     call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)

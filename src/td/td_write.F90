@@ -3737,7 +3737,7 @@ contains
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    call output_mxll_free(outp, gr, st, hm, iter*dt, geo, filename)
+    call output_mxll(outp, gr, st, hm, iter*dt, geo, filename)
  
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)

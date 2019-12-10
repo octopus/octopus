@@ -493,7 +493,7 @@ contains
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
-    scsteps, update_energy, qcchi)
+    scsteps, update_energy, qcchi, hm_mxll, gr_mxll, st_mxll, tr_mxll, mx_iter_steps)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
@@ -510,13 +510,20 @@ contains
     integer,                   optional,         intent(out)   :: scsteps
     logical,                   optional,         intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
+    type(hamiltonian_mxll_t),  optional, target, intent(inout) :: hm_mxll
+    type(grid_t),              optional, target, intent(inout) :: gr_mxll
+    type(states_mxll_t),       optional, target, intent(inout) :: st_mxll
+    type(propagator_mxll_t),   optional, target, intent(inout) :: tr_mxll
+    integer,                   optional,         intent(inout) :: mx_iter_steps
 
-    logical :: generate, update_energy_
+
+    logical :: generate, update_energy_, prop_maxwell
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
     PUSH_SUB(propagator_dt)
 
+    prop_maxwell = (present(hm_mxll) .and. present(st_mxll) .and. present(gr_mxll) .and. present(tr_mxll))
     update_energy_ = optional_default(update_energy, .true.)
 
     if (family_is_mgga_with_exc(hm%xc)) then
@@ -532,42 +539,49 @@ contains
     if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,hm%scdm)
 
     if(present(scsteps)) scsteps = 1
-   
-    select case(tr%method)
-    case(PROP_ETRS)
-      if(self_consistent_step()) then
-        call td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, &
-          tr%scf_threshold, scsteps)
-      else
-        call td_etrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
-      end if
-    case(PROP_AETRS)
-      call td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
-    case(PROP_CAETRS)
-      call td_caetrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
-    case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
-    case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .false.)
-    case(PROP_RUNGE_KUTTA4)
-      call td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
-    case(PROP_RUNGE_KUTTA2)
-      call td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
-    case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .true.)
-    case(PROP_MAGNUS)
-      call td_magnus(hm, gr, st, tr, namespace, time, dt)
-    case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions, geo)
-    case(PROP_EXPLICIT_RUNGE_KUTTA4)
-      if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
-      else
-        call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
-      end if
-    case(PROP_CFMAGNUS4)
-      call td_cfmagnus4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo, nt)
-    end select
+
+    if (prop_maxwell) then
+      call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
+        scsteps, hm_mxll, gr_mxll, st_mxll, tr_mxll, tr_mxll%maxwell_scf_threshold)
+
+    else
+
+      select case(tr%method)
+      case(PROP_ETRS)
+        if(self_consistent_step()) then
+          call td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, &
+            tr%scf_threshold, scsteps)
+        else
+          call td_etrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+        end if
+      case(PROP_AETRS)
+        call td_aetrs(namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      case(PROP_CAETRS)
+        call td_caetrs(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      case(PROP_EXPONENTIAL_MIDPOINT)
+        call exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      case(PROP_CRANK_NICOLSON)
+        call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .false.)
+      case(PROP_RUNGE_KUTTA4)
+        call td_runge_kutta4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+      case(PROP_RUNGE_KUTTA2)
+        call td_runge_kutta2(ks, namespace, hm, gr, st, tr, time, dt, ions, geo)
+      case(PROP_CRANK_NICOLSON_SPARSKIT)
+        call td_crank_nicolson(hm, namespace, gr, st, tr, time, dt, ions, geo, .true.)
+      case(PROP_MAGNUS)
+        call td_magnus(hm, gr, st, tr, namespace, time, dt)
+      case(PROP_QOCT_TDDFT_PROPAGATOR)
+        call td_qoct_tddft_propagator(hm, namespace, gr, st, tr, time, dt, ions, geo)
+      case(PROP_EXPLICIT_RUNGE_KUTTA4)
+        if(present(qcchi)) then
+          call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
+        else
+          call td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo)
+        end if
+      case(PROP_CFMAGNUS4)
+        call td_cfmagnus4(ks, namespace, hm, gr, st, tr, time, dt, ions, geo, nt)
+      end select
+    end if
 
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then

@@ -168,7 +168,7 @@ module hamiltonian_mxll_oct_m
 !    CMPLX, pointer                 :: test_output(:,:)
 
     type(cube_t)                   :: cube
-!    type(mesh_cube_parallel_map_t) :: mesh_cube_map
+    type(mesh_cube_parallel_map_t) :: mesh_cube_map
 
   end type hamiltonian_mxll_t
 
