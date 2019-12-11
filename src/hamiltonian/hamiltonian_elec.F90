@@ -569,6 +569,11 @@ contains
           hm%hm_base%phase_spiral(ip, 2) = &
             exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
         end do
+
+        if(accel_is_enabled()) then
+          call accel_create_buffer(hm%hm_base%buff_phase_spiral, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, (gr%mesh%np_part-gr%mesh%np)*2)
+          call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-gr%mesh%np)*2, hm%hm_base%phase_spiral)
+        endif
       end if
       
 
@@ -629,8 +634,13 @@ contains
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
+    if(allocated(hm%hm_base%phase_spiral) .and. accel_is_enabled()) then
+      call accel_release_buffer(hm%hm_base%buff_phase_spiral)
+    end if
+
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase_spiral)
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)

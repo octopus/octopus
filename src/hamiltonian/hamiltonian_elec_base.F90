@@ -123,6 +123,7 @@ module hamiltonian_elec_base_oct_m
     CMPLX,                    allocatable, public :: phase_corr(:,:)
     CMPLX,                    allocatable, public :: phase_spiral(:,:)
     type(accel_mem_t),                     public :: buff_phase
+    type(accel_mem_t),                     public :: buff_phase_spiral
     integer,                               public :: buff_phase_qn_start
     logical                                       :: projector_self_overlap  !< if .true. some projectors overlap with themselves
     FLOAT,                    pointer,     public :: spin(:,:,:)

@@ -365,8 +365,11 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
   integer,                               intent(in)    :: ik
 
   integer               :: ip, ii
-  integer, allocatable  :: spin_label
+  integer, allocatable  :: spin_label(:)
+  type(accel_mem_t)     :: spin_label_buffer 
   type(profile_t), save :: phase_prof
+  integer :: wgsize
+
 
   PUSH_SUB(X(hamiltonian_elec_base_phase_spiral))
   call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
@@ -415,21 +418,40 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
 
   case(BATCH_DEVICE_PACKED)
 
-    ! generate array of offsets for access of psib and phase_spiral:
+    ASSERT(accel_is_enabled())
 
+    ! generate array of offsets for access of psib and phase_spiral:
+    ! TODO: Move this to the routine where spin(:,:,:) is generated
+    !       and also move the buffer to the GPU at this point to
+    !       avoid unecessary latency here!
+ 
     SAFE_ALLOCATE(spin_label(1:psib%nst_linear))
     spin_label = 0
-    where(spin(3,batch_linear_to_ist(psib, 1:psib%nst_linear),ik)>0) spin_label=1
- 
-    ! what do we need to pass to the kernel?
-    !
-    ! * psib%nst_linear (in)
-    ! * ldpsi (in)
-    ! * ip_start (=np+1), ip_end (=np_part) (in)
-    ! * psib%pack%buffer (in/out)
-    ! * this%buff_phase_spiral (in)
-    ! * spin_label
+    do ii=1, psib%nst_linear
+      if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) spin_label(ii)=1
+    end do
 
+    call accel_create_buffer(spin_label_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, psib%nst_linear)
+    call accel_write_buffer(spin_label_buffer, psib%nst_linear, spin_label)
+
+    call accel_kernel_start_call(kernel_phase_spiral, 'phase_spiral.cl', 'phase_spiral_apply')
+
+    call accel_set_kernel_arg(kernel_phase_spiral, 0, der%mesh%np)
+    call accel_set_kernel_arg(kernel_phase_spiral, 1, der%mesh%np_part)
+    call accel_set_kernel_arg(kernel_phase_spiral, 2, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel_phase_spiral, 3, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(kernel_phase_spiral, 4, this%buff_phase_spiral)
+    call accel_set_kernel_arg(kernel_phase_spiral, 5, spin_label_buffer)
+
+    wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack%size(1)
+
+    call accel_kernel_run(kernel_phase_spiral, &
+                          (/psib%pack%size(1), pad(der%mesh%np_part - der%mesh%np, wgsize)/), &
+                          (/psib%pack%size(1), wgsize/))
+
+    call accel_finish()
+
+    call accel_release_buffer(spin_label_buffer)
 
     SAFE_DEALLOCATE_A(spin_label)
 
