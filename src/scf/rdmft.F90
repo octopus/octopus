@@ -22,6 +22,7 @@
 module rdmft_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use dressed_interaction_oct_m
   use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
@@ -311,7 +312,7 @@ contains
 
     call messages_print_stress(stdout, 'RDMFT Calculation', namespace=namespace)
     call messages_print_var_value(stdout, 'RDMBasis', rdm%do_basis)
- 
+  
     !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
@@ -504,15 +505,11 @@ contains
           write(iunit, '(1x)')
         end if
         
-        if (hm%psolver%dressed) then
+        if (hm%psolver%is_dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          write(iunit, '(a,1x)', advance='no') 'DressedLambda:   '
-          write(iunit, '(f14.12)') (hm%psolver%dressed_lambda(idir), idir = 1,gr%mesh%sb%dim - 1)
-          write(iunit, '(a,1x,f14.12)') 'DressedOmega:    ', hm%psolver%dressed_omega
-          write(iunit, '(a,1x,f14.12)') 'DressedElectrons:', hm%psolver%dressed_electrons
-          write(iunit, '(a,1x,f14.12)') 'DressedCoulomb:  ', hm%psolver%dressed_coulomb
+          call dressed_write_info(hm%psolver%dressed, iunit)
+          write(iunit, '(1x)')
         end if
-        write(iunit, '(1x)')
 
         ! scf information
         if(conv) then
@@ -529,8 +526,8 @@ contains
         iunit = 0
       end if
 
-      if (hm%psolver%dressed) then
-        call calc_photon_number(gr, st, hm, photon_number_state, photon_number, ekin_state, epot_state)
+      if (hm%psolver%is_dressed) then
+        call calc_photon_number(gr, st, hm%psolver%dressed, photon_number_state, photon_number, ekin_state, epot_state)
         if(mpi_grp_is_root(mpi_world)) then
           write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
         end if
@@ -551,14 +548,14 @@ contains
         write(iunit,'(a)') 'Natural occupation numbers:'
         write(iunit,'(a4,5x,a12)', advance='no') '#st', 'Occupation'
         if (.not. rdm%do_basis) write(iunit,'(5x,a12)', advance='no') 'conv'
-        if (hm%psolver%dressed) write(iunit,'(3(5x,a12))', advance='no') 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+        if (hm%psolver%is_dressed) write(iunit,'(3(5x,a12))', advance='no') 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
         write(iunit,*)
 
         ! Write values
         do ist = 1, st%nst
           write(iunit,'(i4,3x,f14.12)', advance='no') ist, st%occ(ist, 1)
           if (.not. rdm%do_basis) write(iunit,'(3x,f14.12)', advance='no') rdm%eigens%diff(ist, 1)
-          if (hm%psolver%dressed) then
+          if (hm%psolver%is_dressed) then
             write(iunit,'(3(3x,f14.12))', advance='no') photon_number_state(ist), ekin_state(ist), epot_state(ist)
           end if
           write(iunit,*)
@@ -613,14 +610,14 @@ contains
   end subroutine calc_maxFO
 
   ! ---------------------------------------------------------
-  subroutine calc_photon_number(gr, st, hm, photon_number_state, photon_number, ekin_state, epot_state)
-    type(grid_t),             intent(in)  :: gr
-    type(states_elec_t),      intent(in)  :: st
-    type(hamiltonian_elec_t), intent(in)  :: hm
-    FLOAT,                    intent(out) :: photon_number_state(:)
-    FLOAT,                    intent(out) :: photon_number
-    FLOAT,                    intent(out) :: ekin_state(:)
-    FLOAT,                    intent(out) :: epot_state(:)
+  subroutine calc_photon_number(gr, st, dressed, photon_number_state, photon_number, ekin_state, epot_state)
+    type(grid_t),                intent(in)  :: gr
+    type(states_elec_t),         intent(in)  :: st
+    type(dressed_interaction_t), intent(in)  :: dressed
+    FLOAT,                       intent(out) :: photon_number_state(:)
+    FLOAT,                       intent(out) :: photon_number
+    FLOAT,                       intent(out) :: ekin_state(:)
+    FLOAT,                       intent(out) :: epot_state(:)
 
     integer :: ist, ip
     FLOAT   :: qq, q_square_exp, laplace_exp
@@ -650,13 +647,13 @@ contains
       ekin_state(ist) = -M_HALF*laplace_exp
 
       ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
-      psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
+      psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2)**2
       q_square_exp = dmf_dotp(gr%mesh, psi(:, 1), psi_q_square(:, 1))
-      epot_state(ist) = M_HALF * hm%psolver%dressed_omega * hm%psolver%dressed_omega * q_square_exp
+      epot_state(ist) = M_HALF * dressed%omega**2 * q_square_exp
 
       !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
       !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-      photon_number_state(ist) = -M_HALF*laplace_exp / hm%psolver%dressed_omega + M_HALF * hm%psolver%dressed_omega * q_square_exp
+      photon_number_state(ist) = -M_HALF*laplace_exp / dressed%omega + M_HALF * dressed%omega * q_square_exp
       photon_number_state(ist) = photon_number_state(ist) - M_HALF
 
       !! N_phot_total= sum_ist occ_ist*N_phot(ist)

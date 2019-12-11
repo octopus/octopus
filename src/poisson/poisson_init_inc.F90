@@ -107,7 +107,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !! memory if you use curvilinear coordinates.
   !!End
   
-  if(this%dressed) then
+  if(this%is_dressed) then
     dim_electronic = this%der%mesh%sb%dim -1
   else
     dim_electronic = this%der%mesh%sb%dim

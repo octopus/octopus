@@ -25,6 +25,7 @@ module poisson_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
+  use dressed_interaction_oct_m
   use fft_oct_m
   use global_oct_m
   use index_oct_m
@@ -126,11 +127,8 @@ module poisson_oct_m
     FLOAT :: charge
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    logical, public :: dressed
-    FLOAT, allocatable, public :: dressed_lambda(:)
-    FLOAT, public :: dressed_omega
-    FLOAT, public :: dressed_electrons
-    FLOAT, public :: dressed_coulomb
+    logical, public :: is_dressed
+    type(dressed_interaction_t), public :: dressed
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -150,12 +148,12 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, charge, label, theta, qq, solver)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, qq, solver)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
-    FLOAT,                       intent(in)  :: charge
+    FLOAT,                       intent(in)  :: qtot !< total charge
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
@@ -187,20 +185,6 @@ contains
       this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
     end if
 
-#ifdef HAVE_MPI
-    !%Variable ParallelizationPoissonAllNodes
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% When running in parallel, this variable selects whether the
-    !% Poisson solver should divide the work among all nodes or only
-    !% among the parallelization-in-domains groups.
-    !%End
-
-    call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
-#endif
-    
     !%Variable DressedOrbitals
     !%Type logical
     !%Default false
@@ -216,11 +200,31 @@ contains
     !% but the latter needs to by added by hand as a user_defined_potential!
     !% Coordinate 1-d: electron; coordinate d+1: photon.
     !%End
-    call parse_variable(namespace, 'DressedOrbitals', .false., this%dressed)
-    if (this%dressed) then
-      call messages_experimental('Dressed Orbitals')
+    call parse_variable(namespace, 'DressedOrbitals', .false., this%is_dressed)
+    if (this%is_dressed .and. der%mesh%sb%dim /= 2) then
+      write(message(1), '(a)')'Dressed Orbital calculation currently only implemented for electronic 1d (=2d dressed) systems.'
+      call messages_fatal(1)
     end if
-    call messages_print_var_value(stdout, 'DressedOrbitals', this%dressed)
+    call messages_print_var_value(stdout, 'DressedOrbitals', this%is_dressed)
+    if (this%is_dressed) then
+      call messages_experimental('Dressed Orbitals')
+      ASSERT(qtot > M_ZERO)
+      call dressed_init(this%dressed, namespace, der%mesh%sb%dim, qtot)
+    end if
+
+#ifdef HAVE_MPI
+    !%Variable ParallelizationPoissonAllNodes
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% When running in parallel, this variable selects whether the
+    !% Poisson solver should divide the work among all nodes or only
+    !% among the parallelization-in-domains groups.
+    !%End
+
+    call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+#endif
 
     !%Variable PoissonSolver
     !%Type integer
@@ -270,7 +274,7 @@ contains
     default_solver = POISSON_FFT
 
     if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
-    
+
     if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
 
 #ifdef HAVE_CLFFT
@@ -291,8 +295,8 @@ contains
     end if
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
-    
-    if (this%dressed) default_solver = POISSON_DIRECT_SUM 
+
+    if (this%is_dressed) default_solver = POISSON_DIRECT_SUM
 
     if(.not.present(solver)) then
       call parse_variable(namespace, 'PoissonSolver', default_solver, this%method)
@@ -301,62 +305,6 @@ contains
     end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
 
-
-    if (this%dressed) then
-      !%Variable DressedLambda
-      !%Type block
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% Polarization vector including the interaction strength in dressed orbital formalism,
-      !% in units of energy. The default is zero for all components.
-      !%End
-      SAFE_ALLOCATE(this%dressed_lambda(der%mesh%sb%dim - 1))
-      if(parse_block(namespace, 'DressedLambda', blk) == 0) then
-        if(parse_block_cols(blk, 0) < der%mesh%sb%dim - 1) then
-          call messages_input_error(' DressedLambda')
-        end if
-        do idir = 1, der%mesh%sb%dim - 1
-          call parse_block_float(blk, 0, idir - 1, this%dressed_lambda(idir), units_inp%energy)
-        end do
-      else
-        this%dressed_lambda = M_ZERO
-      end if
-      call parse_block_end(blk)
-      call messages_print_var_value(stdout, 'DressedLambda', this%dressed_lambda, unit = units_out%energy)
-
-      !%Variable DressedOmega
-      !%Type float
-      !%Default 1.0 Ha
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% mode frequency in dressed orbital formalism.
-      !%End
-      call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%dressed_omega, units_inp%energy)
-      call messages_print_var_value(stdout, 'DressedOmega', this%dressed_omega, unit = units_out%energy)
-
-      !%Variable DressedElectrons
-      !%Type float
-      !%Default 2.0
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% number of electrons as extra variable, necessary in dressed orbital formalism. Defined as float
-      !% for better usage later
-      !%End
-      call parse_variable(namespace, 'DressedElectrons', CNST(2.0), this%dressed_electrons)
-      call messages_print_var_value(stdout, 'DressedElectrons', this%dressed_electrons)
-
-      !%Variable DressedCoulomb
-      !%Type float
-      !%Default 1.0
-      !%Section Hamiltonian::Poisson
-      !%Description
-      !% allows to control the prefactor of the electron electron interaction
-      !%End
-      call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%dressed_coulomb)
-      call messages_print_var_value(stdout, 'DressedCoulomb', this%dressed_coulomb)
-    end if
-
-   
     select case(this%method)
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
@@ -687,15 +635,9 @@ contains
       call this%poke_solver%build()
 #endif
     end if
-    
-    ! dressed orbital implementation works currently only for an electronic 1d system (=2d orbitals) and with direct sum
-    if(this%dressed .and. .not.this%method == POISSON_DIRECT_SUM) then
-      write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum.'
-      call messages_fatal(1)
-    end if
-    
-    if(this%dressed .and. der%mesh%sb%dim /= 2) then
-      write(message(1), '(a)')'Dressed Orbital calculation currently only implemented for electronic 1d (=2d dressed) systems.'
+
+    if (this%is_dressed .and. .not. this%method == POISSON_DIRECT_SUM) then
+      write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum Poisson solver.'
       call messages_fatal(1)
     end if
     
@@ -713,10 +655,6 @@ contains
     PUSH_SUB(poisson_end)
 
     has_cube = .false.
-
-    if (this%dressed) then
-      SAFE_DEALLOCATE_A(this%dressed_lambda)
-    end if
 
     select case(this%method)
     case(POISSON_FFT)
@@ -750,9 +688,10 @@ contains
       call this%poke_grid%end()
       call this%poke_solver%end()
 #endif
-      
+
     end select
     this%method = POISSON_NULL
+    this%is_dressed = .false.
 
     if (has_cube) then
       if (this%cube%parallel_in_domains) then
@@ -902,7 +841,7 @@ contains
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      if ( (this%dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
+      if ( (this%is_dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end if
@@ -995,7 +934,7 @@ contains
 
     PUSH_SUB(poisson_init_sm)
 
-    this%dressed = .false.
+    this%is_dressed = .false.
     this%theta = M_ZERO
 
     this%nslaves = 0

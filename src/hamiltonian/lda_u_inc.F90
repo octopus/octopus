@@ -1195,7 +1195,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, namespace, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, namespace, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs

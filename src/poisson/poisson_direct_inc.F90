@@ -53,12 +53,12 @@ subroutine poisson_solve_direct(this, pot, rho)
   xx4 = M_ZERO
   yy  = M_ZERO
  
-  if (.not. this%dressed) then
+  if (.not. this%is_dressed) then
     dim_ele = this%der%mesh%sb%dim
   else
     dim_ele = this%der%mesh%sb%dim - 1
-    lam(1:dim_ele) = this%dressed_lambda(1:dim_ele)
-    dressed_factor = this%dressed_omega/sqrt(this%dressed_electrons)
+    lam(1:dim_ele) = this%dressed%lambda(1:dim_ele)
+    dressed_factor = this%dressed%omega/sqrt(this%dressed%n_electrons)
   end if
 
   if (this%poisson_soft_coulomb_param**2 > M_ZERO) then
@@ -108,13 +108,13 @@ subroutine poisson_solve_direct(this, pot, rho)
     do ip = 1, this%der%mesh%np_global
       xg = mesh_x_global(this%der%mesh, ip)
       xx(1:dim_ele) = xg(1:dim_ele)
-      if (this%dressed) then
+      if (this%is_dressed) then
         lx = dot_product(lam(1:dim_ele), xx(1:dim_ele))
         pp = xg(dim_ele + 1)
       end if
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
-          if (.not.this%dressed) then
+          if (.not. this%is_dressed) then
             if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
               pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/dim_ele)
             else
@@ -126,17 +126,17 @@ subroutine poisson_solve_direct(this, pot, rho)
             ly = dot_product(lam(1:dim_ele), yy(1:dim_ele))
             qq = this%der%mesh%x(jp, dim_ele + 1)
             if (all(yy(1:dim_eff) == xx(1:dim_eff))) then
-              pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor**(M_ONE - M_ONE/dim_ele) &
+              pvec(jp) = this%dressed%coulomb*rho(jp)*prefactor**(M_ONE - M_ONE/dim_ele) &
                 + rho(jp)*(- dressed_factor*(lx*qq + ly*pp) + lx*ly)
             else
-              pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_eff) - yy(1:dim_eff))**2)) &
+              pvec(jp) = this%dressed%coulomb*rho(jp)/sqrt(sum((xx(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx*qq + ly*pp) + lx*ly)
             end if
           end if
         end do
       else
         do jp = 1, this%der%mesh%np
-          if (.not.this%dressed) then
+          if (.not. this%is_dressed) then
             if (vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp .and. .not. include_diag) then
               pvec(jp) = rho(jp)*prefactor 
             else
@@ -148,10 +148,10 @@ subroutine poisson_solve_direct(this, pot, rho)
             ly = dot_product(lam(1:dim_ele), yy(1:dim_ele))
             qq = this%der%mesh%x(jp, dim_ele + 1)
             if (all(yy(1:dim_eff) == xx(1:dim_eff))) then
-              pvec(jp) = this%dressed_coulomb*rho(jp)*prefactor &
+              pvec(jp) = this%dressed%coulomb*rho(jp)*prefactor &
                 + rho(jp)*(- dressed_factor*(lx*qq + ly*pp) + lx*ly)
             else
-              pvec(jp) = this%dressed_coulomb*rho(jp)/sqrt(sum((xx(1:dim_eff) - yy(1:dim_eff))**2)) &
+              pvec(jp) = this%dressed%coulomb*rho(jp)/sqrt(sum((xx(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx*qq + ly*pp) + lx*ly)
             end if
           end if
@@ -181,7 +181,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       xx2(1:dim_ele) = this%der%mesh%x(ip + 1, 1:dim_ele)
       xx3(1:dim_ele) = this%der%mesh%x(ip + 2, 1:dim_ele)
       xx4(1:dim_ele) = this%der%mesh%x(ip + 3, 1:dim_ele)
-      if (this%dressed) then
+      if (this%is_dressed) then
         lx1 = dot_product(lam(1:dim_ele), xx1(1:dim_ele))
         lx2 = dot_product(lam(1:dim_ele), xx2(1:dim_ele))
         lx3 = dot_product(lam(1:dim_ele), xx3(1:dim_ele))
@@ -201,7 +201,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/dim_ele)
         end if
  
-        if (.not.this%dressed) then
+        if (.not. this%is_dressed) then
           !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
           do jp = 1, this%der%mesh%np
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -227,19 +227,19 @@ subroutine poisson_solve_direct(this, pot, rho)
             ! we do not need the include_diag flag here, because yy and xx1 will differ in the extra dimension 
             ! if include_diag == .true.
             if (.not. all(yy(1:dim_eff) == xx1(1:dim_eff))) then
-              aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
+              aa1 = aa1 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx2(1:dim_eff))) then
-              aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx2(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
+              aa2 = aa2 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx2(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx2*qq + ly*pp2) + lx2*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx3(1:dim_eff))) then
-              aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx3(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
+              aa3 = aa3 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx3(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx3*qq + ly*pp3) + lx3*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx4(1:dim_eff))) then
-              aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx4(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
+              aa4 = aa4 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx4(1:dim_eff) - yy(1:dim_eff))**2))*this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx4*qq + ly*pp4) + lx4*ly)
             end if
           end do
@@ -259,7 +259,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa4 = M_ZERO
         end if
         
-        if (.not.this%dressed) then
+        if (.not. this%is_dressed) then
           !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
           do jp = 1, this%der%mesh%np
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
@@ -275,19 +275,19 @@ subroutine poisson_solve_direct(this, pot, rho)
             ly = dot_product(lam(1:dim_ele), yy(1:dim_ele))
             qq = this%der%mesh%x(jp, dim_ele + 1)
             if (.not. all(yy(1:dim_eff) == xx1(1:dim_eff))) then
-              aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) &
+              aa1 = aa1 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx2(1:dim_eff))) then
-              aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx2(1:dim_eff) - yy(1:dim_eff))**2)) &
+              aa2 = aa2 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx2(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx2*qq + ly*pp2) + lx2*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx3(1:dim_eff))) then
-              aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx3(1:dim_eff) - yy(1:dim_eff))**2)) &
+              aa3 = aa3 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx3(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx3*qq + ly*pp3) + lx3*ly)
             end if
             if (.not. all(yy(1:dim_eff) == xx4(1:dim_eff))) then
-              aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx4(1:dim_eff) - yy(1:dim_eff))**2)) + &
+              aa4 = aa4 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx4(1:dim_eff) - yy(1:dim_eff))**2)) + &
                 + rho(jp)*(- dressed_factor*(lx4*qq + ly*pp4) + lx4*ly)
             end if
           end do
@@ -307,12 +307,12 @@ subroutine poisson_solve_direct(this, pot, rho)
       
       xx1(1:dim_ele) = this%der%mesh%x(ip,1:dim_ele)
       lx1 = dot_product(lam(1:dim_ele), xx1(1:dim_ele))
-      if (this%dressed) then
+      if (this%is_dressed) then
         pp1 = this%der%mesh%x(ip, dim_ele + 1)
       end if
 
       if (this%der%mesh%use_curvilinear) then
-        if (.not.this%dressed) then
+        if (.not. this%is_dressed) then
           do jp = 1, this%der%mesh%np
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
             if (ip == jp .and. .not. include_diag) then
@@ -327,16 +327,16 @@ subroutine poisson_solve_direct(this, pot, rho)
             ly = dot_product(lam(1:dim_ele), yy(1:dim_ele))
             qq = this%der%mesh%x(jp, dim_ele + 1)
             if (all( xx1(1:dim_eff) == yy(1:dim_eff))) then
-              aa1 = aa1 + this%dressed_coulomb*prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/dim_ele) &
+              aa1 = aa1 + this%dressed%coulomb*prefactor*rho(ip)*this%der%mesh%vol_pp(jp)**(M_ONE - M_ONE/dim_ele) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             else
-              aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) *this%der%mesh%vol_pp(jp) &
+              aa1 = aa1 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) *this%der%mesh%vol_pp(jp) &
                 + rho(jp)*this%der%mesh%vol_pp(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             end if
           end do
         end if
       else
-        if (.not. this%dressed) then
+        if (.not. this%is_dressed) then
           do jp = 1, this%der%mesh%np
             yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
             if (ip == jp .and. .not. include_diag) then
@@ -351,10 +351,10 @@ subroutine poisson_solve_direct(this, pot, rho)
             ly = dot_product(lam(1:dim_ele), yy(1:dim_ele))
             qq = this%der%mesh%x(jp, dim_ele + 1)
             if (all( xx1(1:dim_eff) == yy(1:dim_eff))) then
-              aa1 = aa1 + this%dressed_coulomb*prefactor*rho(ip) &
+              aa1 = aa1 + this%dressed%coulomb*prefactor*rho(ip) &
                 + rho(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             else
-              aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) &
+              aa1 = aa1 + this%dressed%coulomb*rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) &
                 + rho(jp)*(- dressed_factor*(lx1*qq + ly*pp1) + lx1*ly)
             end if
           end do

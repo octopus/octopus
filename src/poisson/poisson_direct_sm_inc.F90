@@ -36,7 +36,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
 
   call profiling_in(prof, "SM_POISSON_SOLVE")
 
-  ASSERT(.not. this%dressed)
+  ASSERT(.not. this%is_dressed)
 
   nthreads = 1
 #ifdef HAVE_OPENMP

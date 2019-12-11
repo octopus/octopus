@@ -352,6 +352,7 @@ noinst_HEADERS +=                             \
 
 # Sources in poisson
 poisson_f_srcs =                                 \
+	poisson/dressed_interaction.F90          \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \

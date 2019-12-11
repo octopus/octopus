@@ -303,12 +303,12 @@ contains
     !Initialize Poisson solvers
     nullify(hm%psolver)
     SAFE_ALLOCATE(hm%psolver)
-    call poisson_init(hm%psolver, namespace, gr%der, mc)
+    call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
 
     nullify(hm%psolver_fine)
     if (gr%have_fine_mesh) then
       SAFE_ALLOCATE(hm%psolver_fine)
-      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, label = " (fine mesh)")
+      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, st%qtot, label = " (fine mesh)")
     else
       hm%psolver_fine => hm%psolver
     end if

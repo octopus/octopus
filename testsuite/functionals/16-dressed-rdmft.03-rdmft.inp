@@ -19,7 +19,6 @@ DressedOrbitals = yes
  lam
 %
 DressedOmega = om
-DressedElectrons = Nelec
 
 # single particle potential for 1d dressed Helium
 # electron coordinate: x     photon coordinate: y
