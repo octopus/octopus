@@ -154,7 +154,7 @@ contains
         if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
 
-        ip_inner = mesh_periodic_point(mesh, ip_global)
+        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 
 #ifdef HAVE_MPI
         !translate back to a local point
@@ -200,7 +200,7 @@ contains
         if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
 
-        ip_inner = mesh_periodic_point(mesh, ip_global)
+        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
         
         !translate to local (and keep a copy of the global)
 #ifdef HAVE_MPI
