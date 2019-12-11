@@ -125,6 +125,8 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc,
 
   PUSH_SUB(X(derivatives_batch_perform))
 
+  call ff%check_compatibility_with(opff)
+
   call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
   call X(derivatives_batch_finish)(handle)
 
