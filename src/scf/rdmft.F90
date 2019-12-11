@@ -289,12 +289,10 @@ contains
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
-    logical :: conv, gs_run_
+    logical :: conv
     character(len=MAX_PATH_LEN) :: dirname    
 
     PUSH_SUB(scf_rdmft)
-
-    gs_run_ = .true.
 
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
@@ -444,7 +442,7 @@ contains
 
       ! write output for iterations if requested
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
+        .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
         call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
         call scf_write_static(dirname, "info")
@@ -457,17 +455,16 @@ contains
       write(message(1),'(a,i3,a)')  'The calculation converged after ',rdm%iter,' iterations'
       write(message(2),'(a,9x,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
-      if(gs_run_) then 
-        call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
-      end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter-1, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
       write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
     end if
- 
+
+    call scf_write_static(STATIC_DIR, "info")
+    call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
+
     POP_SUB(scf_rdmft) 
 
   contains
