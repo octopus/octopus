@@ -364,7 +364,8 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
   type(batch_t),                         intent(inout) :: psib
   integer,                               intent(in)    :: ik
 
-  integer :: ip, ii
+  integer               :: ip, ii
+  integer, allocatable  :: spin_label
   type(profile_t), save :: phase_prof
 
   PUSH_SUB(X(hamiltonian_elec_base_phase_spiral))
@@ -411,6 +412,26 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
       end if
     end do
     !$omp end parallel
+
+  case(BATCH_DEVICE_PACKED)
+
+    ! generate array of offsets for access of psib and phase_spiral:
+
+    SAFE_ALLOCATE(spin_label(1:psib%nst_linear))
+    spin_label = 0
+    where(spin(3,batch_linear_to_ist(psib, 1:psib%nst_linear),ik)>0) spin_label=1
+ 
+    ! what do we need to pass to the kernel?
+    !
+    ! * psib%nst_linear (in)
+    ! * ldpsi (in)
+    ! * ip_start (=np+1), ip_end (=np_part) (in)
+    ! * psib%pack%buffer (in/out)
+    ! * this%buff_phase_spiral (in)
+    ! * spin_label
+
+
+    SAFE_DEALLOCATE_A(spin_label)
 
   end select
 
