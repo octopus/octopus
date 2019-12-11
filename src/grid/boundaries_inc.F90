@@ -131,8 +131,8 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   end select
 
 
-  call batch_init(handle%ghost_send, 1, v_local%nst_linear)
-  call handle%ghost_send%X(allocate)(1, v_local%nst_linear, subarray_size(vp%ghost_spoints))
+  call batch_init(handle%ghost_send, v_local%dim, v_local%nst)
+  call handle%ghost_send%X(allocate)(1, v_local%nst, subarray_size(vp%ghost_spoints))
 
   if(v_local%is_packed()) call handle%ghost_send%do_pack(copy = .false.)
 
@@ -663,7 +663,7 @@ subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
 
   PUSH_SUB(X(boundaries_set_single))
 
-  call batch_init     (batch_ff, 1)
+  call batch_init(batch_ff, 1, 1)
   call batch_ff%add_state(ff)
 
   ASSERT(batch_ff%is_ok())

@@ -115,6 +115,7 @@ module batch_oct_m
     procedure :: remote_access_stop => batch_remote_access_stop
     procedure :: status => batch_status
     procedure :: type => batch_type
+    procedure :: type_as_int => batch_type_as_integer
   end type batch_t
 
   !--------------------------------------------------------------
@@ -437,6 +438,20 @@ contains
     end if
      
   end function batch_type
+
+  ! ----------------------------------------------------
+  !> For debuging purpose only
+  integer pure function batch_type_as_integer(this) result(itype)
+    class(batch_t),      intent(in)    :: this
+
+    type(type_t) :: btype
+
+    itype = 0
+    btype = this%type()
+    if( btype == TYPE_FLOAT ) itype = 1
+    if( btype == TYPE_CMPLX ) itype = 2
+
+  end function batch_type_as_integer
 
   ! ----------------------------------------------------
   !> THREADSAFE

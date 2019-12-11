@@ -52,6 +52,8 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   type(accel_mem_t) :: offsets_buff
   type(accel_mem_t) :: dest_buff
 
+  PUSH_SUB(X(subarray_gather_batch))
+
   call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
 
 
@@ -115,6 +117,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   call profiling_count_transfers(arrayb%nst_linear*this%npoints, aa)
 
   call profiling_out(prof)
+  POP_SUB(X(subarray_gather_batch))
 end subroutine X(subarray_gather_batch)
 #endif
 
