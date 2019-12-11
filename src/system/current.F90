@@ -408,7 +408,7 @@ contains
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
             do idir = 1, der%mesh%sb%dim
-              call st%group%psib(ib, ik)%copy_to(commpsib(idir))
+              call epsib%copy_to(commpsib(idir))
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 

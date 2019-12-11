@@ -239,6 +239,8 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
+  call aa%check_compatibility_with(bb)
+
   if(pre%which == PRE_FILTER) then
 
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)

@@ -46,11 +46,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
-  ASSERT(fi%status() == fo%status())
+  call fi%check_compatibility_with(fo) 
   ASSERT(fi%type() == R_TYPE_VAL)
-  ASSERT(fo%type() == R_TYPE_VAL)
-
-  ASSERT(fi%nst_linear == fo%nst_linear)
 
   points_ = OP_ALL
   if(present(points)) points_ = points

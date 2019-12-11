@@ -209,7 +209,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! calculate the gradient
       do idir = 1, gr%mesh%sb%dim
-        call st%group%psib(ib, iq)%copy_to(grad_psib(idir))
+        call psib%copy_to(grad_psib(idir))
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
 

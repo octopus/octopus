@@ -56,6 +56,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
 
   ASSERT(arrayb%status() == subarrayb%status())
+  call arrayb%check_compatibility_with(subarrayb)
     
   select case(arrayb%status())
   case(BATCH_DEVICE_PACKED)
