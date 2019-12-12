@@ -36,5 +36,6 @@ DressedOmega = om
 
 Extrastates = 5
 
-RDMToleranceFO = 1e-6
-RDMConvEner = 1e-7
+RDMToleranceFO = 1e-4
+RDMConvEner = 1e-8
+RDMTolerance = 1e-7
