@@ -64,16 +64,10 @@ module boundaries_oct_m
     pv_handle_batch_t,             &
     dvec_ghost_update,             &
     zvec_ghost_update,             &
-    svec_ghost_update,             &
-    cvec_ghost_update,             &
     dghost_update_batch_start,     &
     zghost_update_batch_start,     &
-    sghost_update_batch_start,     &
-    cghost_update_batch_start,     &
     dghost_update_batch_finish,    &
-    zghost_update_batch_finish,    &
-    sghost_update_batch_finish,    &
-    cghost_update_batch_finish
+    zghost_update_batch_finish
 
   integer, parameter, public ::    &
     POINT_BOUNDARY = 1,            &
@@ -89,10 +83,6 @@ module boundaries_oct_m
     CMPLX, pointer       :: zrecv_buffer(:)
     FLOAT, pointer       :: dsend_buffer(:)
     CMPLX, pointer       :: zsend_buffer(:)
-    FLOAT, pointer       :: srecv_buffer(:)
-    CMPLX, pointer       :: crecv_buffer(:)
-    FLOAT, pointer       :: ssend_buffer(:)
-    CMPLX, pointer       :: csend_buffer(:)
     type(batch_t),   pointer :: v_local
     type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
@@ -109,8 +99,6 @@ module boundaries_oct_m
     module procedure boundaries_set_batch
     module procedure dboundaries_set_single
     module procedure zboundaries_set_single
-    module procedure sboundaries_set_single
-    module procedure cboundaries_set_single
   end interface boundaries_set
 
 contains
@@ -364,10 +352,6 @@ contains
       call dboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_CMPLX) then 
       call zboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_FLOAT_SINGLE) then 
-      call sboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_CMPLX_SINGLE) then 
-      call cboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)
      end if
@@ -381,14 +365,6 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "boundaries_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "boundaries_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
 #include "boundaries_inc.F90"
 
 end module boundaries_oct_m
