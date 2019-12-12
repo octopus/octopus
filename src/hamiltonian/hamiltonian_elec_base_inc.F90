@@ -430,7 +430,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
  
     SAFE_ALLOCATE(spin_label(1:psib%nst_linear))
     spin_label = 0
-    do ii=1, psib%nst_linear
+    do ii=1, psib%nst_linear, 2
       if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) spin_label(ii)=1
     end do
 
@@ -439,18 +439,19 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
 
     call accel_kernel_start_call(kernel_phase_spiral, 'phase_spiral.cl', 'phase_spiral_apply')
 
-    call accel_set_kernel_arg(kernel_phase_spiral, 0, sp) 
-    call accel_set_kernel_arg(kernel_phase_spiral, 1, der%mesh%np_part) 
-    call accel_set_kernel_arg(kernel_phase_spiral, 2, psib%pack%buffer)
-    call accel_set_kernel_arg(kernel_phase_spiral, 3, log2(psib%pack%size(1)))
-    call accel_set_kernel_arg(kernel_phase_spiral, 4, this%buff_phase_spiral)
-    call accel_set_kernel_arg(kernel_phase_spiral, 5, spin_label_buffer)
+    call accel_set_kernel_arg(kernel_phase_spiral, 0, psib%nst) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 1, sp) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 2, der%mesh%np_part) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 3, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel_phase_spiral, 4, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(kernel_phase_spiral, 5, this%buff_phase_spiral)
+    call accel_set_kernel_arg(kernel_phase_spiral, 6, spin_label_buffer)
 
     wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack%size(1)
 
     call accel_kernel_run(kernel_phase_spiral, &
-                          (/psib%pack%size(1), pad(der%mesh%np_part - sp, wgsize)/), &
-                          (/psib%pack%size(1), wgsize/))
+                          (/psib%pack%size(1)/2, pad(der%mesh%np_part - sp, 2*wgsize)/), &
+                          (/psib%pack%size(1)/2, 2*wgsize/))
 
     call accel_finish()
 

@@ -24,6 +24,7 @@
 
 
 __kernel void phase_spiral_apply(
+    const int nst, 
     const int sp, 
     const int np_part,
     __global double2 * psi, const int ldpsi,
@@ -37,10 +38,10 @@ __kernel void phase_spiral_apply(
   const int ip0  = get_global_id(1);
   const int ip   = ip0 + sp;
 
-  if(ip >= np_part) return;
+  if(ip >= np_part || ist >= nst) return;
 
-  const int offset_psi   = spin_label[ist];                    // 0 or 1
-  const int offset_phase = (1-spin_label[ist]) * (np_part-sp);  // assuming phase_spiral(1:np,1:2) in Fortran notation
+  const int offset_psi   = spin_label[2*ist];                    // 0 or 1
+  const int offset_phase = (1-spin_label[2*ist]) * (np_part-sp);  // assuming phase_spiral(1:np,1:2) in Fortran notation
 
   psi[(ip<<ldpsi) + 2*ist + offset_psi] = complex_mul(phase_spiral[offset_phase + ip0], psi[(ip<<ldpsi) + 2*ist + offset_psi]);
   
