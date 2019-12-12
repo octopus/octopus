@@ -44,7 +44,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
   conj = .false.
 
-  call aa%check_compatibility_with(bb)
+  call aa%check_compatibility_with(bb, only_check_dim = .true.)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.

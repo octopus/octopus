@@ -953,14 +953,17 @@ end subroutine batch_copy_data_to
 
 ! --------------------------------------------------------------
 
-subroutine batch_check_compatibility_with(this, target)
+subroutine batch_check_compatibility_with(this, target, only_check_dim)
   class(batch_t),    intent(in) :: this
   class(batch_t),    intent(in) :: target
+  logical, optional, intent(in) :: only_check_dim
 
   PUSH_SUB(batch_check_compatibility_with)
 
   ASSERT(this%type() == target%type())
-  ASSERT(this%nst_linear == target%nst_linear)
+  if(.not. optional_default(only_check_dim, .false.)) then
+    ASSERT(this%nst_linear == target%nst_linear)
+  end if
   ASSERT(this%status() == target%status())
   ASSERT(this%dim == target%dim)
 
