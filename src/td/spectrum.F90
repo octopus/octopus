@@ -1348,9 +1348,9 @@ contains
     SAFE_ALLOCATE(resp(1:no_e))
     SAFE_ALLOCATE(imsp(1:no_e))
 
-    call batch_init(angularb, 1)
-    call batch_init(respb, 1)
-    call batch_init(imspb, 1)
+    call batch_init(angularb, 1, 1)
+    call batch_init(respb, 1, 1)
+    call batch_init(imspb, 1, 1)
 
     call angularb%add_state(angular(:, 1))
     call respb%add_state(resp)
@@ -1909,9 +1909,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(acc_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
       call acc_batch%add_state(racc)
       call sps_batch%add_state(sps)
@@ -2016,9 +2016,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(acc_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
       call acc_batch%add_state(racc)
       call sps_batch%add_state(sps)
@@ -2122,9 +2122,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(cur_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(cur_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
       call cur_batch%add_state(rcur)
       call sps_batch%add_state(sps)

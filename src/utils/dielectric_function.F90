@@ -192,9 +192,9 @@ program dielectric_function
   SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
   SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
-  call batch_init(vecpotb, space%dim)
-  call batch_init(ftrealb, space%dim)
-  call batch_init(ftimagb, space%dim)
+  call batch_init(vecpotb, 1, space%dim)
+  call batch_init(ftrealb, 1, space%dim)
+  call batch_init(ftimagb, 1, space%dim)
 
   do ii = 1, space%dim
     call vecpotb%add_state(vecpot(:, space%dim + ii))

@@ -121,7 +121,6 @@ module batch_oct_m
   !--------------------------------------------------------------
   interface batch_init
     module procedure  batch_init_empty
-    module procedure  batch_init_empty_linear
     module procedure dbatch_init_contiguous
     module procedure zbatch_init_contiguous
   end interface batch_init
@@ -308,45 +307,6 @@ contains
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
 
-
-  !--------------------------------------------------------------
-  !> When we are interested in batches of 1D functions
-  subroutine batch_init_empty_linear(this, nst)
-    type(batch_t), intent(out)   :: this
-    integer,       intent(in)    :: nst
-    
-    integer :: ist
-
-    PUSH_SUB(batch_init_empty_linear)
-
-    this%is_allocated = .false.
-    this%mirror = .false.
-    this%special_memory = .false.
-    this%nst = 0
-    this%dim = 0
-    this%current = 1
-    this%type_of = TYPE_NONE
-    nullify(this%dpsicont, this%zpsicont)
-    nullify(this%states)
-
-    this%nst_linear = nst
-    SAFE_ALLOCATE(this%states_linear(1:this%nst_linear))
-    do ist = 1, this%nst_linear
-      nullify(this%states_linear(ist)%dpsi)
-      nullify(this%states_linear(ist)%zpsi)
-    end do
-
-    this%max_size = 0
-    this%in_buffer_count = 0
-    this%status_of = BATCH_NOT_PACKED
-
-    this%ndims = 1
-    SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
-
-    POP_SUB(batch_init_empty_linear)
-  end subroutine batch_init_empty_linear
-
-
   !--------------------------------------------------------------
   logical function batch_is_ok(this) result(ok)
     class(batch_t), intent(in)   :: this
@@ -380,14 +340,10 @@ contains
     logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
 
     integer :: ii, np
-    logical :: pack_, copy_data_
 
     PUSH_SUB(batch_copy_to)
 
     call batch_init_empty(dest, this%dim, this%nst)
-
-    copy_data_ = optional_default(copy_data, .false.)
-
 
     dest%type_of = this%type_of
 
@@ -410,9 +366,7 @@ contains
 
     end if
 
-    pack_ = this%is_packed()
-    if(present(pack)) pack_ = pack
-    if(pack_) call dest%do_pack(copy = .false.)
+    if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
 
     do ii = 1, dest%nst
       dest%states(ii)%ist = this%states(ii)%ist
@@ -420,7 +374,7 @@ contains
 
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
 
-    if(copy_data_) call this%copy_data_to(np, dest)
+    if(optional_default(copy_data, .false.)) call this%copy_data_to(np, dest)
     
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to
