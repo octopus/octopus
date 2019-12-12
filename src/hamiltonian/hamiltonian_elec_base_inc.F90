@@ -364,7 +364,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
   type(batch_t),                         intent(inout) :: psib
   integer,                               intent(in)    :: ik
 
-  integer               :: ip, ii
+  integer               :: ip, ii, sp
   integer, allocatable  :: spin_label(:)
   type(accel_mem_t)     :: spin_label_buffer 
   type(profile_t), save :: phase_prof
@@ -377,20 +377,23 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
   call profiling_count_operations(R_MUL*dble(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
 
 
-  ASSERT(.not. batch_status(psib) == BATCH_DEVICE_PACKED)
 
   ASSERT(der%boundaries%spiral)
+
+  sp = der%mesh%np
+  if(der%mesh%parallel_in_domains) sp = der%mesh%np + der%mesh%vp%np_ghost
+
 
   select case(batch_status(psib))
   case(BATCH_PACKED)
 
     !$omp parallel do private(ip, ii)
-    do ip = der%mesh%np + 1, der%mesh%np_part
+    do ip = sp + 1, der%mesh%np_part
       do ii = 1, psib%nst_linear, 2
         if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) then
-          psib%pack%X(psi)(ii+1, ip) = psib%pack%X(psi)(ii+1, ip)*this%phase_spiral(ip, 1)
+          psib%pack%X(psi)(ii+1, ip) = psib%pack%X(psi)(ii+1, ip)*this%phase_spiral(ip-sp, 1)
         else
-          psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip, 2)
+          psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip-sp, 2)
         end if
       end do
      end do
@@ -402,14 +405,14 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
     do ii = 1, psib%nst_linear, 2
       if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) then
         !$omp do
-        do ip = der%mesh%np + 1, der%mesh%np_part
-          psib%states_linear(ii+1)%X(psi)(ip) = psib%states_linear(ii+1)%X(psi)(ip)*this%phase_spiral(ip, 1)
+        do ip = sp + 1, der%mesh%np_part
+          psib%states_linear(ii+1)%X(psi)(ip) = psib%states_linear(ii+1)%X(psi)(ip)*this%phase_spiral(ip-sp, 1)
         end do
         !$omp end do nowait
       else
         !$omp do
         do ip = der%mesh%np + 1, der%mesh%np_part
-          psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip, 2)
+          psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip-sp, 2)
         end do
         !$omp end do nowait
       end if
@@ -436,8 +439,8 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
 
     call accel_kernel_start_call(kernel_phase_spiral, 'phase_spiral.cl', 'phase_spiral_apply')
 
-    call accel_set_kernel_arg(kernel_phase_spiral, 0, der%mesh%np)
-    call accel_set_kernel_arg(kernel_phase_spiral, 1, der%mesh%np_part)
+    call accel_set_kernel_arg(kernel_phase_spiral, 0, sp) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 1, der%mesh%np_part) 
     call accel_set_kernel_arg(kernel_phase_spiral, 2, psib%pack%buffer)
     call accel_set_kernel_arg(kernel_phase_spiral, 3, log2(psib%pack%size(1)))
     call accel_set_kernel_arg(kernel_phase_spiral, 4, this%buff_phase_spiral)
@@ -446,7 +449,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
     wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack%size(1)
 
     call accel_kernel_run(kernel_phase_spiral, &
-                          (/psib%pack%size(1), pad(der%mesh%np_part - der%mesh%np, wgsize)/), &
+                          (/psib%pack%size(1), pad(der%mesh%np_part - sp, wgsize)/), &
                           (/psib%pack%size(1), wgsize/))
 
     call accel_finish()

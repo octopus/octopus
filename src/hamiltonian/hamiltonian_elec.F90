@@ -551,10 +551,13 @@ contains
       end if
 
       if(gr%der%boundaries%spiralBC) then
-        SAFE_ALLOCATE(hm%hm_base%phase_spiral(gr%mesh%np+1:gr%mesh%np_part, 1:2))
+        ! SAFE___ALLOCATE(hm%hm_base%phase_spiral(gr%mesh%np+1:gr%mesh%np_part, 1:2))
         ! loop over boundary points
         sp = gr%mesh%np
         if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+
+        SAFE_ALLOCATE(hm%hm_base%phase_spiral(1:gr%mesh%np_part-sp, 1:2))
+
         do ip = sp + 1, gr%mesh%np_part
           !translate to a global point
           ip_global = ip
@@ -564,15 +567,15 @@ contains
           ! get corresponding inner point
           ip_inner = mesh_periodic_point(gr%mesh, ip_global)
           x_global = mesh_x_global(gr%mesh, ip_inner)
-          hm%hm_base%phase_spiral(ip, 1) = &
+          hm%hm_base%phase_spiral(ip-sp, 1) = &
             exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
-          hm%hm_base%phase_spiral(ip, 2) = &
+          hm%hm_base%phase_spiral(ip-sp, 2) = &
             exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
         end do
 
         if(accel_is_enabled()) then
-          call accel_create_buffer(hm%hm_base%buff_phase_spiral, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, (gr%mesh%np_part-gr%mesh%np)*2)
-          call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-gr%mesh%np)*2, hm%hm_base%phase_spiral)
+          call accel_create_buffer(hm%hm_base%buff_phase_spiral, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, (gr%mesh%np_part-sp)*2)
+          call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-sp)*2, hm%hm_base%phase_spiral)
         endif
       end if
       
