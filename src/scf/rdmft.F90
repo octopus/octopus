@@ -71,6 +71,7 @@ module rdmft_oct_m
   type rdm_t
     private
     type(eigensolver_t) :: eigens
+    integer  :: max_iter !< maximum number of scf iterations
     integer  :: iter
     integer  :: nst !< number of states
     integer  :: n_twoint !number of unique two electron integrals
@@ -128,6 +129,9 @@ contains
     if (states_are_complex(st)) then
       call messages_not_implemented("Complex states for RDMFT")
     end if
+
+    ! The documentation for the variable is found in scf_init.
+    call parse_variable(namespace, 'MaximumIter', 200, rdm%max_iter)
 
     !%Variable RDMTolerance
     !%Type float
@@ -273,7 +277,7 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
+  subroutine scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
     type(rdm_t),              intent(inout) :: rdm
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr  !< grid
@@ -282,7 +286,6 @@ contains
     type(v_ks_t),             intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_elec_t), intent(inout) :: hm  !< Hamiltonian
     type(output_t),           intent(in)    :: outp !< output
-    integer,                  intent(in)    :: max_iter
     type(restart_t),          intent(in)    :: restart_dump
 
     type(states_elec_t) :: states_save
@@ -310,7 +313,7 @@ contains
 
     call messages_print_stress(stdout, 'RDMFT Calculation', namespace=namespace)
     call messages_print_var_value(stdout, 'RDMBasis', rdm%do_basis)
-  
+
     !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
@@ -334,7 +337,7 @@ contains
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
     ! using conjugated gradient (scf_orb_cg)
-    do iter = 1, max_iter
+    do iter = 1, rdm%max_iter
       rdm%iter = rdm%iter + 1
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'Iteration:', iter
@@ -394,7 +397,7 @@ contains
       if (rdm%toler > CNST(1e-4)) rdm%toler = rdm%toler*CNST(1e-1) !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
       ! save restart information
-      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == max_iter)) then
+      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == rdm%max_iter)) then
         if (rdm%do_basis) then
           call states_elec_copy(states_save, st)
           SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
@@ -413,7 +416,7 @@ contains
           ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
           call states_elec_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
-          if (conv .or. iter == max_iter) then
+          if (conv .or. iter == rdm%max_iter) then
             call states_elec_end(st)
             call states_elec_copy(st, states_save)
           end if
@@ -531,7 +534,7 @@ contains
       end if
 
       if(mpi_grp_is_root(mpi_world)) then
-        if(max_iter > 0) then
+        if (rdm%max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'maxFO = ', rdm%maxFO
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ener = ', rel_ener
