@@ -298,8 +298,6 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
-  call ss%check_compatibility_with(mm)
-
   ASSERT(.not. ss%is_packed())
   
   select case(mm%status())
@@ -442,8 +440,6 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   R_TYPE :: dotp
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
-
-  call ss%check_compatibility_with(mm)
 
   ASSERT(.not. ss%is_packed())
   ASSERT(.not. mm%is_packed())
