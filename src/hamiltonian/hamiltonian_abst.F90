@@ -1,4 +1,4 @@
-!! Copyright (C) 2019 N. Tancogne-Dejean
+!! Copyright (C) 2019 N. Tancogne-Dejean, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -18,9 +18,12 @@
 #include "global.h"
 
 module hamiltonian_abst_oct_m
+  use batch_oct_m
   use global_oct_m
   use loct_oct_m
+  use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use types_oct_m
   use varinfo_oct_m
 
@@ -34,14 +37,62 @@ module hamiltonian_abst_oct_m
   type, abstract :: hamiltonian_abst_t
 
   contains
-    procedure(is_hermitian), deferred :: is_hermitian
+    procedure(is_hermitian),              deferred :: is_hermitian
+    procedure(dhamiltonian_apply),        deferred :: dapply
+    procedure(zhamiltonian_apply),        deferred :: zapply
+    procedure(dhamiltonian_magnus_apply), deferred :: dmagnus_apply
+    procedure(zhamiltonian_magnus_apply), deferred :: zmagnus_apply
   end type hamiltonian_abst_t
 
   abstract interface
     logical function is_hermitian(hm)
-      import hamiltonian_abst_t
+      import
       class(hamiltonian_abst_t), intent(in) :: hm
     end function is_hermitian
+
+    subroutine dhamiltonian_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+      import
+      class(hamiltonian_abst_t),   intent(in)    :: hm
+      type(namespace_t),           intent(in)    :: namespace
+      type(mesh_t),                intent(in)    :: mesh
+      class(batch_t),      target, intent(inout) :: psib
+      class(batch_t),      target, intent(inout) :: hpsib
+      integer,           optional, intent(in)    :: terms
+      logical,           optional, intent(in)    :: set_bc
+    end subroutine dhamiltonian_apply
+
+    subroutine zhamiltonian_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+      import
+      class(hamiltonian_abst_t),   intent(in)    :: hm
+      type(namespace_t),           intent(in)    :: namespace
+      type(mesh_t),                intent(in)    :: mesh
+      class(batch_t),      target, intent(inout) :: psib
+      class(batch_t),      target, intent(inout) :: hpsib
+      integer,           optional, intent(in)    :: terms
+      logical,           optional, intent(in)    :: set_bc
+    end subroutine zhamiltonian_apply
+
+    subroutine dhamiltonian_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+      import
+      class(hamiltonian_abst_t),   intent(in)    :: hm
+      type(namespace_t),           intent(in)    :: namespace
+      type(mesh_t),                intent(in)    :: mesh
+      class(batch_t),              intent(inout) :: psib
+      class(batch_t),              intent(inout) :: hpsib
+      FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+      logical,           optional, intent(in)    :: set_phase
+    end subroutine dhamiltonian_magnus_apply
+
+    subroutine zhamiltonian_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+      import
+      class(hamiltonian_abst_t),   intent(in)    :: hm
+      type(namespace_t),           intent(in)    :: namespace
+      type(mesh_t),                intent(in)    :: mesh
+      class(batch_t),              intent(inout) :: psib
+      class(batch_t),              intent(inout) :: hpsib
+      FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+      logical,           optional, intent(in)    :: set_phase
+    end subroutine zhamiltonian_magnus_apply
   end interface
 
 end module hamiltonian_abst_oct_m
