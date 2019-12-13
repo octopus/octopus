@@ -10,7 +10,7 @@ PeriodicDimensions = 3
 a =  2.856*angstrom
 
 PseudopotentialSet = pseudodojo_lda
-SpeciesProjectorSphereThreshold = 0.1
+SpeciesProjectorSphereThreshold = 0.05
 
 Spacing = 0.6
 
