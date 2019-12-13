@@ -96,18 +96,30 @@ module hamiltonian_mxll_oct_m
     integer, pointer               :: rs_state_fft_map(:,:,:)
     integer, pointer               :: rs_state_fft_map_inv(:,:)
 
+    logical                        :: mx_ma_coupling
+    logical                        :: mx_ma_coupling_apply
+    integer                        :: mx_ma_coupling_type
+    integer                        :: mx_ma_trans_field_calc_method
+    logical                        :: mx_ma_trans_field_calc_corr
+    integer                        :: mx_ma_coupling_points_number
+    FLOAT, pointer                 :: mx_ma_coupling_points(:,:)
+    integer, pointer               :: mx_ma_coupling_points_map(:)
+    integer                        :: mx_ma_coupling_order
+    logical                        :: ma_mx_coupling
+    logical                        :: ma_mx_coupling_apply
+
     logical                        :: bc_add_ab_region  = .false.
-!    logical                        :: bc_zero           = .false.
+    logical                        :: bc_zero           = .false.
     logical                        :: bc_constant       = .false.
     logical                        :: bc_mirror_pec     = .false.
     logical                        :: bc_mirror_pmc     = .false.
     logical                        :: bc_periodic       = .false.
     logical                        :: bc_plane_waves    = .false.
-!    logical                        :: bc_medium         = .false.
+    logical                        :: bc_medium         = .false.
 
     logical                        :: plane_waves
     logical                        :: plane_waves_apply
-!    logical                        :: spatial_constant
+    logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
 
 !    logical                        :: diamagnetic_current
@@ -120,8 +132,8 @@ module hamiltonian_mxll_oct_m
     integer, pointer               :: medium_box_shape(:)
     FLOAT, pointer                 :: medium_box_center(:,:)
     FLOAT, pointer                 :: medium_box_size(:,:)
-!    FLOAT, pointer                 :: medium_box_ep(:,:)
-!    FLOAT, pointer                 :: medium_box_mu(:,:)
+    FLOAT, pointer                 :: medium_box_ep(:,:)
+    FLOAT, pointer                 :: medium_box_mu(:,:)
     FLOAT, pointer                 :: medium_box_c(:,:)
     FLOAT, pointer                 :: medium_box_ep_factor(:)
     FLOAT, pointer                 :: medium_box_mu_factor(:)
@@ -133,31 +145,31 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: medium_box_points_map(:,:)
     FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
     FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
-!    integer, pointer               :: medium_box_bdry_number(:)
-!    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
+    integer, pointer               :: medium_box_bdry_number(:)
+    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
   
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag
-!    FLOAT                          :: energy
-!    FLOAT                          :: energy_boundaries
-!    FLOAT                          :: e_energy
-!    FLOAT                          :: b_energy
-!    FLOAT                          :: energy_plane_waves
-!    FLOAT                          :: e_energy_plane_waves
-!    FLOAT                          :: b_energy_plane_waves
+    FLOAT                          :: energy
+    FLOAT                          :: energy_boundaries
+    FLOAT                          :: e_energy
+    FLOAT                          :: b_energy
+    FLOAT                          :: energy_plane_waves
+    FLOAT                          :: e_energy_plane_waves
+    FLOAT                          :: b_energy_plane_waves
 
-!    FLOAT                          :: energy_pml
-!    FLOAT                          :: energy_mask
+    FLOAT                          :: energy_pml
+    FLOAT                          :: energy_mask
     FLOAT, pointer                 :: energy_density(:)
     FLOAT, pointer                 :: energy_density_plane_waves(:)
     FLOAT, pointer                 :: e_energy_density(:)
     FLOAT, pointer                 :: b_energy_density(:)
-!    FLOAT                          :: energy_trans
-!    FLOAT                          :: energy_long
-!    FLOAT                          :: e_energy_trans
-!    FLOAT                          :: b_energy_trans
-!    FLOAT                          :: energy_incident_waves
+    FLOAT                          :: energy_trans
+    FLOAT                          :: energy_long
+    FLOAT                          :: e_energy_trans
+    FLOAT                          :: b_energy_trans
+    FLOAT                          :: energy_incident_waves
 
     logical                        :: cpml_hamiltonian = .false.
 

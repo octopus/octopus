@@ -35,7 +35,8 @@ module propagator_mxll_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use index_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -46,7 +47,6 @@ module propagator_mxll_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
   use maxwell_function_oct_m
-  use hamiltonian_mxll_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_function_oct_m
@@ -59,6 +59,7 @@ module propagator_mxll_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use poisson_oct_m
+  use states_elec_oct_m
   use states_mxll_oct_m
   use string_oct_m
   use tdfunction_oct_m
@@ -71,7 +72,7 @@ module propagator_mxll_oct_m
   public ::                                          &
     propagator_mxll_init,                         &
     propagation_mxll_etrs,                        &
-    maxwell_transform_rs_state_forward,              &
+    transform_rs_state_forward,              &
     transform_rs_state_backward,             &
     transform_rs_densities_forward,          &
     transform_rs_densities_backward,         &
@@ -88,13 +89,13 @@ module propagator_mxll_oct_m
     fields_through_box_surfaces,             &
     fields_through_box_surfaces_plane_waves, &
     constant_boundaries_calculation,         &
-    maxwell__mask,                                    &
-    maxwell_matter_mesh_mapping,                     &
-    maxwell_grid_points_coupling_points_mapping,     &
-    td_function_mxll_init,                        &
-    plane_waves_in_box_calculation,          &
-    get_mx_ma_coupling_points
-
+    maxwell_mask,                            &
+    td_function_mxll_init,                   &
+    plane_waves_in_box_calculation
+    ! maxwell_matter_mesh_mapping,                     &
+    ! maxwell_grid_points_coupling_points_mapping,     &
+    ! get_mx_ma_coupling_points
+    
 contains
 
   ! ---------------------------------------------------------
@@ -122,8 +123,8 @@ contains
     !%Option maxwell_etrs 1
     !% Enforced time-reversal-symmetry propagation (etrs)
     !%End
-    default_propagator = OPTION__MAXWELLTDPROPAGATOR__ETRS
-    call parse_variable('MaxwellTDPropagator', default_propagator, tr%tr_method)
+    default_propagator = OPTION__MAXWELLTDPROPAGATOR__MAXWELL_ETRS
+    call parse_variable(namespace, 'MaxwellTDPropagator', default_propagator, tr%tr_method)
     call messages_print_var_option(stdout, 'MaxwellTDPropagator', tr%tr_method)
 
     !%Variable MaxwellBoundaryConditions
@@ -134,7 +135,7 @@ contains
     !%
     !% Example:
     !%
-    !% <tt>%UserDefinedMaxwellIncidentWaves
+    !% <tt>%MaxwellBoundaryConditions
     !% <br>&nbsp;&nbsp;   zero | mirror_pec | consant 
     !% <br>%</tt>
     !%
@@ -157,7 +158,7 @@ contains
     !%Option lossy_layer 8
     !% follows ...
     !%End
-    if(parse_block('MaxwellBoundaryConditions', blk) == 0) then
+    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell boundary conditions:'))
 
@@ -185,7 +186,7 @@ contains
           hm%bc_add_ab_region = .true.
           SAFE_ALLOCATE(st%rs_state_const(1:st%d%dim))
           st%rs_state_const = M_z0
-          call td_function_mxll_init(st, gr, hm)
+          call td_function_mxll_init(st, namespace, gr, hm)
         else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
@@ -212,7 +213,7 @@ contains
         end if
         write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
         call messages_info(1)
-        if (plane_waves_set .and. .not. (parse_is_defined('UserDefinedMaxwellIncidentWaves')) ) then
+        if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
           write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
           write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
           call messages_fatal(2)
@@ -242,7 +243,7 @@ contains
     !%Option smooth 2
     !% Follows
     !%End
-    if(parse_block('MaxwellMediumBox', blk) == 0) then
+    if(parse_block(namespace, 'MaxwellMediumBox', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell Medium box:'))
       hm%medium_box = .true.
@@ -325,10 +326,8 @@ contains
     !% follows
     !%Option const_steps 2
     !% follows
-    !%Option test 3
-    !% follows
     !%End
-    call parse_variable('MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
+    call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
 
     !%Variable MaxwellTDOperatorMethod
@@ -345,7 +344,7 @@ contains
     !% Maxwell operator calculated by fast fourier transform
     !%End
     default_propagator = OPTION__MAXWELLTDOPERATORMETHOD__OP_FD
-    call parse_variable('MaxwellTDOperatorMethod', default_propagator, tr%op_method)
+    call parse_variable(namespace, 'MaxwellTDOperatorMethod', default_propagator, tr%op_method)
     call messages_print_var_option(stdout, 'MaxwellTDOperatorMethod', tr%op_method)
     hm%op_method = tr%op_method
 
@@ -362,7 +361,7 @@ contains
     !%
     !% This variable controls the accuracy threshold for the self consistency.
     !%End
-    call parse_variable('MaxwellTDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
+    call parse_variable(namespace, 'MaxwellTDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
     !%Variable MaxwellPlaneWavesInBox
     !%Type logical
@@ -372,13 +371,13 @@ contains
     !% Analytic evaluation of the incoming waves inside the box,
     !% not doing any numerical propagation of Maxwell's equations.
     !%End
-    call parse_variable('MaxwellPlaneWavesInBox', .false., tr%plane_waves_in_box)
+    call parse_variable(namespace, 'MaxwellPlaneWavesInBox', .false., tr%plane_waves_in_box)
     call set_medium_rs_state(st, gr, hm)
 
     call derivatives_boundary_mask(hm%bc, gr%mesh, hm)
 
-    tr%te%exp = .true.
-    call exponential_init(tr%te) ! initialize Maxwell propagator
+    !tr%te%exp = .true.
+    call exponential_init(tr%te, namespace) ! initialize Maxwell propagator
 
     POP_SUB(propagator_mxll_init)
   end subroutine propagator_mxll_init
@@ -456,18 +455,18 @@ contains
       ! add term J(time)
       ff_rs_inhom_1 = ff_rs_inhom_mean
       ff_rs_inhom_2 = ff_rs_inhom_mean
-      call hamiltonian_update(hm, gr%mesh, st, time=time)
-      call exponential_apply(hm, gr, st, tr, time, inter_dt, ff_rs_inhom_2)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, gr, st, tr, time, inter_dt, ff_rs_inhom_2)
       ! add term U(time+dt,time)J(time)
       ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
       ff_rs_inhom_2 = ff_rs_inhom_mean
-      call hamiltonian_update(hm, gr%mesh, st, time=time)
-      call exponential_apply(hm, gr, st, tr, time, inter_dt/M_TWO, ff_rs_inhom_2)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, gr, st, tr, time, inter_dt/M_TWO, ff_rs_inhom_2)
       ! add term U(time+dt/2,time)J(time)
       ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
       ff_rs_inhom_2 = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, gr%mesh, st, time=time)
-      call exponential_apply(hm, gr, st, tr, time, -inter_dt/M_TWO, ff_rs_inhom_2)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, gr, st, tr, time, -inter_dt/M_TWO, ff_rs_inhom_2)
       ! add term U(time,time+dt/2)J(time)
       ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
       SAFE_DEALLOCATE_A(ff_rs_inhom_2)
@@ -489,12 +488,12 @@ contains
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
           ! RS state propagation
-          call hamiltonian_update(hm, gr%mesh, st, time=inter_time)
+          call hamiltonian_mxll_update(hm, time=inter_time)
           if (pml_check) then
             call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
             hm%cpml_hamiltonian = .true.
           end if
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
           if (pml_check) then
             hm%cpml_hamiltonian = .false.
             call pml_propagation_stage_2(hm, gr, st, tr, inter_time, inter_dt, delay, &
@@ -505,15 +504,15 @@ contains
           call transform_rs_densities_forward(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2)
           ff_rs_inhom_1 = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) / real(inter_steps) * inter_dt * (ii-1)
           ff_rs_inhom_2 = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) / real(inter_steps) * inter_dt * (ii)
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_inhom_1)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_inhom_1)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           ff_rs_state = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
           call transform_rs_densities_forward(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1)
           call transform_rs_densities_forward(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2)
           ff_rs_inhom_1 = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
           ff_rs_inhom_2 = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt/M_TWO, ff_rs_inhom_1)
-          call exponential_apply(hm, gr, st, tr, inter_time, -inter_dt/M_TWO, ff_rs_inhom_2)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt/M_TWO, ff_rs_inhom_1)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, -inter_dt/M_TWO, ff_rs_inhom_2)
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
           ff_rs_state = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
@@ -526,12 +525,12 @@ contains
           call transform_rs_densities_forward(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1)
           call transform_rs_densities_forward(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2)
           ! RS state propagation
-          call hamiltonian_mxll_update(hm, gr%mesh, st, time=inter_time)
+          call hamiltonian_mxll_update(hm, time=inter_time)
           if (pml_check) then
             call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
             hm%cpml_hamiltonian = .true.
           end if
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
           if (pml_check) then
             hm%cpml_hamiltonian = .false.
             call pml_propagation_stage_2(hm, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
@@ -539,7 +538,7 @@ contains
           ! inhomogeneity propagation
           ff_rs_inhom_1 = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) / real(inter_steps) * inter_dt * (ii-1)
           ff_rs_inhom_2 = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) / real(inter_steps) * inter_dt * (ii)
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_inhom_1)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_inhom_1)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           ff_rs_state = ff_rs_state + M_HALF * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
@@ -548,12 +547,12 @@ contains
         ! Maxwell etrs propagation for small current density changes in matter time to assume them as constant
         else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
           ! RS state propagation
-          call hamiltonian_mxll_update(hm, gr%mesh, st, time=inter_time)
+          call hamiltonian_mxll_update(hm, time=inter_time)
           if (pml_check) then
             call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
             hm%cpml_hamiltonian = .true.
           end if
-          call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
+          call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
           if (pml_check) then
             hm%cpml_hamiltonian = .false.
             call pml_propagation_stage_2(hm, gr, st, tr, inter_time, inter_dt, delay, &
@@ -566,12 +565,12 @@ contains
       else
 
         ! RS state propagation
-        call hamiltonian_mxll_update(hm, gr%mesh, st, time=inter_time)
+        call hamiltonian_mxll_update(hm, time=inter_time)
         if (pml_check) then
           call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
           hm%cpml_hamiltonian = .true.
         end if
-        call exponential_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
+        call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_state)
         if (pml_check) then
           hm%cpml_hamiltonian = .false.
           call pml_propagation_stage_2(hm, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
@@ -638,7 +637,7 @@ contains
 
     select case (tr%op_method)
       case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
-        call exponential_apply(tr%te, gr%der, hm, ff, 1, 1, dt, time)
+        !call exponential_apply(tr%te, gr%mesh, gr%der, hm, ff, 1, 1, dt, time)
       case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT)
         call exponential_mxll_fft_apply(hm, gr, st, tr, time, dt, ff)
     end select
@@ -754,7 +753,7 @@ contains
 
           if ((ip /= 0) .and. (ip <= mesh%np)) then
 
-            call maxwell_fft_hamiltonian(hm, k_vec, ff_dim, ipx, ipy, ipz, sigma, hm_matrix)
+            call maxwell_fft_hamiltonian(hm, k_vec, ipx, ipy, ipz, sigma, hm_matrix)
 
             tmp_1(:,:) = M_z0
             tmp_1(1,1) = M_z1
@@ -1074,11 +1073,10 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine calculate_matter_longitudinal_field(gr, st, hm, gr, st, hm, &
-                                                         rs_state_matter, geo)
+  subroutine calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr_elec, st_elec, hm_elec, rs_state_matter, geo)
     type(grid_t),                  intent(in)    :: gr_mxll
     type(states_mxll_t),                intent(in)    :: st_mxll
-    type(hamiltonian_t),           intent(in)    :: hm_mxll
+    type(hamiltonian_mxll_t),           intent(in)    :: hm_mxll
     type(grid_t),                  intent(in)    :: gr_elec
     type(states_elec_t),                intent(in)    :: st_elec
     type(hamiltonian_elec_t),           intent(in)    :: hm_elec
@@ -1089,26 +1087,26 @@ contains
     FLOAT              :: dd, width
     CMPLX, allocatable :: tmp_pot_ma_gr(:,:), tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
-    SAFE_ALLOCATE(tmp_pot_ma_gr(1:gr_elec%mesh%np_part,1))
+!    SAFE_ALLOCATE(tmp_pot_ma_gr(1:gr_elec%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_pot_mx_gr(1:gr_mxll%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_grad_mx_gr(1:gr_mxll%mesh%np,1:gr_mxll%sb%dim))
 
     PUSH_SUB(calculate_matter_longitudinal_field)
 
-    tmp_pot_ma_gr(:,:) = M_z0
-    tmp_pot_ma_gr(1:gr_elec%mesh%np,1) = M_z1 * ( hm_elec%vhartree(1:gr_elec%mesh%np) + hm_elec%ep%vpsl(1:gr_elec%mesh%np) )
+!    tmp_pot_ma_gr(:,:) = M_z0
+!    tmp_pot_ma_gr(1:gr_elec%mesh%np,1) = M_z1 * ( hm_elec%vhartree(1:gr_elec%mesh%np) + hm_elec%ep%vpsl(1:gr_elec%mesh%np) )
 
-    call zma_mesh_to_mx_mesh(st_mxll, gr_mxll, st_elec, gr_elec, tmp_pot_ma_gr, tmp_pot_mx_gr, 1)
+!    call zma_mesh_to_mx_mesh(st_mxll, gr_mxll, st_elec, gr_elec, tmp_pot_ma_gr, tmp_pot_mx_gr, 1)
 
+    tmp_pot_mx_gr(:,:) = M_ZERO
     tmp_grad_mx_gr(:,:) = M_ZERO
     call zderivatives_grad(gr_mxll%der, tmp_pot_mx_gr(:,1), tmp_grad_mx_gr(:,:), set_bc = .false.)
     tmp_grad_mx_gr = - tmp_grad_mx_gr
 
     rs_state_matter = M_z0
     call build_rs_state(real(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), aimag(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), &
-                                st_mxll%rs_sign, rs_state_matter(1:gr_mxll%mesh%np,:), &
-                                st_mxll%ep(1:gr_mxll%mesh%np), st_mxll%mu(1:gr_mxll%mesh%np), & 
-                                gr_mxll%mesh%np)
+      st_mxll%rs_sign, rs_state_matter(1:gr_mxll%mesh%np,:), gr_mxll%mesh, st_mxll%ep(1:gr_mxll%mesh%np), &
+      st_mxll%mu(1:gr_mxll%mesh%np), gr_mxll%mesh%np)
 
     SAFE_DEALLOCATE_A(tmp_pot_ma_gr)
     SAFE_DEALLOCATE_A(tmp_pot_mx_gr)
@@ -1119,16 +1117,16 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, gr_elec, &
-    hm_elec, st_elec, tr_elec, poisson_solver, time, field, transverse_field, vector_potential, geo)
+  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, &
+    gr, hm, st, tr, poisson_solver, time, field, transverse_field, vector_potential, geo)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
     type(hamiltonian_mxll_t),        intent(in)    :: hm_mxll
     type(states_mxll_t),             intent(in)    :: st_mxll
     type(propagator_mxll_t), intent(in)    :: tr_mxll
     type(grid_t),               intent(in)    :: gr
-    type(hamiltonian_t),        intent(in)    :: hm
-    type(states_t),             intent(in)    :: st
+    type(hamiltonian_elec_t),        intent(in)    :: hm
+    type(states_elec_t),             intent(in)    :: st
     type(propagator_t),         intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
@@ -1193,15 +1191,15 @@ contains
 
     if (hm_mxll%ma_mx_coupling) then
 
-      if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_MATTER) then
-        SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-        if (hm_mxll%ma_mx_coupling_apply .and. (tr%current_prop_test == 0)) then
-          call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field)
-        end if
-        transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
-        SAFE_DEALLOCATE_A(tmp_field)
+      ! if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_MATTER) then
+      !   SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
+      !   if (hm_mxll%ma_mx_coupling_apply .and. (tr%current_prop_test == 0)) then
+      !     call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field)
+      !   end if
+      !   transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
+      !   SAFE_DEALLOCATE_A(tmp_field)
 
-      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
+!      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
         ! plane waves subtraction
         if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
           transverse_field(1:np,:) = field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
@@ -1209,72 +1207,72 @@ contains
           transverse_field(1:np,:) = field(1:np,:)
         end if
         ! apply helmholtz decomposition for transverse field
-        call helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
+        call maxwell_helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
         ! plane waves addition
-        if (tr_mxll%bc_plane_waves .and. hm%plane_waves_apply) then
+        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
           transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
         end if
  
-      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_CORR) then
-        ! plane waves subtraction
-        ! longitudinal matter field subtraction to get almost transverse field 
-        call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, transverse_field, geo)
-        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
-          transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
-        else
-          transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:)
-        end if
-        ! apply helmholtz decomposition for transverse field
-        call helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
-        ! plane waves addition
-        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
-          transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
-        end if
+      ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_CORR) then
+      !   ! plane waves subtraction
+      !   ! longitudinal matter field subtraction to get almost transverse field 
+      !   call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, transverse_field, geo)
+      !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
+      !     transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
+      !   else
+      !     transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:)
+      !   end if
+      !   ! apply helmholtz decomposition for transverse field
+      !   call maxwell_helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
+      !   ! plane waves addition
+      !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
+      !     transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
+      !   end if
 
-      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG) then
-        ! plane wave subtraction
-        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
-          transverse_field(1:np,:) = field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
-        else
-          transverse_field(1:np,:) = field(1:np,:)
-        end if
-        ! apply helmholtz decomposition for longitudinal field
-        call helmholtz_decomposition_long_field(poisson_solver, gr_mxll, transverse_field)
-        transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:)
-        ! plane waves addition
-        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
-          transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
-        end if
+      ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG) then
+      !   ! plane wave subtraction
+      !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
+      !     transverse_field(1:np,:) = field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
+      !   else
+      !     transverse_field(1:np,:) = field(1:np,:)
+      !   end if
+      !   ! apply helmholtz decomposition for longitudinal field
+      !   call helmholtz_decomposition_long_field(poisson_solver, gr_mxll, transverse_field)
+      !   transverse_field(1:np,:) = field(1:np,:) - transverse_field(1:np,:)
+      !   ! plane waves addition
+      !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
+      !     transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
+      !   end if
 
-      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG_CORR) then
-        SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np,1:st_mxll%d%dim))
-        ! longitudinal matter field subtraction to get almost transverse field (1st time)
-        call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field, geo)
-        ! plane waves subtraction
-        if (tr_mxll%bc_plane_waves) then
-          tmp_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
-        else
-          tmp_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
-        end if
-        ! apply helmholtz decomposition for longitudinal field
-        call helmholtz_decomposition_long_field(poisson_solver, gr_mxll, tmp_field)
-        transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
-        ! plane waves addition
-        if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
-          transverse_field(1:np,:) = transverse_field(1:np,:) + st%rs_state_plane_waves(1:np,:)
-        end if
-        SAFE_DEALLOCATE_A(tmp_field)
+      ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG_CORR) then
+      !   SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np,1:st_mxll%d%dim))
+      !   ! longitudinal matter field subtraction to get almost transverse field (1st time)
+      !   call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field, geo)
+      !   ! plane waves subtraction
+      !   if (tr_mxll%bc_plane_waves) then
+      !     tmp_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
+      !   else
+      !     tmp_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
+      !   end if
+      !   ! apply helmholtz decomposition for longitudinal field
+      !   call helmholtz_decomposition_long_field(poisson_solver, gr_mxll, tmp_field)
+      !   transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
+      !   ! plane waves addition
+      !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
+      !     transverse_field(1:np,:) = transverse_field(1:np,:) + st%rs_state_plane_waves(1:np,:)
+      !   end if
+      !   SAFE_DEALLOCATE_A(tmp_field)
 
-      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
-        transverse_field(1:np,:) = field(1:np,:)
-        ! apply helmholtz decomposition for transverse field
-        call helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
+      ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
+      !   transverse_field(1:np,:) = field(1:np,:)
+      !   ! apply helmholtz decomposition for transverse field
+      !   call maxwell_helmholtz_decomposition_trans_field(poisson_solver, gr_mxll, hm_mxll, hm, st_mxll, transverse_field)
 
-      end if
+      ! end if
 
     else
 
-      transverse_field = field
+      transverse_field(:,:) = field
 
     end if
 
@@ -1347,8 +1345,7 @@ contains
 
         dtmp = M_ZERO
 
-        call get_magnetic_field_state(field, st%rs_sign, vector_potential, &
-                                              st%mu, gr%mesh%np_part)
+        call get_magnetic_field_state(field, gr%mesh, st%rs_sign, vector_potential, st%mu, gr%mesh%np_part)
         dtmp = vector_potential
         call dderivatives_curl(gr%der, dtmp, vector_potential, set_bc = .false.)
         do idim=1, st%d%dim
@@ -2442,15 +2439,12 @@ contains
     SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%d%dim))
 
     if (.not. hm%ma_mx_coupling) then
-      call get_electric_field_state(st%rs_state_trans+st%rs_state_long, e_field, &
-                                            st%ep, gr%mesh%np)
-      call get_magnetic_field_state(st%rs_state_trans+st%rs_state_long,&
-                                            st%rs_sign, b_field, &
-                                            st%mu, gr%mesh%np)
+      call get_electric_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, e_field, st%ep, gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, st%rs_sign, b_field, &
+        st%mu, gr%mesh%np)
     else
-      call get_electric_field_state(st%rs_state, e_field, st%ep, gr%mesh%np)
-      call get_magnetic_field_state(st%rs_state, st%rs_sign, b_field, &
-                                            st%mu, gr%mesh%np)
+      call get_electric_field_state(st%rs_state, gr%mesh, e_field, st%ep, gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state, gr%mesh, st%rs_sign, b_field, st%mu, gr%mesh%np)
     end if
 
     if (gr%mesh%parallel_in_domains) then
@@ -2591,9 +2585,8 @@ contains
     SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%d%dim))
     SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%d%dim))
 
-    call get_electric_field_state(st%rs_state_plane_waves, e_field, st%ep, gr%mesh%np)
-    call get_magnetic_field_state(st%rs_state_plane_waves, st%rs_sign, b_field, &
-                                          st%mu, gr%mesh%np)
+    call get_electric_field_state(st%rs_state_plane_waves, gr%mesh, e_field, st%ep, gr%mesh%np)
+    call get_magnetic_field_state(st%rs_state_plane_waves, gr%mesh, st%rs_sign, b_field, st%mu, gr%mesh%np)
 
     if (gr%mesh%parallel_in_domains) then
       do idim=1, st%d%dim
@@ -2829,8 +2822,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_2(hm, gr, st, tr, time, dt, time_delay, &
-                                                             ff_rs_state_pml, ff_rs_state)
+  subroutine pml_propagation_stage_2(hm, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
     type(hamiltonian_mxll_t),        intent(inout) :: hm
     type(grid_t),               intent(in)    :: gr
     type(states_mxll_t),             intent(inout) :: st
@@ -2863,7 +2855,7 @@ contains
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
       ff_dim    = size(ff_rs_state(1,:))
       hm%cpml_hamiltonian = .true.
-      call exponential_apply(hm, gr, st, tr, time, dt, ff_rs_state_pml)
+      call exponential_mxll_apply(hm, gr, st, tr, time, dt, ff_rs_state_pml)
       hm%cpml_hamiltonian = .false.
       SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
@@ -3117,8 +3109,8 @@ contains
     SAFE_ALLOCATE(tmp_b(np_part,3))
     SAFE_ALLOCATE(tmp_partial_b(np_part))
 
-    call get_electric_field_state(ff_rs_state_pml, tmp_e)
-    call get_magnetic_field_state(ff_rs_state_pml, hm%rs_sign, tmp_b)
+    call get_electric_field_state(ff_rs_state_pml, gr%mesh, tmp_e)
+    call get_magnetic_field_state(ff_rs_state_pml, gr%mesh, hm%rs_sign, tmp_b)
 
     ! calculation g(1,2)
     call dderivatives_partial(gr%der, tmp_e(:,2), tmp_partial_e(:), 1, set_bc = .false.)
@@ -3349,127 +3341,8 @@ contains
           tmp_grad(ip,:)/(M_FOUR * hm%medium_box_mu(ip_in,il))
       end do
 
-      ! medium ep
-      tmp(:) = P_ep
-      call get_medium_io_function(hm%medium_box_ep(:,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1)') "ep_box-", il
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium mu
-      tmp(:) = P_mu
-      call get_medium_io_function(hm%medium_box_mu(:,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1)') "mu_box-", il
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium mu
-      tmp(:) = P_c
-      call get_medium_io_function(hm%medium_box_c(:,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1)') "c_box-", il
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! electric sigma
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_sigma_e(:,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1)') "e_sigma_box-", il
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! magnetic sigma
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_sigma_m(:,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1)') "m_sigma_box-", il
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium epsilon aux field dim = 1
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_ep(:,1,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_ep_box-", il, "-x"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium epsilon aux field dim = 2
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_ep(:,2,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_ep_box-", il, "-y"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium epsilon aux field dim = 3
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_ep(:,3,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_ep_box-", il, "-z"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium mu aux field dim = 1
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_mu(:,1,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_mu_box-", il, "-x"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium mu aux field dim = 2
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_mu(:,2,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_mu_box-", il, "-y"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      ! medium mu aux field dim = 3
-      tmp(:) = M_ZERO
-      call get_medium_io_function(hm%medium_box_aux_mu(:,3,il), hm, gr%mesh, il, tmp)
-      write(string,'(a,i1,a)') "aux_mu_box-", il, "-z"
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", string, gr%mesh, tmp, unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", string, gr%mesh, tmp, unit_one, err)
+      ! print information about the medium box -- get from Rene's version in maxwell_propagator.F90
+
       SAFE_DEALLOCATE_A(tmp)
     end do
 
@@ -3534,191 +3407,192 @@ contains
   end subroutine generate_medium_boxes
 
 
-  ! -------------------------------------------------------
-  subroutine maxwell_matter_mesh_mapping(gr, gr)
-    type(grid_t),         intent(inout) :: gr
-    type(grid_t),         intent(inout) :: gr_mxll
+  ! ! -------------------------------------------------------
+  ! subroutine maxwell_matter_mesh_mapping(gr, gr_mxll)
+  !   type(grid_t),         intent(inout) :: gr
+  !   type(grid_t),         intent(inout) :: gr_mxll
 
-    integer :: ip, idim, ip_ma_local, ip_mx_local, ip_ma_global, ip_mx_global, idx
-    integer :: ipart, mx_np_part, mx_npart, ma_np_part, ma_npart, ma_comm, mx_comm
-    integer, allocatable :: ip_ma_local_vec(:), ip_mx_local_vec(:)
-    FLOAT   :: dmin_ma, dmin_mx, xx(3)
-    type(mpi_grp_t) :: ma_grp, mx_grp
+  !   integer :: ip, idim, ip_ma_local, ip_mx_local, ip_ma_global, ip_mx_global, idx
+  !   integer :: ipart, mx_np_part, mx_npart, ma_np_part, ma_npart, ma_comm, mx_comm
+  !   integer, allocatable :: ip_ma_local_vec(:), ip_mx_local_vec(:)
+  !   FLOAT   :: dmin_ma, dmin_mx, xx(3)
+  !   type(mpi_grp_t) :: ma_grp, mx_grp
 
-    PUSH_SUB(maxwell_matter_mesh_mapping)
+  !   PUSH_SUB(maxwell_matter_mesh_mapping)
 
-    ma_np_part = gr%mesh%np_part
-    ma_npart   = gr%mesh%vp%npart
-    mx_np_part = gr_mxll%mesh%np_part
-    mx_npart   = gr_mxll%mesh%vp%npart
+  !   ma_np_part = gr%mesh%np_part
+  !   ma_npart   = gr%mesh%vp%npart
+  !   mx_np_part = gr_mxll%mesh%np_part
+  !   mx_npart   = gr_mxll%mesh%vp%npart
 
-    SAFE_ALLOCATE(ip_mx_local_vec(gr_mxll%mesh%vp%npart))
-    SAFE_ALLOCATE(ip_ma_local_vec(gr%mesh%vp%npart))
-    SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(1:gr%mesh%np_part_global))
-    SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_overlap(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global2_overlap(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%rank_map(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_to_local2_map(1:ma_np_part,1:ma_npart))
-    SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(1:gr_mxll%mesh%np_part_global))
-    SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(1:gr_mxll%mesh%np_part))
-    SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(1:gr_mxll%mesh%np_part))
-    SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%rank_map(1:gr_mxll%mesh%np_part))
-    SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_to_local2_map(1:mx_np_part,1:mx_npart))
+  !   SAFE_ALLOCATE(ip_mx_local_vec(gr_mxll%mesh%vp%npart))
+  !   SAFE_ALLOCATE(ip_ma_local_vec(gr%mesh%vp%npart))
+  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(1:gr%mesh%np_part_global))
+  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_overlap(1:gr%mesh%np_part))
+  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global2_overlap(1:gr%mesh%np_part))
+  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%rank_map(1:gr%mesh%np_part))
+  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_to_local2_map(1:ma_np_part,1:ma_npart))
+  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(1:gr_mxll%mesh%np_part_global))
+  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(1:gr_mxll%mesh%np_part))
+  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(1:gr_mxll%mesh%np_part))
+  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%rank_map(1:gr_mxll%mesh%np_part))
+  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_to_local2_map(1:mx_np_part,1:mx_npart))
 
-    ! mapping global points from global matter mesh to global Maxwell mesh
-    do ip_ma_global=1, gr%mesh%np_part_global
-      if (check_point_overlap(gr%mesh, gr_mxll%mesh, ip_ma_global)) then
-        ip_mx_global = gr_mxll%mesh%idx%lxyz_inv(gr%mesh%idx%lxyz(ip_ma_global,1), &
-                                                gr%mesh%idx%lxyz(ip_ma_global,2), &
-                                                gr%mesh%idx%lxyz(ip_ma_global,3))
-        gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) = ip_mx_global
-      else
-        gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) = 0
-      end if
-    end do
+  !   ! mapping global points from global matter mesh to global Maxwell mesh
+  !   do ip_ma_global=1, gr%mesh%np_part_global
+  !     if (check_point_overlap(gr%mesh, gr_mxll%mesh, ip_ma_global)) then
+  !       ip_mx_global = gr_mxll%mesh%idx%lxyz_inv(gr%mesh%idx%lxyz(ip_ma_global,1), &
+  !                                               gr%mesh%idx%lxyz(ip_ma_global,2), &
+  !                                               gr%mesh%idx%lxyz(ip_ma_global,3))
+  !       gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) = ip_mx_global
+  !     else
+  !       gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) = 0
+  !     end if
+  !   end do
 
-    ! mapping global points from global Maxwell mesh to global matter mesh
-    do ip_mx_global=1, gr_mxll%mesh%np_part_global
-      if (check_point_overlap(gr_mxll%mesh, gr%mesh, ip_mx_global)) then
-        ip_ma_global = gr%mesh%idx%lxyz_inv(gr_mxll%mesh%idx%lxyz(ip_mx_global,1), &
-                                            gr_mxll%mesh%idx%lxyz(ip_mx_global,2), &
-                                            gr_mxll%mesh%idx%lxyz(ip_mx_global,3))
-        gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) = ip_ma_global
-      else
-        gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) = 0
-      end if
-    end do
+  !   ! mapping global points from global Maxwell mesh to global matter mesh
+  !   do ip_mx_global=1, gr_mxll%mesh%np_part_global
+  !     if (check_point_overlap(gr_mxll%mesh, gr%mesh, ip_mx_global)) then
+  !       ip_ma_global = gr%mesh%idx%lxyz_inv(gr_mxll%mesh%idx%lxyz(ip_mx_global,1), &
+  !                                           gr_mxll%mesh%idx%lxyz(ip_mx_global,2), &
+  !                                           gr_mxll%mesh%idx%lxyz(ip_mx_global,3))
+  !       gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) = ip_ma_global
+  !     else
+  !       gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) = 0
+  !     end if
+  !   end do
 
-    ! mapping local points from local matter mesh to global Maxwell mesh
-    idx=0
-    do ip_ma_local=1, gr%mesh%np_part
-      if (gr%mesh%parallel_in_domains) then
-        ip_ma_global = vec_local2global_part(gr%mesh%vp, ip_ma_local, gr%mesh%vp%partno)
-      else
-        ip_ma_global = ip_ma_local
-      end if
-      if (check_point_overlap(gr%mesh, gr_mxll%mesh, ip_ma_global)) then
-        if (gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) /= 0) then
-          idx = idx+1
-          ! initializing local1_overlap(idx)
-          gr%mesh%ma_mx_mesh_mapping%local1_overlap(idx) = ip_ma_local
-          ! initializing global2_overlap(idx)
-          gr%mesh%ma_mx_mesh_mapping%global2_overlap(idx) &
-            = gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global)
-        end if
-      end if
-    end do
-    gr%mesh%ma_mx_mesh_mapping%local1_overlap_number = idx
+  !   ! mapping local points from local matter mesh to global Maxwell mesh
+  !   idx=0
+  !   do ip_ma_local=1, gr%mesh%np_part
+  !     if (gr%mesh%parallel_in_domains) then
+  !       ip_ma_global = vec_local2global_part(gr%mesh%vp, ip_ma_local, gr%mesh%vp%partno)
+  !     else
+  !       ip_ma_global = ip_ma_local
+  !     end if
+  !     if (check_point_overlap(gr%mesh, gr_mxll%mesh, ip_ma_global)) then
+  !       if (gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global) /= 0) then
+  !         idx = idx+1
+  !         ! initializing local1_overlap(idx)
+  !         gr%mesh%ma_mx_mesh_mapping%local1_overlap(idx) = ip_ma_local
+  !         ! initializing global2_overlap(idx)
+  !         gr%mesh%ma_mx_mesh_mapping%global2_overlap(idx) &
+  !           = gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(ip_ma_global)
+  !       end if
+  !     end if
+  !   end do
+  !   gr%mesh%ma_mx_mesh_mapping%local1_overlap_number = idx
 
-    ! mapping local points from local Maxwell mesh to global matter mesh
-    idx=0
-    do ip_mx_local=1, gr_mxll%mesh%np_part
-      if (gr_mxll%mesh%parallel_in_domains) then
-        ip_mx_global = vec_local2global_part(gr_mxll%mesh%vp, ip_mx_local, gr_mxll%mesh%vp%partno)
-      else
-        ip_mx_global = ip_mx_local
-      end if
-      if (check_point_overlap(gr_mxll%mesh, gr%mesh, ip_mx_global)) then
-        if (gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) /= 0) then
-          idx = idx+1
-          ! initializing local1_overlap(idx)
-          gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(idx) = ip_mx_local
-          ! initializing global2_overlap(idx)
-          gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(idx) &
-            = gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global)
-        end if
-      end if
-    end do
-    gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap_number = idx
+  !   ! mapping local points from local Maxwell mesh to global matter mesh
+  !   idx=0
+  !   do ip_mx_local=1, gr_mxll%mesh%np_part
+  !     if (gr_mxll%mesh%parallel_in_domains) then
+  !       ip_mx_global = vec_local2global_part(gr_mxll%mesh%vp, ip_mx_local, gr_mxll%mesh%vp%partno)
+  !     else
+  !       ip_mx_global = ip_mx_local
+  !     end if
+  !     if (check_point_overlap(gr_mxll%mesh, gr%mesh, ip_mx_global)) then
+  !       if (gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global) /= 0) then
+  !         idx = idx+1
+  !         ! initializing local1_overlap(idx)
+  !         gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(idx) = ip_mx_local
+  !         ! initializing global2_overlap(idx)
+  !         gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(idx) &
+  !           = gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(ip_mx_global)
+  !       end if
+  !     end if
+  !   end do
+  !   gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap_number = idx
 
-    POP_SUB(maxwell_matter_mesh_mapping)
+  !   POP_SUB(maxwell_matter_mesh_mapping)
 
-    contains
+  !   contains
 
-      logical function check_point_overlap(mesh_1, mesh_2, ip_1) result(check)
-        type(mesh_t), intent(in) :: mesh_1
-        type(mesh_t), intent(in) :: mesh_2
-        integer,      intent(in) :: ip_1
+  !     logical function check_point_overlap(mesh_1, mesh_2, ip_1) result(check)
+  !       type(mesh_t), intent(in) :: mesh_1
+  !       type(mesh_t), intent(in) :: mesh_2
+  !       integer,      intent(in) :: ip_1
 
-        if ( (mesh_1%idx%lxyz(ip_1,1) >= mesh_2%idx%nr(1,1)) .and. &
-             (mesh_1%idx%lxyz(ip_1,1) <= mesh_2%idx%nr(2,1)) .and. &
-             (mesh_1%idx%lxyz(ip_1,2) >= mesh_2%idx%nr(1,2)) .and. &
-             (mesh_1%idx%lxyz(ip_1,2) <= mesh_2%idx%nr(2,2)) .and. &
-             (mesh_1%idx%lxyz(ip_1,3) >= mesh_2%idx%nr(1,3)) .and. &
-             (mesh_1%idx%lxyz(ip_1,3) <= mesh_2%idx%nr(2,3)) ) then
-          check = .true.
-        else
-          check = .false.
-        end if
+  !       if ( (mesh_1%idx%lxyz(ip_1,1) >= mesh_2%idx%nr(1,1)) .and. &
+  !            (mesh_1%idx%lxyz(ip_1,1) <= mesh_2%idx%nr(2,1)) .and. &
+  !            (mesh_1%idx%lxyz(ip_1,2) >= mesh_2%idx%nr(1,2)) .and. &
+  !            (mesh_1%idx%lxyz(ip_1,2) <= mesh_2%idx%nr(2,2)) .and. &
+  !            (mesh_1%idx%lxyz(ip_1,3) >= mesh_2%idx%nr(1,3)) .and. &
+  !            (mesh_1%idx%lxyz(ip_1,3) <= mesh_2%idx%nr(2,3)) ) then
+  !         check = .true.
+  !       else
+  !         check = .false.
+  !       end if
 
-      end function check_point_overlap
+  !     end function check_point_overlap
 
-    end subroutine maxwell_matter_mesh_mapping
+  !   end subroutine maxwell_matter_mesh_mapping
+
+
+  ! ! ---------------------------------------------------------
+  ! subroutine get_mx_ma_coupling_points(geo, hm, mx_ma_coupling_points)
+  !   type(geometry_t),    intent(in)    :: geo
+  !   type(hamiltonian_elec_t), intent(in)    :: hm
+  !   FLOAT,               intent(inout) :: mx_ma_coupling_points(:,:)
+
+  !   integer :: iatom
+
+  !   PUSH_SUB(get_mx_ma_coupling_points)
+
+  !   if (hm%mx_ma_coupling_type == OPTION__MAXWELLCOUPLINGMETHOD__MULTIPOLE_EXPANSION_CENTER_OF_MASS) then
+  !     call find_center_of_mass(geo, mx_ma_coupling_points(:,1), .false.)
+  !   else if (hm%mx_ma_coupling_type == OPTION__MAXWELLCOUPLINGMETHOD__MULTIPOLE_EXPANSION_IONS) then
+  !     do iatom=1, geo%natoms
+  !       mx_ma_coupling_points(:,iatom) = geo%atom(iatom)%x(:)
+  !     end do
+  !   end if
+
+  !   POP_SUB(get_mx_ma_coupling_points)
+  ! end subroutine get_mx_ma_coupling_points
+
+
+  ! ! ---------------------------------------------------------
+  ! subroutine maxwell_grid_points_coupling_points_mapping(gr, mx_ma_coupling_points, mx_ma_coupling_points_number, &
+  !                                                        mx_ma_coupling_map)
+  !   type(grid_t),     intent(inout) :: gr
+  !   FLOAT,            intent(in)    :: mx_ma_coupling_points(:,:)
+  !   integer,          intent(in)    :: mx_ma_coupling_points_number
+  !   integer,          intent(inout) :: mx_ma_coupling_map(:)
+
+  !   integer :: ip_global, ic, idim, ic_no
+  !   FLOAT   :: dd, dd_min, xx(MAX_DIM)
+
+  !   PUSH_SUB(maxwell_grid_points_coupling_points_mapping)
+
+  !   do ip_global=1, gr%mesh%np_global
+  !     do ic=1, mx_ma_coupling_points_number
+  !       dd = M_ZERO
+  !       do idim=1, gr%sb%dim
+  !         xx(idim) = gr%mesh%idx%lxyz(ip_global,idim) * gr%mesh%spacing(idim)
+  !         dd = dd + ( xx(idim) - mx_ma_coupling_points(idim,ic) )**2
+  !       end do
+  !       dd = sqrt(dd)
+  !       if (ic == 1) then
+  !         dd_min = dd
+  !         ic_no = ic
+  !       else
+  !         if ( dd < dd_min ) then
+  !           dd_min = dd
+  !           ic_no = ic
+  !         end if
+  !       end if
+  !     end do
+  !     mx_ma_coupling_map(ip_global) = ic_no
+  !   end do
+
+  !   POP_SUB(maxwell_grid_points_coupling_points_mapping)
+  ! end subroutine maxwell_grid_points_coupling_points_mapping
 
 
   ! ---------------------------------------------------------
-  subroutine get_mx_ma_coupling_points(geo, hm, mx_ma_coupling_points)
-    type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    FLOAT,               intent(inout) :: mx_ma_coupling_points(:,:)
-
-    integer :: iatom
-
-    PUSH_SUB(get_mx_ma_coupling_points)
-
-    if (hm%mx_ma_coupling_type == OPTION__MAXWELLCOUPLINGMETHOD__MULTIPOLE_EXPANSION_CENTER_OF_MASS) then
-      call find_center_of_mass(geo, mx_ma_coupling_points(:,1), .false.)
-    else if (hm%mx_ma_coupling_type == OPTION__MAXWELLCOUPLINGMETHOD__MULTIPOLE_EXPANSION_IONS) then
-      do iatom=1, geo%natoms
-        mx_ma_coupling_points(:,iatom) = geo%atom(iatom)%x(:)
-      end do
-    end if
-
-    POP_SUB(get_mx_ma_coupling_points)
-  end subroutine get_mx_ma_coupling_points
-
-
-  ! ---------------------------------------------------------
-  subroutine maxwell_grid_points_coupling_points_mapping(gr, mx_ma_coupling_points, mx_ma_coupling_points_number, &
-                                                         mx_ma_coupling_map)
-    type(grid_t),     intent(inout) :: gr
-    FLOAT,            intent(in)    :: mx_ma_coupling_points(:,:)
-    integer,          intent(in)    :: mx_ma_coupling_points_number
-    integer,          intent(inout) :: mx_ma_coupling_map(:)
-
-    integer :: ip_global, ic, idim, ic_no
-    FLOAT   :: dd, dd_min, xx(MAX_DIM)
-
-    PUSH_SUB(maxwell_grid_points_coupling_points_mapping)
-
-    do ip_global=1, gr%mesh%np_global
-      do ic=1, mx_ma_coupling_points_number
-        dd = M_ZERO
-        do idim=1, gr%sb%dim
-          xx(idim) = gr%mesh%idx%lxyz(ip_global,idim) * gr%mesh%spacing(idim)
-          dd = dd + ( xx(idim) - mx_ma_coupling_points(idim,ic) )**2
-        end do
-        dd = sqrt(dd)
-        if (ic == 1) then
-          dd_min = dd
-          ic_no = ic
-        else
-          if ( dd < dd_min ) then
-            dd_min = dd
-            ic_no = ic
-          end if
-        end if
-      end do
-      mx_ma_coupling_map(ip_global) = ic_no
-    end do
-
-    POP_SUB(maxwell_grid_points_coupling_points_mapping)
-  end subroutine maxwell_grid_points_coupling_points_mapping
-
-
-  ! ---------------------------------------------------------
-  subroutine td_function_mxll_init(st, gr, hm)
+  subroutine td_function_mxll_init(st, namespace, gr, hm)
     type(states_mxll_t),      intent(inout) :: st
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
@@ -3745,7 +3619,7 @@ contains
     !%
     !%End
 
-    if(parse_block('UserDefinedConstantSpacialMaxwellField', blk) == 0) then
+    if(parse_block(namespace, 'UserDefinedConstantSpacialMaxwellField', blk) == 0) then
       st%rs_state_const_external = .true.
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(st%rs_state_const_td_function(nlines))
@@ -3769,7 +3643,7 @@ contains
         end do
         call parse_block_string( blk, il - 1, 6, mxf_expression)
         call build_rs_vector(e_field, b_field, st%rs_sign, st%rs_state_const_amp(:,il))
-        call tdf_read(st%rs_state_const_td_function(il), trim(mxf_expression), ierr)
+        call tdf_read(st%rs_state_const_td_function(il), namespace, trim(mxf_expression), ierr)
       end do
     end if
 
@@ -3841,18 +3715,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mirror_pec_boundaries_calculation(bc, st, rs_state)
-    type(bc_mxll_t)         :: bc
-    type(states_mxll_t)             :: st
-    CMPLX                      :: rs_state(:,:)
+    type(bc_mxll_t)                :: bc
+    type(states_mxll_t)            :: st
+    CMPLX                          :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
     FLOAT                      :: e_field(3), b_field(3)
 
     PUSH_SUB(mirror_pec_boundaries_calculation)
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
-        do ip_in=1, bc%mirror_points_number(idim)
+        do ip_in = 1, bc%mirror_points_number(idim)
           ip         = bc%mirror_points_map(ip_in,idim)
           e_field(:) = M_ZERO
           call get_magnetic_field_vector(rs_state(ip,:), st%rs_sign, b_field(:), st%mu(ip))
@@ -3867,9 +3741,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mirror_pmc_boundaries_calculation(bc, st, rs_state)
-    type(bc_mxll_t)         :: bc
-    type(states_mxll_t)             :: st
-    CMPLX                      :: rs_state(:,:)
+    type(bc_mxll_t)                :: bc
+    type(states_mxll_t)            :: st
+    CMPLX                          :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
     FLOAT                      :: e_field(3), b_field(3)
@@ -3902,13 +3776,13 @@ contains
     CMPLX                      :: rs_state(:,:)
 
     integer                    :: ip, ip_global, ip_in, wn, oam, sam
-    FLOAT                      :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi, test, test_limit
+    FLOAT                      :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi, test_perp, test_limit
     FLOAT                      :: width, shift, e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b0(MAX_DIM), b_field(MAX_DIM)
     CMPLX                      :: rs_state_add(MAX_DIM), unit_sigma(3), unit_z(3), unit_plus(3), unit_minus(3)
     CMPLX                      :: e0cmplx(MAX_DIM), b0cmplx(MAX_DIM)
 
-    integer, parameter :: MXF_BESSEL_E_FIELD   =  10014,  &  !< Number has to be equivalent to the one in maxwell_function.F90
-                          MXF_BESSEL_B_FIELD   =  10015      !< Number has to be equivaletn to the one in maxwell_function.F90
+!    integer, parameter :: MXF_BESSEL_E_FIELD   =  10014,  &  !< Number has to be equivalent to the one in maxwell_function.F90
+!                          MXF_BESSEL_B_FIELD   =  10015      !< Number has to be equivaletn to the one in maxwell_function.F90
 
 
     PUSH_SUB(plane_waves_boundaries_calculation)
@@ -3921,35 +3795,35 @@ contains
         k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)
         k_vector_abs = sqrt(sum(k_vector(:)**2))
         e0(:)      = hm%bc%plane_waves_e_field(:,wn)
-        if (hm%bc%bessel_beam) then
-          do ip_in=1, hm%bc%plane_waves_points_number
-            ip           = hm%bc%plane_waves_points_map(ip_in)
-            if (wn==1) rs_state(ip,:) = M_Z0
-            nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-            !x_prop       = M_ZERO
-            !x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
-            if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_E_FIELD) then
-              e_field(1) = e0(1)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
-              e_field(2) = e0(2)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
-              e_field(3) = e0(3)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
-              b_field(:) = M_ZERO
-            end if
-            if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_B_FIELD) then
-              b_field(1) = e0(1)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                           * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
-              b_field(2) = e0(2)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                           * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
-              b_field(3) = e0(3)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                           * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
-              e_field(:) = M_ZERO
-            end if
-            call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, &
-                                         st%ep(ip), st%mu(ip))
-            rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
-          end do
-        else
-          test = ddot_product(k_vector, e0(:))
-          if (abs(test) > test_limit) then
+        ! if (hm%bc%bessel_beam) then
+        !   do ip_in=1, hm%bc%plane_waves_points_number
+        !     ip           = hm%bc%plane_waves_points_map(ip_in)
+        !     if (wn==1) rs_state(ip,:) = M_Z0
+        !     nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
+        !     !x_prop       = M_ZERO
+        !     !x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
+        !     if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_E_FIELD) then
+        !       e_field(1) = e0(1)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
+        !       e_field(2) = e0(2)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
+        !       e_field(3) = e0(3)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
+        !       b_field(:) = M_ZERO
+        !     end if
+        !     if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_B_FIELD) then
+        !       b_field(1) = e0(1)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
+        !       b_field(2) = e0(2)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
+        !       b_field(3) = e0(3)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
+        !       e_field(:) = M_ZERO
+        !     end if
+        !     call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, &
+        !                                  st%ep(ip), st%mu(ip))
+        !     rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
+        !   end do
+        !else
+          test_perp = ddot_product(k_vector, e0(:))
+          if (abs(test_perp) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'
             call messages_fatal(2)
@@ -3970,7 +3844,7 @@ contains
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
             rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
           end do
-        end if
+        !end if
       end do
     else
       do ip_in=1, hm%bc%plane_waves_points_number
@@ -4011,8 +3885,8 @@ contains
     call transform_rs_state_forward(hm, gr, st, st%rs_state_plane_waves, ff_rs_state)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
-    call hamiltonian_mxll_update(hm, gr%mesh, st, time=time)
-    call exponential_mxll_apply(tr%te, gr%der, hm, ff_rs_state, 1, 1, dt, time)
+    call hamiltonian_mxll_update(hm, time=time)
+    !call exponential_apply(tr%te, gr%mesh, hm, ff_rs_state, 1, 1, dt, time)
     call transform_rs_state_backward(hm, gr, st, ff_rs_state, st%rs_state_plane_waves)
     call plane_waves_boundaries_calculation(hm, tr, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
@@ -4050,23 +3924,22 @@ contains
         do ip = 1, gr%mesh%np
           if (wn==1) rs_state(ip,:) = M_Z0
           nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-          if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_E_FIELD) then
-            e_field(1) = e0(1)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 1, gr%mesh%x(ip,:), time)
-            e_field(2) = e0(2)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 2, gr%mesh%x(ip,:), time)
-            e_field(3) = e0(3)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 3, gr%mesh%x(ip,:), time)
-            b_field(:) = M_ZERO
-          end if
-          if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_B_FIELD) then
-            b_field(1) = e0(1)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 1, gr%mesh%x(ip,:), time)
-            b_field(2) = e0(2)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 2, gr%mesh%x(ip,:), time)
-            b_field(3) = e0(3)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 3, gr%mesh%x(ip,:), time)
-            e_field(:) = M_ZERO
-          end if
-          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, &
-                                       st%ep(ip), st%mu(ip))
+!          if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_E_FIELD) then
+!            e_field(1) = e0(1)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 1, gr%mesh%x(ip,:), time)
+!            e_field(2) = e0(2)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 2, gr%mesh%x(ip,:), time)
+!            e_field(3) = e0(3)*mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 3, gr%mesh%x(ip,:), time)
+!            b_field(:) = M_ZERO
+!          end if
+!          if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_B_FIELD) then
+!            b_field(1) = e0(1)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+!                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 1, gr%mesh%x(ip,:), time)
+!            b_field(2) = e0(2)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+!                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 2, gr%mesh%x(ip,:), time)
+!            b_field(3) = e0(3)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
+!                         * mxf(hm%bc%plane_waves_mx_function(wn), gr%mesh%x(ip,:), 3, gr%mesh%x(ip,:), time)
+!            e_field(:) = M_ZERO
+!          end if
+          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
           rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
         end do
       else
@@ -4079,17 +3952,16 @@ contains
           if (bc%plane_waves_modus(wn) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
             do idim=1, gr%mesh%sb%dim
                call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
-                                     bc%plane_waves_e_field_string(idim,wn))
+                 bc%plane_waves_e_field_string(idim,wn))
                e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
             end do
           else if (bc%plane_waves_modus(wn) == & 
-                     OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+            OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
             e0(:)      = bc%plane_waves_e_field(:,wn)
             e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:)) 
           end if
           b_field = 1/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
-          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, &
-                                       st%ep(ip), st%mu(ip))
+          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
           rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
         end do
       end if

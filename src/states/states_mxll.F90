@@ -21,6 +21,7 @@ module states_mxll_oct_m
   use blacs_proc_grid_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
@@ -77,34 +78,30 @@ module states_mxll_oct_m
     get_poynting_vector_plane_waves,  &
     state_diff
 
-  type states_mxll_priv_t
-    private
-    type(type_t) :: wfs_type             !< always complex (TYPE_CMPLX) states
-  end type states_mxll_priv_t
-
-  type states_mxll_t
+  type :: states_mxll_t
     ! Components are public by default
     type(states_elec_dim_t)      :: d
-    type(states_mxll_priv_t)     :: priv          !< the private components
-    integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
     type(states_elec_group_t)    :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
+    type(type_t), public         :: wfs_type         !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
+    integer, public              :: nst                   !< Number of states in each irreducible subspace
+    logical, public              :: packed
 
-    type(batch_t), pointer       :: rsb
-    type(batch_t), pointer       :: rs_transb
-    type(batch_t), pointer       :: rs_longb
-    type(batch_t), pointer       :: rs_curr_dens_rest1b
-    type(batch_t), pointer       :: rs_curr_dens_rest2b
+!    type(batch_t), pointer       :: rsb
+!    type(batch_t), pointer       :: rs_transb
+!    type(batch_t), pointer       :: rs_longb
+!    type(batch_t), pointer       :: rs_curr_dens_rest1b
+!    type(batch_t), pointer       :: rs_curr_dens_rest2b
     
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
-!   CMPLX, pointer               :: rs_state(:,:)
-!    CMPLX, pointer              :: rs_state_trans(:,:)
-!    CMPLX, pointer              :: rs_state_long(:,:)
+    CMPLX, pointer               :: rs_state(:,:)
+    CMPLX, pointer               :: rs_state_trans(:,:)
+    CMPLX, pointer               :: rs_state_long(:,:)
     
     logical                      :: rs_current_density_restart = .false.
-!    CMPLX, pointer              :: rs_current_density_restart_t1(:,:)
-!    CMPLX, pointer              :: rs_current_density_restart_t2(:,:)
+    CMPLX, pointer               :: rs_current_density_restart_t1(:,:)
+    CMPLX, pointer               :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -187,6 +184,7 @@ module states_mxll_oct_m
     logical                     :: fromScratch
     type(mpi_grp_t)             :: mpi_grp
     type(mpi_grp_t)             :: dom_st_mpi_grp
+    type(mpi_grp_t)             :: dom_st_kpt_mpi_grp !< The MPI group related to the domains-states-kpoints "cube".
 
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid
@@ -196,21 +194,27 @@ module states_mxll_oct_m
     integer                     :: lnst
     integer                     :: st_start, st_end
     integer, pointer            :: node(:)
-    logical, private            :: packed
+
+  ! contains 
+  !   procedure :: nullify => states_mxll_null
+  !   procedure :: write_info => states_mxll_write_info
+  !   procedure :: pack => states_mxll_pack
+  !   procedure :: unpack => states_mxll_unpack
+  !   procedure :: set_zero => states_mxll_set_zero
   end type states_mxll_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine states_mxll_null(st)
-    type(states_mxll_t), intent(inout) :: st
+    class(states_mxll_t), intent(inout) :: st
 
     PUSH_SUB(states_mxll_null)
 
     call states_elec_dim_null(st%d)
     call states_elec_group_null(st%group)
     call distributed_nullify(st%dist) 
-    st%priv%wfs_type = TYPE_CMPLX
+    st%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
@@ -221,6 +225,58 @@ contains
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
+  ! ! --------------------------------------------------------
+  ! subroutine states_mxll_write_info(st)
+  !   class(states_mxll_t),    intent(in) :: st
+
+  !   PUSH_SUB(states_mxll_write_info)
+
+  !   call messages_print_stress(stdout, "Maxwell States")
+  !   write(message(2), '(a,i8)')    'Number of states         = ', st%nst
+  !   call messages_info(3)
+
+  !   call messages_print_stress(stdout)
+
+  !   POP_SUB(states_mxll_write_info)
+  ! end subroutine states_mxll_write_info
+
+  ! ! ------------------------------------------------------------
+  ! subroutine states_mxll_set_zero(st)
+  !   class(states_mxll_t),    intent(inout) :: st
+
+  !   PUSH_SUB(states_mxll_set_zero)
+
+  !   st%rs_state(:,:) = M_z0
+  !   st%rs_state_trans(:,:) = M_z0
+  !   st%rs_state_long(:,:) = M_z0
+  !   st%rs_current_density_restart_t1 = M_z0
+  !   st%rs_current_density_restart_t2 = M_z0
+    
+  !   POP_SUB(states_mxll_set_zero)
+  ! end subroutine states_mxll_set_zero
+
+  ! ! ---------------------------------------------------------
+  ! subroutine states_mxll_pack(st, copy)
+  !   class(states_mxll_t),    intent(inout) :: st
+  !   logical,      optional, intent(in)    :: copy
+
+  !   PUSH_SUB(states_mxll_pack)
+  !   ! Nothing done here for the moment
+
+  !   POP_SUB(states_mxll_pack)
+  ! end subroutine states_mxll_pack
+
+  ! ! ------------------------------------------------------------
+  ! subroutine states_mxll_unpack(st, copy)
+  !   class(states_mxll_t),    intent(inout) :: st
+  !   logical,      optional, intent(in)    :: copy
+
+  !   PUSH_SUB(states_mxll_unpack)
+  !   ! Nothing done here for the moment
+    
+  !   POP_SUB(states_mxll_unpack)
+  ! end subroutine states_mxll_unpack
+  
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, namespace, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
@@ -321,58 +377,48 @@ contains
   
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
-  subroutine states_mxll_allocate(st, mesh, td)
+  subroutine states_mxll_allocate(st, mesh)
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
-    type(td_t),             intent(in)      :: td
 
 
     PUSH_SUB(states_mxll_allocate)
 
-    SAFE_ALLOCATE(st%energy_rate(1:td%max_iter)) 
-    SAFE_ALLOCATE(st%delta_energy(1:td%max_iter))
-    SAFE_ALLOCATE(st%energy_via_flux_calc(1:td%max_iter))
-    SAFE_ALLOCATE(st%trans_energy_rate(1:td%max_iter))
-    SAFE_ALLOCATE(st%trans_delta_energy(1:td%max_iter))
-    SAFE_ALLOCATE(st%trans_energy_via_flux_calc(1:td%max_iter))
-    SAFE_ALLOCATE(st%plane_waves_energy_rate(1:td%max_iter))
-    SAFE_ALLOCATE(st%plane_waves_delta_energy(1:td%max_iter))
-    SAFE_ALLOCATE(st%plane_waves_energy_via_flux_calc(1:td%max_iter))
-    st%energy_rate = M_ZERO
-    st%delta_energy = M_ZERO
-    st%energy_via_flux_calc = M_ZERO
-    st%trans_energy_rate = M_ZERO
-    st%trans_delta_energy = M_ZERO
-    st%trans_energy_via_flux_calc = M_ZERO
-    st%plane_waves_energy_rate = M_ZERO
-    st%plane_waves_delta_energy = M_ZERO
-    st%plane_waves_energy_via_flux_calc = M_ZERO
+    SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%d%dim))
+    st%rs_state(:,:) = M_z0
 
-    call batch_init(st%rsb, st%d%dim, 1)
-    call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rsb)
+    SAFE_ALLOCATE(st%rs_state_trans(1:mesh%np_part, 1:st%d%dim))
+    st%rs_state_trans(:,:) = M_z0
 
-    call batch_init(st%rs_transb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_transb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_transb)
+    SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%d%dim))
+    st%rs_state_long(:,:) = M_z0
+
+    SAFE_ALLOCATE(st%rs_current_density_restart_t1(1:mesh%np_part, 1:st%d%dim))
+    st%rs_current_density_restart_t1 = M_z0
+
+    SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%d%dim))
+    st%rs_current_density_restart_t2 = M_z0
+
+    ! call batch_init(st%rsb, st%d%dim, 1)
+    ! call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    ! call batch_set_zero(st%rsb)
+
+    ! call batch_init(st%rs_transb, st%d%dim, 1)
+    ! call zbatch_allocate(st%rs_transb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    ! call batch_set_zero(st%rs_transb)
  
-    call batch_init(st%rs_longb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_longb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_longb)
+    ! call batch_init(st%rs_longb, st%d%dim, 1)
+    ! call zbatch_allocate(st%rs_longb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    ! call batch_set_zero(st%rs_longb)
 
-    call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_curr_dens_rest1b)
+    ! call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
+    ! call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    ! call batch_set_zero(st%rs_curr_dens_rest1b)
     
-    call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_curr_dens_rest2b)
+    ! call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
+    ! call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    ! call batch_set_zero(st%rs_curr_dens_rest2b)
    
-!    Another alternative
-!    call batch_init(st%rs_state_transb, hm%d%dim, 1)
-!    call batch_add_state(st%rs_state_transb, 1, st%rs_state_trans)
-!    call batch_end(st%rs_state_transb)
-
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
 
@@ -383,11 +429,14 @@ contains
     PUSH_SUB(states_mxll_end)
 
     call states_elec_dim_end(st%d)
-    call batch_end(st%rsb)
-    call batch_end(st%rs_transb)
-    call batch_end(st%rs_longb)
-    call batch_end(st%rs_curr_dens_rest1b)
-    call batch_end(st%rs_curr_dens_rest2b)
+    SAFE_DEALLOCATE_P(st%rs_state)
+    SAFE_DEALLOCATE_P(st%rs_state_trans)
+
+!    call batch_end(st%rsb)
+!    call batch_end(st%rs_transb)
+!    call batch_end(st%rs_longb)
+!    call batch_end(st%rs_curr_dens_rest1b)
+!    call batch_end(st%rs_curr_dens_rest2b)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
@@ -409,7 +458,6 @@ contains
     FLOAT,   optional, intent(in)    :: mu_element
 
     ! no PUSH_SUB, called too often
-
 
     if (present(ep_element) .and. present(mu_element)) then
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
@@ -561,8 +609,8 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_electric_field_state(rsb, mesh, electric_field, ep_field, np)
-    type(batch_t),     intent(in)    :: rsb
+  subroutine get_electric_field_state(rs_state, mesh, electric_field, ep_field, np)
+    CMPLX,             intent(in)    :: rs_state(:,:)
     type(mesh_t),      intent(in)    :: mesh
     FLOAT,             intent(inout) :: electric_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
@@ -574,21 +622,14 @@ contains
     PUSH_SUB(get_electric_field_state)
 
     np_ = optional_default(np, mesh%np)
-    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
-    
-    do ii = 1, 3
-       call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
-    end do
      
     do ip = 1, np_
       if (present(ep_field)) then
-        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_state(ip, :), REAL_PRECISION)
       else 
-        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_state(ip, :), REAL_PRECISION)
       end if
     end do
-
-    SAFE_DEALLOCATE_A(rs_aux)
 
     POP_SUB(get_electric_field_state)
 
@@ -596,8 +637,8 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_state(rsb, mesh, rs_sign, magnetic_field, mu_field, np)
-    type(batch_t),     intent(in)    :: rsb
+  subroutine get_magnetic_field_state(rs_state, mesh, rs_sign, magnetic_field, mu_field, np)
+    CMPLX,             intent(in)    :: rs_state(:,:)
     type(mesh_t),      intent(in)    :: mesh
     integer,           intent(in)    :: rs_sign
     FLOAT,             intent(inout) :: magnetic_field(:,:)
@@ -610,12 +651,6 @@ contains
     PUSH_SUB(get_magnetic_field_state)
 
     np_ = optional_default(np, mesh%np)
-    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
-
-    do ii = 1, 3
-      call batch_get_state(rsb, np, ii, rs_aux(:, ii))
-    end do
-
     
     do ip = 1, np_
       if (present(mu_field)) then
@@ -624,8 +659,6 @@ contains
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
       end if
    end do
-
-   SAFE_DEALLOCATE_A(rs_aux)
 
    POP_SUB(get_magnetic_field_state)
 
@@ -752,37 +785,47 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_poynting_vector(gr, st, rsb, rs_sign, poynting_vector, ep_field, mu_field)
+  subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    type(batch_t),            intent(in)    :: rsb
+    CMPLX,                    intent(in)    :: rs_state(:,:)
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)
     FLOAT,          optional, intent(in)    :: mu_field(:)
+    FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip, ii
+    integer            :: ip, ii, ip_in, idir
     CMPLX, allocatable :: rs_aux(:,:)
 
     PUSH_SUB(get_poynting_vector)
-
-    SAFE_ALLOCATE(rs_aux(1:gr%mesh%np, 1:3))
-    do ii = 1, 3
-       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
-    end do
 
     if (present(ep_field) .and. present(mu_field)) then
       do ip = 1, gr%mesh%np
         poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
                               * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(real(rs_state(ip, :), REAL_PRECISION), rs_sign*aimag(rs_state(ip,:)))
       end do
     else
       do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
                               * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(real(rs_state(ip, :), REAL_PRECISION), rs_sign*aimag(rs_state(ip,:)))
       end do
+    end if
+
+    if (present (mean_value)) then
+      mean_value = M_ZERO
+      do ip_in = 1, st%inner_points_number
+        ip = st%inner_points_map(ip_in)
+        mean_value(:)   = mean_value(:) + poynting_vector(ip,:)
+      end do
+      mean_value(:) = mean_value(:) * gr%mesh%volume_element
+      if(gr%mesh%parallel_in_domains) then
+        do idir=1, st%d%dim
+          call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
+        end do
+      end if
     end if
 
     POP_SUB(get_poynting_vector)
@@ -790,13 +833,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_poynting_vector_plane_waves(gr, st, rs_sign, poynting_vector)
+  subroutine get_poynting_vector_plane_waves(gr, st, rs_sign, poynting_vector, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
+    FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip
+    integer            :: ip, ip_in, idir
 
     PUSH_SUB(get_poynting_vector_plane_waves)
 
@@ -805,6 +849,20 @@ contains
                & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
                & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
+
+    if (present(mean_value)) then
+      mean_value = M_ZERO
+      do ip_in = 1, st%inner_points_number
+        ip = st%inner_points_map(ip_in)
+        mean_value(:)   = mean_value(:) + poynting_vector(ip,:)
+      end do
+      mean_value(:) = mean_value(:) * gr%mesh%volume_element
+      if(gr%mesh%parallel_in_domains) then
+        do idir = 1, st%d%dim
+          call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
+        end do
+      end if
+    end if
 
     POP_SUB(get_poynting_vector_plane_waves)
   end subroutine get_poynting_vector_plane_waves

@@ -238,7 +238,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__ELECTRIC_FIELD) /= 0) then
       fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
-      call get_electric_field_state(st%rsb, gr%mesh, dtmp, st%ep, gr%mesh%np)
+      call get_electric_field_state(st%rs_state, gr%mesh, dtmp, st%ep, gr%mesh%np)
       do idim = 1, st%d%dim
          write(fname, '(2a)') 'e_field-', index2axis(idim)
          call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
@@ -251,7 +251,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp, st%mu, gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state, gr%mesh, st%rs_sign, dtmp, st%mu, gr%mesh%np)
       do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
@@ -307,7 +307,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__POYNTING_VECTOR) /= 0) then
       fn_unit = units_out%energy/(units_out%time*units_out%length**2)
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-       call get_poynting_vector(gr, st, st%rsb, st%rs_sign, dtmp, st%ep, st%mu)
+       call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, dtmp, st%ep, st%mu)
        do idim = 1, st%d%dim
          write(fname, '(2a)') 'poynting_vector-', index2axis(idim)
          call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim),&
@@ -339,7 +339,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_electric_field_state(st%rs_transb, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
+      call get_electric_field_state(st%rs_state_trans, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'e_field_trans-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
@@ -352,7 +352,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_magnetic_field_state(st%rs_transb, gr%mesh, st%rs_sign, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state_trans, gr%mesh, st%rs_sign, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'b_field_trans-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
@@ -384,7 +384,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_electric_field_state(st%rs_longb, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
+      call get_electric_field_state(st%rs_state_long, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'e_field_long-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, outp%namespace, gr%mesh, dtmp(:,idim), fn_unit,&
@@ -397,7 +397,7 @@
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_magnetic_field_state(st%rs_longb, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), &
+      call get_magnetic_field_state(st%rs_state_long, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), &
                                             gr%mesh%np)
       do idim=1, st%d%dim
         write(fname, '(2a)') 'b_field_long-', index2axis(idim)
@@ -432,7 +432,7 @@
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
-      call get_electric_field_state(st%rsb, gr%mesh, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
+      call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "e_field_div", outp%namespace, gr%mesh, dtmp_2,&
         & fn_unit, ierr, geo=geo)
@@ -446,7 +446,7 @@
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
-      call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state, gr%mesh, st%rs_sign, dtmp_1(1:gr%mesh%np,:), st%mu(1:gr%mesh%np), gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .false.)
       call dio_function_output(outp%how, dir, "b_field_div", outp%namespace, gr%mesh, dtmp_2,&
         & fn_unit, ierr, geo=geo)
@@ -596,7 +596,7 @@
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_electric_field_state(st%rsb, gr%mesh, dtmp_1, st%ep, gr%mesh%np_part)
+      call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1, st%ep, gr%mesh%np_part)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .true.)
       call dio_function_output(outp%how, dir, "charge_density", outp%namespace, gr%mesh, dtmp_2(:),&
            & fn_unit, ierr, geo=geo)
@@ -633,7 +633,7 @@
       SAFE_ALLOCATE(E_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(D_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(e_susceptibility(1:gr%mesh%np))
-      call get_electric_field_state(st%rsb, gr%mesh, E_field, st%ep, gr%mesh%np)
+      call get_electric_field_state(st%rs_state, gr%mesh, E_field, st%ep, gr%mesh%np)
       polarization_ma_gr = M_ZERO
       polarization_mx_gr = M_ZERO
       forall (ip=1:gr%mesh%np, idim=1:st%d%dim)
@@ -687,7 +687,7 @@
       SAFE_ALLOCATE(B_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(H_field(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(b_susceptibility(1:gr%mesh%np))
-      call get_magnetic_field_state(st%rsb, gr%mesh, st%rs_sign, B_field, st%mu, gr%mesh%np)
+      call get_magnetic_field_state(st%rs_state, gr%mesh, st%rs_sign, B_field, st%mu, gr%mesh%np)
       magnetization_ma_gr = M_ZERO
       magnetization_mx_gr = M_ZERO
       forall (ip=1:gr%mesh%np, idim=1:st%d%dim)

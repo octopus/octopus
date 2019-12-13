@@ -34,7 +34,7 @@ module system_abst_oct_m
   public ::                           &
     system_abst_t
 
-  type, abstract :: system_abst_t
+  type :: system_abst_t
     type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh

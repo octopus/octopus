@@ -306,7 +306,6 @@ contains
     call restart_write(restart, iunit_wfns, lines, 2, err)
     if (err /= 0) ierr = ierr + 2
 
-    SAFE_ALLOCATE(zff_global(1:gr%mesh%np_global))
 
     itot = 1
     root = 0
@@ -329,16 +328,14 @@ contains
        end if
 
        if (should_write) then
-          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+!          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if
     end do ! zff_dim
 
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
-
-    SAFE_DEALLOCATE_A(zff_global)
 
     lines(1) = '%'
     call restart_write(restart, iunit_wfns, lines, 1, err) 
@@ -510,7 +507,7 @@ contains
 
        call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
             zff(:,idim), err)
-       call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
+       !call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
 
 
        if (err == 0) then

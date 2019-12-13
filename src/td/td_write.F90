@@ -29,6 +29,7 @@ module td_write_oct_m
   use grid_oct_m
   use output_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use io_function_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
@@ -76,7 +77,10 @@ module td_write_oct_m
     td_write_iter,  &
     td_write_data,  &
     td_write_kick,  &
-    td_write_output
+    td_write_output, &
+    td_write_mxll_init, &
+    td_write_mxll_iter, &
+    td_write_mxll_free_data
 
   type td_write_prop_t
     private
@@ -1810,11 +1814,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_energy(out_energy, hm, iter, ke)
-    type(c_ptr),         intent(inout) :: out_energy
+    type(c_ptr),         intent(inout)   :: out_energy
     type(hamiltonian_elec_t), intent(in) :: hm
-    integer,             intent(in) :: iter
-    FLOAT,               intent(in) :: ke
-
+    integer,             intent(in)      :: iter
+    FLOAT, intent(in)                    :: ke
+    
     integer :: ii
 
     integer :: n_columns         
@@ -3143,8 +3147,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_init(writ, gr, st, hm, iter, max_iter, dt)
+  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, max_iter, dt)
     type(td_write_t),    intent(out)   :: writ
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(inout) :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -3181,7 +3186,7 @@ contains
     !%End
 
     default = 2**(OUT_MAXWELL_ENERGY - 1) 
-    call parse_variable('MaxwellTDOutput', default, flags)
+    call parse_variable(namespace, 'MaxwellTDOutput', default, flags)
 
     if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) call messages_input_error('MaxwellTDOutput')
 
@@ -3205,6 +3210,7 @@ contains
             writ%out(5-1+idim)%write = .true.
           end do
         end if
+      end if
     end do
 
     if (iter == 0) then
@@ -3213,69 +3219,64 @@ contains
       first = iter + 1
     end if
 
-    call io_mkdir('td.general')
+    call io_mkdir('td.general', namespace)
 
     if (writ%out(OUT_MAXWELL_ENERGY)%write) then
        call write_iter_init(writ%out(OUT_MAXWELL_ENERGY)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/maxwell_energy")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/maxwell_energy", namespace)))
     end if
 
     if (writ%out(OUT_FIELDS)%write) then
        call write_iter_init(writ%out(OUT_FIELDS)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/fields")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/fields", namespace)))
     end if
 
     if (writ%out(OUT_POYNTING)%write) then
        call write_iter_init(writ%out(OUT_POYNTING)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/mean_poynting_vector")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/mean_poynting_vector", namespace)))
     end if
 
     if (writ%out(OUT_E_FIELD_SURF_X)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURF_X)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-x")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-x", namespace)))
     end if
 
     if (writ%out(OUT_E_FIELD_SURF_Y)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURF_Y)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-y")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-y", namespace)))
     end if
 
     if (writ%out(OUT_E_FIELD_SURF_Z)%write) then
        call write_iter_init(writ%out(OUT_E_FIELD_SURF_Z)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-z")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-z", namespace)))
     end if
 
     if (writ%out(OUT_B_FIELD_SURF_X)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURF_X)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-x")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-x", namespace)))
     end if
 
     if (writ%out(OUT_B_FIELD_SURF_Y)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURF_Y)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-y")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-y", namespace)))
     end if
 
     if (writ%out(OUT_B_FIELD_SURF_Z)%write) then
        call write_iter_init(writ%out(OUT_B_FIELD_SURF_Z)%handle, first, &
-        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-z")))
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-z", namespace)))
     end if
 
     POP_SUB(td_write_mxll_init)
   end subroutine td_write_mxll_init
 
-
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_iter(writ, gr, st, hm, dt, iter, gr, st, hm, geo)
+  subroutine td_write_mxll_iter(writ, gr, st, hm, dt, iter)
     type(td_write_t),              intent(inout) :: writ
     type(grid_t),                  intent(inout) :: gr
     type(states_mxll_t),                intent(inout) :: st
     type(hamiltonian_mxll_t),           intent(inout) :: hm
     FLOAT,                         intent(in)    :: dt
     integer,                       intent(in)    :: iter
-    type(grid_t),        optional, intent(inout) :: gr
-    type(states_t),      optional, intent(inout) :: st
-    type(hamiltonian_t), optional, intent(inout) :: hm
-    type(geometry_t),    optional, intent(inout) :: geo
 
     type(profile_t), save :: prof
 
@@ -3284,12 +3285,12 @@ contains
     call profiling_in(prof, "TD_WRITE_ITER_MAXWELL")
 
     if(writ%out(OUT_MAXWELL_ENERGY)%write) then
-      if (present(hm)) then
-        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter, &
-                                             hm, geo%kinetic_energy)
-      else
+!      if (present(hm_elec)) then
+!        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter, &
+!                                             hm, geo%kinetic_energy)
+!      else
         call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter)
-      end if
+!      end if
     end if
 
     if (writ%out(OUT_FIELDS)%write) then
@@ -3331,7 +3332,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, st, iter, ke)
+  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, st, iter)
     type(c_ptr),                   intent(inout) :: out_maxwell_energy
     type(hamiltonian_mxll_t),           intent(in)    :: hm
     type(states_mxll_t),                intent(in)    :: st
@@ -3546,11 +3547,11 @@ contains
 
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
 
-    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, &
-                                     dtmp, ep_field=st%ep, mu_field=st%mu, mean_value=field)
+    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, dtmp, ep_field=st%ep, mu_field=st%mu, &
+      mean_value=field)
 
     if (plane_wave_flag) then
-      call get_poynting_vector_plane_waves(gr, st, st%rs_sign, dtmp, field)
+      call get_poynting_vector_plane_waves(gr, st, st%rs_sign, dtmp, mean_value=field)
     end if
 
     SAFE_DEALLOCATE_A(dtmp)
@@ -3708,7 +3709,7 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_maxwell_free_data(writ, gr, st, hm, geo, outp, iter, dt)
+  subroutine td_write_mxll_free_data(writ, gr, st, hm, geo, outp, iter, dt)
     type(td_write_t),     intent(inout) :: writ
     type(grid_t),         intent(inout) :: gr
     type(states_mxll_t),       intent(inout) :: st
@@ -3721,7 +3722,7 @@ contains
     character(len=256) :: filename
     integer :: iout
     type(profile_t), save :: prof
-1
+
     PUSH_SUB(td_write_maxwell_free_data)
     call profiling_in(prof, "TD_WRITE_MAXWELL_DATA")
 
@@ -3732,16 +3733,13 @@ contains
     end if
 
     ! now write down the rest
-    write(filename, '(a,a,i7.7)') trim(maxwell_outp%iter_dir),"td.", iter  ! name of directory
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
+    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
     call output_mxll(outp, gr, st, hm, iter*dt, geo, filename)
  
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)
-  end subroutine td_write_maxwell_free_data
+  end subroutine td_write_mxll_free_data
 
 
   ! ---------------------------------------------------------

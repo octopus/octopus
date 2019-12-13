@@ -1661,23 +1661,19 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedMaxwellIncidentWaves
-    !% <br>&nbsp;&nbsp;   plane_waves_parser      | "k1x" | "k1y" | "k1z" | "E1x" | "E1z" | "E1x" | plane_wave
-    !% <br>&nbsp;&nbsp;   plane_waves_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z" | no_plane_wave
-    !% <br>&nbsp;&nbsp;   plane_waves_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width"           | "shift" | plane_wave
-    !% <br>&nbsp;&nbsp;   plane_waves_mx_function | "k4x" | "k4y" | "k4z" | "E4x" | "E4y" | "E4z" | mx_envelope_name  | phase   | plane_wave
+    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k1x" | "k1y" | "k1z" | "E1x" | "E1z" | "E1x" | plane_wave
+    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z" | no_plane_wave
+    !% <br>&nbsp;&nbsp;   plane_wave_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width"           | "shift" | plane_wave
+    !% <br>&nbsp;&nbsp;   plane_wave_mx_function | "k4x" | "k4y" | "k4z" | "E4x" | "E4y" | "E4z" | mx_envelope_name  | phase   | plane_wave
     !% <br>&nbsp;&nbsp;   bessel_mx_function      | "k5x" | "k5y" | "k5z" | "E5x" | "E5y" | "E5z" | "angle" | "orbital_momentum" | "sigma" | mx_envelope_name | phase
     !% <br>%</tt>
     !%
     !% Description about UserDefinedMaxwellIncidentWaves follows
     !%
-    !%Option plane_waves_parser 0
+    !%Option plane_wave_parser 0
     !% Parser input modus
-    !%Option plane_waves_mx_function 1
+    !%Option plane_wave_mx_function 1
     !% The incident wave envelope is defined by an mx_function
-    !%Option no_plane_wave 2
-    !% The incident wave is not neccesarily a plane wave
-    !%Option plane_wave 3
-    !% The incident wave is treated as a plane wave with corresponding wave vector
     !%Option bessel_mx_function 4
     !% Follows!
     !%End
@@ -1715,7 +1711,7 @@ contains
         call parse_block_integer(blk, il - 1, 0, bc%plane_waves_modus(il))
 
         ! parse formula string
-        if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVES_PARSER) then
+        if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
 
           call parse_block_string( blk, il - 1, 1, k_string(1))
           call parse_block_string( blk, il - 1, 2, k_string(2))
@@ -1755,7 +1751,7 @@ contains
           bc%plane_waves_k_vector(:,il) = k_vector(:)
           bc%plane_waves_v_vector(:,il) = vv(:)
 
-        else if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVES_MX_FUNCTION) then
+        else if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
 
           call parse_block_float( blk, il - 1, 1, e_field(1))
           call parse_block_float( blk, il - 1, 2, e_field(2))

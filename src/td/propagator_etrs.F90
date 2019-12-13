@@ -27,7 +27,6 @@ module propagator_etrs_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
-  use hamiltonian_mxll_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
@@ -42,7 +41,6 @@ module propagator_etrs_oct_m
   use propagator_base_oct_m
   use states_elec_dim_oct_m
   use states_elec_oct_m
-  use states_mxll_oct_m
   use types_oct_m
   use v_ks_oct_m
   use propagation_ops_elec_oct_m
@@ -82,9 +80,9 @@ contains
     type(density_calc_t) :: dens_calc
 
     PUSH_SUB(td_etrs)
-    
+
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      
+
       SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
@@ -130,8 +128,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps,&
-        hm_mxll, gr_mxll, st_mxll, tr_mxll, mx_sctol)
+  subroutine td_etrs_sc(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t),             target, intent(inout) :: ks
     type(namespace_t),                intent(in)    :: namespace
     type(hamiltonian_elec_t), target, intent(inout) :: hm
@@ -146,98 +143,17 @@ contains
     logical,                          intent(in)    :: move_ions
     FLOAT,                            intent(in)    :: sctol
     integer,                optional, intent(out)   :: scsteps
-    type(hamiltonian_mxll_t),  optional, intent(inout) :: hm_mxll
-    type(grid_t),              optional, intent(inout) :: gr_mxll
-    type(states_mxll_t),       optional, intent(inout) :: st_mxll
-    type(propagator_mxll_t),   optional, intent(inout) :: tr_mxll
-    FLOAT,                     optional, intent(in)    :: mx_sctol
 
-    FLOAT :: diff, maxwell_diff, mx_dt, mx_time
-    FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:), rs_state_diff(:), tmp_ma_gr(:,:), tmp_mx_gr(:,:)
+    FLOAT :: diff
+    FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib, iter, ip
     type(batch_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
-    logical :: prop_maxwell = .false., pml_check = .false.
-    CMPLX, allocatable :: rs_current_density_t1(:,:), rs_current_density_t2(:,:)
-    CMPLX, allocatable :: rs_current_density_ext(:,:)
-    CMPLX, allocatable :: rs_charge_density_t1(:), rs_charge_density_t2(:)
-    CMPLX, allocatable :: rs_state_t1(:,:), rs_state_t2(:,:), rs_state_plane_waves(:,:)
 
     PUSH_SUB(td_etrs_sc)
 
     ASSERT(hm%theory_level /= INDEPENDENT_PARTICLES)
-    
-    prop_maxwell = (present(hm_mxll) .and. present(st_mxll) .and. present(gr_mxll) .and. present(tr_mxll))
-    
-    ! Maxwell field propagation: auxiliary arrays and RS rs_density at time t1 (1 of 3 "if (maxwell)" insertions)
-    if (prop_maxwell) then
-
-      do idim = 1, 3
-        if (hm_mxll%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
-          pml_check = .true.
-        end if
-      end do
-
-      ! auxiliary arrays initialization
-      SAFE_ALLOCATE(rs_state_t1(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-      SAFE_ALLOCATE(rs_state_t2(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-      SAFE_ALLOCATE(rs_state_diff(1:gr_mxll%mesh%np))
-      if (hm_mxll%ma_mx_coupling_apply .or. hm_mxll%current_density_ext_flag) then
-        SAFE_ALLOCATE(rs_current_density_t1(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-        rs_current_density_t1  = M_z0
-        SAFE_ALLOCATE(rs_current_density_t2(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-        rs_current_density_t2  = M_z0
-        if (hm_mxll%current_density_ext_flag) then
-          SAFE_ALLOCATE(rs_current_density_ext(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-          rs_current_density_ext = M_z0
-        end if
-        if (hm_mxll%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
-          SAFE_ALLOCATE(rs_charge_density_t1(1:gr_mxll%mesh%np_part))
-          rs_charge_density_t1 = M_z0
-          SAFE_ALLOCATE(rs_charge_density_t2(1:gr_mxll%mesh%np_part))
-          rs_charge_density_t2 = M_z0
-        end if
-      end if
-      SAFE_ALLOCATE(rs_state_plane_waves(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-
-      ! storage of the RS state of the old step time t-dt
-      rs_state_t1(:,:) = st_mxll%rs_state(:,:)
-
-      ! storage or the RS incident waves state without any coupling
-      if (tr_mxll%bc_plane_waves) then
-        rs_state_plane_waves(:,:) = st%rs_state_plane_waves(:,:)
-      end if
-
-      if (hm_mxll%propagation_apply) then
-        if (hm_mxll%ma_mx_coupling_apply) then
-          ! calculation of rs_density at time (time-dt)
-          call get_rs_density(st_mxll, gr_mxll, hm_mxll, st, gr, hm, geo, hm%mx_ma_coupling_points, &
-            hm%mx_ma_coupling_points_number, rs_current_density_t1, &
-            rs_charge_density_t1, time-dt, tr%current_prop_test)
-        end if
-        ! calculation of the external RS density at time (time-dt) 
-        if (hm_mxll%current_density_ext_flag) then
-          call get_rs_density_ext(st_mxll, gr_mxll%mesh, time-dt, rs_current_density_ext)
-          if (.not. hm_mxll%ma_mx_coupling_apply) rs_current_density_t1 = M_z0
-          rs_current_density_t1 = rs_current_density_t1 + rs_current_density_ext
-        end if
-        ! store old convolution function of cpml calculation
-        if (pml_check) then
-          hm_mxll%bc%pml_conv_plus_old  = hm_mxll%bc%pml_conv_plus
-          hm_mxll%bc%pml_conv_minus_old = hm_mxll%bc%pml_conv_minus
-        end if
-        ! calculation of the Maxwell to matter coupling points at time (time)
-        call get_mx_ma_coupling_points(geo, hm, hm%mx_ma_coupling_points(:,:))
-        ! get the map of each grid point to the next Maxwell to matter coupling point
-        call grid_points_coupling_points_mapping(gr, hm%mx_ma_coupling_points, hm%mx_ma_coupling_points_number, &
-          hm%mx_ma_coupling_points_map)
-      end if
-
-      call hamiltonian_update(hm, gr%mesh, time = time - dt)
-
-    end if
-
 
     SAFE_ALLOCATE(vhxc_t1(1:gr%mesh%np, 1:st%d%nspin))
     SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
@@ -271,69 +187,6 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    if (prop_maxwell) then
-          
-      ! reset RS state to the old correct step time t-dt
-      st_mxll%rs_state(:,:) = rs_state_t1(:,:)
-
-      ! reset RS incident waves state without any coupling
-      if (tr_mxll%bc_plane_waves) then
-        st_mxll%rs_state_plane_waves(:,:) = rs_state_plane_waves(:,:)
-      end if
-
-      if (hm_mxll%propagation_apply) then
-        if (hm_mxll%ma_mx_coupling_apply) then
-          ! calculation of rs_density at time (time)
-          call get_rs_density(st_mxll, gr_mxll, hm_mxll, st, gr, hm, geo, hm%mx_ma_coupling_points, &
-            hm%mx_ma_coupling_points_number, rs_current_density_t2, rs_charge_density_t2, time, &
-            tr%current_prop_test)
-        end if
-        ! calculation of external RS density at time (time)
-        if (hm_mxll%current_density_ext_flag) then
-          call get_rs_density_ext(st, gr%mesh, time, rs_current_density_ext)
-          if (.not. hm%ma_mx_coupling_apply) rs_current_density_t2 = M_z0
-          rs_current_density_t2 = rs_current_density_t2 + rs_current_density_ext
-        end if
-        ! reset old convolution function of cpml calculation
-        if (pml_check) then
-          hm_mxll%bc%pml_conv_plus  = hm_mxll%bc%pml_conv_plus_old
-          hm_mxll%bc%pml_conv_minus = hm_mxll%bc%pml_conv_minus_old
-        end if
-        ! Setting electron density for Maxwell grid
-        if (hm_mxll%diamag_current) then
-          tmp_ma_gr = M_ZERO
-          tmp_ma_gr(1:gr%mesh%np,1:st%d%nspin) = st%rho(1:gr%mesh%np,1:st%d%nspin)
-          tmp_mx_gr = M_ZERO
-          call dma_mesh_to_mx_mesh(st_mxll, gr_mxll, st, gr, tmp_ma_gr, tmp_mx_gr, st%d%nspin)
-          st_mxll%grid_rho(1:gr%mesh%np,1:st%d%nspin) = tmp_mx_gr(1:gr%mesh%np,1:st%d%nspin)
-          SAFE_DEALLOCATE_A(tmp_ma_gr)
-          SAFE_DEALLOCATE_A(tmp_mx_gr)
-        end if
-        ! Maxwell propagation step from time (time-dt) to (time) as a first prediction
-        call propagation_mxll_etrs(hm_mxll, gr_mxll, st_mxll, tr_mxll, st_mxll%rs_state, rs_current_density_t1, &
-          rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time-dt, dt, rs_state_t1)
-      end if
-
-      ! calculation of the Maxwell to matter coupling points at time (time)
-      call get_mx_ma_coupling_points(geo, hm, hm%mx_ma_coupling_points(:,:))
-      ! get the map of each grid point to the next Maxwell to matter coupling point
-      call gr_mxllid_points_coupling_points_mapping(gr, hm%mx_ma_coupling_points, hm%mx_ma_coupling_points_number, &
-        hm%mx_ma_coupling_points_map)
-
-      ! coupling of Maxwell fields to the matter
-      if (hm%mx_ma_coupling_apply .and. (tr%current_prop_test == 0)) then
-        ! transverse field calculation
-        call get_vector_pot_and_transverse_field(hm%mx_ma_trans_field_calc_method, gr_mxll, hm_mxll, st_mxll, &
-          tr_mxll, gr, hm, st, tr, hm_mxll%poisson_solver, time, st_mxll%rs_state, st_mxll%rs_state_trans, &
-          hm_mxll%vector_potential)
-        ! electric potential calculation
-        call epot_generate_maxwell_coupling(hm%ep, gr, st_mxll, gr_mxll)
-      else
-        st_mxll%rs_state_trans = st_mxll%rs_state
-      end if
-
-    end if
-
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
@@ -353,71 +206,6 @@ contains
 
       call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      
-      ! Maxwell field propagation: self cons. step of Maxwell field propagation (3 of 3 "if (maxwell)" insertions)
-      if (prop_maxwell) then
-
-        ! reset RS state to the old correct step time t-dt
-        st_mxll%rs_state(:,:) = rs_state_t1(:,:)
-
-        ! reset RS incident waves state without any coupling
-        if (tr_mxll%bc_plane_waves) then
-          st_mxll%rs_state_plane_waves(:,:) = rs_state_plane_waves(:,:)
-        end if
-
-        if (hm_mxll%propagation_apply) then
-          if (hm_mxll%ma_mx_coupling_apply) then
-            ! calculation of rs_density at time (time)
-            call get_rs_density(st_mxll, gr_mxll, hm_mxll, st, gr, hm, geo, hm%mx_ma_coupling_points, &
-              hm%mx_ma_coupling_points_number, rs_current_density_t2, rs_charge_density_t2, time, &
-              tr%current_prop_test)
-          end if
-          ! calculation of external RS density at time (time)
-          if (hm_mxll%current_density_ext_flag) then
-            call get_rs_density_ext(st_mxll, gr_mxll%mesh, time, rs_current_density_ext)
-            if (.not. hm_mxll%ma_mx_coupling_apply) rs_current_density_t2 = M_z0
-            rs_current_density_t2 = rs_current_density_t2 + rs_current_density_ext
-          end if
-          ! reset old convolution function of cpml calculation
-          if (pml_check) then
-            hm_mxll%bc%pml_conv_plus  = hm_mxll%bc%pml_conv_plus_old
-            hm_mxll%bc%pml_conv_minus = hm_mxll%bc%pml_conv_minus_old
-          end if
-          ! Setting electron density for Maxwell grid
-          if (hm_mxll%diamag_current) then
-            tmp_ma_gr = M_ZERO
-            tmp_ma_gr(1:gr%mesh%np,1:st%d%nspin) = st%rho(1:gr%mesh%np,1:st%d%nspin)
-            tmp_mx_gr = M_ZERO
-            call dma_mesh_to_mx_mesh(st_mxll, gr_mxll, st, gr, tmp_ma_gr, tmp_mx_gr, st%d%nspin)
-            st_mxll%grid_rho(1:gr%mesh%np,1:st%d%nspin) = tmp_mx_gr(1:gr%mesh%np,1:st%d%nspin)
-            SAFE_DEALLOCATE_A(tmp_ma_gr)
-            SAFE_DEALLOCATE_A(tmp_mx_gr)
-          end if
-          ! Maxwell propagation step from time (time-dt) to (time) as a first prediction
-          call propagation_mxll_etrs(hm_mxll, gr_mxll, st_mxll, tr_mxll, st_mxll%rs_state, & 
-            rs_current_density_t1, rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time-dt, dt,&
-            rs_state_t1)
-        end if
-
-        ! calculation of the Maxwell to matter coupling points at time (time)
-        call get_mx_ma_coupling_points(geo, hm, hm%mx_ma_coupling_points(:,:))
-        ! get the map of each grid point to the next Maxwell to matter coupling point
-        call maxwell_grid_points_coupling_points_mapping(gr, hm%mx_ma_coupling_points, &
-          hm%mx_ma_coupling_points_number, hm%mx_ma_coupling_points_map)
-
-        ! coupling of Maxwell fields to the matter
-        if (hm%mx_ma_coupling_apply .and. (tr%current_prop_test == 0)) then
-          ! transverse field calculation
-          call get_vector_pot_and_transverse_field(hm%mx_ma_trans_field_calc_method, gr_mxll, hm_mxll, st_mxll, &
-            tr_mxll, gr, hm, st, tr, hm_mxll%poisson_solver, time,st_mxll%rs_state, st_mxll%rs_state_trans, &
-            hm_mxll%vector_potential)
-          ! electric potential calculation
-          call epot_generate_maxwell_coupling(hm%ep, gr, st_mxll, gr_mxll)
-        else
-          st_mxll%rs_state_trans = st_mxll%rs_state
-        end if
-
-      end if
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -425,36 +213,13 @@ contains
       end do
       diff = dmf_integrate(gr%mesh, vhxc_t2(:, 1))
 
-      ! now check how much the electromagnetic field changed
-      if (prop_maxwell) then
-        do ip = 1, gr_mxll%mesh%np
-          rs_state_diff(ip) = sum(abs(rs_state_t2(ip,1:st_mxll%d%dim) & 
-            -st_mxll%rs_state(ip,1:st_mxll%d%dim)))
-        end do
-        maxwell_diff = dmf_integrate(gr_mxll%mesh, rs_state_diff(:))
-      end if
+      call messages_write('          step ')
+      call messages_write(iter)
+      call messages_write(', residue = ')
+      call messages_write(abs(diff), fmt = '(1x,es9.2)')
+      call messages_info()
 
-      if (prop_maxwell) then
-        call messages_write('          step ')
-        call messages_write(iter)
-        call messages_write(', KS-residue = ')
-        call messages_write(abs(diff), fmt = '(1x,es9.2)')
-        call messages_write(', Maxwell-residue = ')
-        call messages_write(abs(maxwell_diff), fmt = '(1x,es9.2)')
-        call messages_info()
-      else
-        call messages_write('          step ')
-        call messages_write(iter)
-        call messages_write(', residue = ')
-        call messages_write(abs(diff), fmt = '(1x,es9.2)')
-        call messages_info()
-      end if
-
-      if(maxwell) then
-        if((diff <= sctol) .and. (maxwell_diff <= mx_sctol)) exit
-      else
-        if(diff <= sctol) exit
-      end if
+      if(diff <= sctol) exit
 
       if(iter /= niter) then
         ! we are not converged, restore the states
@@ -463,8 +228,6 @@ contains
             call batch_copy_data(gr%mesh%np, psi2(ib, ik), st%group%psib(ib, ik))
           end do
         end do
-        ! copy current RS state for next sc step correction
-        if (prop_maxwell) rs_state_t2(:,:) = st_mxll%rs_state(:,:)
       end if
 
     end do
@@ -481,26 +244,6 @@ contains
 
     SAFE_DEALLOCATE_A(vhxc_t1)
     SAFE_DEALLOCATE_A(vhxc_t2)
-
-    if (prop_maxwell) then
-      ! auxiliary arrays deallocation
-      SAFE_DEALLOCATE_A(rs_state_t1)
-      SAFE_DEALLOCATE_A(rs_state_t2)
-      SAFE_DEALLOCATE_A(rs_state_diff)
-      if (hm_mxll%ma_mx_coupling_apply .or. hm_mxll%current_density_ext_flag) then
-        SAFE_DEALLOCATE_A(rs_current_density_t1)
-        SAFE_DEALLOCATE_A(rs_current_density_t2)
-        if (hm_mxll%current_density_ext_flag) then
-          SAFE_DEALLOCATE_A(rs_current_density_ext)
-        end if
-        if (hm_mxll%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
-          SAFE_DEALLOCATE_A(rs_charge_density_t1)
-          SAFE_DEALLOCATE_A(rs_charge_density_t2)
-        end if
-      end if
-      SAFE_DEALLOCATE_A(rs_state_plane_waves)
-    end if
-
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
