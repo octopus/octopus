@@ -249,7 +249,7 @@ end subroutine X(hamiltonian_elec_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
+subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
@@ -263,7 +263,7 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
 
   type(wfs_elec_t) :: psib, hpsib
 
-  PUSH_SUB(X(hamiltonian_elec_apply))
+  PUSH_SUB(X(hamiltonian_elec_apply_single))
   
   call wfs_elec_init(psib, hm%d%dim, 1, ik)
   call psib%add_state(ist, psi)
@@ -281,8 +281,8 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   call hpsib%end()
   
 
-  POP_SUB(X(hamiltonian_elec_apply))
-end subroutine X(hamiltonian_elec_apply)
+  POP_SUB(X(hamiltonian_elec_apply_single))
+end subroutine X(hamiltonian_elec_apply_single)
 
 
 subroutine X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, hpsib)
@@ -703,8 +703,8 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
   ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply)(hm, namespace, mesh, psi, auxpsi, 1, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi, auxpsi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
   do idim = 1, hm%d%dim
@@ -719,8 +719,8 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
 
   ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
   auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
-  call X(hamiltonian_elec_apply)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
   hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
 
   SAFE_DEALLOCATE_A(auxpsi)

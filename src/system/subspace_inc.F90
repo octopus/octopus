@@ -371,7 +371,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_elec_apply)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if

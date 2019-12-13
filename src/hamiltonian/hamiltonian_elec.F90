@@ -72,8 +72,8 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_init,                &
     hamiltonian_elec_end,                 &
     hamiltonian_elec_span,                &
-    dhamiltonian_elec_apply,              &
-    zhamiltonian_elec_apply,              &
+    dhamiltonian_elec_apply_single,       &
+    zhamiltonian_elec_apply_single,       &
     dhamiltonian_elec_apply_all,          &
     zhamiltonian_elec_apply_all,          &
     dhamiltonian_elec_apply_batch,        &

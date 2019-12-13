@@ -324,7 +324,7 @@ contains
       if(apply_magnus) then
         call zmagnus(hm, namespace, mesh, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
-        call zhamiltonian_elec_apply(hm, namespace, mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
+        call zhamiltonian_elec_apply_single(hm, namespace, mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
       POP_SUB(exponential_apply.operate)
