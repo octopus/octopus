@@ -80,8 +80,6 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dhamiltonian_elec_magnus_apply_batch, &
-    zhamiltonian_elec_magnus_apply_batch, &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
@@ -184,6 +182,8 @@ module hamiltonian_elec_oct_m
   contains
     procedure :: dapply => dhamiltonian_elec_apply
     procedure :: zapply => zhamiltonian_elec_apply
+    procedure :: dmagnus_apply => dhamiltonian_elec_magnus_apply
+    procedure :: zmagnus_apply => zhamiltonian_elec_magnus_apply
     procedure :: is_hermitian => hamiltonian_elec_hermitian
   end type hamiltonian_elec_t
 

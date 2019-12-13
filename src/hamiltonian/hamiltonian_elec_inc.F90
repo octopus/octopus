@@ -46,6 +46,35 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psib, hpsib, terms, s
 end subroutine X(hamiltonian_elec_apply)
 
 ! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_magnus_apply) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),              intent(inout) :: psib
+  class(batch_t),              intent(inout) :: hpsib
+  FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+  logical,           optional, intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument psib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument hpsib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_magnus_apply))
+end subroutine X(hamiltonian_elec_magnus_apply)
+
+! ---------------------------------------------------------
 subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
   type(hamiltonian_elec_t),    intent(in)    :: hm
   type(namespace_t),           intent(in)    :: namespace
