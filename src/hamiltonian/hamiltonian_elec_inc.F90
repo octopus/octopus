@@ -757,7 +757,7 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
   POP_SUB(X(magnus))
 end subroutine X(magnus)
 
-subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
@@ -769,7 +769,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
   integer :: ispin
   type(wfs_elec_t) :: auxpsib, aux2psib
 
-  PUSH_SUB(X(hamiltonian_elec_apply_magnus))
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply_batch))
 
   ! We will assume, for the moment, no spinors.
   if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
@@ -808,8 +808,8 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
   call auxpsib%end()
   call aux2psib%end()
 
-  POP_SUB(X(hamiltonian_elec_apply_magnus))
-end subroutine X(hamiltonian_elec_apply_magnus)
+  POP_SUB(X(hamiltonian_elec_magnus_apply_batch))
+end subroutine X(hamiltonian_elec_magnus_apply_batch)
 
 
 ! ---------------------------------------------------------

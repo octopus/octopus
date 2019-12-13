@@ -981,7 +981,7 @@ contains
     PUSH_SUB(operate_batch)
     
     if (present(vmagnus)) then
-      call zhamiltonian_elec_apply_magnus(hm, namespace, mesh, psib, hpsib, vmagnus)
+      call zhamiltonian_elec_magnus_apply_batch(hm, namespace, mesh, psib, hpsib, vmagnus)
     else
       call zhamiltonian_elec_apply_batch(hm, namespace, mesh, psib, hpsib)
     end if

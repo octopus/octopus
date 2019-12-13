@@ -80,8 +80,8 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dhamiltonian_elec_apply_magnus,       &
-    zhamiltonian_elec_apply_magnus,       &
+    dhamiltonian_elec_magnus_apply_batch, &
+    zhamiltonian_elec_magnus_apply_batch, &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
