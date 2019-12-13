@@ -2,11 +2,15 @@ CalculationMode = gs
 ExperimentalFeatures = yes
 FromScratch = yes
 
+ParKPoints = 2
+ParDomains = 2
+
 PeriodicDimensions = 3
 
 a =  2.856*angstrom
 
 PseudopotentialSet = pseudodojo_lda
+SpeciesProjectorSphereThreshold = 0.1
 
 Spacing = 0.6
 
