@@ -161,7 +161,7 @@ program photoelectron_spectrum
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
-    call parse_variable(default_namespace, 'PES_Flux_Shape', option, pflux%shape)
+    call parse_variable(default_namespace, 'PES_Flux_Shape', option, pflux%surf_shape)
     call pes_flux_reciprocal_mesh_gen(pflux, default_namespace, sb, st, 0, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)

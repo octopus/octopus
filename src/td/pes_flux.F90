@@ -79,7 +79,7 @@ module pes_flux_oct_m
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
 
-    integer, public  :: shape                          !< shape of the surface (= cube/sphere/planes)
+    integer, public  :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
@@ -201,14 +201,14 @@ contains
     if(mdim <= 2) default_shape = M_CUBIC
     if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
     
-    call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%shape)
-    if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
+    call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
+    if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Shape')
-    if(this%shape == M_SPHERICAL .and. mdim /= 3) then
+    if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
       call messages_fatal(1, namespace=namespace)
     end if
-    call messages_print_var_option(stdout, 'PES_Flux_Shape', this%shape)
+    call messages_print_var_option(stdout, 'PES_Flux_Shape', this%surf_shape)
 
     !%Variable PES_Flux_Offset
     !%Type block
@@ -237,14 +237,14 @@ contains
     !% Maximum order of the spherical harmonic to be integrated on an equidistant spherical 
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_Lmax', 1, this%lmax)
       if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
     this%avoid_ab = .false.
-    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
       if(hm%bc%abtype /= NOT_ABSORBING) then
         !%Variable PES_Flux_AvoidAB
         !%Type logical
@@ -344,7 +344,7 @@ contains
     !%Description
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
     !%End
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
       if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
@@ -357,7 +357,7 @@ contains
     !%Description
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
     !%End
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
@@ -366,7 +366,7 @@ contains
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
-    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
       call pes_flux_getcube(this, mesh, hm, border, offset)
     else
       call mesh_interpolation_init(this%interp, mesh)
@@ -388,7 +388,7 @@ contains
 #endif
     end if
 
-    if(this%shape == M_PLANES) then
+    if(this%surf_shape == M_PLANES) then
       this%nsrfcpnts_start = 1
       this%nsrfcpnts_end   = this%nsrfcpnts
     end if
@@ -401,7 +401,7 @@ contains
     end if
 
     ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       SAFE_ALLOCATE(this%ylm_r(0:this%lmax, -this%lmax:this%lmax, this%nsrfcpnts_start:this%nsrfcpnts_end))
       this%ylm_r = M_z0
 
@@ -428,7 +428,7 @@ contains
     this%save_iter = save_iter
     this%itstep    = 0
 
-    if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
       this%tdsteps = save_iter
     else
       this%tdsteps = 1
@@ -461,7 +461,7 @@ contains
     SAFE_ALLOCATE(this%veca(1:mdim, 1:this%tdsteps))
     this%veca = M_ZERO
 
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       SAFE_ALLOCATE(this%spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
       this%spctramp_sph = M_z0
 
@@ -515,7 +515,7 @@ contains
 
     PUSH_SUB(pes_flux_end)
 
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       SAFE_DEALLOCATE_P(this%kcoords_sph)
       SAFE_DEALLOCATE_P(this%ylm_k)
       SAFE_DEALLOCATE_P(this%j_l)
@@ -579,7 +579,7 @@ contains
     this%pdim = pdim
 
     
-    if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
+    if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
       ! -----------------------------------------------------------------
       ! Setting up k-mesh
       ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
@@ -828,7 +828,7 @@ contains
     this%parallel_in_momentum = .false.
 
     ! Create the grid
-    select case (this%shape)
+    select case (this%surf_shape)
 
     case (M_SPHERICAL)
       if(optional_default(post, .false.)) then 
@@ -1088,7 +1088,7 @@ contains
       SAFE_ALLOCATE(psi(1:mesh%np_part))
       SAFE_ALLOCATE(gpsi(1:mesh%np_part, 1:mdim))
 
-      if(this%shape == M_SPHERICAL) then
+      if(this%surf_shape == M_SPHERICAL) then
         SAFE_ALLOCATE(interp_values(1:this%nsrfcpnts))
       end if
 
@@ -1107,7 +1107,7 @@ contains
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
 
-            if(this%shape == M_SPHERICAL) then
+            if(this%surf_shape == M_SPHERICAL) then
               call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, psi(1:mesh%np_part), &
                 this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
               this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
@@ -1153,7 +1153,7 @@ contains
       SAFE_DEALLOCATE_A(gpsi)
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
-        if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
+        if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)

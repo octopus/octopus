@@ -35,7 +35,7 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero,
   PUSH_SUB(pes_flux_pmesh)
 
 
-  select case (this%shape)
+  select case (this%surf_shape)
   
   case (M_SPHERICAL)
     call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
@@ -67,7 +67,7 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
 
   PUSH_SUB(pes_flux_map_from_states)
 
-  select case (this%shape)
+  select case (this%surf_shape)
   
   case (M_SPHERICAL)
     call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
@@ -736,7 +736,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
 
   PUSH_SUB(pes_flux_out_energy)
 
-  select case (this%shape)
+  select case (this%surf_shape)
   
   case (M_SPHERICAL)
     call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces", namespace=namespace)
@@ -841,7 +841,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   SAFE_ALLOCATE(spctrsum(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk))
   spctrsum = M_ZERO
 
-  select case (this%shape)
+  select case (this%surf_shape)
   case (M_SPHERICAL)
     SAFE_ALLOCATE(spctrout_sph(1:this%nk, 1:this%nstepsomegak))
     spctrout_sph = M_ZERO
@@ -862,7 +862,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
       do isdim = 1, sdim
 
         ! orbital spectra
-        select case (this%shape)
+        select case (this%surf_shape)
         case (M_SPHERICAL)
 
           do ikk = 1, this%nk 
@@ -952,7 +952,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
     ! total spectrum = sum over all states
-    if(this%shape == M_SPHERICAL) then
+    if(this%surf_shape == M_SPHERICAL) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
     else
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
@@ -967,13 +967,13 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   ! OUTPUT 
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
-    if (this%shape /= M_PLANES) then
+    if (this%surf_shape /= M_PLANES) then
       iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
       iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
       write(iunitone, '(a19)') '# E, total spectrum'
     end if
     
-    select case (this%shape)
+    select case (this%surf_shape)
     case (M_SPHERICAL)
 
       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
@@ -1154,7 +1154,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
       
     end select
     
-    if (this%shape /= M_PLANES) then
+    if (this%surf_shape /= M_PLANES) then
       call io_close(iunittwo)
       call io_close(iunitone)
     end if
@@ -1211,7 +1211,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         write(filename,'(a,i10.10)') "pesflux1.", itot
 
         if (st%st_start <= ist .and. ist <= st%st_end .and. st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-          if(this%shape == M_SPHERICAL) then
+          if(this%surf_shape == M_SPHERICAL) then
             SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
             psi2(:, :) = this%spctramp_sph(ist, idim, ik, :, :)
             call zrestart_write_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err, root = root)
@@ -1234,7 +1234,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
     end do
   end do
 
-  if(this%shape == M_PLANES) then
+  if(this%surf_shape == M_PLANES) then
     root(P_STRATEGY_MAX) = 0
     root(P_STRATEGY_KPOINTS) = -1
     do ik = 1, st%d%nik
@@ -1256,10 +1256,10 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
 
 
 
-  if(this%shape == M_SPHERICAL) then
+  if(this%surf_shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else 
-    if (this%shape /= M_PLANES) &
+    if (this%surf_shape /= M_PLANES) &
       call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
@@ -1315,7 +1315,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
         write(filename,'(a,i10.10)') "pesflux1.", itot
 
         if (st%st_start <= ist .and. ist <= st%st_end .and. st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-          if(this%shape == M_SPHERICAL) then
+          if(this%surf_shape == M_SPHERICAL) then
             SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
             call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
             this%spctramp_sph(ist, idim, ik, :, :) = psi2(:, :)
@@ -1339,7 +1339,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   end do
 
 
-  if(this%shape == M_PLANES) then
+  if(this%surf_shape == M_PLANES) then
     do ik = 1, st%d%nik
       write(filename,'(a,i5.5)') "pesflux4-kpt", ik      
     
@@ -1357,10 +1357,10 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
 
 
 
-  if(this%shape == M_SPHERICAL) then
+  if(this%surf_shape == M_SPHERICAL) then
     call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else
-    if (this%shape /= M_PLANES) &
+    if (this%surf_shape /= M_PLANES) &
       call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
