@@ -80,6 +80,8 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
     call accel_kernel_run(kernel_subarray_gather, &
       (/subarrayb%pack%size_real(1), bsize, this%nblocks/), (/subarrayb%pack%size_real(1), bsize, 1/))
+
+    call accel_finish()
     
     call accel_release_buffer(blength_buff)
     call accel_release_buffer(offsets_buff)

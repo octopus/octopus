@@ -44,16 +44,18 @@ module cuda_oct_m
     cuda_launch_kernel,                 &
     cuda_device_name,                   &
     cuda_device_capability,             &
-    cuda_driver_version
+    cuda_driver_version,                &
+    cuda_set_stream
 
   interface
 
-    subroutine cuda_init(context, device, device_number, rank)
+    subroutine cuda_init(context, device, stream, device_number, rank)
       use iso_c_binding
       implicit none
       
       type(c_ptr), intent(inout) :: context
       type(c_ptr), intent(inout) :: device
+      type(c_ptr), intent(inout) :: stream
       integer,     intent(out)   :: device_number
       integer,     intent(out)   :: rank
     end subroutine cuda_init
@@ -212,7 +214,13 @@ module cuda_oct_m
     end subroutine cuda_context_synchronize
 
     ! -------------------------------------------------
-        
+
+    subroutine cuda_synchronize_all_streams()
+      implicit none
+    end subroutine cuda_synchronize_all_streams
+
+    ! -------------------------------------------------
+
     subroutine cuda_launch_kernel(kernel, griddim, blockdim, shared_mem, arg_array)
       use iso_c_binding
       implicit none
@@ -264,6 +272,21 @@ module cuda_oct_m
       integer,      intent(out)   :: warpsize
     end subroutine cuda_device_get_warpsize
 
+    subroutine cuda_deref(cuda_ptr, cuda_deref_ptr)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr), intent(in)  :: cuda_ptr
+      type(c_ptr), intent(out) :: cuda_deref_ptr
+    end subroutine cuda_deref
+
+    subroutine cuda_set_stream(stream, stream_number)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: stream
+      integer,     intent(in)    :: stream_number
+    end subroutine cuda_set_stream
   end interface
   
 end module cuda_oct_m

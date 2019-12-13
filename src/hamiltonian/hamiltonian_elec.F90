@@ -567,7 +567,7 @@ contains
             if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
 #endif
             ! get corresponding inner point
-            ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+            ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
 
             ! compute phase correction from global coordinate (opposite sign!)
             x_global = mesh_x_global(gr%mesh, ip_inner)
@@ -963,7 +963,7 @@ contains
               if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
               ! get corresponding inner point
-              ip_inner = mesh_periodic_point(mesh, ip_global)
+              ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 
               ! compute phase correction from global coordinate (opposite sign!)
               x_global = mesh_x_global(mesh, ip_inner)

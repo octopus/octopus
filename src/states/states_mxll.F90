@@ -40,13 +40,13 @@ module states_mxll_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_elec_dim_oct_m
+  use states_elec_group_oct_m
+  use states_elec_oct_m
+  use tdfunction_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use states_elec_oct_m
-  use tdfunction_oct_m
-  use states_elec_group_oct_m
   
   implicit none
 
@@ -64,8 +64,6 @@ module states_mxll_oct_m
     build_rs_current_element,         &
     build_rs_current_vector,          &
     build_rs_current_state,           &
-    get_electric_field_element,       &
-    get_magnetic_field_element,       &
     get_electric_field_vector,        &
     get_magnetic_field_vector,        &
     get_electric_field_state,         &
@@ -379,7 +377,7 @@ contains
 
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
-
+  
 
   !----------------------------------------------------------
   subroutine build_rs_element(e_element, b_element, rs_sign, rs_element, ep_element, mu_element)
@@ -390,6 +388,7 @@ contains
     FLOAT,   optional, intent(in)    :: mu_element
 
     ! no PUSH_SUB, called too often
+
 
     if (present(ep_element) .and. present(mu_element)) then
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
@@ -420,26 +419,28 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine build_rs_state(e_field, b_field, rs_sign, rs_state, ep_field, mu_field, np)
+  subroutine build_rs_state(e_field, b_field, rs_sign, rs_state, mesh, ep_field, mu_field, np)
     FLOAT,             intent(in)    :: e_field(:,:), b_field(:,:)
     CMPLX,             intent(inout) :: rs_state(:,:)
     integer,           intent(in)    :: rs_sign
+    type(mesh_t),      intent(in)    :: mesh
     FLOAT,   optional, intent(in)    :: ep_field(:)
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     PUSH_SUB(build_rs_state)
 
-    if (present(ep_field) .and. present(mu_field) .and. present(np)) then
-      do ip=1, np
-        rs_state(ip,:) = sqrt(ep_field(ip)/M_TWO) * e_field(ip,:) & 
-                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip,:)
-      end do
-    else
-      rs_state(:,:) = sqrt(P_ep/M_TWO) * e_field(:,:) + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(:,:)
-    end if 
+    do ip = 1, np_
+      if (present(ep_field) .and. present(mu_field)) then
+        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
+                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
+      else
+        rs_state(ip, :) = sqrt(P_ep/M_TWO) * e_field(ip, :) &
+                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
+      end if 
+    end do
 
     POP_SUB(build_rs_state)
 
@@ -480,60 +481,27 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine build_rs_current_state(current_state, rs_current_state, ep_field, np)
+  subroutine build_rs_current_state(current_state, mesh, rs_current_state, ep_field, np)
     FLOAT,             intent(in)    :: current_state(:,:)
+    type(mesh_t),      intent(in)    :: mesh
     CMPLX,             intent(inout) :: rs_current_state(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     ! no PUSH_SUB, called too often
-
-    if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-        rs_current_state(ip,:) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip,:)
-      end do
-    else
-      rs_current_state = M_ONE/sqrt(M_TWO*P_ep) * current_state
-    end if
+    np_ = optional_default(np, mesh%np)
+ 
+    do ip = 1, np_
+      if (present(ep_field)) then
+        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
+      else
+        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
+      end if
+    end do
 
   end subroutine build_rs_current_state
-
-
-  !----------------------------------------------------------
-  subroutine get_electric_field_element(rs_state_element, e_element, ep_element)
-    CMPLX,           intent(in)    :: rs_state_element
-    FLOAT,           intent(inout) :: e_element
-    FLOAT, optional, intent(in)    :: ep_element
-
-    ! no PUSH_SUB, called too often
-
-    if (present(ep_element)) then
-      e_element = Sqrt(M_TWO/ep_element) * real(rs_state_element)
-    else
-      e_element = Sqrt(M_TWO/P_ep) * real(rs_state_element)
-    end if
-
-  end subroutine get_electric_field_element
-
-
-  !----------------------------------------------------------
-  subroutine get_magnetic_field_element(rs_state_element, rs_sign, b_element, mu_element)
-    CMPLX,             intent(in)    :: rs_state_element
-    integer,           intent(in)    :: rs_sign
-    FLOAT,             intent(inout) :: b_element
-    FLOAT,   optional, intent(in)    :: mu_element
-
-    ! no PUSH_SUB, called too often
-
-    if (present(mu_element)) then
-      b_element = Sqrt(M_TWO*mu_element) * rs_sign * aimag(rs_state_element)
-    else
-      b_element = Sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state_element)
-    end if
-
-  end subroutine get_magnetic_field_element
 
 
   !----------------------------------------------------------
@@ -572,23 +540,34 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_electric_field_state(rs_state, electric_field, ep_field, np)
-    CMPLX,             intent(in)    :: rs_state(:,:)
+  subroutine get_electric_field_state(rsb, mesh, electric_field, ep_field, np)
+    type(batch_t),     intent(in)    :: rsb
+    type(mesh_t),      intent(in)    :: mesh
     FLOAT,             intent(inout) :: electric_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    CMPLX, allocatable :: rs_aux(:,:)
+    integer :: ip, ii, np_
 
     PUSH_SUB(get_electric_field_state)
 
-    if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-        electric_field(ip,:) = sqrt(M_TWO/ep_field(ip)) * real(rs_state(ip,:))
-      end do
-    else
-      electric_field(:,:) = sqrt(M_TWO/P_ep) * real(rs_state(:,:))
-    end if
+    np_ = optional_default(np, mesh%np)
+    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
+    
+    do ii = 1, 3
+       call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
+    end do
+     
+    do ip = 1, np_
+      if (present(ep_field)) then
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
+      else 
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
+      end if
+    end do
+
+    SAFE_DEALLOCATE_A(rs_aux)
 
     POP_SUB(get_electric_field_state)
 
@@ -596,26 +575,38 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_state(rs_state, rs_sign, magnetic_field, mu_field, np)
-    CMPLX,             intent(in)    :: rs_state(:,:)
+  subroutine get_magnetic_field_state(rsb, mesh, rs_sign, magnetic_field, mu_field, np)
+    type(batch_t),     intent(in)    :: rsb
+    type(mesh_t),      intent(in)    :: mesh
     integer,           intent(in)    :: rs_sign
     FLOAT,             intent(inout) :: magnetic_field(:,:)
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    CMPLX, allocatable :: rs_aux(:,:)
+    integer :: ip, ii, np_
 
     PUSH_SUB(get_magnetic_field_state)
 
-    if (present(mu_field) .and. present(np)) then
-      do ip=1, np
-        magnetic_field(ip,:) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_state(ip,:))
-      end do
-    else
-      magnetic_field(:,:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(:,:))
-    end if
+    np_ = optional_default(np, mesh%np)
+    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
 
-    POP_SUB(get_magnetic_field_state)
+    do ii = 1, 3
+      call batch_get_state(rsb, np, ii, rs_aux(:, ii))
+    end do
+
+    
+    do ip = 1, np_
+      if (present(mu_field)) then
+        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
+      else
+        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
+      end if
+   end do
+
+   SAFE_DEALLOCATE_A(rs_aux)
+
+   POP_SUB(get_magnetic_field_state)
 
   end subroutine get_magnetic_field_state
 
@@ -629,9 +620,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element)
+      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element, REAL_PRECISION)
     else
-      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element)
+      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element, REAL_PRECISION)
     end if
 
   end subroutine get_current_element
@@ -646,32 +637,35 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:))
+      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:), REAL_PRECISION)
     else
-      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:))
+      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:), REAL_PRECISION)
     end if
 
   end subroutine get_current_vector
 
 
   !----------------------------------------------------------
-  subroutine get_current_state(rs_current_field, current_field, ep_field, np)
+  subroutine get_current_state(rs_current_field, current_field, mesh, ep_field, np)
     CMPLX,             intent(in)    :: rs_current_field(:,:)
     FLOAT,             intent(inout) :: current_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
+    type(mesh_t),      intent(in)    :: mesh
     integer, optional, intent(in)    :: np
 
-    integer :: ip
+    integer :: ip, np_
 
     PUSH_SUB(get_current_state)
+    
+    np_ = optional_default(np, mesh%np)
 
-    if (present(ep_field) .and. present(np)) then
-      do ip=1, np
-        current_field(ip,:) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip,:))
-      end do
-    else
-      current_field(:,:) = sqrt(M_TWO*P_ep) * real(rs_current_field(:,:))
-    end if
+    do ip = 1, np_
+      if (present(ep_field)) then
+        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip, :), REAL_PRECISION)
+      else
+        current_field(ip, :) = sqrt(M_TWO*P_ep) * real(rs_current_field(ip, :), REAL_PRECISION)
+      end if
+    end do
 
     POP_SUB(get_current_state)
 
@@ -696,7 +690,7 @@ contains
 
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
-    do ip=1, st%selected_points_number
+    do ip = 1, st%selected_points_number
       call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
 !      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
       if (mesh%parallel_in_domains) then
@@ -706,9 +700,9 @@ contains
         call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
-        ztmp(:) = rs_state(pos_index_global,:)
+        ztmp(:) = rs_state(pos_index_global, :)
       end if
-      rs_state_point(:,ip) = ztmp(:)
+      rs_state_point(:, ip) = ztmp(:)
     end do
 
     SAFE_DEALLOCATE_A(ztmp_global)
@@ -720,13 +714,13 @@ contains
   !----------------------------------------------------------
   subroutine get_divergence_field(gr, field, field_div, charge_density)
     type(grid_t),    intent(in)    :: gr
-    CMPLX,           intent(inout) :: field(:,:)
-    CMPLX,           intent(inout) :: field_div(:)
+    FLOAT,           intent(inout) :: field(:,:)
+    FLOAT,           intent(inout) :: field_div(:)
     logical,         intent(in)    :: charge_density
 
     PUSH_SUB(get_divergence_field)
 
-    call zderivatives_div(gr%der, field, field_div)
+    call dderivatives_div(gr%der, field, field_div)
 
     if (optional_default(charge_density,.false.)) then
       field_div = P_ep * field_div
@@ -737,32 +731,36 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field)
+  subroutine get_poynting_vector(gr, st, rsb, rs_sign, poynting_vector, ep_field, mu_field)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    CMPLX,                    intent(in)    :: rs_state(:,:)
+    type(batch_t),            intent(in)    :: rsb
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)
     FLOAT,          optional, intent(in)    :: mu_field(:)
 
-    integer            :: ip
-    FLOAT              :: tmp_1(3), tmp_2(3)
-    FLOAT, allocatable :: e_field(:,:), b_field(:,:)
+    integer            :: ip, ii
+    CMPLX, allocatable :: rs_aux(:,:)
 
     PUSH_SUB(get_poynting_vector)
 
+    SAFE_ALLOCATE(rs_aux(1:gr%mesh%np, 1:3))
+    do ii = 1, 3
+       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
+    end do
+
     if (present(ep_field) .and. present(mu_field)) then
-      do ip=1, gr%mesh%np
-        poynting_vector(ip,:) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
+      do ip = 1, gr%mesh%np
+        poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
                               * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_state(ip,:)),rs_sign*aimag(rs_state(ip,:)))
+                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     else
-      do ip=1, gr%mesh%np
+      do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
                               * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_state(ip,:)),rs_sign*aimag(rs_state(ip,:)))
+                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     end if
 
@@ -778,14 +776,13 @@ contains
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
 
     integer            :: ip
-    FLOAT              :: tmp_1(3), tmp_2(3)
-    FLOAT, allocatable :: e_field(:,:), b_field(:,:)
 
     PUSH_SUB(get_poynting_vector_plane_waves)
 
-    do ip=1, gr%mesh%np
-      poynting_vector(ip,:) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) * &
-               dcross_product(real(st%rs_state_plane_waves(ip,:)),rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
+    do ip = 1, gr%mesh%np
+      poynting_vector(ip, :) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) &
+               & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
+               & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
 
     POP_SUB(get_poynting_vector_plane_waves)
