@@ -56,16 +56,10 @@ module nl_operator_oct_m
     nl_operator_build,          &
     dnl_operator_operate,       &
     znl_operator_operate,       &
-    snl_operator_operate,           &
-    cnl_operator_operate,           &
     dnl_operator_operate_batch, &
     znl_operator_operate_batch, &
-    snl_operator_operate_batch,     &
-    cnl_operator_operate_batch,     &
     dnl_operator_operate_diag,  &
     znl_operator_operate_diag,  &
-    snl_operator_operate_diag,      &
-    cnl_operator_operate_diag,      &    
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
@@ -1058,14 +1052,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "nl_operator_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "nl_operator_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "nl_operator_inc.F90"  
 
 end module nl_operator_oct_m
 
