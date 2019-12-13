@@ -551,13 +551,16 @@ contains
       end if
 
       if(gr%der%boundaries%spiralBC) then
-        ! SAFE___ALLOCATE(hm%hm_base%phase_spiral(gr%mesh%np+1:gr%mesh%np_part, 1:2))
-        ! loop over boundary points
         sp = gr%mesh%np
         if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
 
+        ! We decided to allocate the array from 1:np_part-sp as this is less error prone when passing 
+        ! the array to other routines, or in particular creating a C-style pointer from phase_spiral(1,1).
+        ! We will also update phase_corr and possible other similar arrays.
+
         SAFE_ALLOCATE(hm%hm_base%phase_spiral(1:gr%mesh%np_part-sp, 1:2))
 
+        ! loop over boundary points
         do ip = sp + 1, gr%mesh%np_part
           !translate to a global point
           ip_global = ip
