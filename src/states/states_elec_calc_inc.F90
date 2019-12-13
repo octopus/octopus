@@ -1309,8 +1309,11 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
     call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call accel_write_buffer(uu_buffer, product(ubound(uu)), uu)
 
-    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1318,6 +1321,12 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
+
+     if(st%parallel_in_states) then
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+      end if
 
       call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
@@ -1337,6 +1346,9 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
     call accel_release_buffer(uu_buffer)
     call accel_release_buffer(psicopy_buffer)
     call accel_release_buffer(psinew_buffer)
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
 
   end if
 
