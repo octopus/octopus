@@ -628,7 +628,9 @@ contains
     logical :: phase_correction
 
     PUSH_SUB(exponential_apply_batch)
-
+    
+    deltat2_ = M_z0
+    
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
     if (present(inh_psib)) then
