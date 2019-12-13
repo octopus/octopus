@@ -33,3 +33,5 @@ ParStates = auto
 ParDomain = no
 StatesOrthogonalization = cholesky_serial
 SubspaceDiagonalization = standard
+
+StatesPack = yes
