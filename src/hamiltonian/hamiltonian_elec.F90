@@ -568,7 +568,7 @@ contains
           if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
 #endif
           ! get corresponding inner point
-          ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+          ip_inner = mesh_periodic_point(gr%mesh, ip_global,ip)
           x_global = mesh_x_global(gr%mesh, ip_inner)
           hm%hm_base%phase_spiral(ip-sp, 1) = &
             exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
