@@ -411,7 +411,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib, ik)
         !$omp end do nowait
       else
         !$omp do
-        do ip = der%mesh%np + 1, der%mesh%np_part
+        do ip = sp + 1, der%mesh%np_part
           psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip-sp, 2)
         end do
         !$omp end do nowait
