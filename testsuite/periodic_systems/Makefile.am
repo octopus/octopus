@@ -99,6 +99,8 @@ dist_share_DATA =                                \
 	19-unfolding.03-unocc.inp                \
 	19-unfolding.04-run.inp                  \
 	19-unfolding.test                        \
+        20-masked_periodic_boundaries.01-graphene.inp  \
+        20-masked_periodic_boundaries.test             \
 	21-magnon.01-gs.inp                      \
         21-magnon.02-td.inp                      \
         21-magnon.test

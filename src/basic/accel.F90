@@ -206,18 +206,12 @@ module accel_oct_m
     module procedure iaccel_write_buffer_1, daccel_write_buffer_1, zaccel_write_buffer_1
     module procedure iaccel_write_buffer_2, daccel_write_buffer_2, zaccel_write_buffer_2
     module procedure iaccel_write_buffer_3, daccel_write_buffer_3, zaccel_write_buffer_3
-    module procedure saccel_write_buffer_1, caccel_write_buffer_1
-    module procedure saccel_write_buffer_2, caccel_write_buffer_2
-    module procedure saccel_write_buffer_3, caccel_write_buffer_3
   end interface accel_write_buffer
 
   interface accel_read_buffer
     module procedure iaccel_read_buffer_1, daccel_read_buffer_1, zaccel_read_buffer_1
     module procedure iaccel_read_buffer_2, daccel_read_buffer_2, zaccel_read_buffer_2
     module procedure iaccel_read_buffer_3, daccel_read_buffer_3, zaccel_read_buffer_3
-    module procedure saccel_read_buffer_1, caccel_read_buffer_1
-    module procedure saccel_read_buffer_2, caccel_read_buffer_2
-    module procedure saccel_read_buffer_3, caccel_read_buffer_3
   end interface accel_read_buffer
 
   interface accel_set_kernel_arg
@@ -234,8 +228,6 @@ module accel_oct_m
     module procedure iaccel_get_device_pointer_2
     module procedure daccel_get_device_pointer_1, zaccel_get_device_pointer_1
     module procedure daccel_get_device_pointer_2, zaccel_get_device_pointer_2
-    module procedure saccel_get_device_pointer_1, caccel_get_device_pointer_1
-    module procedure saccel_get_device_pointer_2, caccel_get_device_pointer_2
   end interface accel_get_device_pointer
 
   type(profile_t), save :: prof_read, prof_write
@@ -1905,14 +1897,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "accel_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "accel_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "accel_inc.F90"
 
 #include "undef.F90"

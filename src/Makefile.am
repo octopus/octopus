@@ -25,9 +25,7 @@ noinst_HEADERS =                          \
 	include/integer.F90               \
 	include/real.F90                  \
 	include/complex.F90               \
-	include/real_single.F90           \
 	include/complex.F90               \
-	include/complex_single.F90        \
 	include/undef.F90                 \
 	include/vectors.h                 \
 	include/fortran_types.h

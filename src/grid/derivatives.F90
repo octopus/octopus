@@ -61,8 +61,6 @@ module derivatives_oct_m
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
-    sderivatives_test,                  &
-    cderivatives_test,                  &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -759,14 +757,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "derivatives_inc.F90"
 
 end module derivatives_oct_m

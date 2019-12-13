@@ -460,13 +460,13 @@ contains
     write(iunit,'(3a)') 'Forces on the ions [', trim(units_abbrev(units_out%force)), "]"
     write(iunit,'(a,10x,99(14x,a))') ' Ion', (index2axis(idir), idir = 1, sb%dim)
     do iatom = 1, geo%natoms
-      write(iunit,'(i4,a10,10f15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+      write(iunit,'(i4,a10,10e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
               (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim)
     end do
     write(iunit,'(1x,100a1)') ("-", ii = 1, 13 + sb%dim * 15)
-    write(iunit,'(a14, 10f15.6)') " Max abs force", &
+    write(iunit,'(a14, 10e15.6)') " Max abs force", &
             (units_from_atomic(units_out%force, maxval(abs(geo%atom(1:geo%natoms)%f(idir)))), idir=1, sb%dim)
-    write(iunit,'(a14, 10f15.6)') " Total force", &
+    write(iunit,'(a14, 10e15.6)') " Total force", &
             (units_from_atomic(units_out%force, sum(geo%atom(1:geo%natoms)%f(idir))), idir=1, sb%dim)
 
     if(geo%space%dim == 2 .or. geo%space%dim == 3) then
@@ -478,7 +478,7 @@ contains
         ff(1:geo%space%dim) = geo%atom(iatom)%f(1:geo%space%dim)
         torque(1:3) = torque(1:3) + dcross_product(rr, ff)
       end do
-      write(iunit,'(a14, 10f15.6)') ' Total torque', &
+      write(iunit,'(a14, 10e15.6)') ' Total torque', &
               (units_from_atomic(units_out%force*units_out%length, torque(idir)), idir = 1, 3)
     end if
 

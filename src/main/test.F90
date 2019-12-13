@@ -128,11 +128,6 @@ contains
     !%Option real 1
     !% Test for double-precision real functions.
     !%Option complex 2
-    !% Test for double-precision complex functions.
-    !%Option real_single 4
-    !% Test for single-precision real functions. (Only implemented for derivatives.)
-    !%Option complex_single 5
-    !% Test for single-precision complex functions. (Only implemented for derivatives.)
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
@@ -754,14 +749,6 @@ contains
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
-    end if
-
-    if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
-    end if
-
-    if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
