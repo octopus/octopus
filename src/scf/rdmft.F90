@@ -1027,7 +1027,6 @@ contains
     FLOAT,                    intent(out)   :: energy
 
     integer            :: ik, ist
-    integer            :: maxiter ! maximum number of orbital optimization iterations
     
     type(profile_t), save :: prof_orb_cg
     
@@ -1058,8 +1057,6 @@ contains
           end if
         end do
       end if
-
-      rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     end do
     
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
