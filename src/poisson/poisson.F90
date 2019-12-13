@@ -124,7 +124,6 @@ module poisson_oct_m
     type(poisson_libisf_t) :: libisf_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
-    FLOAT :: charge
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
     logical, public :: is_dressed
