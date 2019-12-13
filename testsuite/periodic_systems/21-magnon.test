@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Processors : 4
 
-Input      : 20-magnon.01-gs.inp
+Input      : 21-magnon.01-gs.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
@@ -28,7 +28,7 @@ match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -3.292154
 match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -1.934993
 match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -1.926171
 
-Input      : 20-magnon.02-td.inp
+Input      : 21-magnon.02-td.inp
 Precision : 0.00025
 match ; Total magnet. [step  49] ; LINEFIELD(td.general/total_magnetization, -52, 3) ; -1.364806065211e-03
 match ; Total magnet. [step  49] ; LINEFIELD(td.general/total_magnetization, -52, 4) ;  1.690193180696e-02
@@ -36,7 +36,7 @@ match ; Total magnet. [step  50] ; LINEFIELD(td.general/total_magnetization, -51
 match ; Total magnet. [step  50] ; LINEFIELD(td.general/total_magnetization, -51, 4) ;  1.776033145758e-02
 
 Util : oct-spin_susceptibility
-Input : 20-magnon.02-td.inp
+Input : 21-magnon.02-td.inp
 
 Precision : 0.015
 match ; Spin susceptibilty Re [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 2) ; -0.136709E+02
