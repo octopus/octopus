@@ -207,10 +207,18 @@ contains
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
     R_TYPE, allocatable :: psii0(:, :)
+    integer :: method, ierr
     
     PUSH_SUB(X(states_elec_orthogonalization_full).mgs)
 
-    if(st%parallel_in_states) then
+    ! set method to MGS in case this method is called as bof from cholesky
+    method = st%d%orth_method
+    if(method == OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL) then
+      method = OPTION__STATESORTHOGONALIZATION__MGS
+    end if
+
+    if(st%parallel_in_states .and. &
+       method /= OPTION__STATESORTHOGONALIZATION__MGS) then
       message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
@@ -223,20 +231,33 @@ contains
 
     do ist = 1, nst
 
-      call states_elec_get_state(st, mesh, ist, ik, psii)
-
       !The different algorithms are given in Giraud et al., 
       !Computers and Mathematics with Applications 50, 1069 (2005).
-      select case(st%d%orth_method)
+      select case(method)
       case(OPTION__STATESORTHOGONALIZATION__MGS)
-        ! renormalize
-        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
-        do idim = 1, st%d%dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-        end do
-        call states_elec_set_state(st, mesh, ist, ik, psii)
+
+        if(ist >= st%st_start .and. ist <= st%st_end) then
+          call states_elec_get_state(st, mesh, ist, ik, psii)
+
+          ! renormalize
+          cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+          do idim = 1, st%d%dim
+            call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+          end do
+          call states_elec_set_state(st, mesh, ist, ik, psii)
+        end if
+
+        if(st%parallel_in_states) then
+#ifdef HAVE_MPI
+          call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, ierr)
+#endif
+        end if
+
+        aa = M_ZERO
+
         ! calculate the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
         end do
@@ -244,6 +265,7 @@ contains
  
         ! subtract the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           do idim = 1, st%d%dim
             call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
@@ -252,6 +274,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__CGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         ! calculate the projections first with the same vector
         do jst = 1, ist - 1
@@ -269,6 +293,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__DRCGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         !double step reorthogonalization
         do is = 1, 2
@@ -299,7 +325,8 @@ contains
       end select
 
       !In case of modified Gram-Schmidt, this was done before.
-      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+      if(method == OPTION__STATESORTHOGONALIZATION__CGS .or. &
+         method == OPTION__STATESORTHOGONALIZATION__DRCGS) then
         ! renormalize
         cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
@@ -1282,8 +1309,11 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
     call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call accel_write_buffer(uu_buffer, product(ubound(uu)), uu)
 
-    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1291,6 +1321,12 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
+
+     if(st%parallel_in_states) then
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+      end if
 
       call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
@@ -1310,6 +1346,9 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
     call accel_release_buffer(uu_buffer)
     call accel_release_buffer(psicopy_buffer)
     call accel_release_buffer(psinew_buffer)
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
 
   end if
 
@@ -1338,7 +1377,8 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(.not. st%are_packed() .or. .not. accel_is_enabled()) then
+  if(.not. st%are_packed() .or. .not. accel_is_enabled() .or. &
+     (st%parallel_in_states .and. .not. accel_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(80, hardware%l2%size/(8*st%nst))
@@ -1393,7 +1433,6 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
   else if(accel_is_enabled()) then
 
     ASSERT(ubound(overlap, dim = 1) == st%nst)
-    ASSERT(.not. st%parallel_in_states)
     
     call accel_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call accel_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
@@ -1402,7 +1441,10 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1412,13 +1454,24 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
+      if(st%parallel_in_states) then
+        call accel_read_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
+        call accel_write_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+      end if
+
       call X(accel_herk)(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
-        n = int(st%nst, 8), k = int(size, 8), &
+        n = int(st%nst, 8), k = int(size*st%d%dim, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
         beta = 1.0_8, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
+      call accel_finish()
     end do
+
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psi)
+    end if
 
     call accel_finish()
 
@@ -1457,18 +1510,21 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
-
   end if
 
-! Debug output
-!#ifndef R_TREAL
-!  do ist = 1, st%nst
-!    do jst = 1, st%nst
-!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ist, jst)), ' ',  aimag(overlap(ist, jst)), ' '
-!    end do
-!      write(12, *) ' ' 
-!  end do
-!#endif
+  ! Debug output
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    do ib = 1, st%nst
+      do jb = 1, st%nst
+#ifndef R_TREAL
+        write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ib, jb)), ' ',  aimag(overlap(ib, jb)), ' '
+#else
+        write(12, '(e12.6,a)', advance = 'no') overlap(ib, jb), ' '
+#endif
+      end do
+      write(12, *) ' ' 
+    end do
+  end if
 
   call profiling_out(prof)
 

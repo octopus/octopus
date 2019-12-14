@@ -300,6 +300,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
   ! recalculate the eigenvalues and residuals
   SAFE_ALLOCATE(eigen_full(1:st%nst))
   eigen_full(1:st%nst) = R_TOTYPE(M_ZERO)
+  st%eigenval(1:st%nst, ik) = R_TOTYPE(M_ZERO)
 
   do ib = st%group%block_start, st%group%block_end
     minst = states_elec_block_min(st, ib)
@@ -329,6 +330,10 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
   end do
 
   if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, eigen_full)
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, eigen_full)
+    call comm_allreduce(st%mpi_grp%comm, st%eigenval(1:st%nst, ik))
+  end if
 
   diff(:) = sqrt(abs(eigen_full(:)))
   SAFE_DEALLOCATE_A(eigen_full)

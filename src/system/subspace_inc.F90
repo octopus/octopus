@@ -434,13 +434,15 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
     else
 
-      ASSERT(.not. st%parallel_in_states)
-      
       ! we have to copy the blocks to a temporary array
       block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
 
-      call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-      call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+      call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+      if(st%parallel_in_states) then
+        SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+        SAFE_ALLOCATE(hpsi(1:st%nst, 1:st%d%dim, 1:block_size))
+      end if
 
       do sp = 1, mesh%np, block_size
         size = min(block_size, mesh%np - sp + 1)
@@ -451,8 +453,17 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do
 
+        if(st%parallel_in_states) then
+          call accel_read_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+          call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
+          call accel_write_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+          call accel_read_buffer(hpsi_buffer, st%nst*st%d%dim*block_size, hpsi)
+          call states_elec_parallel_gather(st, (/st%d%dim, size/), hpsi)
+          call accel_write_buffer(hpsi_buffer, st%nst*st%d%dim*block_size, hpsi)
+        end if
+
         call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
-          M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
+          M = int(st%nst, 8), N = int(st%nst, 8), K = int(size*st%d%dim, 8), &
           alpha = R_TOTYPE(mesh%volume_element), &
           A = psi_buffer, offA = 0_8, lda = int(st%nst, 8), &
           B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
@@ -462,6 +473,10 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
       end do
 
+      if(st%parallel_in_states) then
+        SAFE_DEALLOCATE_A(psi)
+        SAFE_DEALLOCATE_A(hpsi)
+      end if
 
       call accel_release_buffer(psi_buffer)
       call accel_release_buffer(hpsi_buffer)
