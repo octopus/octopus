@@ -182,9 +182,9 @@ module hamiltonian_elec_oct_m
     type(namespace_t), pointer :: namespace
 
   contains
-  
+    procedure :: dapply => dhamiltonian_elec_apply
+    procedure :: zapply => zhamiltonian_elec_apply
     procedure :: is_hermitian => hamiltonian_elec_hermitian
-
   end type hamiltonian_elec_t
 
   integer, public, parameter :: &

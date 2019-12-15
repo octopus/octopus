@@ -17,6 +17,35 @@
 !!
 
 ! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),      target, intent(inout) :: psib
+  class(batch_t),      target, intent(inout) :: hpsib
+  integer,           optional, intent(in)    :: terms
+  logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+  PUSH_SUB(X(hamiltonian_elec_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument psib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument hpsib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_apply))
+end subroutine X(hamiltonian_elec_apply)
+
+! ---------------------------------------------------------
 subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
   type(hamiltonian_elec_t),    intent(in)    :: hm
   type(namespace_t),           intent(in)    :: namespace
