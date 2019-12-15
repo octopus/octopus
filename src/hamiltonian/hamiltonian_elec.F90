@@ -71,7 +71,6 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_t,                   &
     hamiltonian_elec_init,                &
     hamiltonian_elec_end,                 &
-    hamiltonian_elec_span,                &
     dhamiltonian_elec_apply_single,       &
     zhamiltonian_elec_apply_single,       &
     dhamiltonian_elec_apply_all,          &
@@ -142,10 +141,6 @@ module hamiltonian_elec_oct_m
     !> absorbing boundaries
     logical, private :: adjoint
 
-    !> Spectral range
-    FLOAT :: spectral_middle_point
-    FLOAT :: spectral_half_span
-
     !> Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
@@ -180,6 +175,7 @@ module hamiltonian_elec_oct_m
     type(namespace_t), pointer :: namespace
 
   contains
+    procedure :: update_span => hamiltonian_elec_span
     procedure :: dapply => dhamiltonian_elec_apply
     procedure :: zapply => zhamiltonian_elec_apply
     procedure :: dmagnus_apply => dhamiltonian_elec_magnus_apply
@@ -673,8 +669,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_span(hm, delta, emin)
-    type(hamiltonian_elec_t), intent(inout) :: hm
-    FLOAT,               intent(in)    :: delta, emin
+    class(hamiltonian_elec_t), intent(inout) :: hm
+    FLOAT,                     intent(in)    :: delta, emin
 
     PUSH_SUB(hamiltonian_elec_span)
 

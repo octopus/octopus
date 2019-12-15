@@ -35,9 +35,12 @@ module hamiltonian_abst_oct_m
     hamiltonian_abst_t
 
   type, abstract :: hamiltonian_abst_t
-
+    !> Spectral range
+    FLOAT :: spectral_middle_point
+    FLOAT :: spectral_half_span
   contains
     procedure(is_hermitian),              deferred :: is_hermitian
+    procedure(hamiltonian_update_span),   deferred :: update_span
     procedure(dhamiltonian_apply),        deferred :: dapply
     procedure(zhamiltonian_apply),        deferred :: zapply
     procedure(dhamiltonian_magnus_apply), deferred :: dmagnus_apply
@@ -49,6 +52,13 @@ module hamiltonian_abst_oct_m
       import
       class(hamiltonian_abst_t), intent(in) :: hm
     end function is_hermitian
+
+    subroutine hamiltonian_update_span(hm, delta, emin)
+      import
+      class(hamiltonian_abst_t), intent(inout) :: hm
+      FLOAT,                     intent(in)    :: delta
+      FLOAT,                     intent(in)    :: emin
+    end subroutine hamiltonian_update_span
 
     subroutine dhamiltonian_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
       import
