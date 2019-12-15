@@ -25,6 +25,7 @@ module exponential_oct_m
   use batch_ops_oct_m
   use blas_oct_m
   use global_oct_m
+  use hamiltonian_abst_oct_m
   use hamiltonian_elec_oct_m
   use hamiltonian_elec_base_oct_m
   use lalg_adv_oct_m
@@ -40,7 +41,6 @@ module exponential_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use types_oct_m
-  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -613,14 +613,14 @@ contains
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
-    type(hamiltonian_elec_t),           intent(inout) :: hm
-    type(wfs_elec_t),                   intent(inout) :: psib
+    class(hamiltonian_abst_t),          intent(inout) :: hm
+    class(batch_t),                     intent(inout) :: psib
     FLOAT,                              intent(in)    :: deltat
-    type(wfs_elec_t),         optional, intent(inout) :: psib2
+    class(batch_t),           optional, intent(inout) :: psib2
     FLOAT,                    optional, intent(in)    :: deltat2
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,                  optional, intent(in)    :: imag_time
-    type(wfs_elec_t),         optional, intent(inout) :: inh_psib
+    class(batch_t),           optional, intent(inout) :: inh_psib
     
     integer :: ii, ist
     CMPLX :: deltat_, deltat2_
@@ -691,25 +691,25 @@ contains
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
-    type(hamiltonian_elec_t),           intent(inout) :: hm
-    type(wfs_elec_t),                   intent(inout) :: psib
+    class(hamiltonian_abst_t),          intent(inout) :: hm
+    class(batch_t),                     intent(inout) :: psib
     CMPLX,                              intent(in)    :: deltat
-    type(wfs_elec_t),         optional, intent(inout) :: psib2
+    class(batch_t),           optional, intent(inout) :: psib2
     CMPLX,                    optional, intent(in)    :: deltat2
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
-    type(wfs_elec_t),         optional, intent(inout) :: inh_psib
+    class(batch_t),           optional, intent(inout) :: inh_psib
 
     CMPLX :: zfact, zfact2
     integer :: iter, denom
     logical :: zfact_is_real
     type(profile_t), save :: prof
-    type(wfs_elec_t) :: psi1b, hpsi1b
+    class(batch_t), allocatable :: psi1b, hpsi1b
 
     PUSH_SUB(exponential_taylor_series_batch)
     call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-    call psib%copy_to(psi1b)
-    call psib%copy_to(hpsi1b)
+    call psib%clone_to(psi1b)
+    call psib%clone_to(hpsi1b)
 
     zfact = M_z1
     zfact2 = M_z1
@@ -760,8 +760,8 @@ contains
 
     call psi1b%end()
     call hpsi1b%end()
-
-    call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
+    SAFE_DEALLOCATE_A(psi1b)
+    SAFE_DEALLOCATE_A(hpsi1b)
 
     call profiling_out(prof)
     POP_SUB(exponential_taylor_series_batch)
@@ -773,16 +773,16 @@ contains
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
-    type(hamiltonian_elec_t),           intent(inout) :: hm
-    type(wfs_elec_t),                   intent(inout) :: psib
+    class(hamiltonian_abst_t),          intent(inout) :: hm
+    class(batch_t),                     intent(inout) :: psib
     CMPLX,                              intent(in)    :: deltat
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
-    type(wfs_elec_t),         optional, intent(in)    :: inh_psib
+    class(batch_t),           optional, intent(in)    :: inh_psib
 
     integer ::  iter, l, idim, bind, ii, ist
     CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
     FLOAT, allocatable :: beta(:), res(:), norm(:)
-    class(wfs_elec_t), allocatable :: vb(:)
+    class(batch_t), allocatable :: vb(:)
     type(profile_t), save :: prof
 
     PUSH_SUB(exponential_lanczos_batch)
@@ -791,9 +791,8 @@ contains
     SAFE_ALLOCATE(beta(1:psib%nst))
     SAFE_ALLOCATE(res(1:psib%nst))
     SAFE_ALLOCATE(norm(1:psib%nst))
-    allocate(wfs_elec_t::vb(1:te%exp_order+1))
+    call psib%clone_to_array(vb, te%exp_order+1)
 
-    call psib%copy_to(vb(1))
     if (present(inh_psib)) then
       call inh_psib%copy_data_to(mesh%np, vb(1))
     else
@@ -814,9 +813,6 @@ contains
     end if
 
     call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
-    do iter = 2, te%exp_order+1
-      call vb(1)%copy_to(vb(iter))
-    end do
 
     SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
     SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
@@ -924,22 +920,22 @@ contains
     type(exponential_t),                intent(inout) :: te
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
-    type(hamiltonian_elec_t),           intent(inout) :: hm
-    type(wfs_elec_t),                   intent(inout) :: psib
+    class(hamiltonian_abst_t),          intent(inout) :: hm
+    class(batch_t),                     intent(inout) :: psib
     FLOAT,                              intent(in)    :: deltat
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
 
     integer :: j
     CMPLX :: zfact
-    type(wfs_elec_t) :: psi0, psi1, psi2
+    class(batch_t), allocatable :: psi0, psi1, psi2
     type(profile_t), save :: prof
 
     PUSH_SUB(exponential_cheby_batch)
     call profiling_in(prof, "EXP_CHEBY_BATCH")
 
-    call psib%copy_to(psi0)
-    call psib%copy_to(psi1)
-    call psib%copy_to(psi2)
+    call psib%clone_to(psi0)
+    call psib%clone_to(psi1)
+    call psib%clone_to(psi2)
     call batch_set_zero(psi0)
     call batch_set_zero(psi1)
 
@@ -963,6 +959,9 @@ contains
     call psi0%end()
     call psi1%end()
     call psi2%end()
+    SAFE_DEALLOCATE_A(psi0)
+    SAFE_DEALLOCATE_A(psi1)
+    SAFE_DEALLOCATE_A(psi2)
 
     call profiling_out(prof)
 
@@ -971,19 +970,19 @@ contains
 
 
   subroutine operate_batch(hm, namespace, mesh, psib, hpsib, vmagnus)
-    type(hamiltonian_elec_t),           intent(inout) :: hm
+    class(hamiltonian_abst_t),          intent(inout) :: hm
     type(namespace_t),                  intent(in)    :: namespace
     type(mesh_t),                       intent(in)    :: mesh
-    type(wfs_elec_t),                   intent(inout) :: psib
-    type(wfs_elec_t),                   intent(inout) :: hpsib
-    FLOAT,                    optional, intent(in)    :: vmagnus(mesh%np, hm%d%nspin, 2)
+    class(batch_t),                     intent(inout) :: psib
+    class(batch_t),                     intent(inout) :: hpsib
+    FLOAT,                    optional, intent(in)    :: vmagnus(:, :, :)
 
     PUSH_SUB(operate_batch)
     
     if (present(vmagnus)) then
-      call zhamiltonian_elec_magnus_apply_batch(hm, namespace, mesh, psib, hpsib, vmagnus)
+      call hm%zmagnus_apply(namespace, mesh, psib, hpsib, vmagnus)
     else
-      call zhamiltonian_elec_apply_batch(hm, namespace, mesh, psib, hpsib)
+      call hm%zapply(namespace, mesh, psib, hpsib)
     end if
 
     POP_SUB(operate_batch)
