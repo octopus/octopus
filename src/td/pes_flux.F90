@@ -897,9 +897,11 @@ contains
         end if
     
         ! we split the k-mesh in radial & angular part
-        call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
-        if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
-        call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
+        if (.not. post) then
+          call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
+          if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
+          call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
+        end if
 
         if(debug%info) then
 #if defined(HAVE_MPI)
@@ -960,8 +962,10 @@ contains
         !planar or cubic surface
         
         ! we do not split the k-mesh
-        call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-        if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
+        if (.not. post) then
+          call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
+          if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
+        end if
 
         if(debug%info) then
   #if defined(HAVE_MPI)
