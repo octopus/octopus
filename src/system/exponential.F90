@@ -809,7 +809,7 @@ contains
     integer ::  iter, l, idim, bind, ii, ist
     CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
     FLOAT, allocatable :: beta(:), res(:), norm(:)
-    type(batch_t), allocatable :: vb(:)
+    class(batch_t), allocatable :: vb(:)
     type(profile_t), save :: prof
 
     PUSH_SUB(exponential_lanczos_batch)
@@ -818,7 +818,7 @@ contains
     SAFE_ALLOCATE(beta(1:psib%nst))
     SAFE_ALLOCATE(res(1:psib%nst))
     SAFE_ALLOCATE(norm(1:psib%nst))
-    SAFE_ALLOCATE(vb(1:te%exp_order+1))
+    allocate(batch_t::vb(1:te%exp_order+1))
 
     call psib%copy(vb(1))
     if (present(inh_psib)) then
