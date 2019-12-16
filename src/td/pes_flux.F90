@@ -68,6 +68,10 @@ module pes_flux_oct_m
 
   type pes_flux_t
     private
+    !< NOTE: On unfortunate choice of nomenclature. In this module we use the variable k to indicate 
+    !< the momentum of photoelectrons. This has to be distinguished from the electron pseudomomentum 
+    !< in periodic systems and its discretized values (AKA kpoints). 
+    
     integer          :: nkpnts                         !< total number of k-points
     integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
     integer          :: nk
@@ -78,6 +82,7 @@ module pes_flux_oct_m
     FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
+    integer          :: kgrid                          !< how is the grid in k: polar/cartesian
 
     integer, public  :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
@@ -128,6 +133,11 @@ module pes_flux_oct_m
     M_CUBIC      = 1,     &
     M_SPHERICAL  = 2,     &
     M_PLANES     = 3
+
+  integer, parameter ::   &
+    M_POLAR      = 1,     &
+    M_CARTESIAN  = 2
+    
 
 contains
 
@@ -566,7 +576,7 @@ contains
     
     integer             :: ig
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
-    FLOAT               :: dk(1:3)
+    FLOAT               :: dk(1:3), kpoint(1:3)
       
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
 
@@ -578,8 +588,43 @@ contains
     this%dim  = mdim
     this%pdim = pdim
 
-    
+    !%Variable PES_Flux_Momenutum_Grid
+    !%Type integer
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Decides how the grid in momentum space is generated.
+    !%Option polar 1
+    !% The grid is in polar coordinates with the zenith axis is along z. 
+    !% The grid parameters are defined by PES_Flux_Kmax, PES_Flux_DeltaK, 
+    !% PES_Flux_StepsThetaK, PES_Flux_StepsPhiK.
+    !% This is the default choice for PES_Flux_Shape = sph or cub.
+    !%Option cartesian 2
+    !% The grid is in cartesian coordinates with parameters defined by
+    !% PES_Flux_ARPES_grid, PES_Flux_EnergyGrid.
+    !% This is the default choice for PES_Flux_Shape = sph or cub.
+    !%End
+
+    ! default values
     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
+      this%kgrid = M_POLAR
+    else
+      this%kgrid = M_CARTESIAN
+    end if
+    
+    call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', this%kgrid, this%kgrid)
+    if(.not.varinfo_valid_option('PES_Flux_Momenutum_Grid', this%kgrid, is_flag = .true.)) &
+      call messages_input_error('PES_Flux_Momenutum_Grid')
+    if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
+      message(1) = 'Spherical grid works only in 3d.'
+      call messages_fatal(1, namespace=namespace)
+    end if
+    call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
+
+
+
+    
+!     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
+    if (this%kgrid == M_POLAR) then  
       ! -----------------------------------------------------------------
       ! Setting up k-mesh
       ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
@@ -594,6 +639,18 @@ contains
       call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
       if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+
+      !%Variable PES_Flux_Kmin
+      !%Type float
+      !%Default 1.0
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% The minimum value of |k|.
+      !%End
+      call parse_variable(namespace, 'PES_Flux_Kmin', M_ONE, kmin)
+      call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
+      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
+
 
       !%Variable PES_Flux_DeltaK
       !%Type float
@@ -649,7 +706,7 @@ contains
       if(mdim == 3) call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
 
-      this%nk     = nint(kmax/this%dk)
+      this%nk     = nint(abs(kmax-kmin)/this%dk)
       this%nkpnts = this%nstepsomegak * this%nk
 
       this%ll(1)      = this%nk  
@@ -658,7 +715,7 @@ contains
       this%ll(mdim+1:3) = 1
 
     else 
-      ! PLANES 
+      ! Cartesian
 
       !%Variable PES_Flux_Gpoint_Upsample
       !%Type integer
@@ -828,121 +885,137 @@ contains
     this%parallel_in_momentum = .false.
 
     ! Create the grid
-    select case (this%surf_shape)
+    select case (this%kgrid)
 
-    case (M_SPHERICAL)
-      if(optional_default(post, .false.)) then 
-        POP_SUB(pes_flux_reciprocal_mesh_gen)
-        return 
-      end if
+    case (M_POLAR)
+
+      if (this%surf_shape == M_SPHERICAL) then
+
+        if(optional_default(post, .false.)) then 
+          POP_SUB(pes_flux_reciprocal_mesh_gen)
+          return 
+        end if
     
-      ! we split the k-mesh in radial & angular part
-      call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
-      if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
-      call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
+        ! we split the k-mesh in radial & angular part
+        call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
+        if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
+        call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
 
-      if(debug%info) then
+        if(debug%info) then
 #if defined(HAVE_MPI)
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-        write(*,*) &
-          'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-        write(*,*) &
-          'Debug: momentum directions on node ', mpi_world%rank, ' : ', this%nstepsomegak_start, this%nstepsomegak_end
-        call MPI_Barrier(mpi_world%comm, mpi_err)
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+          write(*,*) &
+            'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+          write(*,*) &
+            'Debug: momentum directions on node ', mpi_world%rank, ' : ', this%nstepsomegak_start, this%nstepsomegak_end
+          call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-      end if
-      SAFE_ALLOCATE(this%j_l(0:this%lmax, this%nk_start:this%nk_end))
-      this%j_l = M_ZERO
+        end if
+        SAFE_ALLOCATE(this%j_l(0:this%lmax, this%nk_start:this%nk_end))
+        this%j_l = M_ZERO
 
-      SAFE_ALLOCATE(this%kcoords_sph(1:3, this%nk_start:this%nk_end, 1:this%nstepsomegak))
-      this%kcoords_sph = M_ZERO
+        SAFE_ALLOCATE(this%kcoords_sph(1:3, this%nk_start:this%nk_end, 1:this%nstepsomegak))
+        this%kcoords_sph = M_ZERO
 
-      SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, this%nstepsomegak_start:this%nstepsomegak_end))
-      this%ylm_k = M_z0
+        SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, this%nstepsomegak_start:this%nstepsomegak_end))
+        this%ylm_k = M_z0
 
-      ! spherical harmonics & kcoords_sph
-      iomk = 0
-      do ith = 0, this%nstepsthetak
-        thetak = ith * M_PI / this%nstepsthetak
-        do iph = 0, this%nstepsphik - 1
-          phik = iph * M_TWO * M_PI / this%nstepsphik
-          iomk = iomk + 1
-          if(iomk >= this%nstepsomegak_start .and. iomk <= this%nstepsomegak_end) then
+        ! spherical harmonics & kcoords_sph
+        iomk = 0
+        do ith = 0, this%nstepsthetak
+          thetak = ith * M_PI / this%nstepsthetak
+          do iph = 0, this%nstepsphik - 1
+            phik = iph * M_TWO * M_PI / this%nstepsphik
+            iomk = iomk + 1
+            if(iomk >= this%nstepsomegak_start .and. iomk <= this%nstepsomegak_end) then
+              do ll = 0, this%lmax
+                do mm = -ll, ll
+                  call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
+                end do
+              end do
+            end if
+            if(this%nk_start > 0) then
+              this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
+              this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
+              this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
+            end if
+            if(ith == 0 .or. ith == this%nstepsthetak) exit
+          end do
+        end do
+
+        if(this%nk_start > 0) then
+          ! Bessel functions & kcoords_sph
+          do ikk = this%nk_start, this%nk_end
+            kact = ikk * this%dk + kmin
             do ll = 0, this%lmax
-              do mm = -ll, ll
-                call ylmr(cos(phik) * sin(thetak), sin(phik) * sin(thetak), cos(thetak), ll, mm, this%ylm_k(ll, mm, iomk))
+              this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
+                                  M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+            end do
+            this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
+          end do
+        end if
+
+      else 
+        !planar or cubic surface
+        
+        ! we do not split the k-mesh
+        call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
+        if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
+
+        if(debug%info) then
+  #if defined(HAVE_MPI)
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+          write(*,*) &
+            'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nkpnts_start, this%nkpnts_end
+          call MPI_Barrier(mpi_world%comm, mpi_err)
+  #endif
+        end if
+
+        ! store in the additional kpoint dim the gauge independent grid for final 
+        ! momentum representation (i.e. the one at the Gamma point)
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend+1)) 
+        
+        this%kcoords_cub = M_ZERO
+
+        select case(mdim)
+        case(1)
+          ikp = 0
+          do ikk = -this%nk, this%nk
+            if(ikk == 0) cycle
+            ikp = ikp + 1
+            kact = ikk * this%dk + kmin
+            this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
+          end do
+
+        case default
+          thetak = M_PI / M_TWO
+          do ikpt = kptst, kptend+1
+            if (ikpt == kptend+1) then
+              kpoint(1:sb%dim) = M_ZERO
+            else
+              kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
+            end if
+            ikp = 0            
+            do ikk = 1, this%nk
+              do ith = 0, this%nstepsthetak
+                if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
+                do iph = 0, this%nstepsphik - 1
+                  ikp = ikp + 1
+                  phik = iph * M_TWO * M_PI / this%nstepsphik
+                  kact = ikk * this%dk + kmin
+                                this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
+                                this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
+                  if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
+                  if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
+                end do
               end do
             end do
-          end if
-          if(this%nk_start > 0) then
-            this%kcoords_sph(1, this%nk_start:this%nk_end, iomk) = cos(phik) * sin(thetak)
-            this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
-            this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
-          end if
-          if(ith == 0 .or. ith == this%nstepsthetak) exit
-        end do
-      end do
-
-      if(this%nk_start > 0) then
-        ! Bessel functions & kcoords_sph
-        do ikk = this%nk_start, this%nk_end
-          kact = ikk * this%dk
-          do ll = 0, this%lmax
-            this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
-                                M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
           end do
-          this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
-        end do
+        end select
       end if
 
-    case (M_CUBIC)
-      ! we do not split the k-mesh
-      call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-      if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
-
-      if(debug%info) then
-#if defined(HAVE_MPI)
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-        write(*,*) &
-          'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nkpnts_start, this%nkpnts_end
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
-      end if
-
-      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
-      this%kcoords_cub = M_ZERO
-
-      select case(mdim)
-      case(1)
-        ikp = 0
-        do ikk = -this%nk, this%nk
-          if(ikk == 0) cycle
-          ikp = ikp + 1
-          kact = ikk * this%dk
-          this%kcoords_cub(1, ikp, kptst:kptend) = kact
-        end do
-
-      case default
-        thetak = M_PI / M_TWO
-        ikp = 0
-        do ikk = 1, this%nk
-          do ith = 0, this%nstepsthetak
-            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
-            do iph = 0, this%nstepsphik - 1
-              ikp = ikp + 1
-              phik = iph * M_TWO * M_PI / this%nstepsphik
-              kact = ikk * this%dk
-                            this%kcoords_cub(1, ikp, kptst:kptend) = kact * cos(phik) * sin(thetak)
-                            this%kcoords_cub(2, ikp, kptst:kptend) = kact * sin(phik) * sin(thetak)
-              if(mdim == 3) this%kcoords_cub(3, ikp, kptst:kptend) = kact * cos(thetak)
-              if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
-            end do
-          end do
-        end do
-      end select
-
-    case (M_PLANES)
+    case (M_CARTESIAN)
 
   !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 

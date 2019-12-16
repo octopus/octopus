@@ -563,7 +563,7 @@ program photoelectron_spectrum
                                             default_namespace, Lg, llp, dim, Emax, Estep, interpolate = .true.)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
           call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), default_namespace,&
-                                   llp, pmesh, Ekin)                                     
+                                   llp, pmesh, Ekin, dim)                                     
         end select 
         
       end if

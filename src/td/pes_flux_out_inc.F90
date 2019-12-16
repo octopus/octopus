@@ -35,15 +35,12 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero,
   PUSH_SUB(pes_flux_pmesh)
 
 
-  select case (this%surf_shape)
+  select case (this%kgrid)
   
-  case (M_SPHERICAL)
+  case (M_POLAR)
     call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   
-  case (M_CUBIC)
-  ! not implemented
-
-  case (M_PLANES)
+  case (M_CARTESIAN)
     call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
   
   end select
@@ -67,14 +64,12 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
 
   PUSH_SUB(pes_flux_map_from_states)
 
-  select case (this%surf_shape)
+  select case (this%kgrid)
   
-  case (M_SPHERICAL)
+  case (M_POLAR)
     call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
   
-  case (M_CUBIC)
-
-  case (M_PLANES)
+  case (M_CARTESIAN)
     call pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
   
   end select
@@ -724,7 +719,7 @@ end subroutine pes_flux_map_from_state_2
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim)
   type(pes_flux_t),  intent(in) :: this
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
@@ -732,6 +727,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
   integer,           intent(in) :: ll(:)  
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
+  integer,           intent(in) :: dim
 
 
   PUSH_SUB(pes_flux_out_energy)
@@ -746,7 +742,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
 
   case (M_PLANES)
-    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)
+    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin, dim)
   
   end select
 
@@ -756,13 +752,14 @@ end subroutine pes_flux_out_energy
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin, dim)
   FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
+  integer,           intent(in) :: dim
   
   integer :: iunit, ip, ie
   FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
@@ -782,11 +779,21 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
   write(iunit, '(a)') '##################################################'
   
 
-  do ie = 1, ll(3) 
-    write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
-                                    units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
-                                    sum(arpes(:,:,ie))
-  end do      
+  select case(dim)
+  case (2)
+    do ie = 1, ll(2) 
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
+                                      units_from_atomic(units_out%energy, Ekin(1,ie,1)), &
+                                      sum(arpes(:,ie,:))
+    end do      
+  case (3)
+    do ie = 1, ll(3) 
+      write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
+                                      units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
+                                      sum(arpes(:,:,ie))
+    end do      
+  end select
+  
   
   
   call io_close(iunit)
@@ -804,9 +811,34 @@ end subroutine pes_flux_out_energy_pln
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! OUTPUT ON THE RUN
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
+  type(pes_flux_t), intent(inout)    :: this
+  type(mesh_t),        intent(in)    :: mesh
+  type(simul_box_t),   intent(in)    :: sb
+  type(states_elec_t), intent(in)    :: st
+  type(namespace_t),   intent(in)    :: namespace
+  FLOAT,               intent(in)    :: dt
+
+  PUSH_SUB(pes_flux_output)
+  select case (this%kgrid)
+  
+  case (M_POLAR)
+    call  pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
+  
+  case (M_CARTESIAN)
+    !empty
+    
+  case default
+    !empty      
+    
+  end select
+  
+  POP_SUB(pes_flux_output)
+end subroutine pes_flux_output
+
 
 ! ---------------------------------------------------------
-subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
+subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
   type(pes_flux_t), intent(inout)    :: this
   type(mesh_t),        intent(in)    :: mesh
   type(simul_box_t),   intent(in)    :: sb
@@ -818,7 +850,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   integer            :: ist, ik, isdim
   integer            :: ikp, iomk, ikp_save, iomk_save
   integer            :: ikk, ith, iph, iphi
-  FLOAT              :: phik, thetak, kact
+  FLOAT              :: phik, thetak, kact,kmin
 
   integer            :: iunitone, iunittwo
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
@@ -829,7 +861,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   integer            :: itot
   character(len=80)  :: filename
 
-  PUSH_SUB(pes_flux_output)
+  PUSH_SUB(pes_flux_out_polar_ascii)
 
   stst   = st%st_start
   stend  = st%st_end
@@ -841,20 +873,14 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   SAFE_ALLOCATE(spctrsum(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk))
   spctrsum = M_ZERO
 
-  select case (this%surf_shape)
-  case (M_SPHERICAL)
+  if (this%surf_shape == M_SPHERICAL) then
     SAFE_ALLOCATE(spctrout_sph(1:this%nk, 1:this%nstepsomegak))
     spctrout_sph = M_ZERO
-
-  case (M_CUBIC)
+  else
     SAFE_ALLOCATE(spctrout_cub(1:this%nkpnts))
     spctrout_cub = M_ZERO
+  end if
 
-  case (M_PLANES)
-    POP_SUB(pes_flux_output)
-    return
-    
-  end select
 
   ! calculate spectra & total distribution
   do ik = kptst, kptend
@@ -891,7 +917,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
           spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
             abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * dt**M_TWO
 
-        case (M_CUBIC)
+        case default
 
           select case(mdim)
           case(1)
@@ -912,7 +938,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
             do ikk = 1, this%nk
               do iph = 0, this%nstepsphik - 1
                 ikp = ikp + 1
-                spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + dt**M_TWO * &
+                spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + & 
                   abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
               end do
             end do
@@ -967,15 +993,11 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   ! OUTPUT 
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
-    if (this%surf_shape /= M_PLANES) then
-      iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
-      iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
-      write(iunitone, '(a19)') '# E, total spectrum'
-    end if
-    
-    select case (this%surf_shape)
-    case (M_SPHERICAL)
+    iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
+    iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
+    write(iunitone, '(a19)') '# E, total spectrum'
 
+    if (this%surf_shape==M_SPHERICAL) then
       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
       do ikk = 1, this%nk 
         kact = ikk * this%dk
@@ -1020,8 +1042,9 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
         write(iunitone, '(1x)', advance='yes')
       end do
 
-    case (M_CUBIC)
-
+    else
+      
+      
       select case(mdim)
       case(1)
         write(iunittwo, '(a17)') '# k, distribution'
@@ -1046,9 +1069,10 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
 
       case(2)
         write(iunittwo, '(a22)') '# k, phi, distribution'
+        kmin = minval(sqrt(sum(this%kcoords_cub(1:2, :, kptend+1)**2, dim=1)))
         ikp = 0
         do ikk = 1, this%nk
-          kact = ikk * this%dk
+          kact = ikk * this%dk +kmin
           
           do iph = 0, this%nstepsphik - 1
             ikp = ikp + 1
@@ -1075,9 +1099,10 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
 
       case(3)
         write(iunittwo, '(a29)') '# k, theta, phi, distribution'
+        kmin = minval(sqrt(sum(this%kcoords_cub(1:3, :, kptend+1)**2, dim=1)))
         ikp    = 0
         do ikk = 1, this%nk
-          kact = ikk * this%dk
+          kact = ikk * this%dk + kmin
           spctrsum = M_ZERO
 
           do ith = 0, this%nstepsthetak
@@ -1118,46 +1143,12 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
           write(iunitone, '(1x)', advance='yes')
         end do
       end select
-    
-    case (M_PLANES)
-    
-      do ik = kptst, kptend
-        do ist = stst, stend
-          do isdim = 1, sdim
-            itot = ist + (ik-1) * st%nst +  (isdim-1) * st%nst * st%d%kpt%nglobal
-            write(filename,'(i10.10)') itot
-            
-            iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
-              namespace, action='write', position='rewind')
-            write(iunitone, '(a29)') '# gx, gy, gz distribution'
-            
-            do ikp = 1, this%nkpnts
-              
-              select case(mdim)
-              case (2)
-                write(iunitone,'(3(1x,e18.10E3))') this%kcoords_cub(1, ikp, ik), &
-                                                   this%kcoords_cub(2, ikp, ik), &
-                                 abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
-              case (3)
-                write(iunitone,'(4(1x,e18.10E3))') this%kcoords_cub(1, ikp, ik), &
-                                                   this%kcoords_cub(2, ikp, ik), &
-                                                   this%kcoords_cub(3, ikp, ik), &
-                                 abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
-              end select
-             
-            end do
-            
-            call io_close(iunitone)
-          end do      
-        end do
-      end do
-      
-    end select
-    
-    if (this%surf_shape /= M_PLANES) then
-      call io_close(iunittwo)
-      call io_close(iunitone)
+
     end if
+    
+
+    call io_close(iunittwo)
+    call io_close(iunitone)
     
   end if
 
@@ -1165,8 +1156,8 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   SAFE_DEALLOCATE_A(spctrout_cub)
   SAFE_DEALLOCATE_A(spctrout_sph)
 
-  POP_SUB(pes_flux_output)
-end subroutine pes_flux_output
+  POP_SUB(pes_flux_out_polar_ascii)
+end subroutine pes_flux_out_polar_ascii
 
 
 
