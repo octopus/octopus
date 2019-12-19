@@ -44,10 +44,10 @@ dist_share_DATA =                      \
 	05-time_propagation.01-gs.inp                                 \
 	05-time_propagation.02-td_domains.inp                         \
 	05-time_propagation.03-td_domains_states.inp                  \
-	05-time_propagation.04-td_md.inp                              \
-	05-time_propagation.05-td_fast_md.inp                         \
+	05-time_propagation.04-td_domains_states-reorder_ranks.inp    \
+	05-time_propagation.05-td_md.inp                              \
+	05-time_propagation.06-td_fast_md.inp                         \
 	05-time_propagation.test                                      \
-	05-time_propagation.06-td_domains_states-reorder_ranks.inp    \
 	06-caetrs.01-gs.inp            \
 	06-caetrs.02-kick.inp          \
 	06-caetrs.03-kick-tp1.inp      \
