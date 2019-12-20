@@ -388,7 +388,7 @@ subroutine X(exchange_operator)(hm, namespace, mesh, psib, hpsib, exx_coef)
   FLOAT,          optional, intent(in)    :: exx_coef
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
-  type(wfs_elec_t), pointer :: psi2b
+  class(wfs_elec_t), pointer :: psi2b
   FLOAT :: ff, exx_coef_
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
 

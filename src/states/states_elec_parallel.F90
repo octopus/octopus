@@ -165,7 +165,7 @@ contains
     type(mesh_t),                intent(in) :: mesh
     integer,                     intent(in) :: ib
     integer,                     intent(in) :: iqn
-    type(wfs_elec_t),            pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     type(profile_t), save :: prof
     
@@ -176,7 +176,7 @@ contains
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
     else
-      SAFE_ALLOCATE(psib)
+      allocate(wfs_elec_t::psib)
       call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
@@ -214,7 +214,7 @@ contains
   subroutine states_elec_parallel_release_block(this, ib, psib)
     type(states_elec_t), target, intent(in) :: this
     integer,                     intent(in) :: ib
-    type(wfs_elec_t),            pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     PUSH_SUB(states_elec_parallel_release_block)
 
