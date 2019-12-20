@@ -274,6 +274,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
   if(present(src)) src_ => src
 
   ASSERT(src_%has_phase .eqv. conjugate)
+  ASSERT(src_%ik == psib%ik)
 
   select case(psib%status())
   case(BATCH_PACKED)
