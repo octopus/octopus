@@ -397,14 +397,14 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
   integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
-  type(wfs_elec_t), allocatable :: hpsib(:)
+  class(wfs_elec_t), allocatable :: hpsib(:)
   integer :: sp, size, block_size
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
   PUSH_SUB(X(subspace_diag_hamiltonian))
   call profiling_in(hamiltonian_elec_prof, "SUBSPACE_HAMILTONIAN")
 
-  SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
+  allocate(wfs_elec_t::hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
     call st%group%psib(ib, ik)%copy_to(hpsib(ib))

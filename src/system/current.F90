@@ -286,7 +286,7 @@ contains
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
     type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
-    type(wfs_elec_t), allocatable :: commpsib(:)
+    class(wfs_elec_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
@@ -305,7 +305,7 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(commpsib(1:der%mesh%sb%dim))
+    allocate(wfs_elec_t::commpsib(1:der%mesh%sb%dim))
 
     current = M_ZERO
     current_kpt = M_ZERO
