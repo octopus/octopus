@@ -546,7 +546,7 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    type(wfs_elec_t), allocatable :: psioutb(:, :)
+    class(wfs_elec_t), allocatable :: psioutb(:, :)
 
     PUSH_SUB(scf_run)
 
@@ -651,7 +651,7 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end

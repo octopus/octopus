@@ -149,7 +149,7 @@ contains
     FLOAT :: diff
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib, iter, ip
-    type(wfs_elec_t), allocatable :: psi2(:, :)
+    class(wfs_elec_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
 
@@ -189,7 +189,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+    allocate(wfs_elec_t::psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end

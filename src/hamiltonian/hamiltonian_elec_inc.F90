@@ -812,7 +812,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   integer :: ispin, ii, idir, ip
   R_TYPE, allocatable :: grad(:,:), diverg(:)
   type(wfs_elec_t) :: divb
-  type(wfs_elec_t), allocatable :: gradb(:)
+  class(wfs_elec_t), allocatable :: gradb(:)
   
   PUSH_SUB(X(h_mgga_terms))
 
@@ -823,7 +823,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:mesh%np))
 
-  SAFE_ALLOCATE(gradb(1:mesh%sb%dim))
+  allocate(wfs_elec_t::gradb(1:mesh%sb%dim))
 
   call hpsib%copy_to(divb)
   
