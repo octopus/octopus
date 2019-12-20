@@ -99,6 +99,8 @@ module batch_oct_m
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
+    procedure :: clone_to => batch_clone_to
+    procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
     procedure :: deallocate => batch_deallocate
@@ -332,6 +334,55 @@ contains
 
   end function batch_is_ok
 
+  !--------------------------------------------------------------
+
+  subroutine batch_clone_to(this, dest, pack, copy_data)
+    class(batch_t),              intent(in)    :: this
+    class(batch_t), allocatable, intent(out)   :: dest
+    logical,        optional,    intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
+    logical,        optional,    intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
+
+    PUSH_SUB(batch_clone_to)
+
+    if (.not. allocated(dest)) then
+      allocate(batch_t::dest)
+    else
+      message(1) = "Internal error: destination batch in batch_clone_to has been previously allocated."
+      call messages_fatal(1)
+    end if
+
+    call this%copy_to(dest, pack, copy_data)
+
+    POP_SUB(batch_clone_to)
+  end subroutine batch_clone_to
+
+  !--------------------------------------------------------------
+
+  subroutine batch_clone_to_array(this, dest, n_batches, pack, copy_data)
+    class(batch_t),              intent(in)    :: this
+    class(batch_t), allocatable, intent(out)   :: dest(:)
+    integer,                     intent(in)    :: n_batches
+    logical,        optional,    intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
+    logical,        optional,    intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
+
+    integer :: ib
+
+    PUSH_SUB(batch_clone_to_array)
+
+    if (.not. allocated(dest)) then
+      allocate(batch_t::dest(n_batches))
+    else
+      message(1) = "Internal error: destination batch in batch_clone_to_array has been previously allocated."
+      call messages_fatal(1)
+    end if
+
+    do ib = 1, n_batches
+      call this%copy_to(dest(ib), pack, copy_data)
+    end do
+
+    POP_SUB(batch_clone_to_array)
+  end subroutine batch_clone_to_array
+  
   !--------------------------------------------------------------
 
   subroutine batch_copy_to(this, dest, pack, copy_data)
