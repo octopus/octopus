@@ -79,7 +79,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     psib(1)%batch => st%group%psib(ib, ik)
 
-    if(pack) call psib(1)%batch%do_pack
+    if(pack) call psib(1)%batch%do_pack()
 
     call psib(1)%batch%copy_to(resb(1)%batch)
 
@@ -104,7 +104,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     end do
 
     if(all(done(1:bsize) /= 0)) then
-      if(pack) call st%group%psib(ib, ik)%do_unpack
+      if(pack) call st%group%psib(ib, ik)%do_unpack()
       call resb(1)%batch%end()
       cycle
     end if
@@ -220,7 +220,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
-        if(pack) call psib(jj)%batch%do_pack
+        if(pack) call psib(jj)%batch%do_pack()
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
         if(pack) call psib(jj)%batch%do_unpack(copy = .false.)
       end do
@@ -284,7 +284,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     call resb(niter - 1)%batch%end()
 
-    if(pack) call st%group%psib(ib, ik)%do_unpack
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
 
     prog = prog + bsize
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -305,7 +305,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
 
-    if(pack) call st%group%psib(ib, ik)%do_pack
+    if(pack) call st%group%psib(ib, ik)%do_pack()
   
     call st%group%psib(ib, ik)%copy_to(resb(1)%batch)
     
@@ -323,7 +323,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     
     call resb(1)%batch%end()
 
-    if(pack) call st%group%psib(ib, ik)%do_unpack
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
     
     nops = nops + maxst - minst + 1
   end do
@@ -401,7 +401,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
 
-    if(pack) call st%group%psib(ib, ik)%do_pack
+    if(pack) call st%group%psib(ib, ik)%do_pack()
 
     call st%group%psib(ib, ik)%copy_to(resb)
     call st%group%psib(ib, ik)%copy_to(kresb)
@@ -460,7 +460,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       
     end do
 
-    if(pack) call st%group%psib(ib, ik)%do_unpack
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
 
     call resb%end()
     call kresb%end()

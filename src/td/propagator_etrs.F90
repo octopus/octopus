@@ -394,8 +394,8 @@ contains
 
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_pack
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack
+          call st%group%psib(ib, ik)%do_pack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
@@ -439,8 +439,8 @@ contains
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_unpack
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack
+          call st%group%psib(ib, ik)%do_unpack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
         end if
       end do
     end do

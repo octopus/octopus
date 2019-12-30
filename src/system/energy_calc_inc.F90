@@ -72,7 +72,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       maxst = states_elec_block_max(st, ib)
 
       if(hamiltonian_elec_apply_packed(hm)) then
-        call st%group%psib(ib, ik)%do_pack
+        call st%group%psib(ib, ik)%do_pack()
       end if
       
       call st%group%psib(ib, ik)%copy_to(hpsib)

@@ -121,7 +121,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack()
       
       call st%group%psib(ib, ik)%copy_to(hpsib)
 

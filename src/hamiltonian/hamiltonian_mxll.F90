@@ -434,7 +434,7 @@ contains
 !      .and. terms_ == TERM_ALL
 
 !    if(pack) then
-!      call psib%do_pack
+!      call psib%do_pack()
 !      call hpsib%do_pack(copy = .false.)
 !    end if
 
@@ -451,7 +451,7 @@ contains
   
 !    if(pack) then
 !      call psib%do_unpack(copy = .false.)
-!      call hpsib%do_unpack
+!      call hpsib%do_unpack()
 !    end if
 
     call profiling_out(prof_hamiltonian)

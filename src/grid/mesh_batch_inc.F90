@@ -658,7 +658,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   end if
 
   if (packed_on_entry) then
-    call aa%do_pack
+    call aa%do_pack()
   end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)

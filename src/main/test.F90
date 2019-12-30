@@ -424,7 +424,7 @@ contains
     call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call sys%st%group%psib(1, 1)%do_pack
+      call sys%st%group%psib(1, 1)%do_pack()
       call hpsib%do_pack(copy = .false.)
     end if
 
