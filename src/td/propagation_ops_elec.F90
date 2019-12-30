@@ -289,12 +289,12 @@ contains
           if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if(present(dt2)) then
           call st%group%psib(ib, ik)%copy_to(zpsib_dt)
           if(st%group%psib(ib, ik)%is_packed()) call zpsib_dt%do_pack(copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
-          call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
               deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
@@ -310,7 +310,6 @@ contains
 
           call zpsib_dt%end()
         else
-          call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus, &
