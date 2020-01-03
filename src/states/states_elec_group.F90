@@ -83,7 +83,7 @@ contains
       do ib = 1, this%nblocks
         do iq = d%kpt%start, d%kpt%end
           if (this%block_is_local(ib, iq)) then
-            call this%psib(ib, iq)%end
+            call this%psib(ib, iq)%end()
           end if
         end do
       end do
