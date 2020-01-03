@@ -30,7 +30,7 @@ match ; V Na1-Na2 ;  GREPFIELD(static/info, '1        Na  3s 2 3s', 7); 0.077567
 Input      : 10-intersite.02-graphite.inp
 
 #Units are in eV_angstrom
-Precision : 0.001
+Precision : 0.002
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -597.37055186
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -389.65192243
