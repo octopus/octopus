@@ -364,6 +364,9 @@ contains
 
       call dest%zallocate(1, this%nst, np)
 
+    else
+      message(1) = "Internal error: unknown batch type in batch_copy_to."
+      call messages_fatal(1)
     end if
 
     if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
@@ -526,6 +529,9 @@ contains
           end forall
         end do
 
+      else
+        message(1) = "Internal error: unknown batch type in batch_do_pack."
+        call messages_fatal(1)
       end if
 
       call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
@@ -635,6 +641,9 @@ contains
           end forall
         end do
         
+      else
+        message(1) = "Internal error: unknown batch type in batch_sync."
+        call messages_fatal(1)
       end if
       
       call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
@@ -861,13 +870,14 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
       call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
-    end if
-    
-    if(this%type() == TYPE_FLOAT) then
+    else if (this%type() == TYPE_FLOAT) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
+    else
+      message(1) = "Internal error: unknown batch type in batch_remote_access_start."
+      call messages_fatal(1)
     end if
     
   else
