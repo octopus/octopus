@@ -585,7 +585,7 @@ contains
     FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     integer :: ist, jst
 
-    PUSH_SUB(scf_rdmft.calc_maxFO)
+    PUSH_SUB(calc_maxFO)
 
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst))
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
@@ -606,7 +606,7 @@ contains
     SAFE_DEALLOCATE_A(lambda)
     SAFE_DEALLOCATE_A(FO)
 
-    POP_SUB(scf_rdmft.calc_maxFO)
+    POP_SUB(calc_maxFO)
   end subroutine calc_maxFO
 
   ! ---------------------------------------------------------
@@ -624,10 +624,10 @@ contains
     FLOAT, allocatable :: psi(:, :), psi_q_square(:, :)
     FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:, :)
 
-    PUSH_SUB(scf_rdmft.calc_photon_number)
+    PUSH_SUB(calc_photon_number)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
-    SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np_part, 1))
+    SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np, 1))
     SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
     SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
@@ -636,13 +636,9 @@ contains
     do ist = 1, st%nst
       call states_elec_get_state(st, gr%mesh, ist, 1, psi)
 
-      grad_psi = M_ZERO
-      grad_square_psi = M_ZERO
-      laplace_exp = M_ZERO
-
       ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
       call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .true.)
-      call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .true.)
+      call dderivatives_grad(gr%der, grad_psi(1:gr%mesh%np_part, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .true.)
       laplace_exp = dmf_dotp(gr%mesh, psi(:, 1), grad_square_psi(:, 2))
       ekin_state(ist) = -M_HALF*laplace_exp
 
@@ -663,9 +659,11 @@ contains
     photon_number =  photon_number - st%qtot/M_TWO
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi_q_square)
     SAFE_DEALLOCATE_A(grad_psi)
+    SAFE_DEALLOCATE_A(grad_square_psi)
 
-    POP_SUB(scf_rdmft.calc_photon_number)
+    POP_SUB(calc_photon_number)
   end subroutine calc_photon_number
 
   ! ---------------------------------------------------------
