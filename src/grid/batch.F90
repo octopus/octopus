@@ -337,7 +337,7 @@ contains
     class(batch_t),          intent(in)    :: this
     class(batch_t),          intent(out)   :: dest
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
-    logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
+    logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
     integer :: ii, np
 
