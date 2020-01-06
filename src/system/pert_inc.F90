@@ -32,7 +32,7 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
   
   PUSH_SUB(X(pert_apply_batch))
 
-  ASSERT(batch_status(f_in) == batch_status(f_out))
+  ASSERT(f_in%status() == f_out%status())
   
   SAFE_ALLOCATE(fi(1:gr%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(fo(1:gr%mesh%np, 1:hm%d%dim))
@@ -60,7 +60,7 @@ contains
   subroutine electric()
     integer :: ii, ip
 
-    select case(batch_status(f_in))
+    select case(f_in%status())
       
     case(BATCH_NOT_PACKED)
       do ii = 1, f_in%nst_linear
@@ -944,12 +944,12 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
-      call batch_end(hpsib, copy = .false.)
+      call hpsib%end(copy = .false.)
 
     end do
     

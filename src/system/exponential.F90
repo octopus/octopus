@@ -629,7 +629,7 @@ contains
 
     PUSH_SUB(exponential_apply_batch)
 
-    ASSERT(batch_type(psib) == TYPE_CMPLX)
+    ASSERT(psib%type() == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
     if (present(inh_psib)) then
       ASSERT(inh_psib%nst == psib%nst)
@@ -672,7 +672,7 @@ contains
       end if
 
     case(EXP_LANCZOS)
-      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+      if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
       call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus)
       if (present(inh_psib)) then
         call exponential_lanczos_batch(te, namespace, mesh, hm, psib, ik, deltat_, .not.phase_correction, vmagnus, inh_psib)
@@ -690,7 +690,7 @@ contains
         write(message(2), '(a)') 'with inhomogeneous term is not implemented'
         call messages_fatal(2)
       end if
-      if (present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+      if (present(psib2)) call psib%copy_data_to(mesh%np, psib2)
       call exponential_cheby_batch(te, namespace, mesh, hm, psib, ik, deltat, .not.phase_correction, vmagnus)
       if (present(psib2)) then
         call exponential_cheby_batch(te, namespace, mesh, hm, psib2, ik, deltat2, .not.phase_correction, vmagnus)
@@ -733,14 +733,14 @@ contains
     PUSH_SUB(exponential_taylor_series_batch)
     call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-    call batch_copy(psib, psi1b)
-    call batch_copy(psib, hpsi1b)
+    call psib%copy_to(psi1b)
+    call psib%copy_to(hpsi1b)
 
     zfact = M_z1
     zfact2 = M_z1
     zfact_is_real = .true.
 
-    if(present(psib2)) call batch_copy_data(mesh%np, psib, psib2)
+    if(present(psib2)) call psib%copy_data_to(mesh%np, psib2)
 
     if (present(inh_psib)) then
       zfact = zfact*deltat
@@ -779,12 +779,12 @@ contains
         if(present(psib2)) call batch_axpy(mesh%np, zfact2, hpsi1b, psib2)
       end if
 
-      if(iter /= te%exp_order) call batch_copy_data(mesh%np, hpsi1b, psi1b)
+      if(iter /= te%exp_order) call hpsi1b%copy_data_to(mesh%np, psi1b)
 
     end do
 
-    call batch_end(psi1b)
-    call batch_end(hpsi1b)
+    call psi1b%end()
+    call hpsi1b%end()
 
     call profiling_count_operations(psib%nst*hm%d%dim*dble(mesh%np)*te%exp_order*CNST(6.0))
 
@@ -809,7 +809,7 @@ contains
     integer ::  iter, l, idim, bind, ii, ist
     CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
     FLOAT, allocatable :: beta(:), res(:), norm(:)
-    type(batch_t), allocatable :: vb(:)
+    class(batch_t), allocatable :: vb(:)
     type(profile_t), save :: prof
 
     PUSH_SUB(exponential_lanczos_batch)
@@ -818,13 +818,13 @@ contains
     SAFE_ALLOCATE(beta(1:psib%nst))
     SAFE_ALLOCATE(res(1:psib%nst))
     SAFE_ALLOCATE(norm(1:psib%nst))
-    SAFE_ALLOCATE(vb(1:te%exp_order+1))
+    allocate(batch_t::vb(1:te%exp_order+1))
 
-    call batch_copy(psib, vb(1))
+    call psib%copy_to(vb(1))
     if (present(inh_psib)) then
-      call batch_copy_data(mesh%np, inh_psib, vb(1))
+      call inh_psib%copy_data_to(mesh%np, vb(1))
     else
-      call batch_copy_data(mesh%np, psib, vb(1))
+      call psib%copy_data_to(mesh%np, vb(1))
     end if
     call mesh_batch_nrm2(mesh, vb(1), beta)
 
@@ -833,7 +833,7 @@ contains
       SAFE_DEALLOCATE_A(beta)
       SAFE_DEALLOCATE_A(res)
       SAFE_DEALLOCATE_A(norm)
-      call batch_end(vb(1))
+      call vb(1)%end()
       SAFE_DEALLOCATE_A(vb)
       call profiling_out(prof)
       POP_SUB(exponential_lanczos_batch)
@@ -842,7 +842,7 @@ contains
 
     call batch_scal(mesh%np, M_ONE/beta, vb(1), a_full = .false.)
     do iter = 2, te%exp_order+1
-      call batch_copy(vb(1), vb(iter))
+      call vb(1)%copy_to(vb(iter))
     end do
 
     SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
@@ -914,7 +914,7 @@ contains
     end if
 
     do iter = 1, te%exp_order+1
-      call batch_end(vb(iter))
+      call vb(iter)%end()
     end do
 
     SAFE_DEALLOCATE_A(vb)
@@ -966,15 +966,15 @@ contains
     PUSH_SUB(exponential_cheby_batch)
     call profiling_in(prof, "EXP_CHEBY_BATCH")
 
-    call batch_copy(psib, psi0)
-    call batch_copy(psib, psi1)
-    call batch_copy(psib, psi2)
+    call psib%copy_to(psi0)
+    call psib%copy_to(psi1)
+    call psib%copy_to(psi2)
     call batch_set_zero(psi0)
     call batch_set_zero(psi1)
 
     do j = te%exp_order - 1, 0, -1
-      call batch_copy_data(mesh%np, psi1, psi2)
-      call batch_copy_data(mesh%np, psi0, psi1)
+      call psi1%copy_data_to(mesh%np, psi2)
+      call psi0%copy_data_to(mesh%np, psi1)
 
       call operate_batch(hm, namespace, mesh, psi1, psi0, ik, set_phase, vmagnus)
       zfact = M_TWO*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
@@ -985,13 +985,13 @@ contains
       call batch_axpy(mesh%np, -M_ONE, psi2,  psi0)
     end do
 
-    call batch_copy_data(mesh%np, psi0, psib)
+    call psi0%copy_data_to(mesh%np, psib)
     call batch_axpy(mesh%np, -M_ONE, psi2,  psib)
     call batch_scal(mesh%np, M_HALF*exp(-M_zI*hm%spectral_middle_point*deltat), psib)
 
-    call batch_end(psi0)
-    call batch_end(psi1)
-    call batch_end(psi2)
+    call psi0%end()
+    call psi1%end()
+    call psi2%end()
 
     call profiling_out(prof)
 

@@ -33,14 +33,14 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   PUSH_SUB(X(project_psi))
 
   call batch_init(psib, dim, 1)
-  call batch_add_state(psib, 1, psi)
+  call psib%add_state(1, psi)
   call batch_init(ppsib, dim, 1)
-  call batch_add_state(ppsib, 1, ppsi)
+  call ppsib%add_state(1, ppsi)
 
   call X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
-  call batch_end(psib)
-  call batch_end(ppsib)
+  call psib%end()
+  call ppsib%end()
 
   POP_SUB(X(project_psi))
 end subroutine X(project_psi)
@@ -73,7 +73,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
 
-  ASSERT(batch_status(psib) /= BATCH_DEVICE_PACKED)
+  ASSERT(psib%status() /= BATCH_DEVICE_PACKED)
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
@@ -114,10 +114,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       if(ns < 1) cycle
 
       ! copy psi to the small spherical grid
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
               lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
@@ -131,7 +131,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       case(BATCH_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
               lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
@@ -227,10 +227,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     !  print *, ll, lpsi(1, 1:dim)  
   
       !put the result back in the complete grid
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
@@ -246,7 +246,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
       case(BATCH_PACKED)
         do idim = 1, dim
-          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &

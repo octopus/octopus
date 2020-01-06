@@ -154,7 +154,7 @@ contains
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
  
-    if(st%d%ispin == SPINORS .or. (batch_status(psib) == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
+    if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
         do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
@@ -163,7 +163,7 @@ contains
           if(abs(ww) <= M_EPSILON) cycle
 
           do idim = 1, st%d%dim
-            ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+            ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
             call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
             call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
           end do
@@ -189,7 +189,7 @@ contains
         end do
       end do
 
-    else if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+    else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
       
@@ -239,7 +239,7 @@ contains
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
-        if(batch_is_packed(psib)) then
+        if(psib%is_packed()) then
           do idir = 1, der%mesh%sb%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
@@ -317,12 +317,12 @@ contains
         ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
-          call batch_pack(st%group%psib(ib, ik), copy = .true.)
+          call st%group%psib(ib, ik)%do_pack(copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib)
-          call batch_copy(st%group%psib(ib, ik), rhpsib)
-          call batch_copy(st%group%psib(ib, ik), rpsib)
-          call batch_copy(st%group%psib(ib, ik), hrpsib)
+          call st%group%psib(ib, ik)%copy_to(hpsib)
+          call st%group%psib(ib, ik)%copy_to(rhpsib)
+          call st%group%psib(ib, ik)%copy_to(rpsib)
+          call st%group%psib(ib, ik)%copy_to(hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
@@ -339,7 +339,7 @@ contains
               if(ww <= M_EPSILON) cycle
 
               do idim = 1, st%d%dim
-                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+                ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
                 call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
@@ -371,12 +371,12 @@ contains
 
           end do
 
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+          call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
-          call batch_end(hpsib)
-          call batch_end(rhpsib)
-          call batch_end(rpsib)
-          call batch_end(hrpsib)
+          call hpsib%end()
+          call rhpsib%end()
+          call rpsib%end()
+          call hrpsib%end()
 
         end do
       end do
@@ -392,15 +392,15 @@ contains
           ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
 
-            call batch_pack(st%group%psib(ib, ik), copy = .true.)
-            call batch_copy(st%group%psib(ib, ik), epsib)
+            call st%group%psib(ib, ik)%do_pack(copy = .true.)
+            call st%group%psib(ib, ik)%copy_to(epsib)
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
               call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
-              call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
+              call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
             !The call to individual derivatives_perfom routines returns the derivatives along
@@ -408,7 +408,7 @@ contains
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
             do idir = 1, der%mesh%sb%dim
-              call batch_copy(st%group%psib(ib, ik), commpsib(idir))
+              call epsib%copy_to(commpsib(idir))
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 
@@ -424,11 +424,11 @@ contains
             call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
-              call batch_end(commpsib(idir))
+              call commpsib(idir)%end()
             end do
 
-            call batch_end(epsib)
-            call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+            call epsib%end()
+            call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
           end do
         end do

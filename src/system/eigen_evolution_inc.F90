@@ -71,32 +71,32 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
 #if defined(R_TREAL)
     ! The application of the exponential for the real case is still done one state at a time, as we need
     ! to do a couple of type conversions. To avoid this, we need either a function to convert the
-    ! type of a batch, or to modify the batch_copy_data routine to allow the copy between batches of
+    ! type of a batch, or to modify the batch_copy_data_to routine to allow the copy between batches of
     ! different types.
     do ist = conv + 1, st%nst
       call batch_init(zpsib, hm%d%dim, 1)
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
-      call batch_add_state(zpsib, ist, zpsi)
+      call zpsib%add_state(ist, zpsi)
 
       call exponential_apply_batch(te, namespace, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
 
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
       call states_elec_set_state(st, mesh, ist, ik, psi)
-      call batch_end(zpsib)
+      call zpsib%end()
       matvec = matvec + te%exp_order
     end do
 #else
     do ib = convb + 1, st%group%block_end
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack()
       end if
 
       call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
 
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_unpack()
       end if
     end do
 #endif
@@ -116,20 +116,20 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack()
       end if
 
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))
       st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
       call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)
       call mesh_batch_nrm2(mesh, hpsib, diff(minst:maxst))
-      call batch_end(hpsib)
+      call hpsib%end()
 
       if (debug%info) then
         do ist = minst, maxst
@@ -140,7 +140,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
       end if
 
       if (hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik), copy=.false.)
+        call st%group%psib(ib, ik)%do_unpack(copy=.false.)
       end if
     end do
 

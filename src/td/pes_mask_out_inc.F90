@@ -489,7 +489,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
      
     call batch_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik))
     call density_calc_accumulate(dens_calc, ik, psib) 
-    call batch_end(psib)
+    call psib%end()
 
   end do
   

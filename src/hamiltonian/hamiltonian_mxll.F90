@@ -419,10 +419,10 @@ contains
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
 
-    ASSERT(batch_status(psib) == batch_status(hpsib))
+    ASSERT(psib%status() == hpsib%status())
 
-    ASSERT(batch_is_ok(psib))
-    ASSERT(batch_is_ok(hpsib))
+    ASSERT(psib%is_ok())
+    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment
@@ -434,8 +434,8 @@ contains
 !      .and. terms_ == TERM_ALL
 
 !    if(pack) then
-!      call batch_pack(psib)
-!      call batch_pack(hpsib, copy = .false.)
+!      call psib%do_pack()
+!      call hpsib%do_pack(copy = .false.)
 !    end if
 
     if(present(time)) then
@@ -450,8 +450,8 @@ contains
     hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
   
 !    if(pack) then
-!      call batch_unpack(psib, copy = .false.)
-!      call batch_unpack(hpsib)
+!      call psib%do_unpack(copy = .false.)
+!      call hpsib%do_unpack()
 !    end if
 
     call profiling_out(prof_hamiltonian)
@@ -480,14 +480,14 @@ contains
     PUSH_SUB(hamiltonian_mxll_apply)
 
 !    call batch_init(psib, hm%d%dim, 1)
-!    call batch_add_state(psib, ist, psi)
+!    call psib%add_state(ist, psi)
 !    call batch_init(hpsib, hm%d%dim, 1)
-!    call batch_add_state(hpsib, ist, hpsi)
+!    call hpsib%add_state(ist, hpsi)
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !
-!    call batch_end(psib)
-!    call batch_end(hpsib)
+!    call psib%end()
+!    call hpsib%end()
 
     call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
 

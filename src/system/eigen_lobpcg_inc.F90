@@ -314,8 +314,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
   call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
   
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   niter = niter+lnst
   call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1 = all_ev, xpsi2 = all_ev, symm = .true.)
@@ -400,8 +400,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     
     do i = 1, lnuc
       ist = luc(i)
-      call batch_add_state(psib, ist, res(:, :, ist))
-      call batch_add_state(hpsib, ist, h_res(:, :, ist))
+      call psib%add_state(ist, res(:, :, ist))
+      call hpsib%add_state(ist, h_res(:, :, ist))
     end do
 
     if(lnuc > 0) then
@@ -410,8 +410,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     niter = niter + lnuc
 
-    call batch_end(psib)
-    call batch_end(hpsib)
+    call psib%end()
+    call hpsib%end()
       
     ! Orthonormalize conjugate directions in all but the first iteration.
     ! Since h_dir also has to be modified (to avoid a full calculation of

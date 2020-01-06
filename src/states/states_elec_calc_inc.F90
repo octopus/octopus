@@ -424,7 +424,7 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
       size = min(block_size, mesh%np - sp + 1)
       
       do ib = st%group%block_start, st%group%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
@@ -512,11 +512,11 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
  
     !To understand this, one should look at states_elec_get_states and batch_get_states routines 
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/)) 
+        ibind = batch%inv_index((/ist, idim/)) 
         ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
@@ -553,10 +553,10 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     end if
     
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/))
+        ibind = batch%inv_index((/ist, idim/))
         call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
@@ -1450,7 +1450,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
       size = min(block_size, mesh%np - sp + 1)
 
       do ib = st%group%block_start, st%group%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 

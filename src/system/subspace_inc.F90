@@ -121,17 +121,17 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_pack(st%group%psib(ib, ik))
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack()
       
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
-      call batch_end(hpsib)
+      call hpsib%end()
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       
     end do
 
@@ -224,8 +224,8 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
     
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik)
     
-    call batch_end(psib)
-    call batch_end(hpsib)
+    call psib%end()
+    call hpsib%end()
   end do
 
   ! We need to set to zero some extra parts of the array
@@ -407,7 +407,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_copy(st%group%psib(ib, ik), hpsib(ib))
+    call st%group%psib(ib, ik)%copy_to(hpsib(ib))
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
@@ -448,7 +448,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
         size = min(block_size, mesh%np - sp + 1)
 
         do ib = st%group%block_start, st%group%block_end
-          ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+          ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
           call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do
@@ -535,7 +535,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_end(hpsib(ib))
+    call hpsib(ib)%end()
   end do
   
   SAFE_DEALLOCATE_A(hpsib)

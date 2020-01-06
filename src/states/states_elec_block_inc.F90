@@ -177,7 +177,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     if(present(xpsi1)) then
       call batch_init(psi1b, st%d%dim, psi1_col)
       do ii = 1, psi1_col
-        call batch_add_state(psi1b, ii, psi1(:, :, xpsi1(ii)))
+        call psi1b%add_state(ii, psi1(:, :, xpsi1(ii)))
       end do
     else
       call batch_init(psi1b, st%d%dim, 1, psi1_col, psi1(:, :, :))
@@ -186,19 +186,19 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     if(present(xpsi2)) then
       call batch_init(psi2b, st%d%dim, psi2_col)
       do ii = 1, psi2_col
-        call batch_add_state(psi2b, ii, psi2(:, :, xpsi2(ii)))
+        call psi2b%add_state(ii, psi2(:, :, xpsi2(ii)))
       end do
     else
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
     end if
 
-    ASSERT(batch_is_ok(psi1b))
-    ASSERT(batch_is_ok(psi2b))
+    ASSERT(psi1b%is_ok())
+    ASSERT(psi2b%is_ok())
 
     call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
     
-    call batch_end(psi1b)
-    call batch_end(psi2b)
+    call psi1b%end()
+    call psi2b%end()
 
   end if
   SAFE_DEALLOCATE_P(xpsi1_)

@@ -83,7 +83,7 @@ contains
       do ib = 1, this%nblocks
         do iq = d%kpt%start, d%kpt%end
           if (this%block_is_local(ib, iq)) then
-            call batch_end(this%psib(ib, iq))
+            call this%psib(ib, iq)%end()
           end if
         end do
       end do
@@ -132,7 +132,7 @@ contains
 
       do iqn = qn_start, qn_end
         do ib = group_out%block_start, group_out%block_end
-          call batch_copy(group_in%psib(ib, iqn), group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
+          call group_in%psib(ib, iqn)%copy_to(group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
         end do
       end do
       

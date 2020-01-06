@@ -144,7 +144,7 @@ contains
 
     if (.not. this%gr%have_fine_mesh) then 
 
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         select case (this%st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
@@ -467,7 +467,7 @@ contains
 
           call batch_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi)
           call density_calc_accumulate(dens_calc, ik, psib)
-          call batch_end(psib)
+          call psib%end()
           SAFE_DEALLOCATE_A(psi)
           
           exit

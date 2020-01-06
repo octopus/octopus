@@ -115,7 +115,7 @@ contains
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_start(this%mpi_grp, this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           ! create an empty window
@@ -143,7 +143,7 @@ contains
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_stop(this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
@@ -179,12 +179,12 @@ contains
       call batch_init(psib, this%d%dim, this%group%block_size(ib))
 
       if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
       
-      call batch_pack(psib, copy = .false.)
+      call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
@@ -221,7 +221,7 @@ contains
     if(this%group%block_is_local(ib, iqn)) then
       nullify(psib)
     else
-      call batch_end(psib)
+      call psib%end()
       SAFE_DEALLOCATE_P(psib)
     end if
     

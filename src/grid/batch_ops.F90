@@ -108,7 +108,7 @@ contains
   !--------------------------------------------------------------
 
   subroutine batch_set_zero(this)
-    type(batch_t),     intent(inout) :: this
+    class(batch_t),     intent(inout) :: this
 
     type(profile_t), save :: prof
     integer :: ist_linear, ist, ip
@@ -117,12 +117,12 @@ contains
 
     call profiling_in(prof, "BATCH_SET_ZERO")
 
-    select case(batch_status(this))
+    select case(this%status())
     case(BATCH_DEVICE_PACKED)
-      call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
+      call accel_set_buffer_to_zero(this%pack%buffer, this%type(), product(this%pack%size))
 
     case(BATCH_PACKED)
-      if(batch_type(this) == TYPE_FLOAT) then
+      if(this%type() == TYPE_FLOAT) then
         !$omp parallel do schedule(static)
         do ip = 1, this%pack%size(2)
           do ist = 1, this%pack%size(1)
@@ -161,10 +161,10 @@ contains
 ! --------------------------------------------------------------
 
 subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
-  type(batch_t),       intent(in)    :: this
+  class(batch_t),      intent(in)    :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(accel_mem_t),  intent(inout) :: psi
+  type(accel_mem_t),   intent(inout) :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
@@ -173,14 +173,14 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_get_points_cl)
   call profiling_in(get_points_prof, "GET_POINTS")
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
   case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
-    offset = batch_linear_to_ist(this, 1) - 1
+    tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
+    offset = this%linear_to_ist(1) - 1
 
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
@@ -205,10 +205,10 @@ end subroutine batch_get_points_cl
 ! --------------------------------------------------------------
 
 subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
-  type(batch_t),       intent(inout) :: this
+  class(batch_t),      intent(inout) :: this
   integer,             intent(in)    :: sp  
   integer,             intent(in)    :: ep
-  type(accel_mem_t),  intent(in)    :: psi
+  type(accel_mem_t),   intent(in)    :: psi
   integer,             intent(in)    :: ldpsi
 
   integer :: tsize, offset
@@ -217,15 +217,15 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_set_points_cl)
   call profiling_in(set_points_prof, "SET_POINTS")
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
   case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(batch_type(this))&
+    tsize = types_get_size(this%type())&
       /types_get_size(TYPE_FLOAT)
-    offset = batch_linear_to_ist(this, 1) - 1
+    offset = this%linear_to_ist(1) - 1
 
     call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
     
@@ -250,7 +250,7 @@ end subroutine batch_set_points_cl
 ! -------------------------
 
 integer pure function batch_points_block_size(this) result(block_size)
-  type(batch_t),       intent(in)    :: this
+  class(batch_t),       intent(in)    :: this
   
   block_size = 61440
 

@@ -37,18 +37,18 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
-  ASSERT(batch_status(psib) == batch_status(hpsib))
+  ASSERT(psib%status() == hpsib%status())
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
   set_phase_ = optional_default(set_phase, .true.)  
   ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(batch_status(psib) == BATCH_DEVICE_PACKED) set_phase_ = .true.
+    if(psib%status() == BATCH_DEVICE_PACKED) set_phase_ = .true.
   end if
 
-  ASSERT(batch_is_ok(psib))
-  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%is_ok())
+  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
 
@@ -59,8 +59,8 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
     .and. terms_ == TERM_ALL
 
   if(pack) then
-    call batch_pack(psib)
-    call batch_pack(hpsib, copy = .false.)
+    call psib%do_pack()
+    call hpsib%do_pack(copy = .false.)
   end if
 
   if(optional_default(set_bc, .true.)) then
@@ -80,7 +80,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
 
   if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
-    call batch_copy(psib, epsib)
+    call psib%copy_to(epsib)
   else
     epsib => psib
   end if
@@ -177,13 +177,13 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, ik
 
   if(apply_phase .and. set_phase_) then
     call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, ik, .true., hpsib)
-    call batch_end(epsib, copy = .false.)
+    call epsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
   if(pack) then
-    call batch_unpack(psib, copy = .false.)
-    call batch_unpack(hpsib)
+    call psib%do_unpack(copy = .false.)
+    call hpsib%do_unpack()
   end if
 
   POP_SUB(X(hamiltonian_elec_apply_batch))
@@ -220,7 +220,7 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+  if(psib%status() == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
@@ -263,15 +263,15 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   PUSH_SUB(X(hamiltonian_elec_apply))
   
   call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
+  call psib%add_state(ist, psi)
   call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call hpsib%add_state(ist, hpsi)
 
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
                                        set_phase = set_phase)
 
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
   
 
   POP_SUB(X(hamiltonian_elec_apply))
@@ -359,14 +359,14 @@ subroutine X(exchange_operator_single)(hm, namespace, mesh, ist, ik, psi, hpsi, 
   PUSH_SUB(X(exchange_operator_single))
 
   call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
+  call psib%add_state(ist, psi)
   call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call hpsib%add_state(ist, hpsi)
 
   call X(exchange_operator)(hm, namespace, mesh, ik, psib, hpsib, exx_coef)
 
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   POP_SUB(X(exchange_operator_single))
 end subroutine X(exchange_operator_single)
@@ -743,21 +743,21 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, i
   ! We will assume, for the moment, no spinors.
   if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
 
-  ASSERT(batch_is_ok(psib))
-  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%is_ok())
+  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
 
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
-  call batch_copy(hpsib, auxpsib, copy_data=.false.)
-  call batch_copy(hpsib, aux2psib, copy_data=.false.)
+  call hpsib%copy_to(auxpsib, copy_data=.false.)
+  call hpsib%copy_to(aux2psib, copy_data=.false.)
   
   ! Compute (T + Vnl)|psi> and store it
   call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, auxpsib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
     set_phase = set_phase)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders|psi>
-  call batch_copy_data(mesh%np, auxpsib, hpsib)
+  call auxpsib%copy_data_to(mesh%np, hpsib)
   call X(hamiltonian_elec_external)(hm, mesh, psib, hpsib)
   if (hm%bc%abtype == IMAGINARY_ABSORBING) then
     call batch_mul(mesh%np, hm%bc%mf(1:mesh%np), psib, aux2psib)
@@ -776,8 +776,8 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, i
     set_phase = set_phase)
   call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
 
-  call batch_end(auxpsib)
-  call batch_end(aux2psib)
+  call auxpsib%end()
+  call aux2psib%end()
 
   POP_SUB(X(hamiltonian_elec_apply_magnus))
 end subroutine X(hamiltonian_elec_apply_magnus)
@@ -817,7 +817,7 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ASSERT(.not. batch_is_packed(psib))
+  ASSERT(.not. psib%is_packed())
   
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
@@ -826,10 +826,10 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
 
   SAFE_ALLOCATE(gradb(1:mesh%sb%dim))
 
-  call batch_copy(hpsib, divb)
+  call hpsib%copy_to(divb)
   
   do idir = 1, mesh%sb%dim
-    call batch_copy(hpsib, gradb(idir))
+    call hpsib%copy_to(gradb(idir))
     call X(derivatives_batch_perform)(hm%der%grad(idir), hm%der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
   end do
   
@@ -859,10 +859,10 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
   call batch_axpy(mesh%np, CNST(-1.0), divb, hpsib)
 
   do idir = 1, mesh%sb%dim
-    call batch_end(gradb(idir))
+    call gradb(idir)%end()
   end do
 
-  call batch_end(divb)
+  call divb%end()
   
   SAFE_DEALLOCATE_A(gradb)
   SAFE_DEALLOCATE_A(grad)

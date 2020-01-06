@@ -233,8 +233,8 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
         if (hamiltonian_elec_inh_term(hm)) then
@@ -245,8 +245,8 @@ contains
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
         end if
       end do
     end do
@@ -281,13 +281,13 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
         if(present(dt2)) then
-          call batch_copy(st%group%psib(ib, ik), zpsib_dt)
-          if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
+          call st%group%psib(ib, ik)%copy_to(zpsib_dt)
+          if(st%group%psib(ib, ik)%is_packed()) call zpsib_dt%do_pack(copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
@@ -301,7 +301,7 @@ contains
           !use the dt propagation to calculate the density
           call density_calc_accumulate(dens_calc, ik, zpsib_dt)
 
-          call batch_end(zpsib_dt)
+          call zpsib_dt%end()
         else
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
@@ -316,8 +316,8 @@ contains
         end if
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
         end if
       end do
     end do

@@ -52,12 +52,15 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   type(accel_mem_t) :: offsets_buff
   type(accel_mem_t) :: dest_buff
 
+  PUSH_SUB(X(subarray_gather_batch))
+
   call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
 
 
-  ASSERT(batch_status(arrayb) == batch_status(subarrayb))
+  ASSERT(arrayb%status() == subarrayb%status())
+  call arrayb%check_compatibility_with(subarrayb)
     
-  select case(batch_status(arrayb))
+  select case(arrayb%status())
   case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(blength_buff, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, this%nblocks)
@@ -114,6 +117,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   call profiling_count_transfers(arrayb%nst_linear*this%npoints, aa)
 
   call profiling_out(prof)
+  POP_SUB(X(subarray_gather_batch))
 end subroutine X(subarray_gather_batch)
 #endif
 

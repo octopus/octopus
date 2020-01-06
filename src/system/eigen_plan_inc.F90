@@ -169,7 +169,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
 
       call batch_init(vvb, st%d%dim, blk)
       call batch_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:))
-      call X(batch_allocate)(vvb, d1 + 1, d1 + blk, gr%mesh%np_part)
+      call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk
@@ -181,8 +181,8 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb, ik)
       INCR(matvec, blk)
 
-      call batch_end(vvb)
-      call batch_end(avb)
+      call vvb%end()
+      call avb%end()
 
       ! Here we calculate the last blk columns of H = V^T A V. We do not need the lower
       ! part of the matrix since it is symmetric (LAPACK routine only needs the upper triangle).

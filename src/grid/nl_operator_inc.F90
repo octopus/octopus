@@ -46,11 +46,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
-  ASSERT(batch_status(fi) == batch_status(fo))
-  ASSERT(batch_type(fi) == R_TYPE_VAL)
-  ASSERT(batch_type(fo) == R_TYPE_VAL)
-
-  ASSERT(fi%nst_linear == fo%nst_linear)
+  call fi%check_compatibility_with(fo) 
+  ASSERT(fi%type() == R_TYPE_VAL)
 
   points_ = OP_ALL
   if(present(points)) points_ = points
@@ -65,7 +62,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(present(ghost_update)) ghost_update_ = ghost_update
 
   if(op%mesh%parallel_in_domains .and. ghost_update_) then
-    ASSERT(.not. batch_is_packed(fi))
+    ASSERT(.not. fi%is_packed())
     
     do ist = 1, fi%nst_linear
 #ifdef HAVE_MPI
@@ -89,7 +86,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
+    else if(accel_is_enabled() .and. fi%is_packed() .and. fo%is_packed()) then
       use_opencl = .true.
       call operate_opencl()
     else if(X(function_global) == OP_FORTRAN) then
@@ -107,7 +104,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       nri_loc = nri
 #endif
       
-      if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+      if(fi%is_packed() .and. fo%is_packed()) then
         
         ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
         ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
@@ -185,7 +182,7 @@ contains
 
     nn = op%stencil%size
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 
@@ -232,7 +229,7 @@ contains
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 
@@ -470,16 +467,16 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   PUSH_SUB(X(nl_operator_operate))
 
-  call batch_init     (batch_fi, 1)
-  call batch_add_state(batch_fi, fi)
+  call batch_init(batch_fi, 1, 1)
+  call batch_fi%add_state(fi)
 
-  call batch_init     (batch_fo, 1)
-  call batch_add_state(batch_fo, fo)
+  call batch_init(batch_fo, 1, 1)
+  call batch_fo%add_state(fo)
 
   call X(nl_operator_operate_batch)(op, batch_fi, batch_fo, ghost_update, profile, points)
 
-  call batch_end(batch_fi)
-  call batch_end(batch_fo)
+  call batch_fi%end()
+  call batch_fo%end()
 
   POP_SUB(X(nl_operator_operate))
 end subroutine X(nl_operator_operate)

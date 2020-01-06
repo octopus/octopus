@@ -328,29 +328,29 @@ contains
     PUSH_SUB(states_mxll_allocate)
 
     call batch_init(st%rsb, st%d%dim, 1)
-    call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rsb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rsb)
 
     call batch_init(st%rs_transb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_transb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_transb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_transb)
  
     call batch_init(st%rs_longb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_longb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_longb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_longb)
 
     call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_curr_dens_rest1b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest1b)
     
     call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call st%rs_curr_dens_rest2b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative
 !    call batch_init(st%rs_state_transb, hm%d%dim, 1)
-!    call batch_add_state(st%rs_state_transb, 1, st%rs_state_trans)
-!    call batch_end(st%rs_state_transb)
+!    call st%rs_state_transb%add_state(1, st%rs_state_trans)
+!    call st%rs_state_transb%end()
 
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
@@ -362,11 +362,11 @@ contains
     PUSH_SUB(states_mxll_end)
 
     call states_elec_dim_end(st%d)
-    call batch_end(st%rsb)
-    call batch_end(st%rs_transb)
-    call batch_end(st%rs_longb)
-    call batch_end(st%rs_curr_dens_rest1b)
-    call batch_end(st%rs_curr_dens_rest2b)
+    call st%rsb%end()
+    call st%rs_transb%end()
+    call st%rs_longb%end()
+    call st%rs_curr_dens_rest1b%end()
+    call st%rs_curr_dens_rest2b%end()
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
