@@ -805,7 +805,9 @@ contains
       SAFE_DEALLOCATE_A(beta)
       SAFE_DEALLOCATE_A(res)
       SAFE_DEALLOCATE_A(norm)
-      call vb(1)%end()
+      do iter = 1, te%exp_order+1
+        call vb(iter)%end()
+      end do
       SAFE_DEALLOCATE_A(vb)
       call profiling_out(prof)
       POP_SUB(exponential_lanczos_batch)
