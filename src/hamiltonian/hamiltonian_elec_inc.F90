@@ -34,11 +34,11 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psib, hpsib, terms, s
     class is (wfs_elec_t)
       call X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
     class default
-      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument psib."
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument hpsib."
       call messages_fatal(1)
     end select
   class default
-    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument hpsib."
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument psib."
     call messages_fatal(1)
   end select
 
@@ -63,11 +63,11 @@ subroutine X(hamiltonian_elec_magnus_apply) (hm, namespace, mesh, psib, hpsib, v
     class is (wfs_elec_t)
       call X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
     class default
-      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument psib."
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument hpsib."
       call messages_fatal(1)
     end select
   class default
-    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument hpsib."
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument psib."
     call messages_fatal(1)
   end select
 
