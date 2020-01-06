@@ -127,6 +127,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     if(apply_phase .and. .not.set_phase) then
       ! apply phase correction while setting boundary -> memory needs to be
       ! accessed only once
+      ASSERT(psib%has_phase)
       call boundaries_set(hm%der%boundaries, psib, phase_correction = hm%hm_base%phase_corr(:, psib%ik))
     else
       call boundaries_set(hm%der%boundaries, psib)
