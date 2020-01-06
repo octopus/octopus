@@ -449,7 +449,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   type(cube_function_t) :: cf
   type(mesh_t):: mesh   
   
-  type(batch_t)        :: psib
+  type(wfs_elec_t)        :: psib
   type(density_calc_t) :: dens_calc
 
   PUSH_SUB(pes_mask_output_states)
@@ -487,8 +487,8 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
       end do
     end do
      
-    call batch_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik))
-    call density_calc_accumulate(dens_calc, ik, psib) 
+    call wfs_elec_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik), ik)
+    call density_calc_accumulate(dens_calc, psib)
     call psib%end()
 
   end do

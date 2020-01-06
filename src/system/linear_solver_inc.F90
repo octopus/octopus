@@ -111,15 +111,14 @@ end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
 
-subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, yb, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t),    target, intent(inout) :: this
   type(namespace_t),                intent(in)    :: namespace
   type(hamiltonian_elec_t), target, intent(in)    :: hm
   type(grid_t),             target, intent(in)    :: gr
   type(states_elec_t),      target, intent(in)    :: st
-  integer,                          intent(in)    :: ik
-  type(batch_t),                    intent(inout) :: xb
-  type(batch_t),                    intent(inout) :: yb
+  type(wfs_elec_t),                 intent(inout) :: xb
+  type(wfs_elec_t),                 intent(inout) :: yb
   R_TYPE,                           intent(in)    :: shift(:)
   FLOAT,                            intent(in)    :: tol
   FLOAT,                            intent(out)   :: residue(:)
@@ -139,7 +138,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, x
       call xb%do_pack()
       call yb%do_pack()
     end if
-    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
+    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, yb, shift, iter_used, residue, tol)
     if (hamiltonian_elec_apply_packed(hm)) then
       call yb%do_unpack()
       call xb%do_unpack()
@@ -148,8 +147,8 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, x
 
   case default
     do ii = 1, xb%nst
-      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
-        shift(ii), tol, residue(ii), iter_used(ii), occ_response)
+      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%states(ii)%ist, xb%ik, xb%states(ii)%X(psi), &
+        yb%states(ii)%X(psi), shift(ii), tol, residue(ii), iter_used(ii), occ_response)
     end do
 
   end select
@@ -582,15 +581,14 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
 end subroutine X(linear_solver_operator)
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb, hxb)
+subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, shift, xb, hxb)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
-  integer,                  intent(in)    :: ik
   R_TYPE,                   intent(in)    :: shift(:)
-  type(batch_t),            intent(inout) :: xb   
-  type(batch_t),            intent(inout) :: hxb  
+  type(wfs_elec_t),         intent(inout) :: xb   
+  type(wfs_elec_t),         intent(inout) :: hxb  
 
   integer :: ii
   R_TYPE, allocatable :: shift_ist_indexed(:)
@@ -599,7 +597,7 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, xb, hxb, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, xb, hxb)
     
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     
@@ -614,8 +612,8 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb
   else
 
     do ii = 1, xb%nst
-      call X(linear_solver_operator)(hm, namespace, gr, st, xb%states(ii)%ist, ik, shift(ii), &
-        xb%states(ii)%X(psi), hxb%states(ii)%X(psi))
+      call X(linear_solver_operator)(hm, namespace, gr, st, xb%states(ii)%ist, xb%ik, shift(ii), xb%states(ii)%X(psi), &
+        hxb%states(ii)%X(psi))
     end do
 
   end if
@@ -779,21 +777,20 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
+subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t),    intent(inout) :: this
   type(namespace_t),        intent(in)    :: namespace
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(inout) :: xb
-  type(batch_t),            intent(in)    :: bb
+  type(wfs_elec_t),         intent(inout) :: xb
+  type(wfs_elec_t),         intent(in)    :: bb
   R_TYPE,                   intent(in)    :: shift(:)
   integer,                  intent(out)   :: iter_used(:) 
   FLOAT,                    intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
   FLOAT,                    intent(in)    :: threshold    !< convergence threshold
 
-  type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
+  type(wfs_elec_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   FLOAT               :: oldgamma
   integer             :: ii, iter
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
@@ -839,7 +836,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
   call xb%copy_to(deltax)
   call xb%copy_to(deltar)
 
-  call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, xb, vvb)
+  call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, xb, vvb)
 
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call vvb%copy_data_to(gr%mesh%np, res)
@@ -919,7 +916,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
       call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
     end if
 
-    call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, qqb, ppb)
+    call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, qqb, ppb)
 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
 

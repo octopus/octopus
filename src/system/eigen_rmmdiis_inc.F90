@@ -83,7 +83,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     call psib(1)%batch%copy_to(resb(1)%batch)
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
@@ -116,7 +116,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     call psib(1)%batch%copy_to(resb(2)%batch)
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2)%batch, psib(2)%batch, fr(1, :), reduce = .false.)
@@ -159,7 +159,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       end if
 
       ! calculate the residual
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch)
       nops = nops + bsize
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
@@ -230,7 +230,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       call psib(iter)%batch%copy_to(resb(iter)%batch)
 
       ! re-calculate the residual
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch)
       nops = nops + bsize
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
@@ -310,7 +310,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
   
     call st%group%psib(ib, ik)%copy_to(resb(1)%batch)
     
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
@@ -384,7 +384,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
   R_TYPE, allocatable :: diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
   logical :: pack
-  type(batch_t) :: resb, kresb
+  type(wfs_elec_t) :: resb, kresb
 
   PUSH_SUB(X(eigensolver_rmmdiis_min))
 
@@ -414,7 +414,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
     do isd = 1, sd_steps
 
       !We start by computing the Rayleigh quotient
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me1(2, :), reduce = .false.)
@@ -439,7 +439,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
 
       call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb, kresb)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, kresb, resb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, kresb, resb)
 
       niter = niter + 2*(maxst - minst + 1)
 

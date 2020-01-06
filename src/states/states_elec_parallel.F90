@@ -28,6 +28,7 @@ module states_elec_parallel_oct_m
   use profiling_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -164,7 +165,7 @@ contains
     type(mesh_t),                intent(in) :: mesh
     integer,                     intent(in) :: ib
     integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     type(profile_t), save :: prof
     
@@ -175,8 +176,8 @@ contains
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
     else
-      SAFE_ALLOCATE(psib)
-      call batch_init(psib, this%d%dim, this%group%block_size(ib))
+      allocate(wfs_elec_t::psib)
+      call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
         call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
@@ -210,15 +211,14 @@ contains
 
   ! --------------------------------------
 
-  subroutine states_elec_parallel_release_block(this, ib, iqn, psib)
+  subroutine states_elec_parallel_release_block(this, ib, psib)
     type(states_elec_t), target, intent(in) :: this
     integer,                     intent(in) :: ib
-    integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     PUSH_SUB(states_elec_parallel_release_block)
 
-    if(this%group%block_is_local(ib, iqn)) then
+    if(this%group%block_is_local(ib, psib%ik)) then
       nullify(psib)
     else
       call psib%end()

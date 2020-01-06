@@ -57,6 +57,7 @@ module states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -1088,11 +1089,11 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
             call st%group%psib(ib, iqn)%dallocate(bstart(ib), bend(ib), mesh%np_part, &
               mirror = st%d%mirror_states, special=.true.)
           else
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
             call st%group%psib(ib, iqn)%zallocate(bstart(ib), bend(ib), mesh%np_part, &
               mirror = st%d%mirror_states, special=.true.)
           end if

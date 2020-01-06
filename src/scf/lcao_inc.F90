@@ -550,7 +550,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: hamiltonian(:, :), overlap(:, :), aa(:, :), bb(:, :)
   integer :: prow, pcol, ilbasis, jlbasis
   R_TYPE, allocatable :: psii(:, :, :), hpsi(:, :, :)
-  type(batch_t) :: hpsib, psib
+  type(wfs_elec_t) :: hpsib, psib
   FLOAT, allocatable :: eval(:)
   R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
@@ -642,11 +642,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
         psii = M_ZERO
 
-        call batch_init( psib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), psii)
-        call batch_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi)
+        call wfs_elec_init( psib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), psii, ik)
+        call wfs_elec_init(hpsib, st%d%dim, this%atom_orb_basis(iatom, 1), this%atom_orb_basis(iatom, norbs), hpsi, ik)
 
         call X(submesh_batch_add)(this%sphere(iatom), this%orbitals(iatom), psib)
-        call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
+        call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
 
         do jatom = 1, geo%natoms
           if(.not. this%calc_atom(jatom)) cycle
@@ -726,8 +726,8 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
         end do ! jatom
 
-        call psib%end
-        call hpsib%end
+        call psib%end()
+        call hpsib%end()
 
         if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
 
@@ -870,7 +870,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   do iatom = 1, geo%natoms
     call submesh_end(this%sphere(iatom))
     call lcao_alt_end_orbital(this%orbitals(iatom))
-    call this%orbitals(iatom)%end
+    call this%orbitals(iatom)%end()
   end do
 
   if (this%parallel .or. mpi_grp_is_root(gr%mesh%mpi_grp)) then

@@ -63,6 +63,7 @@ program wannier90_interface
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
   use ylm_wannier_oct_m
 
   implicit none
@@ -733,7 +734,7 @@ contains
     CMPLX, allocatable :: overlap(:)
     CMPLX, allocatable :: psim(:,:), psin(:,:), phase(:)
     type(profile_t), save :: prof, reduce_prof
-    type(batch_t), pointer :: batch
+    type(wfs_elec_t), pointer :: batch
 
     PUSH_SUB(create_wannier90_mmn)
 

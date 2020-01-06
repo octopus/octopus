@@ -88,7 +88,7 @@ module states_mxll_oct_m
     type(states_mxll_priv_t)     :: priv          !< the private components
     integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
-    type(states_elec_group_t)    :: group
+!    type(states_elec_group_t)    :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
 
     type(batch_t), pointer       :: rsb
@@ -208,7 +208,7 @@ contains
     PUSH_SUB(states_mxll_null)
 
     call states_elec_dim_null(st%d)
-    call states_elec_group_null(st%group)
+!    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist) 
     st%priv%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0

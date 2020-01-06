@@ -54,7 +54,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
   R_TYPE, allocatable :: ham(:,:)        ! Projection of the Hamiltonian onto Krylov subspace.
   R_TYPE, allocatable :: hevec(:,:)
   R_TYPE, allocatable :: aux(:,:)
-  type(batch_t) :: vvb, avb
+  type(wfs_elec_t) :: vvb, avb
   integer  :: blk, ist, ii, idim, dim, jst, d1, d2, matvec, nconv
   FLOAT :: xx
 
@@ -167,8 +167,8 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         end if
       end do ortho
 
-      call batch_init(vvb, st%d%dim, blk)
-      call batch_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:))
+      call wfs_elec_init(vvb, st%d%dim, blk, ik)
+      call wfs_elec_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:), ik)
       call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
@@ -178,7 +178,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         end do
       end do
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb)
       INCR(matvec, blk)
 
       call vvb%end()

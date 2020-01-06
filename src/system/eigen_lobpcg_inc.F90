@@ -190,7 +190,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   R_TYPE, allocatable         :: gram_i(:, :)     !< Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) !< Space to construct the Gram matrix blocks.
   R_TYPE, allocatable, target :: ritz_vec(:, :)   !< Ritz-vectors.
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
   logical :: there_are_constraints
   
   PUSH_SUB(X(lobpcg))
@@ -309,10 +309,10 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
-  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
+  call wfs_elec_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:), ik)
+  call wfs_elec_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:), ik)
 
-  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
   
   call psib%end()
   call hpsib%end()
@@ -394,8 +394,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Apply Hamiltonian to residuals.
 
     if(lnuc > 0) then
-      call batch_init(psib, st%d%dim, lnuc)
-      call batch_init(hpsib, st%d%dim, lnuc)
+      call wfs_elec_init(psib, st%d%dim, lnuc, ik)
+      call wfs_elec_init(hpsib, st%d%dim, lnuc, ik)
     end if
     
     do i = 1, lnuc
@@ -405,7 +405,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
     end if
 
     niter = niter + lnuc

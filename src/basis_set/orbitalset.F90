@@ -37,7 +37,8 @@ module orbitalset_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
- 
+  use wfs_elec_oct_m
+
   implicit none
 
   private

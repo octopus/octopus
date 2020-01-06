@@ -27,6 +27,7 @@ module propagator_etrs_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
@@ -43,6 +44,7 @@ module propagator_etrs_oct_m
   use states_elec_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use propagation_ops_elec_oct_m
   use xc_oct_m
 
@@ -147,7 +149,7 @@ contains
     FLOAT :: diff
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib, iter, ip
-    type(batch_t), allocatable :: psi2(:, :)
+    class(wfs_elec_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
 
@@ -187,7 +189,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+    allocate(wfs_elec_t::psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -429,14 +431,16 @@ contains
         end select
         call profiling_out(phase_prof)
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt)
         end if
+        call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
 
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
           call st%group%psib(ib, ik)%do_unpack()

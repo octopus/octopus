@@ -474,7 +474,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
   logical :: against_all_
-  type(batch_t), pointer :: batch
+  type(wfs_elec_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_elec_orthogonalize_single))

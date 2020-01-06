@@ -43,6 +43,7 @@ module energy_calc_oct_m
   use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

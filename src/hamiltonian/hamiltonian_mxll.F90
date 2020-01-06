@@ -533,13 +533,13 @@ contains
 !      end do
 !    end do
   !  else
-    if (present(time)) then 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
-        end do
-      end do
-    end if
+!    if (present(time)) then 
+!      do ik = st%d%kpt%start, st%d%kpt%end
+!        do ib = st%group%block_start, st%group%block_end
+!          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
+!        end do
+!      end do
+!    end if
 
     POP_SUB(hamiltonian_mxll_apply_all)
   end subroutine hamiltonian_mxll_apply_all

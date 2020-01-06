@@ -667,7 +667,7 @@ end subroutine X(mesh_batch_exchange_points)
 !> This function should not be called directly, but through mesh_batch_nrm2.
 subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(mesh_t),            intent(in)    :: mesh
-  type(batch_t),           intent(in)    :: aa
+  class(batch_t),          intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
   integer :: ist, idim, indb, ip

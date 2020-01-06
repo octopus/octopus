@@ -17,12 +17,12 @@
 !!
 
 subroutine X(hamiltonian_elec_base_local)(this, mesh, std, ispin, psib, vpsib)
-  type(hamiltonian_elec_base_t),    intent(in)    :: this
-  type(mesh_t),                intent(in)    :: mesh
-  type(states_elec_dim_t),     intent(in)    :: std
-  integer,                     intent(in)    :: ispin
-  type(batch_t),               intent(in)    :: psib
-  type(batch_t),               intent(inout) :: vpsib
+  type(hamiltonian_elec_base_t),  intent(in)    :: this
+  type(mesh_t),                   intent(in)    :: mesh
+  type(states_elec_dim_t),        intent(in)    :: std
+  integer,                        intent(in)    :: ispin
+  type(wfs_elec_t),               intent(in)    :: psib
+  type(wfs_elec_t),               intent(inout) :: vpsib
 
   PUSH_SUB(X(hamiltonian_elec_base_local))
 
@@ -49,10 +49,10 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
   type(mesh_t),                 intent(in)    :: mesh
   type(states_elec_dim_t),      intent(in)    :: std
   integer,                      intent(in)    :: ispin
-  type(batch_t), target,        intent(in)    :: psib
-  type(batch_t), target,        intent(inout) :: vpsib
+  type(wfs_elec_t), target,     intent(in)    :: psib
+  type(wfs_elec_t), target,     intent(inout) :: vpsib
   FLOAT, optional,              intent(in)    :: Impotential(:,:)
-  type(accel_mem_t), optional, intent(in)    :: potential_opencl
+  type(accel_mem_t),  optional, intent(in)    :: potential_opencl
 
   integer :: ist, ip, dim2, dim3
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
@@ -248,17 +248,16 @@ end subroutine X(hamiltonian_elec_base_local_sub)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, src)
+subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
   type(hamiltonian_elec_base_t),         intent(in)    :: this
   type(mesh_t),                          intent(in)    :: mesh
   integer,                               intent(in)    :: np
-  integer,                               intent(in)    :: iqn
   logical,                               intent(in)    :: conjugate
-  type(batch_t),                 target, intent(inout) :: psib
-  type(batch_t),       optional, target, intent(in)    :: src
+  type(wfs_elec_t),              target, intent(inout) :: psib
+  type(wfs_elec_t),    optional, target, intent(in)    :: src
 
   integer :: ip, ii
-  type(batch_t), pointer :: src_
+  type(wfs_elec_t), pointer :: src_
   type(profile_t), save :: phase_prof
   CMPLX :: phase
   integer :: wgsize
@@ -274,6 +273,9 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
   src_ => psib
   if(present(src)) src_ => src
 
+  ASSERT(src_%has_phase .eqv. conjugate)
+  ASSERT(src_%ik == psib%ik)
+
   select case(psib%status())
   case(BATCH_PACKED)
 
@@ -281,7 +283,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
 
       !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        phase = conjg(this%phase(ip, iqn))
+        phase = conjg(this%phase(ip, psib%ik))
         do ii = 1, psib%nst_linear
           psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
         end do
@@ -292,7 +294,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
 
       !$omp parallel do private(ip, ii, phase)
       do ip = 1, np
-        phase = this%phase(ip, iqn)
+        phase = this%phase(ip, psib%ik)
         do ii = 1, psib%nst_linear
           psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
         end do
@@ -309,7 +311,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, iqn))*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, psib%ik))*src_%states_linear(ii)%X(psi)(ip)
         end do
         !$omp end do nowait
       end do
@@ -320,7 +322,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, psib%ik)*src_%states_linear(ii)%X(psi)(ip)
         end do
         !$omp end do nowait
       end do
@@ -337,7 +339,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
       call accel_set_kernel_arg(ker_phase, 0, 0_4)
     end if
 
-    call accel_set_kernel_arg(ker_phase, 1, (iqn - this%buff_phase_qn_start)*mesh%np_part)
+    call accel_set_kernel_arg(ker_phase, 1, (psib%ik - this%buff_phase_qn_start)*mesh%np_part)
     call accel_set_kernel_arg(ker_phase, 2, np)
     call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
     call accel_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
@@ -352,6 +354,8 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, iqn, conjugate, psib, 
     call accel_finish()
   end select
 
+  psib%has_phase = .not. conjugate
+
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_elec_base_phase))
 end subroutine X(hamiltonian_elec_base_phase)
@@ -359,12 +363,12 @@ end subroutine X(hamiltonian_elec_base_phase)
 ! ---------------------------------------------------------------------------------------
 
 subroutine X(hamiltonian_elec_base_rashba)(this, mesh, der, std, psib, vpsib)
-  type(hamiltonian_elec_base_t),    intent(in)    :: this
-  type(mesh_t),                     intent(in)    :: mesh
-  type(derivatives_t),         intent(in)    :: der
-  type(states_elec_dim_t),     intent(in)    :: std
-  type(batch_t), target,       intent(in)    :: psib
-  type(batch_t), target,       intent(inout) :: vpsib
+  type(hamiltonian_elec_base_t),  intent(in)    :: this
+  type(mesh_t),                   intent(in)    :: mesh
+  type(derivatives_t),            intent(in)    :: der
+  type(states_elec_dim_t),        intent(in)    :: std
+  type(wfs_elec_t), target,       intent(in)    :: psib
+  type(wfs_elec_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
   R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
@@ -418,14 +422,14 @@ end subroutine X(hamiltonian_elec_base_rashba)
 ! -----------------------------------------------------------------------------
 
 subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, psib, vpsib)
-  type(hamiltonian_elec_base_t),    intent(in)    :: this
-  type(mesh_t),                     intent(in)    :: mesh
-  type(derivatives_t),         intent(in)    :: der
-  type(states_elec_dim_t),     intent(in)    :: std
-  type(epot_t),                intent(in)    :: ep
-  integer,                     intent(in)    :: ispin
-  type(batch_t), target,       intent(in)    :: psib
-  type(batch_t), target,       intent(inout) :: vpsib
+  type(hamiltonian_elec_base_t),  intent(in)    :: this
+  type(mesh_t),                   intent(in)    :: mesh
+  type(derivatives_t),            intent(in)    :: der
+  type(states_elec_dim_t),        intent(in)    :: std
+  type(epot_t),                   intent(in)    :: ep
+  integer,                        intent(in)    :: ispin
+  type(wfs_elec_t), target,       intent(in)    :: psib
+  type(wfs_elec_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
   R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
@@ -494,12 +498,11 @@ end subroutine X(hamiltonian_elec_base_magnetic)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, projection)
+subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, psib, projection)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
   type(states_elec_dim_t),          intent(in)    :: std
-  integer,                          intent(in)    :: ik
-  type(batch_t),                    intent(in)    :: psib
+  type(wfs_elec_t),                 intent(in)    :: psib
   type(projection_t),               intent(out)   :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
@@ -527,6 +530,10 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
 #else
   nreal = nst
 #endif
+
+  if(psib%has_phase) then
+    ASSERT(allocated(this%projector_phases))
+  end if
 
   if(psib%is_packed() .and. accel_is_enabled()) then
 
@@ -560,7 +567,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
 
       if(allocated(this%projector_phases)) then
         call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-        call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+        call accel_set_kernel_arg(kernel, 10, (psib%ik - std%kpt%start)*this%total_points)
       end if
 
       ! In case of CUDA we use an optimized kernel, in which the loop over npoints is broken
@@ -662,7 +669,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
         !$omp parallel do private(ist)
         do ip = 1, npoints
           do ist = 1, nst
-            lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, ik)
+            lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, psib%ik)
           end do
         end do
 
@@ -671,7 +678,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, ik, psib, proj
         do ist = 1, nst
           !$omp parallel do
           do ip = 1, npoints
-            lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
+            lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, psib%ik)
           end do
         end do
 
@@ -717,13 +724,12 @@ end subroutine X(hamiltonian_elec_base_nlocal_start)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projection, vpsib)
+subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, projection, vpsib)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
-  type(mesh_t),                     intent(in)    :: mesh
-  type(states_elec_dim_t),          intent(in)    :: std
-  integer,                          intent(in)    :: ik
-  type(projection_t),       target, intent(inout) :: projection
-  type(batch_t),                    intent(inout) :: vpsib
+  type(mesh_t),                          intent(in)    :: mesh
+  type(states_elec_dim_t),               intent(in)    :: std
+  type(projection_t),            target, intent(inout) :: projection
+  type(wfs_elec_t),                      intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, iproj, idim
@@ -744,6 +750,10 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
 #else
   nreal = nst
 #endif
+
+  if(vpsib%has_phase) then
+    ASSERT(allocated(this%projector_phases))
+  end if
 
   ! reduce the projections
   if(mesh%parallel_in_domains) then
@@ -861,7 +871,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
         if(vpsib%is_packed()) then
           !$omp parallel do private(ip, ist, phase) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
-            phase = conjg(this%projector_phases(ip, imat, ik))
+            phase = conjg(this%projector_phases(ip, imat, vpsib%ik))
             forall(ist = 1:nst)
               vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
                           + psi(ist, ip)*phase
@@ -873,7 +883,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, ik, projectio
             !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
-                  + psi(ist, ip)*conjg(this%projector_phases(ip, imat, ik))
+                  + psi(ist, ip)*conjg(this%projector_phases(ip, imat, vpsib%ik))
             end do
             !$omp end parallel do
           end do
@@ -966,7 +976,7 @@ contains
 
         if(allocated(this%projector_phases)) then
           call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-          call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+          call accel_set_kernel_arg(kernel, 10, (vpsib%ik - std%kpt%start)*this%total_points)
         end if
 
         wgsize = accel_kernel_workgroup_size(kernel)/size    
@@ -1006,13 +1016,13 @@ end subroutine X(hamiltonian_elec_base_nlocal_finish)
 
 subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1b, psi2b, force)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
-  type(mesh_t),                     intent(in)    :: mesh
-  type(states_elec_t),              intent(in)    :: st
-  integer,                          intent(in)    :: iqn
-  integer,                          intent(in)    :: ndim
-  type(batch_t),                    intent(in)    :: psi1b
-  type(batch_t),                    intent(in)    :: psi2b(:)
-  FLOAT,                            intent(inout) :: force(:, :)
+  type(mesh_t),                          intent(in)    :: mesh
+  type(states_elec_t),                   intent(in)    :: st
+  integer,                               intent(in)    :: iqn
+  integer,                               intent(in)    :: ndim
+  type(wfs_elec_t),                      intent(in)    :: psi1b
+  type(wfs_elec_t),                      intent(in)    :: psi2b(:)
+  FLOAT,                                 intent(inout) :: force(:, :)
 
   integer :: ii, ist, ip, iproj, imat, nreal, iprojection, iatom, idir
   integer :: npoints, nprojs, nst, idim
@@ -1204,13 +1214,12 @@ end subroutine X(hamiltonian_elec_base_nlocal_force)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, ik, psib, commpsib)
+subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, psib, commpsib)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
-  type(mesh_t),                     intent(in)    :: mesh
-  type(states_elec_dim_t),          intent(in)    :: std
-  integer,                          intent(in)    :: ik
-  type(batch_t),                    intent(in)    :: psib
-  type(batch_t),                    intent(inout) :: commpsib(:)
+  type(mesh_t),                          intent(in)    :: mesh
+  type(states_elec_dim_t),               intent(in)    :: std
+  type(wfs_elec_t),                      intent(in)    :: psib
+  type(wfs_elec_t),                      intent(inout) :: commpsib(:)
 
   integer :: ist, ip, iproj, imat, nreal, iprojection, idir
   integer :: npoints, nprojs, nst, idim
@@ -1324,7 +1333,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              phase = this%projector_phases(ip, imat, ik)
+              phase = this%projector_phases(ip, imat, psib%ik)
               aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))*phase
               bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
               cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
@@ -1344,7 +1353,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              phase = this%projector_phases(ip, imat, ik)
+              phase = this%projector_phases(ip, imat, psib%ik)
               aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
               bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
               cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
@@ -1442,7 +1451,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
         do idir = 0, 3
           !$omp parallel do private(ip, ist, phase)
           do ip = 1, npoints
-            phase = conjg(this%projector_phases(ip, imat, ik))
+            phase = conjg(this%projector_phases(ip, imat, psib%ik))
             forall(ist = 1:nst)
               psi(ist, ip, idir) = phase*psi(ist, ip, idir)
             end forall
@@ -1512,7 +1521,7 @@ contains
 
     if(allocated(this%projector_phases)) then
       call accel_set_kernel_arg(kernel, 10, this%buff_projector_phases)
-      call accel_set_kernel_arg(kernel, 11, (ik - std%kpt%start)*this%total_points)
+      call accel_set_kernel_arg(kernel, 11, (psib%ik - std%kpt%start)*this%total_points)
     end if
       
     lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
@@ -1587,7 +1596,7 @@ contains
 
       if(allocated(this%projector_phases)) then
         call accel_set_kernel_arg(kernel, 12, this%buff_projector_phases)
-        call accel_set_kernel_arg(kernel, 13, (ik - std%kpt%start)*this%total_points)
+        call accel_set_kernel_arg(kernel, 13, (psib%ik - std%kpt%start)*this%total_points)
       end if
       
       wgsize = accel_kernel_workgroup_size(kernel)/size    

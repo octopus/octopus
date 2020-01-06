@@ -17,15 +17,14 @@
 !!
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, f_in, f_out)
   type(pert_t),             intent(in)    :: this
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(in)    :: f_in
-  type(batch_t),            intent(inout) :: f_out
+  type(wfs_elec_t),         intent(in)    :: f_in
+  type(wfs_elec_t),         intent(inout) :: f_out
 
   integer :: ist
   R_TYPE, allocatable :: fi(:, :), fo(:, :)
@@ -45,7 +44,7 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
   case default
     do ist = 1, f_in%nst
       call batch_get_state(f_in, ist, gr%mesh%np, fi)
-      call X(pert_apply)(this, namespace, gr, geo, hm, ik, fi, fo)
+      call X(pert_apply)(this, namespace, gr, geo, hm, f_in%ik, fi, fo)
       call batch_set_state(f_out, ist, gr%mesh%np, fo)
     end do
   end select
@@ -925,7 +924,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
 
   integer :: order, ik, ib, minst, maxst, ist
   R_TYPE, allocatable :: tt(:)
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
 
   PUSH_SUB(X(pert_states_elec_expectation_value))
 
@@ -946,7 +945,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
 
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
+      call X(pert_apply_batch)(this, namespace, gr, geo, hm, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
       call hpsib%end(copy = .false.)

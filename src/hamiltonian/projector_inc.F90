@@ -28,16 +28,16 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   R_TYPE,            intent(inout) :: ppsi(:, :)  !< (1:mesh%np, dim)
   integer,           intent(in)    :: ik
 
-  type(batch_t) :: psib, ppsib
+  type(wfs_elec_t) :: psib, ppsib
 
   PUSH_SUB(X(project_psi))
 
-  call batch_init(psib, dim, 1)
+  call wfs_elec_init(psib, dim, 1, ik)
   call psib%add_state(1, psi)
-  call batch_init(ppsib, dim, 1)
+  call wfs_elec_init(ppsib, dim, 1, ik)
   call ppsib%add_state(1, ppsi)
 
-  call X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
+  call X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib)
 
   call psib%end()
   call ppsib%end()
@@ -55,14 +55,13 @@ end subroutine X(project_psi)
 !! (reduce_buffer). Then the array is reduced (as it is contiguous
 !! only one reduction is required). Finally |ppsi> += |p><p|psi> is
 !! calculated.
-subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
+subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib)
   type(mesh_t),      intent(in)    :: mesh
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
-  type(batch_t),     intent(in)    :: psib
-  type(batch_t),     intent(inout) :: ppsib
-  integer,           intent(in)    :: ik
+  type(wfs_elec_t),  intent(in)    :: psib
+  type(wfs_elec_t),  intent(inout) :: ppsib
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
   R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :), uvpsi(:,:,:)
@@ -120,7 +119,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
-              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, psib%ik)
             end forall
           else
             forall (is = 1:ns) 
@@ -134,7 +133,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
-              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, psib%ik)
             end forall
           else
             forall (is = 1:ns) 
@@ -234,7 +233,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, psib%ik))
             end forall
           else
             forall (is = 1:ns) 
@@ -250,7 +249,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
               ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &
-                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, psib%ik))
             end forall
           else
             forall (is = 1:ns) 

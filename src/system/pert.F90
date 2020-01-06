@@ -47,6 +47,7 @@ module pert_oct_m
   use states_elec_dim_oct_m
   use varinfo_oct_m
   use vibrations_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
