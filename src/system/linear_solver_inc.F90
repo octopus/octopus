@@ -545,7 +545,7 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
 
   PUSH_SUB(X(linear_solver_operator))
 
-  call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, x, Hx, ist, ik)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
   do idim = 1, st%d%dim

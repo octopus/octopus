@@ -36,6 +36,8 @@ module wfs_elec_oct_m
     integer, public :: ik
     logical, public :: has_phase
   contains
+    procedure :: clone_to => wfs_elec_clone_to
+    procedure :: clone_to_array => wfs_elec_clone_to_array
     procedure :: copy_to => wfs_elec_copy_to
     procedure :: check_compatibility_with => wfs_elec_check_compatibility_with
     procedure :: end => wfs_elec_end
@@ -65,6 +67,65 @@ contains
 
     POP_SUB(wfs_elec_init_empty)
   end subroutine wfs_elec_init_empty
+
+  !--------------------------------------------------------------
+  subroutine wfs_elec_clone_to(this, dest, pack, copy_data)
+    class(wfs_elec_t),           intent(in)    :: this
+    class(batch_t), allocatable, intent(out)   :: dest
+    logical,        optional,    intent(in)    :: pack
+    logical,        optional,    intent(in)    :: copy_data
+
+    PUSH_SUB(wfs_elec_clone_to)
+
+    if (.not. allocated(dest)) then
+      allocate(wfs_elec_t::dest)
+    else
+      message(1) = "Internal error: destination batch in wfs_elec_clone_to has been previously allocated."
+      call messages_fatal(1)
+    end if
+
+    select type (dest)
+    class is (wfs_elec_t)
+      call this%copy_to(dest, pack, copy_data)
+    class default
+      message(1) = "Internal error: imcompatible batches in wfs_elec_clone_to."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(wfs_elec_clone_to)
+  end subroutine wfs_elec_clone_to
+
+  !--------------------------------------------------------------
+  subroutine wfs_elec_clone_to_array(this, dest, n_batches, pack, copy_data)
+    class(wfs_elec_t),           intent(in)    :: this
+    class(batch_t), allocatable, intent(out)   :: dest(:)
+    integer,                     intent(in)    :: n_batches
+    logical,        optional,    intent(in)    :: pack
+    logical,        optional,    intent(in)    :: copy_data
+
+    integer :: ib
+
+    PUSH_SUB(wfs_elec_clone_to_array)
+
+    if (.not. allocated(dest)) then
+      allocate(wfs_elec_t::dest(n_batches))
+    else
+      message(1) = "Internal error: destination batch in wfs_elec_clone_to_array has been previously allocated."
+      call messages_fatal(1)
+    end if
+
+    select type (dest)
+    class is (wfs_elec_t)
+      do ib = 1, n_batches
+        call this%copy_to(dest(ib), pack, copy_data)
+      end do
+    class default
+      message(1) = "Internal error: imcompatible batches in wfs_elec_clone_to_array."
+      call messages_fatal(1) 
+    end select
+
+    POP_SUB(wfs_elec_clone_to_array)
+  end subroutine wfs_elec_clone_to_array
 
   !--------------------------------------------------------------
   subroutine wfs_elec_copy_to(this, dest, pack, copy_data)

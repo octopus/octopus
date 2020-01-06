@@ -17,6 +17,64 @@
 !!
 
 ! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),      target, intent(inout) :: psib
+  class(batch_t),      target, intent(inout) :: hpsib
+  integer,           optional, intent(in)    :: terms
+  logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+  PUSH_SUB(X(hamiltonian_elec_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument hpsib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument psib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_apply))
+end subroutine X(hamiltonian_elec_apply)
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_magnus_apply) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),              intent(inout) :: psib
+  class(batch_t),              intent(inout) :: hpsib
+  FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+  logical,           optional, intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument hpsib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument psib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_magnus_apply))
+end subroutine X(hamiltonian_elec_magnus_apply)
+
+! ---------------------------------------------------------
 subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
   type(hamiltonian_elec_t),    intent(in)    :: hm
   type(namespace_t),           intent(in)    :: namespace
@@ -69,6 +127,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     if(apply_phase .and. .not.set_phase) then
       ! apply phase correction while setting boundary -> memory needs to be
       ! accessed only once
+      ASSERT(psib%has_phase)
       call boundaries_set(hm%der%boundaries, psib, phase_correction = hm%hm_base%phase_corr(:, psib%ik))
     else
       call boundaries_set(hm%der%boundaries, psib)
@@ -249,7 +308,7 @@ end subroutine X(hamiltonian_elec_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
+subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
@@ -263,7 +322,7 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
 
   type(wfs_elec_t) :: psib, hpsib
 
-  PUSH_SUB(X(hamiltonian_elec_apply))
+  PUSH_SUB(X(hamiltonian_elec_apply_single))
   
   call wfs_elec_init(psib, hm%d%dim, 1, ik)
   call psib%add_state(ist, psi)
@@ -281,8 +340,8 @@ subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psi, hpsi, ist, ik, t
   call hpsib%end()
   
 
-  POP_SUB(X(hamiltonian_elec_apply))
-end subroutine X(hamiltonian_elec_apply)
+  POP_SUB(X(hamiltonian_elec_apply_single))
+end subroutine X(hamiltonian_elec_apply_single)
 
 
 subroutine X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, hpsib)
@@ -703,8 +762,8 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
   ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply)(hm, namespace, mesh, psi, auxpsi, 1, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi, auxpsi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
   do idim = 1, hm%d%dim
@@ -719,8 +778,8 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
 
   ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
   auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
-  call X(hamiltonian_elec_apply)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
   hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
 
   SAFE_DEALLOCATE_A(auxpsi)
@@ -728,7 +787,7 @@ subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
   POP_SUB(X(magnus))
 end subroutine X(magnus)
 
-subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
@@ -740,7 +799,7 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
   integer :: ispin
   type(wfs_elec_t) :: auxpsib, aux2psib
 
-  PUSH_SUB(X(hamiltonian_elec_apply_magnus))
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply_batch))
 
   ! We will assume, for the moment, no spinors.
   if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
@@ -779,8 +838,8 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, namespace, mesh, psib, hpsib, v
   call auxpsib%end()
   call aux2psib%end()
 
-  POP_SUB(X(hamiltonian_elec_apply_magnus))
-end subroutine X(hamiltonian_elec_apply_magnus)
+  POP_SUB(X(hamiltonian_elec_magnus_apply_batch))
+end subroutine X(hamiltonian_elec_magnus_apply_batch)
 
 
 ! ---------------------------------------------------------

@@ -239,7 +239,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
     do ik = kstart, kend
       ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
     do n2 = n1, this%norbs
