@@ -24,6 +24,7 @@ module batch_oct_m
   use blas_oct_m
   use global_oct_m
   use hardware_oct_m
+  use iso_c_binding
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
