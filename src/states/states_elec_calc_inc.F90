@@ -599,7 +599,6 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
   logical :: against_all_
-  type(batch_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT_BATCH")
   PUSH_SUB(X(states_elec_orthogonalize_single_batch))
@@ -638,8 +637,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
       if(all(mask(minst:maxst) .eqv. .true.)) cycle
     end if
  
-    batch => st%group%psib(ib, iqn)
-    call X(mesh_batch_mf_dotp)(mesh, batch, phi, ss(minst:maxst), reduce = .false., nst = maxst-minst+1)
+    call X(mesh_batch_mf_dotp)(mesh, st%group%psib(ib, iqn), phi, ss(minst:maxst), reduce = .false., nst = maxst-minst+1)
 
     !In case some of the states in the batche need to be skipped
     do ist = minst, maxst
@@ -679,9 +677,8 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
     if(present(mask)) then
       if(all(mask(minst:maxst) .eqv. .true.)) cycle
     end if
-    batch => st%group%psib(ib, iqn)
 
-    call X(mesh_batch_mf_axpy)(mesh, -ss(minst:maxst), batch, phi, nst = maxst-minst+1) 
+    call X(mesh_batch_mf_axpy)(mesh, -ss(minst:maxst), st%group%psib(ib, iqn), phi, nst = maxst-minst+1) 
 
   end do
 

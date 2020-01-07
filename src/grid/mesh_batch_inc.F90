@@ -485,41 +485,38 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     SAFE_ALLOCATE(phi(1:mesh%np, aa%dim))
 
-    if(aa%dim == 1) then
-      !Here we compute the complex conjuguate of the dot product first and then
-      !we take the conjugate at the end
-      if(mesh%use_curvilinear) then
-        !$omp parallel do
-        do ip = 1, mesh%np
-          phi(ip, 1) = mesh%vol_pp(ip)*R_CONJ(psi(ip, 1))
-        end do
-      else
-        !$omp parallel do
-        do ip = 1, mesh%np
-          phi(ip, 1) = R_CONJ(psi(ip, 1))
-        end do
-      end if
+!    if(aa%dim == 1) then
+!      !Here we compute the complex conjuguate of the dot product first and then
+!      !we take the conjugate at the end
+!      if(mesh%use_curvilinear) then
+!        !$omp parallel do
+!        do ip = 1, mesh%np
+!          phi(ip, 1) = mesh%vol_pp(ip)*R_CONJ(psi(ip, 1))
+!        end do
+!      else
+!        !$omp parallel do
+!        do ip = 1, mesh%np
+!          phi(ip, 1) = R_CONJ(psi(ip, 1))
+!        end do
+!      end if
+!
+!      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%pack%X(psi)(1,1), & 
+!               aa%nst, phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
 
-      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(M_ONE), aa%pack%X(psi)(1,1), & 
-               aa%nst_linear, phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
-
-      do ist = 1, nst_
-        dot(ist) = mesh%volume_element*R_CONJ(dot(ist))
-      end do
-
-    else
+!      do ist = 1, nst_
+!        dot(ist) = R_CONJ(dot(ist))
+!      end do
+!
+!    else
 
       dot(1:nst_) = M_ZERO
       do ist = 1, nst_
         call batch_get_state(aa, ist, mesh%np, phi)
-        do idim = 1, aa%dim
-          indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-          dot(ist) = dot(ist) + X(mf_dotp)(mesh, phi(1:mesh%np, idim), psi(1:mesh%np,idim),&
+        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
                reduce = .false.)
-        end do
       end do
 
-    end if
+ !   end if
 
     SAFE_DEALLOCATE_A(phi)
 
@@ -576,15 +573,16 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
     if(xx%dim == 1) then 
 
       call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
-                            xx%nst_linear, aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+                            xx%nst, aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+
     else !Spinor case
 
       SAFE_ALLOCATE(phi(1:mesh%np, 1:xx%dim))
 
       do ist = 1, nst_
-        call batch_get_state(xx, ist, mesh%np, phi)
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call batch_get_state(xx, ist, mesh%np, phi) 
         do idim = 1, xx%dim
-          if(abs(aa(ist)) < M_EPSILON) cycle
           call lalg_axpy(mesh%np, aa(ist), phi(1:mesh%np, idim), psi(1:mesh%np, idim))
         end do
       end do
