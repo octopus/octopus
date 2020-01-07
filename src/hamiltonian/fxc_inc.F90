@@ -115,7 +115,7 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
   if(gga) call gga_init()
 
 
-  dedd = M_ZERO
+  d2ed2d = M_ZERO
   if(spinors_fxc) v_d2ed2d = M_ZERO
   space_loop: do ip = 1, mesh%np
 
