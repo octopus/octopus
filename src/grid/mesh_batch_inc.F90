@@ -574,7 +574,6 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
       call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
                             xx%nst, aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
-
     else !Spinor case
 
       SAFE_ALLOCATE(phi(1:mesh%np, 1:xx%dim))
