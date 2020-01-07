@@ -611,8 +611,6 @@ contains
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
         if(mc%reorder_ranks) then
-          call messages_experimental('Reordering ranks')
-
           ! first, reorder the ranks
           ! this is done to get a column-major ordering of the ranks in the
           ! Cartesian communicator, since they a ordered row-major otherwise
