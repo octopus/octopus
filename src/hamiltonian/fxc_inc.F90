@@ -27,9 +27,45 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
   CMPLX, intent(inout), optional    :: zfxc(:, :, :, :, :)
 
   logical :: spinors_fxc
+  logical :: gga
+
   CMPLX, allocatable :: mmatrix(:, :, :, :), zeigref_(:, :, :)
-  FLOAT, allocatable :: l_vdedd(:), vdedd(:, :)
-  FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
+  FLOAT, allocatable :: l_v_v2rho2(:), v_d2ed2d(:, :)
+
+  ! Input quantities (from Octopus)
+  FLOAT, allocatable :: dens(:,:)      ! Density
+  FLOAT, allocatable :: gdens(:,:,:)   ! Gradient of the density
+
+  ! local input quantities for libxc:
+  FLOAT, allocatable :: l_dens(:)
+  FLOAT, allocatable :: l_sigma(:)   ! Gradient of the density
+
+  ! Note: the first order derivatives should be unnecessary here (delete!)
+
+  ! First order (functional) derivatives
+  FLOAT, allocatable :: l_dedd(:)     ! Derivative of the energy wrt the density
+  FLOAT, allocatable :: l_vsigma(:)   ! Derivative of the energy wrt sigma
+
+  !  First order (functional) derivatives
+  FLOAT, allocatable :: dedd(:,:)      ! Derivative of the exchange or correlation energy wrt the density
+  FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
+
+  ! Second order derivatives:
+
+  ! Second order (functional) defivatives (from libxc):
+
+  FLOAT, allocatable :: l_v2rho2(:)       ! Derivative of the energy wrt the density, density
+  FLOAT, allocatable :: l_v2rhosigma(:)   ! Derivative of the energy wrt density, sigma
+  FLOAT, allocatable :: l_v2sigma2(:)     ! Derivative of the energy wrt sigma, sigma
+
+  ! Second order derivatives (for Octopus):
+
+  FLOAT, allocatable :: d2ed2d(:,:)
+  FLOAT, allocatable :: d2edddgd(:,:,:)
+  FLOAT, allocatable :: d2edgddgd(:,:,:,:)
+
+
+
   integer :: ip, ixc, spin_channels
   type(xc_functl_t), pointer :: functl(:)
 
@@ -46,9 +82,9 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
     spinors_fxc = .false.
   end if
 
-  ! is there anything to do? (only LDA by now)
-  if(bitand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
-    message(1) = "Only LDA functionals are authorized for now in XCKernel."
+  ! is there anything to do? (only LDA and GGA by now)
+  if(bitand(xcs%kernel_family, XC_FAMILY_LDA+XC_FAMILY_GGA) == 0) then
+    message(1) = "Only LDA and GGA functionals are authorized for now in XCKernel."
     call messages_fatal(1, namespace=namespace)
   end if
 
@@ -65,13 +101,22 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
     end if
   end do
 
+  gga  = family_is_gga(xcs%family)
+
+  if(gga .and. spinors_fxc) then
+    message(1) = "Calculating the fxc kernel for GGA with spinors is currently not available.."
+    call messages_fatal(1, namespace=namespace)
+  end if
+
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
     
   call  lda_init()
+  if(gga) call gga_init()
+
 
   dedd = M_ZERO
-  if(spinors_fxc) vdedd = M_ZERO
+  if(spinors_fxc) v_d2ed2d = M_ZERO
   space_loop: do ip = 1, mesh%np
 
     l_dens (:)   = dens (ip, :)
@@ -79,20 +124,22 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
     ! Calculate fxc
     functl_loop: do ixc = 1, 2
 
-      l_dedd = M_ZERO
-      if(spinors_fxc) l_vdedd = M_ZERO
+      l_v2rho2 = M_ZERO
+      if(spinors_fxc) l_v_v2rho2 = M_ZERO
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_dedd(1))
-        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_vdedd(1))
+        call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_v2rho2(1))
+        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_v_v2rho2(1))
         
+      case(XC_FAMILY_GGA)
+        call XC_F90(gga_fxc)(functl(ixc)%conf, 1, l_dens(1), l_sigma(1), l_v2rho2(1), l_v2rhosigma(1), l_v2sigma2(1))
       case default
         cycle
       end select
 
       ! store results
-      dedd(ip, :) = dedd(ip, :) + l_dedd(:)
-      if(spinors_fxc) vdedd(ip, :) = vdedd(ip, :) + l_vdedd(:)
+      d2ed2d(ip, :) = d2ed2d(ip, :) + l_v2rho2(:)
+      if(spinors_fxc) v_d2ed2d(ip, :) = v_d2ed2d(ip, :) + l_v_v2rho2(:)
 
     end do functl_loop
   end do space_loop
@@ -123,14 +170,14 @@ contains
 
     ! allocate some general arrays
     SAFE_ALLOCATE(  dens(1:mesh%np, 1:spin_channels))
-    SAFE_ALLOCATE(  dedd(1:mesh%np, 1:is))
+    SAFE_ALLOCATE(  d2ed2d(1:mesh%np, 1:is))
     SAFE_ALLOCATE(l_dens(1:spin_channels))
-    SAFE_ALLOCATE(l_dedd(1:is))
+    SAFE_ALLOCATE(l_v2rho2(1:is))
     dedd = M_ZERO
 
     if(spinors_fxc) then
-      SAFE_ALLOCATE(l_vdedd(1:spin_channels))
-      SAFE_ALLOCATE(vdedd(1:mesh%np, 1:spin_channels))
+      SAFE_ALLOCATE(l_v_v2rho2(1:spin_channels))
+      SAFE_ALLOCATE(v_d2ed2d(1:mesh%np, 1:spin_channels))
       SAFE_ALLOCATE(zeigref_(1:2, 1:2, 1:mesh%np))
       SAFE_ALLOCATE(mmatrix(1:2, 1:2, 1:2, 1:mesh%np))
     end if
@@ -179,11 +226,11 @@ contains
     PUSH_SUB(xc_get_fxc.lda_end)
 
     SAFE_DEALLOCATE_A(dens)
-    SAFE_DEALLOCATE_A(dedd)
+    SAFE_DEALLOCATE_A(d2ed2d)
     SAFE_DEALLOCATE_A(l_dens)
-    SAFE_DEALLOCATE_A(l_dedd)
+    SAFE_DEALLOCATE_A(l_v2rho2)
     if(ispin == SPINORS) then
-      SAFE_DEALLOCATE_A(l_vdedd)
+      SAFE_DEALLOCATE_A(l_v_v2rho2)
       SAFE_DEALLOCATE_A(mmatrix)
     end if
 
@@ -192,7 +239,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! calculates the LDA part of vxc, taking into account non-collinear spin
+  ! calculates the LDA part of fxc, taking into account non-collinear spin
   subroutine lda_process()
     integer :: alpha, beta, delta, gamma, ip, i, j
     FLOAT :: localfxc(2, 2)
@@ -200,18 +247,18 @@ contains
 
     select case(ispin)
     case(UNPOLARIZED)
-      fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
+      fxc(:,1,1) = fxc(:,1,1) + d2ed2d(:,1)
     case(SPIN_POLARIZED)
-      fxc(:,1,1) = fxc(:,1,1) + dedd(:,1)
-      fxc(:,2,2) = fxc(:,2,2) + dedd(:,3)
-      fxc(:,1,2) = fxc(:,1,2) + dedd(:,2)
-      fxc(:,2,1) = fxc(:,2,1) + dedd(:,2)
+      fxc(:,1,1) = fxc(:,1,1) + d2ed2d(:,1)
+      fxc(:,2,2) = fxc(:,2,2) + d2ed2d(:,3)
+      fxc(:,1,2) = fxc(:,1,2) + d2ed2d(:,2)
+      fxc(:,2,1) = fxc(:,2,1) + d2ed2d(:,2)
     case(SPINORS)
       do ip = 1, mesh%np
-        localfxc(1, 1) = dedd(ip, 1)
-        localfxc(1, 2) = dedd(ip, 2)
-        localfxc(2, 1) = dedd(ip, 2)
-        localfxc(2, 2) = dedd(ip, 3)
+        localfxc(1, 1) = d2ed2d(ip, 1)
+        localfxc(1, 2) = d2ed2d(ip, 2)
+        localfxc(2, 1) = d2ed2d(ip, 2)
+        localfxc(2, 2) = d2ed2d(ip, 3)
         do alpha = 1, 2
           do beta = 1, 2
             do gamma = 1, 2
@@ -219,7 +266,7 @@ contains
                 do i = 1, 2
                   zfxc(alpha, beta, gamma, delta, ip) = zfxc(alpha, beta, gamma, delta, ip) + &
                     lalg_zd2ni(zeigref_(1:2, i, ip), mmatrix(:, :, i, ip), beta, alpha, delta, gamma) * &
-                    vdedd(ip, i)
+                    v_d2ed2d(ip, i)
                   do j = 1, 2
                     zfxc(alpha, beta, gamma, delta, ip) = zfxc(alpha, beta, gamma, delta, ip) + &
                        lalg_zdni(zeigref_(1:2, i, ip), beta, alpha) * &
@@ -235,6 +282,23 @@ contains
 
     POP_SUB(xc_get_fxc.lda_process)
   end subroutine lda_process
+
+  ! ---------------------------------------------------------
+  ! Takes care of the initialization of the GGA part of the functionals
+  !   *) allocates dens(ity) and dedd, dedgd and their local variants
+  !   *) calculates the density
+  subroutine gga_init()
+  end subroutine gga_init
+
+  ! ---------------------------------------------------------
+  ! deallocates variables allocated in gga_init
+  subroutine gga_end()
+  end subroutine gga_end
+
+  ! ---------------------------------------------------------
+  ! calculates the GGA part of fxc
+  subroutine gga_process()
+  end subroutine gga_process
 
 end subroutine xc_get_fxc
 
