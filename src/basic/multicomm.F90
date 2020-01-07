@@ -647,6 +647,7 @@ contains
             call messages_fatal(1)
           end if
           call mpi_grp_init(reorder_grp, reorder_comm)
+          call mpi_grp_copy(base_grp, reorder_grp)
         else
           call mpi_grp_copy(reorder_grp, base_grp)
         end if
