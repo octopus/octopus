@@ -73,6 +73,7 @@ module scf_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oep_oct_m
   
@@ -545,7 +546,7 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    type(batch_t), allocatable :: psioutb(:, :)
+    class(wfs_elec_t), allocatable :: psioutb(:, :)
 
     PUSH_SUB(scf_run)
 
@@ -650,17 +651,17 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+          call st%group%psib(ib, iqn)%copy_to(psioutb(ib, iqn))
         end do
       end do
       
     end select
 
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
@@ -718,7 +719,7 @@ contains
           ks%frozen_hxc = .true.
           do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, iter)
+            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
 
             call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
@@ -738,13 +739,13 @@ contains
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
         end if
       end if
 
       ! occupations
-      call states_elec_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call states_elec_fermi(st, namespace, gr%mesh)
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
@@ -761,7 +762,7 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
+            call st%group%psib(ib, iqn)%copy_data_to(gr%mesh%np, psioutb(ib, iqn))
           end do
         end do
       end select
@@ -771,7 +772,7 @@ contains
       evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call energy_calc_total(hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
@@ -946,7 +947,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
       end if
 
       ! save information for the next iteration
@@ -979,7 +980,7 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
       call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 
@@ -988,7 +989,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_end(psioutb(ib, iqn))
+          call psioutb(ib, iqn)%end()
         end do
       end do
       
@@ -1014,18 +1015,18 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo) 
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
     
     if(scf%max_iter == 0) then
-      call energy_calc_eigenvalues(hm, gr%der, st)
-      call states_elec_fermi(st, gr%mesh)
+      call energy_calc_eigenvalues(namespace, hm, gr%der, st)
+      call states_elec_fermi(st, namespace, gr%mesh)
       call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
 
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, gr, geo, st, hm, ks, STATIC_DIR)
+      call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
@@ -1146,14 +1147,14 @@ contains
 
         call grid_write_info(gr, geo, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
+          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
 
         ! scf information
         if(finish) then
@@ -1180,7 +1181,7 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then

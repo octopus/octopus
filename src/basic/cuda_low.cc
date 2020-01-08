@@ -23,12 +23,18 @@
 #ifdef HAVE_CUDA
 #include <cuda.h>
 #include <nvrtc.h>
+// all kernels and transfers are submitted to this non-blocking stream
+// -> allows operations from libraries to overlap with this stream
+CUstream * phStream;
+int current_stream;
+static int number_streams = 32;
 #else
 typedef int CUcontext;
 typedef int CUdevice;
 typedef int CUmodule;
 typedef int CUfunction;
 typedef int CUdeviceptr;
+typedef int CUstream;
 #endif
 
 #include <stdlib.h> //we have to include this before cmath to workaround a bug in the PGI "compiler".
@@ -73,7 +79,7 @@ typedef int CUdeviceptr;
 
 using namespace std;
 
-extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number, fint * rank){
+extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, CUstream ** stream, fint * device_number, fint * rank){
 
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuInit(0));
@@ -96,12 +102,20 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
 
   CUDA_SAFE_CALL(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
+
+  phStream = new CUstream[number_streams];
+  for(current_stream = 0; current_stream < number_streams; ++current_stream) {
+    CUDA_SAFE_CALL(cuStreamCreate(&phStream[current_stream], CU_STREAM_NON_BLOCKING));
+  }
+  current_stream = 0;
+  *stream = &phStream[current_stream];
 #endif
 }
 
 extern "C" void FC_FUNC_(cuda_end, CUDA_END)(CUcontext ** context, CUdevice ** device){
 #ifdef HAVE_CUDA
 
+  CUDA_SAFE_CALL(cuStreamDestroy(phStream[current_stream]));
   CUDA_SAFE_CALL(cuCtxDestroy(**context));
   
   delete *context;
@@ -310,13 +324,15 @@ extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 
 extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyHtoD(**cuda_ptr + *offset, data, *size));
+  CUDA_SAFE_CALL(cuMemcpyHtoDAsync(**cuda_ptr + *offset, data, *size, phStream[current_stream]));
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 
 extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size, fint8 * offset){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuMemcpyDtoH(data, **cuda_ptr + *offset, *size));
+  CUDA_SAFE_CALL(cuMemcpyDtoHAsync(data, **cuda_ptr + *offset, *size, phStream[current_stream]));
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 
@@ -354,7 +370,14 @@ extern "C" void FC_FUNC_(cuda_kernel_set_arg_value, CUDA_KERNEL_SET_ARG_VALUE)
 
 extern "C" void FC_FUNC_(cuda_context_synchronize, CUDA_CONTEXT_SYNCHRONIZE)(){
 #ifdef HAVE_CUDA
-  CUDA_SAFE_CALL(cuCtxSynchronize());
+  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_synchronize_all_streams, CUDA_SYNCHRONIZE_ALL_STREAMS)(){
+#ifdef HAVE_CUDA
+  for(int i = 0; i < number_streams; ++i)
+    CUDA_SAFE_CALL(cuStreamSynchronize(phStream[i]));
 #endif
 }
 
@@ -382,13 +405,12 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) assert((**arg_array)[ii] != NULL);
   
   CUDA_SAFE_CALL(cuLaunchKernel(**kernel, griddim[0], griddim[1], griddim[2],
-  				blockdim[0], blockdim[1], blockdim[2], *shared_mem, NULL, &(**arg_array)[0], NULL));
+         blockdim[0], blockdim[1], blockdim[2], *shared_mem, phStream[current_stream], &(**arg_array)[0], NULL));
 
   // release the stored argument, this is not necessary in principle,
   // but it should help us to detect missing arguments.
   for(unsigned ii = 0; ii < (**arg_array).size(); ii++) free((**arg_array)[ii]);
   (**arg_array).resize(0);
- 
 #endif
 }
 
@@ -428,3 +450,13 @@ extern "C" void FC_FUNC_(cuda_device_get_warpsize, CUDA_DEVICE_GET_WARPSIZE)(CUd
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_deref, CUDA_DEREF)(CUdeviceptr ** cuda_ptr, void ** cuda_deref_ptr) {
+  *cuda_deref_ptr = (void *) **cuda_ptr;
+}
+
+extern "C" void FC_FUNC_(cuda_set_stream, CUDA_SET_STREAM)(CUstream ** stream, fint * number) {
+#ifdef HAVE_CUDA
+  current_stream = (*number - 1) % number_streams;
+  *stream = &phStream[current_stream];
+#endif
+}

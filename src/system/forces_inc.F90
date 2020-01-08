@@ -82,7 +82,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
+    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x, namespace) .and. ep%ignore_external_ions) then
       cycle
     end if
     
@@ -148,7 +148,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
-  type(hamiltonian_elec_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),       intent(in)    :: hm
   type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
@@ -165,7 +165,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   FLOAT,  pointer :: grad_rho(:, :)
   FLOAT,  allocatable :: force_psi(:)
   FLOAT, allocatable :: symmtmp(:, :)
-  type(batch_t) :: psib, grad_psib(1:MAX_DIM)
+  type(wfs_elec_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
 
   PUSH_SUB(X(forces_from_potential))
@@ -197,24 +197,24 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
+      call st%group%psib(ib, iq)%copy_to(psib, copy_data = .true.)
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
       if(associated(hm%hm_base%phase)) then
-        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., psib)
       end if
 
       ! calculate the gradient
       do idir = 1, gr%mesh%sb%dim
-        call batch_copy(st%group%psib(ib, iq), grad_psib(idir))
+        call psib%copy_to(grad_psib(idir))
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
 
       ! calculate the contribution to the density gradient
-      call X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
+      call X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
       ! the non-local potential contribution
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
@@ -279,7 +279,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
                 if(iatom_symm > geo%natoms) then
                   write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
                   write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-                  call messages_fatal(2)
+                  call messages_fatal(2, namespace=namespace)
                 end if
 
                 do idir = 1, gr%mesh%sb%dim
@@ -330,12 +330,12 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end if
 
       !The Hubbard forces
-      call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
+      call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
-      call batch_end(psib)
+      call psib%end()
       do idir = 1, gr%mesh%sb%dim
-        call batch_end(grad_psib(idir))
+        call grad_psib(idir)%end()
       end do
 
     end do

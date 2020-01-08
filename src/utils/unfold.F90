@@ -190,7 +190,7 @@ program oct_unfold
     end forall
   end do
 
-  call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim)
+  call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim, default_namespace)
   klattice_pc = klattice_pc * M_TWO * M_PI
 
 

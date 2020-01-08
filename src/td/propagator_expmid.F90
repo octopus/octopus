@@ -76,11 +76,11 @@ contains
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
             time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
-    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, M_HALF*dt, time, save_gf = .true.)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, M_HALF*dt, time, save_gf = .true.)
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt*M_HALF)
 
-    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, dt)
 
     !restore to time 'time - dt'
     call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo, move_ions = move_ions)

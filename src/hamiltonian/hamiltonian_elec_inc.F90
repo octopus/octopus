@@ -17,18 +17,75 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, set_bc, set_phase)
-  type(hamiltonian_elec_t),   intent(in)    :: hm
-  type(mesh_t),               intent(in)    :: mesh
-  type(batch_t),      target, intent(inout) :: psib
-  type(batch_t),      target, intent(inout) :: hpsib
-  integer,                    intent(in)    :: ik
-  integer, optional,          intent(in)    :: terms
-  logical, optional,          intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
-  logical, optional,          intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+subroutine X(hamiltonian_elec_apply) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),      target, intent(inout) :: psib
+  class(batch_t),      target, intent(inout) :: hpsib
+  integer,           optional, intent(in)    :: terms
+  logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-  logical :: apply_phase, pack, set_phase_
-  type(batch_t), pointer :: epsib
+  PUSH_SUB(X(hamiltonian_elec_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument hpsib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_apply for argument psib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_apply))
+end subroutine X(hamiltonian_elec_apply)
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_magnus_apply) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+  class(hamiltonian_elec_t),   intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  class(batch_t),              intent(inout) :: psib
+  class(batch_t),              intent(inout) :: hpsib
+  FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+  logical,           optional, intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply))
+
+  select type (psib)
+  class is (wfs_elec_t)
+    select type (hpsib)
+    class is (wfs_elec_t)
+      call X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class default
+      message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument hpsib."
+      call messages_fatal(1)
+    end select
+  class default
+    message(1) = "Internal error: imcompatible batch_t in hamiltonian_elec_magnus_apply for argument psib."
+    call messages_fatal(1)
+  end select
+
+  POP_SUB(X(hamiltonian_elec_magnus_apply))
+end subroutine X(hamiltonian_elec_magnus_apply)
+
+! ---------------------------------------------------------
+subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, terms, set_bc)
+  type(hamiltonian_elec_t),    intent(in)    :: hm
+  type(namespace_t),           intent(in)    :: namespace
+  type(mesh_t),                intent(in)    :: mesh
+  type(wfs_elec_t),    target, intent(inout) :: psib
+  type(wfs_elec_t),    target, intent(inout) :: hpsib
+  integer,           optional, intent(in)    :: terms
+  logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+  logical :: apply_phase, pack, set_phase
+  type(wfs_elec_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
@@ -36,56 +93,62 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
-  ASSERT(batch_status(psib) == batch_status(hpsib))
+  ASSERT(psib%status() == hpsib%status())
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
-  set_phase_ = optional_default(set_phase, .true.)  
+
+  !By default the phase is dictated by apply_phase
+  !and for electronic wavefunctions, we get set_phase from the has_phase flag
+  set_phase = .not. psib%has_phase
+
   ! OpenCL is not supported for the phase correction at the moment
-  if(.not.set_phase_) then
-    if(batch_status(psib) == BATCH_DEVICE_PACKED) set_phase_ = .true.
+  if (.not. set_phase) then
+    if(psib%status() == BATCH_DEVICE_PACKED) set_phase = .true.
   end if
 
-  ASSERT(batch_is_ok(psib))
-  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%is_ok())
+  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
-  ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
+  ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 
   apply_phase = associated(hm%hm_base%phase)
 
-  pack = hamiltonian_elec_apply_packed(hm, mesh) &
+  pack = hamiltonian_elec_apply_packed(hm) &
     .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
     .and. terms_ == TERM_ALL
 
   if(pack) then
-    call batch_pack(psib)
-    call batch_pack(hpsib, copy = .false.)
+    call psib%do_pack()
+    call hpsib%do_pack(copy = .false.)
   end if
 
   if(optional_default(set_bc, .true.)) then
-    if(apply_phase .and. .not.set_phase_) then
+    if(apply_phase .and. .not.set_phase) then
       ! apply phase correction while setting boundary -> memory needs to be
       ! accessed only once
-      call boundaries_set(hm%der%boundaries, psib, phase_correction=hm%hm_base%phase_corr(:, ik))
+      ASSERT(psib%has_phase)
+      call boundaries_set(hm%der%boundaries, psib, phase_correction = hm%hm_base%phase_corr(:, psib%ik))
     else
       call boundaries_set(hm%der%boundaries, psib)
     end if
   else
     ! This should never happen: the phase correction should be always only
     ! applied when also setting the boundary conditions.
-    ASSERT(.not.(apply_phase .and. .not.set_phase_))
+    ASSERT(.not.(apply_phase .and. .not. set_phase))
   end if
 
 
-  if(apply_phase .and. set_phase_) then
+  if(apply_phase .and. set_phase) then
     SAFE_ALLOCATE(epsib)
-    call batch_copy(psib, epsib)
+    call psib%copy_to(epsib)
   else
     epsib => psib
   end if
 
-  if(apply_phase .and. set_phase_) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, ik, .false., epsib, src = psib)
+  if(apply_phase .and. set_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
+    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
+    hpsib%has_phase = .true.
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
@@ -97,7 +160,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
 
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_elec_base_nlocal_start)(hm%hm_base, mesh, hm%d, ik, epsib, projection)
+      call X(hamiltonian_elec_base_nlocal_start)(hm%hm_base, mesh, hm%d, epsib, projection)
     end if
   end if
 
@@ -111,7 +174,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
 
   ! apply the local potential
   if (bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
-    call X(hamiltonian_elec_base_local)(hm%hm_base, mesh, hm%d, states_elec_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+    call X(hamiltonian_elec_base_local)(hm%hm_base, mesh, hm%d, states_elec_dim_get_spin_index(hm%d, psib%ik), epsib, hpsib)
   else if(bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     call X(hamiltonian_elec_external)(hm, mesh, epsib, hpsib)
   end if
@@ -119,15 +182,15 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
   ! and the non-local one
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_elec_base_nlocal_finish)(hm%hm_base, mesh, hm%d, ik, projection, hpsib)
+      call X(hamiltonian_elec_base_nlocal_finish)(hm%hm_base, mesh, hm%d, projection, hpsib)
     else
-      call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
+      call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib)
     end if
   end if
   
   if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_elec_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_elec_base_magnetic)(hm%hm_base, mesh, hm%der, hm%d, hm%ep, &
-             states_elec_dim_get_spin_index(hm%d, ik), epsib, hpsib)
+             states_elec_dim_get_spin_index(hm%d, psib%ik), epsib, hpsib)
   end if
   
   if (bitand(TERM_OTHERS, terms_) /= 0 ) then
@@ -136,7 +199,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
 
   ! multiply with occupation number
   if (hm%theory_level == RDMFT .and. bitand(TERM_RDMFT_OCC, terms_) /= 0) then
-    call X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, ik, hpsib)
+    call X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, hpsib)
   endif
   
   if (bitand(TERM_OTHERS, terms_) /= 0) then
@@ -145,44 +208,44 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, mesh, psib, hpsib, ik, terms, se
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree)(hm, mesh, ik, epsib, hpsib)
+      call X(exchange_operator_hartree)(hm, namespace, mesh, epsib, hpsib)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
-        call X(scdm_exchange_operator)(hm, mesh, epsib, hpsib, ik)
+        call X(scdm_exchange_operator)(hm, namespace, mesh, epsib, hpsib)
       else
         ! standard HF 
-        call X(exchange_operator)(hm, mesh, ik, epsib, hpsib)
+        call X(exchange_operator)(hm, namespace, mesh, epsib, hpsib)
       end if
 
     case(RDMFT)
-      call X(exchange_operator)(hm, mesh, ik, epsib, hpsib)
+      call X(exchange_operator)(hm, namespace, mesh, epsib, hpsib)
     end select
     call profiling_out(prof_exx)
     
   end if
 
   if (bitand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc)) then
-    call X(h_mgga_terms)(hm, mesh, ik, epsib, hpsib)
+    call X(h_mgga_terms)(hm, mesh, epsib, hpsib)
   end if
 
   if(bitand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
-    call X(scissor_apply)(hm%scissor, mesh, ik, epsib, hpsib)
+    call X(scissor_apply)(hm%scissor, mesh, epsib, hpsib)
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, ik, epsib, hpsib, apply_phase)
+    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, epsib, hpsib)
   end if  
 
-  if(apply_phase .and. set_phase_) then
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, ik, .true., hpsib)
-    call batch_end(epsib, copy = .false.)
+  if(apply_phase .and. set_phase) then
+    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, .true., hpsib)
+    call epsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
   if(pack) then
-    call batch_unpack(psib, copy = .false.)
-    call batch_unpack(hpsib)
+    call psib%do_unpack(copy = .false.)
+    call hpsib%do_unpack()
   end if
 
   POP_SUB(X(hamiltonian_elec_apply_batch))
@@ -194,8 +257,8 @@ end subroutine X(hamiltonian_elec_apply_batch)
 subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
   type(hamiltonian_elec_t),    intent(in)    :: this
   type(mesh_t),                intent(in)    :: mesh
-  type(batch_t),               intent(in)    :: psib
-  type(batch_t),               intent(inout) :: vpsib
+  type(wfs_elec_t),            intent(in)    :: psib
+  type(wfs_elec_t),            intent(inout) :: vpsib
 
   FLOAT, dimension(:), pointer :: vpsl
   FLOAT, allocatable :: vpsl_spin(:,:)
@@ -219,7 +282,7 @@ subroutine X(hamiltonian_elec_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+  if(psib%status() == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
@@ -245,8 +308,9 @@ end subroutine X(hamiltonian_elec_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_elec_apply) (hm, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
+subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist, ik, terms, set_bc, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
   integer,                  intent(in)    :: ist       !< the index of the state
   integer,                  intent(in)    :: ik        !< the index of the k-point
@@ -256,45 +320,49 @@ subroutine X(hamiltonian_elec_apply) (hm, mesh, psi, hpsi, ist, ik, terms, set_b
   logical, optional,        intent(in)    :: set_bc
   logical, optional,        intent(in)    :: set_phase
 
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
 
-  PUSH_SUB(X(hamiltonian_elec_apply))
+  PUSH_SUB(X(hamiltonian_elec_apply_single))
   
-  call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call wfs_elec_init(psib, hm%d%dim, 1, ik)
+  call psib%add_state(ist, psi)
+  call wfs_elec_init(hpsib, hm%d%dim, 1, ik)
+  call hpsib%add_state(ist, hpsi)
 
-  call X(hamiltonian_elec_apply_batch)(hm, mesh, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
-                                       set_phase = set_phase)
+  if(present(set_phase)) then
+    psib%has_phase = .not. set_phase
+    hpsib%has_phase = .not. set_phase
+  end if 
 
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, terms = terms, set_bc = set_bc)
+
+  call psib%end()
+  call hpsib%end()
   
 
-  POP_SUB(X(hamiltonian_elec_apply))
-end subroutine X(hamiltonian_elec_apply)
+  POP_SUB(X(hamiltonian_elec_apply_single))
+end subroutine X(hamiltonian_elec_apply_single)
 
 
-subroutine X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, ik, hpsib)
-  type(hamiltonian_elec_t), intent(in) :: hm
-  type(mesh_t),             intent(in) :: mesh
-  integer,             intent(in)    :: ik
-  type(batch_t),       intent(inout) :: hpsib
+subroutine X(hamiltonian_elec_rdmft_occ_apply) (hm, mesh, hpsib)
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(mesh_t),             intent(in)    :: mesh
+  type(wfs_elec_t),         intent(inout) :: hpsib
   
   PUSH_SUB(X(hamiltonian_elec_rdmft_occ_apply))
   
   ! multiply linear terms in hamiltonian with occupation number
   ! nonlinear occupation number dependency occurs only in the exchange, which is treated there
-  call batch_scal(mesh%np, hm%hf_st%occ(:, ik), hpsib)
+  call batch_scal(mesh%np, hm%hf_st%occ(:, hpsib%ik), hpsib)
   
   POP_SUB(X(hamiltonian_elec_rdmft_occ_apply))
 end subroutine X(hamiltonian_elec_rdmft_occ_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_elec_apply_all) (hm, mesh, st, hst)
+subroutine X(hamiltonian_elec_apply_all) (hm, namespace, mesh, st, hst)
   type(hamiltonian_elec_t), intent(inout) :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(inout) :: st
   type(states_elec_t),      intent(inout) :: hst
@@ -307,7 +375,7 @@ subroutine X(hamiltonian_elec_apply_all) (hm, mesh, st, hst)
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end
-      call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hst%group%psib(ib, ik))
     end do
   end do
 
@@ -317,7 +385,7 @@ subroutine X(hamiltonian_elec_apply_all) (hm, mesh, st, hst)
 
     call states_elec_get_state(st, mesh, psiall)
     
-    call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver)
+    call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver, namespace)
 
     SAFE_DEALLOCATE_A(psiall)
     
@@ -326,7 +394,7 @@ subroutine X(hamiltonian_elec_apply_all) (hm, mesh, st, hst)
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         call states_elec_get_state(hst, mesh, ist, ik, psi)
-        call X(oct_exchange_operator)(hm%oct_exchange, mesh, psi, ist, ik)
+        call X(oct_exchange_operator)(hm%oct_exchange, namespace, mesh, psi, ist, ik)
         call states_elec_set_state(hst, mesh, ist, ik, psi)
       end do
     end do
@@ -341,8 +409,9 @@ end subroutine X(hamiltonian_elec_apply_all)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(hm, mesh, ist, ik, psi, hpsi, exx_coef)
+subroutine X(exchange_operator_single)(hm, namespace, mesh, ist, ik, psi, hpsi, exx_coef)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
   integer,                  intent(in)    :: ist
   integer,                  intent(in)    :: ik
@@ -350,35 +419,35 @@ subroutine X(exchange_operator_single)(hm, mesh, ist, ik, psi, hpsi, exx_coef)
   R_TYPE,                   intent(inout) :: hpsi(:, :)
   FLOAT,          optional, intent(in)    :: exx_coef
 
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
 
   PUSH_SUB(X(exchange_operator_single))
 
-  call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call wfs_elec_init(psib, hm%d%dim, 1, ik)
+  call psib%add_state(ist, psi)
+  call wfs_elec_init(hpsib, hm%d%dim, 1, ik)
+  call hpsib%add_state(ist, hpsi)
 
-  call X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
+  call X(exchange_operator)(hm, namespace, mesh, psib, hpsib, exx_coef)
 
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   POP_SUB(X(exchange_operator_single))
 end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
+subroutine X(exchange_operator)(hm, namespace, mesh, psib, hpsib, exx_coef)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(inout) :: psib
-  type(batch_t),            intent(inout) :: hpsib
+  type(wfs_elec_t),         intent(inout) :: psib
+  type(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,          optional, intent(in)    :: exx_coef
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
-  type(batch_t), pointer :: psi2b
+  class(wfs_elec_t), pointer :: psi2b
   FLOAT :: ff, exx_coef_
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
 
@@ -386,7 +455,7 @@ subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
 
   ASSERT(associated(hm%hf_st))
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
 
   exx_coef_ = optional_default(exx_coef, hm%exx_coef)
 
@@ -402,7 +471,7 @@ subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
 
     do ik2 = 1, hm%d%nik
-      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, ik)) cycle
+      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, psib%ik)) cycle
 
       do ib = 1, hm%hf_st%group%nblocks
 
@@ -431,7 +500,7 @@ subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
             ff = hm%hf_st%occ(jst, ik2)
             if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
           else ! RDMFT
-            ff = sqrt(hm%hf_st%occ(ist, ik)*hm%hf_st%occ(jst, ik2)) ! Mueller functional
+            ff = sqrt(hm%hf_st%occ(ist, psib%ik)*hm%hf_st%occ(jst, ik2)) ! Mueller functional
           end if
 
           do idim = 1, hm%hf_st%d%dim
@@ -442,7 +511,7 @@ subroutine X(exchange_operator)(hm, mesh, ik, psib, hpsib, exx_coef)
 
         end do
 
-        call states_elec_parallel_release_block(hm%hf_st, ib, ik2, psi2b)
+        call states_elec_parallel_release_block(hm%hf_st, ib, psi2b)
 
       end do
     end do
@@ -461,12 +530,12 @@ end subroutine X(exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree) (hm, mesh, ik, psib, hpsib)
+subroutine X(exchange_operator_hartree) (hm, namespace, mesh, psib, hpsib)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(inout) :: psib
-  type(batch_t),            intent(inout) :: hpsib
+  type(wfs_elec_t),         intent(inout) :: psib
+  type(wfs_elec_t),         intent(inout) :: hpsib
 
   integer :: ibatch, ip, idim, ik2, ist
   FLOAT   :: ff
@@ -474,8 +543,8 @@ subroutine X(exchange_operator_hartree) (hm, mesh, ik, psib, hpsib)
 
   PUSH_SUB(X(exchange_operator))
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
-  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states", namespace=namespace)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsi(1:mesh%np, 1:hm%d%dim))
@@ -489,7 +558,7 @@ subroutine X(exchange_operator_hartree) (hm, mesh, ik, psib, hpsib)
     call batch_get_state(hpsib, ibatch, mesh%np, hpsi)
     
     do ik2 = 1, hm%d%nik
-      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, ik)) cycle
+      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, psib%ik)) cycle
 
       if(hm%hf_st%occ(ist, ik2) < M_EPSILON) cycle
 
@@ -532,12 +601,12 @@ end subroutine X(exchange_operator_hartree)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
+subroutine X(scdm_exchange_operator) (hm, namespace, mesh, psib, hpsib)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-  integer,             intent(in)    :: ik
+  type(wfs_elec_t),         intent(inout) :: psib
+  type(wfs_elec_t),         intent(inout) :: hpsib
 
   integer :: ist, jst, ip, idim, ik2, ibatch
   integer :: ii, jj, kk, ll, count
@@ -548,10 +617,10 @@ subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
   
   call profiling_in(prof_exx_scdm, 'SCDM_EXX_OPERATOR')
 
-  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   
   ! make sure scdm is localized
-  call X(scdm_localize)(hm%hf_st, mesh, hm%scdm)
+  call X(scdm_localize)(hm%scdm, namespace, hm%hf_st, mesh)
   
   SAFE_ALLOCATE(psil(1:mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(hpsil(1:mesh%np, 1:hm%d%dim))
@@ -582,7 +651,7 @@ subroutine X(scdm_exchange_operator) (hm, mesh, psib, hpsib, ik)
     temp_state_global(:,:) = M_ZERO
 
     do ik2 = 1, hm%d%nik
-      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, ik)) cycle
+      if(states_elec_dim_get_spin_index(hm%d, ik2) /= states_elec_dim_get_spin_index(hm%d, psib%ik)) cycle
       count = 0
       do jst = hm%scdm%st_exx_start, hm%scdm%st_exx_end
 
@@ -668,12 +737,13 @@ end subroutine X(scdm_exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
+subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  integer,                  intent(in)    :: ik
   R_TYPE,                   intent(inout) :: psi(:,:)
   R_TYPE,                   intent(out)   :: hpsi(:,:)
+  integer,                  intent(in)    :: ik
   FLOAT,                    intent(in)    :: vmagnus(:, :, :)
   logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
@@ -684,7 +754,7 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
 
   ! We will assume, for the moment, no spinors.
   if(hm%d%dim /= 1) &
-    call messages_not_implemented("Magnus with spinors")
+    call messages_not_implemented("Magnus with spinors", namespace=namespace)
 
   SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
   SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
@@ -692,8 +762,8 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
   ispin = states_elec_dim_get_spin_index(hm%d, ik)
 
   ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply)(hm, mesh, psi, auxpsi, ist = 1, ik = ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi, auxpsi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
   do idim = 1, hm%d%dim
@@ -708,8 +778,8 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
 
   ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
   auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
-  call X(hamiltonian_elec_apply)(hm, mesh, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
+    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
   hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
 
   SAFE_DEALLOCATE_A(auxpsi)
@@ -717,38 +787,37 @@ subroutine X(magnus) (hm, mesh, psi, hpsi, ik, vmagnus, set_phase)
   POP_SUB(X(magnus))
 end subroutine X(magnus)
 
-subroutine X(hamiltonian_elec_apply_magnus) (hm, mesh, psib, hpsib, ik, vmagnus, set_phase)
+subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),             intent(in)    :: mesh
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(inout) :: psib
-  type(batch_t),            intent(inout) :: hpsib
+  type(wfs_elec_t),         intent(inout) :: psib
+  type(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,                    intent(in)    :: vmagnus(:, :, :)
   logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
   integer :: ispin
-  type(batch_t) :: auxpsib, aux2psib
+  type(wfs_elec_t) :: auxpsib, aux2psib
 
-  PUSH_SUB(X(hamiltonian_elec_apply_magnus))
+  PUSH_SUB(X(hamiltonian_elec_magnus_apply_batch))
 
   ! We will assume, for the moment, no spinors.
-  if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors")
+  if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
 
-  ASSERT(batch_is_ok(psib))
-  ASSERT(batch_is_ok(hpsib))
+  ASSERT(psib%is_ok())
+  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
 
-  ispin = states_elec_dim_get_spin_index(hm%d, ik)
+  ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
 
-  call batch_copy(hpsib, auxpsib, copy_data=.false.)
-  call batch_copy(hpsib, aux2psib, copy_data=.false.)
+  call hpsib%copy_to(auxpsib, copy_data=.false.)
+  call hpsib%copy_to(aux2psib, copy_data=.false.)
   
   ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply_batch)(hm, mesh, psib, auxpsib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, auxpsib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL)
 
   ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders|psi>
-  call batch_copy_data(mesh%np, auxpsib, hpsib)
+  call auxpsib%copy_data_to(mesh%np, hpsib)
   call X(hamiltonian_elec_external)(hm, mesh, psib, hpsib)
   if (hm%bc%abtype == IMAGINARY_ABSORBING) then
     call batch_mul(mesh%np, hm%bc%mf(1:mesh%np), psib, aux2psib)
@@ -763,15 +832,14 @@ subroutine X(hamiltonian_elec_apply_magnus) (hm, mesh, psib, hpsib, ik, vmagnus,
 
   ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
   call batch_mul(mesh%np, vmagnus(1:mesh%np, ispin, 1), psib, auxpsib)
-  call X(hamiltonian_elec_apply_batch)(hm, mesh, auxpsib, aux2psib, ik, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, &
-    set_phase = set_phase)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, auxpsib, aux2psib, terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL)
   call batch_axpy(mesh%np, M_zI, aux2psib, hpsib)
 
-  call batch_end(auxpsib)
-  call batch_end(aux2psib)
+  call auxpsib%end()
+  call aux2psib%end()
 
-  POP_SUB(X(hamiltonian_elec_apply_magnus))
-end subroutine X(hamiltonian_elec_apply_magnus)
+  POP_SUB(X(hamiltonian_elec_magnus_apply_batch))
+end subroutine X(hamiltonian_elec_magnus_apply_batch)
 
 
 ! ---------------------------------------------------------
@@ -794,33 +862,32 @@ end subroutine X(vborders)
 
 
 ! ---------------------------------------------------------
-subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
+subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(mesh_t),             intent(in)    :: mesh
-  integer,             intent(in)    :: ik
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
+  type(wfs_elec_t),         intent(inout) :: psib
+  type(wfs_elec_t),         intent(inout) :: hpsib
 
   integer :: ispin, ii, idir, ip
   R_TYPE, allocatable :: grad(:,:), diverg(:)
-  type(batch_t) :: divb
-  type(batch_t), allocatable :: gradb(:)
+  type(wfs_elec_t) :: divb
+  class(wfs_elec_t), allocatable :: gradb(:)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ASSERT(.not. batch_is_packed(psib))
+  ASSERT(.not. psib%is_packed())
   
-  ispin = states_elec_dim_get_spin_index(hm%d, ik)
+  ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
 
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:mesh%np))
 
-  SAFE_ALLOCATE(gradb(1:mesh%sb%dim))
+  allocate(wfs_elec_t::gradb(1:mesh%sb%dim))
 
-  call batch_copy(hpsib, divb)
+  call hpsib%copy_to(divb)
   
   do idir = 1, mesh%sb%dim
-    call batch_copy(hpsib, gradb(idir))
+    call hpsib%copy_to(gradb(idir))
     call X(derivatives_batch_perform)(hm%der%grad(idir), hm%der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
   end do
   
@@ -850,10 +917,10 @@ subroutine X(h_mgga_terms) (hm, mesh, ik, psib, hpsib)
   call batch_axpy(mesh%np, CNST(-1.0), divb, hpsib)
 
   do idir = 1, mesh%sb%dim
-    call batch_end(gradb(idir))
+    call gradb(idir)%end()
   end do
 
-  call batch_end(divb)
+  call divb%end()
   
   SAFE_DEALLOCATE_A(gradb)
   SAFE_DEALLOCATE_A(grad)

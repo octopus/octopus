@@ -44,7 +44,7 @@ subroutine X(sternheimer_solve)(                           &
   real(8):: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
-  type(batch_t) :: rhsb, dlpsib, orhsb
+  type(wfs_elec_t) :: rhsb, dlpsib, orhsb
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_elec_t), pointer :: st
@@ -65,6 +65,10 @@ subroutine X(sternheimer_solve)(                           &
   call mix_clear(this%mixer)
   
   calculate_rho = this%add_fxc .or. this%add_hartree
+
+  if (st%d%ispin == SPINORS .and. calculate_rho) then
+    call messages_not_implemented('linear response density for spinors', namespace=sys%namespace)
+  end if
 
   SAFE_ALLOCATE(dpsimod(1:nsigma, st%st_start:st%st_end))
   SAFE_ALLOCATE(residue(1:nsigma, st%st_start:st%st_end))
@@ -152,18 +156,17 @@ subroutine X(sternheimer_solve)(                           &
 
         !calculate the RHS of the Sternheimer eq
 
-        call batch_init(rhsb, st%d%dim, sst, est, rhs_tmp)
+        call wfs_elec_init(rhsb, st%d%dim, sst, est, rhs_tmp, ik)
 
         if(sternheimer_have_rhs(this)) then
-          call batch_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1))
-          call batch_copy_data(mesh%np, orhsb, rhsb)
-          call batch_end(orhsb)
+          call wfs_elec_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1), ik)
+          call orhsb%copy_data_to(mesh%np, rhsb)
+          call orhsb%end()
         else
-          call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, ik, &
-            st%group%psib(ib, ik), rhsb)
+          call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, st%group%psib(ib, ik), rhsb)
         end if
 
-        call batch_end(rhsb)
+        call rhsb%end()
 
         ii = 0
         do ist = sst, est
@@ -212,15 +215,15 @@ subroutine X(sternheimer_solve)(                           &
           end do
 
           !solve the Sternheimer equation
-          call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
-          call batch_init(rhsb, st%d%dim, sst, est, rhs)
+          call wfs_elec_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik), ik)
+          call wfs_elec_init(rhsb, st%d%dim, sst, est, rhs, ik)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%gr, sys%st, ik, &
-            dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
-            residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
+          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%namespace, sys%hm, sys%gr, sys%st, dlpsib, rhsb, &
+            -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, residue(sigma, sst:est), conv_iters(sigma, sst:est), &
+            occ_response = this%occ_response)
 
-          call batch_end(dlpsib)
-          call batch_end(rhsb)
+          call dlpsib%end()
+          call rhsb%end()
 
           !re-orthogonalize the resulting vector
           ii = 0

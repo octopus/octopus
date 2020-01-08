@@ -223,7 +223,7 @@ contains
 
       if(gf%n <= 0) then
         write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       read(iunit, *) ! skip comment line
@@ -278,10 +278,10 @@ contains
         call parse_variable(namespace, 'XSFCoordinatesAnimStep', 1, step_to_use)
         if(step_to_use < 1) then
           message(1) = "XSFCoordinatesAnimStep must be > 0."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         else if(step_to_use > nsteps) then
           write(message(1),'(a,i9)') "XSFCoordinatesAnimStep must be <= available number of steps ", nsteps
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         write(message(1),'(a,i9,a,i9)') 'Using animation step ', step_to_use, ' out of ', nsteps
         call messages_info(1)
@@ -301,10 +301,10 @@ contains
       case('MOLECULE')
         gf%periodic_dim = 0
       case('ATOMS')
-        call messages_not_implemented("Input from XSF file beginning with ATOMS")
+        call messages_not_implemented("Input from XSF file beginning with ATOMS", namespace=namespace)
       case default
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       do istep = 1, step_to_use - 1
@@ -322,13 +322,13 @@ contains
       read(iunit, '(a256)') str
       if(str(1:7) /= 'PRIMVEC') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       if(nsteps > 0) then
         read(str(8:), *) istep
         if(istep /= step_to_use) then
           write(message(1), '(a,i9,a,i9)') 'Found PRIMVEC index ', istep, ' instead of ', step_to_use
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -340,34 +340,34 @@ contains
       end do
       if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
         message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(any(gf%lsize(1:space%dim) < M_EPSILON)) then
         message(1) = "XSF file must have positive lattice vectors."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       read(iunit, '(a256)') str
       if(str(1:9) /= 'PRIMCOORD') then
         write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       if(nsteps > 0) then
         read(str(10:), *) istep
         if(istep /= step_to_use) then
           write(message(1), '(a,i9,a,i9)') 'Found PRIMCOORD index ', istep, ' instead of ', step_to_use
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
       read(iunit, *) gf%n, int_one
       if(gf%n <= 0) then
         write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(int_one /= 1) then
         write(message(1),'(a,i6,a)') 'Number in file was ', int_one, ' instead of 1.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
@@ -420,7 +420,7 @@ contains
         ncol = parse_block_cols(blk, ia - 1)
         if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
         do jdir = 1, space%dim
@@ -470,7 +470,7 @@ contains
           ncol = parse_block_cols(blk, ia - 1)
           if((ncol  <  space%dim + 1) .or. (ncol > space%dim + 2)) then
             write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', ia
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
           call parse_block_string (blk, ia - 1, 0, gf%atom(ia)%label)
           do jdir = 1, space%dim
@@ -519,7 +519,7 @@ contains
         done = .true.
       else
         message(1) = 'Multiple definitions of '//trim(what)//' in the input file.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       POP_SUB(read_coords_read.check_duplicated)

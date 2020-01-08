@@ -287,7 +287,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
   ASSERT(.not. st%parallel_in_states)
   if(st%d%ispin == SPINORS) then
-    call messages_not_implemented("Dipole matrix elements with spinors")
+    call messages_not_implemented("Dipole matrix elements with spinors", namespace=namespace)
   end if
 
   ispin = states_elec_dim_get_spin_index(st%d, ik)
@@ -354,7 +354,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
-          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, ik, psii, gpsii, &
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, namespace, ik, psii, gpsii, &
                             associated(hm%hm_base%phase))
         end if
       end if

@@ -158,7 +158,7 @@ contains
       call parse_block_end(blk)
       if(.not. simul_box_is_periodic(sb)) then
         message(1) = "GaugeVectorField is intended for periodic systems."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       if(sb%kpoints%use_symmetries) then
@@ -167,7 +167,7 @@ contains
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot_kick, CNST(1e-5))) then
             message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         end do
       end if
@@ -273,10 +273,11 @@ contains
   end subroutine gauge_field_get_vec_pot_acc
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_propagate(this, dt, time)
+  subroutine gauge_field_propagate(this, dt, time, namespace)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
+    type(namespace_t),    intent(in)    :: namespace
     
     logical, save :: warning_shown = .false.
     integer :: idim
@@ -304,7 +305,7 @@ contains
 
         write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
         write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
     end do
     POP_SUB(gauge_field_propagate)

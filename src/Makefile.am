@@ -25,9 +25,7 @@ noinst_HEADERS =                          \
 	include/integer.F90               \
 	include/real.F90                  \
 	include/complex.F90               \
-	include/real_single.F90           \
 	include/complex.F90               \
-	include/complex_single.F90        \
 	include/undef.F90                 \
 	include/vectors.h                 \
 	include/fortran_types.h
@@ -396,7 +394,8 @@ states_f_srcs =                                 \
 	states/states_elec_parallel.F90         \
 	states/states_elec_restart.F90          \
 	states/states_mxll.F90                  \
-	states/states_mxll_restart.F90
+	states/states_mxll_restart.F90          \
+	states/wfs_elec.F90
 
 states_srcs = $(states_f_srcs)
 
@@ -410,7 +409,8 @@ noinst_HEADERS +=                               \
 	states/states_elec_block_inc.F90        \
 	states/states_elec_calc_inc.F90         \
 	states/states_elec_inc.F90              \
-	states/states_elec_parallel_inc.F90
+	states/states_elec_parallel_inc.F90     \
+	states/wfs_elec_inc.F90
 
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \
@@ -493,6 +493,7 @@ system_f_srcs =                                 \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
+	system/system_mxll.F90                  \
 	system/v_ks.F90                         \
 	system/xc_ks_inversion.F90              \
 	system/xc_oep.F90
@@ -514,6 +515,7 @@ noinst_HEADERS +=                               \
 	system/output_linear_response_inc.F90   \
 	system/output_me_inc.F90                \
 	system/output_modelmb_inc.F90           \
+	system/output_mxll_inc.F90              \
 	system/output_states_inc.F90            \
 	system/pert_inc.F90                     \
 	system/preconditioners_inc.F90          \

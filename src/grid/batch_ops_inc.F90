@@ -21,8 +21,8 @@
 subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(in)    :: xx
+  class(batch_t),    intent(inout) :: yy
 
   integer :: ist, dim2, dim3
   integer :: localsize
@@ -31,17 +31,15 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   PUSH_SUB(X(batch_axpy_const))
   call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
 
-  ASSERT(batch_type(yy) == batch_type(xx))
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
-  ASSERT(batch_type(yy) == TYPE_CMPLX)
+  ASSERT(yy%type() == TYPE_CMPLX)
 #endif
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
-    if(batch_type(yy) == TYPE_FLOAT) then
+    if(yy%type() == TYPE_FLOAT) then
 
       call accel_set_kernel_arg(kernel_daxpy, 0, np)
       call accel_set_kernel_arg(kernel_daxpy, 1, aa)
@@ -78,7 +76,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     call accel_finish()
     
   case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX) then
+    if(yy%type() == TYPE_CMPLX) then
       call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
     else
 #ifdef R_TREAL
@@ -88,7 +86,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
-      if(batch_type(yy) == TYPE_CMPLX) then
+      if(yy%type() == TYPE_CMPLX) then
         call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
       else
 #ifdef R_TREAL
@@ -98,7 +96,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     end do
   end select
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(axpy_const_prof)
   POP_SUB(X(batch_axpy_const))
@@ -107,12 +105,12 @@ end subroutine X(batch_axpy_const)
 ! --------------------------------------------------------------
 
 subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
-  integer,           intent(in)    :: np
-  R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
-  integer, optional, intent(in)    :: a_start
-  logical, optional, intent(in)    :: a_full
+  integer,            intent(in)    :: np
+  R_TYPE,             intent(in)    :: aa(:)
+  class(batch_t),     intent(in)    :: xx
+  class(batch_t),     intent(inout) :: yy
+  integer,  optional, intent(in)    :: a_start
+  logical,  optional, intent(in)    :: a_full
 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
@@ -125,31 +123,29 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
-  ASSERT(batch_type(yy) == batch_type(xx))
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
-  ASSERT(batch_type(yy) == TYPE_CMPLX)
+  ASSERT(yy%type() == TYPE_CMPLX)
 #endif
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
 
   effsize = yy%nst_linear
-  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
 
-    if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
+    if(yy%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
       do ist = 1, yy%pack%size(1)
@@ -184,7 +180,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     call accel_release_buffer(aa_buffer)
 
   case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX) then
+    if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
@@ -204,7 +200,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
-      if(batch_type(yy) == TYPE_CMPLX) then
+      if(yy%type() == TYPE_CMPLX) then
         call lalg_axpy(np, aa_linear(ist), xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
       else
 #ifdef R_TREAL
@@ -216,7 +212,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(axpy_vec_prof)
   POP_SUB(X(batch_axpy_vec))
@@ -227,7 +223,7 @@ end subroutine X(batch_axpy_vec)
 subroutine X(batch_scal_const)(np, aa, xx)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(inout) :: xx
+  class(batch_t),    intent(inout) :: xx
 
   R_TYPE, allocatable :: aavec(:)
   
@@ -249,7 +245,7 @@ end subroutine X(batch_scal_const)
 subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(inout) :: xx
+  class(batch_t),    intent(inout) :: xx
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
@@ -266,23 +262,23 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
-  ASSERT(batch_type(xx) == TYPE_CMPLX)
+  ASSERT(xx%type() == TYPE_CMPLX)
 #endif
 
   effsize = xx%nst_linear
-  if(batch_is_packed(xx)) effsize = xx%pack%size(1)
+  if(xx%is_packed()) effsize = xx%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
   do ist = 1, xx%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
   
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
-    if(batch_type(xx) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
+    if(xx%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack%size(1)))
       do ist = 1, xx%pack%size(1)
@@ -317,7 +313,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     call accel_release_buffer(aa_buffer)
     
   case(BATCH_PACKED)
-    if(batch_type(xx) == TYPE_CMPLX) then
+    if(xx%type() == TYPE_CMPLX) then
       !$omp parallel do
       do ip = 1, np
         do ist = 1, xx%pack%size(1)
@@ -337,7 +333,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     
   case(BATCH_NOT_PACKED)
     do ist = 1, xx%nst_linear
-      if(batch_type(xx) == TYPE_CMPLX) then
+      if(xx%type() == TYPE_CMPLX) then
         call lalg_scal(np, aa_linear(ist), xx%states_linear(ist)%zpsi)
       else
 #ifdef R_TREAL
@@ -357,9 +353,9 @@ end subroutine X(batch_scal_vec)
 
 subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
+  class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(in)    :: aa(:)
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(inout) :: yy
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
@@ -373,28 +369,26 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   PUSH_SUB(X(batch_xpay_vec))
   call profiling_in(xpay_prof, "BATCH_XPAY")
 
-  ASSERT(batch_type(yy) == batch_type(xx))
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
-  ASSERT(batch_type(yy) == TYPE_CMPLX)
+  ASSERT(yy%type() == TYPE_CMPLX)
 #endif
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
 
   effsize = yy%nst_linear
-  if(batch_is_packed(yy)) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack%size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
   do ist = 1, yy%nst_linear
-    iaa = batch_linear_to_ist(xx, ist) - (optional_default(a_start, 1) - 1)
-    if(.not. optional_default(a_full, .true.)) iaa = iaa - (batch_linear_to_ist(xx, 1) - 1)
+    iaa = xx%linear_to_ist(ist) - (optional_default(a_start, 1) - 1)
+    if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_DEVICE_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
+    if(yy%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
       do ist = 1, yy%pack%size(1)
@@ -431,7 +425,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     call accel_release_buffer(aa_buffer)
     
   case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX) then
+    if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
@@ -451,7 +445,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
-      if(batch_type(yy) == TYPE_CMPLX) then
+      if(yy%type() == TYPE_CMPLX) then
         !omp parallel do 
         do ip = 1, np
           yy%states_linear(ist)%zpsi(ip) = xx%states_linear(ist)%zpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%zpsi(ip)
@@ -479,9 +473,9 @@ end subroutine X(batch_xpay_vec)
 
 subroutine X(batch_xpay_const)(np, xx, aa, yy)
   integer,           intent(in)    :: np
-  type(batch_t),     intent(in)    :: xx
+  class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(in)    :: aa
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(inout) :: yy
 
   integer :: minst, maxst, ii, ist
   R_TYPE, allocatable :: aavec(:)
@@ -490,7 +484,7 @@ subroutine X(batch_xpay_const)(np, xx, aa, yy)
   maxst = -HUGE(maxst)
   
   do ii = 1, xx%nst_linear
-    ist = batch_linear_to_ist(xx, ii)
+    ist = xx%linear_to_ist(ii)
     minst = min(minst, ist)
     maxst = max(maxst, ist)
   end do
@@ -509,7 +503,7 @@ end subroutine X(batch_xpay_const)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state1)(this, ist, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:)
@@ -526,12 +520,12 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
-  ASSERT(batch_type(this) /= TYPE_FLOAT)
+  ASSERT(this%type() /= TYPE_FLOAT)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
 #ifdef R_TREAL
       call lalg_copy(np, psi, this%states_linear(ist)%dpsi)
 #endif
@@ -541,7 +535,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
 #endif
     end if
   case(BATCH_PACKED)
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
       !omp parallel do 
       do ip = 1, np
         this%pack%dpsi(ist, ip) = psi(ip)
@@ -554,9 +548,9 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     end if
   case(BATCH_DEVICE_PACKED)
 
-    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), this%pack%size(2))
     
-    if(batch_type(this) /= R_TYPE_VAL) then
+    if(this%type() /= R_TYPE_VAL) then
 
       ! this is not ideal, we should do the conversion on the GPU, so
       ! that we copy half of the data there
@@ -599,7 +593,7 @@ end subroutine X(batch_set_state1)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state2)(this, index, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: index(:)
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:)
@@ -607,7 +601,7 @@ subroutine X(batch_set_state2)(this, index, np, psi)
   PUSH_SUB(X(batch_set_state2))
 
   ASSERT(this%nst_linear > 0)
-  call X(batch_set_state1)(this, batch_inv_index(this, index), np, psi)
+  call X(batch_set_state1)(this, this%inv_index(index), np, psi)
 
   POP_SUB(X(batch_set_state2))
 end subroutine X(batch_set_state2)
@@ -615,7 +609,7 @@ end subroutine X(batch_set_state2)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_state3)(this, ii, np, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ii
   integer,        intent(in)    :: np
   R_TYPE,         intent(in)    :: psi(:, :)
@@ -634,7 +628,7 @@ end subroutine X(batch_set_state3)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state1)(this, ist, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: ist
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:)
@@ -652,12 +646,12 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
-  ASSERT(batch_type(this) /= TYPE_CMPLX)
+  ASSERT(this%type() /= TYPE_CMPLX)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
       !$omp parallel do
       do ip = 1, np
         psi(ip) = this%states_linear(ist)%dpsi(ip)
@@ -672,7 +666,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
 
   case(BATCH_PACKED)
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
       !$omp parallel do
       do ip = 1, np
         psi(ip) = this%pack%dpsi(ist, ip)
@@ -690,9 +684,9 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
     ASSERT(np <= this%pack%size(2))
 
-    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), this%pack%size(2))
     
-    if(batch_type(this) == R_TYPE_VAL) then
+    if(this%type() == R_TYPE_VAL) then
 
       call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
       call accel_set_kernel_arg(X(unpack), 1, np)
@@ -710,7 +704,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
       ! the output buffer is complex, we get it as real
       
-      ASSERT(batch_type(this) == TYPE_FLOAT)
+      ASSERT(this%type() == TYPE_FLOAT)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
       
       call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
@@ -750,7 +744,7 @@ end subroutine X(batch_get_state1)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state2)(this, index, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: index(:)
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:)
@@ -758,7 +752,7 @@ subroutine X(batch_get_state2)(this, index, np, psi)
   PUSH_SUB(X(batch_get_state2))
 
   ASSERT(this%nst_linear > 0)
-  call X(batch_get_state1)(this, batch_inv_index(this, index), np, psi)
+  call X(batch_get_state1)(this, this%inv_index(index), np, psi)
 
   POP_SUB(X(batch_get_state2))
 end subroutine X(batch_get_state2)
@@ -767,7 +761,7 @@ end subroutine X(batch_get_state2)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_state3)(this, ii, np, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: ii
   integer,        intent(in)    :: np
   R_TYPE,         intent(inout) :: psi(:, :)
@@ -786,7 +780,7 @@ end subroutine X(batch_get_state3)
 ! --------------------------------------------------------------
 
 subroutine X(batch_get_points)(this, sp, ep, psi)
-  type(batch_t),  intent(in)    :: this
+  class(batch_t), intent(in)    :: this
   integer,        intent(in)    :: sp  
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
@@ -798,25 +792,25 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
 
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
-  ASSERT(batch_type(this) /= TYPE_CMPLX)
+  ASSERT(this%type() /= TYPE_CMPLX)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
 
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
       
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%dpsi(sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         psi(ist, idim, sp:ep) = this%states_linear(ii)%zpsi(sp:ep)
       end do
 
@@ -824,13 +818,13 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
 
   case(BATCH_PACKED)
 
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
 
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           psi(ist, idim, ip) = this%pack%dpsi(ii, ip)
         end do
       end do
@@ -841,8 +835,8 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           psi(ist, idim, ip) = this%pack%zpsi(ii, ip)
         end do
       end do
@@ -862,7 +856,7 @@ end subroutine X(batch_get_points)
 ! --------------------------------------------------------------
 
 subroutine X(batch_set_points)(this, sp, ep, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: sp  
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
@@ -875,25 +869,25 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
-  ASSERT(batch_type(this) /= TYPE_FLOAT)
+  ASSERT(this%type() /= TYPE_FLOAT)
 #endif
 
-  select case(batch_status(this))
+  select case(this%status())
   case(BATCH_NOT_PACKED)
 
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         this%states_linear(ii)%dpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
     else
 
       do ii = 1, this%nst_linear
-        ist = batch_linear_to_ist(this, ii)
-        idim = batch_linear_to_idim(this, ii)
+        ist = this%linear_to_ist(ii)
+        idim = this%linear_to_idim(ii)
         this%states_linear(ii)%zpsi(sp:ep) = psi(ist, idim, sp:ep)
       end do
 
@@ -901,13 +895,13 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
   case(BATCH_PACKED)
 
-    if(batch_type(this) == TYPE_FLOAT) then
+    if(this%type() == TYPE_FLOAT) then
 
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           this%pack%dpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do
@@ -918,8 +912,8 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       !$omp parallel do private(ip, ii, ist, idim)
       do ip = sp, ep
         do ii = 1, this%nst_linear
-          ist = batch_linear_to_ist(this, ii)
-          idim = batch_linear_to_idim(this, ii)
+          ist = this%linear_to_ist(ii)
+          idim = this%linear_to_idim(ii)
           this%pack%zpsi(ii, ip) = psi(ist, idim, ip)
         end do
       end do
@@ -941,8 +935,8 @@ end subroutine X(batch_set_points)
 subroutine X(batch_mul)(np, ff,  xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: ff(:)
-  type(batch_t),     intent(in)    :: xx
-  type(batch_t),     intent(inout) :: yy
+  class(batch_t),    intent(in)    :: xx
+  class(batch_t),    intent(inout) :: yy
 
   integer :: ist, ip
   R_TYPE :: mul
@@ -954,15 +948,13 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")
 
-  ASSERT(batch_type(yy) == batch_type(xx))
+  call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
-  ASSERT(batch_type(yy) == TYPE_CMPLX)
+  ASSERT(yy%type() == TYPE_CMPLX)
 #endif
-  ASSERT(xx%nst_linear == yy%nst_linear)
-  ASSERT(batch_status(xx) == batch_status(yy))
 
-  select case(batch_status(yy))
+  select case(yy%status())
   case(BATCH_DEVICE_PACKED)
 
 #if defined(R_TREAL)
@@ -991,7 +983,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
 
   case(BATCH_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX) then
+    if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist, mul)
       do ip = 1, np
         mul = ff(ip)
@@ -1014,7 +1006,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     end if
 
   case(BATCH_NOT_PACKED)
-    if(batch_type(yy) == TYPE_CMPLX) then
+    if(yy%type() == TYPE_CMPLX) then
       do ist = 1, yy%nst_linear
         !$omp parallel do
         do ip = 1, np

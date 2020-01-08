@@ -300,15 +300,15 @@ contains
 
     ! problem is about k-points for exchange
     if (simul_box_is_periodic(gr%sb)) then
-      call messages_not_implemented("Periodic system calculations for RDMFT")
+      call messages_not_implemented("Periodic system calculations for RDMFT", namespace=namespace)
     end if
 
     ! exchange routine needs all states on each processor currently
     if(st%parallel_in_states) then
-      call messages_not_implemented("RDMFT parallel in states")
+      call messages_not_implemented("RDMFT parallel in states", namespace=namespace)
     end if
 
-    call messages_print_stress(stdout, 'RDMFT Calculation')
+    call messages_print_stress(stdout, 'RDMFT Calculation', namespace=namespace)
     call messages_print_var_value(stdout, 'RDMBasis', rdm%do_basis)
  
     !set initial values
@@ -325,8 +325,9 @@ contains
       write(message(2),'(a)') '--this may take a while--'
       call messages_info(2)
 
-      call dstates_elec_me_two_body(gr, st, hm%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm, hm, st, gr%mesh)
+      call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
+        rdm%l_index, rdm%twoint)
+      call rdm_integrals(rdm, namespace, hm, st, gr%mesh)
       call sum_integrals(rdm)
     endif
 
@@ -340,16 +341,16 @@ contains
       call messages_info(2)
       ! occupation number optimization unless we are doing Hartree-Fock
       if (rdm%hf) then
-        call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+        call scf_occ_NO(rdm, namespace, gr, hm, st, energy_occ)
       else
-        call scf_occ(rdm, gr, hm, st, energy_occ)
+        call scf_occ(rdm, namespace, gr, hm, st, energy_occ)
       end if
       ! orbital optimization
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount 
         if (rdm%do_basis) then
-          call scf_orb(rdm, gr, st, hm, energy)
+          call scf_orb(rdm, namespace, gr, st, hm, energy)
         else
           call scf_orb_cg(rdm, namespace, gr, geo, st, ks, hm, energy)
         end if
@@ -442,7 +443,7 @@ contains
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
         call scf_write_static(dirname, "info")
       end if
 
@@ -455,7 +456,7 @@ contains
       call messages_info(3)
       if(gs_run_) then 
         call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, namespace, gr, geo, st, hm, ks, STATIC_DIR)
+        call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
       end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter-1, ' iterations '
@@ -481,7 +482,7 @@ contains
 
         call grid_write_info(gr, geo, iunit)
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
         
         if (rdm%do_basis) then
           write(iunit, '(a)')'Orbital optimization with [basis set]'
@@ -552,7 +553,7 @@ contains
       ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
       lambda = M_ZERO
       FO = M_ZERO
-      call construct_lambda(hm, st, gr, lambda, rdm)
+      call construct_lambda(namespace, hm, st, gr, lambda, rdm)
 
       !Set up FO matrix to check maxFO
       do ist = 1, st%nst
@@ -596,8 +597,9 @@ contains
   ! ---------------------------------------------------------
   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
   ! used in Hartree-Fock mode
-  subroutine scf_occ_NO(rdm, gr, hm, st, energy)
-    type(rdm_t),              intent(inout) :: rdm     
+  subroutine scf_occ_NO(rdm, namespace, gr, hm, st, energy)
+    type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(inout) :: st
@@ -614,7 +616,7 @@ contains
     
     energy = M_ZERO
 
-    call rdm_derivatives(rdm, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr)
 
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -636,8 +638,9 @@ contains
   end subroutine scf_occ_NO
     
   ! scf for the occupation numbers 
-  subroutine scf_occ(rdm, gr, hm, st, energy)
+  subroutine scf_occ(rdm, namespace, gr, hm, st, energy)
     type(rdm_t), target,      intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(inout) :: st
@@ -678,7 +681,7 @@ contains
 
     st%occ = occin
     
-    call rdm_derivatives(rdm, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr)
 
     !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
     !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
@@ -846,8 +849,9 @@ contains
   end subroutine write_iter_info_rdmft
 
   ! scf for the natural orbitals
-  subroutine scf_orb(rdm, gr, st, hm, energy)
+  subroutine scf_orb(rdm, namespace, gr, st, hm, energy)
     type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr !< grid
     type(states_elec_t),      intent(inout) :: st !< States
     type(hamiltonian_elec_t), intent(in)    :: hm !< Hamiltonian
@@ -867,7 +871,7 @@ contains
     lambda = M_ZERO
     fo = M_ZERO
 
-    call construct_lambda(hm, st, gr, lambda, rdm)
+    call construct_lambda(namespace, hm, st, gr, lambda, rdm)
     
     !Set up fo matrix 
     if (rdm%iter==1) then
@@ -898,7 +902,7 @@ contains
     call lalg_eigensolve(st%nst, fo, rdm%evalues)
     call assign_eigfunctions(rdm, st, gr, fo)
     call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
-    call rdm_derivatives(rdm, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     SAFE_DEALLOCATE_A(lambda) 
@@ -939,7 +943,7 @@ contains
     end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      call deigensolver_cg2(gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+      call deigensolver_cg2(namespace, gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
   
@@ -966,7 +970,7 @@ contains
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, hm, st, geo)
     call hamiltonian_elec_update(hm, gr%mesh, namespace)
-    call rdm_derivatives(rdm, hm, st, gr)
+    call rdm_derivatives(rdm, namespace, hm, st, gr)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -977,7 +981,8 @@ contains
 
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
-  subroutine construct_lambda(hm, st, gr, lambda, rdm)
+  subroutine construct_lambda(namespace, hm, st, gr, lambda, rdm)
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
@@ -1001,7 +1006,7 @@ contains
 
       do iorb = 1, st%nst
         call states_elec_get_state(st, gr%mesh, iorb, 1, dpsi)
-        call dhamiltonian_elec_apply(hm, gr%mesh, dpsi, hpsi, iorb, 1)
+        call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi, hpsi, iorb, 1)
 
         do jorb = iorb, st%nst  
           ! calculate <phi_j|H|phi_i> =lam_ji
@@ -1010,7 +1015,7 @@ contains
           
           ! calculate <phi_i|H|phi_j>=lam_ij
           if (.not. iorb == jorb ) then
-            call dhamiltonian_elec_apply(hm, gr%mesh, dpsi1, hpsi1, jorb, 1)
+            call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi1, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
         end do
@@ -1147,11 +1152,12 @@ contains
     
     POP_SUB(total_energy_rdm)
   end subroutine total_energy_rdm
-  
+
   ! ----------------------------------------
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
-  subroutine rdm_derivatives(rdm, hm, st, gr)
+  subroutine rdm_derivatives(rdm, namespace, hm, st, gr)
     type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(in)    :: st 
     type(grid_t),             intent(in)    :: gr
@@ -1187,7 +1193,7 @@ contains
       !derivative of one-electron energy with respect to the natural orbitals occupation number
       do ist = 1, st%nst
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
-        call dhamiltonian_elec_apply(hm, gr%mesh, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
@@ -1197,7 +1203,7 @@ contains
       ! only used to calculate total energy
       do is = 1, nspin_
         do jdm = 1, st%d%dim
-          call doep_x(gr%der, hm%psolver, st, is, jdm, lxc, ex, 1.d0, v_ij)
+          call doep_x(namespace, gr%der, hm%psolver, st, is, jdm, lxc, ex, 1.d0, v_ij)
         end do
       end do
       do ist = 1, st%nst
@@ -1256,8 +1262,9 @@ contains
   
   ! --------------------------------------------
   !calculates the one electron integrals in the basis of the initial orbitals
-  subroutine rdm_integrals(rdm, hm, st, mesh)
+  subroutine rdm_integrals(rdm, namespace, hm, st, mesh)
     type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(in)    :: hm
     type(states_elec_t),      intent(in)    :: st 
     type(mesh_t),             intent(in)    :: mesh
@@ -1279,7 +1286,7 @@ contains
       call states_elec_get_state(st, mesh, ist, 1, dpsi)
       do jst = ist, st%nst
         call states_elec_get_state(st, mesh, jst, 1, dpsi2)
-        call dhamiltonian_elec_apply(hm, mesh, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply_single(hm, namespace, mesh, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)

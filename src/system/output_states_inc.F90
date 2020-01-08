@@ -17,14 +17,14 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
-  type(states_elec_t),    intent(in) :: st
-  type(namespace_t),      intent(in) :: namespace
-  type(grid_t),           intent(in) :: gr
-  type(geometry_t),       intent(in) :: geo
-  type(hamiltonian_elec_t),    intent(in) :: hm
-  character(len=*),       intent(in) :: dir
-  type(output_t),         intent(in) :: outp
+subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
+  type(output_t),           intent(in) :: outp
+  type(namespace_t),        intent(in) :: namespace
+  character(len=*),         intent(in) :: dir
+  type(states_elec_t),      intent(in) :: st
+  type(grid_t),             intent(in) :: gr
+  type(geometry_t),         intent(in) :: geo
+  type(hamiltonian_elec_t), intent(in) :: hm
 
   integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
@@ -184,9 +184,9 @@ subroutine output_states(st, namespace, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
-      call doutput_modelmb(trim(dir), namespace, gr, st, geo, outp)
+      call doutput_modelmb(outp, namespace, trim(dir), gr, st, geo)
     else
-      call zoutput_modelmb(trim(dir), namespace, gr, st, geo, outp)
+      call zoutput_modelmb(outp, namespace, trim(dir), gr, st, geo)
     end if
   end if
 
@@ -196,11 +196,12 @@ end subroutine output_states
 
 
 ! ---------------------------------------------------------
-subroutine output_current_flow(gr, st, dir, outp)
+subroutine output_current_flow(outp, namespace, dir, gr, st)
+  type(output_t),       intent(in) :: outp
+  type(namespace_t),    intent(in) :: namespace
+  character(len=*),     intent(in) :: dir
   type(grid_t),         intent(in) :: gr
   type(states_elec_t),  intent(in) :: st
-  character(len=*),     intent(in) :: dir
-  type(output_t),       intent(in) :: outp
 
   integer :: iunit, ip, idir, rankmin
   FLOAT   :: flow, dmin
@@ -215,8 +216,8 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(mpi_grp_is_root(mpi_world)) then
 
-    call io_mkdir(dir, outp%namespace)
-    iunit = io_open(trim(dir)//'/'//'current-flow', outp%namespace, action='write')
+    call io_mkdir(dir, namespace)
+    iunit = io_open(trim(dir)//'/'//'current-flow', namespace, action='write')
 
     select case(gr%mesh%sb%dim)
     case(3)
