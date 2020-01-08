@@ -21,6 +21,7 @@
 module system_abst_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use linked_list_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
@@ -46,7 +47,7 @@ module system_abst_oct_m
 
   type, abstract :: system_abst_t
     private
-
+    type(namespace_t),   public :: namespace
     type(linked_list_t), public :: interactions
     integer, public :: nb_partners = 0
 
