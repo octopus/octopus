@@ -109,8 +109,8 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   nullify(ec_per_vol)
   
   vxc_requested = present(vxc)
-  fxc_requested = present(fxc)
-  kxc_requested = present(kxc)
+  fxc_requested = present(fxc) .and. .false. ! switched off for testing
+  kxc_requested = present(kxc) .and. .false. ! switched off for testing
 
   ASSERT(present(ex) .eqv. present(ec))
   energy_requested = present(ex) .or. present(ex_density) .or. present(ec_density)
@@ -170,7 +170,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
     SAFE_ALLOCATE(vx(1:der%mesh%np))
   end if
 
-  call lda_init()
+  call lda_init() ! lda_init is required also for gga and mgga.
   if(gga .or. xcs%xc_density_correction == LR_X) call gga_init()
   if(mgga) call mgga_init()
 
@@ -941,231 +941,231 @@ end subroutine xc_get_derivatives
 
 
 pure logical function family_is_gga(family)
-integer, intent(in) :: family
+  integer, intent(in) :: family
 
-family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
-  XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+  family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+    XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
 end function  family_is_gga
 
 pure logical function family_is_mgga(family)
-integer, intent(in) :: family
+  integer, intent(in) :: family
 
-family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+  family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
 end function family_is_mgga
 
 ! -----------------------------------------------------
 
 subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
-type(xc_t),          intent(in)    :: xcs
-type(derivatives_t), intent(in)    :: der
-type(poisson_t),     intent(in)    :: psolver
-type(namespace_t),   intent(in)    :: namespace
-integer,             intent(in)    :: nspin
-FLOAT,               intent(in)    :: density(:, :)
-FLOAT,               intent(inout) :: refvx(:)
-FLOAT,               intent(inout) :: vxc(:, :)
-FLOAT, optional,     intent(out)   :: deltaxc
+  type(xc_t),          intent(in)    :: xcs
+  type(derivatives_t), intent(in)    :: der
+  type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
+  integer,             intent(in)    :: nspin
+  FLOAT,               intent(in)    :: density(:, :)
+  FLOAT,               intent(inout) :: refvx(:)
+  FLOAT,               intent(inout) :: vxc(:, :)
+  FLOAT, optional,     intent(out)   :: deltaxc
 
-logical :: find_root, done
-integer :: ip, iunit, ierr
-integer, save :: iter = 0
-FLOAT,   save :: ncsave
-character(len=30) :: number
-FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, qxcfin
-FLOAT   :: x1, x2, x3, f1, f2, f3, dd, vol, mindd, maxdd
-FLOAT, allocatable :: nxc(:), lrvxc(:)
-type(profile_t), save :: prof
-FLOAT, parameter :: thres = CNST(1e-6)
+  logical :: find_root, done
+  integer :: ip, iunit, ierr
+  integer, save :: iter = 0
+  FLOAT,   save :: ncsave
+  character(len=30) :: number
+  FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, qxcfin
+  FLOAT   :: x1, x2, x3, f1, f2, f3, dd, vol, mindd, maxdd
+  FLOAT, allocatable :: nxc(:), lrvxc(:)
+  type(profile_t), save :: prof
+  FLOAT, parameter :: thres = CNST(1e-6)
 
-PUSH_SUB(xc_density_correction_calc)
+  PUSH_SUB(xc_density_correction_calc)
 
-call profiling_in(prof, "XC_DENSITY_CORRECTION")
+  call profiling_in(prof, "XC_DENSITY_CORRECTION")
 
-SAFE_ALLOCATE(nxc(1:der%mesh%np))
-SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
+  SAFE_ALLOCATE(nxc(1:der%mesh%np))
+  SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
 
-forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
-call dderivatives_lapl(der, lrvxc, nxc)
+  forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+  call dderivatives_lapl(der, lrvxc, nxc)
 
-if(debug%info) then
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
-  der%mesh, density(:, 1), unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
-  der%mesh, refvx(:), unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
-  der%mesh, nxc, unit_one, ierr)
-end if
-
-if(xcs%xcd_optimize_cutoff) then
-
-x1 = CNST(1.0e-8)
-qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
-deriv = HUGE(deriv)
-done = .false.
-
-INCR(iter, 1)
-if(debug%info) then
-  if(mpi_world%rank == 0) then
-    write(number, '(i4)') iter
-    iunit = io_open('qxc.'//trim(adjustl(number)), namespace, action='write')
-  end if
-end if
-do
-  if(.not. done) then
-    ncutoff_old = x1
-    qxc_old = qxc
-  end if
-
-  x1 = x1*CNST(1.01)
   if(debug%info) then
-    if(mpi_world%rank == 0) then
-      write(iunit, *) x1, qxc
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
+      der%mesh, density(:, 1), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
+      der%mesh, refvx(:), unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
+  end if
+
+  if(xcs%xcd_optimize_cutoff) then
+
+    x1 = CNST(1.0e-8)
+    qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+    deriv = HUGE(deriv)
+    done = .false.
+
+    INCR(iter, 1)
+    if(debug%info) then
+      if(mpi_world%rank == 0) then
+        write(number, '(i4)') iter
+        iunit = io_open('qxc.'//trim(adjustl(number)), namespace, action='write')
+      end if
     end if
+    do
+      if(.not. done) then
+        ncutoff_old = x1
+        qxc_old = qxc
+      end if
+
+      x1 = x1*CNST(1.01)
+      if(debug%info) then
+        if(mpi_world%rank == 0) then
+          write(iunit, *) x1, qxc
+        end if
+      end if
+      if(x1 > CNST(1.0)) exit
+
+      qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+
+      if(qxc == qxc_old) cycle
+
+      deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
+
+      if(.not. done .and. abs(qxc) >= 1.0_8) then
+        find_root = .true.
+        done = .true.
+        ncutoff = x1
+      end if
+
+      if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
+        find_root = .false.
+        done = .true.
+        ncutoff = x1
+        print*, x1, 0
+      end if
+
+    end do
+
+    if(mpi_world%rank == 0) call io_close(iunit)
+
+    if(iter > 1) x3 = ncsave
+
+    if(find_root) then
+      x1 = ncutoff
+      x2 = ncutoff_old
+      x3 = ncutoff
+      f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
+      f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
+
+      do ip = 1, 20
+        if(abs(f1 - f2) < 1e-16_8) exit
+        x3 = x2 - f2*(x2 - x1)/(f2 - f1)
+        f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
+        if(abs(f3) < 1e-6_8) exit
+        x1 = x2
+        f1 = f2
+        x2 = x3
+        f2 = f3
+      end do
+
+      if(x3 <= ncutoff) ncutoff = x3
+    end if
+
+    ncsave = x3
+
+  else
+    ncutoff = xcs%xcd_ncutoff
   end if
-  if(x1 > CNST(1.0)) exit
 
-  qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+  qxcfin = get_qxc(der%mesh, nxc, density(:, 1), ncutoff)
 
-  if(qxc == qxc_old) cycle
-
-  deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
-
-  if(.not. done .and. abs(qxc) >= 1.0_8) then
-    find_root = .true.
-    done = .true.
-    ncutoff = x1
-  end if
-
-  if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
-    find_root = .false.
-    done = .true.
-    ncutoff = x1
-    print*, x1, 0
-  end if
-
-end do
-
-if(mpi_world%rank == 0) call io_close(iunit)
-
-if(iter > 1) x3 = ncsave
-
-if(find_root) then
-  x1 = ncutoff
-  x2 = ncutoff_old
-  x3 = ncutoff
-  f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
-  f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
-
-  do ip = 1, 20
-    if(abs(f1 - f2) < 1e-16_8) exit
-    x3 = x2 - f2*(x2 - x1)/(f2 - f1)
-    f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
-    if(abs(f3) < 1e-6_8) exit
-    x1 = x2
-    f1 = f2
-    x2 = x3
-    f2 = f3
+  do ip = 1, der%mesh%np
+    if(density(ip, 1) < ncutoff) then
+      nxc(ip) = -nxc(ip)
+    else
+      nxc(ip) = M_ZERO
+    end if
   end do
 
-  if(x3 <= ncutoff) ncutoff = x3
-end if
+  if(debug%info) then
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
+      der%mesh, nxc, unit_one, ierr)
 
-ncsave = x3
+    if(mpi_world%rank == 0) then
+      print*, "Iter",    iter, ncutoff, qxcfin
+    end if
+  end if
 
-else
-ncutoff = xcs%xcd_ncutoff
-end if
+  call dpoisson_solve(psolver, lrvxc, nxc)
 
-qxcfin = get_qxc(der%mesh, nxc, density(:, 1), ncutoff)
+  if(xcs%xcd_normalize .and. abs(qxcfin) > CNST(1e-10)) then
+    do ip = 1, der%mesh%np
+      lrvxc(ip) = lrvxc(ip)/abs(qxcfin)
+    end do
+  end if
 
-do ip = 1, der%mesh%np
-if(density(ip, 1) < ncutoff) then
-  nxc(ip) = -nxc(ip)
-else
-  nxc(ip) = M_ZERO
-end if
-end do
+  if(debug%info) then
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+  end if
 
-if(debug%info) then
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
-  der%mesh, nxc, unit_one, ierr)
+  forall(ip = 1:der%mesh%np) 
+    vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
+    refvx(ip) = lrvxc(ip)
+  end forall
 
-if(mpi_world%rank == 0) then
-  print*, "Iter",    iter, ncutoff, qxcfin
-end if
-end if
+  maxdd = -HUGE(maxdd)
+  mindd =  HUGE(maxdd)
+  vol = M_ZERO
+  do ip = 1, der%mesh%np
+    if(density(ip, 1) >= ncutoff) then
+      vol = vol + der%mesh%volume_element
+      maxdd = max(lrvxc(ip), maxdd)
+      mindd = min(lrvxc(ip), mindd)
+    else
+      lrvxc(ip) = M_ZERO
+    end if
+  end do
 
-call dpoisson_solve(psolver, lrvxc, nxc)
+  if(debug%info) then
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
+      der%mesh, lrvxc, unit_one, ierr)
+  end if
 
-if(xcs%xcd_normalize .and. abs(qxcfin) > CNST(1e-10)) then
-do ip = 1, der%mesh%np
-  lrvxc(ip) = lrvxc(ip)/abs(qxcfin)
-end do
-end if
+  dd = dmf_integrate(der%mesh, lrvxc)/vol
 
-if(debug%info) then
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-end if
+  if(debug%info) then
+    if(mpi_world%rank == 0) then
+      print*, "DD",  -CNST(2.0)*dd, -CNST(2.0)*mindd, -CNST(2.0)*maxdd
+    end if
+  end if
 
-forall(ip = 1:der%mesh%np) 
-vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
-refvx(ip) = lrvxc(ip)
-end forall
+  if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
 
-maxdd = -HUGE(maxdd)
-mindd =  HUGE(maxdd)
-vol = M_ZERO
-do ip = 1, der%mesh%np
-if(density(ip, 1) >= ncutoff) then
-  vol = vol + der%mesh%volume_element
-  maxdd = max(lrvxc(ip), maxdd)
-  mindd = min(lrvxc(ip), mindd)
-else
-  lrvxc(ip) = M_ZERO
-end if
-end do
+  if(debug%info) then
+    call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
+      der%mesh, nxc, unit_one, ierr)
+  end if
 
-if(debug%info) then
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
-  der%mesh, lrvxc, unit_one, ierr)
-end if
+  call profiling_out(prof)
 
-dd = dmf_integrate(der%mesh, lrvxc)/vol
+  SAFE_DEALLOCATE_A(lrvxc)
+  SAFE_DEALLOCATE_A(nxc)
 
-if(debug%info) then
-if(mpi_world%rank == 0) then
-  print*, "DD",  -CNST(2.0)*dd, -CNST(2.0)*mindd, -CNST(2.0)*maxdd
-end if
-end if
-
-if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
-
-if(debug%info) then
-call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
-  der%mesh, nxc, unit_one, ierr)
-end if
-
-call profiling_out(prof)
-
-SAFE_DEALLOCATE_A(lrvxc)
-SAFE_DEALLOCATE_A(nxc)
-
-POP_SUB(xc_density_correction_calc)
+  POP_SUB(xc_density_correction_calc)
 end subroutine xc_density_correction_calc
 
 ! -----------------------------------------------------
