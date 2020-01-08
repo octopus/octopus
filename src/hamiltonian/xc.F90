@@ -376,9 +376,9 @@ contains
   end function family_is_mgga_with_exc
 
 ! #include "vxc_inc.F90"
+#include "xc_deriv_inc.F90"
 #include "fxc_inc.F90"
 #include "kxc_inc.F90"
-#include "xc_deriv_inc.F90"
 
 end module xc_oct_m
 

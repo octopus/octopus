@@ -29,7 +29,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   FLOAT,                intent(in)    :: qtot 
   FLOAT, optional,      intent(inout) :: vxc(:,:)            !< XC potential
   FLOAT, optional,      intent(inout) :: fxc(:,:,:)          !< XC kernel
-  CMPLX, optional,      intent(inout) :: zfxc(:, :, :, :, :) ! XC kernel for spinors
+  CMPLX, optional,      intent(inout) :: zfxc(:, :, :, :, :) !< XC kernel for spinors
   FLOAT, optional,      intent(inout) :: kxc(:,:,:,:)        !< XC third derivative
   FLOAT, optional,      intent(inout) :: ex                  !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec                  !< Correlation energy.
@@ -115,15 +115,16 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   ASSERT(present(ex) .eqv. present(ec))
   energy_requested = present(ex) .or. present(ex_density) .or. present(ec_density)
 
-  if(present(zfxc)) then
-    ASSERT(ispin  ==  SPINORS)
-    spinors_fxc = .true.
-    zfxc = M_z0
-  else
-    ASSERT(ispin /= SPINORS)
-    spinors_fxc = .false.
-  end if
-
+  if(fxc_requested) then
+    if(present(zfxc)) then
+      ASSERT(ispin  ==  SPINORS)
+      spinors_fxc = .true.
+      zfxc = M_z0
+    else
+      ASSERT(ispin /= SPINORS)
+      spinors_fxc = .false.
+    end if
+  end if 
   !Pointer-shortcut for xcs%functional
   !It helps to remember that for xcs%functional(:,:)
   ! (1,:) => exchange,    (2,:) => correlation
@@ -519,7 +520,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   if(gga .or. xcs%xc_density_correction == LR_X) call  gga_end()
   if(mgga) call mgga_end()
 
-  POP_SUB(xc_get_vxc)
+  POP_SUB(xc_get_derivatives)
   call profiling_out(prof)
 
 contains
@@ -536,7 +537,7 @@ contains
 
     integer :: ib, is
 
-    PUSH_SUB(xc_get_vxc.copy_global_to_local)
+    PUSH_SUB(xc_get_derivatives.copy_global_to_local)
 
     do is = 1, spin_channels
       !$omp parallel do
@@ -545,7 +546,7 @@ contains
       end do
     end do
 
-    POP_SUB(xc_get_vxc.copy_global_to_local)
+    POP_SUB(xc_get_derivatives.copy_global_to_local)
   end subroutine copy_global_to_local
 
   ! ---------------------------------------------------------
@@ -558,7 +559,7 @@ contains
 
     integer :: ib, is
 
-    PUSH_SUB(xc_get_vxc.copy_local_to_global)
+    PUSH_SUB(xc_get_derivatives.copy_local_to_global)
 
     do is = 1, spin_channels
       !$omp parallel do
@@ -567,7 +568,7 @@ contains
       end do
     end do
 
-    POP_SUB(xc_get_vxc.copy_local_to_global)
+    POP_SUB(xc_get_derivatives.copy_local_to_global)
   end subroutine copy_local_to_global
 
   ! ---------------------------------------------------------
@@ -576,7 +577,7 @@ contains
     integer, intent(in)  :: np
     integer, intent(out) :: nblock
 
-    PUSH_SUB(xc_get_vxc.space_loop_init)
+    PUSH_SUB(xc_get_derivatives.space_loop_init)
 
     !Resize the dimension of the last block when the number of the mesh points
     !it is not a perfect divisor of the dimension of the blocks.
@@ -605,7 +606,7 @@ contains
       call copy_global_to_local(ldens, l_lapl, nblock, spin_channels, ip)
     end if
 
-    POP_SUB(xc_get_vxc.space_loop_init)
+    POP_SUB(xc_get_derivatives.space_loop_init)
   end subroutine space_loop_init
 
   ! ---------------------------------------------------------
@@ -616,7 +617,7 @@ contains
     integer :: ii
     FLOAT   :: d(2), dtot, dpol
 
-    PUSH_SUB(xc_get_vxc.lda_init)
+    PUSH_SUB(xc_get_derivatives.lda_init)
 
     ! allocate some general arrays
 
@@ -669,13 +670,13 @@ contains
 
     end select
 
-    POP_SUB(xc_get_vxc.lda_init)
+    POP_SUB(xc_get_derivatives.lda_init)
   end subroutine lda_init
 
   ! ---------------------------------------------------------
   !> deallocate variables allocated in lda_init
   subroutine lda_end()
-    PUSH_SUB(xc_get_vxc.lda_end)
+    PUSH_SUB(xc_get_derivatives.lda_end)
 
     SAFE_DEALLOCATE_A(dens)
     if(.not. present(ex_density)) then
@@ -686,7 +687,7 @@ contains
     end if
     SAFE_DEALLOCATE_A(dedd)
 
-    POP_SUB(xc_get_vxc.lda_end)
+    POP_SUB(xc_get_derivatives.lda_end)
   end subroutine lda_end
 
 
@@ -696,7 +697,7 @@ contains
     integer :: ip
     FLOAT :: d(2), dpol, vpol
 
-    PUSH_SUB(xc_get_vxc.lda_process)
+    PUSH_SUB(xc_get_derivatives.lda_process)
 
     if(present(vxc)) then
     
@@ -723,7 +724,7 @@ contains
 
     end if
       
-    POP_SUB(xc_get_vxc.lda_process)
+    POP_SUB(xc_get_derivatives.lda_process)
   end subroutine lda_process
 
 
@@ -736,7 +737,7 @@ contains
     FLOAT :: parameters(4)
 #endif
 
-    PUSH_SUB(xc_get_vxc.gga_init)
+    PUSH_SUB(xc_get_derivatives.gga_init)
 
     ! allocate variables
     SAFE_ALLOCATE(gdens(1:der%mesh%np, 1:der%mesh%sb%dim, 1:spin_channels))
@@ -760,19 +761,19 @@ contains
       end if
     end do
 
-    POP_SUB(xc_get_vxc.gga_init)
+    POP_SUB(xc_get_derivatives.gga_init)
   end subroutine gga_init
 
 
   ! ---------------------------------------------------------
   !> cleans up memory allocated in gga_init
   subroutine gga_end()
-    PUSH_SUB(xc_get_vxc.gga_end)
+    PUSH_SUB(xc_get_derivatives.gga_end)
 
     SAFE_DEALLOCATE_A(gdens)
     SAFE_DEALLOCATE_A(dedgd)
 
-    POP_SUB(xc_get_vxc.gga_end)
+    POP_SUB(xc_get_derivatives.gga_end)
   end subroutine gga_end
 
 
@@ -782,7 +783,7 @@ contains
     integer :: is
     FLOAT, allocatable :: gf(:,:)
 
-    PUSH_SUB(xc_get_vxc.gga_process)
+    PUSH_SUB(xc_get_derivatives.gga_process)
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
@@ -793,7 +794,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(gf)
 
-    POP_SUB(xc_get_vxc.gga_process)
+    POP_SUB(xc_get_derivatives.gga_process)
   end subroutine gga_process
 
 
@@ -801,7 +802,7 @@ contains
   !> initialize meta-GGAs
   !!   *) allocate the kinetic-energy density, dedtau, and local variants
   subroutine mgga_init()
-    PUSH_SUB(xc_get_vxc.mgga_init)
+    PUSH_SUB(xc_get_derivatives.mgga_init)
 
     ! allocate variables
     SAFE_ALLOCATE( tau(1:der%mesh%np, 1:spin_channels))
@@ -810,7 +811,7 @@ contains
     SAFE_ALLOCATE(dedldens(1:der%mesh%np_part, 1:spin_channels))
     dedldens = M_ZERO
 
-    POP_SUB(xc_get_vxc.mgga_init)
+    POP_SUB(xc_get_derivatives.mgga_init)
   end subroutine mgga_init
 
 
@@ -821,7 +822,7 @@ contains
     FLOAT :: gn(MAX_DIM), n, tb09_c
     integer :: ii
 
-    PUSH_SUB(xc_get_vxc.calc_tb09_c)
+    PUSH_SUB(xc_get_derivatives.calc_tb09_c)
 
     SAFE_ALLOCATE(gnon(1:der%mesh%np))
 
@@ -851,21 +852,21 @@ contains
     
     SAFE_DEALLOCATE_A(gnon)
 
-    POP_SUB(xc_get_vxc.calc_tb09_c)
+    POP_SUB(xc_get_derivatives.calc_tb09_c)
   end subroutine calc_tb09_c
 
 
   ! ---------------------------------------------------------
   !> clean up memory allocated in mgga_init
   subroutine mgga_end()
-    PUSH_SUB(xc_get_vxc.mgga_end)
+    PUSH_SUB(xc_get_derivatives.mgga_end)
 
     SAFE_DEALLOCATE_A(tau)
     SAFE_DEALLOCATE_A(ldens)
 
     SAFE_DEALLOCATE_A(dedldens)
 
-    POP_SUB(xc_get_vxc.mgga_end)
+    POP_SUB(xc_get_derivatives.mgga_end)
   end subroutine mgga_end
 
   ! ---------------------------------------------------------
@@ -922,7 +923,7 @@ contains
     integer :: is
     FLOAT, allocatable :: lf(:,:)
 
-    PUSH_SUB(xc_get_vxc.mgga_process)
+    PUSH_SUB(xc_get_derivatives.mgga_process)
 
     ! add the Laplacian of the functional derivative of Exc with respect to
     ! the laplacian of the density.
@@ -934,7 +935,7 @@ contains
     end do
     SAFE_DEALLOCATE_A(lf)
 
-    POP_SUB(xc_get_vxc.mgga_process)
+    POP_SUB(xc_get_derivatives.mgga_process)
   end subroutine mgga_process
 
 end subroutine xc_get_derivatives
