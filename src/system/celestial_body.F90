@@ -68,6 +68,8 @@ contains
 
     PUSH_SUB(celestial_body_init)
 
+    sys%namespace = namespace
+
     call space_init(sys%space, namespace)
 
     !%Variable CelestialBodyMass
@@ -192,7 +194,7 @@ contains
 
     case default
       message(1) = "Unsupported TD operation."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=this%namespace)
     end select
 
    POP_SUB(celestial_body_do_td)
@@ -225,12 +227,12 @@ contains
 
       class default
         message(1) = "Unsupported partner class for force interaction"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=sys%namespace)
       end select
 
     case default
       message(1) = "Unsupported pull interaction."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=sys%namespace)
     end select
 
     POP_SUB(celestial_body_pull)
