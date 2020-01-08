@@ -16,8 +16,8 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
-    vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+    vxc, fxc, zfxc, kxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -27,30 +27,47 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
   FLOAT,                intent(in)    :: qtot 
-  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
-  FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
-  FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
-  FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
-  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
-  FLOAT, optional, target, intent(out)   :: ex_density(:)   !< The exchange energy density
-  FLOAT, optional, target, intent(out)   :: ec_density(:)   !< The correlation energy density
+  FLOAT, optional,      intent(inout) :: vxc(:,:)            !< XC potential
+  FLOAT, optional,      intent(inout) :: fxc(:,:,:)          !< XC kernel
+  CMPLX, optional,      intent(inout) :: zfxc(:, :, :, :, :) ! XC kernel for spinors
+  FLOAT, optional,      intent(inout) :: kxc(:,:,:,:)        !< XC third derivative
+  FLOAT, optional,      intent(inout) :: ex                  !< Exchange energy.
+  FLOAT, optional,      intent(inout) :: ec                  !< Correlation energy.
+  FLOAT, optional,      intent(inout) :: deltaxc             !< The XC derivative discontinuity
+  FLOAT, optional,      intent(inout) :: vtau(:,:)           !< Derivative wrt (two times kinetic energy density)
+  FLOAT, optional, target, intent(out)   :: ex_density(:)    !< The exchange energy density
+  FLOAT, optional, target, intent(out)   :: ec_density(:)    !< The correlation energy density
 
   integer, parameter :: N_BLOCK_MAX = 10000
   integer :: n_block
+
+  logical :: vxc_requested
+  logical :: fxc_requested
+  logical :: kxc_requested
+  logical :: energy_requested
+
+  logical :: spinors_fxc
 
   ! Local blocks (with the correct memory order for libxc):
   !  Input quantities
   FLOAT, allocatable :: l_dens(:,:)     ! Density 
   FLOAT, allocatable :: l_sigma(:,:)    ! Modulus squared of the gradient of the density
-  FLOAT, allocatable :: l_ldens(:,:)    ! Laplacian of the density
+  FLOAT, allocatable :: l_lapl(:,:)    ! Laplacian of the density
   FLOAT, allocatable :: l_tau(:,:)      ! Kinetic energy density
   !  Energy
   FLOAT, allocatable :: l_zk(:)
-  !  First order (functional) derivatives
-  FLOAT, allocatable :: l_dedd(:,:)     ! Derivative of the energy wrt the density
+  !  First order partial derivatives
+  FLOAT, allocatable :: l_vrho(:,:)     ! Derivative of the energy wrt the density
   FLOAT, allocatable :: l_vsigma(:,:)   ! Derivative of the energy wrt sigma
-  FLOAT, allocatable :: l_dedldens(:,:) ! Derivative of the energy wrt the laplacian of the density
-  FLOAT, allocatable :: l_dedtau(:,:)   ! Derivative of the energy wrt tau
+  FLOAT, allocatable :: l_vlapl(:,:)    ! Derivative of the energy wrt the laplacian of the density
+  FLOAT, allocatable :: l_vtau(:,:)     ! Derivative of the energy wrt tau
+  !  Second order partial derivatives
+  FLOAT, allocatable :: l_v2rho2(:,:)       ! Second Derivative of the energy wrt the density
+  FLOAT, allocatable :: l_v2rhosigma(:,:,:) ! Second Derivative of the energy wrt the density and sigma
+  FLOAT, allocatable :: l_v2sigma2(:,:,:)   ! Second Derivative of the energy wrt sigma
+  FLOAT, allocatable :: l_v2rhotau(:,:)     ! Second Derivative of the energy wrt the density and tau
+  FLOAT, allocatable :: l_v2tau2(:,:)       ! Second Derivative of the energy wrt tau
+  
 
   ! Global arrays
   !  Input quantities
@@ -65,6 +82,14 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   FLOAT, allocatable :: dedd(:,:)      ! Derivative of the exchange or correlation energy wrt the density
   FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
   FLOAT, allocatable :: dedldens(:,:)  ! Derivative of the exchange or correlation energy wrt the laplacian of the density
+  !  Second order (functional) derivatives
+  FLOAT, allocatable :: d2ed2d(:,:)       ! Second Derivative of the xc energy wrt density, density
+  FLOAT, allocatable :: d2edddgd(:,:,:)   ! Second Derivative of the xc energy wrt density, gradient of the density
+  FLOAT, allocatable :: d2ed2gd(:,:,:,:)  ! Second Derivative of the xc energy wrt gradient, gradient
+  FLOAT, allocatable :: d2ed2ldens(:,:)   ! Second Derivative of the xc energy wrt the laplacian of the density
+  FLOAT, allocatable :: d2edddldens(:,:)  ! Second Derivative of the xc energy wrt density, laplacian 
+  FLOAT, allocatable :: d2edgddldens(:,:) ! Second Derivative of the xc energy wrt gradient, laplacian
+
 
   FLOAT, allocatable :: vx(:)
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
@@ -73,19 +98,31 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   FLOAT   :: rr, energy(1:2)
   logical :: gga, mgga, mgga_withexc, libvdwxc
   type(profile_t), save :: prof, prof_libxc
-  logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
   type(distributed_t) :: distribution
   type(profile_t), save :: prof_gather
   
-  PUSH_SUB(xc_get_vxc)
+  PUSH_SUB(xc_get_derivatives)
   call profiling_in(prof, "XC_LOCAL")
 
   nullify(ex_per_vol)
   nullify(ec_per_vol)
   
+  vxc_requested = present(vxc)
+  fxc_requested = present(fxc)
+  kxc_requested = present(kxc)
+
   ASSERT(present(ex) .eqv. present(ec))
-  calc_energy = present(ex) .or. present(ex_density) .or. present(ec_density)
+  energy_requested = present(ex) .or. present(ex_density) .or. present(ec_density)
+
+  if(present(zfxc)) then
+    ASSERT(ispin  ==  SPINORS)
+    spinors_fxc = .true.
+    zfxc = M_z0
+  else
+    ASSERT(ispin /= SPINORS)
+    spinors_fxc = .false.
+  end if
 
   !Pointer-shortcut for xcs%functional
   !It helps to remember that for xcs%functional(:,:)
@@ -100,7 +137,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   ! is there anything to do ?
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC
   if(bitand(xcs%family, families) == 0) then
-    POP_SUB(xc_get_vxc)
+    POP_SUB(xc_get_derivatives)
     call profiling_out(prof)
     return
   end if
@@ -184,7 +221,10 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
  
   space_loop: do ip = ipstart, ipend, N_BLOCK_MAX
 
+
+    ! space_loop_init copies the data into libxc format, and calculates the contracted gradients and tau
     call space_loop_init(ip, ipend, n_block)
+    ! after this point, all input quantities for libxc are present.
 
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = FUNC_X, FUNC_C
@@ -193,19 +233,20 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
 
       call profiling_in(prof_libxc, "LIBXC")
 
-      if(calc_energy .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+
+      if(vxc_requested .and. energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
+          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_vrho(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
           call XC_F90(gga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-            l_zk(1), l_dedd(1,1), l_vsigma(1,1))
+            l_zk(1), l_vrho(1,1), l_vsigma(1,1))
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
-            l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
+          call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_lapl(1,1), l_tau(1,1), &
+            l_zk(1), l_vrho(1,1), l_vsigma(1,1), l_vlapl(1,1), l_vtau(1,1))
 
         case default
           call profiling_out(prof_libxc)
@@ -217,7 +258,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
+          call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_vrho(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
           l_vsigma = M_ZERO
@@ -225,15 +266,15 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
           if(functl(ixc)%id == XC_GGA_X_LB) then
             call mesh_r(der%mesh, ip, rr)
             call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              rr, l_dedd(1,1))
+              rr, l_vrho(1,1))
           else
             call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              l_dedd(1,1), l_vsigma(1,1))
+              l_vrho(1,1), l_vsigma(1,1))
           end if
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
-            l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
+          call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_lapl(1,1), l_tau(1,1), &
+            l_vrho(1,1), l_vsigma(1,1), l_vlapl(1,1), l_vtau(1,1))
 
         case default
           call profiling_out(prof_libxc)
@@ -242,9 +283,40 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
         
       end if
 
+      if(fxc_requested) then
+      
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
+          call XC_F90(lda_fxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_v2rho2(1,1))
+
+        case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
+          l_vsigma = M_ZERO
+
+          if(functl(ixc)%id == XC_GGA_X_LB) then
+            call mesh_r(der%mesh, ip, rr)
+            call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
+              rr, l_vrho(1,1))
+          else
+            call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
+              l_vrho(1,1), l_vsigma(1,1))
+          end if
+
+        case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
+          call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_lapl(1,1), l_tau(1,1), &
+            l_vrho(1,1), l_vsigma(1,1), l_vlapl(1,1), l_vtau(1,1))
+
+        case default
+          call profiling_out(prof_libxc)
+          cycle
+        end select
+      
+      
+      end if
+
+
       call profiling_out(prof_libxc)
 
-      if(calc_energy) then
+      if(energy_requested) then
         if(functl(ixc)%type == XC_EXCHANGE) then
           do ib = 1, n_block
             ex_per_vol(ib + ip - 1) = ex_per_vol(ib + ip - 1) + sum(l_dens(1:spin_channels, ib))*l_zk(ib)
@@ -256,7 +328,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
         end if
       end if
 
-      call copy_local_to_global(l_dedd, dedd, n_block, spin_channels, ip)
+      call copy_local_to_global(l_vrho, dedd, n_block, spin_channels, ip)
       
       ! calculate the spin unpolarized exchange potential for the long range correction
       if(xcs%xc_density_correction == LR_X .and. &
@@ -313,9 +385,9 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
       if(family_is_mgga(functl(ixc)%family)) then
         ! XXXXX does this work correctly when functionals belong to
         ! different families and only one is mgga?
-        call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
+        call copy_local_to_global(l_vlapl, dedldens, n_block, spin_channels, ip)
         if(bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 ) &
-          call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
+          call copy_local_to_global(l_vtau, vtau, n_block, spin_channels, ip)
       end if
 
     end do functl_loop
@@ -405,7 +477,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
     call xc_density_correction_calc(xcs, der, psolver, namespace, spin_channels, &
       rho, vx, dedd, deltaxc = deltaxc)
 
-    if(calc_energy) then
+    if(energy_requested) then
       ! correct the energy density from Levy-Perdew, note that vx now
       ! contains the correction applied to the xc potential.
       do is = 1, spin_channels
@@ -435,6 +507,7 @@ contains
 
   ! ---------------------------------------------------------
   !> make a local copy with the correct memory order for libxc
+  !> Note that this is only correct for the first derivatives and the density (what about sigma?)
   subroutine copy_global_to_local(global, local, n_block, spin_channels, ip)
     FLOAT,   intent(in)  :: global(:,:)
     FLOAT,   intent(out) :: local(:,:)
@@ -493,6 +566,7 @@ contains
     ! make a local copy with the correct memory order for libxc
     call copy_global_to_local(dens, l_dens, nblock, spin_channels, ip)
 
+    ! calculate contracted gradients for libxc input and store in correct memory order for libxc
     if(gga) then
       do ib = 1, nblock
         l_sigma(1, ib) = sum(gdens(ib + ip - 1, 1:der%mesh%sb%dim, 1)**2)
@@ -504,11 +578,12 @@ contains
       end do
     end if
 
+    ! calculate kinetic energy density for meta GGA and store in libxc memory order
     if(mgga) then
       call copy_global_to_local(tau, l_tau, nblock, spin_channels, ip)
       ! we adjust for the different definition of tau in libxc
       l_tau(1:spin_channels, 1:nblock) = l_tau(1:spin_channels, 1:nblock) / M_TWO
-      call copy_global_to_local(ldens, l_ldens, nblock, spin_channels, ip)
+      call copy_global_to_local(ldens, l_lapl, nblock, spin_channels, ip)
     end if
 
     POP_SUB(xc_get_vxc.space_loop_init)
@@ -529,7 +604,7 @@ contains
     SAFE_ALLOCATE(dens(1:der%mesh%np_part, 1:spin_channels))
     dens       = M_ZERO
 
-    if(calc_energy) then
+    if(energy_requested) then
       if(present(ex_density)) then
         ex_per_vol => ex_density
       else
@@ -781,7 +856,7 @@ contains
 
     allocate(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
     allocate(l_zk(1:N_BLOCK_MAX))
-    allocate(l_dedd(1:spin_channels, 1:N_BLOCK_MAX))
+    allocate(l_vrho(1:spin_channels, 1:N_BLOCK_MAX))
 
     if(gga .or. xcs%xc_density_correction == LR_X) then
       ii = 1
@@ -793,9 +868,9 @@ contains
 
     if(mgga) then
       allocate(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_ldens(1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_dedtau  (1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_dedldens(1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_lapl(1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_vtau  (1:spin_channels, 1:N_BLOCK_MAX))
+      allocate(l_vlapl(1:spin_channels, 1:N_BLOCK_MAX))
     end if
 
     end subroutine local_allocate
@@ -806,7 +881,7 @@ contains
 
     deallocate(l_dens)
     deallocate(l_zk)
-    deallocate(l_dedd)
+    deallocate(l_vrho)
 
     if(gga .or. xcs%xc_density_correction == LR_X) then
       deallocate(l_sigma)
@@ -815,9 +890,9 @@ contains
 
     if(mgga) then
       deallocate(l_tau)
-      deallocate(l_ldens)
-      deallocate(l_dedtau)
-      deallocate(l_dedldens)
+      deallocate(l_lapl)
+      deallocate(l_vtau)
+      deallocate(l_vlapl)
     end if
 
   end subroutine local_deallocate
@@ -843,7 +918,266 @@ contains
     POP_SUB(xc_get_vxc.mgga_process)
   end subroutine mgga_process
 
-end subroutine xc_get_vxc
+end subroutine xc_get_derivatives
+
+
+pure logical function family_is_gga(family)
+integer, intent(in) :: family
+
+family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+  XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+end function  family_is_gga
+
+pure logical function family_is_mgga(family)
+integer, intent(in) :: family
+
+family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+end function family_is_mgga
+
+! -----------------------------------------------------
+
+subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, density, refvx, vxc, deltaxc)
+type(xc_t),          intent(in)    :: xcs
+type(derivatives_t), intent(in)    :: der
+type(poisson_t),     intent(in)    :: psolver
+type(namespace_t),   intent(in)    :: namespace
+integer,             intent(in)    :: nspin
+FLOAT,               intent(in)    :: density(:, :)
+FLOAT,               intent(inout) :: refvx(:)
+FLOAT,               intent(inout) :: vxc(:, :)
+FLOAT, optional,     intent(out)   :: deltaxc
+
+logical :: find_root, done
+integer :: ip, iunit, ierr
+integer, save :: iter = 0
+FLOAT,   save :: ncsave
+character(len=30) :: number
+FLOAT   :: qxc, ncutoff, qxc_old, ncutoff_old, deriv, qxcfin
+FLOAT   :: x1, x2, x3, f1, f2, f3, dd, vol, mindd, maxdd
+FLOAT, allocatable :: nxc(:), lrvxc(:)
+type(profile_t), save :: prof
+FLOAT, parameter :: thres = CNST(1e-6)
+
+PUSH_SUB(xc_density_correction_calc)
+
+call profiling_in(prof, "XC_DENSITY_CORRECTION")
+
+SAFE_ALLOCATE(nxc(1:der%mesh%np))
+SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
+
+forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+call dderivatives_lapl(der, lrvxc, nxc)
+
+if(debug%info) then
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "rho", namespace, &
+  der%mesh, density(:, 1), unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "vxcorig", namespace, &
+  der%mesh, refvx(:), unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxc", namespace, &
+  der%mesh, nxc, unit_one, ierr)
+end if
+
+if(xcs%xcd_optimize_cutoff) then
+
+x1 = CNST(1.0e-8)
+qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+deriv = HUGE(deriv)
+done = .false.
+
+INCR(iter, 1)
+if(debug%info) then
+  if(mpi_world%rank == 0) then
+    write(number, '(i4)') iter
+    iunit = io_open('qxc.'//trim(adjustl(number)), namespace, action='write')
+  end if
+end if
+do
+  if(.not. done) then
+    ncutoff_old = x1
+    qxc_old = qxc
+  end if
+
+  x1 = x1*CNST(1.01)
+  if(debug%info) then
+    if(mpi_world%rank == 0) then
+      write(iunit, *) x1, qxc
+    end if
+  end if
+  if(x1 > CNST(1.0)) exit
+
+  qxc = get_qxc(der%mesh, nxc, density(:, 1), x1)
+
+  if(qxc == qxc_old) cycle
+
+  deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
+
+  if(.not. done .and. abs(qxc) >= 1.0_8) then
+    find_root = .true.
+    done = .true.
+    ncutoff = x1
+  end if
+
+  if(xcs%xcd_minimum .and. .not. done .and. abs(qxc_old) - abs(qxc) > thres) then
+    find_root = .false.
+    done = .true.
+    ncutoff = x1
+    print*, x1, 0
+  end if
+
+end do
+
+if(mpi_world%rank == 0) call io_close(iunit)
+
+if(iter > 1) x3 = ncsave
+
+if(find_root) then
+  x1 = ncutoff
+  x2 = ncutoff_old
+  x3 = ncutoff
+  f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
+  f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
+
+  do ip = 1, 20
+    if(abs(f1 - f2) < 1e-16_8) exit
+    x3 = x2 - f2*(x2 - x1)/(f2 - f1)
+    f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
+    if(abs(f3) < 1e-6_8) exit
+    x1 = x2
+    f1 = f2
+    x2 = x3
+    f2 = f3
+  end do
+
+  if(x3 <= ncutoff) ncutoff = x3
+end if
+
+ncsave = x3
+
+else
+ncutoff = xcs%xcd_ncutoff
+end if
+
+qxcfin = get_qxc(der%mesh, nxc, density(:, 1), ncutoff)
+
+do ip = 1, der%mesh%np
+if(density(ip, 1) < ncutoff) then
+  nxc(ip) = -nxc(ip)
+else
+  nxc(ip) = M_ZERO
+end if
+end do
+
+if(debug%info) then
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "nxcmod", namespace, &
+  der%mesh, nxc, unit_one, ierr)
+
+if(mpi_world%rank == 0) then
+  print*, "Iter",    iter, ncutoff, qxcfin
+end if
+end if
+
+call dpoisson_solve(psolver, lrvxc, nxc)
+
+if(xcs%xcd_normalize .and. abs(qxcfin) > CNST(1e-10)) then
+do ip = 1, der%mesh%np
+  lrvxc(ip) = lrvxc(ip)/abs(qxcfin)
+end do
+end if
+
+if(debug%info) then
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fulldiffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "fulldiffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "fulldiffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_X, "./static", "fulldiffvxc.pl", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Y, "./static", "fulldiffvxc.pl", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__PLANE_Z, "./static", "fulldiffvxc.pl", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+end if
+
+forall(ip = 1:der%mesh%np) 
+vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
+refvx(ip) = lrvxc(ip)
+end forall
+
+maxdd = -HUGE(maxdd)
+mindd =  HUGE(maxdd)
+vol = M_ZERO
+do ip = 1, der%mesh%np
+if(density(ip, 1) >= ncutoff) then
+  vol = vol + der%mesh%volume_element
+  maxdd = max(lrvxc(ip), maxdd)
+  mindd = min(lrvxc(ip), mindd)
+else
+  lrvxc(ip) = M_ZERO
+end if
+end do
+
+if(debug%info) then
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "diffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Y, "./static", "diffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_Z, "./static", "diffvxc.ax", namespace, &
+  der%mesh, lrvxc, unit_one, ierr)
+end if
+
+dd = dmf_integrate(der%mesh, lrvxc)/vol
+
+if(debug%info) then
+if(mpi_world%rank == 0) then
+  print*, "DD",  -CNST(2.0)*dd, -CNST(2.0)*mindd, -CNST(2.0)*maxdd
+end if
+end if
+
+if(present(deltaxc)) deltaxc = -CNST(2.0)*dd
+
+if(debug%info) then
+call dio_function_output(OPTION__OUTPUTFORMAT__AXIS_X, "./static", "fnxc", namespace, &
+  der%mesh, nxc, unit_one, ierr)
+end if
+
+call profiling_out(prof)
+
+SAFE_DEALLOCATE_A(lrvxc)
+SAFE_DEALLOCATE_A(nxc)
+
+POP_SUB(xc_density_correction_calc)
+end subroutine xc_density_correction_calc
+
+! -----------------------------------------------------
+
+FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
+type(mesh_t), intent(in) :: mesh
+FLOAT,        intent(in) :: nxc(:)
+FLOAT,        intent(in) :: density(:)
+FLOAT,        intent(in) :: ncutoff
+
+integer :: ip
+FLOAT, allocatable :: nxc2(:)
+
+PUSH_SUB(get_qxc)
+
+SAFE_ALLOCATE(nxc2(1:mesh%np))
+
+do ip = 1, mesh%np
+if(density(ip) < ncutoff) then
+  nxc2(ip) = CNST(0.0)
+else
+  nxc2(ip) = nxc(ip)
+end if
+end do
+
+qxc = dmf_integrate(mesh, nxc2)
+
+SAFE_DEALLOCATE_A(nxc2)
+
+POP_SUB(get_qxc)
+end function get_qxc
 
 
 !! Local Variables:

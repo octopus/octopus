@@ -421,7 +421,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/epot.F90                         \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
-        hamiltonian/hamiltonian_mxll.F90             \
+    hamiltonian/hamiltonian_mxll.F90             \
 	hamiltonian/hamiltonian_abst.F90             \
 	hamiltonian/hamiltonian_elec_base.F90        \
 	hamiltonian/hamiltonian_elec.F90             \
@@ -468,7 +468,7 @@ noinst_HEADERS +=                                    \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
-	hamiltonian/vxc_inc.F90
+	hamiltonian/xc_deriv_inc.F90
 
 # Sources in system
 system_f_srcs =                                 \

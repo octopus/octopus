@@ -50,9 +50,9 @@ module xc_oct_m
     xc_init,            &
     xc_end,             &
     xc_write_info,      &
-    xc_get_vxc,         &
     xc_get_fxc,         &
     xc_get_kxc,         &
+    xc_get_derivatives, &
     xc_is_orbital_dependent, &
     family_is_mgga,     &
     family_is_mgga_with_exc   
@@ -375,9 +375,10 @@ contains
     POP_SUB(family_is_mgga_with_exc)
   end function family_is_mgga_with_exc
 
-#include "vxc_inc.F90"
+! #include "vxc_inc.F90"
 #include "fxc_inc.F90"
 #include "kxc_inc.F90"
+#include "xc_deriv_inc.F90"
 
 end module xc_oct_m
 
