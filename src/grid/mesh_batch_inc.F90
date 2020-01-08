@@ -485,29 +485,29 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     SAFE_ALLOCATE(phi(1:mesh%np, aa%dim))
 
-!    if(aa%dim == 1) then
-!      !Here we compute the complex conjuguate of the dot product first and then
-!      !we take the conjugate at the end
-!      if(mesh%use_curvilinear) then
-!        !$omp parallel do
-!        do ip = 1, mesh%np
-!          phi(ip, 1) = mesh%vol_pp(ip)*R_CONJ(psi(ip, 1))
-!        end do
-!      else
-!        !$omp parallel do
-!        do ip = 1, mesh%np
-!          phi(ip, 1) = R_CONJ(psi(ip, 1))
-!        end do
-!      end if
-!
-!      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%pack%X(psi)(1,1), & 
-!               aa%nst, phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+    if(aa%dim == 1) then
+      !Here we compute the complex conjuguate of the dot product first and then
+      !we take the conjugate at the end
+      if(mesh%use_curvilinear) then
+        !$omp parallel do
+        do ip = 1, mesh%np
+          phi(ip, 1) = mesh%vol_pp(ip)*R_CONJ(psi(ip, 1))
+        end do
+      else
+        !$omp parallel do
+        do ip = 1, mesh%np
+         phi(ip, 1) = R_CONJ(psi(ip, 1))
+        end do
+      end if
 
-!      do ist = 1, nst_
-!        dot(ist) = R_CONJ(dot(ist))
-!      end do
-!
-!    else
+      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%pack%X(psi)(1,1), & 
+               ubound(aa%pack%X(psi), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+
+      do ist = 1, nst_
+        dot(ist) = R_CONJ(dot(ist))
+      end do
+
+    else
 
       dot(1:nst_) = M_ZERO
       do ist = 1, nst_
@@ -516,7 +516,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
                reduce = .false.)
       end do
 
- !   end if
+    end if
 
     SAFE_DEALLOCATE_A(phi)
 
@@ -573,7 +573,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
     if(xx%dim == 1) then 
 
       call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
-                            xx%nst, aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
     else !Spinor case
 
       SAFE_ALLOCATE(phi(1:mesh%np, 1:xx%dim))
