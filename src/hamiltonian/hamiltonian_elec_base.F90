@@ -46,6 +46,7 @@ module hamiltonian_elec_base_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -80,8 +81,10 @@ module hamiltonian_elec_base_oct_m
     zhamiltonian_elec_base_phase_spiral,            &
     dhamiltonian_elec_base_nlocal_force,            &
     zhamiltonian_elec_base_nlocal_force,            &
-    projection_t,                              &
-    hamiltonian_elec_base_projector_self_overlap
+    projection_t,                                   &
+    hamiltonian_elec_base_projector_self_overlap,   &
+    hamiltonian_elec_base_set_phase_corr,           &
+    hamiltonian_elec_base_unset_phase_corr
 
   !> This object stores and applies an electromagnetic potential that
   !! can be represented by different types of potentials.
@@ -798,6 +801,59 @@ contains
     
     projector_self_overlap = this%projector_self_overlap
   end function hamiltonian_elec_base_projector_self_overlap
+
+ ! ----------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_set_phase_corr(hm_base, mesh, psib)
+    type(hamiltonian_elec_base_t), intent(in) :: hm_base
+    type(mesh_t),                  intent(in) :: mesh
+    type(wfs_elec_t),           intent(inout) :: psib
+
+    logical :: phase_correction
+
+    PUSH_SUB(hamiltonian_elec_base_set_phase_corr)
+
+    ! check if we only want a phase correction for the boundary points
+    phase_correction = .false.
+    if(associated(hm_base%phase)) phase_correction = .true.
+    if(accel_is_enabled()) phase_correction = .false.
+
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .false., psib)
+    end if
+
+    POP_SUB(hamiltonian_elec_base_set_phase_corr)
+
+  end subroutine hamiltonian_elec_base_set_phase_corr
+
+ ! ----------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_unset_phase_corr(hm_base, mesh, psib)
+    type(hamiltonian_elec_base_t), intent(in) :: hm_base
+    type(mesh_t),                  intent(in) :: mesh
+    type(wfs_elec_t),           intent(inout) :: psib
+
+    logical :: phase_correction
+
+    PUSH_SUB(hamiltonian_elec_base_unset_phase_corr)
+
+    ! check if we only want a phase correction for the boundary points
+    phase_correction = .false.
+    if(associated(hm_base%phase)) phase_correction = .true.
+    if(accel_is_enabled()) phase_correction = .false.
+
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .true., psib)
+    end if
+
+    POP_SUB(hamiltonian_elec_base_unset_phase_corr)
+
+  end subroutine hamiltonian_elec_base_unset_phase_corr
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -60,6 +60,7 @@ module hamiltonian_elec_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
 
@@ -70,17 +71,14 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_t,                   &
     hamiltonian_elec_init,                &
     hamiltonian_elec_end,                 &
-    hamiltonian_elec_span,                &
-    dhamiltonian_elec_apply,              &
-    zhamiltonian_elec_apply,              &
+    dhamiltonian_elec_apply_single,       &
+    zhamiltonian_elec_apply_single,       &
     dhamiltonian_elec_apply_all,          &
     zhamiltonian_elec_apply_all,          &
     dhamiltonian_elec_apply_batch,        &
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dhamiltonian_elec_apply_magnus,       &
-    zhamiltonian_elec_apply_magnus,       &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
@@ -143,10 +141,6 @@ module hamiltonian_elec_oct_m
     !> absorbing boundaries
     logical, private :: adjoint
 
-    !> Spectral range
-    FLOAT :: spectral_middle_point
-    FLOAT :: spectral_half_span
-
     !> Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
@@ -181,9 +175,12 @@ module hamiltonian_elec_oct_m
     type(namespace_t), pointer :: namespace
 
   contains
-  
+    procedure :: update_span => hamiltonian_elec_span
+    procedure :: dapply => dhamiltonian_elec_apply
+    procedure :: zapply => zhamiltonian_elec_apply
+    procedure :: dmagnus_apply => dhamiltonian_elec_magnus_apply
+    procedure :: zmagnus_apply => zhamiltonian_elec_magnus_apply
     procedure :: is_hermitian => hamiltonian_elec_hermitian
-
   end type hamiltonian_elec_t
 
   integer, public, parameter :: &
@@ -711,8 +708,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_span(hm, delta, emin)
-    type(hamiltonian_elec_t), intent(inout) :: hm
-    FLOAT,               intent(in)    :: delta, emin
+    class(hamiltonian_elec_t), intent(inout) :: hm
+    FLOAT,                     intent(in)    :: delta, emin
 
     PUSH_SUB(hamiltonian_elec_span)
 

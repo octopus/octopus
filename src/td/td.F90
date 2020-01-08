@@ -796,7 +796,7 @@ contains
         call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
       end if
 #endif
-      call hamiltonian_elec_span(sys%hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
+      call sys%hm%update_span(minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
       call states_elec_fermi(st, sys%namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
       call energy_calc_total(sys%namespace, sys%hm, gr, st)

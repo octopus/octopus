@@ -25,14 +25,14 @@
 ! ---------------------------------------------------------
 !> These are the workhorse routines that handle the calculation of derivatives
 subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
-  type(nl_operator_t),      target, intent(in)    :: op
-  type(derivatives_t),      target, intent(in)    :: der
-  type(batch_t),            target, intent(inout) :: ff
-  type(batch_t),            target, intent(inout) :: opff
-  type(derivatives_handle_batch_t), intent(out)   :: handle
-  logical,                optional, intent(in)    :: ghost_update
-  logical,                optional, intent(in)    :: set_bc
-  FLOAT,                  optional, intent(in)    :: factor
+  type(nl_operator_t),       target, intent(in)    :: op
+  type(derivatives_t),       target, intent(in)    :: der
+  class(batch_t),            target, intent(inout) :: ff
+  class(batch_t),            target, intent(inout) :: opff
+  type(derivatives_handle_batch_t),  intent(out)   :: handle
+  logical,                 optional, intent(in)    :: ghost_update
+  logical,                 optional, intent(in)    :: set_bc
+  FLOAT,                   optional, intent(in)    :: factor
 
   PUSH_SUB(X(derivatives_batch_start))
 
@@ -118,8 +118,8 @@ end subroutine X(derivatives_batch_finish)
 subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc, factor)
   type(nl_operator_t), intent(in)    :: op
   type(derivatives_t), intent(in)    :: der
-  type(batch_t),       intent(inout) :: ff
-  type(batch_t),       intent(inout) :: opff
+  class(batch_t),      intent(inout) :: ff
+  class(batch_t),      intent(inout) :: opff
   logical,   optional, intent(in)    :: ghost_update
   logical,   optional, intent(in)    :: set_bc
   FLOAT,     optional, intent(in)    :: factor
@@ -127,6 +127,8 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc,
   type(derivatives_handle_batch_t) :: handle
 
   PUSH_SUB(X(derivatives_batch_perform))
+
+  call ff%check_compatibility_with(opff)
 
   call X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, set_bc, factor)
   call X(derivatives_batch_finish)(handle)
@@ -153,19 +155,19 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
 
   ASSERT(ubound(ff, DIM=1) >= der%mesh%np_part)
 
-  call batch_init     (batch_ff, 1)
-  call batch_add_state(batch_ff, ff)
+  call batch_init(batch_ff, 1, 1)
+  call batch_ff%add_state(ff)
 
-  call batch_init     (batch_op_ff, 1)
-  call batch_add_state(batch_op_ff, op_ff)
+  call batch_init(batch_op_ff, 1, 1)
+  call batch_op_ff%add_state(op_ff)
 
-  ASSERT(batch_is_ok(batch_ff))
-  ASSERT(batch_is_ok(batch_op_ff))
+  ASSERT(batch_ff%is_ok())
+  ASSERT(batch_op_ff%is_ok())
 
   call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc, factor)
 
-  call batch_end(batch_ff)
-  call batch_end(batch_op_ff)
+  call batch_ff%end()
+  call batch_op_ff%end()
         
   POP_SUB(X(derivatives_perform))
 
@@ -393,18 +395,18 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   do 
 
     call batch_init(ffb, 1, blocksize)
-    call X(batch_allocate)(ffb, 1, blocksize, this%mesh%np_part)
+    call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
 
     call batch_init(opffb, 1, blocksize)
-    call X(batch_allocate)(opffb, 1, blocksize, this%mesh%np)
+    call opffb%X(allocate)(1, blocksize, this%mesh%np)
 
     forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
       ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
     end forall
 
     if(packstates) then
-      call batch_pack(ffb)
-      call batch_pack(opffb, copy = .false.)
+      call ffb%do_pack()
+      call opffb%do_pack(copy = .false.)
     end if
 
     if(repetitions > 1) then
@@ -418,7 +420,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     etime = (loct_clock() - stime)/dble(repetitions)
 
     if(packstates) then
-      call batch_unpack(opffb)
+      call opffb%do_unpack()
     end if
 
     forall(ip = 1:this%mesh%np)
@@ -440,8 +442,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
     call messages_info(1)
 
-    call batch_end(ffb)
-    call batch_end(opffb)
+    call ffb%end()
+    call opffb%end()
 
     blocksize = 2*blocksize
     if(blocksize > max_blocksize) exit

@@ -186,14 +186,14 @@ program spin_susceptibility
     SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
     SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
 
-    call batch_init(vecpotb, num_col)
-    call batch_init(ftrealb, num_col)
-    call batch_init(ftimagb, num_col)
+    call batch_init(vecpotb, 1, num_col)
+    call batch_init(ftrealb, 1, num_col)
+    call batch_init(ftimagb, 1, num_col)
 
     do ib = 1, num_col
-      call batch_add_state(vecpotb, magnetization(:, ib, iq))
-      call batch_add_state(ftrealb, ftreal(1:energy_steps,ib))
-      call batch_add_state(ftimagb, ftimag(1:energy_steps,ib))
+      call vecpotb%add_state(magnetization(:, ib, iq))
+      call ftrealb%add_state(ftreal(1:energy_steps,ib))
+      call ftimagb%add_state(ftimag(1:energy_steps,ib))
     end do
 
 
@@ -208,9 +208,9 @@ program spin_susceptibility
       spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
-    call batch_end(vecpotb)
-    call batch_end(ftrealb)
-    call batch_end(ftimagb)
+    call vecpotb%end()
+    call ftrealb%end()
+    call ftimagb%end()
 
     ASSERT(abs(anint(num_col*M_HALF) - num_col*M_HALF) <= M_EPSILON)
     SAFE_ALLOCATE(chi(1:energy_steps, 1:num_col/2))

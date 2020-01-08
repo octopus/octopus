@@ -709,8 +709,8 @@ contains
       call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
        istart + 1, iend + 1, kick%time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-      call batch_end(dipoleb)
-      call batch_end(sigmab)
+      call dipoleb%end()
+      call sigmab%end()
 
     end if
 
@@ -981,8 +981,8 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       istart + 1, iend + 1, kick_time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-    call batch_end(dipoleb)
-    call batch_end(sigmab)
+    call dipoleb%end()
+    call sigmab%end()
 
     ! real part of the polarizability
 
@@ -995,8 +995,8 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart + 1, iend + 1, kick_time, dt, dipoleb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sigmab)
 
-    call batch_end(dipoleb)
-    call batch_end(sigmab)
+    call dipoleb%end()
+    call sigmab%end()
 
     SAFE_ALLOCATE(eps(1:no_e))
 
@@ -1109,9 +1109,9 @@ contains
       power(ie, :, :) = (transform_sin(ie, :, :)**2 + transform_cos(ie, :, :)**2)
     end do
 
-    call batch_end(dipoleb)
-    call batch_end(transformb_cos)
-    call batch_end(transformb_sin)
+    call dipoleb%end()
+    call transformb_cos%end()
+    call transformb_sin%end()
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(transform_sin)
@@ -1348,13 +1348,13 @@ contains
     SAFE_ALLOCATE(resp(1:no_e))
     SAFE_ALLOCATE(imsp(1:no_e))
 
-    call batch_init(angularb, 1)
-    call batch_init(respb, 1)
-    call batch_init(imspb, 1)
+    call batch_init(angularb, 1, 1)
+    call batch_init(respb, 1, 1)
+    call batch_init(imspb, 1, 1)
 
-    call batch_add_state(angularb, angular(:, 1))
-    call batch_add_state(respb, resp)
-    call batch_add_state(imspb, imsp)
+    call angularb%add_state(angular(:, 1))
+    call respb%add_state(resp)
+    call imspb%add_state(imsp)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
@@ -1363,9 +1363,9 @@ contains
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
       istart + 1, iend + 1, kick%time, dt, angularb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, imspb)
 
-    call batch_end(angularb)
-    call batch_end(respb)
-    call batch_end(imspb)
+    call angularb%end()
+    call respb%end()
+    call imspb%end()
     
     sum1 = M_Z0
     sum2 = M_Z0
@@ -1909,13 +1909,13 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(acc_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
-      call batch_add_state(acc_batch, racc)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call acc_batch%add_state(racc)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -1928,9 +1928,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call batch_end(acc_batch)
-      call batch_end(sps_batch)
-      call batch_end(spc_batch)
+      call acc_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(racc)
 
@@ -2016,13 +2016,13 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(acc_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
-      call batch_add_state(acc_batch, racc)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call acc_batch%add_state(racc)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, &
@@ -2037,9 +2037,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call batch_end(acc_batch)
-      call batch_end(sps_batch)
-      call batch_end(spc_batch)
+      call acc_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(racc)
 
@@ -2122,13 +2122,13 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(cur_batch, 1)
-      call batch_init(sps_batch, 1)
-      call batch_init(spc_batch, 1)
+      call batch_init(cur_batch, 1, 1)
+      call batch_init(sps_batch, 1, 1)
+      call batch_init(spc_batch, 1, 1)
 
-      call batch_add_state(cur_batch, rcur)
-      call batch_add_state(sps_batch, sps)
-      call batch_add_state(spc_batch, spc)
+      call cur_batch%add_state(rcur)
+      call sps_batch%add_state(sps)
+      call spc_batch%add_state(spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, cur_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -2141,9 +2141,9 @@ contains
 
       call spectrum_hs_output(spectrum, namespace, out_file, pol, no_e, sps)   
 
-      call batch_end(cur_batch)
-      call batch_end(sps_batch)
-      call batch_end(spc_batch)
+      call cur_batch%end()
+      call sps_batch%end()
+      call spc_batch%end()
 
       SAFE_DEALLOCATE_A(rcur)
 
@@ -2469,8 +2469,8 @@ contains
 
     PUSH_SUB(signal_damp)
 
-    ASSERT(batch_is_ok(time_function))
-    ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+    ASSERT(time_function%is_ok())
+    ASSERT(time_function%status() == BATCH_NOT_PACKED)
 
     SAFE_ALLOCATE(weight(time_start:time_end))
 
@@ -2503,7 +2503,7 @@ contains
       end select
     end do
             
-    if(batch_type(time_function) == TYPE_CMPLX) then
+    if(time_function%type() == TYPE_CMPLX) then
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
           time_function%states_linear(ii)%zpsi(itime) = weight(itime)*time_function%states_linear(ii)%zpsi(itime)
@@ -2556,13 +2556,13 @@ contains
 
     PUSH_SUB(fourier_transform)
     
-    ASSERT(batch_is_ok(time_function))
-    ASSERT(batch_is_ok(energy_function))
+    ASSERT(time_function%is_ok())
+    ASSERT(energy_function%is_ok())
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
-    ASSERT(batch_status(time_function) == batch_status(energy_function))
-    ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
-    ASSERT(batch_type(time_function) == TYPE_FLOAT)
-    ASSERT(batch_type(energy_function) == TYPE_FLOAT)
+    ASSERT(time_function%status() == energy_function%status())
+    ASSERT(time_function%status() == BATCH_NOT_PACKED)
+    ASSERT(time_function%type() == TYPE_FLOAT)
+    ASSERT(energy_function%type() == TYPE_FLOAT)
 
     energy_steps = nint((energy_end-energy_start) / energy_step) + 1 
 

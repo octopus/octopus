@@ -106,7 +106,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
 
       call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
       
-      call zhamiltonian_elec_apply(hm, namespace, gr%mesh, zpsi, hzpsi, ist, ik)
+      call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, zpsi, hzpsi, ist, ik)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -118,7 +118,8 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_elec_apply(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
+          terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
@@ -133,7 +134,8 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_elec_apply(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
+          terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)

@@ -36,6 +36,7 @@ module v_ks_oct_m
   use kick_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -1068,11 +1069,13 @@ contains
         end do
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
-        if(states_are_real(st)) then
-          ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
-        else
-          ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
-          ks%calc%energy%int_dft_u   = real(ctmp)
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          if(states_are_real(st)) then
+            ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
+          else
+            ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
+            ks%calc%energy%int_dft_u   = real(ctmp, REAL_PRECISION)
+          end if
         end if
 
       end if

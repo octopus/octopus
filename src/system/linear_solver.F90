@@ -38,6 +38,7 @@ module linear_solver_oct_m
   use smear_oct_m
   use solvers_oct_m
   use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

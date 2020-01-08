@@ -62,13 +62,13 @@ contains
 
   subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
     type(mesh_t),            intent(in)    :: mesh
-    type(batch_t),           intent(in)    :: aa
+    class(batch_t),          intent(in)    :: aa
     FLOAT,                   intent(out)   :: nrm2(:)
     logical,       optional, intent(in)    :: reduce
     
     PUSH_SUB(mesh_batch_nrm2)
     
-    if(batch_type(aa) == TYPE_FLOAT) then
+    if(aa%type() == TYPE_FLOAT) then
       call dpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     else
       call zpriv_mesh_batch_nrm2(mesh, aa, nrm2)

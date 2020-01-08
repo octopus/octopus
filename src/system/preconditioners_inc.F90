@@ -228,8 +228,8 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(batch_t),            intent(inout) :: aa
-  type(batch_t),            intent(inout) :: bb
+  class(batch_t),           intent(inout) :: aa
+  class(batch_t),           intent(inout) :: bb
   R_TYPE,         optional, intent(in)    :: omega(:)
 
   integer :: ii
@@ -239,13 +239,15 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
+  call aa%check_compatibility_with(bb)
+
   if(pre%which == PRE_FILTER) then
 
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
 
   else if(pre%which == PRE_NONE) then
 
-    call batch_copy_data(gr%der%mesh%np, aa, bb)
+    call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
     SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))

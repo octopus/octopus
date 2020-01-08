@@ -57,6 +57,7 @@ module states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -1088,12 +1089,12 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
+            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
+            call st%group%psib(ib, iqn)%dallocate(bstart(ib), bend(ib), mesh%np_part, &
               mirror = st%d%mirror_states, special=.true.)
           else
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
+            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
+            call st%group%psib(ib, iqn)%zallocate(bstart(ib), bend(ib), mesh%np_part, &
               mirror = st%d%mirror_states, special=.true.)
           end if
           
@@ -2264,7 +2265,7 @@ contains
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        mem = mem + batch_pack_size(st%group%psib(ib, iqn))
+        mem = mem + st%group%psib(ib, iqn)%pack_size()
 
         if(mem > max_mem) then
           call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)
@@ -2277,7 +2278,7 @@ contains
           exit qnloop
         end if
         
-        call batch_pack(st%group%psib(ib, iqn), copy)
+        call st%group%psib(ib, iqn)%do_pack(copy)
       end do
     end do qnloop
 
@@ -2299,7 +2300,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+          if(st%group%psib(ib, iqn)%is_packed()) call st%group%psib(ib, iqn)%do_unpack(copy)
         end do
       end do
     end if
