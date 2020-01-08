@@ -52,6 +52,7 @@ module test_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
@@ -128,11 +129,6 @@ contains
     !%Option real 1
     !% Test for double-precision real functions.
     !%Option complex 2
-    !% Test for double-precision complex functions.
-    !%Option real_single 4
-    !% Test for single-precision real functions. (Only implemented for derivatives.)
-    !%Option complex_single 5
-    !% Test for single-precision complex functions. (Only implemented for derivatives.)
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
@@ -247,7 +243,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
 
     PUSH_SUB(test_projector)
@@ -270,12 +266,12 @@ contains
 
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
+    call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
 
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
     end do
 
     do itime = 1, epsib%nst
@@ -283,7 +279,7 @@ contains
       call messages_info(1)
     end do
 
-    call batch_end(epsib)
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
     call system_end(sys)
@@ -297,7 +293,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -319,7 +315,7 @@ contains
     if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
+    call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace)
@@ -341,20 +337,18 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
-                                           .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
-                                           .true., .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zweight)
       end if
     end do
 
-    if(batch_is_packed(epsib)) then
-      call batch_unpack(epsib, force = .true.)
+    if(epsib%is_packed()) then
+      call epsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, epsib)
@@ -364,7 +358,7 @@ contains
     SAFE_DEALLOCATE_A(ddot)
     SAFE_DEALLOCATE_A(zdot)
 
-    call batch_end(epsib)
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
@@ -379,7 +373,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t) :: sys
-    type(batch_t), pointer :: hpsib
+    type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
     type(simul_box_t) :: sb
 
@@ -426,30 +420,30 @@ contains
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
     SAFE_ALLOCATE(hpsib)
-    call batch_copy(sys%st%group%psib(1, 1), hpsib)
+    call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
-      call batch_pack(hpsib, copy = .false.)
+      call sys%st%group%psib(1, 1)%do_pack()
+      call hpsib%do_pack(copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       end if
     end do
 
-    if(batch_is_packed(hpsib)) then
-      call batch_unpack(hpsib, force = .true.)
+    if(hpsib%is_packed()) then
+      call hpsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
 
-    call batch_end(hpsib, copy = .false.)
+    call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
@@ -564,11 +558,11 @@ contains
     call exponential_init(te, namespace)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
+      call sys%st%group%psib(1, 1)%do_pack()
     end if
 
     do itime = 1, param%repetitions
-      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), CNST(1.0))
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
@@ -636,7 +630,7 @@ contains
 
     type(system_t) :: sys
     integer :: itime, ops
-    type(batch_t) :: xx, yy
+    type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
 
     PUSH_SUB(test_density_calc)
@@ -676,40 +670,40 @@ contains
       message(1) = 'Info: Testing axpy'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_SCAL) /= 0) then
       message(1) = 'Info: Testing scal'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
       call test_prints_info_batch(sys%st, sys%gr, yy)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_NRM2) /= 0) then
       message(1) = 'Info: Testing nrm2'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       SAFE_ALLOCATE(tmp(1:xx%nst))
 
@@ -723,8 +717,8 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     call states_elec_deallocate_wfns(sys%st)
@@ -755,14 +749,6 @@ contains
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
-    end if
-
-    if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
-    end if
-
-    if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
@@ -871,14 +857,14 @@ contains
   subroutine test_prints_info_batch(st, gr, psib)
     type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
-    type(batch_t),       intent(inout) :: psib
+    class(batch_t),      intent(inout) :: psib
 
     integer :: itime
 
     PUSH_SUB(test_prints_info_batch)
 
-    if(batch_is_packed(psib)) then
-      call batch_unpack(psib, force = .true.)
+    if (psib%is_packed()) then
+      call psib%do_unpack(force = .true.)
     end if
 
     do itime = 1, psib%nst

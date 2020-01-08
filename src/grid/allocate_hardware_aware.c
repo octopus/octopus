@@ -39,8 +39,7 @@ cudaError_t checkCuda(cudaError_t result)
 
 #endif
 
-void *my_allocate(int size_bytes) {
-#ifndef HAVE_CUDA
+void *allocate_aligned(int size_bytes) {
 #ifdef DEBUG_ALLOC
   printf("Allocating %d bytes, unpinned.\n", (unsigned int)size_bytes);
 #endif
@@ -53,39 +52,63 @@ void *my_allocate(int size_bytes) {
     return NULL;
   }
   return aligned;
-#else // HAVE_CUDA
+}
+
+void *dallocate_aligned(int size) {
+  return allocate_aligned(sizeof(double)*size);
+}
+
+void *zallocate_aligned(int size) {
+  return allocate_aligned(sizeof(double)*2*size);
+}
+
+void *sallocate_aligned(int size) {
+  return allocate_aligned(sizeof(float)*size);
+}
+
+void *callocate_aligned(int size) {
+  return allocate_aligned(sizeof(float)*2*size);
+}
+
+void deallocate_aligned(void *array) {
+#ifdef DEBUG_ALLOC
+  printf("Deallocating unpinned.\n");
+#endif
+  free(array);
+}
+
+void *allocate_pinned(int size_bytes) {
+#ifdef HAVE_CUDA
 #ifdef DEBUG_ALLOC
   printf("Allocating %d bytes, pinned.\n", (unsigned int)size_bytes);
 #endif
   void *pinned;
   checkCuda(cudaMallocHost(&pinned, (unsigned int)size_bytes));
   return pinned;
-#endif // HAVE_CUDA
-}
-
-void *dallocate_hardware_aware(int size) {
-  return my_allocate(sizeof(double)*size);
-}
-
-void *zallocate_hardware_aware(int size) {
-  return my_allocate(sizeof(double)*2*size);
-}
-
-void *sallocate_hardware_aware(int size) {
-  return my_allocate(sizeof(float)*size);
-}
-
-void *callocate_hardware_aware(int size) {
-  return my_allocate(sizeof(float)*2*size);
-}
-
-void deallocate_hardware_aware(void *array) {
-#ifndef HAVE_CUDA
-#ifdef DEBUG_ALLOC
-  printf("Deallocating unpinned.\n");
-#endif
-  free(array);
 #else
+  printf("Error! Pinned memory requested, although CUDA not available. Returning aligned memory.");
+  return allocate_aligned(size_bytes);
+#endif
+}
+
+void *dallocate_pinned(int size) {
+  return allocate_pinned(sizeof(double)*size);
+}
+
+void *zallocate_pinned(int size) {
+  return allocate_pinned(sizeof(double)*2*size);
+}
+
+void *sallocate_pinned(int size) {
+  return allocate_pinned(sizeof(float)*size);
+}
+
+void *callocate_pinned(int size) {
+  return allocate_pinned(sizeof(float)*2*size);
+}
+
+void deallocate_pinned(void *array) {
+#ifdef HAVE_CUDA
 #ifdef DEBUG_ALLOC
   printf("Deallocating pinned.\n");
 #endif

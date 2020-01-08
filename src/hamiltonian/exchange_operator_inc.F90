@@ -29,37 +29,36 @@ subroutine X(exchange_operator_single)(this, der, st_d, ist, ik, psi, hpsi, psol
   type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
 
   PUSH_SUB(X(exchange_operator_single))
 
-  call batch_init(psib, st_d%dim, 1)
-  call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, st_d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
+  call wfs_elec_init(psib, st_d%dim, 1, ik)
+  call psib%add_state(ist, psi)
+  call wfs_elec_init(hpsib, st_d%dim, 1, ik)
+  call hpsib%add_state(ist, hpsi)
 
-  call X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver, rdmft)
+  call X(exchange_operator_apply)(this, der, st_d, psib, hpsib, psolver, rdmft)
 
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   POP_SUB(X(exchange_operator_single))
 end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver, rdmft)
+subroutine X(exchange_operator_apply)(this, der, st_d, psib, hpsib, psolver, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
-  integer,                   intent(in)    :: ik
-  type(batch_t),             intent(inout) :: psib
-  type(batch_t),             intent(inout) :: hpsib
+  class(wfs_elec_t),         intent(inout) :: psib
+  class(wfs_elec_t),         intent(inout) :: hpsib
   type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
-  type(batch_t), pointer :: psi2b
+  class(wfs_elec_t), pointer :: psi2b
   FLOAT :: exx_coef, ff
   R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
   R_TYPE, allocatable :: rho(:), pot(:)
@@ -97,7 +96,7 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver,
   SAFE_ALLOCATE(pot(1:der%mesh%np))
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
-  ikpoint = states_elec_dim_get_kpoint_index(st_d, ik)
+  ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
   qq(1:der%dim) = M_ZERO
 
   do ibatch = 1, psib%nst
@@ -106,7 +105,7 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver,
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, ik)) cycle
+      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
       
       do ib = 1, this%st%group%nblocks
         !We copy data into psi2b from the corresponding MPI task
@@ -120,7 +119,7 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver,
             ff = this%st%occ(jst, ik2)
             if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
           else ! RDMFT
-            ff = sqrt(this%st%occ(ist, ik)*this%st%occ(jst, ik2)) ! Mueller functional
+            ff = sqrt(this%st%occ(ist, psib%ik)*this%st%occ(jst, ik2)) ! Mueller functional
           end if
           ff = st_d%kweights(ik2)*exx_coef*ff
 
@@ -153,7 +152,7 @@ subroutine X(exchange_operator_apply)(this, der, st_d, ik, psib, hpsib, psolver,
 
         end do
 
-        call states_elec_parallel_release_block(this%st, ib, ik2, psi2b)
+        call states_elec_parallel_release_block(this%st, ib, psi2b)
 
       end do
     end do
@@ -173,14 +172,13 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree_apply) (this, der, st_d, ik, exx_coef, psib, hpsib, psolver)
+subroutine X(exchange_operator_hartree_apply) (this, der, st_d, exx_coef, psib, hpsib, psolver)
   type(exchange_operator_t), intent(in)    :: this
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
-  integer,                   intent(in)    :: ik
   FLOAT,                     intent(in)    :: exx_coef
-  type(batch_t),             intent(inout) :: psib
-  type(batch_t),             intent(inout) :: hpsib
+  class(wfs_elec_t),         intent(inout) :: psib
+  class(wfs_elec_t),         intent(inout) :: hpsib
   type(poisson_t),           intent(in)    :: psolver
 
   integer :: ibatch, ip, idim, ik2, ist
@@ -206,7 +204,7 @@ subroutine X(exchange_operator_hartree_apply) (this, der, st_d, ik, exx_coef, ps
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
     
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, ik)) cycle
+      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
 
       if(this%st%occ(ist, ik2) < M_EPSILON) cycle
 
@@ -249,14 +247,13 @@ end subroutine X(exchange_operator_hartree_apply)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply) (this, scdm, der, st_d, psib, hpsib, ik, exx_coef, hartree, psolver)
+subroutine X(exchange_operator_scdm_apply) (this, scdm, der, st_d, psib, hpsib, exx_coef, hartree, psolver)
   type(exchange_operator_t), intent(in)    :: this
   type(scdm_t),              intent(in)    :: scdm
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
-  type(batch_t),             intent(inout) :: psib
-  type(batch_t),             intent(inout) :: hpsib
-  integer,                   intent(in)    :: ik
+  class(wfs_elec_t),         intent(inout) :: psib
+  class(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,                     intent(in)    :: exx_coef
   logical,                   intent(in)    :: hartree
   type(poisson_t),           intent(in)    :: psolver
@@ -305,7 +302,7 @@ subroutine X(exchange_operator_scdm_apply) (this, scdm, der, st_d, psib, hpsib, 
     temp_state_global(:,:) = M_ZERO
 
     do ik2 = 1, st_d%nik
-      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, ik)) cycle
+      if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
       count = 0
       do jst = this%scdm%st_exx_start, this%scdm%st_exx_end
 

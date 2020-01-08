@@ -60,6 +60,7 @@ module pes_mask_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
   use vtk_oct_m
+  use wfs_elec_oct_m
   
   implicit none
 

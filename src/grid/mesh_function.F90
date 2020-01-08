@@ -39,20 +39,12 @@ module mesh_function_oct_m
   public ::                &
     dmf_integrate,         &
     zmf_integrate,         &
-    smf_integrate,         &
-    cmf_integrate,         &
     dmf_dotp,              &
     zmf_dotp,              &
-    smf_dotp,              &
-    cmf_dotp,              &
     dmf_nrm2,              &
     zmf_nrm2,              &
-    smf_nrm2,              &
-    cmf_nrm2,              &    
     dmf_moment,            &
     zmf_moment,            &
-    smf_moment,            &
-    cmf_moment,            &    
     dmf_random,            &
     zmf_random,            &
     dmf_interpolate_points,&
@@ -100,14 +92,6 @@ module mesh_function_oct_m
     module procedure zmf_dotp_1, zmf_dotp_2
   end interface zmf_dotp
 
-  interface smf_dotp
-    module procedure smf_dotp_1, smf_dotp_2
-  end interface smf_dotp
-
-  interface cmf_dotp
-    module procedure cmf_dotp_1, cmf_dotp_2
-  end interface cmf_dotp
-
   interface dmf_nrm2
     module procedure dmf_nrm2_1, dmf_nrm2_2
   end interface dmf_nrm2
@@ -115,14 +99,6 @@ module mesh_function_oct_m
   interface zmf_nrm2
     module procedure zmf_nrm2_1, zmf_nrm2_2
   end interface zmf_nrm2
-
-  interface smf_nrm2
-    module procedure smf_nrm2_1, smf_nrm2_2
-  end interface smf_nrm2
-
-  interface cmf_nrm2
-    module procedure cmf_nrm2_1, cmf_nrm2_2
-  end interface cmf_nrm2
 
   type(mesh_t), pointer :: mesh_aux => null()
 
@@ -149,14 +125,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "mesh_function_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "mesh_function_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "mesh_function_inc.F90"
 
 end module mesh_function_oct_m

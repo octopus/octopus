@@ -46,6 +46,7 @@ module exchange_operator_oct_m
   use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -172,17 +173,16 @@ contains
     POP_SUB(exchange_operator_end)
   end subroutine exchange_operator_end
 
-  subroutine exchange_operator_rdmft_occ_apply(this, mesh, ik, hpsib)
+  subroutine exchange_operator_rdmft_occ_apply(this, mesh, hpsib)
     type(exchange_operator_t), intent(in) :: this
     type(mesh_t),              intent(in) :: mesh
-    integer,                intent(in)    :: ik
-    type(batch_t),          intent(inout) :: hpsib
+    class(wfs_elec_t),      intent(inout) :: hpsib
 
     PUSH_SUB(exchange_operator_rdmft_occ_apply)
 
     ! multiply linear terms in hamiltonian with occupation number
     ! nonlinear occupation number dependency occurs only in the exchange, which is treated there
-    call batch_scal(mesh%np, this%st%occ(:, ik), hpsib)
+    call batch_scal(mesh%np, this%st%occ(:, hpsib%ik), hpsib)
 
     POP_SUB(exchange_operator_rdmft_occ_apply)
   end subroutine exchange_operator_rdmft_occ_apply

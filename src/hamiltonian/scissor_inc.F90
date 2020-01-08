@@ -17,12 +17,11 @@
 !!
 !! $Id$
 
-subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
-  type(scissor_t), intent(in)    :: this
-  type(mesh_t),    intent(in)    :: mesh
-  integer,         intent(in)    :: ik
-  type(batch_t),   intent(in)    :: psib
-  type(batch_t),   intent(inout) :: hpsib
+subroutine X(scissor_apply)(this, mesh, psib, hpsib)
+  type(scissor_t),  intent(in)    :: this
+  type(mesh_t),     intent(in)    :: mesh
+  type(wfs_elec_t), intent(in)    :: psib
+  type(wfs_elec_t), intent(inout) :: hpsib
 
   integer             :: ibatch, ist, idim
   R_TYPE              :: dot
@@ -44,10 +43,10 @@ subroutine X(scissor_apply)(this, mesh, ik, psib, hpsib)
     call batch_get_state(hpsib,ibatch, mesh%np, hpsi)
     
     do ist = 1, this%gs_st%nst
-      call states_elec_get_state(this%gs_st, mesh, ist, ik, gspsi )
+      call states_elec_get_state(this%gs_st, mesh, ist, psib%ik, gspsi)
 
       dot = X(mf_dotp)(mesh, this%gs_st%d%dim, gspsi(:,:), psi) &
-         * this%gs_st%occ(ist, ik) / this%gs_st%smear%el_per_state
+         * this%gs_st%occ(ist, psib%ik) / this%gs_st%smear%el_per_state
       do idim = 1, this%gs_st%d%dim
         call lalg_axpy(mesh%np, -this%gap*dot,  gspsi(:, idim), hpsi(:, idim))
       end do !idim

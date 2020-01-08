@@ -98,6 +98,8 @@ dist_share_DATA =                                \
 	19-unfolding.02-setup.inp                \
 	19-unfolding.03-unocc.inp                \
 	19-unfolding.04-run.inp                  \
-	19-unfolding.test
+	19-unfolding.test                        \
+        20-masked_periodic_boundaries.01-graphene.inp  \
+        20-masked_periodic_boundaries.test
 
 CLEANFILES = *~ *.bak

@@ -30,6 +30,7 @@ module eigensolver_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -52,6 +53,7 @@ module eigensolver_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none

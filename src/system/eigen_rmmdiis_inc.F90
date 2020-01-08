@@ -79,11 +79,11 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     psib(1)%batch => st%group%psib(ib, ik)
 
-    if(pack) call batch_pack(psib(1)%batch)
+    if(pack) call psib(1)%batch%do_pack()
 
-    call batch_copy(psib(1)%batch, resb(1)%batch)
+    call psib(1)%batch%copy_to(resb(1)%batch)
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
@@ -104,19 +104,19 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     end do
 
     if(all(done(1:bsize) /= 0)) then
-      if(pack) call batch_unpack(st%group%psib(ib, ik))
-      call batch_end(resb(1)%batch)
+      if(pack) call st%group%psib(ib, ik)%do_unpack()
+      call resb(1)%batch%end()
       cycle
     end if
 
-    call batch_copy(psib(1)%batch, psib(2)%batch)
+    call psib(1)%batch%copy_to(psib(2)%batch)
 
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb(1)%batch, psib(2)%batch)
 
-    call batch_copy(psib(1)%batch, resb(2)%batch)
+    call psib(1)%batch%copy_to(resb(2)%batch)
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2)%batch, psib(2)%batch, fr(1, :), reduce = .false.)
@@ -147,7 +147,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) then
-        call batch_copy(psib(iter - 1)%batch, psib(iter)%batch)
+        call psib(iter - 1)%batch%copy_to(psib(iter)%batch)
         call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb(iter - 1)%batch, psib(iter)%batch)
       end if
 
@@ -155,11 +155,11 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       call batch_xpay(gr%mesh%np, psib(iter - 1)%batch, lambda, psib(iter)%batch)
 
       if(iter > 2) then
-         call batch_copy(psib(iter)%batch, resb(iter)%batch)
+         call psib(iter)%batch%copy_to(resb(iter)%batch)
       end if
 
       ! calculate the residual
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch)
       nops = nops + bsize
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
@@ -213,24 +213,24 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
         end if
       end do
 
-      call batch_end(resb(iter)%batch)
+      call resb(iter)%batch%end()
 
       call profiling_in(prof_lc, "RMMDIIS_LC")
 
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
-        if(pack) call batch_pack(psib(jj)%batch)
+        if(pack) call psib(jj)%batch%do_pack()
         call batch_axpy(gr%mesh%np, evec(jj, 1, :), psib(jj)%batch, psib(iter)%batch, a_start = minst)
-        if(pack) call batch_unpack(psib(jj)%batch, copy = .false.)
+        if(pack) call psib(jj)%batch%do_unpack(copy = .false.)
       end do
 
       call profiling_out(prof_lc)
 
-      call batch_copy(psib(iter)%batch, resb(iter)%batch)
+      call psib(iter)%batch%copy_to(resb(iter)%batch)
 
       ! re-calculate the residual
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch)
       nops = nops + bsize
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
@@ -276,15 +276,15 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     ! we can remove most of the batches
     do iter = 1, niter
-      if(iter /= 1) call batch_end(psib(iter)%batch)
-      if(iter /= niter - 1) call batch_end(resb(iter)%batch)
+      if(iter /= 1) call psib(iter)%batch%end()
+      if(iter /= niter - 1) call resb(iter)%batch%end()
     end do
 
-    call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%group%psib(ib, ik))
+    call resb(niter - 1)%batch%copy_data_to(gr%mesh%np, st%group%psib(ib, ik))
 
-    call batch_end(resb(niter - 1)%batch)
+    call resb(niter - 1)%batch%end()
 
-    if(pack) call batch_unpack(st%group%psib(ib, ik))
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
 
     prog = prog + bsize
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -300,16 +300,17 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
   ! recalculate the eigenvalues and residuals
   SAFE_ALLOCATE(eigen_full(1:st%nst))
   eigen_full(1:st%nst) = R_TOTYPE(M_ZERO)
+  st%eigenval(1:st%nst, ik) = R_TOTYPE(M_ZERO)
 
   do ib = st%group%block_start, st%group%block_end
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
 
-    if(pack) call batch_pack(st%group%psib(ib, ik))  
+    if(pack) call st%group%psib(ib, ik)%do_pack()
   
-    call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
+    call st%group%psib(ib, ik)%copy_to(resb(1)%batch)
     
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb(1)%batch)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
@@ -321,14 +322,18 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     
     call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen_full(minst:maxst), reduce = .false.)
     
-    call batch_end(resb(1)%batch)
+    call resb(1)%batch%end()
 
-    if(pack) call batch_unpack(st%group%psib(ib, ik))
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
     
     nops = nops + maxst - minst + 1
   end do
 
   if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, eigen_full)
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, eigen_full)
+    call comm_allreduce(st%mpi_grp%comm, st%eigenval(1:st%nst, ik))
+  end if
 
   diff(:) = sqrt(abs(eigen_full(:)))
   SAFE_DEALLOCATE_A(eigen_full)
@@ -379,7 +384,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
   R_TYPE, allocatable :: diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
   logical :: pack
-  type(batch_t) :: resb, kresb
+  type(wfs_elec_t) :: resb, kresb
 
   PUSH_SUB(X(eigensolver_rmmdiis_min))
 
@@ -401,15 +406,15 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
     minst = states_elec_block_min(st, ib)
     maxst = states_elec_block_max(st, ib)
 
-    if(pack) call batch_pack(st%group%psib(ib, ik))
+    if(pack) call st%group%psib(ib, ik)%do_pack()
 
-    call batch_copy(st%group%psib(ib, ik), resb)
-    call batch_copy(st%group%psib(ib, ik), kresb)
+    call st%group%psib(ib, ik)%copy_to(resb)
+    call st%group%psib(ib, ik)%copy_to(kresb)
 
     do isd = 1, sd_steps
 
       !We start by computing the Rayleigh quotient
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, st%group%psib(ib, ik), resb)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me1(2, :), reduce = .false.)
@@ -434,7 +439,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
 
       call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb, kresb)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, kresb, resb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, kresb, resb)
 
       niter = niter + 2*(maxst - minst + 1)
 
@@ -460,10 +465,10 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       
     end do
 
-    if(pack) call batch_unpack(st%group%psib(ib, ik))
+    if(pack) call st%group%psib(ib, ik)%do_unpack()
 
-    call batch_end(resb)
-    call batch_end(kresb)
+    call resb%end()
+    call kresb%end()
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  maxst, st%lnst*st%d%kpt%nlocal)

@@ -674,7 +674,7 @@ contains
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
-            call batch_copy_data(sys%gr%mesh%np, psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
+            call psi%group%psib(ib, ik)%copy_data_to(sys%gr%mesh%np, st_ref%group%psib(ib, ik))
           end do
         end do
 
