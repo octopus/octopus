@@ -82,6 +82,8 @@
 #if defined(NDEBUG)
 #  define SAFE_ALLOCATE(x) allocate(x)
 
+#  define SAFE_ALLOCATE_TYPE(type, x) allocate(type::x)
+
 #  define SAFE_DEALLOCATE_P(x) \
   if(associated(x)) then; CARDINAL \
     deallocate(x);        CARDINAL \
@@ -97,6 +99,16 @@
 #else
 #  define SAFE_ALLOCATE(x)			\
   allocate( ACARDINAL x, ACARDINAL stat=global_alloc_err); CARDINAL \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
+  global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
+    call profiling_memory_allocate(ACARDINAL TOSTRING(x), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
+  if(global_alloc_err.ne.0) ACARDINAL \
+    call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
+  CARDINAL
+
+#  define SAFE_ALLOCATE_TYPE(type, x)			\
+  allocate( ACARDINAL type::x, ACARDINAL stat=global_alloc_err); CARDINAL \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
   global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \

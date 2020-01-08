@@ -304,7 +304,7 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    allocate(wfs_elec_t::commpsib(1:der%mesh%sb%dim))
+    SAFE_ALLOCATE_TYPE(wfs_elec_t, commpsib(1:der%mesh%sb%dim))
 
     current = M_ZERO
     current_kpt = M_ZERO

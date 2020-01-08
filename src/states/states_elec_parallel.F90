@@ -186,7 +186,7 @@ contains
       POP_SUB(states_elec_parallel_get_block)
       return
     else
-      allocate(wfs_elec_t::psib)
+      SAFE_ALLOCATE_TYPE(wfs_elec_t, psib)
       call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
