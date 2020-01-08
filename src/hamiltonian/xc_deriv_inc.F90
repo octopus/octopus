@@ -253,7 +253,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
           cycle
         end select
 
-      else ! we just get the potential
+      elseif (vxc_requested) then ! we just get the potential
         l_zk(:) = M_ZERO
 
         select case(functl(ixc)%family)
@@ -281,6 +281,25 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
           cycle
         end select
         
+      elseif (energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+
+        select case(functl(ixc)%family)
+        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
+          call XC_F90(lda_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1))
+
+        case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
+          call XC_F90(gga_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
+            l_zk(1))
+
+        case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
+          call XC_F90(mgga_exc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_lapl(1,1), l_tau(1,1), &
+            l_zk(1))
+
+        case default
+          call profiling_out(prof_libxc)
+          cycle
+        end select
+
       end if
 
       if(fxc_requested) then
