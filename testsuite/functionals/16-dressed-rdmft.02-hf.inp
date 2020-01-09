@@ -7,7 +7,7 @@ RDMBasis = yes
 RDMHartreeFock = yes
 
 BoxShape = parallelepiped
-Lsize = 6.5
+Lsize = 8.5
 Spacing = 0.55
 
 # Necessary Parameters for electron-photon coupling

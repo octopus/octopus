@@ -6,7 +6,7 @@ ExperimentalFeatures = yes
 TheoryLevel = independent_particles
 
 BoxShape = parallelepiped
-Lsize = 6.5
+Lsize = 8.5
 Spacing = 0.55
 
 # Necessary Parameters for electron-photon coupling
@@ -36,8 +36,8 @@ DressedOmega = om
 
 Extrastates = 5
 
-CGEnergyChangeThreshold = 0.3
-EigensolverTolerance = 1e-12
-ConvRelDens = 1e-9
+Eigensolver = cg_new
+EigensolverTolerance = 1e-14
+EigensolverMaxIter = 300
 
-
+ConvRelDens = 1e-13

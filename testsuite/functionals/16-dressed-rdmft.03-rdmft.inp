@@ -6,7 +6,7 @@ TheoryLevel = rdmft
 RDMBasis = yes
 
 BoxShape = parallelepiped
-Lsize = 6.5
+Lsize = 8.5
 Spacing = 0.55
 
 # Necessary Parameters for electron-photon coupling
@@ -36,6 +36,6 @@ DressedOmega = om
 
 Extrastates = 5
 
-RDMToleranceFO = 5e-4
+RDMToleranceFO = 1e-4
 RDMConvEner = 5e-9
 RDMTolerance = 1e-8
