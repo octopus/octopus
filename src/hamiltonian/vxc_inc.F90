@@ -773,7 +773,7 @@ contains
 
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         alpha = 0.25
       end if
 
@@ -795,23 +795,23 @@ contains
 
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         alpha = 0.25
       end if
       if(alpha < 0) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter smaller than zero (' , alpha ,').'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         alpha = 0.25
       end if
 
 #ifdef HAVE_LIBXC4
-      call messages_not_implemented("MVORB with PBE0 and libxc >= 4.0")
+      call messages_not_implemented("MVORB with PBE0 and libxc >= 4.0", namespace=namespace)
 #else
       call XC_F90(hyb_gga_xc_pbeh_set_par)(functl(FUNC_C)%conf, alpha)
 #endif
       xcs%cam_alpha = alpha
     case default
-      call messages_not_implemented("MVORB density-based mixing for functionals other than PBE0 and HSE06")
+      call messages_not_implemented("MVORB density-based mixing for functionals other than PBE0 and HSE06", namespace=namespace)
     end select
 
     POP_SUB(xc_get_vxc.calc_mvorb_alpha)
@@ -843,13 +843,13 @@ contains
 
     case(XC_HYB_GGA_XC_PBEH)
 #ifdef HAVE_LIBXC4
-      call messages_not_implemented("User-defined CAM paramters with PBE0 and libxc >= 4.0")
+      call messages_not_implemented("User-defined CAM parameters with PBE0 and libxc >= 4.0", namespace=namespace)
 #else
       call XC_F90(hyb_gga_xc_pbeh_set_par)(functl(FUNC_C)%conf, exx_op%cam_alpha)
 #endif
       xcs%cam_alpha = exx_op%cam_alpha
     case default
-      call messages_not_implemented("User-defined CAM paramters for functionals other than PBE0 and HSE06")
+      call messages_not_implemented("User-defined CAM parameters for functionals other than PBE0 and HSE06", namespace=namespace)
     end select
 
     POP_SUB(xc_get_vxc.exx_fix_cam_param)

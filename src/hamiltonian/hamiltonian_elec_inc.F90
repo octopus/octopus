@@ -208,7 +208,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree_apply)(hm%exxop, hm%der, hm%d, hm%exxop%cam_alpha, epsib, hpsib, hm%psolver)
+      call X(exchange_operator_hartree_apply)(hm%exxop, namespace, hm%der, hm%d, hm%exxop%cam_alpha, epsib, hpsib, hm%psolver)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
@@ -216,11 +216,11 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
                           hm%theory_level == HARTREE, hm%psolver)
       else
         ! standard HF 
-        call X(exchange_operator_apply)(hm%exxop, hm%der, hm%d, epsib, hpsib, hm%psolver, .false.)
+        call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, hm%psolver, .false.)
       end if
 
     case(RDMFT)
-      call X(exchange_operator_apply)(hm%exxop, hm%der, hm%d, epsib, hpsib, hm%psolver, .true.)
+      call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, hm%psolver, .true.)
     end select
     call profiling_out(prof_exx)
     

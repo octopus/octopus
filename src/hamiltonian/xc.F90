@@ -115,7 +115,7 @@ contains
       call xc_functl_write_info(xcs%functional(ifunc, 1), iunit, namespace)
     end do
     
-    if(xcs%cam_alpha+xcs%cam_beta /= M_ZERO) then
+    if(xcs%cam_alpha + xcs%cam_beta /= M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%cam_alpha
       if(xcs%cam_beta > M_EPSILON) &
@@ -379,7 +379,7 @@ contains
 
     PUSH_SUB(xc_is_orbital_dependent)
 
-    xc_is_orbital_dependent = (xcs%cam_alpha+xcs%cam_beta) /= M_ZERO .or. &
+    xc_is_orbital_dependent = (xcs%cam_alpha + xcs%cam_beta) /= M_ZERO .or. &
       bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
       bitand(xcs%family, XC_FAMILY_MGGA) /= 0
 

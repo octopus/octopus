@@ -18,8 +18,9 @@
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(this, der, st_d, ist, ik, psi, hpsi, psolver, rdmft)
-  type(exchange_operator_t), intent(inout) :: this
+subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, psolver, rdmft)
+  type(exchange_operator_t), intent(inout) :: this 
+  type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   integer,                   intent(in)    :: ist
@@ -38,7 +39,7 @@ subroutine X(exchange_operator_single)(this, der, st_d, ist, ik, psi, hpsi, psol
   call wfs_elec_init(hpsib, st_d%dim, 1, ik)
   call hpsib%add_state(ist, hpsi)
 
-  call X(exchange_operator_apply)(this, der, st_d, psib, hpsib, psolver, rdmft)
+  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
 
   call psib%end()
   call hpsib%end()
@@ -48,8 +49,9 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply)(this, der, st_d, psib, hpsib, psolver, rdmft)
+subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
   type(exchange_operator_t), intent(in)    :: this
+  type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   class(wfs_elec_t),         intent(inout) :: psib
@@ -76,19 +78,21 @@ subroutine X(exchange_operator_apply)(this, der, st_d, psib, hpsib, psolver, rdm
   exx_coef = max(this%cam_alpha,this%cam_beta)
 
   if(this%cam_omega <= M_EPSILON) then
-    if(st_d%nik > st_d%ispin) &
-      call messages_not_implemented("unscreened exchange operator without k-points")
+    if(st_d%nik > st_d%ispin) then
+      call messages_not_implemented("unscreened exchange operator without k-points", namespace=namespace)
+    end if
   end if
 
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
 
   if(this%cam_beta > M_EPSILON) then
     ASSERT(this%cam_alpha < M_EPSILON)
   end if
 
   !The symmetries require a full treatment
-  if(der%mesh%sb%kpoints%use_symmetries) &
-   call messages_not_implemented("symmetries with Fock operator")
+  if(der%mesh%sb%kpoints%use_symmetries) then
+   call messages_not_implemented("symmetries with Fock operator", namespace=namespace)
+  end if
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st_d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
@@ -172,8 +176,9 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree_apply) (this, der, st_d, exx_coef, psib, hpsib, psolver)
+subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib, psolver)
   type(exchange_operator_t), intent(in)    :: this
+  type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   FLOAT,                     intent(in)    :: exx_coef
@@ -187,10 +192,13 @@ subroutine X(exchange_operator_hartree_apply) (this, der, st_d, exx_coef, psib, 
 
   PUSH_SUB(X(exchange_operator))
 
-  if(der%mesh%sb%kpoints%full%npoints > st_d%ispin) &
-    call messages_not_implemented("exchange operator with k-points")
-  if(this%st%parallel_in_states) &
-    call messages_not_implemented("exchange operator parallel in states")
+  if(der%mesh%sb%kpoints%full%npoints > st_d%ispin) then
+    call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  end if
+
+  if(this%st%parallel_in_states) then
+    call messages_not_implemented("exchange operator parallel in states", namespace=namespace)
+  end if
 
   SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st_d%dim))
   SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:st_d%dim))
@@ -269,7 +277,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
   
   call profiling_in(prof_exx_scdm, 'SCDM_EXX_OPERATOR')
 
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   
   ! make sure scdm is localized
   call X(scdm_localize)(scdm, namespace, this%st, der%mesh)
