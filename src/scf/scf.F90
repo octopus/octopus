@@ -73,6 +73,7 @@ module scf_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oep_oct_m
   
@@ -545,7 +546,7 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    type(batch_t), allocatable :: psioutb(:, :)
+    class(wfs_elec_t), allocatable :: psioutb(:, :)
 
     PUSH_SUB(scf_run)
 
@@ -650,11 +651,11 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+          call st%group%psib(ib, iqn)%copy_to(psioutb(ib, iqn))
         end do
       end do
       
@@ -761,7 +762,7 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
+            call st%group%psib(ib, iqn)%copy_data_to(gr%mesh%np, psioutb(ib, iqn))
           end do
         end do
       end select
@@ -988,7 +989,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_end(psioutb(ib, iqn))
+          call psioutb(ib, iqn)%end()
         end do
       end do
       

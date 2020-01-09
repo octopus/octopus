@@ -39,6 +39,7 @@ module projector_oct_m
   use species_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 

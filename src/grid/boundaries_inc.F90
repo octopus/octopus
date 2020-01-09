@@ -56,7 +56,7 @@ end subroutine X(vec_ghost_update)
 
 subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_t),    target,    intent(in)    :: vp
-  type(batch_t), target,    intent(inout) :: v_local
+  class(batch_t), target,   intent(inout) :: v_local
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset
@@ -73,7 +73,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
   ! first post the receptions
-  select case(batch_status(v_local))
+  select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
     if(.not. accel%cuda_mpi) then
@@ -131,15 +131,15 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   end select
 
 
-  call batch_init(handle%ghost_send, 1, v_local%nst_linear)
-  call X(batch_allocate)(handle%ghost_send, 1, v_local%nst_linear, subarray_size(vp%ghost_spoints))
+  call batch_init(handle%ghost_send, v_local%dim, v_local%nst)
+  call handle%ghost_send%X(allocate)(1, v_local%nst, subarray_size(vp%ghost_spoints))
 
-  if(batch_is_packed(v_local)) call batch_pack(handle%ghost_send, copy = .false.)
+  if(v_local%is_packed()) call handle%ghost_send%do_pack(copy = .false.)
 
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)
 
-  if(batch_status(v_local) == BATCH_DEVICE_PACKED) then
+  if(v_local%status() == BATCH_DEVICE_PACKED) then
     nn = product(handle%ghost_send%pack%size(1:2))
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
@@ -149,7 +149,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
   end if
 
-  select case(batch_status(v_local))
+  select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
     do ipart = 1, vp%npart
@@ -213,7 +213,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   SAFE_DEALLOCATE_A(status)
   SAFE_DEALLOCATE_P(handle%requests)
 
-  if(batch_status(handle%v_local) == BATCH_DEVICE_PACKED) then
+  if(handle%v_local%status() == BATCH_DEVICE_PACKED) then
     ! First call MPI_Waitall to make the transfer happen, then call accel_finish to
     ! synchronize the operate_map kernel for the inner points
     call accel_finish()
@@ -229,7 +229,7 @@ subroutine X(ghost_update_batch_finish)(handle)
     end if
   end if
 
-  call batch_end(handle%ghost_send)
+  call handle%ghost_send%end()
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))
@@ -240,19 +240,19 @@ end subroutine X(ghost_update_batch_finish)
 !! boundary conditions for the derivatives, in finite system;
 !! or set according to periodic boundary conditions.
 subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
-  type(boundaries_t),    intent(in)    :: boundaries
-  type(batch_t), target, intent(inout) :: ffb
-  CMPLX, optional,       intent(in)    :: phase_correction(:)
+  type(boundaries_t),     intent(in)    :: boundaries
+  class(batch_t), target, intent(inout) :: ffb
+  CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
 
   PUSH_SUB(X(boundaries_set_batch))
   call profiling_in(set_bc_prof, 'SET_BC')
   
-  ASSERT(batch_type(ffb) == R_TYPE_VAL)
+  ASSERT(ffb%type() == R_TYPE_VAL)
   ! phase correction not implemented for OpenCL
   if(present(phase_correction)) then
-    ASSERT(batch_status(ffb) /= BATCH_DEVICE_PACKED)
+    ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
   end if
 
   ! The boundary points are at different locations depending on the presence
@@ -281,10 +281,10 @@ contains
 
     PUSH_SUB(X(boundaries_set_batch).zero_boundaries)
 
-    select case(batch_status(ffb))
+    select case(ffb%status())
     case(BATCH_DEVICE_PACKED)
       np = ffb%pack%size(1)*(bndry_end - bndry_start + 1)
-      call accel_set_buffer_to_zero(ffb%pack%buffer, batch_type(ffb), np, offset = ffb%pack%size(1)*(bndry_start - 1))
+      call accel_set_buffer_to_zero(ffb%pack%buffer, ffb%type(), np, offset = ffb%pack%size(1)*(bndry_start - 1))
       call accel_finish()
 
     case(BATCH_PACKED)
@@ -395,10 +395,10 @@ contains
       maxrecv = maxval(boundaries%nrecv(1:npart))
 
       ldbuffer = ffb%nst_linear
-      if(batch_status(ffb) == BATCH_DEVICE_PACKED) ldbuffer = ffb%pack%size(1)
+      if(ffb%status() == BATCH_DEVICE_PACKED) ldbuffer = ffb%pack%size(1)
       SAFE_ALLOCATE(sendbuffer(1:ldbuffer, 1:maxsend, 1:npart))
 
-      select case(batch_status(ffb))
+      select case(ffb%status())
 
       case(BATCH_NOT_PACKED)
 
@@ -489,7 +489,7 @@ contains
       SAFE_DEALLOCATE_A(recv_disp)
       SAFE_DEALLOCATE_A(sendbuffer)
 
-      select case(batch_status(ffb))
+      select case(ffb%status())
 
       case(BATCH_NOT_PACKED)
 
@@ -579,7 +579,7 @@ contains
 
     end if
 
-    select case(batch_status(ffb))
+    select case(ffb%status())
 
     case(BATCH_NOT_PACKED)
 
@@ -663,14 +663,14 @@ subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
 
   PUSH_SUB(X(boundaries_set_single))
 
-  call batch_init     (batch_ff, 1)
-  call batch_add_state(batch_ff, ff)
+  call batch_init(batch_ff, 1, 1)
+  call batch_ff%add_state(ff)
 
-  ASSERT(batch_is_ok(batch_ff))
+  ASSERT(batch_ff%is_ok())
 
   call X(boundaries_set_batch)(boundaries, batch_ff, phase_correction=phase_correction)
 
-  call batch_end(batch_ff)
+  call batch_ff%end()
   POP_SUB(X(boundaries_set_single))
 
 end subroutine X(boundaries_set_single)

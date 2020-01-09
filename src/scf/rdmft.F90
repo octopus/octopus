@@ -1101,7 +1101,7 @@ contains
 
       do iorb = 1, st%nst
         call states_elec_get_state(st, gr%mesh, iorb, 1, dpsi)
-        call dhamiltonian_elec_apply(hm, namespace, gr%mesh, dpsi, hpsi, iorb, 1)
+        call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi, hpsi, iorb, 1)
 
         do jorb = iorb, st%nst  
           ! calculate <phi_j|H|phi_i> =lam_ji
@@ -1110,7 +1110,7 @@ contains
           
           ! calculate <phi_i|H|phi_j>=lam_ij
           if (.not. iorb == jorb ) then
-            call dhamiltonian_elec_apply(hm, namespace, gr%mesh, dpsi1, hpsi1, jorb, 1)
+            call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi1, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
         end do
@@ -1290,7 +1290,7 @@ contains
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
 
         ! calculate one-body energy
-        call dhamiltonian_elec_apply(hm, namespace, gr%mesh, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply_single(hm, namespace, gr%mesh, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
@@ -1385,7 +1385,7 @@ contains
         call states_elec_get_state(st, mesh, jst, 1, dpsi2)
 
         ! calculate one-body integrals
-        call dhamiltonian_elec_apply(hm, namespace, mesh, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply_single(hm, namespace, mesh, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)

@@ -563,7 +563,7 @@ contains
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
@@ -820,7 +820,7 @@ contains
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -858,7 +858,7 @@ contains
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -1029,7 +1029,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1054,7 +1054,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1125,7 +1125,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1152,7 +1152,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1226,7 +1226,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1321,7 +1321,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

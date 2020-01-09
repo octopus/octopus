@@ -396,7 +396,8 @@ states_f_srcs =                                 \
 	states/states_elec_parallel.F90         \
 	states/states_elec_restart.F90          \
 	states/states_mxll.F90                  \
-	states/states_mxll_restart.F90
+	states/states_mxll_restart.F90          \
+	states/wfs_elec.F90
 
 states_srcs = $(states_f_srcs)
 
@@ -410,7 +411,8 @@ noinst_HEADERS +=                               \
 	states/states_elec_block_inc.F90        \
 	states/states_elec_calc_inc.F90         \
 	states/states_elec_inc.F90              \
-	states/states_elec_parallel_inc.F90
+	states/states_elec_parallel_inc.F90     \
+	states/wfs_elec_inc.F90
 
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \

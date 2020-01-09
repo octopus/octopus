@@ -61,6 +61,7 @@ module lcao_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -951,8 +952,8 @@ contains
 
     PUSH_SUB(lcao_alt_end_orbital)
 
-    if(batch_is_ok(orbitalb)) then
-      call batch_deallocate(orbitalb)
+    if(orbitalb%is_ok()) then
+      call orbitalb%deallocate
     end if
 
     POP_SUB(lcao_alt_end_orbital)

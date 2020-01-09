@@ -224,19 +224,19 @@
 
     ftvaf = M_ONE
 
-    call batch_init(vafb, 1)
-    call batch_add_state(vafb, vaf)
+    call batch_init(vafb, 1, 1)
+    call vafb%add_state(vaf)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
 
-    call batch_init(ftvafb, 1)
-    call batch_add_state(ftvafb, ftvaf)
+    call batch_init(ftvafb, 1, 1)
+    call ftvafb%add_state(ftvaf)
 
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
 
-    call batch_end(vafb)
-    call batch_end(ftvafb)
+    call vafb%end()
+    call ftvafb%end()
 
 
     !and print the spectrum

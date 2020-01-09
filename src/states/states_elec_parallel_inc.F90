@@ -21,7 +21,7 @@ subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
   integer,           intent(in)    :: dims(2)
   R_TYPE,            intent(inout) :: psi(:, :, :)
 
-  integer :: maxst, ist, i1, i2
+  integer :: maxst, ist, i1, i2, irank, ist_local
   R_TYPE, allocatable :: sendpsi(:, :, :), recvpsi(:, :, :)
   
   !no PUSH_SUB, called too often
@@ -50,10 +50,15 @@ subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
       recvpsi(1, 1, 1), product(dims(1:2))*maxst, R_MPITYPE, st%mpi_grp%comm, mpi_err)
 #endif
 
-    do ist = 1, st%nst
-      do i1 = 1, dims(1)
-        do i2 = 1, dims(2)
-          psi(ist, i1, i2) = recvpsi(i1, i2, ist)
+    ! now get the correct states from the data of each rank
+    ist = 0
+    do irank = 0, st%mpi_grp%size - 1
+      do ist_local = 1, st%dist%num(irank)
+        ist = ist + 1
+        do i1 = 1, dims(1)
+          do i2 = 1, dims(2)
+            psi(ist, i1, i2) = recvpsi(i1, i2, irank*maxst + ist_local)
+          end do
         end do
       end do
     end do
