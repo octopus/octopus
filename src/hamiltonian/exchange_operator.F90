@@ -76,8 +76,6 @@ module exchange_operator_oct_m
     logical :: user_defined_cam
 
     type(scdm_t)  :: scdm
-
-    type(namespace_t), pointer :: namespace
   end type exchange_operator_t
  
 contains
@@ -109,8 +107,6 @@ contains
     type(block_t) :: blk
 
     PUSH_SUB(exchange_operator_init)
-
-    this%namespace => namespace
 
     this%cam_omega = omega
     this%cam_alpha = alpha

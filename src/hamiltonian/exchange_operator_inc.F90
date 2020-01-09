@@ -247,8 +247,9 @@ end subroutine X(exchange_operator_hartree_apply)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply) (this, scdm, der, st_d, psib, hpsib, exx_coef, hartree, psolver)
+subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree, psolver)
   type(exchange_operator_t), intent(in)    :: this
+  type(namespace_t),         intent(in)    :: namespace
   type(scdm_t),              intent(in)    :: scdm
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
@@ -271,7 +272,7 @@ subroutine X(exchange_operator_scdm_apply) (this, scdm, der, st_d, psib, hpsib, 
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
   
   ! make sure scdm is localized
-  call X(scdm_localize)(scdm, this%namespace, this%st, der%mesh)
+  call X(scdm_localize)(scdm, namespace, this%st, der%mesh)
   
   SAFE_ALLOCATE(psil(1:der%mesh%np, 1:st_d%dim))
   SAFE_ALLOCATE(hpsil(1:der%mesh%np, 1:st_d%dim))

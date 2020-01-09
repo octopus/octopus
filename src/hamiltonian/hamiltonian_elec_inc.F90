@@ -212,7 +212,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
-        call X(exchange_operator_scdm_apply)(hm%exxop, hm%scdm, hm%der, hm%d, epsib, hpsib, hm%exxop%cam_alpha, &
+        call X(exchange_operator_scdm_apply)(hm%exxop, namespace, hm%scdm, hm%der, hm%d, epsib, hpsib, hm%exxop%cam_alpha, &
                           hm%theory_level == HARTREE, hm%psolver)
       else
         ! standard HF 
