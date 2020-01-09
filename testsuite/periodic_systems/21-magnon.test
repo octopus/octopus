@@ -38,6 +38,7 @@ match ; Total magnet. [step  50] ; LINEFIELD(td.general/total_magnetization, -51
 Util : oct-spin_susceptibility
 Input : 21-magnon.02-td.inp
 
-Precision : 0.02
+Precision : 0.25
 match ; Spin susceptibilty Re [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 2) ; -0.138790E+02
+Precision : 0.02
 match ; Spin susceptibilty Im [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 3) ; -0.138125E+01
