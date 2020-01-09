@@ -450,7 +450,7 @@ end subroutine X(mesh_batch_dotp_vector)
 
 subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
+  class(batch_t),    intent(in)    :: aa
   R_TYPE,            intent(in)    :: psi(:,:) 
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
@@ -466,17 +466,17 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   ASSERT(aa%dim == ubound(psi,dim=2))
 
-  ASSERT(batch_status(aa) /= BATCH_DEVICE_PACKED)
+  ASSERT(aa%status() /= BATCH_DEVICE_PACKED)
 
   nst_ = aa%nst
   if(present(nst)) nst_ = nst 
 
-  select case(batch_status(aa))
+  select case(aa%status())
   case(BATCH_NOT_PACKED)
     do ist = 1, nst_
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), psi(1:mesh%np,idim),& 
            reduce = .false.)
       end do
@@ -529,7 +529,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(nst_*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(batch_type(aa))/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(nst_*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_mf_dotp))
@@ -539,7 +539,7 @@ end subroutine X(mesh_batch_mf_dotp)
 ! This routines adds a contain of a batch, weighted, to a single mesh function
 subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: xx
+  class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(inout) :: psi(:,:) 
   R_TYPE,            intent(in)    :: aa(:)
   integer, optional, intent(in)    :: nst
@@ -553,17 +553,17 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
   ASSERT(xx%dim == ubound(psi,dim=2))
 
-  ASSERT(batch_status(xx) /= BATCH_DEVICE_PACKED)
+  ASSERT(xx%status() /= BATCH_DEVICE_PACKED)
 
   nst_ = xx%nst
   if(present(nst)) nst_ = nst
 
 
-  select case(batch_status(xx))
+  select case(xx%status())
   case(BATCH_NOT_PACKED)
     do ist = 1, nst_
       do idim = 1, xx%dim
-        indb = batch_ist_idim_to_linear(xx, (/ist, idim/))
+        indb = xx%ist_idim_to_linear((/ist, idim/))
         if(abs(aa(ist)) < M_EPSILON) cycle
         call lalg_axpy(mesh%np, aa(ist), xx%states_linear(indb)%X(psi), psi(1:mesh%np, idim))
       end do
