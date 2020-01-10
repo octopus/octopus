@@ -1275,7 +1275,7 @@ contains
       SAFE_ALLOCATE(rho1(1:gr%mesh%np))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-      SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(v_ij(1:gr%der%mesh%np, 1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(lxc(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
 
@@ -1368,15 +1368,13 @@ contains
     
     FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
-    integer :: ist, jst, nspin_ 
+    integer :: ist, jst
 
     PUSH_SUB(rdm_integrals)
  
-    nspin_ = min(st%d%nspin, 2)
-    
     SAFE_ALLOCATE(dpsi(1:mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(dpsi2(1:mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(hpsi(1:mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi(1:mesh%np, 1:st%d%dim))
 
     !calculate integrals of the one-electron energy term with respect to the initial orbital basis
     do ist = 1, st%nst
