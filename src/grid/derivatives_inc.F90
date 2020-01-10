@@ -360,7 +360,6 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
   SAFE_ALLOCATE(gradff(1:this%mesh%np, 1:this%mesh%sb%dim))
-  SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
 
 #ifdef R_TREAL
 #ifdef SINGLE_PRECISION
@@ -470,6 +469,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   do
     call batch_init(ffb, 1, blocksize)
     call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
+    SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
     do idir = 1, this%mesh%sb%dim
       call batch_init(gradffb(idir), 1, blocksize)
       call gradffb(idir)%X(allocate)(1, blocksize, this%mesh%np)
@@ -527,6 +527,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     do idir = 1, this%mesh%sb%dim
       call gradffb(idir)%end()
     end do
+    SAFE_DEALLOCATE_A(gradffb)
 
     blocksize = 2*blocksize
     if(blocksize > max_blocksize) exit
@@ -552,7 +553,6 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(opff)
   SAFE_DEALLOCATE_A(gradff)
-  SAFE_DEALLOCATE_A(gradffb)
 
 end subroutine X(derivatives_test)
 
