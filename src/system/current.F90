@@ -407,10 +407,8 @@ contains
             !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
-            do idir = 1, der%mesh%sb%dim
-              call epsib%copy_to(commpsib(idir))
-              call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
-            end do
+            ! this should now take non-orthogonal axis into account, but needs more testing
+            call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 

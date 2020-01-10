@@ -30,6 +30,24 @@ Precision : 4.0e-11
 match ; Real gradient; GREPFIELD(out, 'Gradient real', 5) ; 1.1709414428E-11
 match ; Complex gradient; GREPFIELD(out, 'Gradient complex', 5) ; 1.4055457659E-11
 
+match ; Real Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient real bsize =   1', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient real bsize =   2', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient real bsize =   4', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient real bsize =   8', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient real bsize =  16', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient real bsize =  32', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  64); GREPFIELD(out, 'Batch gradient real bsize =  64', 10) ; 1.2e-11
+match ; Real Gradient (blocksize = 128); GREPFIELD(out, 'Batch gradient real bsize = 128', 10) ; 1.2e-11
+
+match ; Complex Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient complex bsize =   1', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient complex bsize =   2', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient complex bsize =   4', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient complex bsize =   8', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient complex bsize =  16', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient complex bsize =  32', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  64); GREPFIELD(out, 'Batch gradient complex bsize =  64', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize = 128); GREPFIELD(out, 'Batch gradient complex bsize = 128', 10) ; 1.3e-11
+
 Precision : 1.0e-8
 Input: 01-derivatives_1d.02-fortran.inp
 match ; Real Laplacian (blocksize =   1); GREPFIELD(out, 'Laplacian real bsize =   1', 9) ; 2.7801274971E-09
@@ -53,3 +71,21 @@ match ; Complex Laplacian (blocksize = 128); GREPFIELD(out, 'Laplacian complex b
 Precision : 4.0e-11
 match ; Real gradient; GREPFIELD(out, 'Gradient real', 5) ; 1.1709414428E-11
 match ; Complex gradient; GREPFIELD(out, 'Gradient complex', 5) ; 1.4055457659E-11
+
+match ; Real Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient real bsize =   1', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient real bsize =   2', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient real bsize =   4', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient real bsize =   8', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient real bsize =  16', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient real bsize =  32', 10) ; 1.2e-11
+match ; Real Gradient (blocksize =  64); GREPFIELD(out, 'Batch gradient real bsize =  64', 10) ; 1.2e-11
+match ; Real Gradient (blocksize = 128); GREPFIELD(out, 'Batch gradient real bsize = 128', 10) ; 1.2e-11
+
+match ; Complex Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient complex bsize =   1', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient complex bsize =   2', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient complex bsize =   4', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient complex bsize =   8', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient complex bsize =  16', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient complex bsize =  32', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize =  64); GREPFIELD(out, 'Batch gradient complex bsize =  64', 10) ; 1.3e-11
+match ; Complex Gradient (blocksize = 128); GREPFIELD(out, 'Batch gradient complex bsize = 128', 10) ; 1.3e-11

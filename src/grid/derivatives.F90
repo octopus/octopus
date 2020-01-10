@@ -74,6 +74,8 @@ module derivatives_oct_m
     derivatives_lapl_diag,              &
     dderivatives_grad,                  &
     zderivatives_grad,                  &
+    dderivatives_batch_grad,            &
+    zderivatives_batch_grad,            &
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
@@ -141,7 +143,7 @@ module derivatives_oct_m
     FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
+  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof
 
 contains
 
@@ -750,6 +752,7 @@ contains
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
+
   
 #include "undef.F90"
 #include "real.F90"
