@@ -40,11 +40,11 @@ module dressed_interaction_oct_m
 
   type dressed_interaction_t
     private
-    integer :: dim
-    FLOAT :: lambda(1:MAX_DIM - 1)
-    FLOAT, public :: omega
-    FLOAT :: n_electrons
-    FLOAT :: coulomb
+    integer       :: dim                   !< Dimensions of the electronic system
+    FLOAT         :: lambda(1:MAX_DIM - 1) !< Polarization vector, including the interaction strength
+    FLOAT, public :: omega                 !< Mode frequency
+    FLOAT         :: n_electrons           !< Number of electrons
+    FLOAT         :: coulomb               !< Prefactor of the electron-electron interaction
   end type dressed_interaction_t
 
 contains
@@ -68,7 +68,7 @@ contains
     !%Type block
     !%Section SCF::RDMFT
     !%Description
-    !% Polarization vector including the interaction strength in dressed orbital formalism,
+    !% Polarization vector, including the interaction strength, in dressed orbital formalism,
     !% in units of energy. The default is zero for all components.
     !%End
     this%lambda = M_ZERO
@@ -88,7 +88,7 @@ contains
     !%Default 1.0 Ha
     !%Section SCF::RDMFT
     !%Description
-    !% mode frequency in dressed orbital formalism.
+    !% Mode frequency in dressed orbital formalism.
     !%End
     call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%omega, units_inp%energy)
     call messages_print_var_value(stdout, 'DressedOmega', this%omega, unit = units_out%energy)
@@ -98,7 +98,7 @@ contains
     !%Default 1.0
     !%Section SCF::RDMFT
     !%Description
-    !% allows to control the prefactor of the electron electron interaction
+    !% Allows to control the prefactor of the electron-electron interaction.
     !%End
     call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%coulomb)
     call messages_print_var_value(stdout, 'DressedCoulomb', this%coulomb)
@@ -130,20 +130,18 @@ contains
     FLOAT,                       intent(in)    :: rho(:)
     FLOAT,                       intent(inout) :: pot(:)
 
-    integer :: ip, dim_ele
+    integer :: ip
     FLOAT :: lx, ld, dipole(1:MAX_DIM)
 
     PUSH_SUB(dressed_add_poisson_terms)
 
-    dim_ele = mesh%sb%dim - 1
-
     call dmf_dipole(mesh, rho, dipole)
-    ld = dot_product(this%lambda(1:dim_ele), dipole(1:dim_ele))
+    ld = dot_product(this%lambda(1:this%dim), dipole(1:this%dim))
 
     do ip = 1, mesh%np
-      lx = dot_product(this%lambda(1:dim_ele), mesh%x(ip, 1:dim_ele))
+      lx = dot_product(this%lambda(1:this%dim), mesh%x(ip, 1:this%dim))
       pot(ip) = pot(ip)*this%coulomb - &
-        this%omega/sqrt(this%n_electrons)*(mesh%x(ip, dim_ele + 1)*ld + lx*dipole(dim_ele + 1)) + lx*ld
+        this%omega/sqrt(this%n_electrons)*(mesh%x(ip, this%dim + 1)*ld + lx*dipole(this%dim + 1)) + lx*ld
     end do
 
     POP_SUB(dressed_add_poisson_terms)
