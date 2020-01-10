@@ -815,8 +815,6 @@ contains
     !! its calculations? (Defaults to .true.)
     logical, optional,    intent(in)    :: all_nodes 
 
-    integer :: ip, dim_ele
-    FLOAT :: lx, ld, dipole(1:MAX_DIM)
     type(derivatives_t), pointer :: der
     type(cube_function_t) :: crho, cpot
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
@@ -918,18 +916,7 @@ contains
 
     ! Add extra terms for dressed interaction
     if (this%is_dressed .and. this%method /= POISSON_NO) then
-      dim_ele = this%der%mesh%sb%dim - 1
-
-      call dmf_dipole(this%der%mesh, rho, dipole)
-      ld = dot_product(this%dressed%lambda(1:dim_ele), dipole(1:dim_ele))
-
-      do ip = 1, this%der%mesh%np
-        lx = dot_product(this%dressed%lambda(1:dim_ele), this%der%mesh%x(ip, 1:dim_ele))
-        pot(ip) = pot(ip)*this%dressed%coulomb - &
-          this%dressed%omega/sqrt(this%dressed%n_electrons)*(this%der%mesh%x(ip, dim_ele + 1)*ld + lx*dipole(dim_ele + 1)) &
-          + lx*ld
-      end do
-
+      call dressed_add_poisson_terms(this%dressed, der%mesh, rho, pot)
     end if
 
     POP_SUB(dpoisson_solve)

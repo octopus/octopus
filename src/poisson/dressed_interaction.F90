@@ -20,6 +20,8 @@
 
 module dressed_interaction_oct_m
   use global_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -33,15 +35,16 @@ module dressed_interaction_oct_m
   public ::                      &
     dressed_interaction_t,       &
     dressed_init,                &
-    dressed_write_info
+    dressed_write_info,          &
+    dressed_add_poisson_terms
 
   type dressed_interaction_t
     private
     integer :: dim
-    FLOAT, public :: lambda(1:MAX_DIM - 1)
+    FLOAT :: lambda(1:MAX_DIM - 1)
     FLOAT, public :: omega
-    FLOAT, public :: n_electrons
-    FLOAT, public :: coulomb
+    FLOAT :: n_electrons
+    FLOAT :: coulomb
   end type dressed_interaction_t
 
 contains
@@ -103,6 +106,7 @@ contains
     POP_SUB(dressed_init)
   end subroutine dressed_init
 
+  !-----------------------------------------------------------------
   subroutine dressed_write_info(this, iunit)
     type(dressed_interaction_t), intent(in) :: this
     integer,                     intent(in) :: iunit
@@ -118,6 +122,32 @@ contains
 
     POP_SUB(dressed_write_info)
   end subroutine dressed_write_info
+
+  !-----------------------------------------------------------------
+  subroutine dressed_add_poisson_terms(this, mesh, rho, pot)
+    type(dressed_interaction_t), intent(in)    :: this
+    type(mesh_t),                intent(in)    :: mesh
+    FLOAT,                       intent(in)    :: rho(:)
+    FLOAT,                       intent(inout) :: pot(:)
+
+    integer :: ip, dim_ele
+    FLOAT :: lx, ld, dipole(1:MAX_DIM)
+
+    PUSH_SUB(dressed_add_poisson_terms)
+
+    dim_ele = mesh%sb%dim - 1
+
+    call dmf_dipole(mesh, rho, dipole)
+    ld = dot_product(this%lambda(1:dim_ele), dipole(1:dim_ele))
+
+    do ip = 1, mesh%np
+      lx = dot_product(this%lambda(1:dim_ele), mesh%x(ip, 1:dim_ele))
+      pot(ip) = pot(ip)*this%coulomb - &
+        this%omega/sqrt(this%n_electrons)*(mesh%x(ip, dim_ele + 1)*ld + lx*dipole(dim_ele + 1)) + lx*ld
+    end do
+
+    POP_SUB(dressed_add_poisson_terms)
+  end subroutine dressed_add_poisson_terms
 
 end module dressed_interaction_oct_m
 
