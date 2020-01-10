@@ -200,10 +200,6 @@ contains
     !% Coordinate 1-d: electron; coordinate d+1: photon.
     !%End
     call parse_variable(namespace, 'DressedOrbitals', .false., this%is_dressed)
-    if (this%is_dressed .and. der%mesh%sb%dim /= 2) then
-      write(message(1), '(a)')'Dressed Orbital calculation currently only implemented for electronic 1d (=2d dressed) systems.'
-      call messages_fatal(1)
-    end if
     call messages_print_var_value(stdout, 'DressedOrbitals', this%is_dressed)
     if (this%is_dressed) then
       call messages_experimental('Dressed Orbitals')
