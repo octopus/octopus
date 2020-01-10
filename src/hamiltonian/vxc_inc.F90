@@ -174,7 +174,11 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
 
   if(xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_GGA .or. &
          xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_MGGA) then
-    if(xcs%useMVORB) call calc_mvorb_alpha()
+
+    if (xcs%functional(FUNC_C,1)%id == XC_HYB_GGA_XC_MVORB_HSE06  &
+     .or. xcs%functional(FUNC_C,1)%id == XC_HYB_GGA_XC_MVORB_PBEH) then
+      call calc_mvorb_alpha()
+    end if
 
     if(exx_op%user_defined_cam) then
       call exx_fix_cam_param(exx_op)
@@ -768,7 +772,7 @@ contains
     SAFE_DEALLOCATE_A(gnon)
 
     select case(functl(FUNC_C)%id)
-    case(XC_HYB_GGA_XC_HSE06)
+    case(XC_HYB_GGA_XC_MVORB_HSE06)
       alpha = CNST(0.121983)+CNST(0.130711)*tb09_c**4
 
       if(alpha > 1) then
@@ -790,7 +794,7 @@ contains
       !but is called alpha in the original paper.
       xcs%cam_beta = alpha
 
-    case(XC_HYB_GGA_XC_PBEH)
+    case(XC_HYB_GGA_XC_MVORB_PBEH)
       alpha = -CNST(1.00778)+CNST(1.10507)*tb09_c
 
       if(alpha > 1) then

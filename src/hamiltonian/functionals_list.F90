@@ -843,9 +843,9 @@
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
 !% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
-!%Option hyb_gga_mvorb_hse06   921000 
+!%Option hyb_gga_xc_mvorb_hse06   921000 
 !% Density-based mixing parameter of HSE06 (not from libxc).
-!%Option hyb_gga_mvorb_pbeh    922000
+!%Option hyb_gga_xc_mvorb_pbeh    922000
 !% Density-based mixing parameter of PBEH (not from libxc).
 !%Option vdw_c_vdwdf      918000
 !% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.

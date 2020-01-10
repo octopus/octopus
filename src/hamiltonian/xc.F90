@@ -82,8 +82,6 @@ module xc_oct_m
     logical :: xcd_normalize
     logical :: parallel
 
-    !> For hybrid calculations, use of the density-based mixing parameter
-    logical :: useMVORB
   end type xc_t
 
   FLOAT, parameter :: tiny      = CNST(1.0e-12)
@@ -197,12 +195,6 @@ contains
          bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
         call XC_F90(hyb_cam_coef)(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
                                      xcs%cam_alpha, xcs%cam_beta)
-
-        xcs%useMVORB = .false.
-        if(xcs%functional(FUNC_X,1)%id == XC_HYB_GGA_MVORB_HSE06 & 
-              .or. xcs%functional(FUNC_X,1)%id == XC_HYB_GGA_MVORB_PBEH) then
-          xcs%useMVORB = .true.
-        end if
 
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional

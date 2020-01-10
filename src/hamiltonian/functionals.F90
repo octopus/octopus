@@ -50,8 +50,8 @@ module xc_functl_oct_m
     XC_VDW_C_VDWDF = 918,         &  !< vdw-df correlation from libvdwxc
     XC_VDW_C_VDWDF2 = 919,        &  !< vdw-df2 correlation from libvdwxc
     XC_VDW_C_VDWDFCX = 920,       &  !< vdw-df-cx correlation from libvdwxc
-    XC_HYB_GGA_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
-    XC_HYB_GGA_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
+    XC_HYB_GGA_XC_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
+    XC_HYB_GGA_XC_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
     XC_RDMFT_XC_M = 601              !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
@@ -152,7 +152,7 @@ contains
         case(XC_RDMFT_XC_M)
           functl%family = XC_FAMILY_RDMFT
 
-        case(XC_HYB_GGA_MVORB_HSE06, XC_HYB_GGA_MVORB_PBEH)
+        case(XC_HYB_GGA_XC_MVORB_HSE06, XC_HYB_GGA_XC_MVORB_PBEH)
           functl%family = XC_FAMILY_HYB_GGA
 
         case default
@@ -186,15 +186,17 @@ contains
       ! initialize
 
       !For the two MVORB functionals, we initialize libxc with the non-MVORB functionals
-      if(functl%id == XC_HYB_GGA_MVORB_HSE06) then
+      select case(functl%id)
+      case(XC_HYB_GGA_XC_MVORB_HSE06)
         call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_HSE06, spin_channels)
 
-      elseif(functl%id == XC_HYB_GGA_MVORB_PBEH) then
+      case(XC_HYB_GGA_XC_MVORB_PBEH)
         call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_PBEH, spin_channels)
 
-      else
+      case default
         call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
-      end if
+      end select
+
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%flags    = XC_F90(info_flags)(functl%info)
 
