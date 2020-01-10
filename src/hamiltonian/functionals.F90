@@ -43,14 +43,16 @@ module xc_functl_oct_m
 
   !> This adds to the constants defined in libxc. But since in that module
   !! the OEP functionals are not included, it is better to put it here.
-  integer, public, parameter :: &
-    XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
-    XC_OEP_X = 901,             &  !< Exact exchange
-    XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
-    XC_VDW_C_VDWDF = 918,       &  !< vdw-df correlation from libvdwxc
-    XC_VDW_C_VDWDF2 = 919,      &  !< vdw-df2 correlation from libvdwxc
-    XC_VDW_C_VDWDFCX = 920,     &  !< vdw-df-cx correlation from libvdwxc
-    XC_RDMFT_XC_M = 601            !< RDMFT Mueller functional
+  integer, public, parameter ::   &
+    XC_KS_INVERSION = 801,        &  !< inversion of Kohn-Sham potential
+    XC_OEP_X = 901,               &  !< Exact exchange
+    XC_HALF_HARTREE = 917,        &  !< half-Hartree exchange for two electrons (supports complex scaling)
+    XC_VDW_C_VDWDF = 918,         &  !< vdw-df correlation from libvdwxc
+    XC_VDW_C_VDWDF2 = 919,        &  !< vdw-df2 correlation from libvdwxc
+    XC_VDW_C_VDWDFCX = 920,       &  !< vdw-df-cx correlation from libvdwxc
+    XC_HYB_GGA_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
+    XC_HYB_GGA_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
+    XC_RDMFT_XC_M = 601              !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
   !! careful not to use a value defined in libxc for another family!
@@ -131,21 +133,32 @@ contains
       ! this also ensures it is actually a functional defined by the linked version of libxc
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
-        if(functl%id == XC_OEP_X) then
+
+        select case(functl%id)
+        case(XC_OEP_X)
           functl%family = XC_FAMILY_OEP
-        else if (functl%id == XC_KS_INVERSION) then
+
+        case(XC_KS_INVERSION)
           functl%family = XC_FAMILY_KS_INVERSION
-        else if(functl%id == XC_HALF_HARTREE) then
+
+        case(XC_HALF_HARTREE)
           call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
+
+        case(XC_VDW_C_VDWDF, XC_VDW_C_VDWDF2, XC_VDW_C_VDWDFCX)
           functl%family = XC_FAMILY_LIBVDWXC
           !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
-        else if (functl%id == XC_RDMFT_XC_M) then
+
+        case(XC_RDMFT_XC_M)
           functl%family = XC_FAMILY_RDMFT
-        else
+
+        case(XC_HYB_GGA_MVORB_HSE06, XC_HYB_GGA_MVORB_PBEH)
+          functl%family = XC_FAMILY_HYB_GGA
+
+        case default
           call messages_input_error('XCFunctional', 'Unknown functional')
-        end if
+
+        end select
       end if
     end if
 
@@ -165,13 +178,23 @@ contains
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
 
-    else if(functl%family  ==  XC_FAMILY_NONE) then
+    else if(functl%family == XC_FAMILY_NONE) then
       functl%type = -1
       functl%flags = 0
 
     else ! handled by libxc
       ! initialize
-      call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+
+      !For the two MVORB functionals, we initialize libxc with the non-MVORB functionals
+      if(functl%id == XC_HYB_GGA_MVORB_HSE06) then
+        call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_HSE06, spin_channels)
+
+      elseif(functl%id == XC_HYB_GGA_MVORB_PBEH) then
+        call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_PBEH, spin_channels)
+
+      else
+        call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+      end if
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%flags    = XC_F90(info_flags)(functl%info)
 

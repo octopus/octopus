@@ -420,6 +420,8 @@
 !% BEEF-vdW exchange-correlation
 !%Option gga_x_pbetrans               291
 !% Gradient-based interpolation between PBE and revPBE
+!%Option gga_x_chachiyo               298
+!% Chachiyo exchange
 !%Option gga_x_wpbeh               524
 !% short-range version of the PBE
 !%Option gga_x_hjs_pbe               525
@@ -744,6 +746,16 @@
 !% GX functional of Loos
 !%Option mgga_x_pbe_gx               576
 !% PBE-GX functional of Loos
+!%Option mgga_x_revscan               581
+!% revised SCAN
+!%Option mgga_c_revscan               582000
+!% revised SCAN correlation
+!%Option mgga_c_scan_vv10               584000
+!% SCAN correlation +  VV10 correlation
+!%Option mgga_c_revscan_vv10               585000
+!% revised SCAN correlation
+!%Option mgga_x_br89_explicit               586
+!% Becke-Roussel 89 with an explicit inversion of x(y)
 !%Option hyb_mgga_x_dldf               36
 !% Dispersionless Density Functional
 !%Option hyb_mgga_x_ms2h               224
@@ -812,6 +824,10 @@
 !% Perdew-Burke-Ernzerhof + KCIS hybrid
 !%Option hyb_mgga_xc_tpss1kcis               569000
 !% TPSS hybrid with KCIS correlation
+!%Option hyb_mgga_x_revscan0               583
+!% revised SCAN hybrid exchange
+!%Option hyb_mgga_xc_b98               598000
+!% Becke 98
 !%Option oep_x                    901
 !% OEP: Exact exchange (not from libxc).
 !%Option ks_inversion             801
@@ -827,6 +843,10 @@
 !%Option xc_half_hartree          917
 !% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
 !% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
+!%Option hyb_gga_mvorb_hse06   921000 
+!% Density-based mixing parameter of HSE06 (not from libxc).
+!%Option hyb_gga_mvorb_pbeh    922000
+!% Density-based mixing parameter of PBEH (not from libxc).
 !%Option vdw_c_vdwdf      918000
 !% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.
 !%Option vdw_c_vdwdf2     919000

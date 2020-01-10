@@ -105,6 +105,7 @@ dist_share_DATA =                                  \
         03-xc.gga_x_xpbe.inp                       \
         03-xc.sic_pz.inp                           \
         03-xc.pbe0_fock.inp                        \
+        03-xc.mvorb_pbe0_fock.inp                  \
         03-xc.pbe0_oep.inp                         \
         03-xc.b3lyp_fock.inp                       \
         03-xc.b3lyp_oep.inp                        \

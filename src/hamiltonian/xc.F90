@@ -198,16 +198,11 @@ contains
         call XC_F90(hyb_cam_coef)(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
                                      xcs%cam_alpha, xcs%cam_beta)
 
-        !%Variable DensityBasedMixing
-        !%Type logical
-        !%Default false
-        !%Section Hamiltonian
-        !%Description
-        !% (Experimental) If set to yes, Octopus will use the density-based mixing 
-        !% parameter as proposed in Marues et al. PRB 83 035119 (2011).
-        !%End
-        call parse_variable(namespace, 'DensityBasedMixing', .false., xcs%useMVORB)
-        if(xcs%useMVORB) call messages_experimental('DensityBasedMixing')
+        xcs%useMVORB = .false.
+        if(xcs%functional(FUNC_X,1)%id == XC_HYB_GGA_MVORB_HSE06 & 
+              .or. xcs%functional(FUNC_X,1)%id == XC_HYB_GGA_MVORB_PBEH) then
+          xcs%useMVORB = .true.
+        end if
 
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
