@@ -619,37 +619,39 @@ contains
     FLOAT,                       intent(out) :: ekin_state(:)
     FLOAT,                       intent(out) :: epot_state(:)
 
-    integer :: ist, ip
-    FLOAT   :: qq, q_square_exp, laplace_exp
-    FLOAT, allocatable :: psi(:, :), psi_q_square(:, :)
-    FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:, :)
+    integer :: ist, dim_photon
+    FLOAT   :: qq, q2_exp, laplace_exp
+    FLOAT, allocatable :: psi(:, :), psi_q2(:), dpsidq(:), d2psidq2(:)
 
     PUSH_SUB(calc_photon_number)
 
+    ! The photon dimension is always the last
+    dim_photon = gr%mesh%sb%dim
+
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
-    SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np, 1))
-    SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(psi_q2(1:gr%mesh%np))
+    SAFE_ALLOCATE(dpsidq(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(d2psidq2(1:gr%mesh%np))
 
     photon_number = M_ZERO
 
     do ist = 1, st%nst
       call states_elec_get_state(st, gr%mesh, ist, 1, psi)
 
-      ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
-      call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .true.)
-      call dderivatives_grad(gr%der, grad_psi(1:gr%mesh%np_part, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .true.)
-      laplace_exp = dmf_dotp(gr%mesh, psi(:, 1), grad_square_psi(:, 2))
+      ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)
+      call dderivatives_partial(gr%der, psi(:, 1), dpsidq(:), dim_photon, ghost_update = .true., set_bc = .true.)
+      call dderivatives_partial(gr%der, dpsidq(1:gr%mesh%np_part), d2psidq2(:), dim_photon, ghost_update = .true., set_bc = .true.)
+      laplace_exp = dmf_dotp(gr%mesh, psi(:, 1), d2psidq2(:))
       ekin_state(ist) = -M_HALF*laplace_exp
 
       ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
-      psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, 2)**2
-      q_square_exp = dmf_dotp(gr%mesh, psi(:, 1), psi_q_square(:, 1))
-      epot_state(ist) = M_HALF * dressed%omega**2 * q_square_exp
+      psi_q2(1:gr%mesh%np) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, dim_photon)**2
+      q2_exp = dmf_dotp(gr%mesh, psi(:, 1), psi_q2(:))
+      epot_state(ist) = M_HALF * dressed%omega**2 * q2_exp
 
       !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
       !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-      photon_number_state(ist) = -M_HALF*laplace_exp / dressed%omega + M_HALF * dressed%omega * q_square_exp
+      photon_number_state(ist) = -M_HALF*laplace_exp / dressed%omega + M_HALF * dressed%omega * q2_exp
       photon_number_state(ist) = photon_number_state(ist) - M_HALF
 
       !! N_phot_total= sum_ist occ_ist*N_phot(ist)
@@ -659,9 +661,9 @@ contains
     photon_number =  photon_number - st%qtot/M_TWO
 
     SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(psi_q_square)
-    SAFE_DEALLOCATE_A(grad_psi)
-    SAFE_DEALLOCATE_A(grad_square_psi)
+    SAFE_DEALLOCATE_A(psi_q2)
+    SAFE_DEALLOCATE_A(dpsidq)
+    SAFE_DEALLOCATE_A(d2psidq2)
 
     POP_SUB(calc_photon_number)
   end subroutine calc_photon_number
