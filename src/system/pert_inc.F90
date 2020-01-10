@@ -374,14 +374,14 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
   !d^T v |f>
   SAFE_ALLOCATE(fout(1:gr%mesh%np_part, 1:1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*fin(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:1))
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
   forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*grad(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = -f_out(ip) + fout(ip, 1)
 
   SAFE_DEALLOCATE_A(grad)
@@ -712,21 +712,21 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
    
   !di^T dj^T v |f>
   forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
   !dj^T v di |f>
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
 
@@ -734,7 +734,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
   forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*tmp2(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
   forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) + tmp1(ip, 1)
 
   POP_SUB(X(ionic_perturbation_order_2))
@@ -793,12 +793,12 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
 
         !2<f|dj^T v di |f>
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*gpsi(ip, idim, idir)
-        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
+        call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1))
 
         !2<f|di^T dj^T v |f> 
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim)
-        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
+        call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1))
 
         matrix(jmat, imat) = matrix(jmat, imat) + dot*st%occ(ist, ik)*factor
