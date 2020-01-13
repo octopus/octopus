@@ -180,9 +180,6 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
       call calc_mvorb_alpha()
     end if
 
-    if(exx_op%user_defined_cam) then
-      call exx_fix_cam_param(exx_op)
-    end if
   end if
 
 
@@ -820,44 +817,6 @@ contains
 
     POP_SUB(xc_get_vxc.calc_mvorb_alpha)
   end subroutine calc_mvorb_alpha
-
-
- ! ---------------------------------------------------------
-
-  subroutine exx_fix_cam_param(exx_op)
-    type(exchange_operator_t) :: exx_op
-
-#ifdef HAVE_LIBXC4
-    FLOAT :: parameters(3)
-#endif
-
-    PUSH_SUB(xc_get_vxc.exx_fix_cam_param)
-
-    select case(functl(FUNC_C)%id)
-    case(XC_HYB_GGA_XC_HSE06)
-#ifdef HAVE_LIBXC4
-      parameters(1) = exx_op%cam_beta
-      parameters(2) = xcs%cam_omega
-      parameters(3) = xcs%cam_omega
-      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters(1))
-#else
-      call XC_F90(hyb_gga_xc_hse_set_par)(functl(FUNC_C)%conf, exx_op%cam_beta, xcs%cam_omega)
-#endif
-      xcs%cam_beta = exx_op%cam_beta
-
-    case(XC_HYB_GGA_XC_PBEH)
-#ifdef HAVE_LIBXC4
-      call messages_not_implemented("User-defined CAM parameters with PBE0 and libxc >= 4.0", namespace=namespace)
-#else
-      call XC_F90(hyb_gga_xc_pbeh_set_par)(functl(FUNC_C)%conf, exx_op%cam_alpha)
-#endif
-      xcs%cam_alpha = exx_op%cam_alpha
-    case default
-      call messages_not_implemented("User-defined CAM parameters for functionals other than PBE0 and HSE06", namespace=namespace)
-    end select
-
-    POP_SUB(xc_get_vxc.exx_fix_cam_param)
-  end subroutine exx_fix_cam_param
 
 
   ! ---------------------------------------------------------

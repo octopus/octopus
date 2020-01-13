@@ -73,8 +73,6 @@ module exchange_operator_oct_m
     FLOAT :: cam_alpha
     FLOAT :: cam_beta
 
-    logical :: user_defined_cam
-
     type(scdm_t)  :: scdm
   end type exchange_operator_t
  
@@ -90,8 +88,6 @@ contains
     this%cam_omega = M_ZERO
     this%cam_alpha = M_ZERO
     this%cam_beta  = M_ZERO
-
-    this%user_defined_cam = .false.
 
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
@@ -112,27 +108,6 @@ contains
     this%cam_alpha = alpha
     this%cam_beta  = beta
 
-    !%Variable UserDefinedCamParameters
-    !%Type block
-    !%Section Hamiltonian::XC
-    !%Description
-    !% (Experimental) This variable allows to define the CAM parameters of an range-separated hybrid
-    !% thus overwriting the values that are returned by libxc.
-    !% The values are defined in order as omega, alpha, and beta.
-    !% If the functional does not depends on these parameters, the value is simply ignored by the code.
-    !% At the moment only the weight of the exact exchange term can be tuned, and this is only implemented for the HSE06 or the PBE0 functionals.
-    !%End
-    if(parse_block(namespace, 'UserDefinedCamParameters', blk)==0) then
-      call parse_block_float(blk, 0, 0, this%cam_omega)
-      call parse_block_float(blk, 0, 1, this%cam_alpha)
-      call parse_block_float(blk, 0, 2, this%cam_beta)
-      call parse_block_end(blk) 
-      this%user_defined_cam = .true.
-      call messages_experimental('UserDefinedCamParameters')
-    else
-      this%user_defined_cam = .false. 
-    end if
-
     POP_SUB(exchange_operator_init)
   end subroutine exchange_operator_init
 
@@ -145,11 +120,9 @@ contains
 
     this%st => st
 
-    if(.not. this%user_defined_cam) then
-      this%cam_omega = omega
-      this%cam_alpha = alpha
-      this%cam_beta  = beta
-    end if
+    this%cam_omega = omega
+    this%cam_alpha = alpha
+    this%cam_beta  = beta
 
     POP_SUB(exchange_operator_reinit)
   end subroutine exchange_operator_reinit
