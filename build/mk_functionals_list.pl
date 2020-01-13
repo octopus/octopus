@@ -115,8 +115,10 @@ print OUT <<EOF;
 !% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
 !%Option hyb_gga_xc_mvorb_hse06   921000 
 !% Density-based mixing parameter of HSE06 (not from libxc).
+!% Does not work with libxc 4.0.0, but work with later releases.
 !%Option hyb_gga_xc_mvorb_pbeh    922000
 !% Density-based mixing parameter of PBEH (not from libxc).
+!% At the moment this is not supported for libxc >= 4.0.
 !%Option vdw_c_vdwdf      918000
 !% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.
 !%Option vdw_c_vdwdf2     919000
