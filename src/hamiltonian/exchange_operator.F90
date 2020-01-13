@@ -120,7 +120,7 @@ contains
     !% thus overwriting the values that are returned by libxc.
     !% The values are defined in order as omega, alpha, and beta.
     !% If the functional does not depends on these parameters, the value is simply ignored by the code.
-    !% At the moment only the weight of the exact can be tuned, and only for the HSE06 or the PBE0 functionals.
+    !% At the moment only the weight of the exact exchange term can be tuned, and this is only implemented for the HSE06 or the PBE0 functionals.
     !%End
     if(parse_block(namespace, 'UserDefinedCamParameters', blk)==0) then
       call parse_block_float(blk, 0, 0, this%cam_omega)
