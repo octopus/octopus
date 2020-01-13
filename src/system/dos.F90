@@ -143,7 +143,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
-    type(dos_t),              intent(in) :: this
+    type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb

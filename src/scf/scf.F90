@@ -1031,8 +1031,8 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
+          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
@@ -1090,7 +1090,7 @@ contains
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
+          call write_magnetic_moments(stdout, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         end if
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
@@ -1185,7 +1185,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
+        call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 

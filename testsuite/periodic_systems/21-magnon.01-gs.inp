@@ -1,0 +1,48 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+
+ParKPoints = 2
+ParDomains = 2
+
+PeriodicDimensions = 3
+
+a =  2.856*angstrom
+
+PseudopotentialSet = pseudodojo_lda
+SpeciesProjectorSphereThreshold = 0.05
+
+Spacing = 0.6
+
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ -0.5| 0.5 | 0.5
+ 0.5 |-0.5 | 0.5
+ 0.5 | 0.5 |-0.5
+%
+
+%ReducedCoordinates
+ "Fe" |   0.0    | 0.0     | 0.0 
+%
+
+%KPointsGrid
+ 2 | 2 | 2
+%
+
+Smearing = 0.1*eV
+SmearingFunction = fermi_dirac
+ExtraStates = 3
+
+ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
+EigensolverMaxIter = 50
+
+SpinComponents = spinors
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 0 | 0 | 2
+%

@@ -1,0 +1,32 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Dressed RDMFT
+Program    : octopus
+TestGroups : short-run, functionals
+Enabled    : Yes
+
+
+Input: 16-dressed-rdmft.01-ip.inp
+match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; IP energy                     ; GREPFIELD(static/info, 'Total       =', 3) ; -1.58545076
+match ; IP eigenvalue                 ; GREPFIELD(static/info, '  1   --', 3) ; -0.792725
+
+Input: 16-dressed-rdmft.02-hf.inp
+Precision: 0.001
+match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
+Precision: 1e-8
+match ; dHF converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.780547043815
+match ; dHF highest occupation number ; GREPFIELD(static/info, 'Natural occupation numbers', 2, 2) ; 2.0
+Precision: 1e-6
+match ; dHF total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ;0.066690295387
+
+
+Input: 16-dressed-rdmft.03-rdmft.inp
+Precision: 0.001
+match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+Precision: 1.e-04
+match ; dRDMFT converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.888984225125
+Precision: 0.0004
+match ; dRDMFT total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 0.083088691071
+Precision: 0.003
+match ; dRDMFT highest occupation number ; GREPFIELD(static/info, 'Natural occupation numbers', 2, 2) ; 1.9237626622815

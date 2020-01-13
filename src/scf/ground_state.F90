@@ -107,9 +107,11 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    if(sys%ks%theory_level /= RDMFT) then
+      call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    end if
 
-    if(fromScratch) then
+    if (fromScratch .and. sys%ks%theory_level /= RDMFT) then
       call lcao_run(sys, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
@@ -128,8 +130,7 @@ contains
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
       call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc, fromScratch)
-      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
-        restart_dump)
+      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, restart_dump)
       call rdmft_end(rdm, sys%gr)
     else
       if(.not. fromScratch) then
@@ -140,9 +141,10 @@ contains
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
           restart_dump=restart_dump)
       end if
+
+      call scf_end(scfv)
     end if
 
-    call scf_end(scfv)
     call restart_end(restart_dump)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()

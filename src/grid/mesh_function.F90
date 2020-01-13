@@ -55,6 +55,8 @@ module mesh_function_oct_m
     zmf_dotp_aux,          &
     dmf_multipoles,        &
     zmf_multipoles,        &
+    dmf_dipole,            &
+    zmf_dipole,            &
     dmf_local_multipoles,  &
     zmf_local_multipoles,  &
     mesh_init_mesh_aux,    &

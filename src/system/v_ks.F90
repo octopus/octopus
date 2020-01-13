@@ -1303,7 +1303,7 @@ contains
           kick_real = M_ZERO
           kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
@@ -1327,7 +1327,7 @@ contains
           kick_real = M_ZERO
           kick_time =((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if

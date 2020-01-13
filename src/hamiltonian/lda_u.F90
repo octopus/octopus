@@ -20,6 +20,7 @@
 
 module lda_u_oct_m
   use atomic_orbital_oct_m
+  use boundaries_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
@@ -556,7 +557,7 @@ contains
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
-    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
+    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries, namespace)
   else
     !In case there is no phase, we perform the orthogonalization here
     if(this%basis%orthogonalization) then
@@ -597,15 +598,19 @@ contains
 
 
  !> Build the phase correction to the global phase for all orbitals
- subroutine lda_u_build_phase_correction(this, sb, std, namespace, vec_pot, vec_pot_var)
+ subroutine lda_u_build_phase_correction(this, sb, std, boundaries, namespace, vec_pot, vec_pot_var)
    type(lda_u_t),                 intent(inout) :: this
    type(simul_box_t),             intent(in)    :: sb 
    type(states_elec_dim_t),       intent(in)    :: std
+   type(boundaries_t),            intent(in)    :: boundaries
    type(namespace_t),             intent(in)    :: namespace
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
    integer :: ios
+
+   if(boundaries%spiralBC) call messages_not_implemented("DFT+U with spiral boundary conditions.", &
+                                                            namespace=namespace)
  
    !In this case there is no phase difference, as the basis come from states on the full 
    !grid and not from spherical meshes around the atoms

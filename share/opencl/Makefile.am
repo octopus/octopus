@@ -36,6 +36,7 @@ dist_opencl_DATA =              \
 	subarray.cl             \
 	density.cl              \
 	phase.cl                \
+	phase_spiral.cl         \
 	mesh_batch.cl           \
 	rotate.cl               \
 	points.cl               \

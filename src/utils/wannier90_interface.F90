@@ -1332,7 +1332,8 @@ contains
       end do
     end do
  
-    call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
+    call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, &
+                                               dummyphase)
  
     SAFE_DEALLOCATE_A(eigk)
     SAFE_DEALLOCATE_A(hk_eigenval)

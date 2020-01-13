@@ -350,6 +350,7 @@ noinst_HEADERS +=                             \
 
 # Sources in poisson
 poisson_f_srcs =                                 \
+	poisson/dressed_interaction.F90          \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \
@@ -371,7 +372,8 @@ noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
-	poisson/poisson_init_direct_inc.F90
+	poisson/poisson_init_inc.F90             \
+	poisson/poisson_direct_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \
@@ -679,6 +681,7 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-local_multipoles \
                  oct-conductivity \
                  oct-floquet \
+                 oct-spin_susceptibility \
                  oct-wannier90 \
                  oct-unfold
 
@@ -764,6 +767,10 @@ oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) 
 			utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+oct_spin_susceptibility_SOURCES = $(all_srcs) utils/spin_susceptibility.F90
+oct_spin_susceptibility_LINK = $(FCLINK)
+oct_spin_susceptibility_LDADD = $(all_LIBS)
+
 
 oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) \
                         $(basis_set_srcs) $(poisson_srcs) $(states_srcs) $(grid_srcs) \

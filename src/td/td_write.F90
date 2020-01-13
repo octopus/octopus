@@ -109,7 +109,8 @@ module td_write_oct_m
     OUT_SEPARATE_VELOCITY= 23, &
     OUT_SEPARATE_FORCES  = 24, &
     OUT_TOTAL_HEAT_CURRENT = 25, &
-    OUT_MAX              = 25
+    OUT_TOT_M            = 26, &
+    OUT_MAX              = 26
   
   integer, parameter ::      &
     OUT_DFTU_EFFECTIVE_U = 1, &
@@ -284,6 +285,10 @@ contains
     !% Writes forces in a separate file.
     !%Option total_heat_current bit(24)
     !% Output the total heat current (average of the heat current density over the cell).
+    !%Option total_magnetization bit(25)
+    !% Writes the total magnetization, where the total magnetization is calculated at the momentum
+    !% defined by <tt>TDMomentumTransfer</tt>. 
+    !% This is used to extract the magnon frequency in case of a magnon kick.
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -669,6 +674,11 @@ contains
         call write_iter_init(writ%out(OUT_N_EX)%handle, first, &
           units_from_atomic(units_out%time, dt),  &
           trim(io_workpath("td.general/n_ex", namespace)))
+    
+     if(writ%out(OUT_TOT_M)%write) &
+        call write_iter_init(writ%out(OUT_TOT_M)%handle, first, &
+          units_from_atomic(units_out%time, dt), &
+          trim(io_workpath("td.general/total_magnetization", namespace)))
       
     end if
     
@@ -794,6 +804,9 @@ contains
 
     if(writ%out(OUT_MAGNETS)%write) &
       call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, geo, writ%lmm_r, iter)
+
+    if(writ%out(OUT_TOT_M)%write) &
+      call td_write_tot_mag(writ%out(OUT_TOT_M)%handle, gr, st, kick, iter)
 
     if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
@@ -1002,7 +1015,7 @@ contains
 
     !get the atoms` magnetization. This has to be calculated by all nodes
     SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
-    call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
+    call magnetic_local_moments(gr%mesh, st, geo, gr%der%boundaries, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
@@ -1041,6 +1054,67 @@ contains
 
     POP_SUB(td_write_local_magnetic_moments)
   end subroutine td_write_local_magnetic_moments
+
+  ! ---------------------------------------------------------
+  subroutine td_write_tot_mag(out_magnets, gr, st, kick, iter)
+    type(c_ptr),              intent(inout) :: out_magnets
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(in)    :: st
+    type(kick_t),             intent(in)    :: kick
+    integer,                  intent(in)    :: iter
+
+    character(len=50) :: aux
+    CMPLX, allocatable :: tm(:,:)
+    integer :: ii, iq
+
+    PUSH_SUB(td_write_tot_mag)
+
+    SAFE_ALLOCATE(tm(1:6,1:kick%nqvec))
+
+    do iq = 1, kick%nqvec
+      call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector(:,iq), tm(1:6,iq))
+    end do
+
+    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
+
+      if(iter ==0) then
+        call td_write_print_header_init(out_magnets)
+        call kick_write(kick, out = out_magnets)
+
+        !second line -> columns name
+        call write_iter_header_start(out_magnets)
+        call write_iter_header(out_magnets, 'Re[m_x(q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(q)]')
+        call write_iter_header(out_magnets, 'Re[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(-q)]')
+        call write_iter_nl(out_magnets)
+
+        call td_write_print_header_end(out_magnets)
+      end if
+
+      call write_iter_start(out_magnets)
+      do iq = 1, kick%nqvec
+        do ii = 1, 6
+          call write_iter_double(out_magnets, real(tm(ii, iq),REAL_PRECISION), 1)
+          call write_iter_double(out_magnets, aimag(tm(ii, iq)), 1)
+        end do
+      end do
+      call write_iter_nl(out_magnets)
+    end if
+
+    SAFE_DEALLOCATE_A(tm)
+
+    POP_SUB(td_write_tot_mag)
+  end subroutine td_write_tot_mag
+
 
 
   ! ---------------------------------------------------------
@@ -1257,7 +1331,7 @@ contains
       else ! sin or cos
         write(aux, '(a15)')       '# qvector      '
         do idir = 1, gr%mesh%sb%dim
-          write(aux2, '(f9.5)') kick%qvector(idir)
+          write(aux2, '(f9.5)') kick%qvector(idir,1)
           aux = trim(aux) // trim(aux2)
         end do
       end if
@@ -1293,7 +1367,7 @@ contains
       integrand = M_ZERO
       do is = 1, st%d%nspin
         forall(ip = 1:gr%mesh%np)
-          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:)))
+          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
         end forall
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)

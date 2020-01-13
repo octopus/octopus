@@ -362,6 +362,115 @@ end subroutine X(hamiltonian_elec_base_phase)
 
 ! ---------------------------------------------------------------------------------------
 
+subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
+  type(hamiltonian_elec_base_t),         intent(in)    :: this
+  type(derivatives_t),                   intent(in)    :: der
+  class(wfs_elec_t),                     intent(inout) :: psib
+
+  integer               :: ip, ii, sp
+  integer, allocatable  :: spin_label(:)
+  type(accel_mem_t)     :: spin_label_buffer 
+  type(profile_t), save :: phase_prof
+  integer :: wgsize
+
+
+  PUSH_SUB(X(hamiltonian_elec_base_phase_spiral))
+  call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
+
+  call profiling_count_operations(R_MUL*dble(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
+
+
+
+  ASSERT(der%boundaries%spiral)
+
+  sp = der%mesh%np
+  if(der%mesh%parallel_in_domains) sp = der%mesh%np + der%mesh%vp%np_ghost
+
+
+  select case(psib%status())
+  case(BATCH_PACKED)
+
+    !$omp parallel do private(ip, ii)
+    do ip = sp + 1, der%mesh%np_part
+      do ii = 1, psib%nst_linear, 2
+        if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
+          psib%pack%X(psi)(ii+1, ip) = psib%pack%X(psi)(ii+1, ip)*this%phase_spiral(ip-sp, 1)
+        else
+          psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip-sp, 2)
+        end if
+      end do
+     end do
+    !$omp end parallel do
+
+  case(BATCH_NOT_PACKED)
+
+    !$omp parallel private(ii, ip)
+    do ii = 1, psib%nst_linear, 2
+      if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
+        !$omp do
+        do ip = sp + 1, der%mesh%np_part
+          psib%states_linear(ii+1)%X(psi)(ip) = psib%states_linear(ii+1)%X(psi)(ip)*this%phase_spiral(ip-sp, 1)
+        end do
+        !$omp end do nowait
+      else
+        !$omp do
+        do ip = sp + 1, der%mesh%np_part
+          psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip-sp, 2)
+        end do
+        !$omp end do nowait
+      end if
+    end do
+    !$omp end parallel
+
+  case(BATCH_DEVICE_PACKED)
+
+    ASSERT(accel_is_enabled())
+
+    ! generate array of offsets for access of psib and phase_spiral:
+    ! TODO: Move this to the routine where spin(:,:,:) is generated
+    !       and also move the buffer to the GPU at this point to
+    !       avoid unecessary latency here!
+ 
+    SAFE_ALLOCATE(spin_label(1:psib%nst_linear))
+    spin_label = 0
+    do ii=1, psib%nst_linear, 2
+      if(this%spin(3, psib%linear_to_ist(ii), psib%ik) > 0) spin_label(ii)=1
+    end do
+
+    call accel_create_buffer(spin_label_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, psib%nst_linear)
+    call accel_write_buffer(spin_label_buffer, psib%nst_linear, spin_label)
+
+    call accel_kernel_start_call(kernel_phase_spiral, 'phase_spiral.cl', 'phase_spiral_apply')
+
+    call accel_set_kernel_arg(kernel_phase_spiral, 0, psib%nst) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 1, sp) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 2, der%mesh%np_part) 
+    call accel_set_kernel_arg(kernel_phase_spiral, 3, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel_phase_spiral, 4, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(kernel_phase_spiral, 5, this%buff_phase_spiral)
+    call accel_set_kernel_arg(kernel_phase_spiral, 6, spin_label_buffer)
+
+    wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack%size(1)
+
+    call accel_kernel_run(kernel_phase_spiral, &
+                          (/psib%pack%size(1)/2, pad(der%mesh%np_part - sp, 2*wgsize)/), &
+                          (/psib%pack%size(1)/2, 2*wgsize/))
+
+    call accel_finish()
+
+    call accel_release_buffer(spin_label_buffer)
+
+    SAFE_DEALLOCATE_A(spin_label)
+
+  end select
+
+  call profiling_out(phase_prof)
+  POP_SUB(X(hamiltonian_elec_base_phase_spiral))
+end subroutine X(hamiltonian_elec_base_phase_spiral)
+
+
+! ---------------------------------------------------------------------------------------
+
 subroutine X(hamiltonian_elec_base_rashba)(this, mesh, der, std, psib, vpsib)
   type(hamiltonian_elec_base_t),  intent(in)    :: this
   type(mesh_t),                   intent(in)    :: mesh
@@ -498,10 +607,11 @@ end subroutine X(hamiltonian_elec_base_magnetic)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, psib, projection)
+subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, projection)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                     intent(in)    :: mesh
   type(states_elec_dim_t),          intent(in)    :: std
+  type(boundaries_t),               intent(in)    :: bnd
   type(wfs_elec_t),                 intent(in)    :: psib
   type(projection_t),               intent(out)   :: projection
 
@@ -509,7 +619,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, psib, projecti
   integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
   type(projector_matrix_t), pointer :: pmat
-  integer :: padnprojs, lnprojs, size
+  integer :: padnprojs, lnprojs, size, idim
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
@@ -664,26 +774,59 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, psib, projecti
       end if
 
     else
-      
-      if(psib%is_packed()) then
-        !$omp parallel do private(ist)
-        do ip = 1, npoints
-          do ist = 1, nst
-            lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, psib%ik)
-          end do
-        end do
-
-      else
-
-        do ist = 1, nst
-          !$omp parallel do
+       if(.not. bnd%spiral) then 
+        if(psib%is_packed()) then
+          !$omp parallel do private(ist)
           do ip = 1, npoints
-            lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, psib%ik)
+            do ist = 1, nst
+              lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+            end do
           end do
-        end do
+
+        else
+
+          do ist = 1, nst
+            !$omp parallel do
+            do ip = 1, npoints
+              lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+            end do
+          end do
+
+        end if
+      else
+        if(psib%is_packed()) then
+         !$omp parallel do private(ist)
+         do ip = 1, npoints
+           do ist = 1, nst, 2
+             if(this%spin(3,psib%linear_to_ist(ist), psib%ik)>0) then
+               lpsi(ist, ip)   = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+               lpsi(ist+1, ip) = psib%pack%X(psi)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 2, psib%ik)
+             else 
+               lpsi(ist, ip)   = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 3, psib%ik)
+               lpsi(ist+1, ip) = psib%pack%X(psi)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+             end if
+           end do
+         end do
+
+       else
+
+         do ist = 1, nst
+           if(this%spin(3, psib%linear_to_ist(ist), psib%ik) > 0 .and. psib%linear_to_idim(ist)==2) then
+             idim = 2
+           else if(this%spin(3, psib%linear_to_ist(ist), psib%ik) < 0 .and. psib%linear_to_idim(ist)==1) then
+             idim = 3
+           else
+             idim = 1
+           end if
+           !$omp parallel do
+           do ip = 1, npoints
+             lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, idim, psib%ik)
+           end do
+         end do
+
+        end if
 
       end if
-
     end if
 
     if(pmat%is_cmplx) then
@@ -724,16 +867,17 @@ end subroutine X(hamiltonian_elec_base_nlocal_start)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, projection, vpsib)
+subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projection, vpsib)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
-  type(mesh_t),                          intent(in)    :: mesh
-  type(states_elec_dim_t),               intent(in)    :: std
-  type(projection_t),            target, intent(inout) :: projection
-  type(wfs_elec_t),                      intent(inout) :: vpsib
+  type(mesh_t),                     intent(in)    :: mesh
+  type(states_elec_dim_t),          intent(in)    :: std
+  type(boundaries_t),               intent(in)    :: bnd
+  type(projection_t),       target, intent(inout) :: projection
+  class(wfs_elec_t),                intent(inout) :: vpsib
 
   integer :: ist, ip, imat, nreal, iprojection
+  CMPLX  :: phase, phase_pq, phase_mq
   integer :: npoints, nprojs, nst, iproj, idim
-  CMPLX  :: phase
   R_TYPE, allocatable :: psi(:, :)
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: reduce_prof
@@ -867,26 +1011,69 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, std, projection, v
           end do
         end if
       else
-        ! and copy the points from the local buffer to its position
-        if(vpsib%is_packed()) then
-          !$omp parallel do private(ip, ist, phase) if(.not. this%projector_self_overlap)
-          do ip = 1, npoints
-            phase = conjg(this%projector_phases(ip, imat, vpsib%ik))
-            forall(ist = 1:nst)
-              vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
-                          + psi(ist, ip)*phase
-            end forall
-          end do
-          !$omp end parallel do
-        else
-          do ist = 1, nst
-            !$omp parallel do if(.not. this%projector_self_overlap)
+        if(.not. bnd%spiral) then
+          ! and copy the points from the local buffer to its position
+          if(vpsib%is_packed()) then
+            !$omp parallel do private(ip, ist, phase)
             do ip = 1, npoints
-              vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
-                  + psi(ist, ip)*conjg(this%projector_phases(ip, imat, vpsib%ik))
+              phase = conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
+              forall(ist = 1:nst)
+                vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                            + psi(ist, ip)*phase
+              end forall
             end do
             !$omp end parallel do
-          end do
+          else
+            do ist = 1, nst
+              !$omp parallel do
+              do ip = 1, npoints
+                vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
+                    + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
+              end do
+              !$omp end parallel do
+            end do
+          end if
+        else
+          ! and copy the points from the local buffer to its position
+          if(vpsib%is_packed()) then
+            !$omp parallel do private(ip, ist, phase, phase_pq, phase_mq) if(.not. this%projector_self_overlap)
+            do ip = 1, npoints
+              phase = conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
+              phase_pq = conjg(this%projector_phases(ip, imat, 2, vpsib%ik))
+              phase_mq = conjg(this%projector_phases(ip, imat, 3, vpsib%ik))
+              do ist = 1, nst, 2
+                if(this%spin(3, vpsib%linear_to_ist(ist), vpsib%ik) > 0) then
+                  vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                              + psi(ist, ip)*phase
+                  vpsib%pack%X(psi)(ist+1, pmat%map(ip)) = vpsib%pack%X(psi)(ist+1, pmat%map(ip)) &
+                              + psi(ist+1, ip)*phase_pq
+                else
+                  vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                              + psi(ist, ip)*phase_mq
+                  vpsib%pack%X(psi)(ist+1, pmat%map(ip)) = vpsib%pack%X(psi)(ist+1, pmat%map(ip)) &
+                              + psi(ist+1, ip)*phase
+                end if
+              end do
+            end do
+            !$omp end parallel do
+          else
+            do ist = 1, nst
+              if(this%spin(3, vpsib%linear_to_ist(ist), vpsib%ik) > 0 .and. vpsib%linear_to_idim(ist) == 2) then
+                idim = 2
+              else if(this%spin(3, vpsib%linear_to_ist(ist), vpsib%ik) < 0 .and. vpsib%linear_to_idim(ist) == 1) then
+                idim = 3
+              else
+                idim = 1
+              end if
+              !$omp parallel do if(.not. this%projector_self_overlap)
+              do ip = 1, npoints
+                vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
+                    + psi(ist, ip)*conjg(this%projector_phases(ip, imat, idim, vpsib%ik))
+              end do
+              !$omp end parallel do
+            end do
+          end if
+
         end if
       end if
       call profiling_count_operations(nst*npoints*R_ADD)
@@ -1084,7 +1271,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
             forall(idir = 0:ndim)
-              psi(idir, ist, ip) = this%projector_phases(ip, imat, iqn)*psi(idir, ist, ip)
+              psi(idir, ist, ip) = this%projector_phases(ip, imat, psi1b%linear_to_idim(ist), psi1b%ik)*psi(idir, ist, ip)
             end forall
           end forall
         end forall
@@ -1227,7 +1414,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   R_TYPE :: aa, bb, cc, dd
   R_TYPE, allocatable :: projections(:, :, :)
   R_TYPE, allocatable :: psi(:, :, :)
-  CMPLX :: phase
+  CMPLX :: phase(2)
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
@@ -1333,11 +1520,11 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              phase = this%projector_phases(ip, imat, psib%ik)
-              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
+              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1353,11 +1540,11 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              phase = this%projector_phases(ip, imat, psib%ik)
-              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
-              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase
+              phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
+              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1451,9 +1638,9 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
         do idir = 0, 3
           !$omp parallel do private(ip, ist, phase)
           do ip = 1, npoints
-            phase = conjg(this%projector_phases(ip, imat, psib%ik))
+            phase(1:std%dim) = conjg(this%projector_phases(ip, imat, 1:std%dim, psib%ik))
             forall(ist = 1:nst)
-              psi(ist, ip, idir) = phase*psi(ist, ip, idir)
+              psi(ist, ip, idir) = phase(psib%linear_to_idim(ist))*psi(ist, ip, idir)
             end forall
           end do
           !$omp end parallel do

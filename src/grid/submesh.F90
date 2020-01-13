@@ -20,6 +20,7 @@
   
 module submesh_oct_m
   use batch_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -77,7 +78,6 @@ module submesh_oct_m
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
-    
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
@@ -292,7 +292,7 @@ contains
         exit
       end if
     end do
-    
+
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(xtmp)
 

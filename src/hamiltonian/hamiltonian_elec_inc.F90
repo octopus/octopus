@@ -151,6 +151,11 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     hpsib%has_phase = .true.
   end if
 
+  !Apply the spiral BC if needed
+  if(hm%der%boundaries%spiral .and. apply_phase) then
+    call X(hamiltonian_elec_base_phase_spiral)(hm%hm_base, hm%der, epsib)
+  end if
+
   if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
     call profiling_in(prof_kinetic_start, "KINETIC_START")
@@ -160,7 +165,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_elec_base_nlocal_start)(hm%hm_base, mesh, hm%d, epsib, projection)
+      call X(hamiltonian_elec_base_nlocal_start)(hm%hm_base, mesh, hm%d, hm%der%boundaries, epsib, projection)
     end if
   end if
 
@@ -182,9 +187,9 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   ! and the non-local one
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_elec_base_nlocal_finish)(hm%hm_base, mesh, hm%d, projection, hpsib)
+      call X(hamiltonian_elec_base_nlocal_finish)(hm%hm_base, mesh, hm%der%boundaries, hm%d, projection, hpsib)
     else
-      call X(project_psi_batch)(mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib)
+      call X(project_psi_batch)(mesh, hm%der%boundaries, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib)
     end if
   end if
   
