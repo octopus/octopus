@@ -663,7 +663,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
 
     if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
     if(present(mask)) then
-      if(all(mask(minst:maxst) .eqv. .true.)) cycle
+      if(all(mask(minst:maxst))) cycle
     end if
  
     call X(mesh_batch_mf_dotp)(mesh, st%group%psib(ib, iqn), phi, ss(minst:maxst), reduce = .false., nst = maxst-minst+1)
@@ -704,7 +704,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
 
     if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
     if(present(mask)) then
-      if(all(mask(minst:maxst) .eqv. .true.)) cycle
+      if(all(mask(minst:maxst))) cycle
     end if
 
     call X(mesh_batch_mf_axpy)(mesh, -ss(minst:maxst), st%group%psib(ib, iqn), phi, nst = maxst-minst+1) 
