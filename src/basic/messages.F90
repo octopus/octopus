@@ -624,8 +624,6 @@ contains
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
 
-    type(block_t) :: blk
-    
     call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
