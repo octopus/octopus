@@ -413,8 +413,8 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof_hamiltonian
-    logical :: pack
-    integer :: terms_
+!    logical :: pack
+!    integer :: terms_
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
@@ -521,8 +521,8 @@ contains
     type(states_mxll_t),      intent(inout) :: hst
     FLOAT, optional,          intent(in)    :: time
 
-    integer :: ik, ib
-    FLOAT, allocatable :: psi(:, :)
+!    integer :: ik, ib
+!    FLOAT, allocatable :: psi(:, :)
   
     PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
@@ -980,7 +980,6 @@ contains
 
     integer            :: ip, ip_in, il, np_part
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
-    FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_curl_e(:,:), tmp_curl_b(:,:)
     CMPLX              :: ff_plus(3), ff_minus(3)
 
     PUSH_SUB(maxwell_medium_boxes_calculation)
@@ -1142,9 +1141,10 @@ contains
     type(states_mxll_t),      intent(in)    :: st
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 
-    integer            :: idim, rankmin, ip_local, ip_global, ii, jj, kk, ip, ip_in
-    FLOAT              :: pos(3), dmin
-    CMPLX              :: surface_integral(3)
+    integer            :: idim, ip, ip_in
+!    integer            :: rankmin, ip_local, ip_global, ii, jj, kk
+!    FLOAT              :: pos(3), dmin
+!    CMPLX              :: surface_integral(3)
     CMPLX, allocatable :: field_old(:,:), ztmp(:,:), tmp_poisson(:)
 
     PUSH_SUB(maxwell_helmholtz_decomposition_trans_field)
@@ -1234,7 +1234,8 @@ contains
     CMPLX,               intent(in)    :: field(:,:)
     CMPLX,               intent(inout) :: surface_integral(:)
 
-    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+!    integer             :: idim
     FLOAT               :: xx(3)
     CMPLX               :: tmp_sum(3), normal(3)
     CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)
