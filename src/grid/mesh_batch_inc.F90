@@ -673,10 +673,8 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   integer :: ist, idim, indb, ip
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
-  type(accel_kernel_t), pointer :: kernel
-  type(accel_mem_t)  :: nrm2_buffer, one_buffer, scratch_buffer
+  type(accel_mem_t)  :: nrm2_buffer
   type(profile_t), save :: prof
-  integer :: wgsize, local_size_1, local_size_2
 
   PUSH_SUB(X(priv_mesh_batch_nrm2))
   call profiling_in(prof, 'MESH_BATCH_NRM2')
@@ -794,10 +792,9 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   integer, optional, intent(in)    :: gs_scheme
 
   logical :: normalize_
-  integer :: ist, idim, is
+  integer :: ist, is
   R_TYPE, allocatable   :: nrm2(:)
   R_TYPE, allocatable  :: ss(:,:), ss_full(:,:)
-  integer :: block_size, size, sp, ep
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
   logical :: drcgs
