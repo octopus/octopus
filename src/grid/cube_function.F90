@@ -59,11 +59,11 @@ module cube_function_oct_m
 
   type cube_function_t
     ! Components are public by default
-    FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
-    CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
-    CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
-    logical            :: forced_alloc !< Forced to be allocated even when PFFT is associated with the cube
-    logical            :: in_device_memory
+    FLOAT, pointer    :: dRS(:, :, :)  !< real-space grid
+    CMPLX, pointer    :: zRS(:, :, :)  !< real-space grid, complex numbers
+    CMPLX, pointer    :: FS(:, :, :)   !< Fourier-space grid
+    logical           :: forced_alloc !< Forced to be allocated even when PFFT is associated with the cube
+    logical           :: in_device_memory
     type(accel_mem_t) :: real_space_buffer
     type(accel_mem_t) :: fourier_space_buffer
   end type cube_function_t
