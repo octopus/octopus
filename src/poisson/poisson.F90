@@ -710,15 +710,17 @@ contains
     type(derivatives_t), pointer :: der
     logical :: all_nodes_value
 
+    type(profile_t), save :: prof
+
     der => this%der
 
     PUSH_SUB(zpoisson_solve_real_and_imag_separately)
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    call profiling_in(prof, 'POISSON_RE_IM_SOLVE')
+
+    ASSERT(.not. any(abs(this%qq(:))>CNST(1e-8)))
+
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     SAFE_ALLOCATE(aux1(1:der%mesh%np))
     SAFE_ALLOCATE(aux2(1:der%mesh%np))
@@ -737,6 +739,8 @@ contains
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
 
+    call profiling_out(prof)
+
     POP_SUB(zpoisson_solve_real_and_imag_separately)
   end subroutine zpoisson_solve_real_and_imag_separately
 
@@ -749,18 +753,25 @@ contains
     logical, optional,    intent(in)    :: all_nodes
 
     logical :: all_nodes_value
+    type(profile_t), save :: prof
 
     PUSH_SUB(zpoisson_solve)
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
+
+    ASSERT(ubound(pot, dim = 1) == this%der%mesh%np_part .or. ubound(pot, dim = 1) == this%der%mesh%np)
+    ASSERT(ubound(rho, dim = 1) == this%der%mesh%np_part .or. ubound(rho, dim = 1) == this%der%mesh%np)
 
     ASSERT(this%method /= POISSON_NULL)
 
-    call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+    if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
+      !We add the profiling here, as the other path uses dpoisson_solve
+      call profiling_in(prof, 'ZPOISSON_SOLVE')
+      call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+      call profiling_out(prof)
+    else
+      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+    end if
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
@@ -826,11 +837,7 @@ contains
     ASSERT(ubound(rho, dim = 1) == der%mesh%np_part .or. ubound(rho, dim = 1) == der%mesh%np)
 
     ! Check optional argument and set to default if necessary.
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     ASSERT(this%method /= POISSON_NULL)
       
