@@ -127,7 +127,7 @@ contains
     integer :: ist, ip, ispin
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    CMPLX, allocatable :: psi(:), fpsi(:), zpsi(:, :)
+    CMPLX, allocatable :: psi(:), fpsi(:)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     integer            :: wgsize
@@ -503,7 +503,6 @@ contains
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
-#if defined(HAVE_MPI) 
 
       do ik = st%d%kpt%start, st%d%kpt%end
         !We cound how many states we have to send, and how many we  will receive
@@ -530,14 +529,18 @@ contains
           else
             if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
               call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+#if defined(HAVE_MPI)
               call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
                     st%mpi_grp%comm, mpi_err)
+#endif
               nsend = nsend -1
-            end if          
+            end if
 
             if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
+#if defined(HAVE_MPI)
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
                  ist, st%mpi_grp%comm, status, mpi_err)
+#endif
               call states_elec_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
               nreceiv= nreceiv-1
             end if
@@ -546,6 +549,7 @@ contains
       end do
 
       ! Add a barrier to ensure that the process are synchronized
+#if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
    

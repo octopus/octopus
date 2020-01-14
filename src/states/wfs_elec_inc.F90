@@ -25,8 +25,6 @@ subroutine X(wfs_elec_init_contiguous)(this, dim, st_start, st_end, psi, ik)
   integer,          intent(in)    :: ik
   R_TYPE,   target, intent(in)    :: psi(:, :, st_start:)
 
-  integer :: ist
-
   PUSH_SUB(X(wfs_elec_init_contiguous))
 
   this%ik = ik
