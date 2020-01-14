@@ -32,6 +32,7 @@ module output_oct_m
   use etsf_io
   use etsf_io_tools
 #endif
+  use exchange_operator_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
@@ -652,7 +653,7 @@ contains
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
 
     integer :: idir, ierr
     character(len=80) :: fname
@@ -908,7 +909,7 @@ contains
     type(namespace_t),         intent(in) :: namespace
     character(len=*),          intent(in) :: dir
     type(hamiltonian_elec_t),  intent(in) :: hm
-    type(v_ks_t),              intent(in) :: ks
+    type(v_ks_t),           intent(inout) :: ks
     type(states_elec_t),       intent(in) :: st
     type(derivatives_t),       intent(in) :: der
     type(geometry_t),          intent(in) :: geo
@@ -948,7 +949,7 @@ contains
       ASSERT(.not. gr%have_fine_mesh)
 
       call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-        -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
+        -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end forall
@@ -1195,7 +1196,7 @@ contains
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
 
@@ -1239,7 +1240,7 @@ contains
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
     call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-      -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+      -minval(st%eigenval(st%nst, :)), st%qtot, hm%exxop, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"

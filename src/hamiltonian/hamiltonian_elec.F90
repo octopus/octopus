@@ -27,6 +27,7 @@ module hamiltonian_elec_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
+  use exchange_operator_oct_m
   use hamiltonian_elec_base_oct_m
   use epot_oct_m
   use gauge_field_oct_m
@@ -94,10 +95,6 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_update2,             &
     hamiltonian_elec_get_time,            &
     hamiltonian_elec_apply_packed,        &
-    dexchange_operator_single,       &
-    zexchange_operator_single,       &
-    dscdm_exchange_operator,         &
-    zscdm_exchange_operator,         &
     zhamiltonian_elec_apply_atom,         &
     hamiltonian_elec_dump_vhxc,           &
     hamiltonian_elec_load_vhxc,           &
@@ -146,8 +143,6 @@ module hamiltonian_elec_oct_m
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT, private :: mass_scaling(MAX_DIM)
 
-    !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
-    type(states_elec_t), pointer :: hf_st
     !> use the SCDM method to compute the action of the Fock operator
     logical :: scdm_EXX
 
@@ -172,6 +167,7 @@ module hamiltonian_elec_oct_m
 
     logical, private :: time_zero
 
+    type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
 
   contains
@@ -397,8 +393,6 @@ contains
         call parse_block_end(blk)
     end if
 
-    nullify(hm%hf_st)
-
     hm%inh_term = .false.
     call oct_exchange_remove(hm%oct_exchange)
 
@@ -475,7 +469,7 @@ contains
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%scdm, namespace, hm%hf_st, hm%der, hm%psolver%cube)
+      call scdm_init(hm%scdm, namespace, st, hm%der, hm%psolver%cube)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -501,6 +495,10 @@ contains
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
+
+    !Cam parameters are irrelevant here and are updated later
+    call exchange_operator_nullify(hm%exxop)
+    call exchange_operator_init(hm%exxop, namespace, hm%d, gr%sb, gr%mesh, M_ONE, M_ZERO, M_ZERO)
 
     if (hm%apply_packed .and. accel_is_enabled()) then
       ! Check if we can actually apply the hamiltonian packed
@@ -675,14 +673,8 @@ contains
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
+    call exchange_operator_end(hm%exxop)
     call lda_u_end(hm%lda_u)
-
-    ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
-    if(associated(hm%hf_st))  then
-      if(hm%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%hf_st)
-      call states_elec_end(hm%hf_st)
-      SAFE_DEALLOCATE_P(hm%hf_st)
-    end if
 
     SAFE_DEALLOCATE_P(hm%energy)
 
