@@ -22,6 +22,7 @@ module poisson_fft_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
+  use fourier_shell_oct_m
   use fourier_space_oct_m
   use global_oct_m
   use loct_math_oct_m
@@ -188,10 +189,6 @@ contains
     gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
     gg(1:3) = gg(1:3) * temp(1:3)
     gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
-! MJV 27 jan 2015 this should not be necessary
-!    do idir = 1, 3
-!      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
-!    end do
 
     modg2 = sum(gg(1:3)**2)
 
@@ -207,31 +204,47 @@ contains
     FLOAT :: temp(3), modg2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
+    FLOAT :: ekin_cutoff    
+    logical :: apply_full_space
 
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+
+    apply_full_space = .false.
+    if( any(abs(this%qq(:))>CNST(1e-8))) apply_full_space = .true.
+
+
+    ekin_cutoff = fourier_shell_cutoff(cube, mesh, apply_full_space, dg = temp)
 
     ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
-
-    do ix = 1, cube%fs_n_global(1)
-      ixx(1) = pad_feq(ix, db(1), .true.)
+    ! According to the conventions of plane-wave codes, e.g. Quantum ESPRESSO,
+    ! PARATEC, EPM, and BerkeleyGW, if the FFT grid is even, then neither
+    ! nfft/2 nor -nfft/2 should be a valid G-vector component.
+    do iz = 1, cube%fs_n_global(3)
+      ixx(3) = pad_feq(iz, db(3), .true.)
+      if(2 * ixx(3) == db(3)) cycle
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(3)
-          ixx(3) = pad_feq(iz, db(3), .true.)
+        if(2 * ixx(2) == db(2)) cycle
+        do ix = 1, cube%fs_n_global(1)
+          ixx(1) = pad_feq(ix, db(1), .true.)
+          if(2 * ixx(1) == db(1)) cycle
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+
+         !We only keep closed shells
+         if(M_HALF*modg2 > ekin_cutoff) cycle
 
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 
           if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
           else
             fft_Coulb_FS(ix, iy, iz) = M_ZERO
           end if
@@ -239,10 +252,6 @@ contains
       end do
 
     end do
-
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
 
     call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
 
