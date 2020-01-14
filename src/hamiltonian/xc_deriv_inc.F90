@@ -258,7 +258,6 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
         end select
 
       elseif (vxc_requested) then ! we just get the potential
-        l_zk(:) = M_ZERO
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
@@ -351,7 +350,9 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
         end if
       end if
 
-      call copy_local_to_global(l_vrho, dedd, n_block, spin_channels, ip)
+      if(vxc_requested) then
+        call copy_local_to_global(l_vrho, dedd, n_block, spin_channels, ip)
+      end if
       
       ! calculate the spin unpolarized exchange potential for the long range correction
       if(xcs%xc_density_correction == LR_X .and. &
