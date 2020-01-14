@@ -536,7 +536,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 end subroutine X(mesh_batch_mf_dotp)
 
 ! --------------------------------------------------------------------------
-! This routines adds a contain of a batch, weighted, to a single mesh function
+! This routine performs a set of axpy operations for each mesh function x of a batch, 
+! and accumulate the result to y, a single mesh function.
 subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   type(mesh_t),      intent(in)    :: mesh
   class(batch_t),    intent(in)    :: xx
