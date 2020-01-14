@@ -1,0 +1,114 @@
+#!/bin/sh
+
+die()
+{
+  _ret=$2
+  test -n "$_ret" || _ret=1
+  test "$_PRINT_HELP" = yes && print_help >&2
+  echo "$1" >&2
+  exit ${_ret}
+}
+
+# THE DEFAULT INITIALIZATIONS
+_arg_dir="./"
+_arg_check_only=0
+_arg_silent=0
+
+print_help()
+{
+  printf '%s\n' "This script runs the findent on all the files with .F90 extension in ./ and its subdirectories and if findent changes any of the files it returns 1 otherwise, returns 0."
+  printf 'Usage: %s [-d|--dir <arg>] [--check-only] [-h|--help]\n' "$0"
+  printf '\t%s\n' "-d, --dir: directory of the files to check (./ by default)"
+  printf '\t%s\n' "--check-only: Only check the files with findent and do not fix them (off by default)"
+  printf '\t%s\n' "-s, --silent: Don't show the differences (off by default)"
+  printf '\t%s\n' "-h, --help: Print help (this text!)"
+}
+
+
+parse_commandline()
+{
+  while test $# -gt 0
+  do
+    _key="$1"
+    case "$_key" in
+      -d|--dir)
+        test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+        _arg_dir="$2"
+        shift
+        ;;
+      --dir=*)
+        _arg_dir="${_key##--dir=}"
+        ;;
+      -d*)
+        _arg_dir="${_key##-d}"
+        ;;
+      --check-only)
+        _arg_check_only=1
+        ;;
+      -s|--silent)
+        _arg_silent=1
+        ;;
+      -h|--help)
+        print_help
+        exit 0
+        ;;
+      -h*)
+        print_help
+        exit 0
+        ;;
+      *)
+        _PRINT_HELP=yes die "FATAL ERROR: Unexpected argument '$1'" 1
+        ;;
+    esac
+    shift
+  done
+}
+
+parse_commandline "$@"
+
+echo "Checking the files in $(realpath "$_arg_dir") using $(./findent -v)"
+tmp_file="findent_batch.tmp"
+difference=0
+changed=0
+unchanged=0
+correct=0
+for file in $(find "$_arg_dir" -type f -name '*.F90'); do
+  case "$file" in
+    *loct_pointer_inc.F90) continue ;; #issue with the TYPE* statements
+    *) ./findent -i2 -c2 < "$file" > "$tmp_file" ;;
+  esac
+
+  if [ "$_arg_silent" = 0 ]
+  then
+    diff "$file" "$tmp_file"
+  else
+    diff "$file" "$tmp_file" >/dev/null
+  fi
+  retval=$?
+
+  if [ "$retval" = 1 ]
+  then
+    if [ "$_arg_check_only" = 0 ]
+    then
+      echo "$file had not been properly indentated!"
+      mv -f "$tmp_file" "$file"
+      changed=$((changed + 1))
+    else
+      echo "$file have not been properly indentated!"
+     unchanged=$((unchanged + 1))
+     fi
+    difference=1
+  else
+    correct=$((correct + 1))
+  fi
+done
+
+rm -f "$tmp_file"
+
+echo "$(( changed + unchanged + correct )) files checked"
+echo "$correct files were correctly indented."
+echo "$changed incorrectly indented files got fixed!"
+echo "$unchanged incorrectly indented files left unchanged!"
+
+exit $difference
+
