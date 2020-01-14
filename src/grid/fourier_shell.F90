@@ -53,18 +53,34 @@ contains
     logical,         intent(in)  :: is_wfn
     FLOAT, optional, intent(out) :: dg(:) !< (3)
 
-    FLOAT :: dg_(3)
+    integer :: ii
+    FLOAT :: dg_(3), gg(3), ng(3)
 
     PUSH_SUB(fourier_shell_cutoff)
 
-    ! FIXME: what about anisotropic spacing?
-    dg_(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
+    dg_(1:3) = M_TWO*M_PI/(cube%rs_n_global(1:3)*mesh%spacing(1:3))
     if(present(dg)) dg(1:3) = dg_(1:3)
-    if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
-      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2-2))**2/M_TWO
-    else
-      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2))**2/M_TWO
-    end if
+
+    ! Neither nfft/2 nor -nfft/2 should be a valid G-vector component.
+    ! Therefore these points should not be considered for the
+    ! calculation of the radius of the largest closed shell
+    ng(1:3) = cube%rs_n_global(1:3)
+    do ii=1, 3
+      if(ng(ii) == 2*nint(ng(ii)/M_TWO)) ng(ii) = ng(ii) - 1
+    end do
+
+    fourier_shell_cutoff = M_HUGE
+    do ii = 1, 3
+      gg(1:3) = M_ZERO
+      if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
+        gg(ii) = aint(ng(ii)/2-1)
+      else
+        gg(ii) = aint(ng(ii)/2)
+      end if
+      gg(1:3) = matmul(mesh%sb%klattice(1:3,1:3),gg(1:3))
+      fourier_shell_cutoff = min(fourier_shell_cutoff, sum(gg(1:3)**2))
+    end do
+    fourier_shell_cutoff = fourier_shell_cutoff/M_TWO
 
     POP_SUB(fourier_shell_cutoff)
   end function fourier_shell_cutoff
