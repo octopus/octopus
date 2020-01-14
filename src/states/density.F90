@@ -294,7 +294,7 @@ contains
       end do
 
 
-      ! For this to work again, a namespace has to be available. I don't make
+      ! For this to work again, a namespace has to be available. I don`t make
       ! the change now because this debugging output has been commented out for
       ! 4 years. - SO
       ! some debugging output that I will keep here for the moment, XA
