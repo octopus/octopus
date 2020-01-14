@@ -238,7 +238,7 @@ contains
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
 
          !We only keep closed shells
-         if(M_HALF*modg2 > ekin_cutoff) cycle
+         !if(M_HALF*modg2 > ekin_cutoff) cycle
 
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
