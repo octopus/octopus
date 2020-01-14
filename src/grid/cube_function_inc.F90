@@ -225,9 +225,12 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
     ASSERT(associated(cf%X(rs)))
 
-    !$omp parallel workshare
-    cf%X(rs) = M_ZERO
-    !$omp end parallel workshare
+    !For 3D periodic, there is no need to initialize with zeros
+    if(.not.(mesh%sb%dim == 3 .and. mesh%sb%periodic_dim == 3)) then
+      !$omp parallel workshare
+      cf%X(rs) = M_ZERO
+      !$omp end parallel workshare
+    end if
 
     ASSERT(associated(mesh%cube_map%map))
     ASSERT(mesh%sb%dim <= 3)
