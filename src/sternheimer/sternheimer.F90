@@ -287,6 +287,10 @@ contains
 
     FLOAT, allocatable :: rho(:, :)
 
+    ! This needs to be modified for the GGA fxc:
+    ! We need to provide space for the vector function
+
+
     PUSH_SUB(sternheimer_build_fxc)
 
     SAFE_ALLOCATE(this%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))

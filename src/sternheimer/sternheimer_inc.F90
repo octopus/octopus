@@ -507,6 +507,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
   FLOAT, optional,        intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
+  ! add optional GGA fx terms
 
   R_TYPE, allocatable :: tmp(:), hartree(:)
   integer :: np, ip, ispin, ispin2
@@ -546,6 +547,10 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
         hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + fxc(1:np, ispin, ispin2)*lr_rho(1:np, ispin2)
       end do
     end if
+
+    ! here we can add the gradient terms of fxc_GGA if present:
+    ! first calculate the gradient of lr_rho and then multiply by fxc_gradient
+
   end do
   
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))

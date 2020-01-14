@@ -63,8 +63,8 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   FLOAT, allocatable :: l_vtau(:,:)     ! Derivative of the energy wrt tau
   !  Second order partial derivatives
   FLOAT, allocatable :: l_v2rho2(:,:)       ! Second Derivative of the energy wrt the density
-  FLOAT, allocatable :: l_v2rhosigma(:,:,:) ! Second Derivative of the energy wrt the density and sigma
-  FLOAT, allocatable :: l_v2sigma2(:,:,:)   ! Second Derivative of the energy wrt sigma
+  FLOAT, allocatable :: l_v2rhosigma(:,:) ! Second Derivative of the energy wrt the density and sigma
+  FLOAT, allocatable :: l_v2sigma2(:,:)   ! Second Derivative of the energy wrt sigma
   FLOAT, allocatable :: l_v2rhotau(:,:)     ! Second Derivative of the energy wrt the density and tau
   FLOAT, allocatable :: l_v2tau2(:,:)       ! Second Derivative of the energy wrt tau
   
@@ -83,7 +83,10 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
   FLOAT, allocatable :: dedldens(:,:)  ! Derivative of the exchange or correlation energy wrt the laplacian of the density
   !  Second order (functional) derivatives
-  FLOAT, allocatable :: d2ed2d(:,:)       ! Second Derivative of the xc energy wrt density, density
+  FLOAT, allocatable :: d2ed2d(:,:,:)     ! Second Derivative of the xc energy wrt density, density
+
+  ! Think about how to best encode the indices of second derivs wrt gradients
+
   FLOAT, allocatable :: d2edddgd(:,:,:)   ! Second Derivative of the xc energy wrt density, gradient of the density
   FLOAT, allocatable :: d2ed2gd(:,:,:,:)  ! Second Derivative of the xc energy wrt gradient, gradient
   FLOAT, allocatable :: d2ed2ldens(:,:)   ! Second Derivative of the xc energy wrt the laplacian of the density
@@ -109,8 +112,8 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   nullify(ec_per_vol)
   
   vxc_requested = present(vxc)
-  fxc_requested = present(fxc) .and. .false. ! switched off for testing
-  kxc_requested = present(kxc) .and. .false. ! switched off for testing
+  fxc_requested = present(fxc)
+  kxc_requested = present(kxc)
 
   ASSERT(present(ex) .eqv. present(ec))
   energy_requested = present(ex) .or. present(ex_density) .or. present(ec_density)
@@ -389,7 +392,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
         ! seems it would be better to allocate and deallocate these arrays outside the space loop.
         SAFE_DEALLOCATE_A(unp_dens)
         SAFE_DEALLOCATE_A(unp_dedd)
-      end if
+      end if ! long range correction
 
       if(family_is_gga(functl(ixc)%family).and.functl(ixc)%family /= XC_FAMILY_LIBVDWXC) then
         do ib = 1, n_block
@@ -619,6 +622,8 @@ contains
 
     PUSH_SUB(xc_get_derivatives.lda_init)
 
+    ! General parts (exc, vxc, fxc, ...)
+
     ! allocate some general arrays
 
     SAFE_ALLOCATE(dens(1:der%mesh%np_part, 1:spin_channels))
@@ -669,6 +674,14 @@ contains
       end do
 
     end select
+
+    ! fxc specific code:
+
+    if(fxc_requested) then
+
+      SAFE_ALLOCATE(d2ed2d(1:der%mesh%np_part, 1:spin_channels, 1:spin_channels))
+
+    end if
 
     POP_SUB(xc_get_derivatives.lda_init)
   end subroutine lda_init
@@ -874,23 +887,47 @@ contains
   subroutine local_allocate()
     integer :: ii
 
-    allocate(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
-    allocate(l_zk(1:N_BLOCK_MAX))
-    allocate(l_vrho(1:spin_channels, 1:N_BLOCK_MAX))
+    SAFE_ALLOCATE(l_dens(1:spin_channels, 1:N_BLOCK_MAX))
+
+    if(energy_requested) then
+      SAFE_ALLOCATE(l_zk(1:N_BLOCK_MAX))
+    endif
+
+    if(vxc_requested) then
+      SAFE_ALLOCATE(l_vrho(1:spin_channels, 1:N_BLOCK_MAX))
+    end if
 
     if(gga .or. xcs%xc_density_correction == LR_X) then
       ii = 1
       if(ispin /= UNPOLARIZED) ii = 3
 
-      allocate(l_sigma(1:ii, 1:N_BLOCK_MAX))
-      allocate(l_vsigma(1:ii, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_sigma (1:ii, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_vsigma(1:ii, 1:N_BLOCK_MAX))
     end if
 
     if(mgga) then
-      allocate(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_lapl(1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_vtau  (1:spin_channels, 1:N_BLOCK_MAX))
-      allocate(l_vlapl(1:spin_channels, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_lapl (1:spin_channels, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_vtau (1:spin_channels, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_vlapl(1:spin_channels, 1:N_BLOCK_MAX))
+    end if
+
+    if(fxc_requested) then
+
+      ! TODO: CHECK THE RANGES !!
+
+      SAFE_ALLOCATE(l_v2rho2     (1:ii, 1:N_BLOCK_MAX))
+
+      if(gga .or. xcs%xc_density_correction == LR_X) then
+        SAFE_ALLOCATE(l_v2rhosigma (1:ii, 1:N_BLOCK_MAX))
+        SAFE_ALLOCATE(l_v2sigma2   (1:ii, 1:N_BLOCK_MAX))
+
+        if(mgga) then
+          SAFE_ALLOCATE(l_v2rhotau(1:ii,1:N_BLOCK_MAX))
+          SAFE_ALLOCATE(l_v2tau2  (1:ii,1:N_BLOCK_MAX))
+        end if
+      end if
+
     end if
 
     end subroutine local_allocate
@@ -899,20 +936,40 @@ contains
   !> THREADSAFE (no SAFE ALLOCATE or PUSH/POP SUB)
   subroutine local_deallocate()
 
-    deallocate(l_dens)
-    deallocate(l_zk)
-    deallocate(l_vrho)
+    SAFE_DEALLOCATE_A(l_dens)
+    if(energy_requested) then
+      SAFE_DEALLOCATE_A(l_zk)
+    end if
+    if(vxc_requested) then
+      SAFE_DEALLOCATE_A(l_vrho)
+    end if
 
     if(gga .or. xcs%xc_density_correction == LR_X) then
-      deallocate(l_sigma)
-      deallocate(l_vsigma)
+      SAFE_DEALLOCATE_A(l_sigma)
+      SAFE_DEALLOCATE_A(l_vsigma)
     end if
 
     if(mgga) then
-      deallocate(l_tau)
-      deallocate(l_lapl)
-      deallocate(l_vtau)
-      deallocate(l_vlapl)
+      SAFE_DEALLOCATE_A(l_tau)
+      SAFE_DEALLOCATE_A(l_lapl)
+      SAFE_DEALLOCATE_A(l_vtau)
+      SAFE_DEALLOCATE_A(l_vlapl)
+    end if
+
+    if(fxc_requested) then
+
+      SAFE_DEALLOCATE_A(l_v2rho2)
+
+      if(gga .or. xcs%xc_density_correction == LR_X) then
+        SAFE_DEALLOCATE_A(l_v2rhosigma)
+        SAFE_DEALLOCATE_A(l_v2sigma2)
+
+        if(mgga) then
+          SAFE_DEALLOCATE_A(l_v2rhotau)
+          SAFE_DEALLOCATE_A(l_v2tau2)
+        end if
+      end if
+
     end if
 
   end subroutine local_deallocate
