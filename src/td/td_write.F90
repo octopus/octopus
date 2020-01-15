@@ -1063,7 +1063,6 @@ contains
     type(kick_t),             intent(in)    :: kick
     integer,                  intent(in)    :: iter
 
-    character(len=50) :: aux
     CMPLX, allocatable :: tm(:,:)
     integer :: ii, iq
 
