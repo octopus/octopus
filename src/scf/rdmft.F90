@@ -475,7 +475,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      integer :: iunit, ist, idir
+      integer :: iunit, ist
       FLOAT :: photon_number
       FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
@@ -620,7 +620,7 @@ contains
     FLOAT,                       intent(out) :: epot_state(:)
 
     integer :: ist, dim_photon
-    FLOAT   :: qq, q2_exp, laplace_exp
+    FLOAT   :: q2_exp, laplace_exp
     FLOAT, allocatable :: psi(:, :), psi_q2(:), dpsidq(:), d2psidq2(:)
 
     PUSH_SUB(calc_photon_number)
@@ -675,7 +675,6 @@ contains
     type(states_elec_t), intent(inout) :: st
 
     FLOAT, allocatable ::  occin(:,:)
-    integer :: ist
 
     PUSH_SUB(set_occ_pinning)    
 
@@ -1178,7 +1177,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     FLOAT,               intent(in)    :: lambda(:, :)
     
-    integer :: iqn, iorb, jorb, ist
+    integer :: iorb, jorb, ist
     FLOAT, allocatable :: vecnat_new(:,:)
 
     PUSH_SUB(assign_eigenfunctions)
