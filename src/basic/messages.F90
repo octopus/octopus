@@ -121,6 +121,21 @@ module messages_oct_m
 
   type(debug_t), save :: debug
   
+  !> from signals.c
+  interface
+    subroutine get_signal_description(signum, signame)
+      implicit none
+      integer, intent(in) :: signum
+      character(len=*), intent(out) :: signame
+    end subroutine get_signal_description
+
+    subroutine trap_segfault()
+      implicit none
+    end subroutine trap_segfault
+  end interface
+
+
+
 contains
 
   ! ---------------------------------------------------------
