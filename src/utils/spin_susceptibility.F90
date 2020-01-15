@@ -39,18 +39,17 @@ program spin_susceptibility
 
   implicit none
 
-  integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr, ib, num_col, num_col_cart
-  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, n_rows, iq
-  FLOAT   :: dt, dt_ref, tt, ww, norm, dot
+  integer :: in_file, out_file, ii, jj, kk, ierr, ib, num_col, num_col_cart
+  integer :: time_steps, energy_steps, istart, iend, ntiter, iq
+  FLOAT   :: dt, tt, ww
   FLOAT, allocatable :: ftreal(:,:), ftimag(:,:)
   FLOAT, allocatable :: m_cart(:,:), magnetization(:,:,:)
   type(spectrum_t)  :: spectrum
-  type(block_t)     :: blk
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
-  character(len=MAX_PATH_LEN) :: ref_filename, fname
+  character(len=MAX_PATH_LEN) :: fname
   CMPLX, allocatable :: chi(:,:)
 
   ! Initialize stuff
