@@ -22,7 +22,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
 
-  FLOAT                :: prefactor, aa1, aa2, aa3, aa4, dressed_factor
+  FLOAT                :: prefactor, aa1, aa2, aa3, aa4
 
   integer              :: ip, jp
   integer              :: dim_ele   !< physical dimensions  (= dimensions of simulation box      if electrons only)

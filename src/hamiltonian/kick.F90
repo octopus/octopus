@@ -1006,7 +1006,7 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
     CMPLX, allocatable :: kick_pcm_function(:)
-    integer :: ns, idir, iq
+    integer :: ns, iq
     FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), Gvec(MAX_DIM,MAX_DIM)
     FLOAT :: xx(MAX_DIM), rr
 

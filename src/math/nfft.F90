@@ -232,7 +232,8 @@ contains
   subroutine nfft_write_info(nfft)
     type(nfft_t), intent(inout) :: nfft
 
-    integer :: idir, mm
+    integer :: idir
+!    integer :: mm
 
     PUSH_SUB(nfft_write_info)
 

@@ -1855,6 +1855,7 @@ contains
   integer pure function accel_max_size_per_dim(dim) result(size)
     integer, intent(in) :: dim
 
+    size = 0
 #ifdef HAVE_OPENCL
     size = 2**30
 #endif

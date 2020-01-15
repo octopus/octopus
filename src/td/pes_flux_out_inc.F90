@@ -160,11 +160,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
    
 
 
-  integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
+  integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, err
   FLOAT :: kpt(1:3),GG(1:3)
 
-  integer, allocatable :: Lkpt(:,:), idx(:,:), idx_inv(:,:), ikidx(:,:)
-  FLOAT, allocatable   :: LG_(:,:)
+  integer, allocatable :: Lkpt(:,:), ikidx(:,:)
 
   integer :: nkpt, kpth_dir, ig, igpt
   FLOAT :: zero_thr
@@ -487,8 +486,7 @@ subroutine pes_flux_map_from_state_1(restart, idx, np, psiG)
   CMPLX, target,    intent(out) :: psiG(:)
 
   character(len=80) :: filename, path
-  integer ::  err, iunit 
-  character(len=128) :: lines(2)
+  integer ::  err 
 
   PUSH_SUB(pes_flux_map_from_state_1)
 
@@ -524,7 +522,7 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
                                                         
 
   integer            :: iomk
-  integer            :: ikk, ith, iph, iphi
+  integer            :: ikk, ith, iph
   FLOAT              :: phik, thetak, kact, kvec(1:3)
   
   integer            :: ip1, ip2, ip3
@@ -597,12 +595,12 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
   integer, optional, intent(in)  :: istin 
 
   integer :: ik, ist, idim, itot, nkpt, ispin
-  integer :: i1, i2, i3, ip(1:3)
+  integer :: i1, i2, ip(1:3)
   integer :: idone, ntodo
   CMPLX   :: psiG1(1:this%nk, 1:this%nstepsomegak)
   CMPLX   :: psiG2(1:this%nk, 1:this%nstepsomegak)
   FLOAT   :: weight 
-  integer :: istart, iend, nst, ig
+  integer :: istart, iend, nst
   
   PUSH_SUB(pes_flux_map_from_states_elec_sph)
 
@@ -704,8 +702,7 @@ subroutine pes_flux_map_from_state_2(restart, idx, np, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:)
 
   character(len=80) :: filename, path
-  integer ::  err, iunit 
-  character(len=128) :: lines(2)
+  integer ::  err
 
   PUSH_SUB(pes_flux_map_from_state_2)
 
@@ -764,9 +761,7 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
   
-  integer :: iunit, ip, ie
-  FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
-  
+  integer :: iunit, ie
   
   PUSH_SUB(pes_flux_out_energy_pln)
 
@@ -1286,7 +1281,6 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   type(states_elec_t), intent(in)    :: st
   integer,             intent(out)   :: ierr
 
-  integer          :: stst, stend, kptst, kptend, sdim, mdim
   integer          :: ist, ik, idim, itot
   integer          :: err
   character(len=128) :: filename

@@ -841,7 +841,7 @@ contains
 
     type(pcm_t) :: pcm
     FLOAT :: dipole_pcm(1:3)
-    integer :: ia, it, ii
+    integer :: ia, it
 
     ! unit io variables
     integer :: asc_unit_test

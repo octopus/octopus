@@ -385,10 +385,6 @@ contains
       type(states_elec_t), intent(in) :: st
 
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(unocc_run.write_iter_)
 

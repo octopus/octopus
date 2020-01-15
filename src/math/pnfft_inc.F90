@@ -21,7 +21,7 @@ subroutine X(pnfft_forward)(pnfft, in, out)
   R_TYPE,           intent(in)  :: in(:,:,:)
   CMPLX,            intent(out) :: out(:,:,:)
 
-  integer :: i1, i2, i3
+!  integer :: i1, i2, i3
 
   PUSH_SUB(X(pnfft_forward))
 
@@ -75,7 +75,7 @@ subroutine X(pnfft_backward)(pnfft, in, out)
   CMPLX,            intent(in)  :: in (:,:,:)
   R_TYPE,           intent(out) :: out(:,:,:)
 
-  integer :: i1, i2, i3
+!  integer :: i1, i2, i3
 
   PUSH_SUB(X(pnfft_backward))
 

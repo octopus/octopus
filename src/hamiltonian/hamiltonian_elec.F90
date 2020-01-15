@@ -533,9 +533,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
-      integer :: idim
+      integer :: ip, ik, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      
 
       PUSH_SUB(hamiltonian_elec_init.init_phase)
 

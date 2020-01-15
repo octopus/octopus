@@ -624,7 +624,9 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
+#ifdef R_TCOMPLEX
   CMPLX, allocatable :: tmp_proj(:, :)
+#endif
 
   integer :: block_size
   integer :: size_unfolded

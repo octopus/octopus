@@ -370,7 +370,7 @@ contains
     type(states_elec_t), intent(in) :: st
     type(simul_box_t),   intent(in) :: sb
     
-    integer :: ik, ikk, ist
+    integer :: ik, ist
 
     FLOAT :: homo, lumo, egdir, egindir
     integer :: homok, lumok, egdirk
