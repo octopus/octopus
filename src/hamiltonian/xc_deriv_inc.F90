@@ -260,6 +260,8 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
       !elseif (vxc_requested) then ! we just get the potential
       else 
 
+        l_zk(:) = M_ZERO;
+
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
           call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_vrho(1,1))
@@ -901,20 +903,20 @@ contains
       SAFE_ALLOCATE(l_vrho(1:spin_channels, 1:N_BLOCK_MAX))
     ! end if
 
-    ! if(gga .or. xcs%xc_density_correction == LR_X) then
+    if(gga .or. xcs%xc_density_correction == LR_X) then
       ii = 1
       if(ispin /= UNPOLARIZED) ii = 3
 
       SAFE_ALLOCATE(l_sigma  (1:ii, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(l_vsigma (1:ii, 1:N_BLOCK_MAX))
-    ! end if
+    end if
 
-    ! if(mgga) then
+    if(mgga) then
       SAFE_ALLOCATE(l_tau  (1:spin_channels, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(l_lapl (1:spin_channels, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(l_vtau (1:spin_channels, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(l_vlapl(1:spin_channels, 1:N_BLOCK_MAX))
-    ! end if
+    end if
 
     if(fxc_requested) then
 
@@ -948,17 +950,17 @@ contains
       SAFE_DEALLOCATE_A(l_vrho)
     ! end if
 
-    ! if(gga .or. xcs%xc_density_correction == LR_X) then
+    if(gga .or. xcs%xc_density_correction == LR_X) then
       SAFE_DEALLOCATE_A(l_sigma)
       SAFE_DEALLOCATE_A(l_vsigma)
-    ! end if
+    end if
 
-    ! if(mgga) then
+    if(mgga) then
       SAFE_DEALLOCATE_A(l_tau)
       SAFE_DEALLOCATE_A(l_lapl)
       SAFE_DEALLOCATE_A(l_vtau)
       SAFE_DEALLOCATE_A(l_vlapl)
-    ! end if
+    end if
 
     if(fxc_requested) then
 
