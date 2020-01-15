@@ -215,6 +215,9 @@ contains
     apply_full_space = .false.
     if( any(abs(this%qq(:))>CNST(1e-8))) apply_full_space = .true.
 
+    if(apply_full_space) then
+      ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
+    end if
 
     ekin_cutoff = fourier_shell_cutoff(cube, mesh, apply_full_space, dg = temp)
 
@@ -227,18 +230,15 @@ contains
     ! nfft/2 nor -nfft/2 should be a valid G-vector component.
     do iz = 1, cube%fs_n_global(3)
       ixx(3) = pad_feq(iz, db(3), .true.)
-      if(2 * ixx(3) == db(3)) cycle
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        if(2 * ixx(2) == db(2)) cycle
         do ix = 1, cube%fs_n_global(1)
           ixx(1) = pad_feq(ix, db(1), .true.)
-          if(2 * ixx(1) == db(1)) cycle
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
 
          !We only keep closed shells
-         !if(M_HALF*modg2 > ekin_cutoff) cycle
+         if(M_HALF*modg2 > ekin_cutoff) cycle
 
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
