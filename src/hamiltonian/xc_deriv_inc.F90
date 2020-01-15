@@ -52,7 +52,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
   !  Input quantities
   FLOAT, allocatable :: l_dens(:,:)     ! Density 
   FLOAT, allocatable :: l_sigma(:,:)    ! Modulus squared of the gradient of the density
-  FLOAT, allocatable :: l_lapl(:,:)    ! Laplacian of the density
+  FLOAT, allocatable :: l_lapl(:,:)     ! Laplacian of the density
   FLOAT, allocatable :: l_tau(:,:)      ! Kinetic energy density
   !  Energy
   FLOAT, allocatable :: l_zk(:)
@@ -238,7 +238,7 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
       call profiling_in(prof_libxc, "LIBXC")
 
 
-      if(vxc_requested .and. energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+      if(energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
@@ -257,7 +257,8 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
           cycle
         end select
 
-      elseif (vxc_requested) then ! we just get the potential
+      !elseif (vxc_requested) then ! we just get the potential
+      else 
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
@@ -284,7 +285,9 @@ subroutine xc_get_derivatives(der, xcs, st, psolver, namespace, rho, ispin, ioni
           cycle
         end select
         
-      elseif (energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+      endif
+      !elseif (energy_requested .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+      if(.false.) then
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
@@ -902,7 +905,7 @@ contains
       ii = 1
       if(ispin /= UNPOLARIZED) ii = 3
 
-      SAFE_ALLOCATE(l_sigma (1:ii, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_sigma  (1:ii, 1:N_BLOCK_MAX))
       SAFE_ALLOCATE(l_vsigma (1:ii, 1:N_BLOCK_MAX))
     ! end if
 
