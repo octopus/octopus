@@ -1252,7 +1252,10 @@ contains
       write(number, '(f12.6)') tval
     end if
 
-    if(optional_default(align_left, .false.)) number = ' '//adjustl(number)
+    if(optional_default(align_left, .false.)) then
+      number = adjustl(number)
+      number(1:len(number)) = ' '//number(1:len(number)-1)
+    end if
 
     write(message(current_line), '(a, a)') trim(message(current_line)), trim(number)
 
