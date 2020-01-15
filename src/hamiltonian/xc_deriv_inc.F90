@@ -903,6 +903,7 @@ contains
       if(ispin /= UNPOLARIZED) ii = 3
 
       SAFE_ALLOCATE(l_sigma (1:ii, 1:N_BLOCK_MAX))
+      SAFE_ALLOCATE(l_vsigma (1:ii, 1:N_BLOCK_MAX))
     ! end if
 
     ! if(mgga) then
