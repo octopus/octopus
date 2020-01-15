@@ -237,8 +237,8 @@ contains
     integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
-    integer, parameter :: FATAL_TAG = 1620299
 #ifdef HAVE_MPI
+    integer, parameter :: FATAL_TAG = 1620299
     logical :: received
     integer :: send_req
 #endif

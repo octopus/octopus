@@ -137,8 +137,6 @@ contains
   subroutine poisson_libisf_end(this)
     type(poisson_libisf_t), intent(inout) :: this
 
-    character(len=*), parameter :: subname='Poisson_Solver'
-
     PUSH_SUB(poisson_libisf_end)
 
 #ifdef HAVE_LIBISF

@@ -287,7 +287,6 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     class(wfs_elec_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 

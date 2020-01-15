@@ -56,7 +56,6 @@
     FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
     integer :: ifreq, max_freq
     integer :: skip
-    FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
     type(namespace_t) :: default_namespace    
     character(len=120) :: header
