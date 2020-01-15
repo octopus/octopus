@@ -1736,15 +1736,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
          end do
        end if
      end if
-<<<<<<< HEAD
-
      force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim), REAL_PRECISION)
-
-=======
-
-     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim), REAL_PRECISION)
-
->>>>>>> 9d7824277349d8ff535dd6c99c41b52469aa079e
      if(this%intersite) then
        do ia = 1, natoms
          force(1:ndim, ia) = force(1:ndim, ia) + real(ffV(1:ndim,ia), REAL_PRECISION)
