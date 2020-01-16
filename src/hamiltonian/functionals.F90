@@ -116,7 +116,6 @@ contains
     FLOAT   :: parameters(2)
 #endif
     logical :: ok, lb94_modified
-    integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
     PUSH_SUB(xc_functl_init_functl)
 
@@ -285,7 +284,7 @@ contains
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
       call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable(namespace, 'Interaction1D', INT_SOFT_COULOMB, interact_1d)
+      call parse_variable(namespace, 'Interaction1D', OPTION__INTERACTION1D__INTERACTION_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
       !%Type float

@@ -60,6 +60,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
 
   ! Some hard-coded parameters.
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
+  integer, parameter  :: krylov_half = 7 ! Half the Krylov subspace size (rounded down).
 
   PUSH_SUB(X(eigensolver_plan))
 
@@ -119,7 +120,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
     if (d1 <= st%d%block_size) then !start from beginning
       blk = st%d%block_size
     else                   !restart to work on another set of eigen-pairs
-      blk = min(krylov/2, d1)
+      blk = min(krylov_half, d1)
     end if
 
     !copy next set of Ritz vector/initial guesses to vv

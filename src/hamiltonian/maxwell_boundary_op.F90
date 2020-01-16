@@ -1648,7 +1648,7 @@ contains
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
 
-    test_limit = 10**(-9)
+    test_limit = CNST(10.0e-9)
 
     !%Variable UserDefinedMaxwellIncidentWaves
     !%Type block

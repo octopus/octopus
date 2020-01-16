@@ -376,7 +376,6 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
   integer,                  intent(inout) :: converged
   integer,                  intent(in)    :: ik
 
-  integer, parameter :: sweeps = 5
   integer :: sd_steps
   integer :: isd, ist, minst, maxst, ib, ii
   FLOAT  :: ca, cb, cc

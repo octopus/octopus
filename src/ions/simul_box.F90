@@ -1106,7 +1106,6 @@ contains
     FLOAT,              intent(in) :: yy(:)
     type(namespace_t),  intent(in) :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
     logical :: in_box2(1)
 

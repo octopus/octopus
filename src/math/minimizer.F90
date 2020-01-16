@@ -276,7 +276,9 @@ contains
 
     type(c_ptr) :: opt
     integer :: ires
-    include 'nlopt.f'
+    ! The following values are taken from the 'nlopt.f' file installed by NLopt.
+    integer, parameter :: NLOPT_LD_LBFGS  = 11
+    integer, parameter :: NLOPT_LN_BOBYQA = 34
 
     select case(method)
     case(MINMETHOD_NLOPT_BOBYQA)
