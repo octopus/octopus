@@ -933,6 +933,9 @@ contains
     if (present(average_to_zero)) average_to_zero_ = average_to_zero
     average = M_z0 !this avoids a non-initialized warning
 
+    !If we perform complex ffts, the full cube need to be allocated
+    ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
+
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
