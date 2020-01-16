@@ -34,7 +34,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   R_TYPE  :: acc, acc_vector(1:3)
   FLOAT   :: weight, maxabsdiff, maxabs
   R_TYPE, pointer :: field_global(:), field_global_vector(:, :)
-  type(pv_t), pointer :: vp
 
   PUSH_SUB(X(symmetrizer_apply))
 
@@ -52,7 +51,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   end if
 
   ASSERT(associated(this%mesh))
-  vp => this%mesh%vp
 
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
@@ -64,7 +62,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
 #ifdef HAVE_MPI
-      call vec_allgather(vp, field_global, field)
+      call vec_allgather(this%mesh%vp, field_global, field)
 #endif
     else
       field_global => field
@@ -77,7 +75,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
 #ifdef HAVE_MPI
-        call vec_allgather(vp, field_global_vector(:, idir), field_vector(:, idir))
+        call vec_allgather(this%mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
 #endif
       end do
     else
@@ -146,7 +144,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   POP_SUB(X(symmetrizer_apply))
 end subroutine X(symmetrizer_apply)
 
-
 !The same as for symmetrizer_apply, but a single symmetry operation
 !Here iop can be negative, indicating the spatial symmetry plus time reversal symmetry
 subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
@@ -156,10 +153,8 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
   R_TYPE,              target, intent(in)    :: field(:) !< (np)
   R_TYPE,                      intent(out)   :: symmfield(:) !< (np)
 
-  integer :: ip, ipsrc, idir
-  FLOAT   :: weight, maxabsdiff, maxabs
+  integer :: ip
   R_TYPE, pointer :: field_global(:)
-  type(pv_t), pointer :: vp
   type(profile_t), save :: prof
 
   PUSH_SUB(X(symmetrizer_apply_single))
@@ -169,7 +164,6 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
   ASSERT(ubound(field, dim = 1) >= np)
   ASSERT(ubound(symmfield, dim = 1) >= np)
   ASSERT(associated(this%mesh))
-  vp => this%mesh%vp
 
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
@@ -180,7 +174,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
   if(this%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
 #ifdef HAVE_MPI
-    call vec_allgather(vp, field_global, field)
+    call vec_allgather(this%mesh%vp, field_global, field)
 #endif
   else
     field_global => field

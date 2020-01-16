@@ -103,10 +103,10 @@ contains
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         !At this point, this is already checked
-        forall(idir = 1:3) 
+        do idir = 1, 3
           srcpoint(idir) = srcpoint(idir)*lsize(idir)
           srcpoint_inv(idir) = srcpoint_inv(idir)*lsize(idir)
-        end forall
+        end do
 
         ! move back to reference to origin at corner of cell
         srcpoint = srcpoint + dble(int(lsize)/2)
