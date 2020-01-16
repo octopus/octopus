@@ -19,7 +19,7 @@
 !> supply field and symmfield, and/or field_vector and symmfield_vector
 subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfield_vector, &
           suppress_warning, reduced_quantity)
-  type(symmetrizer_t), target, intent(in)    :: this
+  type(symmetrizer_t),         intent(in)    :: this
   integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
@@ -147,7 +147,7 @@ end subroutine X(symmetrizer_apply)
 !The same as for symmetrizer_apply, but a single symmetry operation
 !Here iop can be negative, indicating the spatial symmetry plus time reversal symmetry
 subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
-  type(symmetrizer_t), target, intent(in)    :: this
+  type(symmetrizer_t),         intent(in)    :: this
   integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   integer,                     intent(in)    :: iop
   R_TYPE,              target, intent(in)    :: field(:) !< (np)
