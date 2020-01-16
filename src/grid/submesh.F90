@@ -27,6 +27,7 @@ module submesh_oct_m
   use messages_oct_m
   use sort_oct_m
   use mesh_oct_m
+  use mesh_cube_map_oct_m
   use mpi_oct_m
   use par_vec_oct_m
   use periodic_copy_oct_m
@@ -66,7 +67,10 @@ module submesh_oct_m
     zsubmesh_copy_from_mesh,     &
     dsubmesh_copy_from_mesh_batch,     &
     zsubmesh_copy_from_mesh_batch,     &
-    submesh_end
+    submesh_end,                 &
+    submesh_get_cube_dim,        &
+    submesh_init_cube_map,       &
+    submesh_end_cube_map
 
   type submesh_t
     ! Components are public by default
@@ -82,6 +86,8 @@ module submesh_oct_m
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
     integer,  allocatable :: global2local(:)
+    
+    type(mesh_cube_map_t) :: cube_map
   end type submesh_t
   
   interface submesh_add_to_mesh
@@ -721,6 +727,81 @@ contains
  
     POP_SUB(zzsubmesh_to_mesh_dotp)
   end function zzsubmesh_to_mesh_dotp
+
+  !------------------------------------------------------------
+  !> finds the dimension of a box containing the submesh
+  subroutine submesh_get_cube_dim(sm, db, dim)
+    type(submesh_t),   intent(in)  :: sm
+    integer,           intent(out) :: db(:)
+    integer,           intent(in)  :: dim
+
+    integer :: ip, idir
+    FLOAT :: chi(1:MAX_DIM)
+
+    PUSH_SUB(submesh_get_cube_dim)
+
+    db = 1
+
+    do ip = 1, sm%np
+      !TODO: should be curvilinear_x2chi here instead
+      chi(1:dim) = matmul(sm%x(ip,1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+      
+      do idir = 1, dim
+        db(idir) = max(db(idir), nint(abs(chi(idir))/sm%mesh%spacing(idir) + M_HALF))
+      end do
+    end do
+
+    do idir = 1, dim
+      db(idir) = 2 * db(idir) + 1
+    end do
+
+    POP_SUB(submesh_get_cube_dim)
+  end subroutine submesh_get_cube_dim
+
+  !------------------------------------------------------------
+  subroutine submesh_init_cube_map(sm, db, dim)
+    type(submesh_t),   intent(inout)  :: sm
+    integer,           intent(in)     :: db(:)
+    integer,           intent(in)     :: dim
+
+    integer :: ip, idir
+    FLOAT :: chi(1:MAX_DIM), shift(1:MAX_DIM)
+
+    PUSH_SUB(submesh_init_cube_map)
+
+    sm%cube_map%nmap = sm%np
+    SAFE_ALLOCATE(sm%cube_map%map(1:dim, sm%cube_map%nmap))
+
+    !The center of the submesh does not belong to the mesh
+    !So we first need to find the closest grid point, and center the cube to it
+    chi(1:dim) = matmul(sm%center(1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+    do idir = 1, dim
+      shift(idir) = nint(chi(idir)/sm%mesh%spacing(idir))*sm%mesh%spacing(idir)
+    end do
+    shift(1:dim) = matmul(sm%mesh%sb%rlattice_primitive(1:dim,1:dim), shift(1:dim)) 
+    shift(1:dim) = shift(1:dim) - sm%center(1:dim) 
+
+    do ip = 1, sm%np
+      !TODO: should be curvilinear_x2chi here instead
+      chi(1:dim) = matmul(sm%x(ip,1:dim) - shift(1:dim), sm%mesh%sb%klattice_primitive(1:dim, 1:dim))
+      do idir = 1, dim
+        sm%cube_map%map(idir,ip) = nint(chi(idir)/sm%mesh%spacing(idir))
+      end do
+    end do
+
+    POP_SUB(submesh_init_cube_map)
+  end subroutine submesh_init_cube_map
+
+  !------------------------------------------------------------
+  subroutine submesh_end_cube_map(sm)
+    type(submesh_t),   intent(inout)  :: sm
+
+    PUSH_SUB(submesh_end_cube_map)
+
+    call mesh_cube_map_end(sm%cube_map)
+
+    POP_SUB(submesh_end_cube_map)
+  end subroutine submesh_end_cube_map
 
 
 #include "undef.F90"

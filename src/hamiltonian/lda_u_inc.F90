@@ -1040,8 +1040,9 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, mesh, der, psolver)
+subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   type(lda_u_t),       intent(inout)  :: this
+  type(namespace_t),   intent(in)     :: namespace
   type(mesh_t),        intent(in)     :: mesh
   type(derivatives_t), intent(in)     :: der
   type(poisson_t),     intent(in)     :: psolver
@@ -1081,7 +1082,12 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, psolver)
 
     call submesh_build_global(os%sphere)
 
-    call poisson_init_sm(os%poisson, psolver, der, os%sphere) 
+    select case (this%sm_poisson)
+    case(DFT_U_POISSON_DIRECT)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
+    case(DFT_U_POISSON_ISF)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+    end select
  
     ijst=0
     do ist = 1, norbs
@@ -1098,7 +1104,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, psolver)
 
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
-
 
         klst=0
         do kst = 1, norbs
@@ -1134,7 +1139,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, psolver)
         end do !kst
       end do !jst
     end do !ist
-    call poisson_end(os%poisson)
+    call poisson_end(os%poisson, os%sphere)
 
     call submesh_end_global(os%sphere)
   end do !iorb
@@ -1146,7 +1151,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der, psolver)
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)
   end if
- 
+
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
   SAFE_DEALLOCATE_A(tmp)
