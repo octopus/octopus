@@ -287,7 +287,6 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     class(wfs_elec_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -888,8 +887,8 @@ contains
     FLOAT,          intent(in)    :: time
     FLOAT,          intent(inout) :: current(:,:)
 
-    integer :: ip, jn, idir, il
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), omega, shift, width, amp(MAX_DIM)
+    integer :: ip, jn, idir
+    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
 
     PUSH_SUB(external_current_calculation)

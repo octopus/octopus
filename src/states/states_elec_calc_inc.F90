@@ -207,7 +207,7 @@ contains
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
     R_TYPE, allocatable :: psii0(:, :)
-    integer :: method, ierr
+    integer :: method
     
     PUSH_SUB(X(states_elec_orthogonalization_full).mgs)
 
@@ -249,7 +249,7 @@ contains
 
         if(st%parallel_in_states) then
 #ifdef HAVE_MPI
-          call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, ierr)
+          call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, mpi_err)
 #endif
         end if
 

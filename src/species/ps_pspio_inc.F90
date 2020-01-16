@@ -376,7 +376,6 @@
     type(fpspio_pspdata_t), intent(in)    :: pspdata
 
     integer :: ir, nrc
-    FLOAT, parameter :: threshold = CNST(0.5e-7)
     type(fpspio_xc_t) :: xc
     FLOAT, allocatable :: rho(:)
 

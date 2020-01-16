@@ -622,7 +622,6 @@ contains
     logical,                  optional, intent(in)    :: imag_time
     class(batch_t),           optional, intent(inout) :: inh_psib
     
-    integer :: ii, ist
     CMPLX :: deltat_, deltat2_
 
     PUSH_SUB(exponential_apply_batch)
@@ -779,7 +778,7 @@ contains
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     class(batch_t),           optional, intent(in)    :: inh_psib
 
-    integer ::  iter, l, idim, bind, ii, ist
+    integer ::  iter, l, ii, ist
     CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
     FLOAT, allocatable :: beta(:), res(:), norm(:)
     class(batch_t), allocatable :: vb(:)

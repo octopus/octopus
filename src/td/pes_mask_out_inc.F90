@@ -411,8 +411,7 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
   character(len=80) :: filename
-  integer ::  np, err, iunit 
-  character(len=128) :: lines(2)
+  integer ::  np, err
 
   PUSH_SUB(pes_mask_map_from_state)
 

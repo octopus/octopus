@@ -229,8 +229,7 @@ contains
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
     integer :: idim, nlines, ncols, il
-    FLOAT   :: zero_dummy(MAX_DIM), pos(MAX_DIM)
-    character(len=1024)  :: string(MAX_DIM)
+    FLOAT   :: pos(MAX_DIM)
 
     PUSH_SUB(states_mxll_init)
 
@@ -681,7 +680,7 @@ contains
     type(states_mxll_t), intent(in)      :: st
     type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, mpi_err, pos_index_local, pos_index_global, rankmin, ip_global
+    integer :: ip, pos_index_local, pos_index_global, rankmin
     FLOAT   :: dmin
     CMPLX   :: ztmp(MAX_DIM)
     CMPLX, allocatable :: ztmp_global(:)

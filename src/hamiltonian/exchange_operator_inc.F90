@@ -65,7 +65,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
   R_TYPE, allocatable :: rho(:), pot(:)
   FLOAT :: qq(1:MAX_DIM) 
-  integer :: ikpoint, ikpoint2
+  integer :: ikpoint
 
   type(profile_t), save :: prof, prof2
 

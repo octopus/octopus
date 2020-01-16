@@ -337,7 +337,6 @@ contains
     integer :: ik, ist, idir, jdir, idim, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
-    logical, parameter :: hamiltonian_elec_current = .false.
 
     call profiling_in(prof, "STRESS_FROM_KEE")    
     PUSH_SUB(stress_from_kinetic_energy_electron)

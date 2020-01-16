@@ -159,10 +159,9 @@ contains
     integer,           optional, intent(in)  :: solver
 
     logical :: need_cube, isf_data_is_parallel
-    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library, idir
+    integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
     FLOAT :: fft_alpha
     character(len=60) :: str
-    type(block_t) :: blk
 
     if(this%method /= POISSON_NULL) return ! already initialized
 

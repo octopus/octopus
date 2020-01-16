@@ -100,8 +100,6 @@ contains
     type(mesh_t),              intent(in)    :: mesh
     FLOAT,                     intent(in)    :: omega, alpha, beta
 
-    type(block_t) :: blk
-
     PUSH_SUB(exchange_operator_init)
 
     this%cam_omega = omega
