@@ -763,7 +763,8 @@ contains
 
     ASSERT(this%method /= POISSON_NULL)
 
-    if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
+    if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED  &
+          .and. .not. this%is_dressed) then
       !We add the profiling here, as the other path uses dpoisson_solve
       call profiling_in(prof, 'ZPOISSON_SOLVE')
       call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map)
