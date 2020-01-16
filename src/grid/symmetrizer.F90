@@ -75,15 +75,15 @@ contains
 
     call profiling_in(prof, "SYMMETRIZER_INIT") 
 
-    lsize(1:3) = dble(mesh%idx%ll(1:3))
-    offset(1:3) = dble(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
+    lsize(1:3) = TOFLOAT(mesh%idx%ll(1:3))
+    offset(1:3) = TOFLOAT(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
     do ip = 1, mesh%np
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = dble(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
+        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
       else
-        destpoint(1:3) = dble(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
+        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
       end if
       ! offset moves corner of cell to origin, in integer mesh coordinates
 
@@ -91,7 +91,7 @@ contains
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - dble(int(lsize)/2)
+      destpoint = destpoint - TOFLOAT(int(lsize)/2)
 
       !convert to proper reduced coordinates
       forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
@@ -109,8 +109,8 @@ contains
         end do
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + dble(int(lsize)/2)
-        srcpoint_inv = srcpoint_inv + dble(int(lsize)/2)
+        srcpoint = srcpoint + TOFLOAT(int(lsize)/2)
+        srcpoint_inv = srcpoint_inv + TOFLOAT(int(lsize)/2)
 
         ! apply periodic boundary conditions in periodic directions
         do idir = 1, mesh%sb%periodic_dim
