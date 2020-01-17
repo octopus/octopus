@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, psolver, rdmft)
+subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, rdmft)
   type(exchange_operator_t), intent(inout) :: this 
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
@@ -27,7 +27,6 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   integer,                   intent(in)    :: ik
   R_TYPE,                    intent(in)    :: psi(:, :)
   R_TYPE,                    intent(inout) :: hpsi(:, :)
-  type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
   type(wfs_elec_t) :: psib, hpsib
@@ -39,7 +38,7 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   call wfs_elec_init(hpsib, st_d%dim, 1, ik)
   call hpsib%add_state(ist, hpsi)
 
-  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
+  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
 
   call psib%end()
   call hpsib%end()
@@ -49,14 +48,13 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
+subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
-  type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
@@ -143,7 +141,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
           call profiling_out(prof)
 
           !and V_ij
-          call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+          call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
 
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
@@ -176,7 +174,7 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib, psolver)
+subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
@@ -184,7 +182,6 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
   FLOAT,                     intent(in)    :: exx_coef
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
-  type(poisson_t),           intent(in)    :: psolver
 
   integer :: ibatch, ip, idim, ik2, ist
   FLOAT   :: ff
@@ -227,7 +224,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
         end forall
       end do
 
-      call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+      call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
 
       ff = this%st%occ(ist, ik2)
       if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
@@ -255,7 +252,7 @@ end subroutine X(exchange_operator_hartree_apply)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree, psolver)
+subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(scdm_t),              intent(in)    :: scdm
@@ -265,7 +262,6 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
   class(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,                     intent(in)    :: exx_coef
   logical,                   intent(in)    :: hartree
-  type(poisson_t),           intent(in)    :: psolver
 
   integer :: ist, jst, ip, idim, ik2, ibatch
   integer :: ii, jj, kk, ll, count

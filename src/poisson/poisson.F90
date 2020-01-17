@@ -147,7 +147,7 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, qq, solver)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, qq, solver, verbose, force_serial, force_cmplx)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
@@ -157,6 +157,9 @@ contains
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     integer,           optional, intent(in)  :: solver
+    logical,           optional, intent(in)  :: verbose
+    logical,           optional, intent(in)  :: force_serial
+    logical,           optional, intent(in)  :: force_cmplx
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -169,9 +172,11 @@ contains
 
     this%theta = optional_default(theta, M_ZERO)
 
-    str = "Hartree"
-    if(present(label)) str = trim(str) // trim(label)
-    call messages_print_stress(stdout, trim(str))
+    if(optional_default(verbose,.true.)) then
+      str = "Hartree"
+      if(present(label)) str = trim(str) // trim(label)
+      call messages_print_stress(stdout, trim(str))
+    end if
 
     this%nslaves = 0
     this%der => der
@@ -207,17 +212,21 @@ contains
     end if
 
 #ifdef HAVE_MPI
-    !%Variable ParallelizationPoissonAllNodes
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% When running in parallel, this variable selects whether the
-    !% Poisson solver should divide the work among all nodes or only
-    !% among the parallelization-in-domains groups.
-    !%End
+    if(.not.optional_default(force_serial,.false.)) then
+      !%Variable ParallelizationPoissonAllNodes
+      !%Type logical
+      !%Default true
+      !%Section Execution::Parallelization
+      !%Description
+      !% When running in parallel, this variable selects whether the
+      !% Poisson solver should divide the work among all nodes or only
+      !% among the parallelization-in-domains groups.
+      !%End
 
-    call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+      call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+    else
+      this%all_nodes_default = .false.
+    end if
 #endif
 
     !%Variable PoissonSolver
@@ -298,31 +307,32 @@ contains
       this%method = solver
     end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
-
-    select case(this%method)
-    case (POISSON_DIRECT_SUM)
-      str = "direct sum"
-    case (POISSON_FMM)
-      str = "fast multipole method"
-    case (POISSON_FFT)
-      str = "fast Fourier transform"
-    case (POISSON_CG)
-      str = "conjugate gradients"
-    case (POISSON_CG_CORRECTED)
-      str = "conjugate gradients, corrected"
-    case (POISSON_MULTIGRID)
-      str = "multigrid"
-    case (POISSON_ISF)
-      str = "interpolating scaling functions"
-    case (POISSON_LIBISF)
-      str = "interpolating scaling functions (from BigDFT)"
-    case (POISSON_NO)
-      str = "no Poisson solver - Hartree set to 0"
-    case (POISSON_POKE)
-      str = "Poke library"
-    end select
-    write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
-    call messages_info(1)
+    if(optional_default(verbose,.true.)) then
+      select case(this%method)
+      case (POISSON_DIRECT_SUM)
+        str = "direct sum"
+      case (POISSON_FMM)
+        str = "fast multipole method"
+      case (POISSON_FFT)
+        str = "fast Fourier transform"
+      case (POISSON_CG)
+        str = "conjugate gradients"
+      case (POISSON_CG_CORRECTED)
+        str = "conjugate gradients, corrected"
+      case (POISSON_MULTIGRID)
+        str = "multigrid"
+      case (POISSON_ISF)
+        str = "interpolating scaling functions"
+      case (POISSON_LIBISF)
+        str = "interpolating scaling functions (from BigDFT)"
+      case (POISSON_NO)
+        str = "no Poisson solver - Hartree set to 0"
+      case (POISSON_POKE)
+        str = "Poke library"
+      end select
+      write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
+      call messages_info(1)
+    end if
 
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
@@ -380,7 +390,8 @@ contains
       call parse_variable(namespace, 'PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
 
-      call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
+      if(optional_default(verbose,.true.)) &
+        call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 
     end if
 
@@ -496,11 +507,13 @@ contains
 #endif
     end if
 
-    call messages_print_stress(stdout)
+    if(optional_default(verbose,.true.)) &
+      call messages_print_stress(stdout)
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
     fft_type = FFT_REAL
+    if(optional_default(force_cmplx, .false.)) fft_type = FFT_COMPLEX
 
     if (this%method == POISSON_ISF .or. this%method == POISSON_LIBISF) then
       fft_type = FFT_NONE
@@ -609,7 +622,8 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, verbose = .true., &
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, &
+                   verbose = optional_default(verbose,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)

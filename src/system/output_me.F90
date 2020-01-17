@@ -345,7 +345,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
+        call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
           lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
@@ -356,10 +356,10 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
         else
-          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint)
         end if
 

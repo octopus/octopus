@@ -498,7 +498,7 @@ contains
 
     !Cam parameters are irrelevant here and are updated later
     call exchange_operator_nullify(hm%exxop)
-    call exchange_operator_init(hm%exxop, namespace, hm%d, gr%sb, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+    call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
 
     if (hm%apply_packed .and. accel_is_enabled()) then
       ! Check if we can actually apply the hamiltonian packed
