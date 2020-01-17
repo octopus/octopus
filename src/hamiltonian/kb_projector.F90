@@ -35,17 +35,17 @@ module kb_projector_oct_m
 
   private
   public :: &
-       kb_projector_t,             &
-       kb_projector_null,          &
-       kb_projector_init,          &
-       dkb_project, zkb_project,   &
-       dkb_project_bra,            &
-       zkb_project_bra,            &
-       dkb_project_ket,            &
-       zkb_project_ket,            &
-       dkb_mul_energies,           &
-       zkb_mul_energies,           &
-       kb_projector_end
+    kb_projector_t,             &
+    kb_projector_null,          &
+    kb_projector_init,          &
+    dkb_project, zkb_project,   &
+    dkb_project_bra,            &
+    zkb_project_bra,            &
+    dkb_project_ket,            &
+    zkb_project_ket,            &
+    dkb_mul_energies,           &
+    zkb_mul_energies,           &
+    kb_projector_end
 
   type kb_projector_t
     private
@@ -85,7 +85,7 @@ contains
     ps => species_ps(a%species)
 
     kb_p%n_s = sm%np
-    
+
     if ((.not. ps%hamann .and. l == 0) .or. ps%kbc == 1) then
       n_c = 1
     else ! we have j-dependent projectors
@@ -97,7 +97,7 @@ contains
     SAFE_ALLOCATE(kb_p%p (1:kb_p%n_s, 1:2))
     kb_p%p = M_ZERO
     kb_p%e = M_ZERO
-    
+
     do ic = 1, n_c
       call double_grid_apply_non_local(gr%dgrid, a%species, sm%mesh, sm, a%x, kb_p%p(:, ic), l, lm, ic)
       kb_p%e(ic) = ps%h(l, ic, ic)

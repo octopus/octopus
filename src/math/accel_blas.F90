@@ -53,7 +53,7 @@ module accel_blas_oct_m
 
   integer, parameter, public ::                      &
     CUBLAS_OP_N = 0,                                 &
-    CUBLAS_OP_T = 1,                                 &  
+    CUBLAS_OP_T = 1,                                 &
     CUBLAS_OP_C = 2
 
   integer, parameter, public ::                      &
@@ -72,16 +72,16 @@ module accel_blas_oct_m
   integer, parameter, public ::                      &
     ACCEL_BLAS_LOWER = clblasLower,                  &
     ACCEL_BLAS_UPPER = clblasUpper
-  
+
   integer, parameter, public ::                      &
     ACCEL_BLAS_N = clblasNoTrans,                    &
     ACCEL_BLAS_T = clblasTrans,                      &
     ACCEL_BLAS_C = clblasConjTrans
-  
+
   integer, parameter, public ::                      &
     ACCEL_BLAS_DIAG_NON_UNIT = clblasNonUnit,        &
     ACCEL_BLAS_DIAG_UNIT     = clblasUnit
-#else 
+#else
   integer, parameter, public ::                      &
     ACCEL_BLAS_LEFT  = CUBLAS_SIDE_LEFT,             &
     ACCEL_BLAS_RIGHT = CUBLAS_SIDE_RIGHT
@@ -89,7 +89,7 @@ module accel_blas_oct_m
   integer, parameter, public ::                      &
     ACCEL_BLAS_LOWER = CUBLAS_FILL_MODE_LOWER,       &
     ACCEL_BLAS_UPPER = CUBLAS_FILL_MODE_UPPER
-  
+
   integer, parameter, public ::                      &
     ACCEL_BLAS_N = CUBLAS_OP_N,                      &
     ACCEL_BLAS_T = CUBLAS_OP_T,                      &
@@ -99,14 +99,14 @@ module accel_blas_oct_m
     ACCEL_BLAS_DIAG_NON_UNIT = CUBLAS_DIAG_NON_UNIT, &
     ACCEL_BLAS_DIAG_UNIT     = CUBLAS_DIAG_UNIT
 #endif
-  
+
   ! DOT
   interface
     subroutine cuda_blas_ddot(handle, n, x, offx, incx, y, offy, incy, res, offres)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer(8),   intent(in)    :: n
       type(c_ptr),  intent(in)    :: x
@@ -121,9 +121,9 @@ module accel_blas_oct_m
 
     subroutine cuda_blas_zdotc(handle, n, x, offx, incx, y, offy, incy, res, offres)
       use iso_c_binding
-            
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer(8),   intent(in)    :: n
       type(c_ptr),  intent(in)    :: x
@@ -141,9 +141,9 @@ module accel_blas_oct_m
   interface
     subroutine cuda_blas_dnrm2(handle, n, x, offx, incx, res, offres)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer(8),   intent(in)    :: n
       type(c_ptr),  intent(in)    :: x
@@ -155,9 +155,9 @@ module accel_blas_oct_m
 
     subroutine cuda_blas_znrm2(handle, n, x, offx, incx, res, offres)
       use iso_c_binding
-            
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer(8),   intent(in)    :: n
       type(c_ptr),  intent(in)    :: x
@@ -172,9 +172,9 @@ module accel_blas_oct_m
   interface
     subroutine cuda_blas_dgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: transa
       integer,      intent(in)    :: transb
@@ -188,12 +188,12 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: ldb
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer(8),   intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc
     end subroutine cuda_blas_dgemm
 
     subroutine cuda_blas_zgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
       use iso_c_binding
-      
+
       implicit none
 
       type(c_ptr),  intent(in)    :: handle
@@ -209,7 +209,7 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: ldb
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer(8),   intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc
     end subroutine cuda_blas_zgemm
   end interface
 
@@ -218,9 +218,9 @@ module accel_blas_oct_m
   interface
     subroutine cuda_blas_dgemv(handle, transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: transa
       integer(8),   intent(in)    :: m
@@ -232,12 +232,12 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: incx
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: y
-      integer(8),   intent(in)    :: incy       
+      integer(8),   intent(in)    :: incy
     end subroutine cuda_blas_dgemv
 
     subroutine cuda_blas_zgemv(handle, transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
       use iso_c_binding
-      
+
       implicit none
 
       type(c_ptr),  intent(in)    :: handle
@@ -251,16 +251,16 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: incx
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: y
-      integer(8),   intent(in)    :: incy       
+      integer(8),   intent(in)    :: incy
     end subroutine cuda_blas_zgemv
   end interface
   ! SYRK/HERK
   interface
     subroutine cuda_blas_dsyrk(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: uplo
       integer,      intent(in)    :: trans
@@ -271,14 +271,14 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer(8),   intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc
     end subroutine cuda_blas_dsyrk
 
     subroutine cuda_blas_zherk(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: uplo
       integer,      intent(in)    :: trans
@@ -289,7 +289,7 @@ module accel_blas_oct_m
       integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(in)    :: beta
       type(c_ptr),  intent(inout) :: C
-      integer(8),   intent(in)    :: ldc       
+      integer(8),   intent(in)    :: ldc
     end subroutine cuda_blas_zherk
   end interface
 
@@ -297,9 +297,9 @@ module accel_blas_oct_m
   interface
     subroutine cuda_blas_dtrsm(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: side
       integer,      intent(in)    :: uplo
@@ -311,14 +311,14 @@ module accel_blas_oct_m
       type(c_ptr),  intent(in)    :: A
       integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(inout) :: B
-      integer(8),   intent(in)    :: ldb       
+      integer(8),   intent(in)    :: ldb
     end subroutine cuda_blas_dtrsm
-    
+
     subroutine cuda_blas_ztrsm(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb)
       use iso_c_binding
-      
+
       implicit none
-      
+
       type(c_ptr),  intent(in)    :: handle
       integer,      intent(in)    :: side
       integer,      intent(in)    :: uplo
@@ -330,12 +330,12 @@ module accel_blas_oct_m
       type(c_ptr),  intent(in)    :: A
       integer(8),   intent(in)    :: lda
       type(c_ptr),  intent(inout) :: B
-      integer(8),   intent(in)    :: ldb       
+      integer(8),   intent(in)    :: ldb
     end subroutine cuda_blas_ztrsm
   end interface
-  
+
 contains
-  
+
 #include "undef.F90"
 #include "complex.F90"
 #include "accel_blas_inc.F90"

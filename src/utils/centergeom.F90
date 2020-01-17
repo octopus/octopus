@@ -39,7 +39,7 @@ program centergeom
   type(geometry_t)  :: geo
   type(space_t)     :: space
   type(namespace_t) :: default_namespace
-  
+
   call global_init(is_serial = .true.)
 
   call getopt_init(ierr)

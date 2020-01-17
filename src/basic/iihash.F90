@@ -46,10 +46,10 @@ module iihash_oct_m
 
   type iihash_t
     private
-    
+
     type(c_ptr) :: map
   end type iihash_t
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -66,16 +66,16 @@ contains
       subroutine iihash_map_init(map)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
       end subroutine iihash_map_init
     end interface
-    
-    
+
+
     PUSH_SUB(iihash_init)
 
     call iihash_map_init(h%map)
-    
+
     POP_SUB(iihash_init)
   end subroutine iihash_init
 
@@ -84,20 +84,20 @@ contains
   !> Free a hash table.
   subroutine iihash_end(h)
     type(iihash_t), intent(inout) :: h
-    
+
     interface
       subroutine iihash_map_end(map)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
       end subroutine iihash_map_end
     end interface
-    
+
     PUSH_SUB(iihash_end)
-    
+
     call iihash_map_end(h%map)
-    
+
     POP_SUB(iihash_end)
   end subroutine iihash_end
 
@@ -113,13 +113,13 @@ contains
       subroutine iihash_map_insert(map, key, val)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
         integer,     intent(in)    :: key
         integer,     intent(in)    :: val
       end subroutine iihash_map_insert
     end interface
-    
+
     call iihash_map_insert(h%map, key, val)
   end subroutine iihash_insert
 
@@ -138,7 +138,7 @@ contains
       subroutine iihash_map_lookup(map, key, ifound, val)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(in)    :: map
         integer,     intent(in)    :: key
         integer,     intent(out)   :: ifound
@@ -158,7 +158,7 @@ contains
   end function iihash_lookup
 
 end module iihash_oct_m
-  
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -100,7 +100,7 @@ module minimizer_oct_m
 
   interface loct_minimize_direct
     function oct_minimize_direct(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum)
-     implicit none
+      implicit none
       integer :: oct_minimize_direct
       integer, intent(in)    :: method
       integer, intent(in)    :: dim
@@ -131,7 +131,7 @@ module minimizer_oct_m
     end function oct_minimize_direct
   end interface loct_minimize_direct
 
-contains 
+contains
 
   subroutine minimize_multidim_nograd(method, dim, x, step, toldr, maxiter, f, write_iter_info, minimum, ierr)
     integer, intent(in)    :: method
@@ -161,13 +161,13 @@ contains
     end interface
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
-    
+
     PUSH_SUB(minimize_multidim_nograd)
 
     ASSERT(ubound(x, dim = 1) >= dim)
-    
+
     select case(method)
-    case(MINMETHOD_NMSIMPLEX) 
+    case(MINMETHOD_NMSIMPLEX)
       ierr = loct_minimize_direct(method, dim, x(1), step, toldr, maxiter, f, write_iter_info, minimum)
     end select
 
@@ -340,22 +340,22 @@ contains
     end interface
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
-    
+
     PUSH_SUB(minimize_multidim)
 
     ASSERT(ubound(x, dim = 1) >= dim)
-    
+
     select case(method)
     case(MINMETHOD_SD_NATIVE)
       call minimize_sd(dim, x, step, maxiter, f, write_iter_info, minimum, ierr)
-      
+
     case default
       ierr = loct_minimize(method, dim, x(1), step, line_tol, tolgrad, toldr, maxiter, f, write_iter_info, minimum)
-      
+
     end select
 
     POP_SUB(minimize_multidim)
-    
+
   end subroutine minimize_multidim
 
   !----------------------------------------------
@@ -386,25 +386,25 @@ contains
     end interface
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
-    
+
     integer :: iter
     real(8), allocatable :: grad(:)
     real(8) :: step2, maxgrad
-    
+
     PUSH_SUB(minimize_sd)
 
     SAFE_ALLOCATE(grad(1:dim))
-    
+
     step2 = step*CNST(10.0)
     do iter = 1, maxiter
       call f(dim, x, minimum, 1, grad)
-      
+
       maxgrad = maxval(abs(grad))
-      
+
       call write_iter_info(iter, dim, minimum, maxgrad*step2, maxgrad, x)
-      
+
       x(1:dim) = x(1:dim) - step2*grad(1:dim)
-      
+
       step2 = step2*CNST(0.99)
     end do
     ierr = 0
@@ -478,7 +478,7 @@ contains
     dt = step
 
     alpha = alpha_start
-    
+
     p_times = 0
 
     f_alpha = CNST(0.99)
@@ -487,8 +487,8 @@ contains
     dt_max = CNST(10.0) * dt
     f_dec = CNST(0.5)
 
-    maxmove = CNST(0.2) * P_Ang 
-    
+    maxmove = CNST(0.2) * P_Ang
+
     grad = M_ZERO
 
     SAFE_ALLOCATE(vel(1:dim))
@@ -504,16 +504,16 @@ contains
     n_iter = 1
 
     do while (n_iter <= maxiter)
-      
+
       call f(dim, x_new, en, 1, grad)
-      
+
       select case (integrator)
-      ! Velocity verlet
+        ! Velocity verlet
       case (OPTION__GOFIREINTEGRATOR__VERLET)
         vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
       end select
 
-      if (n_iter /= 1) then 
+      if (n_iter /= 1) then
         p_value = M_ZERO
         do i_tmp = 0, dim/3 - 1
           p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
@@ -536,18 +536,18 @@ contains
 
       x(1:dim)=x_new(1:dim)
 
-      
+
       select case (integrator)
       case (OPTION__GOFIREINTEGRATOR__VERLET)
-      ! Velocity Verlet 
+        ! Velocity Verlet
         dr_i = vel(1:dim)*dt - M_HALF*grad(1:dim)*dt**2/mass(1:dim)
         vel(1:dim) = vel(1:dim) - M_HALF*grad(1:dim)*dt/mass(1:dim)
       case (OPTION__GOFIREINTEGRATOR__EULER)
-      ! Euler method
+        ! Euler method
         vel(1:dim) = vel(1:dim) - grad(1:dim)*dt/mass(1:dim)
         dr_i(1:dim) = vel(1:dim)*dt
       end select
-      
+
       mod_dr = lalg_nrm2(dim, dr_i)
       if (mod_dr > maxmove) then
         dr_i = maxmove * dr_i / mod_dr
@@ -567,7 +567,7 @@ contains
       else
         n_iter = n_iter + 1
       end if
-      
+
     end do
 
     SAFE_DEALLOCATE_A(dr_atoms)
@@ -576,9 +576,9 @@ contains
     SAFE_DEALLOCATE_A(vel)
     SAFE_DEALLOCATE_A(grad)
     SAFE_DEALLOCATE_A(grad_atoms)
-    
+
     POP_SUB(minimize_fire)
-  
+
   end subroutine minimize_fire
 
 end module minimizer_oct_m

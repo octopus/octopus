@@ -25,7 +25,7 @@ module xc_oep_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
-  use lalg_basic_oct_m 
+  use lalg_basic_oct_m
   use lalg_adv_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
@@ -143,7 +143,7 @@ contains
         if(st%d%nspin == SPINORS) &
           call messages_not_implemented("Full OEP with spinors", namespace=namespace)
 
-        call messages_experimental("Full OEP")    
+        call messages_experimental("Full OEP")
         !%Variable OEPMixing
         !%Type float
         !%Default 1.0
@@ -166,7 +166,7 @@ contains
         !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 4, 043004 (2003)
         !%Option OEP_MIXING_SCHEME_BB 2
         !%Use the Barzilai-Borwein (BB) Method
-        !%Reference: T. W. Hollins, S. J. Clark, K. Refson, and N. I. Gidopoulos, 
+        !%Reference: T. W. Hollins, S. J. Clark, K. Refson, and N. I. Gidopoulos,
         !%<i>Phys. Rev. B</i> <b>85<\b>, 235126 (2012)
         !%Option OEP_MIXING_SCHEME_DENS 3
         !%Use the inverse of the electron density
@@ -184,10 +184,10 @@ contains
         oep%norm2ss = M_ZERO
       end if
 
-     ! this routine is only prepared for finite systems. (Why not?)
+      ! this routine is only prepared for finite systems. (Why not?)
       if(st%d%nik > st%d%ispin) &
         call messages_not_implemented("OEP for periodic systems", namespace=namespace)
-    
+
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, st%d%nspin)
 
@@ -200,7 +200,7 @@ contains
       oep%vxc = M_ZERO
 
       ! when performing full OEP, we need to solve a linear equation
-      if(oep%level == XC_OEP_FULL) then 
+      if(oep%level == XC_OEP_FULL) then
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
         call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
         call lr_init(oep%lr)
@@ -230,7 +230,7 @@ contains
     if(oep%level /= XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
 
-      if(oep%level == XC_OEP_FULL) then 
+      if(oep%level == XC_OEP_FULL) then
         call lr_dealloc(oep%lr)
         call linear_solver_end(oep%solver)
       end if

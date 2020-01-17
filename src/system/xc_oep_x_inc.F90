@@ -46,7 +46,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   R_TYPE,                      intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
   FLOAT,                       intent(inout) :: ex
   FLOAT,                       intent(in)    :: exx_coef !< amount of EXX (for hybrids)
-  R_TYPE,            optional, intent(out)   :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
+  R_TYPE,            optional, intent(out)   :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst)
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
@@ -74,7 +74,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   else
     isp = is
     idm = 1
-  end if 
+  end if
   ! Note: we assume that st%occ is known in all nodes
 
   SAFE_ALLOCATE(F_ij(1:der%mesh%np))
@@ -201,8 +201,8 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
           if(ist /= jst .and. .not.(st%d%ispin==SPINORS)) rr = M_TWO
 
           ex = ex - exx_coef* M_HALF * rr * &
-              st%occ(ist, isp) * socc*st%occ(jst, isp) * &
-              R_REAL(X(mf_dotp)(der%mesh, psi(1:der%mesh%np), wf_ist(:)*F_ij(:)))
+            st%occ(ist, isp) * socc*st%occ(jst, isp) * &
+            R_REAL(X(mf_dotp)(der%mesh, psi(1:der%mesh%np), wf_ist(:)*F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
@@ -214,7 +214,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
           if(st%parallel_in_states) then
             ! or send it to the node that has wf ist
             call MPI_Isend(send_buffer(1), der%mesh%np, R_MPITYPE, &
-             node_fr, ist, st%mpi_grp%comm, send_req, mpi_err)
+              node_fr, ist, st%mpi_grp%comm, send_req, mpi_err)
           end if
 #endif
         end if

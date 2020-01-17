@@ -85,7 +85,7 @@ contains
 
         tnadd_energy = M_ZERO
         external_energy = M_ZERO
-        
+
         hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern_local = external_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
@@ -93,12 +93,12 @@ contains
         evxctau = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_MGGA)
       else
         hm%energy%kinetic = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
-         
+
         hm%energy%extern_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
-        
+
         hm%energy%extern_non_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
-        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
-        
+        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local
+
         evxctau = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
@@ -107,39 +107,39 @@ contains
       hm%pcm%counter = hm%pcm%counter + 1
       if (hm%pcm%localf) then
         call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
-                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
-                                              E_int_e_ext = hm%energy%int_e_ext_pcm,      &
-                                              E_int_n_ext = hm%energy%int_n_ext_pcm       )
+          hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
+          E_int_e_ext = hm%energy%int_e_ext_pcm,      &
+          E_int_n_ext = hm%energy%int_n_ext_pcm       )
       else
         call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
-                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )
+          hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )
       end if
     end if
 
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues
-       
+
     case(HARTREE)
       hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
-      
+
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
         + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic
 
       ! FIXME: pcm terms are only added to total energy in DFT case
-      
+
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
-                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
-                             + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
+        + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
+        + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
         + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic
 
-   end select 
-    
+    end select
+
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
     if(st%smear%method == SMEAR_FIXED_OCC) then ! no temperature available
       hm%energy%TS = M_ZERO
@@ -176,19 +176,19 @@ contains
       write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       call messages_info(10, iunit)
-      
+
       if (hm%pcm%run_pcm) then
-          write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
-                                                                                                  hm%energy%int_en_pcm + &
-                                                                                                  hm%energy%int_e_ext_pcm )
-          write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_nn_pcm + &
-                                                                                                  hm%energy%int_ne_pcm + &
-                                                                                                  hm%energy%int_n_ext_pcm )
-          write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
-                                                                             hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
-                                                                             hm%energy%int_nn_pcm + hm%energy%int_ne_pcm + &
-                                                                          hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm )
-          call messages_info(3, iunit)
+        write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
+          hm%energy%int_en_pcm + &
+          hm%energy%int_e_ext_pcm )
+        write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_nn_pcm + &
+          hm%energy%int_ne_pcm + &
+          hm%energy%int_n_ext_pcm )
+        write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
+          hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
+          hm%energy%int_nn_pcm + hm%energy%int_ne_pcm + &
+          hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm )
+        call messages_info(3, iunit)
       end if
 
       if(full_) then
@@ -201,7 +201,7 @@ contains
       if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
-      end if  
+      end if
       if(hm%lda_u_level /= DFT_U_NONE) then
         write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%dft_u)
         write(message(2), '(6x,a, f18.8)')'Int[n*v_U]  = ', units_from_atomic(units_out%energy, hm%energy%int_dft_u)
@@ -213,13 +213,13 @@ contains
   end subroutine energy_calc_total
 
   ! --------------------------------------------------------------------
-  
+
   subroutine energy_calc_eigenvalues(namespace, hm, der, st)
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(derivatives_t),      intent(in)    :: der
     type(states_elec_t),      intent(inout) :: st
-    
+
     PUSH_SUB(energy_calc_eigenvalues)
 
     if(states_are_real(st)) then

@@ -57,7 +57,7 @@ module propagator_rk_oct_m
     td_explicit_runge_kutta4,  &
     td_runge_kutta2,           &
     td_runge_kutta4
-  
+
   type(mesh_t),             pointer,     private :: mesh_p
   type(hamiltonian_elec_t), pointer,     private :: hm_p
   type(states_elec_t),      pointer,     private :: st_p
@@ -67,9 +67,9 @@ module propagator_rk_oct_m
   FLOAT,                                 private :: t_op, dt_op
   FLOAT,                    allocatable, private :: vhxc1_op(:, :), vhxc2_op(:, :), vpsl1_op(:), vpsl2_op(:)
   logical :: move_ions_op
-  
+
 contains
-  
+
   subroutine td_explicit_runge_kutta4(ks, namespace, hm, gr, st, time, dt, ions, geo, qcchi)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
@@ -175,10 +175,10 @@ contains
     ! Stage 1.
     !
 
-    ! 
+    !
     call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_elec_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)
     end if
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0
@@ -197,12 +197,12 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Stage 2.
-    
+
     call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_elec_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)
     end if
-    
+
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
@@ -211,7 +211,7 @@ contains
         end if
       end do
     end do
-        
+
     if(ion_dynamics_ions_move(ions)) then
       pos = pos0 + M_HALF * posk
       vel = vel0 + M_HALF * velk
@@ -231,9 +231,9 @@ contains
 
     call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_elec_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)
     end if
-    
+
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -CNST(0.5)*M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
@@ -263,9 +263,9 @@ contains
 
     call states_elec_set_state(stphi, gr%mesh, zphi)
     if(propagate_chi) then
-      call states_elec_set_state(stchi, gr%mesh, zchi)    
+      call states_elec_set_state(stchi, gr%mesh, zchi)
     end if
-    
+
     do ik = stphi%d%kpt%start, stphi%d%kpt%end
       do ib = stphi%group%block_start, stphi%group%block_end
         call batch_axpy(gr%mesh%np, -M_zI*dt, hst%group%psib(ib, ik), stphi%group%psib(ib, ik))
@@ -426,7 +426,7 @@ contains
 
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
         SAFE_ALLOCATE(inhpsi(1:gr%mesh%np_part, 1:st%d%dim))
-        SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))      
+        SAFE_ALLOCATE(dvpsi(1:gr%mesh%np_part, 1:st%d%dim, 1:gr%sb%dim))
 
         do ik = 1, st%d%nik
           do ist = 1, st%nst
@@ -473,7 +473,7 @@ contains
           end if
         end do
       end do
-      
+
       if(ion_dynamics_ions_move(ions)) then
         posfinal = posfinal + posk * epsilon
         velfinal = velfinal + velk * epsilon
@@ -653,7 +653,7 @@ contains
 
       t_op  = time - dt
       call zsparskit_solver_run(tr%tdsk, td_rk2op, td_rk2opt, zpsi, rhs)
-      
+
       k2 = M_z0
       j = 1
       do ik = kp1, kp2
@@ -727,7 +727,7 @@ contains
       rhs1(:, :, :, :), rhs2(:, :, :, :)
 
     PUSH_SUB(td_runge_kutta4)
-    
+
     c(1) = M_HALF - sqrt(M_THREE)/CNST(6.0)
     c(2) = M_HALF + sqrt(M_THREE)/CNST(6.0)
     b(1) = M_HALF
@@ -913,7 +913,7 @@ contains
 
       t_op  = time - dt
       call zsparskit_solver_run(tr%tdsk, td_rk4op, td_rk4opt, zpsi, rhs)
-      
+
       k1 = M_z0
       k2 = M_z0
       j = 1
@@ -1258,7 +1258,7 @@ contains
 
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(opzpsi)
-    
+
     POP_SUB(td_rk2op)
   end subroutine td_rk2op
   ! ---------------------------------------------------------

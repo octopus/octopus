@@ -53,20 +53,20 @@ contains
 #include "modelmb_exchange_syms_inc.F90"
 #include "undef.F90"
 
-subroutine modelmb_sym_all_states (gr, st)
-  type(states_elec_t),    intent(inout) :: st
-  type(grid_t),           intent(in)    :: gr
+  subroutine modelmb_sym_all_states (gr, st)
+    type(states_elec_t),    intent(inout) :: st
+    type(grid_t),           intent(in)    :: gr
 
-  PUSH_SUB(modelmb_sym_all_states)
+    PUSH_SUB(modelmb_sym_all_states)
 
-  if (states_are_complex(st)) then
-    call zmodelmb_sym_all_states (gr, st)
-  else
-    call dmodelmb_sym_all_states (gr, st)
-  end if
+    if (states_are_complex(st)) then
+      call zmodelmb_sym_all_states (gr, st)
+    else
+      call dmodelmb_sym_all_states (gr, st)
+    end if
 
-  POP_SUB(modelmb_sym_all_states)
-end subroutine modelmb_sym_all_states
+    POP_SUB(modelmb_sym_all_states)
+  end subroutine modelmb_sym_all_states
 
 end module modelmb_exchange_syms_oct_m
 

@@ -16,354 +16,354 @@
 !! 02110-1301, USA.
 !!
 
-  subroutine X(write_header)(fname, np_global, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np_global
-    integer,             intent(out) :: ierr
+subroutine X(write_header)(fname, np_global, ierr)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np_global
+  integer,             intent(out) :: ierr
 
-    integer :: iio
-    
-    PUSH_SUB(X(write_header))
+  integer :: iio
 
-    iio = 0;
-    call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  PUSH_SUB(X(write_header))
+
+  iio = 0;
+  call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_header))
+end subroutine X(write_header)
+
+
+ ! ------------------------------------------------------
+
+subroutine X(write_binary)(fname, np, ff, ierr, nohead, fendian)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(in)  :: ff(:)
+  integer,             intent(out) :: ierr
+  logical, optional,   intent(in)  :: nohead   !< skip header
+  logical, optional,   intent(in)  :: fendian  !< flip endianness
+
+  integer :: nhd, flpe, iio
+
+  PUSH_SUB(X(write_binary))
+
+  ASSERT(product(ubound(ff)) >= np)
+
+  nhd = logical_to_integer(optional_default(nohead, .false.))
+  flpe = logical_to_integer(optional_default(fendian, .false.))
+
+  iio = 0;
+  call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_binary))
+end subroutine X(write_binary)
+
+ !------------------------------------------------------
+
+subroutine X(write_binary2)(fname, np, ff, ierr, nohead, fendian)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(in)  :: ff(:, :)
+  integer,             intent(out) :: ierr
+  logical, optional,   intent(in)  :: nohead   !> skip header
+  logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+  integer :: nhd, flpe, iio
+
+  PUSH_SUB(X(write_binary2))
+
+  ASSERT(product(ubound(ff)) >= np)
+
+  nhd = logical_to_integer(optional_default(nohead, .false.))
+  flpe = logical_to_integer(optional_default(fendian, .false.))
+
+  iio = 0;
+  call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_binary2))
+end subroutine X(write_binary2)
+
+ !------------------------------------------------------
+
+subroutine X(write_binary3)(fname, np, ff, ierr, nohead, fendian)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(in)  :: ff(:,:,:)
+  integer,             intent(out) :: ierr
+  logical, optional,   intent(in)  :: nohead   !> skip header
+  logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+
+  integer :: nhd, flpe, iio
+
+  PUSH_SUB(X(write_binary3))
+
+  ASSERT(product(ubound(ff)) >= np)
+
+  nhd = logical_to_integer(optional_default(nohead, .false.))
+  flpe = logical_to_integer(optional_default(fendian, .false.))
+
+  iio = 0;
+  call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_binary3))
+end subroutine X(write_binary3)
+
+ !------------------------------------------------------
+
+subroutine X(write_binary4)(fname, np, ff, ierr, nohead, fendian)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(in)  :: ff(:,:,:,:)
+  integer,             intent(out) :: ierr
+  logical, optional,   intent(in)  :: nohead   !> skip header
+  logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+
+  integer :: nhd, flpe, iio
+
+  PUSH_SUB(X(write_binary4))
+
+  ASSERT(product(ubound(ff)) >= np)
+
+  nhd = logical_to_integer(optional_default(nohead, .false.))
+  flpe = logical_to_integer(optional_default(fendian, .false.))
+
+  iio = 0;
+  call write_binary(np, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_binary4))
+end subroutine X(write_binary4)
+
+ ! ------------------------------------------------------
+
+subroutine X(write_binary5)(fname, np, ff, ierr, nohead, fendian)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(in)  :: ff(:,:,:,:,:)
+  integer,             intent(out) :: ierr
+  logical, optional,   intent(in)  :: nohead   !> skip header
+  logical, optional,   intent(in)  :: fendian  !> flip endianness
+
+
+  integer :: nhd, flpe, iio
+
+  PUSH_SUB(X(write_binary5))
+
+  ASSERT(product(ubound(ff)) >= np)
+
+  nhd = logical_to_integer(optional_default(nohead, .false.))
+  flpe = logical_to_integer(optional_default(fendian, .false.))
+
+  iio = 0;
+  call write_binary(np, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+  call io_incr_counters(iio)
+
+  POP_SUB(X(write_binary5))
+end subroutine X(write_binary5)
+
+
+ ! ------------------------------------------------------
+
+subroutine X(write_parallel)(fname, comm, xlocal, np, ff, ierr)
+  character(len=*),    intent(in)    :: fname
+  integer,             intent(in)    :: comm
+  integer,             intent(in)    :: xlocal
+  integer,             intent(in)    :: np
+  R_TYPE,              intent(in)    :: ff(:)
+  integer,             intent(out)   :: ierr
+
+#ifdef HAVE_MPI2
+  integer :: status(MPI_STATUS_SIZE)
+#endif
+  integer :: write_count, file_handle
+
+  PUSH_SUB(X(write_parallel))
+
+  call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .true., ierr)
+  ASSERT(product(ubound(ff)) >= np)
+
+  if(ierr == 0) then
+#ifdef HAVE_MPI2
+    call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
+    call MPI_Get_count(status, R_MPITYPE, write_count, mpi_err)
+#endif
+    if (write_count /= np) then
+      write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " wrote elements=", write_count, " instead of", np
+      write(message(2), '(a,a)') " of file= ", fname
+      call messages_warning(2)
+      ierr = 999
+    end if
+  end if
+
+  call io_binary_parallel_end(file_handle)
+
+  POP_SUB(X(write_parallel))
+end subroutine X(write_parallel)
+
+ !------------------------------------------------------
+
+subroutine X(read_binary)(fname, np, ff, ierr, offset)
+  character(len=*),    intent(in)   :: fname
+  integer,             intent(in)   :: np
+  R_TYPE,              intent(out)  :: ff(:)
+  integer,             intent(out)  :: ierr
+  integer, optional,   intent(in)   :: offset
+
+  integer :: iio
+
+  PUSH_SUB(X(read_binary))
+
+  ASSERT(np > 0)
+  ASSERT(product(ubound(ff)) >= np)
+
+  ierr = -1
+#ifdef R_TCOMPLEX
+  call try_dread_binary(fname, np, ff, ierr, offset)
+#endif
+  if(ierr == -1) then
+    iio = 0
+    call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
     call io_incr_counters(iio)
-    
-    POP_SUB(X(write_header))
-  end subroutine X(write_header)
+  end if
 
+  POP_SUB(X(read_binary))
+end subroutine X(read_binary)
 
-  ! ------------------------------------------------------
+ !------------------------------------------------------
 
-  subroutine X(write_binary)(fname, np, ff, ierr, nohead, fendian)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:)
-    integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !< skip header
-    logical, optional,   intent(in)  :: fendian  !< flip endianness
+subroutine X(read_parallel)(fname, comm, xlocal, np, ff, ierr)
+  character(len=*),    intent(in)    :: fname
+  integer,             intent(in)    :: comm
+  integer,             intent(in)    :: xlocal
+  integer,             intent(in)    :: np
+  R_TYPE,              intent(inout) :: ff(:)
+  integer,             intent(out)   :: ierr
 
-    integer :: nhd, flpe, iio
+#ifdef HAVE_MPI2
+  integer :: status(MPI_STATUS_SIZE)
+#endif
+  integer :: read_count, file_handle
 
-    PUSH_SUB(X(write_binary))
+  PUSH_SUB(X(read_parallel))
 
-    ASSERT(product(ubound(ff)) >= np)
+  ASSERT(np > 0)
+  ierr = -1
+#ifdef R_TCOMPLEX
+  call try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
+#endif
 
-    nhd = logical_to_integer(optional_default(nohead, .false.))
-    flpe = logical_to_integer(optional_default(fendian, .false.))
-      
-    iio = 0;
-    call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
-    call io_incr_counters(iio)
+  if(ierr == -1) then
+    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .false., ierr)
 
-    POP_SUB(X(write_binary))
-  end subroutine X(write_binary)
-
-  !------------------------------------------------------
-
-  subroutine X(write_binary2)(fname, np, ff, ierr, nohead, fendian)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:, :)
-    integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !> skip header
-    logical, optional,   intent(in)  :: fendian  !> flip endianness
-
-    integer :: nhd, flpe, iio
-
-    PUSH_SUB(X(write_binary2))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    nhd = logical_to_integer(optional_default(nohead, .false.))
-    flpe = logical_to_integer(optional_default(fendian, .false.))
-
-    iio = 0;
-    call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(write_binary2))
-  end subroutine X(write_binary2)
-
-  !------------------------------------------------------
-
-  subroutine X(write_binary3)(fname, np, ff, ierr, nohead, fendian)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:)
-    integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !> skip header
-    logical, optional,   intent(in)  :: fendian  !> flip endianness
-
-
-    integer :: nhd, flpe, iio
-
-    PUSH_SUB(X(write_binary3))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    nhd = logical_to_integer(optional_default(nohead, .false.))
-    flpe = logical_to_integer(optional_default(fendian, .false.))
-
-    iio = 0;
-    call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(write_binary3))
-  end subroutine X(write_binary3)
-
-  !------------------------------------------------------
-
-  subroutine X(write_binary4)(fname, np, ff, ierr, nohead, fendian)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:,:)
-    integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !> skip header
-    logical, optional,   intent(in)  :: fendian  !> flip endianness
-
-
-    integer :: nhd, flpe, iio
-
-    PUSH_SUB(X(write_binary4))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    nhd = logical_to_integer(optional_default(nohead, .false.))
-    flpe = logical_to_integer(optional_default(fendian, .false.))
-
-    iio = 0;
-    call write_binary(np, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(write_binary4))
-  end subroutine X(write_binary4)
-
-  ! ------------------------------------------------------
-
-  subroutine X(write_binary5)(fname, np, ff, ierr, nohead, fendian)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:,:,:)
-    integer,             intent(out) :: ierr
-    logical, optional,   intent(in)  :: nohead   !> skip header
-    logical, optional,   intent(in)  :: fendian  !> flip endianness
-
-
-    integer :: nhd, flpe, iio
-
-    PUSH_SUB(X(write_binary5))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    nhd = logical_to_integer(optional_default(nohead, .false.))
-    flpe = logical_to_integer(optional_default(fendian, .false.))
-
-    iio = 0;
-    call write_binary(np, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(write_binary5))
-  end subroutine X(write_binary5)
- 
-
-  ! ------------------------------------------------------
-
-  subroutine X(write_parallel)(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    R_TYPE,              intent(in)    :: ff(:)
-    integer,             intent(out)   :: ierr
- 
- #ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
- #endif
-    integer :: write_count, file_handle
- 
-    PUSH_SUB(X(write_parallel))
- 
-    call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .true., ierr)
-    ASSERT(product(ubound(ff)) >= np)
- 
     if(ierr == 0) then
- #ifdef HAVE_MPI2
-      call MPI_File_write_ordered(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
-      call MPI_Get_count(status, R_MPITYPE, write_count, mpi_err)
- #endif
-      if (write_count /= np) then
-        write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " wrote elements=", write_count, " instead of", np
+      ASSERT(product(ubound(ff)) >= np)
+
+#ifdef HAVE_MPI2
+      call MPI_File_read(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
+      call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
+#endif
+      if (read_count /= np) then
+        write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " read elements=", read_count, " instead of", np
         write(message(2), '(a,a)') " of file= ", fname
         call messages_warning(2)
         ierr = 999
       end if
     end if
- 
+
     call io_binary_parallel_end(file_handle)
- 
-    POP_SUB(X(write_parallel))
-  end subroutine X(write_parallel)
+  end if
 
-  !------------------------------------------------------
+  POP_SUB(X(read_parallel))
+end subroutine X(read_parallel)
 
-  subroutine X(read_binary)(fname, np, ff, ierr, offset)
-    character(len=*),    intent(in)   :: fname
-    integer,             intent(in)   :: np
-    R_TYPE,              intent(out)  :: ff(:)
-    integer,             intent(out)  :: ierr
-    integer, optional,   intent(in)   :: offset
+ !------------------------------------------------------
 
-    integer :: iio
+subroutine X(read_binary2)(fname, np, ff, ierr)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(out) :: ff(:,:)
+  integer,             intent(out) :: ierr
 
-    PUSH_SUB(X(read_binary))
+  integer :: iio
 
-    ASSERT(np > 0)
-    ASSERT(product(ubound(ff)) >= np)
+  PUSH_SUB(X(read_binary2))
 
-    ierr = -1
-#ifdef R_TCOMPLEX
-    call try_dread_binary(fname, np, ff, ierr, offset)
-#endif
-    if(ierr == -1) then
-      iio = 0
-      call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
-      call io_incr_counters(iio)
-    end if
+  ASSERT(product(ubound(ff)) >= np)
 
-    POP_SUB(X(read_binary))
-  end subroutine X(read_binary)
+  iio = 0
+  call read_binary(np, 0, ff(1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  call io_incr_counters(iio)
 
-  !------------------------------------------------------ 
+  POP_SUB(X(read_binary2))
+end subroutine X(read_binary2)
 
-  subroutine X(read_parallel)(fname, comm, xlocal, np, ff, ierr)
-    character(len=*),    intent(in)    :: fname
-    integer,             intent(in)    :: comm
-    integer,             intent(in)    :: xlocal
-    integer,             intent(in)    :: np
-    R_TYPE,              intent(inout) :: ff(:)
-    integer,             intent(out)   :: ierr
+ !------------------------------------------------------
 
-#ifdef HAVE_MPI2
-    integer :: status(MPI_STATUS_SIZE)
-#endif
-    integer :: read_count, file_handle
+subroutine X(read_binary3)(fname, np, ff, ierr)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(out) :: ff(:,:,:)
+  integer,             intent(out) :: ierr
 
-    PUSH_SUB(X(read_parallel))
+  integer :: iio
 
-    ASSERT(np > 0)
-    ierr = -1
-#ifdef R_TCOMPLEX
-    call try_dread_parallel(fname, comm, xlocal, np, ff, ierr)
-#endif
+  PUSH_SUB(X(read_binary3))
 
-    if(ierr == -1) then
-      call io_binary_parallel_start(fname, file_handle, comm, xlocal, np, R_SIZEOF, .false., ierr)
+  ASSERT(product(ubound(ff)) >= np)
 
-      if(ierr == 0) then
-        ASSERT(product(ubound(ff)) >= np)
+  iio = 0
+  call read_binary(np, 0, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  call io_incr_counters(iio)
 
-#ifdef HAVE_MPI2
-        call MPI_File_read(file_handle, ff(1), np, R_MPITYPE, status, mpi_err)
-        call MPI_Get_count(status, R_MPITYPE, read_count, mpi_err)
-#endif
-        if (read_count /= np) then
-          write(message(1),'(1x,2a,i8,a,i8)') TOSTRING(R_TYPE), " read elements=", read_count, " instead of", np
-          write(message(2), '(a,a)') " of file= ", fname
-          call messages_warning(2)
-          ierr = 999
-        end if
-      end if
+  POP_SUB(X(read_binary3))
+end subroutine X(read_binary3)
 
-      call io_binary_parallel_end(file_handle)
-    end if
+ !------------------------------------------------------
 
-    POP_SUB(X(read_parallel))
-  end subroutine X(read_parallel)
+subroutine X(read_binary4)(fname, np, ff, ierr)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(out) :: ff(:,:,:,:)
+  integer,             intent(out) :: ierr
 
-  !------------------------------------------------------
+  integer :: iio
 
-  subroutine X(read_binary2)(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:)
-    integer,             intent(out) :: ierr
+  PUSH_SUB(X(read_binary4))
 
-    integer :: iio
+  ASSERT(product(ubound(ff)) >= np)
 
-    PUSH_SUB(X(read_binary2))
+  iio = 0
+  call read_binary(np, 0, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  call io_incr_counters(iio)
 
-    ASSERT(product(ubound(ff)) >= np)
+  POP_SUB(X(read_binary4))
+end subroutine X(read_binary4)
 
-    iio = 0
-    call read_binary(np, 0, ff(1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
-    call io_incr_counters(iio)
+ !------------------------------------------------------
 
-    POP_SUB(X(read_binary2))
-  end subroutine X(read_binary2)
+subroutine X(read_binary5)(fname, np, ff, ierr)
+  character(len=*),    intent(in)  :: fname
+  integer,             intent(in)  :: np
+  R_TYPE,              intent(out) :: ff(:,:,:,:,:)
+  integer,             intent(out) :: ierr
 
-  !------------------------------------------------------
+  integer :: iio
 
-  subroutine X(read_binary3)(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:)
-    integer,             intent(out) :: ierr
+  PUSH_SUB(X(read_binary5))
 
-    integer :: iio
+  ASSERT(product(ubound(ff)) >= np)
 
-    PUSH_SUB(X(read_binary3))
+  iio = 0
+  call read_binary(np, 0, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+  call io_incr_counters(iio)
 
-    ASSERT(product(ubound(ff)) >= np)
-
-    iio = 0
-    call read_binary(np, 0, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(read_binary3))
-  end subroutine X(read_binary3)
-
-  !------------------------------------------------------
-
-  subroutine X(read_binary4)(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:,:)
-    integer,             intent(out) :: ierr
-
-    integer :: iio
-
-    PUSH_SUB(X(read_binary4))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    iio = 0
-    call read_binary(np, 0, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(read_binary4))
-  end subroutine X(read_binary4)
-
-  !------------------------------------------------------
-
-  subroutine X(read_binary5)(fname, np, ff, ierr)
-    character(len=*),    intent(in)  :: fname
-    integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:,:,:)
-    integer,             intent(out) :: ierr
-
-    integer :: iio
-
-    PUSH_SUB(X(read_binary5))
-
-    ASSERT(product(ubound(ff)) >= np)
-
-    iio = 0
-    call read_binary(np, 0, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
-    call io_incr_counters(iio)
-
-    POP_SUB(X(read_binary5))
-  end subroutine X(read_binary5)
+  POP_SUB(X(read_binary5))
+end subroutine X(read_binary5)
 
 
 !! Local Variables:

@@ -59,7 +59,7 @@ module ps_in_grid_oct_m
     FLOAT, pointer, private :: so_dkbcos(:)     !< Kleinman-Bylander cosine
     FLOAT, pointer, private :: so_dknorm(:)     !< Kleinman-Bylander norm
     FLOAT, pointer, private :: so_kb_radius(:)  !< radius of KB projectors
-    
+
     FLOAT, pointer :: vlocal(:)        !< local part of the pseudopotential
     FLOAT, pointer :: rphi(:, :,:)     !< pseudo wavefunctions
 
@@ -69,7 +69,7 @@ module ps_in_grid_oct_m
   end type ps_in_grid_t
 
 contains
-  
+
   subroutine ps_in_grid_init(ps, flavor, a, b, nrval, no_l, so_no_l)
     type(ps_in_grid_t), intent(out) :: ps
     integer,            intent(in)  :: flavor, nrval
@@ -302,10 +302,10 @@ contains
 
         if(dincv > threshold) exit
       end do
-      
+
       ps%so_kb_radius(l) = ps%g%rofi(ir + 1)
     end do
-    
+
     POP_SUB(ps_in_grid_cutoff_radii)
   end subroutine ps_in_grid_cutoff_radii
 
@@ -315,7 +315,7 @@ contains
   subroutine ps_in_grid_check_rphi(ps, namespace)
     type(ps_in_grid_t), intent(in) :: ps
     type(namespace_t),  intent(in) :: namespace
-    
+
     integer :: l
     FLOAT   :: nrm
 
@@ -341,10 +341,10 @@ contains
     FLOAT,             intent(in)    :: x(:)
     FLOAT,             intent(in)    :: y(:)
     logical, optional, intent(in)    :: high_order
-    
+
     FLOAT :: x1, x2, x3
     FLOAT :: y1, y2, y3
-    
+
     x1 = x(2) - x(1)
     x2 = x(3) - x(1)
     x3 = x(4) - x(1)
@@ -362,7 +362,7 @@ contains
       y0 = y1 - (y2 - y1)*x1/(x2 - x1)
 
     end if
-      
+
   end function first_point_extrapolate
 
 end module ps_in_grid_oct_m

@@ -65,15 +65,15 @@ contains
     class(batch_t),          intent(in)    :: aa
     FLOAT,                   intent(out)   :: nrm2(:)
     logical,       optional, intent(in)    :: reduce
-    
+
     PUSH_SUB(mesh_batch_nrm2)
-    
+
     if(aa%type() == TYPE_FLOAT) then
       call dpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     else
       call zpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     end if
-    
+
     if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
       nrm2(1:aa%nst) = nrm2(1:aa%nst)**2
       call comm_allreduce(mesh%mpi_grp%comm, nrm2, dim = aa%nst)

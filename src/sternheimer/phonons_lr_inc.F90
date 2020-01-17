@@ -45,12 +45,12 @@ subroutine X(phonons_lr_infrared)(gr, geo, st, lr, kdotp_lr, imat, iatom, idir, 
       end do
     end do
   end if
-  
+
   do jdir = gr%sb%periodic_dim + 1, gr%sb%dim
     infrared(imat, jdir) = dmf_dotp(gr%mesh, gr%mesh%x(:, jdir), TOFLOAT(lr%X(dl_rho)(:, 1)))
   end do
   infrared(imat, idir) = infrared(imat, idir) - species_zval(geo%atom(iatom)%species)
-  
+
   POP_SUB(X(phonons_lr_infrared))
 end subroutine X(phonons_lr_infrared)
 
@@ -90,14 +90,14 @@ subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load,
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_fatal(1)
         end if
-            
+
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             do idim = 1, st%d%dim
 
               call lalg_axpy(gr%mesh%np, vib%normal_mode(imat, inm), &
                 lrtmp%X(dl_psi)(:, idim, ist, ik), lr%X(dl_psi)(:, idim, ist, ik))
-                  
+
             end do
           end do
         end do

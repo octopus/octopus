@@ -69,7 +69,7 @@ subroutine X(batch_add_state)(this, ist, psi)
   end do
 
   this%max_size = max(this%max_size, ubound(this%states(this%current)%X(psi), dim = 1))
-  
+
   this%current = this%current + 1
 
   POP_SUB(X(batch_add_state))
@@ -88,7 +88,7 @@ subroutine X(batch_add_state_linear)(this, psi)
   this%ist_idim_index(this%current, 1) = this%current
 
   this%max_size = max(this%max_size, ubound(this%states_linear(this%current)%X(psi), dim = 1))
-  
+
   this%current = this%current + 1
 
   POP_SUB(X(batch_add_state_linear))
@@ -117,8 +117,8 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   end if
 
   this%is_allocated = .true.
-  this%mirror = optional_default(mirror, .false.)  
-  
+  this%mirror = optional_default(mirror, .false.)
+
   do ist = st_start, st_end
     call this%add_state(ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
@@ -135,13 +135,13 @@ subroutine X(batch_allocate_temporary)(this)
   PUSH_SUB(X(batch_allocate_temporary))
 
   ASSERT(.not. associated(this%X(psicont)))
-  
+
   if(this%special_memory) then
     call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
   else
     SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
   end if
-  
+
   do ist = 1, this%nst
     this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
     do idim = 1, this%dim

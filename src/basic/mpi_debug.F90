@@ -79,7 +79,7 @@ module mpi_debug_oct_m
     C_MPI_ALLTOALL   = 8,        &
     C_MPI_ALLGATHER  = 9,        &
     C_MPI_FILE_READ  = 10,       &
-    C_MPI_FILE_WRITE = 11 
+    C_MPI_FILE_WRITE = 11
 
   character(len=14), dimension(C_NUM_MPI_ROUTINES), public :: mpi_rlabel = &
     (/                           &

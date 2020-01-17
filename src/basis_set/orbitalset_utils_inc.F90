@@ -1,4 +1,4 @@
-!! Copyright (C) 2017 N. Tancogne-Dejean 
+!! Copyright (C) 2017 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -17,30 +17,30 @@
 !!
 
 
-  !At the present time this routine can only return atomic orbitals, but this could be generalized
-  subroutine X(orbitalset_utils_getorbitals)(os, geo, mesh)
-    type(orbitalset_t),   intent(inout) :: os
-    type(geometry_t),        intent(in) :: geo
-    type(mesh_t),            intent(in) :: mesh
+ !At the present time this routine can only return atomic orbitals, but this could be generalized
+subroutine X(orbitalset_utils_getorbitals)(os, geo, mesh)
+  type(orbitalset_t),   intent(inout) :: os
+  type(geometry_t),        intent(in) :: geo
+  type(mesh_t),            intent(in) :: mesh
 
-    integer :: iorb
+  integer :: iorb
 
-    PUSH_SUB(X(orbitalset_utils_getorbitals))
+  PUSH_SUB(X(orbitalset_utils_getorbitals))
 
-    call submesh_null(os%sphere)
+  call submesh_null(os%sphere)
 
-    do iorb = 1, os%norbs
-      if (debug%info) then
-        write(message(1),'(a,i3,1x,i1,1x,i1,1x,i1,1x,f3.1)')  'get_atomic_orbital ', os%iatom, &
-                                                                    iorb, os%ii, os%ll, os%jj
-        call messages_info(1)
-      end if
-      ! We obtain the orbital
-      call X(get_atomic_orbital)(geo, mesh, os%sphere, os%iatom, os%ii, os%ll, os%jj, &
-                                              os, iorb, os%radius, os%ndim)
-    end do !iorb
+  do iorb = 1, os%norbs
+    if (debug%info) then
+      write(message(1),'(a,i3,1x,i1,1x,i1,1x,i1,1x,f3.1)')  'get_atomic_orbital ', os%iatom, &
+        iorb, os%ii, os%ll, os%jj
+      call messages_info(1)
+    end if
+    ! We obtain the orbital
+    call X(get_atomic_orbital)(geo, mesh, os%sphere, os%iatom, os%ii, os%ll, os%jj, &
+      os, iorb, os%radius, os%ndim)
+  end do !iorb
 
-    POP_SUB(X(orbitalset_utils_getorbitals))
+  POP_SUB(X(orbitalset_utils_getorbitals))
 
-   end subroutine X(orbitalset_utils_getorbitals)
+end subroutine X(orbitalset_utils_getorbitals)
 

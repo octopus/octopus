@@ -83,7 +83,7 @@ contains
     POP_SUB(ps_fhi_init)
   end subroutine ps_fhi_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine ps_fhi_end(ps_fhi)
     type(ps_fhi_t), intent(inout) :: ps_fhi

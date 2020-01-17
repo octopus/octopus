@@ -202,7 +202,7 @@ contains
     call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
     td%dt = td%dt/td%mu
-    
+
     if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
       call messages_fatal(namespace=sys%namespace)
@@ -291,22 +291,22 @@ contains
     if( sys%hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes", namespace=sys%namespace)
 
-    !%Variable TDScissor 
-    !%Type float 
-    !%Default 0.0 
-    !%Section Time-Dependent 
-    !%Description 
-    !% (experimental) If set, a scissor operator will be applied in the 
-    !% Hamiltonian, shifting the excitation energies by the amount 
-    !% specified. By default, it is not applied. 
-    !%End 
-    call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor) 
-    td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+    !%Variable TDScissor
+    !%Type float
+    !%Default 0.0
+    !%Section Time-Dependent
+    !%Description
+    !% (experimental) If set, a scissor operator will be applied in the
+    !% Hamiltonian, shifting the excitation energies by the amount
+    !% specified. By default, it is not applied.
+    !%End
+    call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor)
+    td%scissor = units_to_atomic(units_inp%energy, td%scissor)
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), family_is_mgga_with_exc(sys%ks%xc))
-    
+
     if(sys%hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields", namespace=sys%namespace)
       call laser_write_info(sys%hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -339,7 +339,7 @@ contains
     end if
 
     if(sys%gr%der%boundaries%spiralBC .and. &
-          any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then 
+      any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
       message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
       call messages_fatal(1, namespace=sys%namespace)
     end if
@@ -348,7 +348,7 @@ contains
   end subroutine td_init
 
   ! ---------------------------------------------------------
-  
+
   subroutine td_end(td)
     type(td_t), intent(inout) :: td
 
@@ -364,7 +364,7 @@ contains
   end subroutine td_end
 
   ! ---------------------------------------------------------
-  
+
   subroutine td_run(sys, fromScratch)
     type(system_t), target, intent(inout) :: sys
     logical,                intent(inout) :: fromScratch
@@ -403,7 +403,7 @@ contains
       else
         !complex wfs are required for Ehrenfest
         call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-      end if 
+      end if
     else
       call states_elec_allocate_wfns(st, gr%mesh)
       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
@@ -414,7 +414,7 @@ contains
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
-    
+
     if (gauge_field_is_applied(sys%hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(sys%ks, .true.)
@@ -445,7 +445,7 @@ contains
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
         call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
-      end if  
+      end if
     end if
 
     call td_write_init(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%ks, &
@@ -477,7 +477,7 @@ contains
     end if
 
     if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st%pack()
-    
+
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
@@ -489,7 +489,7 @@ contains
 #ifdef HAVE_MPI
       call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, sys%mc%master_comm, mpi_err)
       stopping = stopping_tmp
-#endif      
+#endif
 
       call profiling_in(prof, "TIME_STEP")
 
@@ -501,13 +501,13 @@ contains
             call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
           end if
           call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
-          !We activate the sprial BC only after the kick, 
+          !We activate the sprial BC only after the kick,
           !to be sure that the first iteration corresponds to the ground state
           if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
         end if
       end if
 
-      ! in case use scdm localized states for exact exchange and request a new localization             
+      ! in case use scdm localized states for exact exchange and request a new localization
       if(sys%hm%scdm_EXX) scdm_is_local = .false.
 
       ! time iterate the system, one time step.
@@ -522,9 +522,9 @@ contains
       end select
 
       !Apply mask absorbing boundaries
-      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st) 
+      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st)
 
-      !Photoelectron stuff 
+      !Photoelectron stuff
       if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
         call pes_calc(td%pesv, sys%namespace, gr%mesh, st, td%dt, iter, gr, sys%hm, stopping)
       end if
@@ -714,7 +714,7 @@ contains
         call restart_end(restart)
       end if
 
-      !We activate the sprial BC only after the kick, 
+      !We activate the sprial BC only after the kick,
       !to be sure that the first iteration corresponds to the ground state
       if(gr%der%boundaries%spiralBC) then
         if((td%iter-1)*td%dt > sys%hm%ep%kick%time .and. gr%der%boundaries%spiralBC) then
@@ -722,7 +722,7 @@ contains
         end if
         sys%hm%hm_base%spin => st%spin
         !We fill st%spin. In case of restart, we read it in td_load
-        if(fromScratch) call states_elec_fermi(st, sys%namespace, gr%mesh) 
+        if(fromScratch) call states_elec_fermi(st, sys%namespace, gr%mesh)
       end if
 
       ! Initialize the occupation matrices and U for LDA+U
@@ -760,7 +760,7 @@ contains
         if(fromScratch) then
           call states_elec_freeze_orbitals(st, sys%namespace, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
         else
-           call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no", namespace=sys%namespace)
+          call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no", namespace=sys%namespace)
         end if
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
@@ -775,16 +775,16 @@ contains
       !%Default no
       !%Section Time-Dependent
       !%Description
-      !% The electrons are evolved as independent particles feeling the Hartree and 
+      !% The electrons are evolved as independent particles feeling the Hartree and
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
       call parse_variable(sys%namespace, 'TDFreezeHXC', .false., freeze_hxc)
-      if(freeze_hxc) then 
+      if(freeze_hxc) then
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
         call v_ks_freeze_hxc(sys%ks)
 
-        !In this case we should reload GS wavefunctions 
+        !In this case we should reload GS wavefunctions
         if(.not.fromScratch) then
           call messages_not_implemented("TDFreezeHXC with FromScratch=no", namespace=sys%namespace)
         end if
@@ -815,8 +815,8 @@ contains
         call messages_info(1)
         call lda_u_freeze_occ(sys%hm%lda_u)
 
-        !In this case we should reload GS wavefunctions 
-        if(sys%hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
+        !In this case we should reload GS wavefunctions
+        if(sys%hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then
           call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, sys%hm%lda_u, st, sys%hm%energy%dft_u, ierr, occ_only = .true.)
           call restart_end(restart_frozen)
@@ -840,7 +840,7 @@ contains
         if(sys%hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
           call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, sys%hm%lda_u, st, sys%hm%energy%dft_u, ierr, u_only = .true.)
-          call restart_end(restart_frozen)    
+          call restart_end(restart_frozen)
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
           call messages_info(1)
           call lda_u_write_U(sys%hm%lda_u, stdout)
@@ -868,7 +868,7 @@ contains
         end if
         call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, 0)
 
-        !We activate the sprial BC only after the kick 
+        !We activate the sprial BC only after the kick
         if(gr%der%boundaries%spiralBC) then
           gr%der%boundaries%spiral = .true.
         end if
@@ -885,7 +885,7 @@ contains
 
     ! ---------------------------------------------------------
     !> reads the pos and vel from coordinates file
-    subroutine td_read_coordinates() 
+    subroutine td_read_coordinates()
       integer :: iatom, iter, iunit
       PUSH_SUB(td_run.td_read_coordinates)
 
@@ -939,11 +939,11 @@ contains
     CMPLX, allocatable :: rotation_matrix(:,:), psi(:, :)
     integer :: ist, jst, ncols, iqn
     character(len=256) :: block_name
-    
+
     PUSH_SUB(transform_states)
 
     block_name = trim(optional_default(prefix, "")) // "TransformStates"
-    
+
     !%Variable TransformStates
     !%Type block
     !%Default no
@@ -960,7 +960,7 @@ contains
     !% <tt>restart/gs</tt> directory. This number may be different: for example,
     !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
     !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
-    !% These states can be used in the transformation. 
+    !% These states can be used in the transformation.
     !%
     !% Note that the code will not check the orthonormality of the new states!
     !%
@@ -983,13 +983,13 @@ contains
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
         SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-        
+
         rotation_matrix = M_z0
         forall(ist = 1:stin%nst) rotation_matrix(ist, ist) = CNST(1.0)
-        
+
         do ist = 1, st%nst
           ncols = parse_block_cols(blk, ist-1)
-          if(ncols /= stin%nst) then            
+          if(ncols /= stin%nst) then
             write(message(1),'(a,i6,a,i6,3a,i6,a)') "Number of columns (", ncols, ") in row ", ist, " of block ", &
               trim(block_name), " must equal number of states (", stin%nst, ") read from gs restart."
             call messages_fatal(1, namespace=namespace)
@@ -1008,7 +1008,7 @@ contains
             call states_elec_rotate(stin, namespace, gr%mesh, rotation_matrix, iqn)
           end if
 
-          do ist = st%st_start, st%st_end 
+          do ist = st%st_start, st%st_end
             call states_elec_get_state(stin, gr%mesh, ist, iqn, psi)
             call states_elec_set_state(st, gr%mesh, ist, iqn, psi)
           end do
@@ -1023,7 +1023,7 @@ contains
       else
         call messages_input_error(trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
       end if
-      
+
     end if
 
     POP_SUB(transform_states)
@@ -1061,7 +1061,7 @@ contains
     if (err /= 0) ierr = ierr + 1
 
     call states_elec_dump_rho(restart, st, gr, ierr, iter=iter)
-    if (err /= 0) ierr = ierr + 1 
+    if (err /= 0) ierr = ierr + 1
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
@@ -1151,7 +1151,7 @@ contains
 
     if(gr%der%boundaries%spiralBC) then
       call states_elec_load_spin(restart, st, gr, err)
-      !To ensure back compatibility, if the file is not present, we use the 
+      !To ensure back compatibility, if the file is not present, we use the
       !current states to get the spins
       if(err /= 0) call states_elec_fermi(st, namespace, gr%mesh)
     end if

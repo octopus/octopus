@@ -39,7 +39,7 @@ module system_mxll_oct_m
   use space_oct_m
   use states_mxll_oct_m
   use system_oct_m
-  
+
   implicit none
 
   private
@@ -65,12 +65,12 @@ module system_mxll_oct_m
   end type system_mxll_t
 
 contains
-  
+
   !----------------------------------------------------------
   subroutine system_mxll_init(sys, namespace)
     type(system_mxll_t), intent(inout) :: sys
     type(namespace_t), intent(in)  :: namespace
-    
+
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_init)
@@ -99,12 +99,12 @@ contains
     sys%geo%periodic_dim = 0
     sys%geo%lsize = M_ZERO
 
-    
+
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
 
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
-    
+
     call parallel_mxll_init(sys)
 
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
@@ -112,15 +112,15 @@ contains
     call output_mxll_init(sys%outp, sys%namespace, sys%gr%sb)
 
     call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
-    
+
     call profiling_out(prof)
-    POP_SUB(system_mxll_init)    
+    POP_SUB(system_mxll_init)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine parallel_mxll_init(sys)
-      type(system_mxll_t), intent(inout) :: sys      
+      type(system_mxll_t), intent(inout) :: sys
 
       integer :: index_range(4)
 
@@ -135,7 +135,7 @@ contains
 
       ! create index and domain communicators
       call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), &
-           &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+      &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(system_mxll_init.parallel_init)
     end subroutine parallel_mxll_init
@@ -168,7 +168,7 @@ contains
   end subroutine system_mxll_end
 
 
-    !----------------------------------------------------------
+  !----------------------------------------------------------
   subroutine system_check_match_maxwell_and_matter(sys_elec, sys_mxll, multigrid_mode)
     type(system_t),           intent(in)  :: sys_elec
     type(system_mxll_t),      intent(in)  :: sys_mxll
@@ -197,7 +197,7 @@ contains
       call messages_fatal(6)
     end if
     if (all(sys_mxll%gr%mesh%spacing(:) == sys_elec%gr%mesh%spacing(:))) then
-      multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL 
+      multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL
     elseif (all(sys_mxll%gr%mesh%spacing(:) >= M_FOUR * sys_elec%gr%sb%lsize(:))) then
       multigrid_mode = MULTIGRID_MX_TO_MA_LARGE
     else

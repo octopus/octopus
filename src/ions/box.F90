@@ -93,7 +93,7 @@ contains
       call messages_fatal(1, namespace=namespace)
 
     end select
-    
+
     POP_SUB(box_create)
   end subroutine box_create
 
@@ -160,7 +160,7 @@ contains
         inside(ip) = (rr <= box%rsize + DELTA .and. abs(xx(1, ip)) <= box%xsize + DELTA)
       end do
 
-    case(BOX_PARALLELEPIPED) 
+    case(BOX_PARALLELEPIPED)
       llimit(1:box%dim) = -box%lsize(1:box%dim) - DELTA
       ulimit(1:box%dim) =  box%lsize(1:box%dim) + DELTA
 

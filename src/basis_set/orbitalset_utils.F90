@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean 
+!! Copyright (C) 2016 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -36,16 +36,16 @@ module orbitalset_utils_oct_m
   use species_oct_m
   use submesh_oct_m
   use unit_oct_m
- 
+
   implicit none
 
   private
 
   public ::                            &
-       orbitalset_utils_count,         &
-       dorbitalset_utils_getorbitals,  &
-       zorbitalset_utils_getorbitals,  &
-       orbitalset_init_intersite
+    orbitalset_utils_count,         &
+    dorbitalset_utils_getorbitals,  &
+    zorbitalset_utils_getorbitals,  &
+    orbitalset_init_intersite
 
 contains
 
@@ -108,7 +108,7 @@ contains
     if(this%iatom /= -1)then
       xat(1:sb%dim) = geo%atom(this%iatom)%x(1:sb%dim)
 
-      !We first count first the number of neighboring atoms at a distance max rcut 
+      !We first count first the number of neighboring atoms at a distance max rcut
       do ios = 1, nos
 
         call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)
@@ -135,7 +135,7 @@ contains
       if(has_phase) then
         SAFE_ALLOCATE(this%phase_shift(1:this%nneighbors, kpt%start:kpt%end))
       end if
- 
+
       this%nneighbors = 0
       do ios = 1, nos
         call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)
@@ -150,7 +150,7 @@ contains
 
           this%V_ij(this%nneighbors, 1:sb%dim) = xi(1:sb%dim) -os(ios)%sphere%center(1:sb%dim)
           this%V_ij(this%nneighbors, sb%dim+1) = rr
-          
+
           this%map_os(this%nneighbors) = ios
         end do
         call periodic_copy_end(pc)
@@ -178,10 +178,10 @@ contains
 
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
-                       shift = this%V_ij(inn, 1:sb%dim))
+          shift = this%V_ij(inn, 1:sb%dim))
 
         write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', &
-                             this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
+          this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
         call messages_info(1)
 
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))
@@ -190,14 +190,14 @@ contains
 
         do ist = 1, this%norbs
           call datomic_orbital_get_submesh_safe(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
-                          1, orb(1:sm%np, ist,1))
+            1, orb(1:sm%np, ist,1))
         end do
-         
+
         call submesh_shift_center(sm, sb, this%V_ij(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
 
         do ist = 1, os(ios)%norbs
           call datomic_orbital_get_submesh_safe(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
-                1, orb(1:sm%np, ist,2))
+            1, orb(1:sm%np, ist,2))
         end do
 
         SAFE_ALLOCATE(tmp(1:sm%np))
@@ -209,29 +209,29 @@ contains
         np_sphere = sm%np
 
         do ist = 1, this%norbs
+          !$omp parallel do
+          do ip = 1, np_sphere
+            nn(ip) = orb(ip,ist,1)*orb(ip,ist,1)
+          end do
+          !$omp end parallel do
+
+          !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+          call dpoisson_solve_sm(this%poisson, sm, vv(1:np_sphere), nn(1:np_sphere))
+
+          do jst = 1, os(ios)%norbs
+
             !$omp parallel do
             do ip = 1, np_sphere
-              nn(ip) = orb(ip,ist,1)*orb(ip,ist,1)
+              tmp(ip) = vv(ip)*orb(ip, jst, 2)*orb(ip, jst, 2)
             end do
-            !$omp end parallel do    
+            !$omp end parallel do
 
-            !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
-            call dpoisson_solve_sm(this%poisson, sm, vv(1:np_sphere), nn(1:np_sphere))
+            this%coulomb_IIJJ(ist, ist, jst, jst, inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere), reduce = .false.)
+            if(abs(this%coulomb_IIJJ(ist, ist, jst, jst, inn)) < CNST(1.0e-12)) then
+              this%coulomb_IIJJ(ist, ist, jst, jst, inn) = M_ZERO
+            end if
 
-            do jst = 1, os(ios)%norbs
-
-                !$omp parallel do
-                do ip = 1, np_sphere
-                  tmp(ip) = vv(ip)*orb(ip, jst, 2)*orb(ip, jst, 2)
-                end do
-                !$omp end parallel do
-
-                this%coulomb_IIJJ(ist, ist, jst, jst, inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere), reduce = .false.)
-                if(abs(this%coulomb_IIJJ(ist, ist, jst, jst, inn)) < CNST(1.0e-12)) then
-                  this%coulomb_IIJJ(ist, ist, jst, jst, inn) = M_ZERO
-                end if
-
-            end do !kst 
+          end do !kst
         end do !ist
 
         call poisson_end(this%poisson)
@@ -249,15 +249,15 @@ contains
       if(der%mesh%parallel_in_domains) then
         call comm_allreduce(der%mesh%mpi_grp%comm, this%coulomb_IIJJ)
       end if
- 
+
 
       if(dist%parallel) then
         call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)
       end if
-      
-      #ifdef HAVE_MPI
+
+#ifdef HAVE_MPI
       call distributed_end(dist)
-      #endif
+#endif
 
     end if
 

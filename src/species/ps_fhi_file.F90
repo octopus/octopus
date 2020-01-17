@@ -52,7 +52,7 @@ module ps_fhi_file_oct_m
     FLOAT,              private :: fchrg  !
     FLOAT,              private :: qchrg  !
   end type ps_fhi_file_t
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -74,7 +74,7 @@ contains
       write(message(2),'(a,i2)') "  expecting pspcod = 6, but found ", psf%pspcod
       call messages_fatal(2, namespace=namespace)
     end if
-    
+
     read(unit, '(a3)') line
     if(line /= '4--') then  ! have non-local core corrections
       backspace(unit)
@@ -89,7 +89,7 @@ contains
     read(unit, '(a3)') line
     read(unit, '(a3)') line
     read(unit, '(a3)') line
-    
+
     POP_SUB(read_file_data)
   end subroutine ps_fhi_file_read
 

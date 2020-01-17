@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean 
+!! Copyright (C) 2016 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -38,328 +38,328 @@ module lda_u_io_oct_m
   use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
- 
+
   implicit none
 
   private
 
   public ::                             &
-       lda_u_write_occupation_matrices, &
-       lda_u_write_effectiveU,          &
-       lda_u_write_kanamoriU,           &
-       lda_u_write_U,                   &
-       lda_u_write_V,                   &
-       lda_u_write_magnetization,       &
-       lda_u_load,                      &
-       lda_u_loadbasis,                 &
-       lda_u_dump
+    lda_u_write_occupation_matrices, &
+    lda_u_write_effectiveU,          &
+    lda_u_write_kanamoriU,           &
+    lda_u_write_U,                   &
+    lda_u_write_V,                   &
+    lda_u_write_magnetization,       &
+    lda_u_load,                      &
+    lda_u_loadbasis,                 &
+    lda_u_dump
 
 contains
 
- !> Prints the occupation matrices at the end of the scf calculation.
- subroutine lda_u_write_occupation_matrices(dir, this, st, namespace)
-   type(lda_u_t),       intent(in)    :: this
-   character(len=*),    intent(in)    :: dir
-   type(states_elec_t), intent(in)    :: st
-   type(namespace_t),   intent(in)    :: namespace
+  !> Prints the occupation matrices at the end of the scf calculation.
+  subroutine lda_u_write_occupation_matrices(dir, this, st, namespace)
+    type(lda_u_t),       intent(in)    :: this
+    character(len=*),    intent(in)    :: dir
+    type(states_elec_t), intent(in)    :: st
+    type(namespace_t),   intent(in)    :: namespace
 
-   integer :: iunit, ios, ispin, im, imp
- 
-   PUSH_SUB(lda_u_write_occupation_matrices)
+    integer :: iunit, ios, ispin, im, imp
 
-   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-   iunit = io_open(trim(dir) // "/occ_matrices", namespace, action='write')
-   write(iunit,'(a)') ' Occupation matrices '
+    PUSH_SUB(lda_u_write_occupation_matrices)
 
-   do ios = 1, this%norbsets
-     do ispin = 1,st%d%nspin 
-        write(iunit,'(a, i4, a, i4)') ' Orbital set ', ios, ' spin ', ispin
-        do im = 1, this%orbsets(ios)%norbs
-          write(iunit,'(1x)',advance='no') 
+    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+      iunit = io_open(trim(dir) // "/occ_matrices", namespace, action='write')
+      write(iunit,'(a)') ' Occupation matrices '
 
-          if (states_are_real(st)) then
-            do imp = 1, this%orbsets(ios)%norbs-1
-              write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ios)  
-            end do
-            write(iunit,'(f14.8)') this%dn(im,this%orbsets(ios)%norbs,ispin,ios)
-          else
-            do imp = 1, this%orbsets(ios)%norbs-1
-              write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ios)
-            end do
-            write(iunit,'(f14.8,f14.8)') this%zn(im,this%orbsets(ios)%norbs,ispin,ios) 
-          end if
-        end do
-     end do !ispin
-   end do !iatom
-   call io_close(iunit)
-
-   if(this%level == DFT_U_ACBN0) then
-     iunit = io_open(trim(dir) // "/renorm_occ_matrices", namespace, action='write')
-     write(iunit,'(a)') ' Renormalized occupation matrices '
-
-     do ios = 1, this%norbsets
-       do ispin = 1,st%d%nspin
+      do ios = 1, this%norbsets
+        do ispin = 1,st%d%nspin
           write(iunit,'(a, i4, a, i4)') ' Orbital set ', ios, ' spin ', ispin
           do im = 1, this%orbsets(ios)%norbs
             write(iunit,'(1x)',advance='no')
 
             if (states_are_real(st)) then
               do imp = 1, this%orbsets(ios)%norbs-1
-                write(iunit,'(f14.8)',advance='no') this%dn_alt(im,imp,ispin,ios)
+                write(iunit,'(f14.8)',advance='no') this%dn(im,imp,ispin,ios)
               end do
-              write(iunit,'(f14.8)') this%dn_alt(im,this%orbsets(ios)%norbs,ispin,ios)
+              write(iunit,'(f14.8)') this%dn(im,this%orbsets(ios)%norbs,ispin,ios)
             else
               do imp = 1, this%orbsets(ios)%norbs-1
-                write(iunit,'(f14.8,f14.8)',advance='no') this%zn_alt(im,imp,ispin,ios)
+                write(iunit,'(f14.8,f14.8)',advance='no') this%zn(im,imp,ispin,ios)
               end do
-              write(iunit,'(f14.8,f14.8)') this%zn_alt(im,this%orbsets(ios)%norbs,ispin,ios)
+              write(iunit,'(f14.8,f14.8)') this%zn(im,this%orbsets(ios)%norbs,ispin,ios)
             end if
           end do
-       end do !ispin
-     end do !iatom
-     call io_close(iunit)
-   end if
+        end do !ispin
+      end do !iatom
+      call io_close(iunit)
 
-   end if
+      if(this%level == DFT_U_ACBN0) then
+        iunit = io_open(trim(dir) // "/renorm_occ_matrices", namespace, action='write')
+        write(iunit,'(a)') ' Renormalized occupation matrices '
 
-   POP_SUB(lda_u_write_occupation_matrices)
- end subroutine lda_u_write_occupation_matrices
+        do ios = 1, this%norbsets
+          do ispin = 1,st%d%nspin
+            write(iunit,'(a, i4, a, i4)') ' Orbital set ', ios, ' spin ', ispin
+            do im = 1, this%orbsets(ios)%norbs
+              write(iunit,'(1x)',advance='no')
 
- !--------------------------------------------------------- 
- subroutine lda_u_write_effectiveU(dir, this, namespace)
-   type(lda_u_t),     intent(in)    :: this
-   character(len=*),  intent(in)    :: dir
-   type(namespace_t), intent(in)    :: namespace
+              if (states_are_real(st)) then
+                do imp = 1, this%orbsets(ios)%norbs-1
+                  write(iunit,'(f14.8)',advance='no') this%dn_alt(im,imp,ispin,ios)
+                end do
+                write(iunit,'(f14.8)') this%dn_alt(im,this%orbsets(ios)%norbs,ispin,ios)
+              else
+                do imp = 1, this%orbsets(ios)%norbs-1
+                  write(iunit,'(f14.8,f14.8)',advance='no') this%zn_alt(im,imp,ispin,ios)
+                end do
+                write(iunit,'(f14.8,f14.8)') this%zn_alt(im,this%orbsets(ios)%norbs,ispin,ios)
+              end if
+            end do
+          end do !ispin
+        end do !iatom
+        call io_close(iunit)
+      end if
 
-   integer :: iunit, ios
+    end if
 
-   PUSH_SUB(lda_u_write_effectiveU)
+    POP_SUB(lda_u_write_occupation_matrices)
+  end subroutine lda_u_write_occupation_matrices
 
-   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     iunit = io_open(trim(dir) // "/effectiveU", namespace, action='write')
-     call lda_u_write_U(this, iunit)
+  !---------------------------------------------------------
+  subroutine lda_u_write_effectiveU(dir, this, namespace)
+    type(lda_u_t),     intent(in)    :: this
+    character(len=*),  intent(in)    :: dir
+    type(namespace_t), intent(in)    :: namespace
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
-           end if
+    integer :: iunit, ios
+
+    PUSH_SUB(lda_u_write_effectiveU)
+
+    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+      iunit = io_open(trim(dir) // "/effectiveU", namespace, action='write')
+      call lda_u_write_U(this, iunit)
+
+      write(iunit, '(a,a,a,f7.3,a)') 'Hubbard U [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                             l_notation(this%orbsets(ios)%ll), &
-                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
-           end if
-         end if
-       else
-         write(iunit,'(i4,a10, 3x, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
-       end if
-     end do
+          write(iunit,'(i4,a10, 3x, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+        end if
+      end do
 
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Hund J [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
-           end if
+      write(iunit, '(a,a,a,f7.3,a)') 'Hund J [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                            l_notation(this%orbsets(ios)%ll), &
-                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                            units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
-           end if
-         end if
-       else
-         write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
-       end if
-     end do
+          write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+        end if
+      end do
 
-     call io_close(iunit)
-   end if
+      call io_close(iunit)
+    end if
 
-   POP_SUB(lda_u_write_effectiveU)
- end subroutine lda_u_write_effectiveU
+    POP_SUB(lda_u_write_effectiveU)
+  end subroutine lda_u_write_effectiveU
 
- !--------------------------------------------------------- 
- subroutine lda_u_write_kanamoriU(dir, st, this, namespace)
-   type(lda_u_t),       intent(in)    :: this
-   type(states_elec_t), intent(in)    :: st
-   character(len=*),    intent(in)    :: dir
-   type(namespace_t),   intent(in)    :: namespace
+  !---------------------------------------------------------
+  subroutine lda_u_write_kanamoriU(dir, st, this, namespace)
+    type(lda_u_t),       intent(in)    :: this
+    type(states_elec_t), intent(in)    :: st
+    character(len=*),    intent(in)    :: dir
+    type(namespace_t),   intent(in)    :: namespace
 
-   integer :: iunit, ios
-   FLOAT, allocatable :: kanamori(:,:)
+    integer :: iunit, ios
+    FLOAT, allocatable :: kanamori(:,:)
 
-   PUSH_SUB(lda_u_write_kanamoriU)
+    PUSH_SUB(lda_u_write_kanamoriU)
 
-   if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-     SAFE_ALLOCATE(kanamori(1:3,1:this%norbsets))
+    if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+      SAFE_ALLOCATE(kanamori(1:3,1:this%norbsets))
 
-     call compute_ACBNO_U_kanamori(this, st, kanamori)
+      call compute_ACBNO_U_kanamori(this, st, kanamori)
 
-     iunit = io_open(trim(dir) // "/kanamoriU", namespace, action='write')
+      iunit = io_open(trim(dir) // "/kanamoriU", namespace, action='write')
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Intraorbital U [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, kanamori(1,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, kanamori(1,ios))
-           end if
+      write(iunit, '(a,a,a,f7.3,a)') 'Intraorbital U [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(1,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(1,ios))
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(1,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(1,ios))
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                                units_from_atomic(units_out%energy, kanamori(1,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                            l_notation(this%orbsets(ios)%ll), &
-                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                            units_from_atomic(units_out%energy, kanamori(1,ios))
-           end if
-         end if
-       else
-         write(iunit,'(i4,a10, 3x, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(1,ios))
-       end if
-     end do
+          write(iunit,'(i4,a10, 3x, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(1,ios))
+        end if
+      end do
 
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Interorbital Up [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'Up'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, kanamori(2,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, kanamori(2,ios))
-           end if
+      write(iunit, '(a,a,a,f7.3,a)') 'Interorbital Up [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'Up'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(2,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(2,ios))
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(2,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(2,ios))
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                                units_from_atomic(units_out%energy, kanamori(2,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                            l_notation(this%orbsets(ios)%ll), &
-                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                            units_from_atomic(units_out%energy, kanamori(2,ios))
-           end if
-         end if
-       else
-         write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(2,ios))
-       end if
-     end do
+          write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(2,ios))
+        end if
+      end do
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Hund J [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, kanamori(3,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, kanamori(3,ios))
-           end if
+      write(iunit, '(a,a,a,f7.3,a)') 'Hund J [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'J'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(3,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, kanamori(3,ios))
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(3,ios))
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, kanamori(3,ios))
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                                units_from_atomic(units_out%energy, kanamori(3,ios))
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                            l_notation(this%orbsets(ios)%ll), &
-                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                            units_from_atomic(units_out%energy, kanamori(3,ios))
-           end if
-         end if
-       else
-         write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(3,ios))
-       end if
-     end do
+          write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, kanamori(3,ios))
+        end if
+      end do
 
 
-     call io_close(iunit)
+      call io_close(iunit)
 
-     SAFE_DEALLOCATE_A(kanamori)
-   end if
+      SAFE_DEALLOCATE_A(kanamori)
+    end if
 
 
-   POP_SUB(lda_u_write_kanamoriU)
- end subroutine lda_u_write_kanamoriU
+    POP_SUB(lda_u_write_kanamoriU)
+  end subroutine lda_u_write_kanamoriU
 
 
 
- !--------------------------------------------------------- 
- subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
-   type(lda_u_t),       intent(in)    :: this
-   character(len=*),    intent(in)    :: dir
-   type(geometry_t),    intent(in)    :: geo
-   type(mesh_t),        intent(in)    :: mesh
-   type(states_elec_t), intent(in)    :: st
-   type(namespace_t),   intent(in)    :: namespace
+  !---------------------------------------------------------
+  subroutine lda_u_write_magnetization(dir, this, geo, mesh, st, namespace)
+    type(lda_u_t),       intent(in)    :: this
+    character(len=*),    intent(in)    :: dir
+    type(geometry_t),    intent(in)    :: geo
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(in)    :: st
+    type(namespace_t),   intent(in)    :: namespace
 
-   integer :: iunit, ia, ios, im
-   FLOAT, allocatable :: mm(:,:)
+    integer :: iunit, ia, ios, im
+    FLOAT, allocatable :: mm(:,:)
 
-   if( .not. mpi_grp_is_root(mpi_world)) return
+    if( .not. mpi_grp_is_root(mpi_world)) return
 
-   PUSH_SUB(lda_u_write_magnetization)
+    PUSH_SUB(lda_u_write_magnetization)
 
-   call io_mkdir(dir, namespace)
+    call io_mkdir(dir, namespace)
     iunit = io_open(trim(dir)//"/magnetization.xsf", namespace, action='write', position='asis')
 
     if(this%nspins > 1) then
@@ -370,7 +370,7 @@ contains
         ia = this%orbsets(ios)%iatom
         do im = 1, this%orbsets(ios)%norbs
           if (states_are_real(st)) then
-            mm(ia, 3) = mm(ia, 3) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios) 
+            mm(ia, 3) = mm(ia, 3) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios)
           else
             mm(ia, 3) = mm(ia, 3) + real(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
             !Spinors
@@ -378,7 +378,7 @@ contains
               mm(ia, 1) = mm(ia, 1) + 2*real(this%zn(im,im,3,ios))
               mm(ia, 2) = mm(ia, 2) - 2*aimag(this%zn(im,im,3,ios))
             end if
-          end if  
+          end if
         end do !im
       end do ! ios
       call write_xsf_geometry(iunit, geo, mesh, forces = mm)
@@ -387,112 +387,112 @@ contains
 
     call io_close(iunit)
 
-   POP_SUB(lda_u_write_magnetization)
- end subroutine lda_u_write_magnetization
+    POP_SUB(lda_u_write_magnetization)
+  end subroutine lda_u_write_magnetization
 
- !--------------------------------------------------------- 
- subroutine lda_u_write_U(this, iunit)
-   type(lda_u_t),     intent(in) :: this
-   integer,           intent(in) :: iunit
+  !---------------------------------------------------------
+  subroutine lda_u_write_U(this, iunit)
+    type(lda_u_t),     intent(in) :: this
+    integer,           intent(in) :: iunit
 
-   integer :: ios
+    integer :: ios
 
-   PUSH_SUB(lda_u_write_U)
-  
-   if(mpi_grp_is_root(mpi_world)) then
+    PUSH_SUB(lda_u_write_U)
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
-     do ios = 1, this%norbsets
-       if(.not.this%basisfromstates) then
-         if(this%orbsets(ios)%ndim == 1) then 
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)  
-           else
-             write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                    l_notation(this%orbsets(ios)%ll), &
-                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
-           end if
+    if(mpi_grp_is_root(mpi_world)) then
+
+      write(iunit, '(a,a,a,f7.3,a)') 'Effective Hubbard U [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,6x,14x,a)') ' Orbital',  'U'
+      do ios = 1, this%norbsets
+        if(.not.this%basisfromstates) then
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+            else
+              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+            end if
+          end if
         else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                                            l_notation(this%orbsets(ios)%ll), &
-                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
-                                                            units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
-           end if 
+          write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
         end if
-       else
-         write(iunit,'(i4,a10, f15.6)') ios, 'states', units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
-       end if
-     end do
-   end if
- 
-   POP_SUB(lda_u_write_U)
- end subroutine lda_u_write_U
+      end do
+    end if
 
- !--------------------------------------------------------- 
- subroutine lda_u_write_V(this, iunit)
-   type(lda_u_t),     intent(in) :: this
-   integer,           intent(in) :: iunit
+    POP_SUB(lda_u_write_U)
+  end subroutine lda_u_write_U
 
-   integer :: ios, icopies, ios2
+  !---------------------------------------------------------
+  subroutine lda_u_write_V(this, iunit)
+    type(lda_u_t),     intent(in) :: this
+    integer,           intent(in) :: iunit
 
-   if(.not. this%intersite) return
+    integer :: ios, icopies, ios2
 
-   PUSH_SUB(lda_u_write_V)
+    if(.not. this%intersite) return
 
-   if(mpi_grp_is_root(mpi_world)) then
+    PUSH_SUB(lda_u_write_V)
 
-     write(iunit, '(a,a,a,f7.3,a)') 'Effective intersite V [', &
-       trim(units_abbrev(units_out%energy)),']:'
-     write(iunit,'(a,14x,a)') ' Orbital',  'V'
-     do ios = 1, this%norbsets
-       do icopies = 1, this%orbsets(ios)%nneighbors
-         ios2 = this%orbsets(ios)%map_os(icopies)
-         if(this%orbsets(ios)%ndim == 1) then
-           if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i2, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ios2, &
-                                             this%orbsets(ios2)%nn, l_notation(this%orbsets(ios2)%ll), &
-                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
-                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
-           else
-             write(iunit,'(i4,a10, 3x, a1, i2, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                             l_notation(this%orbsets(ios)%ll), ios2, l_notation(this%orbsets(ios2)%ll), &
-                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
-                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
-           end if
-        else
-          if(this%orbsets(ios)%nn /= 0 ) then
-             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,      &
-                          units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
-                          units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
-           else
-             write(iunit,'(i4,a10, 3x, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,   &
-                                  units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
-                                  units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
-           end if
-         end if
-       end do
+    if(mpi_grp_is_root(mpi_world)) then
+
+      write(iunit, '(a,a,a,f7.3,a)') 'Effective intersite V [', &
+        trim(units_abbrev(units_out%energy)),']:'
+      write(iunit,'(a,14x,a)') ' Orbital',  'V'
+      do ios = 1, this%norbsets
+        do icopies = 1, this%orbsets(ios)%nneighbors
+          ios2 = this%orbsets(ios)%map_os(icopies)
+          if(this%orbsets(ios)%ndim == 1) then
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i2, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ios2, &
+                this%orbsets(ios2)%nn, l_notation(this%orbsets(ios2)%ll), &
+                units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+            else
+              write(iunit,'(i4,a10, 3x, a1, i2, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), ios2, l_notation(this%orbsets(ios2)%ll), &
+                units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+            end if
+          else
+            if(this%orbsets(ios)%nn /= 0 ) then
+              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,      &
+                units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+            else
+              write(iunit,'(i4,a10, 3x, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                l_notation(this%orbsets(ios)%ll), int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,   &
+                units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+            end if
+          end if
+        end do
 
 
-     end do
-   end if
+      end do
+    end if
 
-   POP_SUB(lda_u_write_V)
- end subroutine lda_u_write_V
- 
+    POP_SUB(lda_u_write_V)
+  end subroutine lda_u_write_V
+
 
   ! ---------------------------------------------------------
   subroutine lda_u_dump(restart, this, st, ierr, iter)
@@ -528,12 +528,12 @@ contains
       end if
     end if
 
- 
+
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
       docc = M_ZERO
       call dlda_u_get_occupations(this, docc)
-      call drestart_write_binary(restart, "lda_u_occ", occsize, docc, err)      
+      call drestart_write_binary(restart, "lda_u_occ", occsize, docc, err)
       if (err /= 0) ierr = ierr + 1
       SAFE_DEALLOCATE_A(docc)
     else
@@ -555,7 +555,7 @@ contains
       if (err /= 0) ierr = ierr + 1
 
       if(this%intersite) then
-        ncount = 0  
+        ncount = 0
         do ios = 1, this%norbsets
           ncount = ncount + this%orbsets(ios)%nneighbors
         end do
@@ -563,7 +563,7 @@ contains
         call lda_u_get_effectiveV(this, Veff(:))
         call drestart_write_binary(restart, "lda_u_Veff", ncount, Veff, err)
         SAFE_DEALLOCATE_A(Veff)
-        if (err /= 0) ierr = ierr + 1 
+        if (err /= 0) ierr = ierr + 1
       end if
     end if
 
@@ -576,7 +576,7 @@ contains
   end subroutine lda_u_dump
 
 
- ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine lda_u_load(restart, this, st, dftu_energy, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
@@ -639,7 +639,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(docc(1:occsize))
-        call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
+        call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err)
         if (err /= 0) ierr = ierr + 1
         call dlda_u_set_occupations(this, docc)
         SAFE_DEALLOCATE_A(docc)
@@ -688,7 +688,7 @@ contains
     character(len=12)    :: filename
     character(len=1)     :: char
     character(len=50)    :: str
- 
+
 
     PUSH_SUB(lda_u_loadbasis)
 
@@ -738,7 +738,7 @@ contains
     restart_file_present = .false.
 
 
-    ! Next we read the list of states from the files. 
+    ! Next we read the list of states from the files.
     ! Errors in reading the information of a specific state from the files are ignored
     ! at this point, because later we will skip reading the wavefunction of that state.
     do

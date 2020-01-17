@@ -75,7 +75,7 @@ module density_oct_m
   end type density_calc_t
 
 contains
-  
+
   subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
     type(states_elec_t),  target,   intent(in)    :: st
@@ -95,7 +95,7 @@ contains
     this%packed = .false.
 
     correct_size = ubound(this%density, dim = 1) == this%gr%fine%mesh%np .or. &
-         ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
+      ubound(this%density, dim = 1) == this%gr%fine%mesh%np_part
     ASSERT(correct_size)
 
     POP_SUB(density_calc_init)
@@ -107,14 +107,14 @@ contains
     type(density_calc_t),           intent(inout)   :: this
 
     PUSH_SUB(density_calc_pack)
-    
+
     this%packed = .true.
     this%pnp = accel_padded_size(this%gr%mesh%np)
     call accel_create_buffer(this%buff_density, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, this%pnp*this%st%d%nspin)
-    
+
     ! set to zero
     call accel_set_buffer_to_zero(this%buff_density, TYPE_FLOAT, this%pnp*this%st%d%nspin)
-    
+
     POP_SUB(density_calc_pack)
   end subroutine density_calc_pack
 
@@ -142,7 +142,7 @@ contains
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%states(ist)%ist, psib%ik)
 
-    if (.not. this%gr%have_fine_mesh) then 
+    if (.not. this%gr%have_fine_mesh) then
 
       select case(psib%status())
       case(BATCH_NOT_PACKED)
@@ -170,7 +170,7 @@ contains
           do ist = 1, psib%nst
             if(abs(weight(ist)) <= M_EPSILON) cycle
             !$omp parallel do schedule(static) private(psi1, psi2, term)
-            do ip = 1, this%gr%mesh%np          
+            do ip = 1, this%gr%mesh%np
               psi1 = psib%states(ist)%zpsi(ip, 1)
               psi2 = psib%states(ist)%zpsi(ip, 2)
               this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
@@ -226,7 +226,7 @@ contains
         call accel_write_buffer(buff_weight, psib%nst, weight)
 
         select case (this%st%d%ispin)
-        case (UNPOLARIZED, SPIN_POLARIZED)        
+        case (UNPOLARIZED, SPIN_POLARIZED)
           if(states_are_real(this%st)) then
             kernel => kernel_density_real
           else
@@ -240,7 +240,7 @@ contains
           call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
           call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
-        
+
         case (SPINORS)
           kernel => kernel_density_spinors
 
@@ -258,9 +258,9 @@ contains
         call accel_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
 
         call accel_finish()
-        
+
         call accel_release_buffer(buff_weight)
-        
+
       end select
 
     else if(this%gr%have_fine_mesh) then
@@ -285,12 +285,12 @@ contains
         end do
 
         nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
-        
+
         !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
           this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*sqpsi(ip)/nrm
         end do
-        
+
       end do
 
 
@@ -336,14 +336,14 @@ contains
         call accel_read_buffer(this%buff_density, this%gr%mesh%np, tmpdensity, offset = (ispin - 1)*this%pnp)
 
         if(this%gr%have_fine_mesh) then
-           SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
-           call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, tmpdensity, fdensity, order = 2)
+          SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
+          call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, tmpdensity, fdensity, order = 2)
 
-           do ip = 1, this%gr%fine%mesh%np
-             this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
-           end do
+          do ip = 1, this%gr%fine%mesh%np
+            this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+          end do
 
-           SAFE_DEALLOCATE_A(fdensity)
+          SAFE_DEALLOCATE_A(fdensity)
         else
           do ip = 1, this%gr%mesh%np
             this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
@@ -370,7 +370,7 @@ contains
 
       do ispin = 1, this%st%d%nspin
         call dsymmetrizer_apply(symmetrizer, this%gr%fine%mesh%np, field = this%density(:, ispin), &
-                                 symmfield = tmpdensity)
+          symmfield = tmpdensity)
         this%density(1:this%gr%fine%mesh%np, ispin) = tmpdensity(1:this%gr%fine%mesh%np)
       end do
 
@@ -383,7 +383,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Computes the density from the orbitals in st. 
+  !> Computes the density from the orbitals in st.
   subroutine density_calc(st, gr, density)
     type(states_elec_t),     intent(in)  :: st
     type(grid_t),            intent(in)  :: gr
@@ -397,7 +397,7 @@ contains
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
     call density_calc_init(dens_calc, st, gr, density)
-    
+
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
@@ -449,27 +449,27 @@ contains
       if(n < st%st_start) cycle
 
       do ib =  st%group%block_start, st%group%block_end
-        !We can use the full batch 
+        !We can use the full batch
         if(states_elec_block_max(st, ib) <= n) then
 
           call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
           if(states_elec_block_max(st, ib) == n) exit
 
-        else !Here we only use a part of this batch 
+        else !Here we only use a part of this batch
 
           nblock = n - states_elec_block_min(st, ib) + 1
 
           SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1:nblock))
 
           do ist = 1, nblock
-            call states_elec_get_state(st, gr%mesh, states_elec_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
+            call states_elec_get_state(st, gr%mesh, states_elec_block_min(st, ib) + ist - 1, ik, psi(:, :, ist))
           end do
 
           call wfs_elec_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi, ik)
           call density_calc_accumulate(dens_calc, psib)
           call psib%end()
           SAFE_DEALLOCATE_A(psi)
-          
+
           exit
 
         end if
@@ -482,7 +482,7 @@ contains
     if(family_is_mgga) then
       if(.not.associated(st%frozen_tau)) then
         SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
-      end if    
+      end if
       if(.not.associated(st%frozen_gdens)) then
         SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
       end if
@@ -491,8 +491,8 @@ contains
       end if
 
       call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
-           density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
-    end if 
+        density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n)
+    end if
 
 
     call states_elec_copy(staux, st)
@@ -503,7 +503,7 @@ contains
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
-#if defined(HAVE_MPI) 
+#if defined(HAVE_MPI)
 
       do ik = st%d%kpt%start, st%d%kpt%end
         !We cound how many states we have to send, and how many we  will receive
@@ -514,7 +514,7 @@ contains
         nreceiv = st%st_end-st%st_start+1
 
         st_min = min(max(staux%st_start-n, 1),st%st_start)
- 
+
         do ist = st_min, st%st_end
           nodeto = -1
           nodefr = -1
@@ -524,20 +524,20 @@ contains
           !Local copy
           if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == st%mpi_grp%rank) then
             call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
-            call states_elec_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))            
+            call states_elec_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
             nsend = nsend -1
             nreceiv= nreceiv-1
           else
             if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
               call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
               call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
-                    st%mpi_grp%comm, mpi_err)
+                st%mpi_grp%comm, mpi_err)
               nsend = nsend -1
-            end if          
+            end if
 
             if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
-                 ist, st%mpi_grp%comm, status, mpi_err)
+                ist, st%mpi_grp%comm, status, mpi_err)
               call states_elec_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
               nreceiv= nreceiv-1
             end if
@@ -548,7 +548,7 @@ contains
       ! Add a barrier to ensure that the process are synchronized
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-   
+
     else
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = st%st_start, st%st_end
@@ -560,7 +560,7 @@ contains
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(rec_buffer)
-    
+
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         st%occ(ist, ik) = staux%occ(n+ist, ik)
@@ -608,10 +608,10 @@ contains
 
     PUSH_SUB(states_elec_freeze_adjust_occs)
 
-    ! Change the smearing method by fixing the occupations to  
-    ! that of the ground-state such that the unfrozen states inherit 
+    ! Change the smearing method by fixing the occupations to
+    ! that of the ground-state such that the unfrozen states inherit
     ! those values.
-    st%smear%method = SMEAR_FIXED_OCC 
+    st%smear%method = SMEAR_FIXED_OCC
 
     ! Set total charge
     st%qtot = M_ZERO
@@ -621,11 +621,11 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)        
+#if defined(HAVE_MPI)
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
     end if
-#endif  
+#endif
 
 
     POP_SUB(states_elec_freeze_adjust_qtot)
@@ -661,7 +661,7 @@ contains
         total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if
-  
+
     POP_SUB(states_elec_total_density)
   end subroutine states_elec_total_density
 

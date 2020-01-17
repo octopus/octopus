@@ -29,7 +29,7 @@ module mesh_interpolation_oct_m
   use profiling_oct_m
   use par_vec_oct_m
   use simul_box_oct_m
-  
+
   implicit none
   private
 
@@ -43,7 +43,7 @@ module mesh_interpolation_oct_m
 
   type mesh_interpolation_t
     private
-    
+
     type(mesh_t), pointer :: mesh
   end type mesh_interpolation_t
 
@@ -59,17 +59,17 @@ contains
   subroutine mesh_interpolation_init(this, mesh)
     type(mesh_interpolation_t), intent(out)   :: this
     type(mesh_t), target,       intent(in)    :: mesh
-    
+
     PUSH_SUB(mesh_interpolation_init)
 
     ASSERT(.not. mesh%use_curvilinear)
-    
+
     this%mesh => mesh
 
     POP_SUB(mesh_interpolation_init)
-   
+
   end subroutine mesh_interpolation_init
-  
+
   ! ---------------------------------------------------
 
 
@@ -77,9 +77,9 @@ contains
     type(mesh_interpolation_t), intent(inout)   :: this
 
     PUSH_SUB(mesh_interpolation_end)
-    
+
     POP_SUB(mesh_interpolation_end)
-   
+
   end subroutine mesh_interpolation_end
 
 

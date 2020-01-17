@@ -24,7 +24,7 @@ subroutine X(nfft_forward1)(nfft, in, out)
   integer :: ix, iy, iz
 
   PUSH_SUB(X(nfft_forward1))
-        
+
   do ix = 1, nfft%N(1)
     do iy = 1, nfft%N(2)
       do iz = 1, nfft%N(3)
@@ -44,7 +44,7 @@ subroutine X(nfft_forward1)(nfft, in, out)
   end do
 
   POP_SUB(X(nfft_forward1))
-    
+
 end subroutine X(nfft_forward1)
 
 
@@ -65,7 +65,7 @@ subroutine X(nfft_backward1)(nfft, in, out)
       end do
     end do
   end do
-  
+
   call oct_nfft_adjoint(nfft%plan)
 
   do ix = 1,nfft%N(1)

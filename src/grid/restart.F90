@@ -97,7 +97,7 @@ module restart_oct_m
     integer(8)        :: format    !< Format used to store the restart information.
     character(len=MAX_PATH_LEN) :: dir !< Directory where the restart information is stored.
     character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
-                                       !! It can be either dir or a subdirectory of dir.
+    !! It can be either dir or a subdirectory of dir.
     type(namespace_t), pointer :: namespace !< namespace depending on system to modify path
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
     type(multicomm_t), pointer :: mc
@@ -116,35 +116,35 @@ module restart_oct_m
 
 
   integer, parameter, public :: RESTART_TYPE_DUMP = 1, &
-                                RESTART_TYPE_LOAD = 2
+    RESTART_TYPE_LOAD = 2
 
   integer, parameter, public :: RESTART_UNDEFINED  = -1,  &
-                                RESTART_ALL        =  0,  &                                
-                                RESTART_GS         =  1,  &
-                                RESTART_UNOCC      =  2,  &
-                                RESTART_TD         =  3,  &
-                                RESTART_EM_RESP    =  4,  &
-                                RESTART_EM_RESP_FD =  5,  &
-                                RESTART_KDOTP      =  6,  &
-                                RESTART_VIB_MODES  =  7,  &
-                                RESTART_VDW        =  8,  &
-                                RESTART_CASIDA     =  9,  &
-                                RESTART_OCT        =  10, &
-                                RESTART_PARTITION  =  11, &
-                                RESTART_PROJ       =  12
+    RESTART_ALL        =  0,  &
+    RESTART_GS         =  1,  &
+    RESTART_UNOCC      =  2,  &
+    RESTART_TD         =  3,  &
+    RESTART_EM_RESP    =  4,  &
+    RESTART_EM_RESP_FD =  5,  &
+    RESTART_KDOTP      =  6,  &
+    RESTART_VIB_MODES  =  7,  &
+    RESTART_VDW        =  8,  &
+    RESTART_CASIDA     =  9,  &
+    RESTART_OCT        =  10, &
+    RESTART_PARTITION  =  11, &
+    RESTART_PROJ       =  12
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
 
   integer, parameter, public :: RESTART_FLAG_STATES = 1,  &
-                                RESTART_FLAG_RHO    = 2,  &
-                                RESTART_FLAG_VHXC   = 4,  &
-                                RESTART_FLAG_MIX    = 8,  &
-                                RESTART_FLAG_SKIP   = 16
+    RESTART_FLAG_RHO    = 2,  &
+    RESTART_FLAG_VHXC   = 4,  &
+    RESTART_FLAG_MIX    = 8,  &
+    RESTART_FLAG_SKIP   = 16
 
   type(restart_data_t) :: info(RESTART_N_DATA_TYPES)
 
 
- !> from signals.c
+  !> from signals.c
   interface restart_block_signals
     subroutine block_signals()
       implicit none
@@ -220,7 +220,7 @@ contains
     info(:)%basedir = 'restart'
     info(:)%flags = 0
     info(RESTART_PARTITION)%flags = RESTART_FLAG_SKIP
-    
+
     info(RESTART_GS)%dir = GS_DIR
     info(RESTART_UNOCC)%dir = GS_DIR
     info(RESTART_TD)%dir = TD_DIR
@@ -253,7 +253,7 @@ contains
     !% for each line, the first column indicates the type of data, the second column indicates
     !% the path to the directory that should be used to read and write that restart information, and the
     !% third column, which is optional, allows one to set some flags to modify the way how the data
-    !% is read or written. For example, if you are running a time-dependent calculation, you can 
+    !% is read or written. For example, if you are running a time-dependent calculation, you can
     !% indicate where <tt>Octopus</tt> can find the ground-state information in the following way:
     !%
     !% <tt>%RestartOptions
@@ -273,17 +273,17 @@ contains
     !% <br>&nbsp;&nbsp;restart_td&nbsp;  | "td_restart"
     !% <br>%</tt>
     !%
-    !% the time-dependent restart information will be stored in the "td_restart" directory, while all the remaining 
+    !% the time-dependent restart information will be stored in the "td_restart" directory, while all the remaining
     !% restart information will be stored in the "my_restart" directory.
     !%
     !% By default, the name of the "restart_all" directory is set to "restart".
-    !% 
+    !%
     !% Some <tt>CalculationMode</tt>s also take into account specific flags set in the third column of the <tt>RestartOptions</tt>
     !% block. These are used to determine if some specific part of the restart data is to be taken into account
     !% or not when reading the restart information. For example, when restarting a ground-state calculation, one can
     !% set the <tt>restart_rho</tt> flags, so that the density used is not built from the saved wavefunctions, but is
     !% instead read from the restart directory. In this case, the block should look like this:
-    !% 
+    !%
     !% <tt>%RestartOptions
     !% <br>&nbsp;&nbsp;restart_gs | "restart" | restart_rho
     !% <br>%</tt>
@@ -291,9 +291,9 @@ contains
     !% A list of available flags is given below, but note that the code might ignore some of them, which will happen if they
     !% are not available for that particular calculation, or might assume some of them always present, which will happen
     !% in case they are mandatory.
-    !% 
+    !%
     !% Finally, note that all the restart information of a given data type is always stored in a subdirectory of the
-    !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information 
+    !% specified path. The name of this subdirectory is fixed and cannot be changed. For example, ground-state information
     !% will always be stored in a subdirectory named "gs". This makes it safe in most situations to use the same path for
     !% all the data types. The name of these subdirectories is indicated in the description of the data types below.
     !%
@@ -302,47 +302,47 @@ contains
     !% (data type)
     !% Option to globally change the path of all the restart information.
     !%Option restart_gs  1
-    !% (data type) 
+    !% (data type)
     !% The data resulting from a ground-state calculation.
     !% This information is stored under the "gs" subdirectory.
     !%Option restart_unocc 2
-    !% (data type) 
-    !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground state and 
+    !% (data type)
+    !% The data resulting from an unoccupied states calculation. This information also corresponds to a ground state and
     !% can be used as such, so it is stored under the same subdirectory as the one of restart_gs.
     !%Option restart_td 3
-    !% (data type) 
-    !% The data resulting from a real-time time-dependent calculation. 
+    !% (data type)
+    !% The data resulting from a real-time time-dependent calculation.
     !% This information is stored under the "td" subdirectory.
     !%Option restart_em_resp 4
-    !% (data type) 
-    !% The data resulting from the calculation of the electromagnetic response using the Sternheimer approach. 
+    !% (data type)
+    !% The data resulting from the calculation of the electromagnetic response using the Sternheimer approach.
     !% This information is stored under the "em_resp" subdirectory.
     !%Option restart_em_resp_fd 5
-    !% (data type) 
-    !% The data resulting from the calculation of the electromagnetic response using finite-differences. 
+    !% (data type)
+    !% The data resulting from the calculation of the electromagnetic response using finite-differences.
     !% This information is stored under the "em_resp_fd" subdirectory.
     !%Option restart_kdotp 6
-    !% (data type) 
+    !% (data type)
     !% The data resulting from the calculation of effective masses by k.p perturbation theory.
     !% This information is stored under the "kdotp" subdirectory.
     !%Option restart_vib_modes 7
-    !% (data type) 
+    !% (data type)
     !% The data resulting from the calculation of vibrational modes.
     !% This information is stored under the "vib_modes" subdirectory.
     !%Option restart_vdw 8
-    !% (data type) 
+    !% (data type)
     !% The data resulting from the calculation of van der Waals coefficients.
     !% This information is stored under the "vdw" subdirectory.
     !%Option restart_casida 9
-    !% (data type) 
+    !% (data type)
     !% The data resulting from a Casida calculation.
     !% This information is stored under the "casida" subdirectory.
     !%Option restart_oct 10
-    !% (data type) 
+    !% (data type)
     !% The data for optimal control calculations.
     !% This information is stored under the "opt-control" subdirectory.
     !%Option restart_partition 11
-    !% (data type) 
+    !% (data type)
     !% The data for the mesh partitioning.
     !% This information is stored under the "partition" subdirectory.
     !%Option restart_proj 12
@@ -360,7 +360,7 @@ contains
     !% Read the Hartree and XC potentials.
     !%Option restart_mix 8
     !% (flag)
-    !% Read the SCF mixing information.   
+    !% Read the SCF mixing information.
     !%Option restart_skip 16
     !% (flag)
     !% This flag allows to selectively skip the reading and writting of specific restart information.
@@ -403,15 +403,15 @@ contains
     type(namespace_t), target,   intent(in)  :: namespace
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
-                                                          !! or for loading (type = RESTART_TYPE_LOAD)?
+    !! or for loading (type = RESTART_TYPE_LOAD)?
     type(multicomm_t), target,   intent(in)  :: mc        !< The multicommunicator in charge of handling this restart.
     integer,                     intent(out) :: ierr      !< Error code, if any. Required for LOAD, should not be present for DUMP.
-    type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh 
-                                                          !! information is either dumped or the mesh compatibility is checked.
-    character(len=*),  optional, intent(in)  :: dir       !< Directory where to find the restart data. It is mandatory if 
-                                                          !! data_type=RESTART_UNDEFINED and is ignored in all the other cases.
-    logical,           optional, intent(in)  :: exact     !< If loading the restart information, should the mesh be 
-                                                          !! exactly the same or not?
+    type(mesh_t),      optional, intent(in)  :: mesh      !< If present, depending on the type of restart, the mesh
+    !! information is either dumped or the mesh compatibility is checked.
+    character(len=*),  optional, intent(in)  :: dir       !< Directory where to find the restart data. It is mandatory if
+    !! data_type=RESTART_UNDEFINED and is ignored in all the other cases.
+    logical,           optional, intent(in)  :: exact     !< If loading the restart information, should the mesh be
+    !! exactly the same or not?
 
     logical :: grid_changed, grid_reordered, restart_write, dir_exists
     integer :: iunit
@@ -462,11 +462,11 @@ contains
         message(1) = 'Restart information will not be written.'
         call messages_warning(1)
       end if
-        
+
     case (RESTART_TYPE_LOAD)
       ! This is set to true as an error condition, checked by assertions in some routines.
       restart%skip = .false.
-      
+
     case default
       message(1) = "Unknown restart type in restart_init"
       call messages_fatal(1)
@@ -526,7 +526,7 @@ contains
             write(iunit,'(a)') '# except for the geometry of the system.'
           end if
           call io_close(iunit, grp=restart%mpi_grp)
-          
+
           call mesh_dump(mesh, restart%pwd, "mesh", restart%mpi_grp, namespace, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write mesh information to '"//trim(restart%pwd)//"/mesh'."
@@ -552,7 +552,7 @@ contains
             call messages_fatal(1)
           end if
         end if
-        
+
       end if
 
     case (RESTART_TYPE_LOAD)
@@ -649,17 +649,17 @@ contains
     SAFE_DEALLOCATE_P(restart%map)
     restart%has_mesh = .false.
     nullify(restart%mc)
-    
+
     POP_SUB(restart_end)
   end subroutine restart_end
 
 
   ! ---------------------------------------------------------
-  !> Returns the name of the directory containing the restart 
-  !! information. The use of this function should be avoided, 
-  !! as the access to the restart data should always be done 
-  !! through this module, and it is only provided to allow 
-  !! some older parts of the code to keep functioning until 
+  !> Returns the name of the directory containing the restart
+  !! information. The use of this function should be avoided,
+  !! as the access to the restart data should always be done
+  !! through this module, and it is only provided to allow
+  !! some older parts of the code to keep functioning until
   !! someone fixes them.
   function restart_dir(restart)
     type(restart_t), intent(in) :: restart
@@ -674,7 +674,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Change the restart directory to dirname, where "dirname" 
+  !> Change the restart directory to dirname, where "dirname"
   !! is a subdirectory of the base restart directory.
   subroutine restart_open_dir(restart, dirname, ierr)
     type(restart_t),  intent(inout) :: restart
@@ -741,7 +741,7 @@ contains
   end subroutine restart_mkdir
 
 
-  ! ---------------------------------------------------------  
+  ! ---------------------------------------------------------
   !> Remove directory or file "name" that is located inside the current restart directory.
   subroutine restart_rm(restart, name)
     type(restart_t),  intent(in) :: restart
@@ -802,7 +802,7 @@ contains
       action=trim(action), status=trim(status_), &
       die=die, position=position, form="formatted", grp=restart%mpi_grp)
 
-    if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then    
+    if (restart_open < 0 .and. .not. optional_default(silent, .false.)) then
       message(1) = "Unable to open file '"//trim(restart%pwd)//"/"//trim(filename)//"'."
       call messages_warning(1)
     end if

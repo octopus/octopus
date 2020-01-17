@@ -72,9 +72,9 @@ module ion_dynamics_oct_m
   type ion_td_displacement_t
     private
     logical     :: move
-    type(tdf_t) :: fx 
-    type(tdf_t) :: fy 
-    type(tdf_t) :: fz       
+    type(tdf_t) :: fx
+    type(tdf_t) :: fy
+    type(tdf_t) :: fz
   end type ion_td_displacement_t
 
   type ion_dynamics_t
@@ -88,13 +88,13 @@ module ion_dynamics_oct_m
     FLOAT, pointer   :: oldforce(:, :)
 
     !> the old positions for Verlet (used for the Nose-Hoover)
-    FLOAT, pointer :: old_pos(:, :)    
+    FLOAT, pointer :: old_pos(:, :)
 
     !> variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh(1:2)
     type(tdf_t) :: temperature_function
-      
-    logical :: drive_ions  
+
+    logical :: drive_ions
     type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time-dependent displacements driving the ions
     type(geometry_t), pointer :: geo_t0
   end type ion_dynamics_t
@@ -105,7 +105,7 @@ module ion_dynamics_oct_m
     FLOAT, pointer :: vel(:, :)
     FLOAT, pointer :: old_pos(:, :)
     type(nose_hoover_t) :: nh(1:2)
-  end type ion_state_t  
+  end type ion_state_t
 
 contains
 
@@ -150,7 +150,7 @@ contains
       have_velocities = .true.
       this%drive_ions = .true.
     end if
-    
+
     !%Variable IonsTimeDependentDisplacements
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -160,7 +160,7 @@ contains
     !% from their equilibrium position: <math>r(t) = r_0 + \Delta
     !% r(t)</math>.  Specify the displacements dx(t), dy(t), dz(t) as
     !% follows, for some or all of the atoms:
-    !% 
+    !%
     !% <tt>%IonsTimeDependentDisplacements
     !% <br>&nbsp;&nbsp; atom_index | "dx(t)" | "dy(t)" | "dz(t)"
     !% <br>%</tt>
@@ -170,7 +170,7 @@ contains
     !% If this block is set, the ions will not be affected by any forces.
     !%End
 
-    
+
     ndisp = 0
     if(parse_block(namespace, 'IonsTimeDependentDisplacements', blk) == 0) then
       call messages_experimental("IonsTimeDependentDisplacements")
@@ -178,41 +178,41 @@ contains
       SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
       this%td_displacements(1:geo%natoms)%move = .false.
       if (ndisp > 0) this%drive_ions =.true.
-      
+
       do i = 1, ndisp
         call parse_block_integer(blk, i-1, 0, iatom)
         this%td_displacements(iatom)%move = .true.
-        
+
         call parse_block_string(blk, i-1, 1, expression)
         call tdf_read(this%td_displacements(iatom)%fx, namespace, trim(expression), ierr)
-        if (ierr /= 0) then            
+        if (ierr /= 0) then
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1, namespace=namespace)
         end if
-        
-        
+
+
         call parse_block_string(blk, i-1, 2, expression)
         call tdf_read(this%td_displacements(iatom)%fy, namespace, trim(expression), ierr)
-        if (ierr /= 0) then            
+        if (ierr /= 0) then
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1, namespace=namespace)
         end if
-        
+
         call parse_block_string(blk, i-1, 3, expression)
         call tdf_read(this%td_displacements(iatom)%fz, namespace, trim(expression), ierr)
-        if (ierr /= 0) then            
+        if (ierr /= 0) then
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1, namespace=namespace)
         end if
-        
+
       end do
-      
+
       SAFE_ALLOCATE(this%geo_t0)
       call geometry_copy(this%geo_t0, geo)
-      
+
     end if
-    
-    
+
+
 
 
     !%Variable Thermostat
@@ -221,7 +221,7 @@ contains
     !%Section Time-Dependent::Propagation
     !%Description
     !% This variable selects the type of thermostat applied to
-    !% control the ionic temperature. 
+    !% control the ionic temperature.
     !%Option none 0
     !% No thermostat is applied. This is the default.
     !%Option velocity_scaling 1
@@ -229,13 +229,13 @@ contains
     !%Option nose_hoover 2
     !% Nose-Hoover thermostat.
     !%End
-    
+
     call parse_variable(namespace, 'Thermostat', THERMO_NONE, this%thermostat)
     if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
-    
+
     if(this%thermostat /= THERMO_NONE) then
-      
+
       have_velocities = .true.
 
       if(this%drive_ions) then
@@ -282,9 +282,9 @@ contains
 
         this%nh(1:2)%pos = M_ZERO
         this%nh(1:2)%vel = M_ZERO
-        
+
         SAFE_ALLOCATE(this%old_pos(1:geo%space%dim, 1:geo%natoms))
-        
+
         do iatom = 1, geo%natoms
           this%old_pos(1:geo%space%dim, iatom) = geo%atom(iatom)%x(1:geo%space%dim)
         end do
@@ -319,7 +319,7 @@ contains
         if( mpi_grp_is_root(mpi_world)) then
           sigma = sqrt(temperature / species_mass(geo%atom(i)%species) )
           do j = 1, 3
-             geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
+            geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
           end do
         end if
 #ifdef HAVE_MPI
@@ -360,12 +360,12 @@ contains
       !%Type string
       !%Section System::Velocities
       !%Description
-      !% <tt>Octopus</tt> will try to read the starting velocities of the atoms from the XYZ file 
+      !% <tt>Octopus</tt> will try to read the starting velocities of the atoms from the XYZ file
       !% specified by the variable <tt>XYZVelocities</tt>.
       !% Note that you do not need to specify initial velocities if you are not going
       !% to perform ion dynamics; if you are going to allow the ions to move but the velocities
       !% are not specified, they are considered to be null.
-      !% Note: It is important for the velocities to maintain the ordering 
+      !% Note: It is important for the velocities to maintain the ordering
       !% in which the atoms were defined in the coordinates specifications.
       !%End
 
@@ -388,7 +388,7 @@ contains
       !%Section System::Velocities
       !%Description
       !% If <tt>XYZVelocities</tt>, <tt>PDBVelocities</tt>, and <tt>XSFVelocities</tt>
-      !% are not present, <tt>Octopus</tt> will try to fetch the initial 
+      !% are not present, <tt>Octopus</tt> will try to fetch the initial
       !% atomic velocities from this block. If this block is not present, <tt>Octopus</tt>
       !% will set the initial velocities to zero. The format of this block can be
       !% illustrated by this example:
@@ -401,14 +401,14 @@ contains
       !% It describes one carbon and one oxygen moving at the relative
       !% velocity of 3.4 velocity units.
       !%
-      !% Note: It is important for the velocities to maintain the ordering 
+      !% Note: It is important for the velocities to maintain the ordering
       !% in which the atoms were defined in the coordinates specifications.
       !%End
 
       call read_coords_init(xyz)
       call read_coords_read('Velocities', xyz, geo%space, namespace)
       if(xyz%source /= READ_COORDS_ERR) then
-        
+
         have_velocities = .true.
 
         if(geo%natoms /= xyz%n) then
@@ -443,7 +443,7 @@ contains
     call parse_variable(namespace, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
-    if(ion_dynamics_ions_move(this)) then 
+    if(ion_dynamics_ions_move(this)) then
       SAFE_ALLOCATE(this%oldforce(1:geo%space%dim, 1:geo%natoms))
     end if
 
@@ -473,7 +473,7 @@ contains
       end if
     end if
 
-      
+
 
 
     POP_SUB(ion_dynamics_end)
@@ -495,17 +495,17 @@ contains
     if(.not. ion_dynamics_ions_move(this)) return
 
     PUSH_SUB(ion_dynamics_propagate)
-    
+
     DR = M_ZERO
 
     this%dt = dt
-    
+
 
     ! get the temperature from the tdfunction for the current time
     if(this%thermostat /= THERMO_NONE) then
       this%current_temperature = units_to_atomic(unit_kelvin, tdf(this%temperature_function, time))
 
-      if(this%current_temperature < M_ZERO) then 
+      if(this%current_temperature < M_ZERO) then
         write(message(1), '(a, f10.3, 3a, f10.3, 3a)') &
           "Negative temperature (", &
           units_from_atomic(unit_kelvin, this%current_temperature), " ", units_abbrev(unit_kelvin), &
@@ -527,25 +527,25 @@ contains
           geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
             + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
             M_HALF*dt**2 / species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%f(1:geo%space%dim)
-          
+
           this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
-          
+
         else
           if(this%constant_velocity) then
             geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
-                                                + dt*geo%atom(iatom)%v(1:geo%space%dim)
+              + dt*geo%atom(iatom)%v(1:geo%space%dim)
           end if
 
 
           if (this%td_displacements(iatom)%move) then
-            
+
             DR(1:3)=(/TOFLOAT(tdf(this%td_displacements(iatom)%fx,time)), &
-                      TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
-                      TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
+              TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
+              TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
 
             geo%atom(iatom)%x(1:geo%space%dim) = this%geo_t0%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
           end if
-            
+
         end if
 
       end do
@@ -569,7 +569,7 @@ contains
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate
-  
+
 
   ! ---------------------------------------------------------
   subroutine nh_chain(this, geo)
@@ -586,7 +586,7 @@ contains
     uk = ion_dynamics_kinetic_energy(geo)
 
     temp = this%current_temperature
-    
+
     g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
     this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
     this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
@@ -598,11 +598,11 @@ contains
     this%nh(2)%pos = this%nh(2)%pos + this%nh(2)%vel*dt/CNST(2.0)
 
     ss = exp(-this%nh(1)%vel*dt/CNST(2.0))
-    
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%v(1:geo%space%dim) = ss*geo%atom(iatom)%v(1:geo%space%dim)
     end do
-    
+
     uk = uk*ss**2
 
     this%nh(1)%vel = this%nh(1)%vel*exp(-this%nh(2)%vel*dt/CNST(8.0))
@@ -612,10 +612,10 @@ contains
 
     g2 = (this%nh(1)%mass*this%nh(1)%vel**2 - temp)/this%nh(2)%mass
     this%nh(2)%vel = this%nh(2)%vel + g2*dt/CNST(4.0)
-    
+
     POP_SUB(nh_chain)
   end subroutine nh_chain
-  
+
 
   ! ---------------------------------------------------------
   subroutine ion_dynamics_propagate_vel(this, geo, atoms_moved)
@@ -630,21 +630,21 @@ contains
     if(this%drive_ions) return
 
     PUSH_SUB(ion_dynamics_propagate_vel)
-    
+
     if(present(atoms_moved)) atoms_moved = this%thermostat == THERMO_NH
 
     if(this%thermostat /= THERMO_NH) then
       ! velocity verlet
-      
+
       do iatom = 1, geo%natoms
         if(.not. geo%atom(iatom)%move) cycle
-        
+
         geo%atom(iatom)%v(1:geo%space%dim) = geo%atom(iatom)%v(1:geo%space%dim) &
           + this%dt/species_mass(geo%atom(iatom)%species) * M_HALF * (this%oldforce(1:geo%space%dim, iatom) + &
           geo%atom(iatom)%f(1:geo%space%dim))
-        
+
       end do
-      
+
     else
       ! the nose-hoover integration
       do iatom = 1, geo%natoms
@@ -652,7 +652,7 @@ contains
           this%dt*geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
         geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) + M_HALF*this%dt*geo%atom(iatom)%v(1:geo%space%dim)
       end do
-      
+
       call nh_chain(this, geo)
 
     end if
@@ -766,7 +766,7 @@ contains
       state%nh(1:2)%pos = this%nh(1:2)%pos
       state%nh(1:2)%vel = this%nh(1:2)%vel
     end if
-    
+
     POP_SUB(ion_dynamics_save_state)
   end subroutine ion_dynamics_save_state
 
@@ -797,7 +797,7 @@ contains
 
     SAFE_DEALLOCATE_P(state%pos)
     SAFE_DEALLOCATE_P(state%vel)
-    
+
     POP_SUB(ion_dynamics_restore_state)
   end subroutine ion_dynamics_restore_state
 
@@ -805,11 +805,11 @@ contains
   ! ---------------------------------------------------------
   logical pure function ion_dynamics_ions_move(this) result(ions_move)
     type(ion_dynamics_t), intent(in)    :: this
-    
+
     ions_move = this%move_ions
-    
+
   end function ion_dynamics_ions_move
-  
+
 
   ! ---------------------------------------------------------
   FLOAT pure function ion_dynamics_kinetic_energy(geo) result(kinetic_energy)
@@ -832,7 +832,7 @@ contains
     type(geometry_t),      intent(in) :: geo
 
     temperature = CNST(2.0)/CNST(3.0)*ion_dynamics_kinetic_energy(geo)/geo%natoms
-    
+
   end function ion_dynamics_temperature
 
 

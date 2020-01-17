@@ -30,12 +30,12 @@ subroutine X(subspace_diag)(this, namespace, mesh, st, hm, ik, eigenval, diff)
 
   integer :: ist
   R_TYPE, allocatable :: psi(:, :, :)
-    
+
   PUSH_SUB(X(subspace_diag))
   call profiling_in(diagon_prof, "SUBSPACE_DIAG")
 
   select case(this%method)
-    
+
   case(OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK)
 
     SAFE_ALLOCATE(psi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -49,18 +49,18 @@ subroutine X(subspace_diag)(this, namespace, mesh, st, hm, ik, eigenval, diff)
     do ist = st%st_start, st%st_end
       call states_elec_set_state(st, mesh, ist, ik, psi(:, :, ist))
     end do
-    
+
     SAFE_DEALLOCATE_A(psi)
-    
+
   case(OPTION__SUBSPACEDIAGONALIZATION__STANDARD)
     call X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff)
-    
+
   case(OPTION__SUBSPACEDIAGONALIZATION__NONE)
     ! do nothing
 
   case default
     ASSERT(.false.)
-    
+
   end select
 
   if(present(diff) .and. st%parallel_in_states) then
@@ -86,43 +86,43 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
   integer             :: ib, minst, maxst
   type(wfs_elec_t)       :: hpsib
   type(profile_t), save :: prof_diff
-  
+
   PUSH_SUB(X(subspace_diag_standard))
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
-  
+
   call X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
-  
+
   ! Diagonalize the Hamiltonian in the subspace.
   ! only half of hmss has the matrix, but this is what Lapack needs
   call lalg_eigensolve(st%nst, hmss, eigenval)
-  
+
 #ifdef HAVE_MPI
   ! the eigenvectors are not unique due to phases and degenerate subspaces, but
   ! they must be consistent among processors in domain parallelization
   if (mesh%parallel_in_domains) &
-      call MPI_Bcast(hmss, st%nst**2, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
+    call MPI_Bcast(hmss, st%nst**2, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
 
   ! Calculate the new eigenfunctions as a linear combination of the
   ! old ones.
   call states_elec_rotate(st, namespace, mesh, hmss, ik)
-  
+
   ! Recalculate the residues if requested by the diff argument.
-  if(present(diff)) then 
+  if(present(diff)) then
 
     call profiling_in(prof_diff, 'SUBSPACE_DIFF')
-    
+
     SAFE_ALLOCATE(rdiff(1:st%nst))
     rdiff(1:st%nst) = R_TOTYPE(M_ZERO)
-    
+
     do ib = st%group%block_start, st%group%block_end
-      
+
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
       if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack()
-      
+
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib)
@@ -132,7 +132,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       call hpsib%end()
 
       if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_unpack(copy = .false.)
-      
+
     end do
 
     if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, rdiff)
@@ -141,7 +141,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
     SAFE_DEALLOCATE_A(rdiff)
 
     call profiling_out(prof_diff)
-    
+
   end if
 
   SAFE_DEALLOCATE_A(hmss)
@@ -150,7 +150,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
 
 end subroutine X(subspace_diag_standard)
 
-! --------------------------------------------------------- 
+! ---------------------------------------------------------
 !> This routine diagonalises the Hamiltonian in the subspace defined by
 !! the states; this version is aware of parallelization in states but
 !! consumes more memory.
@@ -163,7 +163,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   FLOAT,                    intent(out)   :: eigenval(:)
   R_TYPE,                   intent(inout) :: psi(:, :, st%st_start:)
   FLOAT, optional,          intent(out)   :: diff(:)
- 
+
 #ifdef HAVE_SCALAPACK
   R_TYPE, allocatable :: hs(:, :), hpsi(:, :, :), evectors(:, :)
   integer             :: ist, size
@@ -183,11 +183,11 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   CMPLX :: ftmp
 #endif
 #endif
-  
+
   PUSH_SUB(X(subspace_diag_scalapack))
 
   SAFE_ALLOCATE(hpsi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
-  
+
   call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
 
   call descinit(psi_desc(1), total_np, st%nst, psi_block(1), psi_block(2), 0, 0,  st%dom_st_proc_grid%context, &
@@ -218,12 +218,12 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   ! calculate |hpsi> = H |psi>
   do ist = st%st_start, st%st_end, st%d%block_size
     size = min(st%d%block_size, st%st_end - ist + 1)
-    
+
     call wfs_elec_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:), ik)
     call wfs_elec_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:), ik)
-    
+
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib)
-    
+
     call psib%end()
     call hpsib%end()
   end do
@@ -236,7 +236,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
     psi(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
     hpsi(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   end if
-  
+
   call profiling_in(prof_gemm1, "SCALAPACK_GEMM1")
 
   ! get the matrix <psi|H|psi> = <psi|hpsi>
@@ -338,10 +338,10 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
     write(message(1),'(a,i6)') "ScaLAPACK pdsyev call failure, error code = ", info
     call messages_fatal(1, namespace=namespace)
   end if
-  
+
   SAFE_DEALLOCATE_A(work)
 #endif
-  
+
 #endif
 !(HAVE_ELPA)
 
@@ -369,19 +369,19 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   call profiling_out(prof_gemm2)
 
   ! Recalculate the residues if requested by the diff argument.
-  if(present(diff)) then 
+  if(present(diff)) then
     do ist = st%st_start, st%st_end
       call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if
-  
+
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(hs)
-  
+
   POP_SUB(X(subspace_diag_scalapack))
 
-#endif /* SCALAPACK */  
+#endif /* SCALAPACK */
 end subroutine X(subspace_diag_scalapack)
 
 ! ------------------------------------------------------
@@ -405,12 +405,12 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   call profiling_in(hamiltonian_elec_prof, "SUBSPACE_HAMILTONIAN")
 
   allocate(wfs_elec_t::hpsib(st%group%block_start:st%group%block_end))
-  
+
   do ib = st%group%block_start, st%group%block_end
     call st%group%psib(ib, ik)%copy_to(hpsib(ib))
     call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib))
   end do
-  
+
   if(st%are_packed() .and. accel_is_enabled()) then
 
     ASSERT(ubound(hmss, dim = 1) == st%nst)
@@ -466,9 +466,9 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
           M = int(st%nst, 8), N = int(st%nst, 8), K = int(size*st%d%dim, 8), &
           alpha = R_TOTYPE(mesh%volume_element), &
           A = psi_buffer, offA = 0_8, lda = int(st%nst, 8), &
-          B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
+          B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), &
           C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
-        
+
         call accel_finish()
 
       end do
@@ -480,7 +480,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
       call accel_release_buffer(psi_buffer)
       call accel_release_buffer(hpsi_buffer)
-      
+
     end if
 
     call accel_read_buffer(hmss_buffer, st%nst*st%nst, hmss)
@@ -488,20 +488,20 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
   else
 
-#ifdef R_TREAL  
+#ifdef R_TREAL
     block_size = max(40, hardware%l2%size/(2*8*st%nst))
 #else
     block_size = max(20, hardware%l2%size/(2*16*st%nst))
 #endif
 
     hmss(1:st%nst, 1:st%nst) = CNST(0.0)
-    
+
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
     SAFE_ALLOCATE(hpsi(1:st%nst, 1:st%d%dim, 1:block_size))
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%group%block_start, st%group%block_end
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi)
         call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi)
@@ -511,7 +511,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
         call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
         call states_elec_parallel_gather(st, (/st%d%dim, size/), hpsi)
       end if
-      
+
       if (mesh%use_curvilinear) then
         do ip = 1, size
           psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
@@ -523,7 +523,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
         alpha = R_TOTYPE(mesh%volume_element),      &
         a = hpsi(1, 1, 1), lda = ubound(hpsi, dim = 1),   &
         b = psi(1, 1, 1), ldb = ubound(psi, dim = 1), &
-        beta = R_TOTYPE(CNST(1.0)),                     & 
+        beta = R_TOTYPE(CNST(1.0)),                     &
         c = hmss(1, 1), ldc = ubound(hmss, dim = 1))
     end do
 
@@ -531,17 +531,17 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
     SAFE_DEALLOCATE_A(hpsi)
 
   end if
-  
+
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
-  
+
   do ib = st%group%block_start, st%group%block_end
     call hpsib(ib)%end()
   end do
-  
+
   SAFE_DEALLOCATE_A(hpsib)
-    
+
   if (mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, hmss, dim = (/st%nst, st%nst/))
-  
+
   call profiling_out(hamiltonian_elec_prof)
   POP_SUB(X(subspace_diag_hamiltonian))
 

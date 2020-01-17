@@ -17,7 +17,7 @@
 !!
 
 #include "global.h"
- 
+
 module v_ks_oct_m
   use accel_oct_m
   use berry_oct_m
@@ -66,7 +66,7 @@ module v_ks_oct_m
 
   ! from the dftd3 library
   use dftd3_api
-  
+
   implicit none
 
   private
@@ -81,7 +81,7 @@ module v_ks_oct_m
     v_ks_calc_start,    &
     v_ks_calc_finish,   &
     v_ks_freeze_hxc,    &
-    v_ks_calculate_current 
+    v_ks_calculate_current
 
   integer, parameter, public :: &
     SIC_NONE   = 1,     &  !< no self-interaction correction
@@ -136,7 +136,7 @@ module v_ks_oct_m
   end type v_ks_t
 
 contains
- 
+
   ! ---------------------------------------------------------
   subroutine v_ks_nullify(ks)
     type(v_ks_t),            intent(inout) :: ks
@@ -155,7 +155,7 @@ contains
 
     POP_SUB(v_ks_nullify)
   end subroutine v_ks_nullify
-  
+
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, namespace, gr, st, geo, mc)
@@ -171,12 +171,12 @@ contains
     type(dftd3_input) :: d3_input
     character(len=20) :: d3func_def, d3func
     integer :: pseudo_x_functional, pseudo_c_functional
-    
+
     PUSH_SUB(v_ks_init)
 
     ! We need to parse TheoryLevel and XCFunctional, this is
     ! complicated because they are interdependent.
-    
+
     !%Variable TheoryLevel
     !%Type integer
     !%Section Hamiltonian
@@ -188,11 +188,11 @@ contains
     !% <tt>hartree_fock</tt>.
     !%Option independent_particles 2
     !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
-    !% This mode is mainly used for testing purposes, as the code is usually 
+    !% This mode is mainly used for testing purposes, as the code is usually
     !% much faster with <tt>independent_particles</tt>.
     !%Option hartree 1
     !% Calculation within the Hartree method (experimental). Note that, contrary to popular
-    !% belief, the Hartree potential is self-interaction-free. Therefore, this run 
+    !% belief, the Hartree potential is self-interaction-free. Therefore, this run
     !% mode will not yield the same result as <tt>dft</tt> without exchange-correlation.
     !%Option hartree_fock 3
     !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme, it is fully
@@ -202,19 +202,19 @@ contains
     !% functional (see <tt>XCFunctional</tt>). In the latter case, you will be following the
     !% quantum-chemistry recipe to use hybrids.
     !%Option dft 4
-    !% This is the default density-functional theory scheme. Note that you can also use 
+    !% This is the default density-functional theory scheme. Note that you can also use
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
-    !%Option rdmft 7 
+    !%Option rdmft 7
     !% (Experimental) Reduced Density Matrix functional theory.
     !%End
-    
+
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
-   
+
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
-    
+
     ! the user knows what he wants, give her that
     if(parse_is_defined(namespace, 'TheoryLevel')) then
       call parse_variable(namespace, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
@@ -233,13 +233,13 @@ contains
         default = pseudo_x_functional
       else
         select case(gr%mesh%sb%dim)
-        case(3); default = XC_LDA_X   
+        case(3); default = XC_LDA_X
         case(2); default = XC_LDA_X_2D
         case(1); default = XC_LDA_X_1D
         end select
       end if
     end if
-    
+
     ASSERT(default >= 0)
 
     if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -262,7 +262,7 @@ contains
       call messages_write('      used in the calculation.')
       call messages_info()
     end if
-    
+
     ! The description of this variable can be found in file src/xc/functionals_list.F90
     call parse_variable(namespace, 'XCFunctional', default, val)
 
@@ -270,7 +270,7 @@ contains
     ! the next 3 the C functional.
     c_id = val / 1000
     x_id = val - c_id*1000
-    
+
     if( (x_id /= pseudo_x_functional .and. pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) .or. &
       (c_id /= pseudo_c_functional .and. pseudo_c_functional /= PSEUDO_EXCHANGE_ANY)) then
       call messages_write('The XCFunctional that you selected does not match the one used', new_line = .true.)
@@ -279,7 +279,7 @@ contains
     end if
 
     ! FIXME: we rarely need this. We should only parse when necessary.
-    
+
     !%Variable XCKernel
     !%Type integer
     !%Section Hamiltonian::XC
@@ -294,17 +294,17 @@ contains
     !%Option xc_functional -1
     !% The same functional defined by <tt>XCFunctional</tt>.
     !%End
-    
+
     call parse_variable(namespace, 'XCKernel', default, val)
-    
+
     if( -1 == val ) then
       ck_id = c_id
       xk_id = x_id
     else
       ck_id = val / 1000
-      xk_id = val - ck_id*1000  
+      xk_id = val - ck_id*1000
     end if
-    
+
     call messages_obsolete_variable(namespace, 'XFunctional', 'XCFunctional')
     call messages_obsolete_variable(namespace, 'CFunctional', 'XCFunctional')
 
@@ -322,7 +322,7 @@ contains
     end if
 
     ks%xc_family = ks%xc%family
-    ks%xc_flags  = ks%xc%flags 
+    ks%xc_flags  = ks%xc%flags
 
     if(.not. parsed_theory_level) then
       default = KOHN_SHAM_DFT
@@ -335,14 +335,14 @@ contains
       ! In principle we do not need to parse. However we do it for consistency
       call parse_variable(namespace, 'TheoryLevel', default, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
-     
+
     end if
 
     call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable(namespace, 'HartreeFock', 'TheoryLevel')
 
     if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
-    
+
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
       ks%sic_type = SIC_NONE
@@ -356,7 +356,7 @@ contains
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree-Fock with k-points", namespace=namespace)
-      
+
       ks%sic_type = SIC_NONE
 
     case(KOHN_SHAM_DFT)
@@ -379,7 +379,7 @@ contains
         !% Amaldi correction term.
         !%Option sic_adsic 4
         !% Average-density SIC.
-        !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
+        !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002).
         !%End
         call parse_variable(namespace, 'SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
@@ -417,9 +417,9 @@ contains
     ks%gr => gr
     ks%calc%calculating = .false.
 
-    !The value of ks%calculate_current is set to false or true by Output    
+    !The value of ks%calculate_current is set to false or true by Output
     call current_init(ks%current_calculator, namespace)
-    
+
     !%Variable VDWCorrection
     !%Type integer
     !%Default no
@@ -437,7 +437,7 @@ contains
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable(namespace, 'VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
-    
+
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
@@ -464,14 +464,14 @@ contains
           call messages_write('vdw_d3 can only be used in 3-dimensional systems')
           call messages_fatal(namespace=namespace)
         end if
-        
+
         do iatom = 1, geo%natoms
           if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
             call messages_write('vdw_d3 is not implemented when non-atomic species are present')
             call messages_fatal(namespace=namespace)
           end if
         end do
-         
+
         d3func_def = ''
 
         ! The list of valid values can be found in 'external_libs/dftd3/core.f90'.
@@ -505,7 +505,7 @@ contains
         !%End
         if(parse_is_defined(namespace, 'VDWD3Functional')) call messages_experimental('VDWD3Functional')
         call parse_variable(namespace, 'VDWD3Functional', d3func_def, d3func)
-        
+
         if(d3func == '') then
           call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')
           call messages_new_line()
@@ -521,19 +521,19 @@ contains
           call messages_write('to be periodic in three dimensions.')
           call messages_warning(namespace=namespace)
         end if
-          
+
         call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
         call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
       case default
         ASSERT(.false.)
       end select
-      
+
     else
       ks%vdw_self_consistent = .false.
     end if
-    
-    
+
+
     POP_SUB(v_ks_init)
 
   contains
@@ -541,13 +541,13 @@ contains
     subroutine get_functional_from_pseudos(x_functional, c_functional)
       integer, intent(out) :: x_functional
       integer, intent(out) :: c_functional
-      
+
       integer :: xf, cf, ispecies
       logical :: warned_inconsistent
-      
+
       x_functional = PSEUDO_EXCHANGE_ANY
       c_functional = PSEUDO_CORRELATION_ANY
-      
+
       warned_inconsistent = .false.
       do ispecies = 1, geo%nspecies
         xf = species_x_functional(geo%species(ispecies))
@@ -578,12 +578,12 @@ contains
             warned_inconsistent = .true.
           end if
         end if
-        
+
       end do
-      
+
       ASSERT(x_functional /= PSEUDO_EXCHANGE_UNKNOWN)
       ASSERT(c_functional /= PSEUDO_CORRELATION_UNKNOWN)
-      
+
     end subroutine get_functional_from_pseudos
   end subroutine v_ks_init
   ! ---------------------------------------------------------
@@ -594,7 +594,7 @@ contains
     type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
-    
+
     select case(ks%vdw_correction)
     case(OPTION__VDWCORRECTION__VDW_TS)
       call vdw_ts_end(ks%vdw_ts)
@@ -611,7 +611,7 @@ contains
         call xc_oep_end(ks%oep)
       end if
       call xc_end(ks%xc)
-    case(HARTREE_FOCK)      
+    case(HARTREE_FOCK)
       call xc_end(ks%xc)
     end select
 
@@ -690,19 +690,19 @@ contains
     POP_SUB(v_ks_calc)
   end subroutine v_ks_calc
 
-  ! --------------------------------------------------------- 
+  ! ---------------------------------------------------------
 
   !> This routine starts the calculation of the Kohn-Sham
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current)
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_elec_t),               intent(inout) :: st
     type(geometry_t) ,         target, intent(in)    :: geo
-    FLOAT,                   optional, intent(in)    :: time 
+    FLOAT,                   optional, intent(in)    :: time
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
     logical,                 optional, intent(in)    :: calc_current
@@ -713,9 +713,9 @@ contains
     PUSH_SUB(v_ks_calc_start)
 
     calc_current_ = optional_default(calc_current, .true.)  &
-                   .and. ks%calculate_current &
-                   .and. states_are_complex(st) &
-                   .or. hamiltonian_elec_needs_current(hm, states_are_real(st))
+      .and. ks%calculate_current &
+      .and. states_are_complex(st) &
+      .or. hamiltonian_elec_needs_current(hm, states_are_real(st))
 
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
@@ -723,13 +723,13 @@ contains
     ks%calc%calculating = .true.
 
     ks%calc%geo => geo
-    
+
     if(debug%info) then
       write(message(1), '(a)') 'Debug: Calculating Kohn-Sham potential.'
       call messages_info(1)
     end if
 
-    ks%calc%time_present = present(time) 
+    ks%calc%time_present = present(time)
 
     if(present(time)) then
       ks%calc%time = time
@@ -752,7 +752,7 @@ contains
     end if
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
-    if(ks%frozen_hxc) then      
+    if(ks%frozen_hxc) then
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
         call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
@@ -793,7 +793,7 @@ contains
       call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
-    nullify(ks%calc%hf_st) 
+    nullify(ks%calc%hf_st)
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_elec_copy(ks%calc%hf_st, st)
@@ -820,7 +820,7 @@ contains
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       call magnetic_induced(ks%gr%der, st, hm%psolver, ks%calc%a_ind, ks%calc%b_ind)
     end if
-   
+
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
 
@@ -870,9 +870,9 @@ contains
 
       integer        :: ip, ispin, ist, ik
       FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
-      
+
       PUSH_SUB(add_adsic)
-      
+
       if (family_is_mgga(hm%xc%family)) then
         call messages_not_implemented('ADSIC with MGGAs', namespace=namespace)
       end if
@@ -884,14 +884,14 @@ contains
       SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
       SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(qsp(1:st%d%nspin))
-      
+
       vxc_sic = M_ZERO
       vh_sic = M_ZERO
       qsp = M_ZERO
       do ist = 1, st%nst
         do ispin = 1,st%d%nspin
           do ik = ispin, st%d%nik, st%d%nspin
-           qsp(ispin) = qsp(ispin)+ st%occ(ist, ik) * st%d%kweights(ik) 
+            qsp(ispin) = qsp(ispin)+ st%occ(ist, ik) * st%d%kweights(ik)
           enddo
         enddo
       end do
@@ -921,7 +921,7 @@ contains
       forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
 
       SAFE_DEALLOCATE_P(vxc_sic)
-      SAFE_DEALLOCATE_P(vh_sic)                                
+      SAFE_DEALLOCATE_P(vh_sic)
       SAFE_DEALLOCATE_P(rho)
       SAFE_DEALLOCATE_P(qsp)
 
@@ -1004,7 +1004,7 @@ contains
 
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
         ASSERT(geo%space%dim == 3)
-        
+
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
 
@@ -1014,7 +1014,7 @@ contains
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
             ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-           
+
         case(OPTION__VDWCORRECTION__VDW_D3)
 
           SAFE_ALLOCATE(coords(1:3, geo%natoms))
@@ -1024,7 +1024,7 @@ contains
             atnum(iatom) = nint(species_z(geo%atom(iatom)%species))
             coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
           end do
-          
+
           if(simul_box_is_periodic(ks%gr%sb)) then
             latvec(1:3, 1:3) = ks%gr%sb%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
             call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
@@ -1034,26 +1034,26 @@ contains
 
           SAFE_DEALLOCATE_A(coords)
           SAFE_DEALLOCATE_A(atnum)
-          
+
         case default
           ASSERT(.false.)
-          
+
         end select
-        
+
         if(ks%vdw_self_consistent) then
           do ispin = 1, hm%d%nspin
             ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + vvdw(1:ks%gr%fine%mesh%np)
           end do
         end if
-        
-        SAFE_DEALLOCATE_A(vvdw)    
-        
+
+        SAFE_DEALLOCATE_A(vvdw)
+
       else
 
         ks%calc%energy%vdw = CNST(0.0)
 
       end if
-      
+
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
@@ -1122,7 +1122,7 @@ contains
     end if
 
     if(associated(hm%ep%v_static)) then
-      hm%energy%intnvstatic = dmf_dotp(ks%gr%mesh, ks%calc%total_density, hm%ep%v_static) 
+      hm%energy%intnvstatic = dmf_dotp(ks%gr%mesh, ks%calc%total_density, hm%ep%v_static)
     else
       hm%energy%intnvstatic = M_ZERO
     end if
@@ -1136,7 +1136,7 @@ contains
       hm%energy%correlation = M_ZERO
     else
 
-      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT ) then 
+      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT ) then
         if(ks%gr%have_fine_mesh) then
           do ispin = 1, hm%d%nspin
             call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
@@ -1170,7 +1170,7 @@ contains
 
 
       ! Build Hartree + XC potential
-     
+
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
       if(associated(hm%vberry)) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
@@ -1182,12 +1182,12 @@ contains
           forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
         end if
       end if
-      
+
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if
 
-      ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
+      ! Note: this includes hybrids calculated with the Fock operator instead of OEP
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
@@ -1196,7 +1196,7 @@ contains
           call states_elec_end(hm%hf_st)
           SAFE_DEALLOCATE_P(hm%hf_st)
         end if
-        
+
         hm%hf_st => ks%calc%hf_st
 
         select case(ks%theory_level)
@@ -1204,18 +1204,18 @@ contains
           hm%exx_coef = ks%xc%exx_coef
         case(HARTREE)
           hm%exx_coef = M_ONE
-        case(RDMFT) 
+        case(RDMFT)
           hm%exx_coef = M_ONE
         end select
       end if
-      
+
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms)
       SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
     else
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
+      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)
     end if
 
     if(ks%calc%time_present) then
@@ -1234,7 +1234,7 @@ contains
     POP_SUB(v_ks_calc_finish)
   end subroutine v_ks_calc_finish
 
-  ! --------------------------------------------------------- 
+  ! ---------------------------------------------------------
   !
   !> Hartree contribution to the KS potential. This function is
   !! designed to be used by v_ks_calc_finish and it cannot be called
@@ -1281,7 +1281,7 @@ contains
       if (hm%pcm%solute) then
         call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_h = pot, time_present = ks%calc%time_present)
       end if
-        
+
       !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
       !! For the laser, the latter is only valid in the long-wavelength limit.
       !! Static potentials are included in subroutine hamiltonian_elec_epot_generate (module hamiltonian).
@@ -1291,11 +1291,11 @@ contains
         kick_present  = epot_have_kick(   hm%ep )
         if ( laser_present .and. kick_present ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
-          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           potx = M_ZERO
           kick = M_ZERO
-          do ii = 1, hm%ep%no_lasers        
+          do ii = 1, hm%ep%no_lasers
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           kick_real = M_ZERO
@@ -1312,8 +1312,8 @@ contains
           SAFE_DEALLOCATE_A(kick_real)
         else if ( laser_present .and. .not.kick_present ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
-          potx = M_ZERO    
-          do ii = 1, hm%ep%no_lasers        
+          potx = M_ZERO
+          do ii = 1, hm%ep%no_lasers
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, time_present = ks%calc%time_present)
@@ -1342,7 +1342,7 @@ contains
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
       end if
-        
+
     end if
 
     if(ks%calc%calc_energy) then
@@ -1375,7 +1375,7 @@ contains
     PUSH_SUB(v_ks_freeze_hxc)
 
     ks%frozen_hxc = .true.
-    
+
     POP_SUB(v_ks_freeze_hxc)
   end subroutine v_ks_freeze_hxc
   ! ---------------------------------------------------------
@@ -1385,12 +1385,12 @@ contains
     logical,      intent(in)    :: calc_cur
 
     PUSH_SUB(v_ks_calculate_current)
-    
+
     this%calculate_current = calc_cur
 
     POP_SUB(v_ks_calculate_current)
   end subroutine v_ks_calculate_current
- 
+
 end module v_ks_oct_m
 
 !! Local Variables:

@@ -40,7 +40,7 @@ subroutine X(interpolate_2)(xa, ya, x, y)
     y(:, k) = M_ZERO
 
     do i = 1, n
-      call lalg_axpy(n1, c(i), ya(:, k, i), y(:, k)) 
+      call lalg_axpy(n1, c(i), ya(:, k, i), y(:, k))
     end do
 
   end do
@@ -70,7 +70,7 @@ subroutine X(interpolate_1)(xa, ya, x, y)
 
   y(:) = M_ZERO
   do i = 1, n
-    call lalg_axpy(n1, c(i), ya(:, i), y(:)) 
+    call lalg_axpy(n1, c(i), ya(:, i), y(:))
   end do
 
   SAFE_DEALLOCATE_A(c)
@@ -110,7 +110,7 @@ end subroutine X(interpolate_0)
 !! accessed directly, but through the .app. operator.
 logical function X(approximately_equal)(a, b) result(app)
   R_TYPE, intent(in) :: a, b
-  
+
   PUSH_SUB(X(approximately_equal))
 #if defined(R_TREAL)
   app = abs(a-b) < APP_THRESHOLD

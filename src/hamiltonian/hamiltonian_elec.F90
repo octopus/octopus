@@ -120,7 +120,7 @@ module hamiltonian_elec_oct_m
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
     type(derivatives_t), pointer :: der !< pointer to derivatives
-    
+
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
@@ -137,7 +137,7 @@ module hamiltonian_elec_oct_m
 
     type(epot_t) :: ep         !< handles the external potential
     type(pcm_t)  :: pcm        !< handles pcm variables
- 
+
     !> absorbing boundaries
     logical, private :: adjoint
 
@@ -163,10 +163,10 @@ module hamiltonian_elec_oct_m
 
     FLOAT :: current_time
     logical, private :: apply_packed  !< This is initialized by the StatesPack variable.
-    
+
     type(scdm_t)  :: scdm
 
-    !> For the LDA+U 
+    !> For the LDA+U
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
@@ -222,7 +222,7 @@ contains
 
     PUSH_SUB(hamiltonian_elec_init)
     call profiling_in(prof, 'HAMILTONIAN_ELEC_INIT')
-    
+
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
@@ -309,7 +309,7 @@ contains
     else
       hm%psolver_fine => hm%psolver
     end if
-  
+
     !Initialize external potential
     call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family)
 
@@ -386,15 +386,15 @@ contains
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
     if(parse_block(namespace, 'MassScaling', blk) == 0) then
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > gr%sb%dim) then
-          call messages_input_error("MassScaling")
-        end if
-        iline = 1 ! just deal with 1 line - should be generalized
-        do icol = 1, ncols
-          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
-        end do
-        call parse_block_end(blk)
+      ncols = parse_block_cols(blk, 0)
+      if(ncols > gr%sb%dim) then
+        call messages_input_error("MassScaling")
+      end if
+      iline = 1 ! just deal with 1 line - should be generalized
+      do icol = 1, ncols
+        call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
+      end do
+      call parse_block_end(blk)
     end if
 
     nullify(hm%hf_st)
@@ -417,7 +417,7 @@ contains
     !% An empiricial Hubbard U is added on the orbitals specified in the block species
     !% with hubbard_l and hubbard_u
     !%Option dft_u_acbn0 2
-    !% Octopus determines the effective U term using the 
+    !% Octopus determines the effective U term using the
     !% ACBN0 functional as defined in PRX 5, 011006 (2015)
     !%End
     call parse_variable(namespace, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
@@ -427,7 +427,7 @@ contains
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
     end if
- 
+
 
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
@@ -457,7 +457,7 @@ contains
       if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
       if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
     end if
-    
+
     !%Variable SCDM_EXX
     !%Type logical
     !%Default no
@@ -551,7 +551,7 @@ contains
         sp = gr%mesh%np
         if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
 
-        ! We decided to allocate the array from 1:np_part-sp as this is less error prone when passing 
+        ! We decided to allocate the array from 1:np_part-sp as this is less error prone when passing
         ! the array to other routines, or in particular creating a C-style pointer from phase_spiral(1,1).
         ! We will also update phase_corr and possible other similar arrays.
 
@@ -578,7 +578,7 @@ contains
           call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-sp)*2, hm%hm_base%phase_spiral)
         endif
       end if
-      
+
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -624,7 +624,7 @@ contains
 
   end subroutine hamiltonian_elec_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_end(hm)
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -650,7 +650,7 @@ contains
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
-    
+
     if (family_is_mgga_with_exc(hm%xc)) then
       SAFE_DEALLOCATE_P(hm%vtau)
     end if
@@ -671,7 +671,7 @@ contains
 
     call bc_end(hm%bc)
 
-    call states_elec_dim_end(hm%d) 
+    call states_elec_dim_end(hm%d)
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
@@ -687,7 +687,7 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
 
     nullify(hm%namespace)
-     
+
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end
@@ -700,7 +700,7 @@ contains
 
     PUSH_SUB(hamiltonian_elec_hermitian)
     hamiltonian_elec_hermitian = .not.((hm%bc%abtype == IMAGINARY_ABSORBING) .or. &
-                                  oct_exchange_enabled(hm%oct_exchange))
+      oct_exchange_enabled(hm%oct_exchange))
 
     POP_SUB(hamiltonian_elec_hermitian)
   end function hamiltonian_elec_hermitian
@@ -841,7 +841,7 @@ contains
               this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
                 this%pcm%v_ext_rs(ip)
             end do
-          end if 
+          end if
         end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
@@ -851,12 +851,12 @@ contains
           end do
         end if
 
-      else !Spinors 
+      else !Spinors
         !$omp parallel do simd schedule(static)
         do ip = 1, mesh%np
           this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
         end do
-          
+
       end if
 
 
@@ -910,7 +910,7 @@ contains
         this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
-      
+
     end if
 
     ! the vector potential of a static magnetic field
@@ -1019,7 +1019,7 @@ contains
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
           call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, this%der%boundaries, namespace, &
-               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+            vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
 
@@ -1100,10 +1100,10 @@ contains
     end if
 
     if (this%pcm%run_pcm) then
-     !> Generates the real-space PCM potential due to nuclei which do not change
-     !! during the SCF calculation.
-     if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, geo = geo)
+      !> Generates the real-space PCM potential due to nuclei which do not change
+      !! during the SCF calculation.
+      if (this%pcm%solute) &
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, this%psolver, geo = geo)
 
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
@@ -1565,24 +1565,24 @@ contains
 
   end subroutine hamiltonian_elec_update2
 
- ! ---------------------------------------------------------
- subroutine hamiltonian_elec_set_vhxc(hm, mesh, vold, vold_tau)
-   type(hamiltonian_elec_t), intent(inout)  :: hm
-   type(mesh_t),             intent(in)     :: mesh
-   FLOAT,                    intent(in)     :: vold(:, :)
-   FLOAT, optional,          intent(in)     :: vold_tau(:, :)
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_elec_set_vhxc(hm, mesh, vold, vold_tau)
+    type(hamiltonian_elec_t), intent(inout)  :: hm
+    type(mesh_t),             intent(in)     :: mesh
+    FLOAT,                    intent(in)     :: vold(:, :)
+    FLOAT, optional,          intent(in)     :: vold_tau(:, :)
 
-   PUSH_SUB(hamiltonian_elec_set_vhxc)
+    PUSH_SUB(hamiltonian_elec_set_vhxc)
 
-   call lalg_copy(mesh%np, hm%d%nspin, vold, hm%vhxc)
-   if(present(vold_tau)) then
-     call lalg_copy(mesh%np, hm%d%nspin, vold_tau, hm%vtau)
-   end if
+    call lalg_copy(mesh%np, hm%d%nspin, vold, hm%vhxc)
+    if(present(vold_tau)) then
+      call lalg_copy(mesh%np, hm%d%nspin, vold_tau, hm%vtau)
+    end if
 
-   POP_SUB(hamiltonian_elec_set_vhxc)
- end subroutine hamiltonian_elec_set_vhxc
+    POP_SUB(hamiltonian_elec_set_vhxc)
+  end subroutine hamiltonian_elec_set_vhxc
 
- logical function hamiltonian_elec_needs_current(hm, states_are_real)
+  logical function hamiltonian_elec_needs_current(hm, states_are_real)
     type(hamiltonian_elec_t), intent(in) :: hm
     logical,                  intent(in) :: states_are_real
 
@@ -1599,7 +1599,7 @@ contains
 
   end function hamiltonian_elec_needs_current
 
-  
+
 
 #include "undef.F90"
 #include "real.F90"

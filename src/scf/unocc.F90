@@ -124,7 +124,7 @@ contains
     ! if there is no restart info to read, this will not get set otherwise
     ! setting to zero means everything is missing.
     lowest_missing(:,:) = 0
-    
+
     read_gs = .true.
     if (.not. fromScratch) then
       call restart_init(restart_load_unocc, sys%namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, &
@@ -134,7 +134,7 @@ contains
         call states_elec_load(restart_load_unocc, sys%namespace, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         call restart_end(restart_load_unocc)
       end if
-      
+
       ! If successfully read states from unocc, do not read from gs.
       ! If RESTART_GS and RESTART_UNOCC have the same directory (the default), and we tried RESTART_UNOCC
       ! already and failed, it is a waste of time to try to read again.
@@ -223,17 +223,17 @@ contains
       showstart = minval(occ_states(:)) + 1
     end if
 
-    
+
 
     ! it is strange and useless to see no eigenvalues written if you are only calculating
     ! occupied states, on a different k-point.
     if(showstart > sys%st%nst) showstart = 1
-    
+
     SAFE_DEALLOCATE_A(lowest_missing)
 
     if(showoccstates) showstart = 1
 
-    ! In the case of someone using KPointsPath, the code assume that this is only for plotting a 
+    ! In the case of someone using KPointsPath, the code assume that this is only for plotting a
     ! bandstructure. This mode ensure that no restart information will be written for the new grid
     if(bandstructure_mode) then
       message(1) = "Info: The code will run in band structure mode."
@@ -277,7 +277,7 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir(STATIC_DIR, sys%namespace)
         iunit = io_open(STATIC_DIR//'/eigenvalues', sys%namespace, action='write')
-        
+
         if(converged) then
           write(iunit,'(a)') 'All states converged.'
         else
@@ -290,25 +290,25 @@ contains
       end if
 
       forced_finish = clean_stop(sys%mc%master_comm)
-     
+
       if(.not. bandstructure_mode) then
         ! write restart information.
         if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
-                     .or. iter == max_iter .or. forced_finish) then
+          .or. iter == max_iter .or. forced_finish) then
           call states_elec_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
           if(ierr /= 0) then
             message(1) = "Unable to write states wavefunctions."
             call messages_warning(1)
           end if
         end if
-      end if 
+      end if
 
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
-            .and. sys%outp%duringscf) then
+        .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%namespace, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
       end if
-     
+
       if(converged .or. forced_finish) exit
 
     end do
@@ -333,12 +333,12 @@ contains
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
         call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, &
-              sys%gr%sb, sys%geo, sys%gr%mesh, &
-              sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
-              vec_pot_var = sys%hm%hm_base%vector_potential)
+          sys%gr%sb, sys%geo, sys%gr%mesh, &
+          sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
+          vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
     end if
- 
+
 
     call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
 
@@ -366,7 +366,7 @@ contains
         message(2) = "by hand, since the highest states will probably never converge."
         call messages_warning(2)
       end if
-      
+
       POP_SUB(unocc_run.init_)
     end subroutine init_
 
@@ -380,7 +380,7 @@ contains
       POP_SUB(unocc_run.end_)
     end subroutine end_
 
-        ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine write_iter_(st)
       type(states_elec_t), intent(in) :: st
 
@@ -394,7 +394,7 @@ contains
 
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
-       
+
       write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
       call messages_info(1)
 

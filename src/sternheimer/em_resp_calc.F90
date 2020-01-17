@@ -49,41 +49,41 @@ module em_resp_calc_oct_m
 
   private
   public ::                            &
-     lr_calc_current,                  &
-     dlr_calc_elf,                     &
-     zlr_calc_elf,                     &
-     dcalc_polarizability_finite,      &
-     zcalc_polarizability_finite,      &
-     dcalc_polarizability_periodic,    &
-     zcalc_polarizability_periodic,    &
-     dinhomog_B,                       &
-     zinhomog_B,                       &
-     dinhomog_KB_tot,                  &
-     zinhomog_KB_tot,                  &
-     dinhomog_KE_tot,                  &
-     zinhomog_KE_tot,                  &
-     dinhomog_K2_tot,                  &
-     zinhomog_K2_tot,                  &
-     dlr_calc_magnetization_periodic,  &
-     zlr_calc_magnetization_periodic,  &
-     dlr_calc_magneto_optics_finite,   &
-     zlr_calc_magneto_optics_finite,   &
-     dlr_calc_magneto_optics_periodic, & 
-     zlr_calc_magneto_optics_periodic, &
-     dlr_calc_susceptibility,          &
-     zlr_calc_susceptibility,          &
-     dlr_calc_susceptibility_periodic, &
-     zlr_calc_susceptibility_periodic, &
-     dlr_calc_beta,                    &
-     zlr_calc_beta,                    &
-     freq2str,                         &
-     magn_dir,                         &
-     em_wfs_tag,                       &
-     em_rho_tag,                       &
-     dpost_orthogonalize,              &
-     zpost_orthogonalize,              &
-     dem_resp_calc_eigenvalues,        &
-     zem_resp_calc_eigenvalues
+    lr_calc_current,                  &
+    dlr_calc_elf,                     &
+    zlr_calc_elf,                     &
+    dcalc_polarizability_finite,      &
+    zcalc_polarizability_finite,      &
+    dcalc_polarizability_periodic,    &
+    zcalc_polarizability_periodic,    &
+    dinhomog_B,                       &
+    zinhomog_B,                       &
+    dinhomog_KB_tot,                  &
+    zinhomog_KB_tot,                  &
+    dinhomog_KE_tot,                  &
+    zinhomog_KE_tot,                  &
+    dinhomog_K2_tot,                  &
+    zinhomog_K2_tot,                  &
+    dlr_calc_magnetization_periodic,  &
+    zlr_calc_magnetization_periodic,  &
+    dlr_calc_magneto_optics_finite,   &
+    zlr_calc_magneto_optics_finite,   &
+    dlr_calc_magneto_optics_periodic, &
+    zlr_calc_magneto_optics_periodic, &
+    dlr_calc_susceptibility,          &
+    zlr_calc_susceptibility,          &
+    dlr_calc_susceptibility_periodic, &
+    zlr_calc_susceptibility_periodic, &
+    dlr_calc_beta,                    &
+    zlr_calc_beta,                    &
+    freq2str,                         &
+    magn_dir,                         &
+    em_wfs_tag,                       &
+    em_rho_tag,                       &
+    dpost_orthogonalize,              &
+    zpost_orthogonalize,              &
+    dem_resp_calc_eigenvalues,        &
+    zem_resp_calc_eigenvalues
 
   type(profile_t), save :: beta_prof
 
@@ -128,7 +128,7 @@ contains
       do ist = 1, st%nst
 
         call states_elec_set_state(st, gr%mesh, ist, ispin, psi)
-        
+
         do idim = 1, st%d%dim
 
           call zderivatives_grad(gr%der, lr%zdl_psi(:, idim, ist, ispin), gdl_psi)
@@ -138,24 +138,24 @@ contains
 
             call zderivatives_grad(gr%der, lr_m%zdl_psi(:, idim, ist, ispin), gdl_psi_m)
 
-            do idir = 1, gr%mesh%sb%dim 
+            do idir = 1, gr%mesh%sb%dim
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
                 + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &
                 -       psi(1:np, idim)*conjg(gdl_psi_m(1:np, idir))  &
-                + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
+                + conjg(lr_m%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   &
                 -       lr%zdl_psi  (1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)
             end do
 
-          else 
+          else
 
-            do idir = 1, gr%mesh%sb%dim 
+            do idir = 1, gr%mesh%sb%dim
 
               lr%dl_j(1:np, idir, ispin) = lr%dl_j(1:np, idir, ispin) + (           &
                 + conjg(psi(1:np, idim))*gdl_psi(1:np, idir)   &
                 -       psi(1:np, idim)*conjg(gdl_psi(1:np, idir))  &
-                + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   & 
+                + conjg(lr%zdl_psi(1:np, idim, ist, ispin)) *       gpsi(1:np, idir)   &
                 -       lr%zdl_psi(1:np, idim, ist, ispin)  * conjg(gpsi(1:np, idir))  &
                 ) / (M_TWO * M_zI)
 
@@ -217,60 +217,60 @@ contains
     str_tmp = freq2str(freq)
     write(str, '(3a,i1)') 'rho_', trim(str_tmp), '_', dir
     if(present(dir2)) write(str, '(2a,i1)') trim(str), "_", dir2
-    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert) 
+    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert)
 
     POP_SUB(em_rho_tag)
 
   end function em_rho_tag
-  
+
 
 ! ---------------------------------------------------------
   character(len=100) function em_wfs_tag(idir, ifactor, idir2, ipert) result(str)
     integer,           intent(in) :: idir
     integer,           intent(in) :: ifactor
     integer, optional, intent(in) :: idir2
-    integer, optional, intent(in) :: ipert 
+    integer, optional, intent(in) :: ipert
 
     PUSH_SUB(em_wfs_tag)
 
     write(str, '(3a,i1)') "wfs_", index2axis(idir), "_f", ifactor
     if(present(idir2)) write(str, '(3a)') trim(str), "_", index2axis(idir2)
-    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert) 
+    if(present(ipert)) write(str, '(3a)') trim(str), "_", index2pert(ipert)
 
     POP_SUB(em_wfs_tag)
 
   end function em_wfs_tag
 
 ! ---------------------------------------------------------
-! Provides indices of axes forming the right-hand system 
-! to the given axis (to choose components of the position 
-! and velocity, r_\alpha and V_\beta, for calculation of 
-! the M_\gamma component of the magnetic dipole moment 
+! Provides indices of axes forming the right-hand system
+! to the given axis (to choose components of the position
+! and velocity, r_\alpha and V_\beta, for calculation of
+! the M_\gamma component of the magnetic dipole moment
 ! M_\gamma = e_{\alpha \beta \gamma} r_\alpha V_\beta /2)
   integer pure function magn_dir(dir, ind) result(dir_out)
     integer, intent(in) :: dir, ind
- 
+
     select case(dir)
-      case(1)
-        if(ind == 1) then
-          dir_out = 2
-        else
-          dir_out = 3
-        end if
-      case(2)
-        if(ind == 1) then
-          dir_out = 3
-        else
-          dir_out = 1
-        end if
-      case(3)
-        if(ind == 1) then
-          dir_out = 1
-        else
-          dir_out = 2
-        end if
-      case default
-        dir_out = 0
+    case(1)
+      if(ind == 1) then
+        dir_out = 2
+      else
+        dir_out = 3
+      end if
+    case(2)
+      if(ind == 1) then
+        dir_out = 3
+      else
+        dir_out = 1
+      end if
+    case(3)
+      if(ind == 1) then
+        dir_out = 1
+      else
+        dir_out = 2
+      end if
+    case default
+      dir_out = 0
     end select
 
   end function magn_dir
@@ -280,22 +280,22 @@ contains
 
   character(len=2) pure function index2pert(ipert) result(ch)
     integer, intent(in) :: ipert
-    
+
     select case(ipert)
-      case(1)
-        ch = 'B'
-      case(2)
-        ch = 'K2'
-      case(3)
-        ch = 'KB'
-      case(4)
-        ch = 'KE'
-      case(5)
-        ch = 'E'
+    case(1)
+      ch = 'B'
+    case(2)
+      ch = 'K2'
+    case(3)
+      ch = 'KB'
+    case(4)
+      ch = 'KE'
+    case(5)
+      ch = 'E'
     end select
 
   end function index2pert
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "em_resp_calc_inc.F90"

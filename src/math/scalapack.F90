@@ -91,7 +91,7 @@ module scalapack_oct_m
       integer            desca
       double precision   a, tau, work
     end subroutine pdgeqrf
-    
+
     subroutine pzgeqrf(m, n, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
       integer            ia, info, ja, lwork, m, n
@@ -99,7 +99,7 @@ module scalapack_oct_m
       complex(8)         a, tau, work
     end subroutine pzgeqrf
   end interface scalapack_geqrf
-  
+
   !>  Generates an \f$ m \times n\f$ real distributed matrix Q denoting
   !!  A(IA:IA+M-1,JA:JA+N-1) with orthonormal columns, which is defined as
   !!  the first N columns of a product of K elementary reflectors of order
@@ -110,13 +110,13 @@ module scalapack_oct_m
   !!
   !!  as returned by PDGEQRF.
   interface scalapack_orgqr
-    subroutine pdorgqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info) 
+    subroutine pdorgqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
       integer            ia, info, ja, k, lwork, m, n
       integer            desca
       double precision   a, tau, work
     end subroutine pdorgqr
-    
+
     subroutine pzungqr(m, n, k, a, ia, ja, desca, tau, work, lwork, info)
       implicit none
       integer            ia, info, ja, k, lwork, m, n
@@ -124,7 +124,7 @@ module scalapack_oct_m
       complex(8)         a, tau, work
     end subroutine pzungqr
   end interface scalapack_orgqr
-  
+
   interface
     subroutine pdgesv(n, nrhs, a, ia, ja, desca, ipiv, b, ib, jb, descb, info)
       implicit none
@@ -142,7 +142,7 @@ module scalapack_oct_m
       complex(8)         a, b
     end subroutine pzgesv
   end interface
-  
+
   !>  Computes all eigenvalues and, optionally, eigenvectors
   !!  of a real symmetric matrix A by calling the recommended sequence
   !!  of ScaLAPACK routines.
@@ -212,74 +212,74 @@ module scalapack_oct_m
   !!  eigenvalues.
   interface scalapack_syevx
     subroutine pdsyevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, &
-         m, nz, w, orfac, z, iz, jz, descz, work, lwork, iwork, liwork, ifail, iclustr, gap, info )
-      implicit none      
-      character(1), intent(in)    :: jobz     
-      character(1), intent(in)    :: range    
-      character(1), intent(in)    :: uplo     
-      integer,      intent(in)    :: n         
-      real(8),      intent(inout) :: a         
-      integer,      intent(in)    :: ia        
-      integer,      intent(in)    :: ja        
-      integer,      intent(in)    :: desca     
-      real(8),      intent(in)    :: vl        
-      real(8),      intent(in)    :: vu        
-      integer,      intent(in)    :: il        
-      integer,      intent(in)    :: iu        
-      real(8) ,     intent(in)    :: abstol    
-      integer,      intent(out)   :: m         
-      integer,      intent(out)   :: nz       
-      real(8),      intent(out)   :: w        
-      real(8),      intent(in)    :: orfac   
-      real(8),      intent(out)   :: z       
-      integer,      intent(in)    :: iz      
-      integer,      intent(in)    :: jz      
-      integer,      intent(in)    :: descz   
-      real(8),      intent(out)   :: work    
-      integer,      intent(in)    :: lwork   
-      integer,      intent(inout) :: iwork   
-      integer,      intent(in)    :: liwork  
-      integer,      intent(out)   :: ifail  
+      m, nz, w, orfac, z, iz, jz, descz, work, lwork, iwork, liwork, ifail, iclustr, gap, info )
+      implicit none
+      character(1), intent(in)    :: jobz
+      character(1), intent(in)    :: range
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      real(8),      intent(inout) :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
+      integer,      intent(in)    :: desca
+      real(8),      intent(in)    :: vl
+      real(8),      intent(in)    :: vu
+      integer,      intent(in)    :: il
+      integer,      intent(in)    :: iu
+      real(8) ,     intent(in)    :: abstol
+      integer,      intent(out)   :: m
+      integer,      intent(out)   :: nz
+      real(8),      intent(out)   :: w
+      real(8),      intent(in)    :: orfac
+      real(8),      intent(out)   :: z
+      integer,      intent(in)    :: iz
+      integer,      intent(in)    :: jz
+      integer,      intent(in)    :: descz
+      real(8),      intent(out)   :: work
+      integer,      intent(in)    :: lwork
+      integer,      intent(inout) :: iwork
+      integer,      intent(in)    :: liwork
+      integer,      intent(out)   :: ifail
       integer,      intent(out)   :: iclustr
-      real(8),      intent(out)   :: gap    
-      integer,      intent(out)   :: info   
+      real(8),      intent(out)   :: gap
+      integer,      intent(out)   :: info
 
     end subroutine pdsyevx
 
     subroutine pzheevx( jobz, range, uplo, n, a, ia, ja, desca, vl, vu, il, iu, abstol, m, nz, w, orfac, z, iz, &
-         jz, descz, work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info )
+      jz, descz, work, lwork, rwork, lrwork, iwork, liwork, ifail, iclustr, gap, info )
       implicit none
-      character(1), intent(in)    :: jobz 
+      character(1), intent(in)    :: jobz
       character(1), intent(in)    :: range
-      character(1), intent(in)    :: uplo 
-      integer,      intent(in)    :: n    
-      complex(8),   intent(inout) :: a    
-      integer,      intent(in)    :: ia   
-      integer,      intent(in)    :: ja   
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n
+      complex(8),   intent(inout) :: a
+      integer,      intent(in)    :: ia
+      integer,      intent(in)    :: ja
       integer,      intent(in)    :: desca
-      real(8),      intent(in)    :: vl         
-      real(8),      intent(in)    :: vu         
+      real(8),      intent(in)    :: vl
+      real(8),      intent(in)    :: vu
       integer,      intent(in)    :: il
       integer,      intent(in)    :: iu
-      real(8),      intent(in)    :: abstol     
-      integer,      intent(out)   :: m 
+      real(8),      intent(in)    :: abstol
+      integer,      intent(out)   :: m
       integer,      intent(out)   :: nz
-      real(8),      intent(out)   :: w          
-      real(8),      intent(in)    :: orfac      
-      complex(8),   intent(out)   :: z 
-      integer,      intent(in)    :: iz         
-      integer,      intent(in)    :: jz         
-      integer,      intent(in)    :: descz      
-      complex(8),   intent(out)   :: work       
-      integer,      intent(in)    :: lwork      
-      real(8),      intent(out)   :: rwork      
-      integer,      intent(in)    :: lrwork    
-      integer,      intent(inout) :: iwork     
-      integer,      intent(in)    :: liwork    
-      integer,      intent(out)   :: ifail     
-      integer,      intent(out)   :: iclustr   
-      real(8),      intent(out)   :: gap      
-      integer,      intent(out)   :: info    
+      real(8),      intent(out)   :: w
+      real(8),      intent(in)    :: orfac
+      complex(8),   intent(out)   :: z
+      integer,      intent(in)    :: iz
+      integer,      intent(in)    :: jz
+      integer,      intent(in)    :: descz
+      complex(8),   intent(out)   :: work
+      integer,      intent(in)    :: lwork
+      real(8),      intent(out)   :: rwork
+      integer,      intent(in)    :: lrwork
+      integer,      intent(inout) :: iwork
+      integer,      intent(in)    :: liwork
+      integer,      intent(out)   :: ifail
+      integer,      intent(out)   :: iclustr
+      real(8),      intent(out)   :: gap
+      integer,      intent(out)   :: info
     end subroutine pzheevx
   end interface scalapack_syevx
 
@@ -332,7 +332,7 @@ module scalapack_oct_m
       integer,             intent(out)   :: info
     end subroutine pdsygvx
   end interface scalapack_sygvx
-  
+
   ! -------------------------------------------------------------
   !>  Computes all the eigenvalues, and optionally,
   !!  the eigenvectors
@@ -413,7 +413,7 @@ module scalapack_oct_m
       integer,      intent(in)    :: desca
       integer,      intent(out)   :: info
     end subroutine pdpotrf
-    
+
     subroutine pzpotrf(uplo, n, a, ia, ja, desca, info)
       implicit none
       character(1), intent(in)    :: uplo

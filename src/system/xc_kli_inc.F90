@@ -28,9 +28,9 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
   R_TYPE, allocatable :: psi(:, :)
-  
+
   call profiling_in(C_PROFILING_XC_KLI, 'XC_KLI')
-  
+
   PUSH_SUB(X(xc_KLI_solve))
   ! some intermediate quantities
   ! vxc contains the Slater part!
@@ -58,12 +58,12 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
   ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
-  
+
   oep%vxc(1:mesh%np, 1) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
-    
+
     do ip = 1, mesh%np
       oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
     end do
@@ -74,7 +74,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   end do
 
   SAFE_DEALLOCATE_A(psi)
-  
+
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     call MPI_Allreduce(oep%vxc(1,1), dd(1), mesh%np, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
@@ -82,7 +82,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     SAFE_DEALLOCATE_A(dd)
   end if
 #endif
-  
+
   if(oep%level == XC_OEP_SLATER) then
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
@@ -99,7 +99,7 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
       v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
     end if
   end do
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, v_bar_S, dim = st%st_end) 
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, v_bar_S, dim = st%st_end)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
@@ -144,9 +144,9 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
         kssi = oep%eigen_index(ist)
         call MPI_Bcast(yy(ist, 1), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
         do jst = 1, eigen_n
-           call MPI_Bcast(Ma(ist, jst), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
+          call MPI_Bcast(Ma(ist, jst), 1, MPI_FLOAT, st%node(kssi), st%mpi_grp%comm, mpi_err)
         end do
-     end do
+      end do
     end if
 #endif
 

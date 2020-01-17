@@ -19,7 +19,7 @@
 !-----------------------------------------------------------------
 subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   type(poisson_t), intent(in)  :: this
-  type(submesh_t), intent(in)  :: sm 
+  type(submesh_t), intent(in)  :: sm
   FLOAT,           intent(out) :: pot(:)
   FLOAT,           intent(in)  :: rho(:)
 
@@ -89,12 +89,12 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
         end do
       end if
       tmp(ip) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
-   end do
+    end do
 
 
-   call comm_allreduce(sm%mesh%mpi_grp%comm, tmp)
+    call comm_allreduce(sm%mesh%mpi_grp%comm, tmp)
 
-   do ip = 1, sm%np_global
+    do ip = 1, sm%np_global
       if (sm%part_v(ip) == sm%mesh%vp%partno) then
         pot(sm%global2local(ip)) = tmp(ip)
       end if
@@ -112,7 +112,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       xx2(1:dim) = sm%x(ip + 1, 1:dim)
       xx3(1:dim) = sm%x(ip + 2, 1:dim)
       xx4(1:dim) = sm%x(ip + 3, 1:dim)
-      
+
       if(this%der%mesh%use_curvilinear) then
 
         aa1 = prefactor*rho(ip    )*sm%mesh%vol_pp(ip    )**(M_ONE - M_ONE/dim)
@@ -142,14 +142,14 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
           aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
           aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
         end do
-  
+
         do jp = ip, ip+3
           if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
         end do
-        
+
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
         do jp = ip+4, sm%np
           aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
@@ -164,10 +164,10 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       pot(ip + 1) = sm%mesh%volume_element*aa2
       pot(ip + 2) = sm%mesh%volume_element*aa3
       pot(ip + 3) = sm%mesh%volume_element*aa4
-    
+
     end do
-  
-  
+
+
     do ip = ip, sm%np
 
       aa1 = M_ZERO
@@ -196,7 +196,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       end if
 
       pot(ip) = sm%mesh%volume_element*aa1
-    
+
     end do
 
 #ifdef HAVE_MPI
@@ -204,42 +204,42 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
 #endif
 
   call profiling_out(prof)
-  
-  POP_SUB(dpoisson_solve_direct_sm) 
+
+  POP_SUB(dpoisson_solve_direct_sm)
 end subroutine dpoisson_solve_direct_sm
 
-  subroutine zpoisson_solve_direct_sm(this, sm, pot, rho)
-    type(poisson_t),      intent(in)    :: this
-    type(submesh_t),      intent(in)    :: sm
-    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
+subroutine zpoisson_solve_direct_sm(this, sm, pot, rho)
+  type(poisson_t),      intent(in)    :: this
+  type(submesh_t),      intent(in)    :: sm
+  CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
+  CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
 
-    FLOAT, allocatable :: aux1(:), aux2(:)
-    type(derivatives_t), pointer :: der
+  FLOAT, allocatable :: aux1(:), aux2(:)
+  type(derivatives_t), pointer :: der
 
-    der => this%der
+  der => this%der
 
-    PUSH_SUB(zpoisson_solve_direct_sm)
+  PUSH_SUB(zpoisson_solve_direct_sm)
 
-    SAFE_ALLOCATE(aux1(1:sm%np))
-    SAFE_ALLOCATE(aux2(1:sm%np))
-    ! first the real part
-    aux1(1:sm%np) = real(rho(1:sm%np))
-    aux2(1:sm%np) = real(pot(1:sm%np))
-    call dpoisson_solve_direct_sm(this, sm, aux2, aux1)
-    pot(1:sm%np)  = aux2(1:sm%np)
+  SAFE_ALLOCATE(aux1(1:sm%np))
+  SAFE_ALLOCATE(aux2(1:sm%np))
+  ! first the real part
+  aux1(1:sm%np) = real(rho(1:sm%np))
+  aux2(1:sm%np) = real(pot(1:sm%np))
+  call dpoisson_solve_direct_sm(this, sm, aux2, aux1)
+  pot(1:sm%np)  = aux2(1:sm%np)
 
-    ! now the imaginary part
-    aux1(1:sm%np) = aimag(rho(1:sm%np))
-    aux2(1:sm%np) = aimag(pot(1:sm%np))
-    call dpoisson_solve_direct_sm(this, sm, aux2, aux1)
-    pot(1:sm%np) = pot(1:sm%np) + M_zI*aux2(1:sm%np)
+  ! now the imaginary part
+  aux1(1:sm%np) = aimag(rho(1:sm%np))
+  aux2(1:sm%np) = aimag(pot(1:sm%np))
+  call dpoisson_solve_direct_sm(this, sm, aux2, aux1)
+  pot(1:sm%np) = pot(1:sm%np) + M_zI*aux2(1:sm%np)
 
-    SAFE_DEALLOCATE_A(aux1)
-    SAFE_DEALLOCATE_A(aux2)
+  SAFE_DEALLOCATE_A(aux1)
+  SAFE_DEALLOCATE_A(aux2)
 
-    POP_SUB(zpoisson_solve_direct_sm)
-  end subroutine zpoisson_solve_direct_sm
+  POP_SUB(zpoisson_solve_direct_sm)
+end subroutine zpoisson_solve_direct_sm
 
 
 !! Local Variables:

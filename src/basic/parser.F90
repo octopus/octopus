@@ -659,20 +659,20 @@ contains
 
     string_length = len(inp_string)
     do i=1, string_length - 1
-       if(inp_string(i:i+1) == arraychar//"[") then
-          m = 0
-          if(inp_string(i+3:i+3) == ",") m = 1
-          if(inp_string(i+4:i+4) == ",") m = 2
-          if(m == 0) then
-             write(stderr, '(a)') "*** Fatal Error (description follows)"
-             write(stderr, '(a)') "Attempting to parse a string with array elements larger than 99"
-             call parse_fatal()
-          end if
-          read(inp_string(i+2:i+1+m),*) n_atom
-          read(inp_string(i+3+m:i+3+m),*) coord
-          write(v_string,*) x(n_atom, coord)
-          inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
-       end if
+      if(inp_string(i:i+1) == arraychar//"[") then
+        m = 0
+        if(inp_string(i+3:i+3) == ",") m = 1
+        if(inp_string(i+4:i+4) == ",") m = 2
+        if(m == 0) then
+          write(stderr, '(a)') "*** Fatal Error (description follows)"
+          write(stderr, '(a)') "Attempting to parse a string with array elements larger than 99"
+          call parse_fatal()
+        end if
+        read(inp_string(i+2:i+1+m),*) n_atom
+        read(inp_string(i+3+m:i+3+m),*) coord
+        write(v_string,*) x(n_atom, coord)
+        inp_string = inp_string(:i-1) // "(" // trim(v_string) // ")" // inp_string(i+5+m:)
+      end if
     end do
 
   end subroutine parse_array

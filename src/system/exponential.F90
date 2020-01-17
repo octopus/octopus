@@ -74,7 +74,7 @@ contains
   subroutine exponential_init(te, namespace)
     type(exponential_t), intent(out) :: te
     type(namespace_t),   intent(in)  :: namespace
-    
+
     PUSH_SUB(exponential_init)
 
     !%Variable TDExponentialMethod
@@ -90,12 +90,12 @@ contains
     !% by this variable.
     !%Option lanczos 2
     !% Allows for larger time-steps.
-    !% However, the larger the time-step, the longer the computational time per time-step. 
+    !% However, the larger the time-step, the longer the computational time per time-step.
     !% In certain cases, if the time-step is too large, the code will emit a warning
     !% whenever it considers that the evolution may not be properly proceeding --
     !% the Lanczos process did not converge. The method consists in a Krylov
     !% subspace approximation of the action of the exponential
-    !% (see M. Hochbruck and C. Lubich, <i>SIAM J. Numer. Anal.</i> <b>34</b>, 1911 (1997) for details). 
+    !% (see M. Hochbruck and C. Lubich, <i>SIAM J. Numer. Anal.</i> <b>34</b>, 1911 (1997) for details).
     !% Two more variables control the performance of the method: the maximum dimension
     !% of this subspace (controlled by variable <tt>TDExpOrder</tt>), and
     !% the stopping criterion (controlled by variable <tt>TDLanczosTol</tt>).
@@ -115,7 +115,7 @@ contains
     !% suggest the 4th order as especially suitable and stable.
     !%Option chebyshev 4
     !% In principle, the Chebyshev expansion
-    !% of the exponential represents it more accurately than the canonical or standard expansion. 
+    !% of the exponential represents it more accurately than the canonical or standard expansion.
     !% As in the latter case, <tt>TDExpOrder</tt> determines the order of the expansion.
     !%
     !% There exists a closed analytic form for the coefficients of the exponential in terms
@@ -160,8 +160,8 @@ contains
       !%Default 4
       !%Section Time-Dependent::Propagation
       !%Description
-      !% For <tt>TDExponentialMethod</tt> = <tt>standard</tt> or <tt>chebyshev</tt>, 
-      !% the order to which the exponential is expanded. For the Lanczos approximation, 
+      !% For <tt>TDExponentialMethod</tt> = <tt>standard</tt> or <tt>chebyshev</tt>,
+      !% the order to which the exponential is expanded. For the Lanczos approximation,
       !% it is the Lanczos-subspace dimension.
       !%End
       call parse_variable(namespace, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
@@ -176,17 +176,17 @@ contains
       !%Section Time-Dependent::Propagation
       !%Description
       !% The orthogonalization method used for the Arnoldi procedure.
-      !% Only for TDExponentialMethod = lanczos. 
+      !% Only for TDExponentialMethod = lanczos.
       !%Option cgs 3
       !% Classical Gram-Schmidt (CGS) orthogonalization.
       !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
       !%Option drcgs 5
       !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
-      !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
+      !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
       !% According to this reference, this is much more precise than CGS or MGS algorithms.
       !%End
       call parse_variable(namespace, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
-                              te%arnoldi_gs)
+        te%arnoldi_gs)
     end if
 
     POP_SUB(exponential_init)
@@ -211,7 +211,7 @@ contains
     teo%exp_method  = tei%exp_method
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
-    teo%arnoldi_gs  = tei%arnoldi_gs 
+    teo%arnoldi_gs  = tei%arnoldi_gs
 
     POP_SUB(exponential_copy)
   end subroutine exponential_copy
@@ -289,8 +289,8 @@ contains
       end if
     end if
 
-   !We apply the phase only to np points, and the phase for the np+1 to np_part points
-   !will be treated as a phase correction in the Hamiltonian
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
     if(phase_correction) then
       call states_elec_set_phase(hm%d, zpsi, hm%hm_base%phase(1:mesh%np, ik), mesh%np, .false.)
     end if
@@ -323,7 +323,7 @@ contains
 
       if(apply_magnus) then
         call zmagnus(hm, namespace, mesh, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
-        else
+      else
         call zhamiltonian_elec_apply_single(hm, namespace, mesh, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
@@ -353,7 +353,7 @@ contains
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         zfact_is_real = .not. zfact_is_real
-        
+
         call operate(zpsi1, hzpsi1)
 
         if(zfact_is_real) then
@@ -385,7 +385,7 @@ contains
 
 
     ! ---------------------------------------------------------
-    !> Calculates the exponential of the Hamiltonian through an expansion in 
+    !> Calculates the exponential of the Hamiltonian through an expansion in
     !! Chebyshev polynomials.
     !!
     !! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
@@ -485,7 +485,7 @@ contains
 
           !to apply the Hamiltonian
           call operate(zpsi, v(:, :,  iter + 1))
-        
+
           if(hm%is_hermitian()) then
             l = max(1, iter - 1)
           else
@@ -507,7 +507,7 @@ contains
           do idim = 1, hm%d%dim
             call lalg_scal(mesh%np, M_ONE / hamilt(iter + 1, iter), v(:, idim, iter+1))
           end do
-           
+
           if(iter > 3 .and. res < tol) exit
         end do
 
@@ -544,7 +544,7 @@ contains
 
             !to apply the Hamiltonian
             call operate(psi, v(:, :, iter + 1))
-  
+
 
             if(hm%is_hermitian()) then
               l = max(1, iter - 1)
@@ -558,7 +558,7 @@ contains
               norm = hamilt(iter + 1, iter), gs_scheme = te%arnoldi_gs)
 
             call zlalg_phi(iter, pp, hamilt, expo, hm%is_hermitian())
- 
+
             res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
             if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
@@ -572,7 +572,7 @@ contains
 
           do idim = 1, hm%d%dim
             call blas_gemv('N', mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), &
-                           mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
+              mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
           end do
 
         end if
@@ -621,7 +621,7 @@ contains
     FLOAT,                    optional, intent(in)    :: vmagnus(:,:,:) !(mesh%np, hm%d%nspin, 2)
     logical,                  optional, intent(in)    :: imag_time
     class(batch_t),           optional, intent(inout) :: inh_psib
-    
+
     integer :: ii, ist
     CMPLX :: deltat_, deltat2_
 
@@ -850,7 +850,7 @@ contains
 
       if(all(abs(hamilt(iter + 1, iter, :)) < CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
       !We normalize only if the norm is non-zero
-      ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0 
+      ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0
       norm = M_ONE
       do ist = 1, psib%nst
         if( abs(hamilt(iter + 1, iter, ist)) >= CNST(1.0e4)*M_EPSILON ) then
@@ -980,7 +980,7 @@ contains
     FLOAT,                    optional, intent(in)    :: vmagnus(:, :, :)
 
     PUSH_SUB(operate_batch)
-    
+
     if (present(vmagnus)) then
       call hm%zmagnus_apply(namespace, mesh, psib, hpsib, vmagnus)
     else
@@ -989,7 +989,7 @@ contains
 
     POP_SUB(operate_batch)
   end subroutine operate_batch
-  
+
   ! ---------------------------------------------------------
   !> Note that this routine not only computes the exponential, but
   !! also an extra term if there is a inhomogeneous term in the
@@ -1018,7 +1018,7 @@ contains
     zfact = M_ONE
     do i = 1, te%exp_order
       zfact = zfact * deltat / i
-      
+
       if (i == 1) then
         call zhamiltonian_elec_apply_all(hm, namespace, mesh, st, hst1)
       else
@@ -1027,9 +1027,9 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-            call batch_set_zero(st1%group%psib(ib, ik))
-            call batch_axpy(mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
-            call batch_axpy(mesh%np, zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
+          call batch_set_zero(st1%group%psib(ib, ik))
+          call batch_axpy(mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
+          call batch_axpy(mesh%np, zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
         end do
       end do
 
@@ -1056,7 +1056,7 @@ contains
       zfact = M_ONE
       do i = 1, te%exp_order
         zfact = zfact * deltat / (i+1)
-      
+
         if (i == 1) then
           call zhamiltonian_elec_apply_all(hm, namespace, mesh, hm%inh_st, hst1)
         else

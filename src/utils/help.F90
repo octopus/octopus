@@ -58,9 +58,9 @@ program oct_help
   case("list")
     call varinfo_search(help_stdout, "", ierr)
   end select
-    
+
   call global_end()
-    
+
 end program oct_help
 
 !! Local Variables:

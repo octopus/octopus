@@ -42,13 +42,13 @@ module derivatives_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
-!   debug purposes 
+!   debug purposes
 !   use io_binary_oct_m
 !   use io_function_oct_m
 !   use io_oct_m
 !   use unit_oct_m
 !   use unit_system_oct_m
-  
+
   implicit none
 
   private
@@ -96,7 +96,7 @@ module derivatives_oct_m
 
   integer, parameter ::     &
     BLOCKING = 1,           &
-    NON_BLOCKING = 2 
+    NON_BLOCKING = 2
 
   type derivatives_t
     ! Components are public by default
@@ -110,16 +110,16 @@ module derivatives_oct_m
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT, private :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff
 
     type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
-                                                    !! op(conf%dim+1) => Laplacian
+    !! op(conf%dim+1) => Laplacian
     type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer, private             :: comm_method 
+    integer, private             :: comm_method
 #endif
     type(derivatives_t),    pointer :: finer
     type(derivatives_t),    pointer :: coarser
@@ -210,7 +210,7 @@ contains
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
     call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
-    
+
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
@@ -256,9 +256,9 @@ contains
     !%Option non_blocking 2
     !% Communication is based on non-blocking point-to-point communication.
     !%End
-    
+
     call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
-    
+
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call messages_input_error('ParallelizationOfDerivatives')
     end if
@@ -371,7 +371,7 @@ contains
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_grad(der)
     type(derivatives_t), intent(inout) :: der
-      
+
 
     integer  :: ii
     character :: dir_label
@@ -396,7 +396,7 @@ contains
       case(DER_STARPLUS)
         call stencil_starplus_get_grad(der%grad(ii)%stencil, der%dim, ii, der%order)
       case(DER_STARGENERAL)
-      ! use the simple star stencil
+        ! use the simple star stencil
         call stencil_star_get_grad(der%grad(ii)%stencil, ii, der%order)
       end select
     end do
@@ -411,12 +411,12 @@ contains
     type(derivatives_t),    intent(inout) :: der
     type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
-    
+
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
-    
+
     call derivatives_build(der, namespace, mesh)
-    
+
   end subroutine derivatives_update
 
   ! ---------------------------------------------------------
@@ -517,9 +517,9 @@ contains
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
 
-    case(DER_STARGENERAL)    
-    
-      do i = 1, der%dim        
+    case(DER_STARGENERAL)
+
+      do i = 1, der%dim
         der%op(i)%stencil%npoly = der%op(i)%stencil%size ! for gradients we are fine
 
         SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(i)%stencil%npoly))
@@ -532,13 +532,13 @@ contains
         ! Forcing the orthogonal case avoid incurring in ill-defined cases.
         ! NOTE: this is not so clean and also am not 100% sure is correct. It has to be tested. UDG
         call derivatives_make_discretization(der%dim, der%mesh, der%masses, polynomials, rhs, 1,&
-                                              der%op(i:i), name, force_orthogonal = .true.)
+          der%op(i:i), name, force_orthogonal = .true.)
         SAFE_DEALLOCATE_A(polynomials)
         SAFE_DEALLOCATE_A(rhs)
       end do
 
       der%op(der%dim+1)%stencil%npoly = der%op(der%dim+1)%stencil%size &
-           + der%order*(2*der%order-1)*der%op(der%dim+1)%stencil%stargeneral%narms
+        + der%order*(2*der%order-1)*der%op(der%dim+1)%stencil%stargeneral%narms
 
       SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(der%dim+1)%stencil%size, 1:1))
@@ -554,8 +554,8 @@ contains
       call stencil_variational_coeff_lapl(der%dim, der%order, mesh%spacing, der%lapl, alpha = der%lapl_cutoff)
 
     end select
-    
-    
+
+
 
     ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
     if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
@@ -605,7 +605,7 @@ contains
           if(this_one) rhs(j) = M_TWO
         end do
       end do
-      
+
 
       POP_SUB(derivatives_build.get_rhs_lapl)
     end subroutine get_rhs_lapl
@@ -680,10 +680,10 @@ contains
         else
           forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
           ! TODO : this internal if clause is inefficient - the condition is determined globally
-          if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
-              x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
+          if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  &
+            x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
-                         
+
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
         forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
 
@@ -724,7 +724,7 @@ contains
 ! once we are happy and convinced, remove this comment
         op(i)%w(:, p) = sol(:, i)
       end do
-              
+
     end do ! loop over points p
 
     do i = 1, nderiv
@@ -738,19 +738,19 @@ contains
     POP_SUB(derivatives_make_discretization)
   end subroutine derivatives_make_discretization
 
-#ifdef HAVE_MPI    
+#ifdef HAVE_MPI
   ! ---------------------------------------------------------
   logical function derivatives_overlap(this) result(overlap)
     type(derivatives_t), intent(in) :: this
 
     PUSH_SUB(derivatives_overlap)
 
-    overlap = this%comm_method /= BLOCKING  
+    overlap = this%comm_method /= BLOCKING
 
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "derivatives_inc.F90"

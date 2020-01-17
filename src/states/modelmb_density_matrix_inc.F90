@@ -17,12 +17,12 @@
 !!
 
 !>------------------------------------------------------------
-!! This routine calculates the one-body density matrix gamma 
+!! This routine calculates the one-body density matrix gamma
 !! for particle ikeeppart, used in higher dimensional model
-!! hamiltonian calculations (MJV, NH) 
+!! hamiltonian calculations (MJV, NH)
 !!------------------------------------------------------------
 subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
-     mesh, psi, gamma)
+  mesh, psi, gamma)
   integer,               intent(in)  :: ikeeppart
   integer,               intent(in)  :: nparticles_densmat
   type(modelmb_1part_t), intent(in)  :: mb_1part
@@ -69,7 +69,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
 
     ! find coordinates of present point in full MAX_DIM space
     call index_to_coords(mesh%idx, ip_global, ix)
-    
+
     ! find index of present coordinates for particle ikeeppart
     ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
     call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, &
@@ -89,10 +89,10 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
 
       ! find coordinates of present point in full MAX_DIM space
       call index_to_coords(mesh%idx, ip_global, ix)
-      
+
       ! prime position will be identical to ix, apart from the ikeeppart particle
       ixp = ix
-        
+
       ! find index of present coordinates for particle ikeeppart
       ix_1part = ix((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part)
       call hypercube_x_to_i(mb_1part%hypercube_1part, mb_1part%ndim1part, &
@@ -104,10 +104,10 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       ! find equivalent position of particle prime
       call hypercube_i_to_x(mb_1part%hypercube_1part, mb_1part%ndim1part, &
         mb_1part%nr_1part, mb_1part%enlarge_1part(1), icoordp, ix_1part)
-        
-      ! change coordinates of particle ikeeppart only 
+
+      ! change coordinates of particle ikeeppart only
       ixp((ikeeppart - 1)*mb_1part%ndim1part + 1:ikeeppart*mb_1part%ndim1part) = ix_1part
-        
+
       ! find new index for general point prime
       ipp_global = index_from_coords(mesh%idx, ixp)
       forward_map_gamma(ipp_global) = ip_global
@@ -129,7 +129,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       if (icoordp > mb_1part%npt) icoordp = icoordp - mb_1part%npt
 
       gamma(icoord_map(ip), icoordp) = gamma(icoord_map(ip), icoordp) + &
-         nparticles_densmat*volume_element*psi(ip)*R_CONJ(psi_p (ip,1,1))
+        nparticles_densmat*volume_element*psi(ip)*R_CONJ(psi_p (ip,1,1))
     end do
   end do
 
@@ -201,13 +201,13 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     SAFE_ALLOCATE(evalues(1:mb_1part%npt))
     SAFE_ALLOCATE(density(1:mb_1part%npt))
 
-    
+
     densmatr  = R_TOTYPE(M_ZERO)
 
     !   calculate the 1-particle density matrix for this many-body state, and for the chosen
     !   particle being the free coordinate
     call X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles, &
-          gr%mesh, wf, densmatr)
+      gr%mesh, wf, densmatr)
 
     !Diagonalize the density matrix
     bof=.true.
@@ -218,7 +218,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     evectors = densmatr_tmp
     call lalg_eigensolve(mb_1part%npt, evectors, evalues, bof, err_code)
     SAFE_DEALLOCATE_A(densmatr_tmp)
-  
+
     !NOTE: The highest eigenvalues are the last ones not the first!!!
     !      Writing is therefore in reverse order
     evectors = evectors/sqrt(mb_1part%vol_elem_1part)
@@ -234,7 +234,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
       do jj = mb_1part%npt, 1, -1
         write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
       end do
-        
+
       call io_close(iunit)
 
       do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
@@ -247,12 +247,12 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
           do idir=1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
-          write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
+          write(iunit,'(es11.3,es11.3)') evectors(ll,jj)
           !), aimag(evectors(ll,jj)) ! format is too long for real wf case, but should be ok for most compilers
         end do
         call io_close(iunit)
       end do
-      
+
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
       iunit = io_open(filename, namespace, action='write')
       do jj = 1, mb_1part%npt
@@ -308,9 +308,9 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     SAFE_DEALLOCATE_A(evalues)
     SAFE_DEALLOCATE_A(density)
     SAFE_DEALLOCATE_A(densmatr)
-  
+
     call modelmb_1part_end(mb_1part)
-  
+
   end do densmat_loop ! loop over densmats to output
 
 

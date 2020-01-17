@@ -60,12 +60,12 @@ module phonons_lr_oct_m
 
   private
   public :: &
-       phonons_lr_run,    &
-       phn_nm_wfs_tag,    &
-       phn_wfs_tag,       &
-       phn_rho_tag,       &
-       axsf_mode_output
-  
+    phonons_lr_run,    &
+    phn_nm_wfs_tag,    &
+    phn_wfs_tag,       &
+    phn_rho_tag,       &
+    axsf_mode_output
+
 contains
 
   ! ---------------------------------------------------------
@@ -234,7 +234,7 @@ contains
     do imat = start_mode, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)
-      
+
       write(message(1),'(a,i5,a,a1,a)') &
         "Calculating response to displacement of atom ", iatom, " in ", index2axis(idir), "-direction."
       call messages_info(1)
@@ -253,10 +253,10 @@ contains
         end if
         call restart_close_dir(restart_load)
       end if
-      
+
       call pert_setup_atom(ionic_pert, iatom)
       call pert_setup_dir(ionic_pert, idir)
-      
+
       if(states_are_real(st)) then
         call dsternheimer_solve(sh, sys, lr, 1, M_ZERO, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
@@ -264,7 +264,7 @@ contains
         call zsternheimer_solve(sh, sys, lr, 1, M_z0, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
-      
+
       if(states_are_real(st)) then
         call dforces_derivative(gr, sys%namespace, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       else
@@ -284,7 +284,7 @@ contains
         vib%dyn_matrix(jmat, imat) = vib%dyn_matrix(jmat, imat) * vibrations_norm_factor(vib, geo, iatom, jatom)
       end do
       call vibrations_out_dyn_matrix_row(vib, imat)
-      
+
       if(do_infrared) then
         if(states_are_real(st)) then
           call dphonons_lr_infrared(gr, geo, st, lr(1), kdotp_lr, imat, iatom, idir, vib%infrared)
@@ -313,7 +313,7 @@ contains
 
       message(1) = ""
       call messages_info(1)
-    end do 
+    end do
 
     call pert_end(ionic_pert)
 
@@ -383,7 +383,7 @@ contains
           do jatom = 1, natoms
             if(iatom == jatom) cycle
 
-            do jdir = 1, ndim         
+            do jdir = 1, ndim
 
               xj(1:ndim) = geo%atom(jatom)%x(1:ndim)
               r2 = sum((xi(1:ndim) - xj(1:ndim))**2)
@@ -467,15 +467,15 @@ contains
   ! ---------------------------------------------------------
   character(len=100) function phn_rho_tag(iatom, dir) result(str)
     integer, intent(in) :: iatom, dir
-    
+
     PUSH_SUB(phn_rho_tag)
-    
+
     write(str, '(a,i4.4,a,i1)') 'phn_rho_', iatom, '_',  dir
 
     POP_SUB(phn_rho_tag)
 
   end function phn_rho_tag
-  
+
 
   ! ---------------------------------------------------------
   character(len=100) function phn_wfs_tag(iatom, dir) result(str)
@@ -486,7 +486,7 @@ contains
     write(str, '(a,i4.4,a,a)') "phn_wfs_", iatom, "_", index2axis(dir)
 
     POP_SUB(phn_wfs_tag)
-    
+
   end function phn_wfs_tag
 
 
@@ -499,7 +499,7 @@ contains
     write(str, '(a,i5.5)') "phn_nm_wfs_", inm
 
     POP_SUB(phn_nm_wfs_tag)
-    
+
   end function phn_nm_wfs_tag
 
 
@@ -510,7 +510,7 @@ contains
     type(geometry_t),   intent(in) :: geo
     type(mesh_t),       intent(in) :: mesh
     type(namespace_t),  intent(in) :: namespace
-    
+
     integer :: iunit, iatom, idir, imat, jmat
     FLOAT, allocatable :: forces(:,:)
     character(len=2) :: suffix
@@ -578,11 +578,11 @@ contains
           call messages_fatal(1)
         end if
       end do imode_loop
-        
+
       write(message(1),'(a,i9,a,i9)') 'Info: Read saved dynamical-matrix rows for ', &
         start_mode - 1, ' modes out of ', vib%num_modes
       call messages_info(1)
-      
+
       call restart_close(restart, iunit)
     else
       start_mode = 1

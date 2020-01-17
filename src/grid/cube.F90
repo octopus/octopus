@@ -72,7 +72,7 @@ module cube_oct_m
 
     type(fft_t), pointer :: fft !< the fft object
     logical, private :: has_cube_mapping !< Saves if a mapping with the cube is needed.
-                                         !! Until now, is needed with par_states (without par_domains) and PES.
+    !! Until now, is needed with par_states (without par_domains) and PES.
   end type cube_t
 
   !> It is intended to be used within a vector.
@@ -90,7 +90,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine cube_init(cube, nn, sb, namespace, fft_type, fft_library, dont_optimize, nn_out, verbose, &
-                       mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
+    mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
     type(simul_box_t), intent(in)  :: sb
@@ -99,16 +99,16 @@ contains
     integer, optional, intent(in)  :: fft_library !< What fft library to use
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
-                                                !! If optimized, may be different from input nn.
+    !! If optimized, may be different from input nn.
     logical, optional, intent(in)  :: verbose   !< Print info to the screen.
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
     logical, optional, intent(in)  :: need_partition !< Should we calculate and store the cube partition?
     FLOAT, optional, intent(in)    :: spacing(3)
     FLOAT, optional, intent(in)    :: tp_enlarge(3)  !< Two point enlargement factor. Can be used with (p)nfft
-                                                     !! enlarge the box by moving outward the cube first and last points
-                                                     !! in each direction. The resulting boundaries are rescaled by tp_enlarge.
+    !! enlarge the box by moving outward the cube first and last points
+    !! in each direction. The resulting boundaries are rescaled by tp_enlarge.
     integer, optional, intent(in)  :: blocksize !< just use a fixed block decomposition without caring about FFT library.
-                                                !! See description for cube_set_blocksize.
+    !! See description for cube_set_blocksize.
 
     integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), fft_library_
     integer :: effdim_fft
@@ -131,10 +131,10 @@ contains
     effdim_fft = min (3, sb%dim)
 
     nullify(cube%fft)
-    
+
     nullify(cube%Lrs)
     nullify(cube%Lfs)
-    
+
     nullify(cube%np_local)
     nullify(cube%xlocal)
     nullify(cube%local)
@@ -221,7 +221,7 @@ contains
         call fft_init_stage1(cube%fft, namespace, cube%Lrs, cube%rs_n_global)
         !set local dimensions after stage1 - needed for PNFFT
         call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
-             cube%rs_istart, cube%fs_istart)
+          cube%rs_istart, cube%fs_istart)
       end if
 
     end if
@@ -231,9 +231,9 @@ contains
     end if
 
 
-    
+
     cube%center(1:3) = cube%rs_n_global(1:3)/2 + 1
-    
+
 
     call mpi_grp_init(cube%mpi_grp, mpi_comm)
 
@@ -255,7 +255,7 @@ contains
   ! ---------------------------------------------------------
   subroutine cube_end(cube)
     type(cube_t), intent(inout) :: cube
-    
+
     PUSH_SUB(cube_end)
 
     if(associated(cube%fft)) then
@@ -272,10 +272,10 @@ contains
       SAFE_DEALLOCATE_P(cube%xlocal_fs)
       SAFE_DEALLOCATE_P(cube%local_fs)
     end if
-    
+
     SAFE_DEALLOCATE_P(cube%Lrs)
     SAFE_DEALLOCATE_P(cube%Lfs)
-    
+
     POP_SUB(cube_end)
   end subroutine cube_end
 
@@ -284,27 +284,27 @@ contains
   subroutine cube_tp_fft_defaults(cube, fft_library)
     type(cube_t), intent(inout) :: cube
     integer,      intent(in)    :: fft_library
-    
+
     PUSH_SUB(cube_tp_fft_defaults)
     select case (fft_library)
-      case (FFTLIB_NFFT)
-        !Set NFFT defaults to values that gives good performance for two-point enlargement
-        !These values are overridden by the NFFT options in the input file 
-        cube%fft%nfft%set_defaults = .true.
-        cube%fft%nfft%guru = .true.
-        cube%fft%nfft%mm = 2 
-        cube%fft%nfft%sigma = CNST(1.1)
-        cube%fft%nfft%precompute = NFFT_PRE_PSI
+    case (FFTLIB_NFFT)
+      !Set NFFT defaults to values that gives good performance for two-point enlargement
+      !These values are overridden by the NFFT options in the input file
+      cube%fft%nfft%set_defaults = .true.
+      cube%fft%nfft%guru = .true.
+      cube%fft%nfft%mm = 2
+      cube%fft%nfft%sigma = CNST(1.1)
+      cube%fft%nfft%precompute = NFFT_PRE_PSI
 
-      case (FFTLIB_PNFFT)
-        cube%fft%pnfft%set_defaults = .true.
-        cube%fft%pnfft%m = 2 
-        cube%fft%pnfft%sigma = CNST(1.1)
+    case (FFTLIB_PNFFT)
+      cube%fft%pnfft%set_defaults = .true.
+      cube%fft%pnfft%m = 2
+      cube%fft%pnfft%sigma = CNST(1.1)
 
-      case default 
-      !do nothing  
+    case default
+      !do nothing
     end select
-    
+
     POP_SUB(cube_tp_fft_defaults)
   end subroutine cube_tp_fft_defaults
 
@@ -315,36 +315,36 @@ contains
     FLOAT,        intent(in) :: tp_enlarge(3)
     FLOAT,        intent(in) :: spacing(3)
     integer,      intent(in) :: fft_library
-    
+
     FLOAT   :: temp
     integer :: ii, nn(3), maxn, idim
 
     PUSH_SUB(cube_init_coords)
 
 
-    nn(1:3) = cube%fs_n_global(1:3) 
+    nn(1:3) = cube%fs_n_global(1:3)
 
-    maxn = maxval(nn) 
+    maxn = maxval(nn)
     SAFE_ALLOCATE(cube%Lrs(1:maxn, 1:3))
     cube%Lrs(:,:) = M_ZERO
-    
-    !! Real space coordinates 
-    do idim=1,3 
+
+    !! Real space coordinates
+    do idim=1,3
       if (tp_enlarge(idim) > M_ONE ) then
-        do ii = 2, nn(idim) - 1 
+        do ii = 2, nn(idim) - 1
           cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
         end do
         cube%Lrs(1,        idim) = (-int(nn(idim)/2)) * spacing(idim) * tp_enlarge(idim)
         cube%Lrs(nn(idim), idim) = (int(nn(idim)/2))  * spacing(idim) * tp_enlarge(idim)
       else
-        do ii = 1, nn(idim) 
+        do ii = 1, nn(idim)
           cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
         end do
       end if
     end do
 
 
-    !! Fourier space coordinates 
+    !! Fourier space coordinates
     if(fft_library /= FFTLIB_NONE) then
 
       SAFE_ALLOCATE(cube%Lfs(1:maxn, 1:3))
@@ -366,7 +366,7 @@ contains
         end do
       end do
     end if
-    
+
     POP_SUB(cube_init_coords)
   end subroutine cube_init_coords
 
@@ -383,24 +383,24 @@ contains
     lxyz(2) = ixyz(2) - cube%rs_istart(2) + 1
     lxyz(3) = ixyz(3) - cube%rs_istart(3) + 1
     is_here = lxyz(1) >= 1 .and. lxyz(1) <= cube%rs_n(1) .and. &
-              lxyz(2) >= 1 .and. lxyz(2) <= cube%rs_n(2) .and. &
-              lxyz(3) >= 1 .and. lxyz(3) <= cube%rs_n(3)
-    
+      lxyz(2) >= 1 .and. lxyz(2) <= cube%rs_n(2) .and. &
+      lxyz(3) >= 1 .and. lxyz(3) <= cube%rs_n(3)
+
   end function cube_global2local
 
 
   ! ---------------------------------------------------------
   !> Returns the FFT library of the cube.
-  !! Possible values are FFTLIB_NONE, FFTLIB_FFTW, FFTLIB_PFFT 
-  !! FFTLIB_ACCEL, FFTLIB_NFFT and FFTLIB_PNFFT 
+  !! Possible values are FFTLIB_NONE, FFTLIB_FFTW, FFTLIB_PFFT
+  !! FFTLIB_ACCEL, FFTLIB_NFFT and FFTLIB_PNFFT
   !! (defined in fft.F90)
   integer function cube_getFFTLibrary(cube) result(fft_library)
     type(cube_t), intent(in)  :: cube
 
     if (associated(cube%fft)) then
-       fft_library = cube%fft%library
+      fft_library = cube%fft%library
     else
-       fft_library = FFTLIB_NONE
+      fft_library = FFTLIB_NONE
     end if
   end function cube_getFFTLibrary
 
@@ -409,7 +409,7 @@ contains
   subroutine cube_do_mapping(cube, fs)
     type(cube_t), intent(inout) :: cube
     logical,      intent(in)    :: fs !< fill the fs mapping too
-    
+
     integer :: tmp_local(6), position, process, ix, iy, iz, index
     integer, allocatable :: local_sizes(:)
     type(profile_t), save ::  prof_gt, prof_map
@@ -430,7 +430,7 @@ contains
       call profiling_in(prof_gt,"CUBE_GAT")
 #ifdef HAVE_MPI
       call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
-                         cube%mpi_grp%comm, mpi_err)
+        cube%mpi_grp%comm, mpi_err)
 #endif
       call profiling_out(prof_gt)
     else
@@ -469,9 +469,9 @@ contains
         end do
       end do
     end do
-    
+
     call profiling_out(prof_map)
-    
+
     if(optional_default(fs,.false.)) then
 
       tmp_local(1) = cube%fs_istart(1)
@@ -484,10 +484,10 @@ contains
       local_sizes = 0
       if (cube%parallel_in_domains) then
         call profiling_in(prof_gt,"CUBE_GAT_FS")
-  #ifdef HAVE_MPI
+#ifdef HAVE_MPI
         call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
-                           cube%mpi_grp%comm, mpi_err)
-  #endif
+          cube%mpi_grp%comm, mpi_err)
+#endif
         call profiling_out(prof_gt)
       else
         local_sizes = tmp_local
@@ -524,12 +524,12 @@ contains
           end do
         end do
       end do
-      
+
       call profiling_out(prof_map)
 
     end if
 
-    
+
 
     SAFE_DEALLOCATE_A(local_sizes)
 
@@ -542,7 +542,7 @@ contains
   integer pure function cube_point_to_process(xyz, part) result(process)
     integer, intent(in)   :: xyz(1:3)
     type(dimensions_t), intent(in) :: part(:)
-    
+
     integer :: proc
     logical :: found
 
@@ -557,7 +557,7 @@ contains
         exit
       end if
     end do
-      
+
     ! An error message should be raised, if this point is reached
     if (.not. found) then
       process = -1
@@ -608,7 +608,7 @@ contains
       SAFE_ALLOCATE(local_sizes(1:6*cube%mpi_grp%size))
 #ifdef HAVE_MPI
       call MPI_Allgather(tmp_local, 6, MPI_INTEGER, local_sizes, 6, MPI_INTEGER,&
-                         cube%mpi_grp%comm, mpi_err)
+        cube%mpi_grp%comm, mpi_err)
 #endif
     else
       SAFE_ALLOCATE(local_sizes(1:6))
@@ -617,14 +617,14 @@ contains
 
     do process = 1, cube%mpi_grp%size
       position = ((process-1)*6)+1
-      
+
       part(process)%start_xyz(1) = local_sizes(position)
-      part(process)%start_xyz(2) = local_sizes(position+1) 
-      part(process)%start_xyz(3) = local_sizes(position+2) 
+      part(process)%start_xyz(2) = local_sizes(position+1)
+      part(process)%start_xyz(3) = local_sizes(position+2)
       part(process)%end_xyz(1)   = local_sizes(position)+local_sizes(position+3)
       part(process)%end_xyz(2)   = local_sizes(position+1)+local_sizes(position+4)
       part(process)%end_xyz(3)   = local_sizes(position+2)+local_sizes(position+5)
-      
+
     end do
 
     POP_SUB(cube_partition)
@@ -636,22 +636,22 @@ contains
     type(namespace_t), intent(in) :: namespace
 
     integer          :: nn, ii, jj, kk ! Counters.
-    integer          :: ixyz(3)        ! Current value of xyz 
+    integer          :: ixyz(3)        ! Current value of xyz
     integer          :: npart
     integer          :: iunit          ! For debug output to files.
     character(len=3) :: filenum
     type(dimensions_t), allocatable :: part(:)
-    
+
     PUSH_SUB(cube_partition_messages_debug)
 
     if(debug%info) then
       SAFE_ALLOCATE(part(1:cube%mpi_grp%size))
       call cube_partition(cube, part)
-  
+
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/cube_partition', namespace)
         npart = cube%mpi_grp%size
-      
+
         ! Debug output. Write points of each partition in a different file.
         do nn = 1, npart
 

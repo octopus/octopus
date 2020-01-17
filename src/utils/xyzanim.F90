@@ -41,7 +41,7 @@ program xyzanim
   type(geometry_t)  :: geo
   type(space_t)     :: space
   type(namespace_t) :: default_namespace
-  
+
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -51,7 +51,7 @@ program xyzanim
 
   call parser_init()
   default_namespace = namespace_t("")
-  
+
   call messages_init(default_namespace)
   call io_init(default_namespace)
   call unit_system_init(default_namespace)
@@ -96,11 +96,11 @@ program xyzanim
   do while(ierr == 0)
     read(unit = coords_unit, iostat = ierr, fmt = *) iter, time, &
       ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
-      do i = 1, geo%natoms
-        do j = 1, geo%space%dim
-          geo%atom(i)%x(j)=units_to_atomic(units_out%length, geo%atom(i)%x(j))
-        end do
+    do i = 1, geo%natoms
+      do j = 1, geo%space%dim
+        geo%atom(i)%x(j)=units_to_atomic(units_out%length, geo%atom(i)%x(j))
       end do
+    end do
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
       if(.not.multifiles)then

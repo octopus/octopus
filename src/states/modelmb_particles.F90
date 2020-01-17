@@ -34,11 +34,11 @@ module modelmb_particles_oct_m
   private
 
   public :: modelmb_particles_nullify,   &
-            modelmb_particles_init,      &
-            modelmb_particles_end,       &
-            modelmb_particles_copy,      &
-            modelmb_copy_masses,         &
-            modelmb_particle_t
+    modelmb_particles_init,      &
+    modelmb_particles_end,       &
+    modelmb_particles_copy,      &
+    modelmb_copy_masses,         &
+    modelmb_particle_t
 
   !>==============================================================
   !!  container type for input vars concerning modelmb particles
@@ -46,13 +46,13 @@ module modelmb_particles_oct_m
   type modelmb_particle_t
     private
     integer, public :: ndim              !< dimensionality of modelmb space each
-                                         !!  particle lives in
-    
+    !!  particle lives in
+
     integer, public :: ntype_of_particle !< number of different types of particles
-                                         !!  modelmb in MAX_DIM dimensional space
+    !!  modelmb in MAX_DIM dimensional space
     integer :: max_particles_per_type    !< max number of different particle
 
-    integer, public :: nparticle         !< number of particles 
+    integer, public :: nparticle         !< number of particles
 
     integer :: ndensities_to_calculate
 
@@ -69,11 +69,11 @@ module modelmb_particles_oct_m
     integer, pointer, public :: nparticles_per_type(:)
     integer, pointer, public :: particles_of_type(:,:)
     integer, pointer, public :: bosonfermion(:)
-    
+
     integer, pointer :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
-    
+
     FLOAT, pointer :: mass_particle(:)
-    
+
     FLOAT, pointer, public :: charge_particle(:)
 
     !>   %block densitiestocalc
@@ -84,7 +84,7 @@ module modelmb_particles_oct_m
     !!   however many lines wanted (up to nparticle_modelmb)
     !!   %
     character(80), allocatable :: labels_densities(:)
-    
+
     integer, pointer :: particle_kept_densities(:)
 
   end type modelmb_particle_t
@@ -93,9 +93,9 @@ contains
 
   subroutine modelmb_particles_nullify(this)
     type(modelmb_particle_t), intent(inout) :: this
-    
+
     PUSH_SUB(modelmb_particles_nullify)
-    
+
     this%nparticle = 0
     nullify(this%particletype)
     nullify(this%nparticles_per_type)
@@ -105,11 +105,11 @@ contains
     nullify(this%mass_particle)
     nullify(this%charge_particle)
     nullify(this%particle_kept_densities)
-    
+
     POP_SUB(modelmb_particles_nullify)
   end subroutine modelmb_particles_nullify
-  
-  
+
+
   !>==============================================================
   !!  initialization function for modelmb particles information
   !!==============================================================
@@ -117,20 +117,20 @@ contains
     type(modelmb_particle_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
-    
+
     integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
     type(block_t) :: blk
-    
+
     PUSH_SUB(modelmb_particles_init)
-    
+
     ! read in scalar dimensions
-    
+
     !%Variable NParticleModelmb
     !%Type integer
     !%Section States::ModelMB
     !%Default  0
     !%Description
-    !% Number of particles in modelmb space. 
+    !% Number of particles in modelmb space.
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%End
     call parse_variable(namespace, 'NParticleModelmb', 0, this%nparticle)
@@ -141,7 +141,7 @@ contains
     end if
 
     call messages_print_var_value(stdout, "NParticleModelmb", this%nparticle)
-    
+
     !%Variable NDimModelmb
     !%Type integer
     !%Section States::ModelMB
@@ -153,7 +153,7 @@ contains
     !%End
     call parse_variable(namespace, 'NDimModelmb', 1, this%ndim)
     call messages_print_var_value(stdout, "NDimModelmb", this%ndim)
-    
+
     !%Variable NTypeParticleModelmb
     !%Type integer
     !%Section States::ModelMB
@@ -168,14 +168,14 @@ contains
         this%ntype_of_particle, this%nparticle
       call messages_fatal(1, namespace=namespace)
     end if
-    
+
     if (this%ndim*this%nparticle /= gr%sb%dim) then
       message(1) = ' Number of modelmb particles * dimension of modelmb space must be = Ndim'
       call messages_fatal(1, namespace=namespace)
     end if
 
     ! read in blocks
-    
+
     !%Variable DescribeParticlesModelmb
     !%Type block
     !%Section States::ModelMB
@@ -203,7 +203,7 @@ contains
     !%Option anyon 3
     !%  Particle is neither fermion nor boson.
     !%End
-    
+
     ! allocate stuff
     npar = this%nparticle
     ntype = this%ntype_of_particle
@@ -214,19 +214,19 @@ contains
     SAFE_ALLOCATE (this%bosonfermion(1:npar))
     SAFE_ALLOCATE (this%nparticles_per_type(1:ntype))
     SAFE_ALLOCATE (this%particles_of_type(1:npar, 1:ntype))
-    
+
     ! default all particles are electrons
     this%labels_particles = 'electron'
     this%particletype = 1
     this%mass_particle = M_ONE
     this%charge_particle = M_ONE
     this%bosonfermion = 1 ! set to fermion
-    
-    
+
+
     if(parse_block(namespace, 'DescribeParticlesModelmb', blk) == 0) then
-      
+
       call messages_experimental("Model many-body")
-      
+
       ncols = parse_block_cols(blk, 0)
       if(ncols /= 5 ) then
         call messages_input_error("DescribeParticlesModelmb")
@@ -235,14 +235,14 @@ contains
       if (nline /= this%nparticle) then
         call messages_input_error("DescribeParticlesModelmb")
       end if
-      
+
       do ipart = 1, this%nparticle
         call parse_block_string(blk, ipart - 1, 0, this%labels_particles(ipart))
         call parse_block_integer(blk, ipart - 1, 1, this%particletype(ipart))
         call parse_block_float(blk, ipart - 1, 2, this%mass_particle(ipart))
         call parse_block_float(blk, ipart - 1, 3, this%charge_particle(ipart))
         call parse_block_integer(blk, ipart - 1, 4, this%bosonfermion(ipart))
-        
+
         write (message(1),'(a,a)') 'labels_particles = ', this%labels_particles(ipart)
         write (message(2),'(a,i6)') 'particletype = ', this%particletype(ipart)
         write (message(3),'(a,E20.10)') 'mass_particle = ', this%mass_particle(ipart)
@@ -251,34 +251,34 @@ contains
         call messages_info(5)
       end do
       call parse_block_end(blk)
-      
+
     end if
-    
+
     this%nparticles_per_type = 0
     this%particles_of_type = 0
     do ipart = 1, this%nparticle
-      this%nparticles_per_type(this%particletype(ipart)) = & 
+      this%nparticles_per_type(this%particletype(ipart)) = &
         this%nparticles_per_type(this%particletype(ipart)) + 1
       this%particles_of_type(this%nparticles_per_type(this%particletype(ipart)), &
         this%particletype(ipart)) = ipart
     end do
-    
+
     this%max_particles_per_type = maxval(this%nparticles_per_type)
     itmp = this%max_particles_per_type
     jtmp = this%ntype_of_particle
     SAFE_ALLOCATE (this%exchange_symmetry(1:itmp, 1:itmp, 1:jtmp))
     this%exchange_symmetry = 0
-    
+
     POP_SUB(modelmb_particles_init)
-    
+
   end subroutine modelmb_particles_init
 
 
   subroutine modelmb_particles_end (this)
     type(modelmb_particle_t),intent(inout) :: this
-    
+
     PUSH_SUB(modelmb_particles_end)
-    
+
     SAFE_DEALLOCATE_A(this%labels_particles)
     SAFE_DEALLOCATE_P(this%particletype)
     SAFE_DEALLOCATE_P(this%mass_particle)
@@ -287,26 +287,26 @@ contains
     SAFE_DEALLOCATE_P(this%particles_of_type)
     SAFE_DEALLOCATE_P(this%exchange_symmetry)
     SAFE_DEALLOCATE_P(this%bosonfermion)
-    
+
     SAFE_DEALLOCATE_A(this%labels_densities)
     SAFE_DEALLOCATE_P(this%particle_kept_densities)
-    
+
     POP_SUB(modelmb_particles_end)
-    
+
   end subroutine modelmb_particles_end
-  
+
   subroutine modelmb_particles_copy(modelmb_out, modelmb_in)
     type(modelmb_particle_t), intent(in)  :: modelmb_in
     type(modelmb_particle_t), intent(out) :: modelmb_out
-    
+
     PUSH_SUB(modelmb_particles_copy)
-    
+
     modelmb_out%ndim = modelmb_in%ndim
     modelmb_out%ntype_of_particle = modelmb_in%ntype_of_particle
     modelmb_out%max_particles_per_type = modelmb_in%max_particles_per_type
     modelmb_out%nparticle = modelmb_in%nparticle
     modelmb_out%ndensities_to_calculate = modelmb_in%ndensities_to_calculate
-    
+
     call loct_allocatable_copy(modelmb_out%labels_particles,modelmb_in%labels_particles)
     call loct_pointer_copy(modelmb_out%particletype,modelmb_in%particletype)
     call loct_pointer_copy(modelmb_out%mass_particle,modelmb_in%mass_particle)
@@ -315,10 +315,10 @@ contains
     call loct_pointer_copy(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
     call loct_pointer_copy(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
     call loct_pointer_copy(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
-    
+
     call loct_allocatable_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
     call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
-    
+
     POP_SUB(modelmb_particles_copy)
 
   end subroutine modelmb_particles_copy
@@ -329,11 +329,11 @@ contains
   subroutine modelmb_copy_masses (this,masses)
     type(modelmb_particle_t), intent(in)    :: this
     FLOAT,                    intent(inout) :: masses(MAX_DIM)
-    
+
     integer :: dimcounter,ipart
-    
+
     PUSH_SUB(modelmb_copy_masses)
-    
+
     ! copy masses to gr%der%masses
     dimcounter = 0
     do ipart = 1,this%nparticle
@@ -342,11 +342,11 @@ contains
       end if
       dimcounter = dimcounter+this%ndim
     end do
-    
+
     POP_SUB(modelmb_copy_masses)
-    
+
   end subroutine modelmb_copy_masses
-  
+
 end module modelmb_particles_oct_m
 
 !! Local Variables:

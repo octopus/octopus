@@ -116,10 +116,10 @@ module nl_operator_oct_m
   end type nl_operator_t
 
   integer, parameter :: &
-       OP_FORTRAN = 0,  &
-       OP_VEC     = 1,  &
-       OP_MIN     = OP_FORTRAN, &
-       OP_MAX     = OP_VEC
+    OP_FORTRAN = 0,  &
+    OP_VEC     = 1,  &
+    OP_MIN     = OP_FORTRAN, &
+    OP_MAX     = OP_VEC
 
   integer, parameter ::     &
     OP_INVMAP    = 1,       &
@@ -141,17 +141,17 @@ module nl_operator_oct_m
   integer :: dfunction_global = -1
   integer :: zfunction_global = -1
   integer :: sfunction_global = -1
-  integer :: cfunction_global = -1  
+  integer :: cfunction_global = -1
   integer :: function_opencl
 
   type(profile_t), save :: operate_batch_prof
 
 contains
-  
+
   ! ---------------------------------------------------------
   subroutine nl_operator_global_init(namespace)
     type(namespace_t),         intent(in)    :: namespace
-    
+
     integer :: default
 
     PUSH_SUB(nl_operator_global_init)
@@ -175,7 +175,7 @@ contains
     !%Default optimized
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for complex functions. 
+    !% operators over the grid for complex functions.
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
@@ -210,16 +210,16 @@ contains
     !%Default optimized
     !%Description
     !% This variable selects the subroutine used to apply non-local
-    !% operators over the grid for single-precision complex functions. 
+    !% operators over the grid for single-precision complex functions.
     !%Option fortran 0
     !% The standard Fortran function.
     !%Option optimized 1
     !% This version is optimized using vector primitives (if available).
     !%End
-    
+
     call parse_variable(namespace, 'OperateSingle', OP_FORTRAN, sfunction_global)
     if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
-    
+
     call parse_variable(namespace, 'OperateComplexSingle', OP_FORTRAN, cfunction_global)
     if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
@@ -261,7 +261,7 @@ contains
     if(compact_boundaries) then
       call messages_experimental('NLOperatorCompactBoundaries')
     end if
-      
+
     POP_SUB(nl_operator_global_init)
   end subroutine nl_operator_global_init
 
@@ -279,11 +279,11 @@ contains
     integer, intent(in) :: id
 
     PUSH_SUB(op_function_name)
-    
+
     str = 'unknown'
     if(id == OP_FORTRAN) str = 'Fortran'
     if(id == OP_VEC)     str = 'Vector'
-    
+
     POP_SUB(op_function_name)
   end function op_function_name
 
@@ -332,12 +332,12 @@ contains
     call loct_pointer_copy(opo%ri, opi%ri)
     call loct_pointer_copy(opo%rimap, opi%rimap)
     call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
-    
+
     if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
       call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
       call loct_pointer_copy(opo%inner%imax, opi%inner%imax)
-      call loct_pointer_copy(opo%inner%ri,   opi%inner%ri)      
+      call loct_pointer_copy(opo%inner%ri,   opi%inner%ri)
 
       opo%outer%nri = opi%outer%nri
       call loct_pointer_copy(opo%outer%imin, opi%outer%imin)
@@ -362,8 +362,8 @@ contains
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
-    integer, allocatable :: inner_points(:), outer_points(:), all_points(:)    
-    
+    integer, allocatable :: inner_points(:), outer_points(:), all_points(:)
+
     PUSH_SUB(nl_operator_build)
 
     if(mesh%parallel_in_domains .and. .not. const_w) then
@@ -419,17 +419,17 @@ contains
           ! Get global index of p1 plus current stencil point.
           if(mesh%sb%mr_flag) then
             st1(jj) = index_from_coords(mesh%idx, &
-                 p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
+              p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
           else
             st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           end if
-          
+
           if(mesh%parallel_in_domains) then
             ! When running parallel, translate this global
             ! number back to a local number.
             st1(jj) = vec_global2local(mesh%vp, st1(jj), mesh%vp%partno)
           end if
-          
+
           ! if boundary conditions are zero, we can remap boundary
           ! points to reduce memory accesses. We cannot do this for the
           ! first point, since it is used to build the weights, so it
@@ -442,13 +442,13 @@ contains
 
         st1(1:op%stencil%size) = st1(1:op%stencil%size) - ii
 
-        change = any(st1 /= st2) 
+        change = any(st1 /= st2)
 
         !the next is to detect when we move from a point that does not
         !have boundary points as neighbours to one that has
-        force_change = any(st1 + ii > mesh%np) .and. all(st2 + ii - 1 <= mesh%np) 
+        force_change = any(st1 + ii > mesh%np) .and. all(st2 + ii - 1 <= mesh%np)
 
-        if(change .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then 
+        if(change .and. compact_boundaries .and. mesh_compact_boundaries(mesh)) then
           !try to repair it by changing the boundary points
           do jj = 1, op%stencil%size
             if(st1(jj) + ii > mesh%np .and. st2(jj) + ii - 1 > mesh%np .and. st2(jj) + ii <= mesh%np_part) then
@@ -464,7 +464,7 @@ contains
         end if
 
         ! if the stencil changes
-        if (change .or. force_change) then 
+        if (change .or. force_change) then
           !store it
           st2 = st1
 
@@ -483,7 +483,7 @@ contains
       end do
 
       !after counting, allocate
-      if (time == 1 ) then 
+      if (time == 1 ) then
         SAFE_ALLOCATE(op%ri(1:op%stencil%size, 1:op%nri))
         SAFE_ALLOCATE(op%rimap(1:op%np))
         SAFE_ALLOCATE(op%rimap_inv(1:op%nri + 1))
@@ -535,9 +535,9 @@ contains
           ASSERT(op%outer%nri <= op%nri)
         end if
       end do
-      
+
       ASSERT(op%inner%nri + op%outer%nri == op%nri)
-      
+
       SAFE_ALLOCATE(op%inner%imin(1:op%inner%nri + 1))
       SAFE_ALLOCATE(op%inner%imax(1:op%inner%nri))
       SAFE_ALLOCATE(op%inner%ri(1:op%stencil%size, 1:op%inner%nri))
@@ -565,14 +565,14 @@ contains
           op%outer%ri(1:op%stencil%size, iouter) = op%ri(1:op%stencil%size, ir)
         end if
       end do
-      
+
       !verify that all points in the inner operator are actually inner
       do ir = 1, op%inner%nri
         do ii = op%inner%imin(ir) + 1, op%inner%imax(ir)
           ASSERT(all(ii + op%inner%ri(1:op%stencil%size, ir) <= mesh%np))
         end do
       end do
-      
+
     end if
 
     if(accel_is_enabled() .and. op%const_w) then
@@ -581,7 +581,7 @@ contains
       flags='-DNDIM=3 -DSTENCIL_SIZE='//trim(adjustl(flags))
 
       if(op%mesh%parallel_in_domains) flags = '-DINDIRECT '//trim(flags)
-      
+
       select case(function_opencl)
       case(OP_INVMAP)
         call accel_kernel_build(op%kernel, 'operate.cl', 'operate', flags)
@@ -607,14 +607,14 @@ contains
         call accel_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
 
         if(op%mesh%parallel_in_domains) then
-          
+
           SAFE_ALLOCATE(inner_points(1:op%mesh%np))
           SAFE_ALLOCATE(outer_points(1:op%mesh%np))
           SAFE_ALLOCATE(all_points(1:op%mesh%np))
-          
+
           op%ninner = 0
           op%nouter = 0
-          
+
           do ii = 1, op%mesh%np
             all_points(ii) = ii - 1
             maxp = ii + maxval(op%ri(1:op%stencil%size, op%rimap(ii)))
@@ -626,21 +626,21 @@ contains
               outer_points(op%nouter) = ii - 1
             end if
           end do
-          
+
           call accel_create_buffer(op%buff_all, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_all, op%mesh%np, all_points)
-        
+
           call accel_create_buffer(op%buff_inner, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%ninner, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_inner, op%ninner, inner_points)
-          
+
           call accel_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_outer, op%nouter, outer_points)
 
         end if
-        
+
         SAFE_DEALLOCATE_A(inner_points)
         SAFE_DEALLOCATE_A(outer_points)
-        
+
       case(OP_NOMAP)
 
         ASSERT(op%mesh%sb%dim == 3)
@@ -648,7 +648,7 @@ contains
 
         call accel_create_buffer(op%buff_map, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%mesh%np, accel_max_workgroup_size()))
         call accel_write_buffer(op%buff_map, op%mesh%np, (op%rimap - 1)*op%stencil%size)
-        
+
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:op%stencil%size + 1))
 
         stencil(1:op%mesh%sb%dim, 1:op%stencil%size) = op%stencil%points(1:op%mesh%sb%dim, 1:op%stencil%size)
@@ -659,7 +659,7 @@ contains
 
         call accel_create_buffer(op%buff_stencil, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, op%mesh%sb%dim*(op%stencil%size + 1))
         call accel_write_buffer(op%buff_stencil, op%mesh%sb%dim*(op%stencil%size + 1), stencil)
-        
+
         SAFE_DEALLOCATE_A(stencil)
 
         size = product(mesh%idx%nr(2, 1:op%mesh%sb%dim) - mesh%idx%nr(1, 1:op%mesh%sb%dim) + 1)
@@ -703,12 +703,12 @@ contains
         write(message(2), '(a,f16.8)') trim(message(2)), this%mesh%spacing(idir)
       end do
       call messages_info(2)
-      
+
       do istencil = 1, this%stencil%size
         write(message(1), '(a,i3,3i4,f25.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w(istencil, 1)
         call messages_info(1)
       end do
-      
+
     end if
 
     POP_SUB(nl_operator_update_weights)
@@ -814,7 +814,7 @@ contains
       vol_pp => mesh%vol_pp
       ASSERT(.false.)
 #endif
-    else      
+    else
       opg  => op
       opgt => opt
       vol_pp => mesh%vol_pp
@@ -1017,12 +1017,12 @@ contains
     type(nl_operator_t), intent(in)   :: op
     integer,             intent(in)   :: is
     integer,             intent(in)   :: ip
-    
+
     res = ip + op%ri(is, op%rimap(ip))
   end function nl_operator_get_index
 
   ! ---------------------------------------------------------
-  
+
   integer pure function nl_operator_np_zero_bc(op) result(np_bc)
     type(nl_operator_t), intent(in)   :: op
 

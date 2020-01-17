@@ -1,4 +1,4 @@
-!! Copyright (C) 2018 N. Tancogne-Dejean 
+!! Copyright (C) 2018 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -33,20 +33,20 @@ module loewdin_oct_m
   use orbitalset_oct_m
   use profiling_oct_m
   use simul_box_oct_m
- 
+
   implicit none
 
   private
 
   public ::                            &
-        dloewdin_orthogonalize,        &
-        zloewdin_orthogonalize,        &
-        dloewdin_overlap,              &
-        zloewdin_overlap,              &
-        dloewdin_info,                 &
-        zloewdin_info
+    dloewdin_orthogonalize,        &
+    zloewdin_orthogonalize,        &
+    dloewdin_overlap,              &
+    zloewdin_overlap,              &
+    dloewdin_info,                 &
+    zloewdin_info
 
-  contains
+contains
 
 #include "undef.F90"
 #include "real.F90"

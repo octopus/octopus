@@ -33,16 +33,16 @@ module subarray_oct_m
   private
 
   public                         &
-       subarray_t,               &
-       subarray_init,            &
-       subarray_end,             &
-       subarray_size,            &
-       isubarray_gather,         &
-       dsubarray_gather,         &
-       zsubarray_gather,         &
-       dsubarray_gather_batch,   &
-       zsubarray_gather_batch 
-  
+    subarray_t,               &
+    subarray_init,            &
+    subarray_end,             &
+    subarray_size,            &
+    isubarray_gather,         &
+    dsubarray_gather,         &
+    zsubarray_gather,         &
+    dsubarray_gather_batch,   &
+    zsubarray_gather_batch
+
   type subarray_t
     private
     integer, allocatable :: offsets(:)
@@ -51,7 +51,7 @@ module subarray_oct_m
     integer              :: nblocks
     integer              :: npoints
   end type subarray_t
-  
+
 contains
 
   subroutine get_blocks(npos, positions, nblocks, blocklengths, offsets)
@@ -83,14 +83,14 @@ contains
 
     ASSERT( npos == sum(blocklengths(1:nblocks)) )
 
-    ip = 1 
+    ip = 1
     do ib = 1, nblocks
       do ii = 1, blocklengths(ib)
         ASSERT(positions(ip) == offsets(ib) + ii - 1)
         ip = ip + 1
       end do
     end do
-    
+
     ASSERT(npos == ip - 1)
 
   end subroutine get_blocks
@@ -108,16 +108,16 @@ contains
     PUSH_SUB(subarray_init)
 
     this%npoints = total
-    
+
     SAFE_ALLOCATE(bltmp(1:total))
     SAFE_ALLOCATE(ostmp(1:total))
 
     call get_blocks(total, positions, this%nblocks, bltmp, ostmp)
-    
+
     SAFE_ALLOCATE(this%blength(1:this%nblocks))
     SAFE_ALLOCATE(this%offsets(1:this%nblocks))
     SAFE_ALLOCATE(this%dest(1:this%nblocks))
-    
+
     this%blength(1:this%nblocks) = bltmp(1:this%nblocks)
     this%offsets(1:this%nblocks) = ostmp(1:this%nblocks)
 
@@ -125,7 +125,7 @@ contains
     do iblock = 2, this%nblocks
       this%dest(iblock) = this%dest(iblock - 1) + this%blength(iblock - 1)
     end do
-    
+
     SAFE_DEALLOCATE_A(bltmp)
     SAFE_DEALLOCATE_A(ostmp)
 
@@ -133,10 +133,10 @@ contains
   end subroutine subarray_init
 
   !---------------------------------------------------------------------
-  
+
   subroutine subarray_end(this)
     type(subarray_t), intent(inout) :: this
-    
+
     PUSH_SUB(subarray_end)
 
     SAFE_DEALLOCATE_A(this%offsets)

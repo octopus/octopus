@@ -77,7 +77,7 @@ module unit_oct_m
     module procedure dunits_from_atomic, zunits_from_atomic, &
       dunits_from_atomic_4, zunits_from_atomic_4
   end interface units_from_atomic
-  
+
   interface sqrt
     module procedure units_sqrt
   end interface sqrt
@@ -93,7 +93,7 @@ contains
     res = val*this%factor
 
   end function dunits_to_atomic
- 
+
   !-----------------------------------------------
 
   complex(8) elemental pure function zunits_to_atomic(this, val) result(res)
@@ -105,7 +105,7 @@ contains
   end function zunits_to_atomic
 
   !-----------------------------------------------
-  
+
   real(8) elemental pure function dunits_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     real(8),      intent(in) :: val
@@ -115,7 +115,7 @@ contains
   end function dunits_from_atomic
 
   !-----------------------------------------------
-  
+
   complex(8) elemental pure function zunits_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
     complex(8),   intent(in) :: val
@@ -135,7 +135,7 @@ contains
     res = real(real(val, 8)*this%factor, 4)
 
   end function dunits_to_atomic_4
- 
+
   !-----------------------------------------------
 
   complex(4) elemental pure function zunits_to_atomic_4(this, val) result(res)
@@ -147,7 +147,7 @@ contains
   end function zunits_to_atomic_4
 
   !-----------------------------------------------
-  
+
   real(4) elemental pure function dunits_from_atomic_4(this, val) result(res)
     type(unit_t), intent(in) :: this
     real(4),      intent(in) :: val
@@ -157,7 +157,7 @@ contains
   end function dunits_from_atomic_4
 
   !-----------------------------------------------
-  
+
   complex(4) elemental pure function zunits_from_atomic_4(this, val) result(res)
     type(unit_t), intent(in) :: this
     complex(4),   intent(in) :: val
@@ -171,7 +171,7 @@ contains
 
   character(len=20) pure function units_abbrev(this) result(abbrev)
     type(unit_t), intent(in) :: this
-    
+
     abbrev = this%abbrev
   end function units_abbrev
 
@@ -238,7 +238,7 @@ contains
 
   type(unit_t) pure function units_sqrt(aa) result(cc)
     type(unit_t), intent(in) :: aa
-    
+
     cc%factor = sqrt(aa%factor)
     cc%abbrev = 'sqrt('//trim(aa%abbrev)//')'
 

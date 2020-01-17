@@ -67,7 +67,7 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
-    
+
   call  lda_init()
 
   dedd = M_ZERO
@@ -85,7 +85,7 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
       case(XC_FAMILY_LDA)
         call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_dedd(1))
         if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_vdedd(1))
-        
+
       case default
         cycle
       end select
@@ -98,10 +98,10 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
   end do space_loop
 
   call  lda_process()
-    
+
   ! clean up allocated memory
   call  lda_end()
-  
+
   POP_SUB(xc_get_fxc)
 
 
@@ -222,8 +222,8 @@ contains
                     vdedd(ip, i)
                   do j = 1, 2
                     zfxc(alpha, beta, gamma, delta, ip) = zfxc(alpha, beta, gamma, delta, ip) + &
-                       lalg_zdni(zeigref_(1:2, i, ip), beta, alpha) * &
-                       lalg_zdni(zeigref_(1:2, j, ip), delta, gamma) * localfxc(j, i)
+                      lalg_zdni(zeigref_(1:2, i, ip), beta, alpha) * &
+                      lalg_zdni(zeigref_(1:2, j, ip), delta, gamma) * localfxc(j, i)
                   end do
                 end do
               end do

@@ -36,7 +36,7 @@ module multisystem_oct_m
   integer, parameter ::     &
     SYSTEM_ELECTRONIC = 1,  &
     SYSTEM_MAXWELL    = 2
-  
+
 contains
 
   subroutine multisystem_init(systems, global_namespace)
@@ -49,7 +49,7 @@ contains
     type(system_t) :: system_elec
     class(*), allocatable :: system
     class(*), pointer :: sys_ptr
-    
+
     PUSH_SUB(multisystem_init)
 
     !%Variable Systems
@@ -121,5 +121,5 @@ contains
 
     POP_SUB(multisystem_end)
   end subroutine multisystem_end
-  
+
 end module multisystem_oct_m

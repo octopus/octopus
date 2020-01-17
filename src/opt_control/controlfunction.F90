@@ -19,7 +19,7 @@
 #include "global.h"
 
 !> This module contains the definition of the data type that holds a "control function"
-!! used for OCT runs. 
+!! used for OCT runs.
 !!
 !! In addition, the module also contains the necessary procedures to manipulate these objects.
 module controlfunction_oct_m
@@ -45,39 +45,39 @@ module controlfunction_oct_m
 
   private
   public :: controlfunction_t,     &
-            controlfunction_mod_init,          &
-            controlfunction_mod_close,         &
-            controlfunction_init,              &
-            controlfunction_representation,    &
-            controlfunction_mode,              &
-            controlfunction_set,               &
-            controlfunction_end,               &
-            controlfunction_copy,              &
-            controlfunction_to_h,              &
-            controlfunction_to_h_val,          &
-            controlfunction_write,             &
-            controlfunction_diff,              &
-            controlfunction_apply_envelope,    &
-            controlfunction_set_fluence,       &
-            controlfunction_set_alpha,         &
-            controlfunction_set_rep,           &
-            controlfunction_to_realtime,       &
-            controlfunction_to_basis,          &
-            controlfunction_prepare_initial,   &
-            controlfunction_fluence,           &
-            controlfunction_j2,                &
-            controlfunction_get_theta,         &
-            controlfunction_set_theta,         &
-            controlfunction_randomize,         &
-            controlfunction_update,            &
-            controlfunction_number,            &
-            controlfunction_bounds,            &
-            controlfunction_dof,               &
-            controlfunction_w0,                &
-            controlfunction_alpha,             &
-            controlfunction_targetfluence,     &
-            controlfunction_filter,            &
-            controlfunction_gradient
+    controlfunction_mod_init,          &
+    controlfunction_mod_close,         &
+    controlfunction_init,              &
+    controlfunction_representation,    &
+    controlfunction_mode,              &
+    controlfunction_set,               &
+    controlfunction_end,               &
+    controlfunction_copy,              &
+    controlfunction_to_h,              &
+    controlfunction_to_h_val,          &
+    controlfunction_write,             &
+    controlfunction_diff,              &
+    controlfunction_apply_envelope,    &
+    controlfunction_set_fluence,       &
+    controlfunction_set_alpha,         &
+    controlfunction_set_rep,           &
+    controlfunction_to_realtime,       &
+    controlfunction_to_basis,          &
+    controlfunction_prepare_initial,   &
+    controlfunction_fluence,           &
+    controlfunction_j2,                &
+    controlfunction_get_theta,         &
+    controlfunction_set_theta,         &
+    controlfunction_randomize,         &
+    controlfunction_update,            &
+    controlfunction_number,            &
+    controlfunction_bounds,            &
+    controlfunction_dof,               &
+    controlfunction_w0,                &
+    controlfunction_alpha,             &
+    controlfunction_targetfluence,     &
+    controlfunction_filter,            &
+    controlfunction_gradient
 
 
   integer, public, parameter ::     &
@@ -91,8 +91,8 @@ module controlfunction_oct_m
 
 
   integer, parameter, public :: controlfunction_mode_none      = 0, &
-                                controlfunction_mode_epsilon   = 1, &
-                                controlfunction_mode_f         = 2
+    controlfunction_mode_epsilon   = 1, &
+    controlfunction_mode_f         = 2
 
   !> This data type contains information that is filled when the module
   !! is initialized ("controlfunction_mod_init"), and stored while the module
@@ -101,28 +101,28 @@ module controlfunction_oct_m
   type controlfunction_common_t
     private
     integer :: representation      = 0                             !< The "representation" may be any one of the {ctr_internal,
-                                                                   !! ctr_rt, ctr_fourier_series_h, ctr_zero_fourier_series_h, 
-                                                                   !! ctr_fourier_series, ctr_zero_fourier_series} set. If it is 
-                                                                   !! zero, then it is not initialized. This is set by the 
-                                                                   !! OCTControlFunctionRepresentation.
-    FLOAT   :: omegamax            = M_ZERO                        !< The representations based on Fourier expansions (all the 
-                                                                   !! "parametrized" ones) contain Fourier expansion coefficients 
-                                                                   !! corresponding to frequencies up to this cut-off frequency.
-    FLOAT   :: targetfluence       = M_ZERO                        !< This is the fluence that should be conserved when doing 
-                                                                   !! optimization in fixed fluence mode.
-                                                                   !! It is determined by the input variable OCTFixFluenceTo.
+    !! ctr_rt, ctr_fourier_series_h, ctr_zero_fourier_series_h,
+    !! ctr_fourier_series, ctr_zero_fourier_series} set. If it is
+    !! zero, then it is not initialized. This is set by the
+    !! OCTControlFunctionRepresentation.
+    FLOAT   :: omegamax            = M_ZERO                        !< The representations based on Fourier expansions (all the
+    !! "parametrized" ones) contain Fourier expansion coefficients
+    !! corresponding to frequencies up to this cut-off frequency.
+    FLOAT   :: targetfluence       = M_ZERO                        !< This is the fluence that should be conserved when doing
+    !! optimization in fixed fluence mode.
+    !! It is determined by the input variable OCTFixFluenceTo.
     logical :: fix_initial_fluence = .false.                       !< This determines whether or not to scale the initial guess
-                                                                   !! field to have the fixed fluence given by targetfluence.
-    integer :: mode                = controlfunction_mode_none     !< This may be one of {controlfunction_mode_epsilon, 
-                                                                   !! controlfunction_mode_f, controlfunction_mode_phi}, and is set
-                                                                   !! by the OCTControlFunctionType input variable.
-                                                                   !! It determines whether the full time-dependent function is to 
-                                                                   !! be controlled, or only the "envelope" or "phase" components.
+    !! field to have the fixed fluence given by targetfluence.
+    integer :: mode                = controlfunction_mode_none     !< This may be one of {controlfunction_mode_epsilon,
+    !! controlfunction_mode_f, controlfunction_mode_phi}, and is set
+    !! by the OCTControlFunctionType input variable.
+    !! It determines whether the full time-dependent function is to
+    !! be controlled, or only the "envelope" or "phase" components.
     FLOAT   :: w0                  = M_ZERO                        !< The carrier frequency, in case the mode is set to control the
-                                                                   !! "envelope" or the "phase".
+    !! "envelope" or the "phase".
     integer :: no_controlfunctions = 0                             !! The number of control functions to be optimized.
     FLOAT,       pointer :: alpha(:) => NULL()                     !< A factor that determines the "penalty", for each of the
-                                                                   !! control functions.
+    !! control functions.
     type(tdf_t), pointer :: td_penalty(:) => NULL()                !< The penalties, if these are time-dependent.
   end type controlfunction_common_t
 
@@ -130,14 +130,14 @@ module controlfunction_oct_m
   type controlfunction_t
     private
     integer :: no_controlfunctions = 0           !< In fact, not only one control function may be used
-                                                 !! to control the propagation, but several. This is the variable that holds
-                                                 !! this number.
+    !! to control the propagation, but several. This is the variable that holds
+    !! this number.
     integer :: dim           = 0                 !< If the control function is not represented directly in real time, but through
-                                                 !! a number of control functions, it will actually be expanded in a basis set. 
-                                                 !! This is the dimension of the basis set. However, this does not mean necessarily
-                                                 !! that the parameters are the coefficients of the basis set.
-    integer :: dof           = 0                 !< This is the number of degrees of freedom, or number of parameters, used to 
-                                                 !! represent a control function (this may be different -- smaller -- than "dim").
+    !! a number of control functions, it will actually be expanded in a basis set.
+    !! This is the dimension of the basis set. However, this does not mean necessarily
+    !! that the parameters are the coefficients of the basis set.
+    integer :: dof           = 0                 !< This is the number of degrees of freedom, or number of parameters, used to
+    !! represent a control function (this may be different -- smaller -- than "dim").
     type(tdf_t), pointer :: f(:) => NULL()
     FLOAT, pointer :: alpha(:) => NULL()
 
@@ -150,7 +150,7 @@ module controlfunction_oct_m
 
     FLOAT, pointer :: theta(:) => NULL()
   end type controlfunction_t
-  
+
   !> the next variable has to be a pointer to avoid a bug in the IBM compiler
   !! and it can not be properly initialized thanks to a bug in the PGI compiler
   logical                                 :: cf_common_initialized=.false.
@@ -178,7 +178,7 @@ contains
   !> Initializes the module, should be the first subroutine to be called (the last one
   !! should be controlfunction_mod_close, when the module is no longer to be used).
   !!
-  !! It fills the module variable "cf_common", whose type is controlfunction_common_t, with 
+  !! It fills the module variable "cf_common", whose type is controlfunction_common_t, with
   !! information obtained from the inp file.
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
@@ -218,12 +218,12 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default control_fourier_series_h
     !%Description
-    !% If <tt>OCTControlRepresentation = control_function_parametrized</tt>, one must 
+    !% If <tt>OCTControlRepresentation = control_function_parametrized</tt>, one must
     !% specify the kind of parameters that determine the control function.
     !% If <tt>OCTControlRepresentation = control_function_real_time</tt>, then this variable
     !% is ignored, and the control function is handled directly in real time.
     !%Option control_fourier_series_h 3
-    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% The control function is expanded as a full Fourier series (although it must, of
     !% course, be a real function). Then, the total fluence is fixed, and a transformation
     !% to hyperspherical coordinates is done; the parameters to optimize are the hyperspherical
     !% angles.
@@ -231,55 +231,55 @@ contains
     !% The control function is expanded as a Fourier series, but assuming (1) that the zero
     !% frequency component is zero, and (2) the control function, integrated in time, adds
     !% up to zero (this essentially means that the sum of all the cosine coefficients is zero).
-    !% Then, the total fluence is fixed, and a transformation to hyperspherical coordinates is 
+    !% Then, the total fluence is fixed, and a transformation to hyperspherical coordinates is
     !% done; the parameters to optimize are the hyperspherical angles.
     !%Option control_fourier_series 5
-    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% The control function is expanded as a full Fourier series (although it must, of
     !% course, be a real function). The control parameters are the coefficients of this
     !% basis-set expansion.
     !%Option control_zero_fourier_series 6
-    !% The control function is expanded as a full Fourier series (although it must, of 
+    !% The control function is expanded as a full Fourier series (although it must, of
     !% course, be a real function). The control parameters are the coefficients of this
     !% basis-set expansion. The difference with the option <tt>control_fourier_series</tt> is that
-    !% (1) that the zero-frequency component is zero, and (2) the control function, integrated 
-    !% in time, adds up to zero (this essentially means that the sum of all the cosine 
+    !% (1) that the zero-frequency component is zero, and (2) the control function, integrated
+    !% in time, adds up to zero (this essentially means that the sum of all the cosine
     !% coefficients is zero).
     !%Option control_rt 7
     !% (experimental)
     !%End
     call parse_variable(namespace, 'OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
-      if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
-        call messages_input_error('OCTControlFunctionRepresentation')
-      select case(cf_common%representation)
-      case(ctr_fourier_series_h)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
-        write(message(2), '(a)') '      and then a transformation to hyperspherical coordinates will be made.'
-        call messages_info(2)
-      case(ctr_zero_fourier_series_h)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
-        write(message(2), '(a)') '      in which (i) the zero-frequency component is assumed to be zero,'
-        write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
-        write(message(4), '(a)') '      the control function starts and ends at zero.'
-        write(message(5), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
-        call messages_info(5)
-      case(ctr_fourier_series)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
-        call messages_info(1)
-      case(ctr_zero_fourier_series)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
-        write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero,'
-        write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
-        write(message(4), '(a)') '      the control function starts and ends at zero.'
-        call messages_info(4)
-      case(ctr_rt)
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
-        call messages_info(1)
-        call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
-      case default
-        write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
-        call messages_info(1)
-        call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
-      end select
+    if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
+      call messages_input_error('OCTControlFunctionRepresentation')
+    select case(cf_common%representation)
+    case(ctr_fourier_series_h)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+      write(message(2), '(a)') '      and then a transformation to hyperspherical coordinates will be made.'
+      call messages_info(2)
+    case(ctr_zero_fourier_series_h)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+      write(message(2), '(a)') '      in which (i) the zero-frequency component is assumed to be zero,'
+      write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
+      write(message(4), '(a)') '      the control function starts and ends at zero.'
+      write(message(5), '(a)') '      Then, a transformation to hyperspherical coordinates will be made.'
+      call messages_info(5)
+    case(ctr_fourier_series)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series.'
+      call messages_info(1)
+    case(ctr_zero_fourier_series)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
+      write(message(2), '(a)') '      in which the zero-frequency component is assumed to be zero,'
+      write(message(3), '(a)') '      and  (ii) the sum of all the cosine coefficients are zero, so that'
+      write(message(4), '(a)') '      the control function starts and ends at zero.'
+      call messages_info(4)
+    case(ctr_rt)
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
+      call messages_info(1)
+      call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
+    case default
+      write(message(1), '(a)') 'Info: The OCT control functions will be represented in real time.'
+      call messages_info(1)
+      call messages_experimental('"OCTControlFunctionRepresentation = ctr_rt"')
+    end select
 
     !%Variable OCTControlFunctionOmegaMax
     !%Type float
@@ -302,7 +302,7 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 0.0
     !%Description
-    !% The algorithm tries to obtain the specified fluence for the laser field. 
+    !% The algorithm tries to obtain the specified fluence for the laser field.
     !% This works only in conjunction with either the WG05 or the straight iteration scheme.
     !%
     !% If this variable is not present in the input file, by default the code will not
@@ -321,7 +321,7 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default yes
     !%Description
-    !% By default, when asking for a fixed-fluence optimization (<tt>OCTFixFluenceTo = whatever</tt>), 
+    !% By default, when asking for a fixed-fluence optimization (<tt>OCTFixFluenceTo = whatever</tt>),
     !% the initial laser guess provided in the input file is scaled to match this
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
@@ -334,9 +334,9 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default controlfunction_mode_epsilon
     !%Description
-    !% The control function may fully determine the time-dependent form of the 
-    !% external field, or only the envelope function of this external field, or its phase. 
-    !% Or, we may have two different control functions, one of them providing the phase 
+    !% The control function may fully determine the time-dependent form of the
+    !% external field, or only the envelope function of this external field, or its phase.
+    !% Or, we may have two different control functions, one of them providing the phase
     !% and the other one, the envelope.
     !%
     !% Note that, if <tt>OCTControlRepresentation = control_function_real_time</tt>, then the control
@@ -345,9 +345,9 @@ contains
     !% In this case, the control function determines the full control function: namely,
     !% if we are considering the electric field of a laser, the time-dependent electric field.
     !%Option controlfunction_mode_f         2
-    !% The optimization process attempts to find the best possible envelope. The full 
-    !% control field is this envelope times a cosine function with a "carrier" frequency. 
-    !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
+    !% The optimization process attempts to find the best possible envelope. The full
+    !% control field is this envelope times a cosine function with a "carrier" frequency.
+    !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt>
     !% in the <tt>inp</tt> file.
     !%End
     call parse_variable(namespace, 'OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
@@ -364,7 +364,7 @@ contains
       do idir = 1, MAX_DIM
         if( aimag(pol(idir))**2 > CNST(1.0e-20) ) then
           write(message(1), '(a)') 'In QOCT runs, the polarization vector cannot be complex. Complex'
-          write(message(2), '(a)') 'polarization vectors are only truly necessary if one wants a'  
+          write(message(2), '(a)') 'polarization vectors are only truly necessary if one wants a'
           write(message(3), '(a)') 'circularly / elliptically polarized laser. This concepts assumes'
           write(message(4), '(a)') 'the existence of a well defined carrier frequency (otherwise it'
           write(message(5), '(a)') 'would not make sense to speak of a fixed phase difference). So in'
@@ -377,8 +377,8 @@ contains
 
 
     ! The laser field is defined by "td functions", as implemented in module "tdfunction_m". At this point, they
-    ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency, 
-    ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid). 
+    ! can be in "non-numerical" representation (i.e. described with a set of parameters, e.g. frequency,
+    ! width, etc). We need them to be in numerical form (i.e. time grid, values at the time grid).
     ! Here we do the transformation.
     ! It cannot be done before calling controlfunction_mod_init because we need to pass the omegamax value.
     do il = 1, ep%no_lasers
@@ -432,20 +432,20 @@ contains
     !%Section Calculation Modes::Optimal Control
     !%Default 1.0
     !%Description
-    !% The variable specifies the value of the penalty factor for the 
+    !% The variable specifies the value of the penalty factor for the
     !% integrated field strength (fluence). Large value = small fluence.
     !% A transient shape can be specified using the block <tt>OCTLaserEnvelope</tt>.
-    !% In this case <tt>OCTPenalty</tt> is multiplied with time-dependent function. 
-    !% The value depends on the coupling between the states. A good start might be a 
-    !% value from 0.1 (strong fields) to 10 (weak fields). 
+    !% In this case <tt>OCTPenalty</tt> is multiplied with time-dependent function.
+    !% The value depends on the coupling between the states. A good start might be a
+    !% value from 0.1 (strong fields) to 10 (weak fields).
     !%
     !% Note that if there are several control functions, one can specify this
     !% variable as a one-line code, each column being the penalty factor for each
     !% of the control functions. Make sure that the number of columns is equal to the
     !% number of control functions. If it is not a block, all control functions will
-    !% have the same penalty factor. 
+    !% have the same penalty factor.
     !%
-    !% All penalty factors must be positive. 
+    !% All penalty factors must be positive.
     !%End
     SAFE_ALLOCATE(cf_common%alpha(1:cf_common%no_controlfunctions))
     cf_common%alpha = M_ZERO
@@ -471,8 +471,8 @@ contains
     !%Type block
     !%Section Calculation Modes::Optimal Control
     !%Description
-    !% Often a pre-defined time-dependent envelope on the control function is desired. 
-    !% This can be achieved by making the penalty factor time-dependent. 
+    !% Often a pre-defined time-dependent envelope on the control function is desired.
+    !% This can be achieved by making the penalty factor time-dependent.
     !% Here, you may specify the required time-dependent envelope.
     !%
     !% It is possible to choose different envelopes for different control functions.
@@ -535,7 +535,7 @@ contains
     nullify(this%theta)
 
   end subroutine controlfunction_nullify
-  
+
   !> Before using an controlfunction_t variable, it needs
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
@@ -565,11 +565,11 @@ contains
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
     ! the number of values that represent the function on the discretized time-axis.
     !
-    ! If the control function is parametrized, up to now (in the future this might change), all 
+    ! If the control function is parametrized, up to now (in the future this might change), all
     ! parametrizations are based on a previous basis-set expansion (sine-Fourier series, or "normal"
-    ! Fourier series with or without the zero term). For the representations whose name ends in "_h", 
-    ! the parameters are not directly the coefficients of the control function in this basis-set 
-    ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to 
+    ! Fourier series with or without the zero term). For the representations whose name ends in "_h",
+    ! the parameters are not directly the coefficients of the control function in this basis-set
+    ! expansion, but are constructed from them (e.g. by performing a coordinate transformation to
     ! hyperspherical coordinates). The "dimension" (cp%dim) is the dimension of this basis set.
     select case(cf_common%representation)
     case(ctr_internal)
@@ -590,9 +590,9 @@ contains
     end select
 
     ! The "degrees of freedom" cp%dof is the number of parameters that define the control function.
-    ! (if it is represented directly in real time, this would be meaningless, but we put the number of 
-    ! control functions, times the "dimension", which in this case is the number of time discretization 
-    ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may 
+    ! (if it is represented directly in real time, this would be meaningless, but we put the number of
+    ! control functions, times the "dimension", which in this case is the number of time discretization
+    ! points). This is not equal to the dimension of the basis set employed (cp%dim), because we may
     ! add further constraints, and do a coordinate transformation to account for them.
     select case(cf_common%representation)
     case(ctr_internal)
@@ -612,7 +612,7 @@ contains
       cp%dof = cp%dim
     case(ctr_zero_fourier_series)
       ! The number of degrees of freedom is reduced by one, since we add the constraint forcing the
-      ! the field to start and end at zero, which amounts to having all the cosine coefficients 
+      ! the field to start and end at zero, which amounts to having all the cosine coefficients
       ! summing up to zero.
       cp%dof = cp%dim - 1
     case(ctr_rt)
@@ -673,7 +673,7 @@ contains
   ! ---------------------------------------------------------
 
 
-  !> Returns the "mode" of the control function, i.e. if it is the full pulse, the envelope, 
+  !> Returns the "mode" of the control function, i.e. if it is the full pulse, the envelope,
   !! or the phase.
   integer pure function controlfunction_mode()
     controlfunction_mode = cf_common%mode
@@ -692,7 +692,7 @@ contains
 
     if(cf_common%targetfluence /= M_ZERO) then
       if(cf_common%targetfluence < M_ZERO) then
-        cf_common%targetfluence = controlfunction_fluence(par) 
+        cf_common%targetfluence = controlfunction_fluence(par)
         write(message(1), '(a)')         'Info: The QOCT run will attempt to find a solution with the same'
         write(message(2), '(a,f10.5,a)') '      fluence as the input external fields: F = ', &
           cf_common%targetfluence, ' a.u.'
@@ -714,10 +714,10 @@ contains
 
   !> Transforms the control function to frequency space, if
   !! this is the space in which the functions are defined (and it
-  !! is necessary to perform the transformation). 
+  !! is necessary to perform the transformation).
   !! And, transforms the control function to real-time space, if
   !! this is the space in which the functions are defined (and it
-  !! is necessary to perform the transformation). 
+  !! is necessary to perform the transformation).
   subroutine controlfunction_set_rep(par)
     type(controlfunction_t), intent(inout) :: par
 
@@ -1028,7 +1028,7 @@ contains
           iunit = io_open(trim(filename)//'/cpw', namespace, action='write')
         end if
         write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
-                              '      Im[e(w)]       '
+          '      Im[e(w)]       '
 
         nfreqs = 1000
         wa = M_ZERO
@@ -1052,13 +1052,13 @@ contains
         end do
         call io_close(iunit)
       end do
-      
+
 
     case(controlfunction_mode_f)
       iunit = io_open(trim(filename)//'/cpw', namespace, action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
-                            '      Im[e(w)]       '
-      
+        '      Im[e(w)]       '
+
       nfreqs = 1000
       wa = cp%w0 - M_THREE * cf_common%omegamax
       wb = cp%w0 + M_THREE * cf_common%omegamax
@@ -1200,7 +1200,7 @@ contains
     PUSH_SUB(controlfunction_set_fluence)
 
     call controlfunction_to_realtime(par)
-    old_fluence = controlfunction_fluence(par) 
+    old_fluence = controlfunction_fluence(par)
     do ipar = 1, par%no_controlfunctions
       call tdf_scalar_multiply( sqrt(cf_common%targetfluence / old_fluence), par%f(ipar) )
     end do
@@ -1265,20 +1265,20 @@ contains
   subroutine controlfunction_randomize(par)
     type(controlfunction_t), intent(inout) :: par
 
-     integer :: ipar
+    integer :: ipar
 
-     PUSH_SUB(controlfunction_randomize)
+    PUSH_SUB(controlfunction_randomize)
 
-     ASSERT(cf_common%representation /= ctr_internal)
+    ASSERT(cf_common%representation /= ctr_internal)
 
-     call controlfunction_set_rep(par)
+    call controlfunction_set_rep(par)
 
-     do ipar = 1, par%no_controlfunctions
-       call tdf_set_random(par%f(ipar))
-     end do
-     call controlfunction_basis_to_theta(par)
+    do ipar = 1, par%no_controlfunctions
+      call tdf_set_random(par%f(ipar))
+    end do
+    call controlfunction_basis_to_theta(par)
 
-     POP_SUB(controlfunction_randomize)
+    POP_SUB(controlfunction_randomize)
   end subroutine controlfunction_randomize
   ! ---------------------------------------------------------
 
@@ -1297,27 +1297,27 @@ contains
 
     FLOAT :: val
     integer :: ipar
-    
+
     PUSH_SUB(controlfunction_update)
 
     select case(dir)
-      case('f')
-        do ipar = 1, cp%no_controlfunctions
-          val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
-          val = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * val
-          call tdf_set_numerical(cp%f(ipar), iter, val)
-          if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, val)
-          if(iter + 2 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+2, val)
-        end do
+    case('f')
+      do ipar = 1, cp%no_controlfunctions
+        val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter) - M_TWO * aimag(dq(ipar)) )
+        val = (M_ONE - mu) * tdf(cpp%f(ipar), iter) + mu * val
+        call tdf_set_numerical(cp%f(ipar), iter, val)
+        if(iter + 1 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+1, val)
+        if(iter + 2 <= tdf_niter(cp%f(ipar)) + 1)  call tdf_set_numerical(cp%f(ipar), iter+2, val)
+      end do
 
-      case('b')
-        do ipar = 1, cp%no_controlfunctions
-          val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
-          val = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * val
-          call tdf_set_numerical(cp%f(ipar), iter + 1, val)
-          if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, val)
-          if(iter - 1 > 0) call tdf_set_numerical(cp%f(ipar), iter-1, val)
-        end do
+    case('b')
+      do ipar = 1, cp%no_controlfunctions
+        val = dd(ipar) / ( tdf(cf_common%td_penalty(ipar), iter + 1) - M_TWO * aimag(dq(ipar)) )
+        val = (M_ONE - mu) * tdf(cpp%f(ipar), iter + 1) + mu * val
+        call tdf_set_numerical(cp%f(ipar), iter + 1, val)
+        if(iter > 0) call tdf_set_numerical(cp%f(ipar), iter, val)
+        if(iter - 1 > 0) call tdf_set_numerical(cp%f(ipar), iter-1, val)
+      end do
     end select
 
     POP_SUB(controlfunction_update)
@@ -1421,7 +1421,7 @@ contains
     if(.not. cf_common_initialized) then
       message(1) = "Internal error: Cannot call controlfunction_mod_close when not initialized."
       call messages_fatal(1)
-      end if
+    end if
 
     cf_common_initialized=.false.
     SAFE_DEALLOCATE_P(cf_common%alpha)
@@ -1452,34 +1452,34 @@ contains
     select case(cf_common%representation)
 
     case(ctr_rt)
-       dedu = M_ZERO
-       do i = 1, par%dim
-         dedu(i, i) = M_ONE
-       end do
+      dedu = M_ZERO
+      do i = 1, par%dim
+        dedu(i, i) = M_ONE
+      end do
 
     case(ctr_fourier_series_h)
-       SAFE_ALLOCATE(grad_matrix(1:par%dim - 1, 1:par%dim))
-       rr = sqrt(cf_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
-       dedu = matmul(grad_matrix, transpose(par%utransfi))
-       SAFE_DEALLOCATE_A(grad_matrix)
+      SAFE_ALLOCATE(grad_matrix(1:par%dim - 1, 1:par%dim))
+      rr = sqrt(cf_common%targetfluence)
+      call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
+      dedu = matmul(grad_matrix, transpose(par%utransfi))
+      SAFE_DEALLOCATE_A(grad_matrix)
 
     case(ctr_zero_fourier_series_h)
-       SAFE_ALLOCATE(dedv(1:par%dim-1, 1:par%dim))
-       dedv = M_ZERO
-       do i = 1, (par%dim-1)/2
-         dedv(i, 1) = - M_ONE
-         dedv(i, i+1) = M_ONE
-       end do
-       do i = (par%dim-1)/2+1, par%dim-1
-         dedv(i, i+1) = M_ONE
-       end do
-       SAFE_ALLOCATE(grad_matrix(1:par%dim - 2, 1:par%dim - 1))
-       rr = sqrt(cf_common%targetfluence)
-       call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
-       dedu = matmul(grad_matrix, matmul(transpose(par%utransfi), dedv))
-       SAFE_DEALLOCATE_A(grad_matrix)
-       SAFE_DEALLOCATE_A(dedv)
+      SAFE_ALLOCATE(dedv(1:par%dim-1, 1:par%dim))
+      dedv = M_ZERO
+      do i = 1, (par%dim-1)/2
+        dedv(i, 1) = - M_ONE
+        dedv(i, i+1) = M_ONE
+      end do
+      do i = (par%dim-1)/2+1, par%dim-1
+        dedv(i, i+1) = M_ONE
+      end do
+      SAFE_ALLOCATE(grad_matrix(1:par%dim - 2, 1:par%dim - 1))
+      rr = sqrt(cf_common%targetfluence)
+      call hypersphere_grad_matrix(grad_matrix, rr, par%theta)
+      dedu = matmul(grad_matrix, matmul(transpose(par%utransfi), dedv))
+      SAFE_DEALLOCATE_A(grad_matrix)
+      SAFE_DEALLOCATE_A(dedv)
 
     case(ctr_fourier_series)
       dedu = M_ZERO
@@ -1543,14 +1543,14 @@ contains
       do jj = 1, par%dof
         ! Probably we could do without par%u, and write explicitly the values it takes.
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * par%u(jj, 1)*par%theta(jj) &
-                 - par%u(jj, 1) * tdf(par_output%f(1), jj)
+          - par%u(jj, 1) * tdf(par_output%f(1), jj)
       end do
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
         call controlfunction_der(par, namespace, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
-                 - tdf_dot_product(par_output%f(1), depsilon)
+          - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do
 

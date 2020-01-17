@@ -88,7 +88,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
       count = count +1
       call states_elec_get_state(st, mesh, vv, st%d%nik, temp_state)
       temp_column(1:mesh%np) = temp_column(1:mesh%np) + &
-                                  temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
+        temp_state(1:mesh%np,1)* R_CONJ(SCDM_matrix(count,ii))
     end do
     SCDM_temp(1:mesh%np,ii) = temp_column(1:mesh%np)
   end do
@@ -176,10 +176,10 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii=1,3
       scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
-           lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
+        lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
   end do
-    ! reduce to world, since the above can be state+domain distribution
+  ! reduce to world, since the above can be state+domain distribution
   call comm_allreduce(mpi_world%comm, scdm%center)
 
   SAFE_DEALLOCATE_A(lxyz_domains)
@@ -218,14 +218,14 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     ! make list with points in the box
     if (all(out_of_index_range .eqv. (/.false.,.false.,.false./)) ) then
       temp_box(:,:,:) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
-           icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
-           icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
+        icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
+        icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
 
       ! check if all indices are within the mesh
       out_of_mesh(1:3) = .false.
       do idim=1,3
         if(minval(minval(temp_box,dim=idim)) < 1 .or. &
-           maxval(maxval(temp_box,dim=idim)) > mesh%np_global) then
+          maxval(maxval(temp_box,dim=idim)) > mesh%np_global) then
           out_of_mesh(idim) = .true.
           ! can only be out of mesh in periodic direction
           if(idim > mesh%sb%periodic_dim ) then
@@ -242,7 +242,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     !       dimensions, because above we have made sure that in
     !       all other directions there are no points out of the mesh
     if(any(out_of_mesh        .eqv. (/.true.,.true.,.true./)) .or. &
-       any(out_of_index_range .eqv. (/.true.,.true.,.true./)) ) then
+      any(out_of_index_range .eqv. (/.true.,.true.,.true./)) ) then
 
       ! dimension of full simulation box
       nn = scdm%full_cube_n
@@ -401,7 +401,7 @@ subroutine X(invert)(nn, A)
 end subroutine X(invert)
 
 !> Perform RRQR on the transpose states stored in the states object
-!! and return the pivot vector 
+!! and return the pivot vector
 !! This is not an all-purose routien for RRQR, but only operates on the
 !! specific set stored in st
 subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
@@ -448,35 +448,35 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
   do_serial = .false.
   if(mesh%parallel_in_domains .or. st%parallel_in_states) then
 #ifndef HAVE_SCALAPACK
-     message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
-     call messages_warning(1, namespace=namespace)
-     do_serial = .true.
+    message(1) = 'The RRQR is performed in serial. Try linking ScaLAPCK'
+    call messages_warning(1, namespace=namespace)
+    do_serial = .true.
 #else
-     if(.not.st%scalapack_compatible) then
-        message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
-        call messages_warning(1, namespace=namespace)
-        do_serial = .true.
-     end if
+    if(.not.st%scalapack_compatible) then
+      message(1) = 'The RRQR is performed in serial. Try setting ScaLAPACKCompatible = yes'
+      call messages_warning(1, namespace=namespace)
+      do_serial = .true.
+    end if
 #endif
   else
-     do_serial = .true.
+    do_serial = .true.
   endif
 
   if(.not.do_serial) then
-    
+
     call states_elec_parallel_blacs_blocksize(st, namespace, mesh, psi_block, total_np)
-    
+
     ! allocate local part of transpose state matrix
     SAFE_ALLOCATE(KSt(1:lnst,1:total_np))
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-    
+
     ! copy states into the transpose matrix
     count = 0
     do ist = st%st_start,st%st_end
       count = count + 1
 
       call states_elec_get_state(st, mesh, ist, ik, psi)
-      
+
       ! We need to set to zero some extra parts of the array
       if(st%d%dim == 1) then
         psi(mesh%np + 1:psi_block(1), 1:st%d%dim) = M_ZERO
@@ -488,19 +488,19 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
     end do
 
     SAFE_DEALLOCATE_A(psi)
-     
+
     ! DISTRIBUTE THE MATRIX ON THE PROCESS GRID
     ! Initialize the descriptor array for the main matrices (ScaLAPACK)
 #ifdef HAVE_SCALAPACK
     call descinit(psi_desc(1), nst, total_np, psi_block(2), psi_block(1), 0, 0, &
       scdm%proc_grid%context, lnst, blacs_info)
 #endif
-     
+
     if(blacs_info /= 0) then
-       write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
-       call messages_fatal(1, namespace=namespace)
+      write(message(1),'(a,i6)') 'descinit failed with error code: ', blacs_info
+      call messages_fatal(1, namespace=namespace)
     end if
-    
+
     nref = min(nst, total_np)
     SAFE_ALLOCATE(tau(1:nref))
     tau = M_ZERO
@@ -512,17 +512,17 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
     ! Note: lapack routine has different number of arguments depending on type
 #ifdef HAVE_SCALAPACK
 #ifndef R_TREAL
-    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info) 
-#else 
+    call pzgeqpf(nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, tmp2, -1, blacs_info)
+#else
     call pdgeqpf( nst, total_np, KSt(1,1), 1, 1, psi_desc(1), ipiv(1), tau(1), tmp, -1, blacs_info)
 #endif
 #endif
-    
+
     if(blacs_info /= 0) then
       write(message(1),'(a,i6)') 'scalapack geqrf workspace query failed with error code: ', blacs_info
       call messages_fatal(1, namespace=namespace)
     end if
-     
+
     wsize = nint(R_REAL(tmp))
     SAFE_ALLOCATE(work(1:wsize))
 #ifdef HAVE_SCALAPACK
@@ -541,28 +541,28 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       call messages_fatal(1, namespace=namespace)
     end if
     SAFE_DEALLOCATE_A(work)
-     
-     ! copy the first nst global elements of ipiv into jpvt
-     ! bcast is at the end of the routine
+
+    ! copy the first nst global elements of ipiv into jpvt
+    ! bcast is at the end of the routine
 !     if(mpi_world%rank==0)  then
 !        do ist =1,nst
 !           write(123,*) ipiv(ist)
 !        end do
 !     end if
     jpvt(1:nst) =  ipiv(1:nst)
-     
+
   else
     ! first gather states into one array on the root process
     ! build transpose of KS set on which RRQR is performed
     if(root) then
-       SAFE_ALLOCATE(KSt(1:nst,1:mesh%np_global))
+      SAFE_ALLOCATE(KSt(1:nst,1:mesh%np_global))
     end if
-    
+
     ! gather states in case of domain parallelization
     if (mesh%parallel_in_domains.or.st%parallel_in_states) then
       SAFE_ALLOCATE(temp_state(1:mesh%np,1))
       SAFE_ALLOCATE(state_global(1:mesh%np_global))
-      
+
       count = 0
       do ii = 1,nst
         !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
@@ -600,14 +600,14 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       SAFE_ALLOCATE(work(1:1))
       SAFE_ALLOCATE(tau(1:nst))
       if(.not.states_are_real(st)) then
-         SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+        SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+        call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
       else
-         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+        call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
       endif
       if (info /= 0) then
-         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1, namespace=namespace)
+        write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+        call messages_fatal(1, namespace=namespace)
       end if
 
       wsize = work(1)
@@ -618,28 +618,28 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       tau(:) = 0.
       ! actual call
       if(.not.states_are_real(st)) then
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+        call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
       else
-         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
+        call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
       endif
       if (info /= 0)then
-         write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
-         call messages_fatal(1, namespace=namespace)
+        write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
+        call messages_fatal(1, namespace=namespace)
       end if
       SAFE_DEALLOCATE_A(work)
     endif
 
     SAFE_DEALLOCATE_A(temp_state)
     SAFE_DEALLOCATE_A(state_global)
-    
-   endif
+
+  endif
 
 #ifdef HAVE_MPI
-    call MPI_Bcast(JPVT,nst, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
+  call MPI_Bcast(JPVT,nst, MPI_INTEGER, 0, mpi_world%comm, mpi_err)
 #endif
 
-   call profiling_out(prof_scdm_QR)
-   POP_SUB(X(scdm_rrqr))
+  call profiling_out(prof_scdm_QR)
+  POP_SUB(X(scdm_rrqr))
 
 end subroutine X(scdm_rrqr)
 

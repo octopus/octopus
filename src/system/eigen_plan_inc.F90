@@ -156,7 +156,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         if(xx  <=  M_EPSILON) then
           if(st%randomization == PAR_INDEPENDENT) then
             call X(mf_random)(gr%mesh, vv(:, 1, ist),gr%mesh%vp%xlocal-1)
-          else 
+          else
             call X(mf_random)(gr%mesh, vv(:, 1, ist))
           end if
         else
@@ -202,9 +202,9 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       if ( d2+1 <= krylov .and. matvec < maxmatvecs) then
         ! In this case, compute only the lowest Ritz eigenpair.
         call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, 1), &
-             R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
+          R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
         call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
-             R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
+          R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
         call residual(av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
         ! If the first Ritz eigen-pair converged, compute all
@@ -212,11 +212,11 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         if(res(nec + 1)<tol) then
           do ist = 2, st%d%block_size
             call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, ist), &
-                 R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
+              R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
           end do
           do ist = 2, st%d%block_size
             call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, ist), &
-                 R_TOTYPE(M_ZERO), vv(:, :, ist))
+              R_TOTYPE(M_ZERO), vv(:, :, ist))
           end do
           do ist = 2, st%d%block_size
             call residual(vv(:, :, ist), eigenvec(:, :, nec+ist), tmp(ist), av(:, :, ist), res(nec+ist))
@@ -226,11 +226,11 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       else
         do ist = 1, st%d%block_size
           call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), vv(:, :, 1:d2), hevec(1:d2, ist), &
-               R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
+            R_TOTYPE(M_ZERO), eigenvec(:, :, nec+ist))
         end do
         do ist = 1, st%d%block_size
           call lalg_gemv(gr%mesh%np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, ist), &
-               R_TOTYPE(M_ZERO), vv(:, :, ist))
+            R_TOTYPE(M_ZERO), vv(:, :, ist))
         end do
         do ist = 1, st%d%block_size
           do idim = 1, dim
@@ -265,11 +265,11 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
           xx = eigenval(jst-1)
           eigenval(jst-1) = eigenval(jst)
           eigenval(jst) = xx
-          
+
           xx = res(jst-1)
           res(jst-1) = res(jst)
           res(jst) = xx
-          
+
           do idim = 1, dim
             call lalg_swap(gr%mesh%np, eigenvec(:, idim, jst), eigenvec(:, idim, jst-1))
           end do

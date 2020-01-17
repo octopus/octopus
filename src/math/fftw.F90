@@ -27,43 +27,43 @@ module fftw_params_oct_m
 
   ! make public some needed symbols from the FFTW library
   public :: fftw_cleanup,         &
-            fftw_execute_dft,     &
-            fftw_execute_dft_c2r, &
-            fftw_execute_dft_r2c, &
-            fftw_destroy_plan,    &
-            fftw_plan_dft_1d,     &
-            fftw_plan_dft_2d,     &
-            fftw_plan_dft_3d,     &
-            fftw_plan_dft_r2c_1d, &
-            fftw_plan_dft_r2c_2d, &
-            fftw_plan_dft_r2c_3d, &
-            fftw_plan_dft_c2r_1d, &
-            fftw_plan_dft_c2r_2d, &
-            fftw_plan_dft_c2r_3d, &
-            C_FFTW_R2R_KIND,      &
-            FFTW_R2HC,            &
-            FFTW_HC2R,            &
-            FFTW_DHT,             &
-            FFTW_REDFT00,         &
-            FFTW_REDFT01,         &
-            FFTW_REDFT10,         &
-            FFTW_REDFT11,         &
-            FFTW_RODFT00,         &
-            FFTW_RODFT01,         &
-            FFTW_RODFT10,         &
-            FFTW_RODFT11,         &
-            FFTW_FORWARD,         &
-            FFTW_BACKWARD,        &
-            FFTW_MEASURE,         &
-            FFTW_DESTROY_INPUT,   &
-            FFTW_UNALIGNED
+    fftw_execute_dft,     &
+    fftw_execute_dft_c2r, &
+    fftw_execute_dft_r2c, &
+    fftw_destroy_plan,    &
+    fftw_plan_dft_1d,     &
+    fftw_plan_dft_2d,     &
+    fftw_plan_dft_3d,     &
+    fftw_plan_dft_r2c_1d, &
+    fftw_plan_dft_r2c_2d, &
+    fftw_plan_dft_r2c_3d, &
+    fftw_plan_dft_c2r_1d, &
+    fftw_plan_dft_c2r_2d, &
+    fftw_plan_dft_c2r_3d, &
+    C_FFTW_R2R_KIND,      &
+    FFTW_R2HC,            &
+    FFTW_HC2R,            &
+    FFTW_DHT,             &
+    FFTW_REDFT00,         &
+    FFTW_REDFT01,         &
+    FFTW_REDFT10,         &
+    FFTW_REDFT11,         &
+    FFTW_RODFT00,         &
+    FFTW_RODFT01,         &
+    FFTW_RODFT10,         &
+    FFTW_RODFT11,         &
+    FFTW_FORWARD,         &
+    FFTW_BACKWARD,        &
+    FFTW_MEASURE,         &
+    FFTW_DESTROY_INPUT,   &
+    FFTW_UNALIGNED
 #ifdef HAVE_FFTW3_MPI
   public :: FFTW_MPI_DEFAULT_BLOCK
 #endif
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   public :: fftw_init_threads,   &
-            fftw_plan_with_nthreads, &
-            fftw_cleanup_threads
+    fftw_plan_with_nthreads, &
+    fftw_cleanup_threads
 #endif
 
 #ifdef HAVE_FFTW3_MPI
@@ -100,7 +100,7 @@ contains
 
     FLOAT, allocatable :: in(:,:,:)
     CMPLX, allocatable :: out(:,:,:)
-    
+
     PUSH_SUB(fftw_prepare_plan_r2c)
 
     ASSERT(sign == FFTW_FORWARD)
@@ -110,14 +110,14 @@ contains
 
     select case (dim)
     case (1)
-       plan = fftw_plan_dft_r2c_1d(n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_1d)(plan, n(1), in(1,1,1), out(1,1,1), flags)
+      plan = fftw_plan_dft_r2c_1d(n(1), in, out, flags)
+      !call DFFTW(plan_dft_r2c_1d)(plan, n(1), in(1,1,1), out(1,1,1), flags)
     case (2)
-       plan = fftw_plan_dft_r2c_2d(n(2),n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), in(1,1,1), out(1,1,1), flags)
+      plan = fftw_plan_dft_r2c_2d(n(2),n(1), in, out, flags)
+      !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), in(1,1,1), out(1,1,1), flags)
     case (3)
-       plan = fftw_plan_dft_r2c_3d(n(3),n(2), n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), in(1,1,1), out(1,1,1), flags)
+      plan = fftw_plan_dft_r2c_3d(n(3),n(2), n(1), in, out, flags)
+      !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), in(1,1,1), out(1,1,1), flags)
     end select
 
     SAFE_DEALLOCATE_A(in)
@@ -139,7 +139,7 @@ contains
     FLOAT, allocatable :: rout(:,:,:)
     CMPLX, allocatable :: cin(:,:,:)
     CMPLX, allocatable :: cout(:,:,:)
-    
+
     PUSH_SUB(fftw_prepare_plan)
 
     ASSERT(sign == FFTW_FORWARD .or. sign == FFTW_BACKWARD)
@@ -151,14 +151,14 @@ contains
 
         select case (dim)
         case (1)
-           plan = fftw_plan_dft_r2c_1d(n(1), rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_1d)(plan, n(1), rin(1,1,1), cout(1,1,1), flags)
+          plan = fftw_plan_dft_r2c_1d(n(1), rin, cout, flags)
+          !call DFFTW(plan_dft_r2c_1d)(plan, n(1), rin(1,1,1), cout(1,1,1), flags)
         case (2)
-           plan = fftw_plan_dft_r2c_2d(n(2), n(1),rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), rin(1,1,1), cout(1,1,1), flags)
+          plan = fftw_plan_dft_r2c_2d(n(2), n(1),rin, cout, flags)
+          !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), rin(1,1,1), cout(1,1,1), flags)
         case (3)
-           plan = fftw_plan_dft_r2c_3d(n(3), n(2), n(1), rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), rin(1,1,1), cout(1,1,1), flags)
+          plan = fftw_plan_dft_r2c_3d(n(3), n(2), n(1), rin, cout, flags)
+          !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), rin(1,1,1), cout(1,1,1), flags)
         end select
 
         SAFE_DEALLOCATE_A(rin)
@@ -169,14 +169,14 @@ contains
 
         select case (dim)
         case (1)
-           plan = fftw_plan_dft_c2r_1d(n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_1d)(plan, n(1), cin(1,1,1), rout(1,1,1), flags)
+          plan = fftw_plan_dft_c2r_1d(n(1), cin, rout, flags)
+          !call DFFTW(plan_dft_c2r_1d)(plan, n(1), cin(1,1,1), rout(1,1,1), flags)
         case (2)
-           plan = fftw_plan_dft_c2r_2d(n(2), n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_2d)(plan, n(1), n(2), cin(1,1,1), rout(1,1,1), flags)
+          plan = fftw_plan_dft_c2r_2d(n(2), n(1), cin, rout, flags)
+          !call DFFTW(plan_dft_c2r_2d)(plan, n(1), n(2), cin(1,1,1), rout(1,1,1), flags)
         case (3)
-           plan = fftw_plan_dft_c2r_3d(n(3), n(2), n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_3d)(plan, n(1), n(2), n(3), cin(1,1,1), rout(1,1,1), flags)
+          plan = fftw_plan_dft_c2r_3d(n(3), n(2), n(1), cin, rout, flags)
+          !call DFFTW(plan_dft_c2r_3d)(plan, n(1), n(2), n(3), cin(1,1,1), rout(1,1,1), flags)
         end select
 
         SAFE_DEALLOCATE_A(cin)
@@ -188,14 +188,14 @@ contains
 
       select case (dim)
       case (1)
-         plan = fftw_plan_dft_1d(n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_1d)(plan, n(1), cin(1,1,1), cout(1,1,1), sign, flags)
+        plan = fftw_plan_dft_1d(n(1), cin, cout, sign, flags)
+        !call DFFTW(plan_dft_1d)(plan, n(1), cin(1,1,1), cout(1,1,1), sign, flags)
       case (2)
-         plan = fftw_plan_dft_2d(n(2), n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_2d)(plan, n(1), n(2), cin(1,1,1), cout(1,1,1), sign, flags)
+        plan = fftw_plan_dft_2d(n(2), n(1), cin, cout, sign, flags)
+        !call DFFTW(plan_dft_2d)(plan, n(1), n(2), cin(1,1,1), cout(1,1,1), sign, flags)
       case (3)
-         plan = fftw_plan_dft_3d(n(3), n(2), n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_3d)(plan, n(1), n(2), n(3), cin(1,1,1), cout(1,1,1), sign, flags)
+        plan = fftw_plan_dft_3d(n(3), n(2), n(1), cin, cout, sign, flags)
+        !call DFFTW(plan_dft_3d)(plan, n(1), n(2), n(3), cin(1,1,1), cout(1,1,1), sign, flags)
       end select
 
       SAFE_DEALLOCATE_A(cin)

@@ -39,7 +39,7 @@ module varinfo_oct_m
     module procedure varinfo_valid_option_8
     module procedure varinfo_valid_option_4
   end interface varinfo_valid_option
-  
+
   interface
     subroutine varinfo_init(filename)
       implicit none
@@ -199,14 +199,14 @@ contains
   end function varinfo_valid_option_8
 
   ! ---------------------------------------------------------
-  
+
   logical function varinfo_valid_option_4(var, option, is_flag) result(l)
     character(len=*),  intent(in) :: var
     integer,           intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
     l = varinfo_valid_option_8(var, int(option, 8), is_flag)
-    
+
   end function varinfo_valid_option_4
 
   ! ---------------------------------------------------------
@@ -219,7 +219,7 @@ contains
     type(c_ptr) :: handle, opt, name, desc
     integer(8) :: val
     logical :: option_found
-    
+
     call varinfo_getvar(var, handle)
     if(.not. c_associated(handle)) then
       write(iunit, '(3a)') 'ERROR: Could not find a variable named ', trim(var), '.'
@@ -241,7 +241,7 @@ contains
     end do
 
     write(iunit, '(4a)', advance='no') "Input:", ' [', var, ' = '
-    
+
     if(option_found) then
       call print_C_string(iunit, name, advance='no')
     else
@@ -261,7 +261,7 @@ contains
       write(iunit,'(a,i6,2a)') "ERROR: invalid option ", option, " for variable ", trim(var)
       stop
     end if
-    
+
   end subroutine varinfo_print_option
 
   ! ---------------------------------------------------------
@@ -269,15 +269,15 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
     integer,optional, intent(out):: ierr
-    
+
     type(c_ptr) :: handle, name, type, default, section, desc
-    
+
     handle = c_null_ptr
     if(present(ierr)) ierr = -1
-    do 
+    do
       call varinfo_search_var(var, handle)
 
-      if(c_associated(handle)) then 
+      if(c_associated(handle)) then
         if(present(ierr)) ierr = 0
       else
         exit
@@ -285,9 +285,9 @@ contains
 
       call varinfo_getinfo(handle, name, type, default, section, desc)
       call print_C_string(iunit, name)
-      
+
     end do
-      
+
   end subroutine varinfo_search
 
   ! ---------------------------------------------------------
@@ -323,7 +323,7 @@ contains
     exists = c_associated(handle)
 
   end function varinfo_exists
-  
+
 
 end module varinfo_oct_m
 

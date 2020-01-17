@@ -55,7 +55,7 @@ module xc_oct_m
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
     family_is_mgga,     &
-    family_is_mgga_with_exc   
+    family_is_mgga_with_exc
 
 
   type xc_t
@@ -64,7 +64,7 @@ module xc_oct_m
     integer,           public :: flags               !<flags of the xc functional
     integer,           public :: kernel_family
     type(xc_functl_t), public :: functional(2,2)     !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
-                                                     !! (:,1) => unpolarized, (:,2) => polarized
+    !! (:,1) => unpolarized, (:,2) => polarized
 
     type(xc_functl_t), public :: kernel(2,2)
     FLOAT,             public   :: kernel_lrc_alpha  !< long-range correction alpha parameter for kernel in solids
@@ -108,7 +108,7 @@ contains
     do ifunc = FUNC_X, FUNC_C
       call xc_functl_write_info(xcs%functional(ifunc, 1), iunit, namespace)
     end do
-    
+
     if(xcs%exx_coef /= M_ZERO) then
       write(message(1), '(1x)')
       write(message(2), '(a,f8.5)') "Exact exchange mixing = ", xcs%exx_coef
@@ -182,7 +182,7 @@ contains
 
       ! get the mixing coefficient for hybrids
       if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
+        bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then
         call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
@@ -216,14 +216,14 @@ contains
 
     POP_SUB(xc_init)
 
-  contains 
+  contains
 
     subroutine parse()
 
       PUSH_SUB(xc_init.parse)
 
       ! the values of x_id,  c_id, xk_id, and c_id are read outside the routine
-      
+
       !%Variable XCKernelLRCAlpha
       !%Type float
       !%Default 0.0
@@ -231,12 +231,12 @@ contains
       !%Description
       !% Set to a non-zero value to add a long-range correction for solids to the kernel.
       !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
-      !% 69, 155112 (2004). The <math>\Gamma = \Gamma` = 0</math> term <math>-\alpha/q^2</math> is taken 
-      !% into account by introducing an additional pole to the polarizability (see R. Stubner  
-      !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by  
-      !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero 
-      !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>  
-      !% corresponds to account of only the <math>\Gamma = \Gamma` = 0</math> term. 
+      !% 69, 155112 (2004). The <math>\Gamma = \Gamma` = 0</math> term <math>-\alpha/q^2</math> is taken
+      !% into account by introducing an additional pole to the polarizability (see R. Stubner
+      !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by
+      !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero
+      !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>
+      !% corresponds to account of only the <math>\Gamma = \Gamma` = 0</math> term.
       !% Applicable only to isotropic systems. (Experimental)
       !%End
 
@@ -258,7 +258,7 @@ contains
       !%End
       call parse_variable(namespace, 'XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
-      if(xcs%xc_density_correction /= LR_NONE) then 
+      if(xcs%xc_density_correction /= LR_NONE) then
         call messages_experimental('XC density correction')
 
         !%Variable XCDensityCorrectionOptimize
@@ -319,7 +319,7 @@ contains
       !%End
       call messages_obsolete_variable(namespace, 'XCParallel', 'ParallelXC')
       call parse_variable(namespace, 'ParallelXC', .true., xcs%parallel)
-      
+
       POP_SUB(xc_init.parse)
     end subroutine parse
 
@@ -358,11 +358,11 @@ contains
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent
-  
+
   logical function family_is_mgga_with_exc(xcs)
     type(xc_t), intent(in) :: xcs
 
-    integer :: ixc  
+    integer :: ixc
 
     PUSH_SUB(family_is_mgga_with_exc)
 

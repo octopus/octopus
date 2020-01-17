@@ -72,10 +72,10 @@ module hamiltonian_mxll_oct_m
 
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
-    
+
     logical :: time_zero
 
-    type(nl_operator_t), pointer   :: operators(:) 
+    type(nl_operator_t), pointer   :: operators(:)
 
 !    type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
@@ -135,7 +135,7 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
 !    integer, pointer               :: medium_box_bdry_number(:)
 !    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
-  
+
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag
@@ -186,9 +186,9 @@ contains
     type(hamiltonian_mxll_t), intent(inout) :: hm
 
     PUSH_SUB(hamiltonian_mxll_null)
- 
+
     hm%adjoint = .false.
-    
+
     hm%current_density_ext_flag = .false.
 
     nullify(hm%energy_density)
@@ -213,7 +213,7 @@ contains
     PUSH_SUB(hamiltonian_mxll_init)
 
     call profiling_in(prof, 'HAMILTONIAN_INIT')
-       
+
     call hamiltonian_mxll_null(hm)
 
     call states_elec_dim_copy(hm%d, st%d)
@@ -250,7 +250,7 @@ contains
     !%Option faraday_ampere_medium 2
     !% The propagation operation in medium with Spin 1 matrices without Gauss law condition
     !%Option faraday_ampere_gauss 3
-    !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint. 
+    !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint.
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
@@ -307,7 +307,7 @@ contains
     POP_SUB(hamiltonian_mxll_init)
   end subroutine hamiltonian_mxll_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine hamiltonian_mxll_end(hm)
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -321,7 +321,7 @@ contains
 
     call bc_mxll_end(hm%bc)
 
-    call states_elec_dim_end(hm%d) 
+    call states_elec_dim_end(hm%d)
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -398,7 +398,7 @@ contains
 
     apply = this%apply_packed
     if(mesh%use_curvilinear) apply = .false.
-    
+
   end function hamiltonian_mxll_apply_packed
 
   ! ---------------------------------------------------------
@@ -448,7 +448,7 @@ contains
 
     call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
     hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
-  
+
 !    if(pack) then
 !      call psib%do_unpack(copy = .false.)
 !      call hpsib%do_unpack()
@@ -499,9 +499,9 @@ contains
       end if
     end if
 
-!    select case (hm%op_method) 
+!    select case (hm%op_method)
 !      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
-        call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
+    call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
 !      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT) ! For reviews: seems that this option is no longer needed, should we leave it?
 !        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
 !     end select
@@ -523,7 +523,7 @@ contains
 
     integer :: ik, ib
     FLOAT, allocatable :: psi(:, :)
-  
+
     PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
 !    if(present(Imtime)) then
@@ -532,8 +532,8 @@ contains
 !          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
 !      end do
 !    end do
-  !  else
-!    if (present(time)) then 
+    !  else
+!    if (present(time)) then
 !      do ik = st%d%kpt%start, st%d%kpt%end
 !        do ib = st%group%block_start, st%group%block_end
 !          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
@@ -574,7 +574,7 @@ contains
 
       if (hm%diamag_current) then
         mx_rho    => hm%st%grid_rho
-        kappa_psi => hm%st%kappa_psi 
+        kappa_psi => hm%st%kappa_psi
       end if
 
       !----------------------------------------------------------------------------------------------------------------------------
@@ -617,8 +617,8 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
-    ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
+      !==============================================================================================================================
+      ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
 
@@ -676,8 +676,8 @@ contains
       call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
 
-    !==============================================================================================================================
-    ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
+      !==============================================================================================================================
+      ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
 
@@ -708,8 +708,8 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
-    ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
+      !==============================================================================================================================
+      ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
 
@@ -777,7 +777,7 @@ contains
     PUSH_SUB(maxwell_pml_hamiltonian)
 
     if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
+      hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
@@ -799,7 +799,7 @@ contains
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
 
     if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
+      hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
         call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
 !      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
@@ -842,10 +842,10 @@ contains
         pml_b(:) = hm%bc%pml_b(ip_in, :)
         pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g(field_dir)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
+          + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
+          + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
+          + rs_sign * pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g(field_dir)) &
+          + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
       end do
 
       SAFE_DEALLOCATE_A(tmp_partial)
@@ -856,7 +856,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein 
+  !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein
   !> vector with medium inside the box
   subroutine maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, pml_dir, field_dir, pml)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -888,15 +888,15 @@ contains
         pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
         pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 1)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
+          + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 1)) &
+          + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
+          + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
+          + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
         pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 2)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
+          + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 2)) &
+          + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
+          + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
+          + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
 
     end if
@@ -906,7 +906,7 @@ contains
     POP_SUB(maxwell_pml_calculation_via_riemann_silberstein_medium)
   end subroutine maxwell_pml_calculation_via_riemann_silberstein_medium
 
-  
+
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian for medium boundaries
   subroutine maxwell_medium_boundaries_calculation(hm, psi, oppsi)
@@ -922,7 +922,7 @@ contains
 
     do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
-           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+        (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
         do ip_in = 1, hm%bc%medium_points_number(idim)
           ip          = hm%bc%medium_points_map(ip_in, idim)
           cc          = hm%bc%medium_c(ip_in, idim)/P_c
@@ -939,29 +939,29 @@ contains
           aux_ep      = dcross_product(aux_ep,real(ff_plus+ff_minus))
           aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip, 1)*cc                                         &
-                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+            - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+            - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip, 4)*cc                                         &
-                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+            + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+            - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip, 2)*cc                                         &
-                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+            - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+            - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
-                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+            + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+            - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
-                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+            - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+            - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip, 6)*cc                                         &
-                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+            + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+            - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end if
     end do
@@ -974,7 +974,7 @@ contains
   ! > Maxwell Hamiltonian including medium boxes
   subroutine maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-     type(derivatives_t),      intent(in)    :: der
+    type(derivatives_t),      intent(in)    :: der
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
@@ -988,7 +988,7 @@ contains
     np_part = der%mesh%np_part
 
     if (hm%medium_box .and. &
-         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+      (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
       do il = 1, hm%medium_box_number
         do ip_in = 1, hm%medium_box_points_number(il)
           ip           = hm%medium_box_points_map(ip_in, il)
@@ -1006,29 +1006,29 @@ contains
           aux_ep       = dcross_product(aux_ep,real(ff_plus+ff_minus))
           aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
-                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+            - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+            - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip,4)*cc                                          &
-                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+            + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+            - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip,2)*cc                                          &
-                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+            - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+            - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip,5)*cc                                          &
-                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+            + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+            - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 3) = oppsi(ip,3)*cc                                          &
-                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+            - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+            - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+            - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip,6)*cc                                          &
-                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+            + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+            - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+            + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end do
     end if
@@ -1205,7 +1205,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     CMPLX,               intent(inout) :: longitudinal_field(:,:)
 
-    CMPLX, allocatable :: ztmp(:), tmp_poisson(:)        
+    CMPLX, allocatable :: ztmp(:), tmp_poisson(:)
 
     SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_poisson(1:gr%mesh%np_part))
@@ -1230,7 +1230,7 @@ contains
   subroutine surface_integral_helmholtz_transverse(gr, st, pos, field, surface_integral)
     type(grid_t),        intent(in)    :: gr
     type(states_mxll_t), intent(in)    :: st
-    FLOAT,               intent(in)    :: pos(:) 
+    FLOAT,               intent(in)    :: pos(:)
     CMPLX,               intent(in)    :: field(:,:)
     CMPLX,               intent(inout) :: surface_integral(:)
 
@@ -1249,7 +1249,7 @@ contains
 !#endif
 !      end do
 !    else
-      tmp_global(:,:) = field(:,:)
+    tmp_global(:,:) = field(:,:)
 !    end if
 
     ix_max = st%surface_grid_rows_number(1)
@@ -1268,17 +1268,17 @@ contains
           normal    =  M_z0
           normal(1) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 1, iy, iz,:) = tmp_surf(1, 1, iy, iz, :) & 
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
+            * gr%mesh%spacing(1:3)
+          tmp_surf(1, 1, iy, iz,:) = tmp_surf(1, 1, iy, iz, :) &
+            + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)) &
+            / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(1) = +M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
+            * gr%mesh%spacing(1:3)
           tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
+            + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)) &
+            / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
         end do
         tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
         tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
@@ -1297,17 +1297,17 @@ contains
           normal    =  M_z0
           normal(2) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
+            * gr%mesh%spacing(1:3)
           tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
+            + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)) &
+            / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(2) =  M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
+            * gr%mesh%spacing(1:3)
           tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
+            + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)) &
+            / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
         end do
         tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
         tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
@@ -1326,17 +1326,17 @@ contains
           normal    =  M_z0
           normal(3) = -M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
+            * gr%mesh%spacing(1:3)
           tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
+            + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)) &
+            / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
           normal    =  M_z0
           normal(3) =  M_z1
           xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
+            * gr%mesh%spacing(1:3)
           tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
+            + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)) &
+            / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
         end do
         tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
         tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))

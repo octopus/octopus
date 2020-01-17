@@ -33,7 +33,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer :: nri
   integer, pointer :: imin(:), imax(:), ri(:, :)
 !  FLOAT, allocatable :: wre(:), wim(:)
-  R_BASE, allocatable :: wre(:), wim(:)  
+  R_BASE, allocatable :: wre(:), wim(:)
 #ifdef R_TREAL
   integer, parameter :: logldf = 0
 #else
@@ -43,10 +43,10 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer :: nri_loc, ini
   R_TYPE,  pointer :: pfi(:), pfo(:)
 #endif
-  
+
   PUSH_SUB(X(nl_operator_operate_batch))
 
-  call fi%check_compatibility_with(fo) 
+  call fi%check_compatibility_with(fo)
   ASSERT(fi%type() == R_TYPE_VAL)
 
   points_ = OP_ALL
@@ -63,7 +63,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   if(op%mesh%parallel_in_domains .and. ghost_update_) then
     ASSERT(.not. fi%is_packed())
-    
+
     do ist = 1, fi%nst_linear
 #ifdef HAVE_MPI
       call X(vec_ghost_update)(op%mesh%vp, fi%states_linear(ist)%X(psi)(:))
@@ -82,7 +82,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 
   use_opencl = .false.
-  
+
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
@@ -92,23 +92,23 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else if(X(function_global) == OP_FORTRAN) then
       call operate_const_weights()
     else
-      
+
 ! for the moment this is not implemented
 #ifndef SINGLE_PRECISION
 
       !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
 #ifdef HAVE_OPENMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
-#else 
+#else
       ini = 1
       nri_loc = nri
 #endif
-      
+
       if(fi%is_packed() .and. fo%is_packed()) then
-        
+
         ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
         ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
-        
+
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
           fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
       else
@@ -116,10 +116,10 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
           ASSERT(ubound(fi%states_linear(ist)%X(psi), dim = 1) == op%mesh%np_part)
           ASSERT(ubound(fo%states_linear(ist)%X(psi), dim = 1) >= op%mesh%np)
-          
+
           pfi => fi%states_linear(ist)%X(psi)(:)
           pfo => fo%states_linear(ist)%X(psi)(:)
-          
+
           call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), logldf, pfo(1))
         end do
       end if
@@ -187,9 +187,9 @@ contains
     case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
-      
+
     case(BATCH_NOT_PACKED)
-      
+
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
@@ -234,9 +234,9 @@ contains
     case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
-      
+
     case(BATCH_NOT_PACKED)
-      
+
       !$omp parallel do private(ll, ist, ii, nn)
       do ll = 1, nri
         nn = op%nn(ll)
@@ -256,9 +256,9 @@ contains
         end forall
       end do
       !$omp end parallel do
-      
+
     end select
-      
+
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 
@@ -275,7 +275,7 @@ contains
 
     ASSERT(accel_buffer_is_allocated(fi%pack%buffer))
     ASSERT(accel_buffer_is_allocated(fo%pack%buffer))
-    
+
     kernel_operate = op%kernel
 
     call accel_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
@@ -292,7 +292,7 @@ contains
       ASSERT(accel_buffer_is_allocated(op%buff_ri))
       ASSERT(accel_buffer_is_allocated(op%buff_imin))
       ASSERT(accel_buffer_is_allocated(op%buff_imax))
-      
+
       call accel_set_kernel_arg(kernel_operate, 0, op%stencil%size)
       call accel_set_kernel_arg(kernel_operate, 1, nri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_ri)
@@ -342,7 +342,7 @@ contains
           ASSERT(.false.)
         end select
       end if
-      
+
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
         localsize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
@@ -352,7 +352,7 @@ contains
       else
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
-      
+
       if(bsize < fi%pack%size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
@@ -376,13 +376,13 @@ contains
 
       call profiling_count_transfers(npoints*(op%stencil%size + 2), localsize)
       call profiling_count_transfers(fi%nst_linear*npoints*(op%stencil%size + 1), R_TOTYPE(M_ONE))
-      
+
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
       ASSERT(accel_buffer_is_allocated(op%buff_stencil))
       ASSERT(accel_buffer_is_allocated(op%buff_xyz_to_ip))
       ASSERT(accel_buffer_is_allocated(op%buff_ip_to_xyz))
-      
+
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
@@ -415,7 +415,7 @@ contains
         ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
         call accel_set_kernel_arg(kernel_operate, 8, TYPE_INTEGER, isize*op%stencil%size)
       end if
-      
+
       call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
 
       call profiling_count_transfers(op%stencil%size*op%mesh%np + op%mesh%np, isize)
@@ -424,7 +424,7 @@ contains
         call profiling_count_transfers(op%mesh%np_part*op%stencil%size + op%mesh%np, R_TOTYPE(M_ONE))
       end do
     end select
-    
+
     if(profile_) then
       select case(points_)
       case(OP_INNER)
@@ -437,7 +437,7 @@ contains
         ASSERT(.false.)
       end select
     end if
-    
+
     ! when doing the inner points the synchronization is done
     ! in X(ghost_update_batch_finish) after a Waitall call to
     ! overlap communication and computation
@@ -488,15 +488,15 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   R_TYPE,              intent(out)   :: fo(:)
 
   PUSH_SUB(X(nl_operator_operate_diag))
-  
+
   if(op%const_w) then
     fo(1:op%np) = op%w(op%stencil%center, 1)
   else
     fo(1:op%np) = op%w(op%stencil%center, 1:op%np)
   end if
-  
+
   POP_SUB(X(nl_operator_operate_diag))
-  
+
 end subroutine X(nl_operator_operate_diag)
 
 

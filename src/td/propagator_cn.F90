@@ -112,12 +112,12 @@ contains
 
     !move the ions to time 'time - dt/2', and save the current status to return to it later.
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
-                time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
+      time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_interpolate(tr%vksold, 3, &
         time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
-    else 
+    else
       call potential_interpolation_interpolate(tr%vksold, 3, &
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if

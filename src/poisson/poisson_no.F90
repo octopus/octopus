@@ -43,7 +43,7 @@ contains
     type(poisson_no_t),  intent(out)   :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
-! may need to add these later for housekeeping in no poisson case. Otherwise delete these 2 lines and 
+! may need to add these later for housekeeping in no poisson case. Otherwise delete these 2 lines and
 !  type member above
 !    integer,             intent(in)    :: all_nodes_comm
 !    logical, optional,   intent(in)    :: init_world
@@ -79,7 +79,7 @@ contains
 
     PUSH_SUB(poisson_no_solve)
 
-    pot(1:mesh%np) = M_ZERO 
+    pot(1:mesh%np) = M_ZERO
 
     POP_SUB(poisson_no_solve)
   end subroutine poisson_no_solve

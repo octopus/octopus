@@ -24,7 +24,7 @@ module comm_oct_m
   use mpi_oct_m
   use profiling_oct_m
 
-  implicit none 
+  implicit none
 
   private
 
@@ -41,11 +41,11 @@ module comm_oct_m
   end interface
 
 contains
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "comm_inc.F90"
-  
+
 #include "undef.F90"
 #include "complex.F90"
 #include "comm_inc.F90"

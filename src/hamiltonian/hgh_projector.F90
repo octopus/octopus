@@ -35,17 +35,17 @@ module hgh_projector_oct_m
 
   private
   public :: &
-       hgh_projector_t,              &
-       hgh_projector_null,           &
-       hgh_projector_init,           &
-       dhgh_project, zhgh_project,   &
-       dhgh_project_bra,             &
-       zhgh_project_bra,             &
-       dhgh_project_ket,             &
-       zhgh_project_ket,             &
-       hgh_projector_end
+    hgh_projector_t,              &
+    hgh_projector_null,           &
+    hgh_projector_init,           &
+    dhgh_project, zhgh_project,   &
+    dhgh_project_bra,             &
+    zhgh_project_bra,             &
+    dhgh_project_ket,             &
+    zhgh_project_ket,             &
+    hgh_projector_end
 
-  
+
 
   type hgh_projector_t
     private
@@ -103,7 +103,7 @@ contains
     else
       SAFE_ALLOCATE(hgh_p%zp(1:hgh_p%n_s, 1:3))
       do i = 1, 3
-        call species_nl_projector(a%species, hgh_p%n_s, sm%x(:, 0:3), l, lm, i, hgh_p%zp(:, i)) 
+        call species_nl_projector(a%species, hgh_p%n_s, sm%x(:, 0:3), l, lm, i, hgh_p%zp(:, i))
       end do
     end if
 

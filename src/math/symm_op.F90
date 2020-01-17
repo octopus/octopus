@@ -25,25 +25,25 @@ module symm_op_oct_m
   implicit none
 
   private
-  
+
   public ::                            &
-       symm_op_t,                      &
-       symm_op_init,                   &
-       symm_op_copy,                   &
-       symm_op_end,                    &
-       symm_op_apply_red,              &
-       symm_op_apply_inv_red,          &
-       symm_op_apply_transpose_red,    &
-       symm_op_invariant_red,          &
-       symm_op_has_translation,        &
-       symm_op_rotation_matrix_red,    &
-       symm_op_translation_vector_red, &
-       symm_op_apply_cart,             &
-       symm_op_apply_inv_cart,         &
-       symm_op_invariant_cart,         &
-       symm_op_rotation_matrix_cart,   &
-       symm_op_translation_vector_cart,&
-       symm_op_is_identity
+    symm_op_t,                      &
+    symm_op_init,                   &
+    symm_op_copy,                   &
+    symm_op_end,                    &
+    symm_op_apply_red,              &
+    symm_op_apply_inv_red,          &
+    symm_op_apply_transpose_red,    &
+    symm_op_invariant_red,          &
+    symm_op_has_translation,        &
+    symm_op_rotation_matrix_red,    &
+    symm_op_translation_vector_red, &
+    symm_op_apply_cart,             &
+    symm_op_apply_inv_cart,         &
+    symm_op_invariant_cart,         &
+    symm_op_rotation_matrix_cart,   &
+    symm_op_translation_vector_cart,&
+    symm_op_is_identity
 
   type symm_op_t
     private
@@ -54,11 +54,11 @@ module symm_op_oct_m
     FLOAT    :: trans_red(1:3)
     FLOAT    :: trans_cart(1:3)
   end type symm_op_t
-  
+
   interface symm_op_apply_red
     module procedure isymm_op_apply_red, dsymm_op_apply_red, zsymm_op_apply_red
   end interface symm_op_apply_red
- 
+
   interface symm_op_apply_cart
     module procedure dsymm_op_apply_cart, zsymm_op_apply_cart
   end interface symm_op_apply_cart
@@ -84,7 +84,7 @@ module symm_op_oct_m
   end interface symm_op_invariant_red
 
 contains
- 
+
   subroutine symm_op_init(this, rot, rlattice, klattice, dim, trans)
     type(symm_op_t),     intent(out) :: this
     integer,             intent(in)  :: rot(:, :)
@@ -106,8 +106,8 @@ contains
       this%rot_red(idim,idim) = 1
     end do
 
-    !The inverse operation is only given by its inverse, not the transpose  
-    !By Contrustion the reduced matrix also has a determinant of +1 
+    !The inverse operation is only given by its inverse, not the transpose
+    !By Contrustion the reduced matrix also has a determinant of +1
     ! Calculate the inverse of the matrix
     this%rot_red_inv(1,1) = +(this%rot_red(2,2)*this%rot_red(3,3) - this%rot_red(2,3)*this%rot_red(3,2))
     this%rot_red_inv(2,1) = -(this%rot_red(2,1)*this%rot_red(3,3) - this%rot_red(2,3)*this%rot_red(3,1))
@@ -126,7 +126,7 @@ contains
     !      (with a factor 2 \pi)
     this%rot_cart = M_ZERO
     this%rot_cart(1:dim, 1:dim)  = matmul(rlattice(1:dim, 1:dim), &
-                    matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
+      matmul(rot(1:dim, 1:dim),transpose(klattice(1:dim, 1:dim))/ (M_TWO * M_PI)))
     do idim = dim+1,3
       this%rot_cart(idim,idim) = M_ONE
     end do
@@ -140,21 +140,21 @@ contains
 
     !We check that the rotation matrix in cartesian space is indeed a rotation matrix
     if(sum(abs(matmul(this%rot_cart,transpose(this%rot_cart)) &
-              -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>CNST(1.0e-6)) then
+      -reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/))))>CNST(1.0e-6)) then
       message(1) = "Internal error: This matrix is not a rotation matrix"
       write(message(2),'(3(3f7.3,2x))') this%rot_cart
-      call messages_fatal(2) 
+      call messages_fatal(2)
     end if
     POP_SUB(symm_op_init)
   end subroutine symm_op_init
-  
+
   ! -------------------------------------------------------------------------------
   subroutine symm_op_copy(inp, outp)
     type(symm_op_t),     intent(in) :: inp
     type(symm_op_t),     intent(out) :: outp
 
     PUSH_SUB(symm_op_copy)
- 
+
     outp%dim = inp%dim
     outp%rot_red(1:3, 1:3) =  inp%rot_red(1:3, 1:3)
     outp%rot_red_inv(1:3, 1:3) =  inp%rot_red_inv(1:3, 1:3)
@@ -164,7 +164,7 @@ contains
 
     POP_SUB(symm_op_copy)
   end subroutine symm_op_copy
-  
+
   ! -------------------------------------------------------------------------------
   subroutine symm_op_end(this)
     type(symm_op_t),  intent(inout) :: this
@@ -175,7 +175,7 @@ contains
 
     POP_SUB(symm_op_end)
   end subroutine symm_op_end
-  
+
   ! -------------------------------------------------------------------------------
   logical pure function symm_op_has_translation(this, prec) result(has)
     type(symm_op_t),  intent(in)  :: this
@@ -207,7 +207,7 @@ contains
 
 
   ! -------------------------------------------------------------------------------
- 
+
   function symm_op_translation_vector_red(this) result(vector)
     type(symm_op_t),  intent(in)  :: this
     FLOAT                         :: vector(1:this%dim)
@@ -240,14 +240,14 @@ contains
   end function symm_op_is_identity
 
   ! -------------------------------------------------------------------------------
-  
+
   pure function isymm_op_apply_red(this, aa) result(bb)
     type(symm_op_t),  intent(in)  :: this
     integer,          intent(in)  :: aa(:) !< (3)
     integer                       :: bb(1:this%dim)
 
     bb(1:this%dim) = nint(dsymm_op_apply_red(this, real(aa, REAL_PRECISION)))
-    
+
   end function isymm_op_apply_red
 
   ! -------------------------------------------------------------------------------
@@ -258,7 +258,7 @@ contains
     integer                       :: bb(1:this%dim)
 
     bb(1:this%dim) = nint(dsymm_op_apply_inv_red(this, real(aa, REAL_PRECISION)))
-    
+
   end function isymm_op_apply_inv_red
 
 #include "undef.F90"

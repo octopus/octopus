@@ -97,7 +97,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           if(mesh%parallel_in_domains) then
             call comm_allreduce(mesh%mpi_grp%comm, zx)
           end if
-          
+
 
           ! intensities
           do ia = 1, cas%n_pairs
@@ -172,16 +172,16 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_elec_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
     call states_elec_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
-    forall(ip = 1:mesh%np) 
+    forall(ip = 1:mesh%np)
       ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
     end forall
 
     xx(ia) = X(mf_integrate)(mesh, ff, reduce = .false.)
   end do
 
-   if(mesh%parallel_in_domains) then
-     call comm_allreduce(mesh%mpi_grp%comm, xx)
-   end if
+  if(mesh%parallel_in_domains) then
+    call comm_allreduce(mesh%mpi_grp%comm, xx)
+  end if
 
   SAFE_DEALLOCATE_A(ff)
 
@@ -298,7 +298,7 @@ end subroutine X(get_transition_densities)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho) 
+subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   type(states_elec_t), intent(in)  :: st
   type(mesh_t),        intent(in)  :: mesh
   integer,             intent(in)  :: ii
@@ -570,7 +570,7 @@ contains
 
     PUSH_SUB(X(casida_get_matrix).X(K_term))
     call profiling_in(prof, 'CASIDA_K')
-    
+
     if(cas%herm_conj) then
       pi = qq%i
       pa = qq%a
@@ -712,10 +712,10 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
   integer,        intent(in) :: jb
 
   PUSH_SUB(X(write_K_term))
-  
+
   write(iunit,*) cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%kk, &
     cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, mat_val
-  
+
   POP_SUB(X(write_K_term))
 end subroutine X(write_K_term)
 
@@ -725,7 +725,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   type(system_t),      intent(inout) :: sys
   type(mesh_t),           intent(in) :: mesh
   type(states_elec_t), intent(inout) :: st
-  
+
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
   FLOAT, allocatable :: ddl_rho(:,:), kxc(:,:,:,:)
   FLOAT, allocatable :: lr_fxc(:,:,:)
@@ -736,24 +736,24 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   type(restart_t) :: restart_vib
 
   PUSH_SUB(X(casida_forces))
-  
+
   if(cas%type == CASIDA_CASIDA) then
     message(1) = "Forces for Casida theory level not implemented"
     call messages_warning(1)
     POP_SUB(X(casida_forces))
     return
   end if
-  
+
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
     kxc = M_ZERO
     ! not spin polarized so far
     call xc_get_kxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, kxc(:, :, :, :))
   end if
-  
+
   message(1) = "Reading vib_modes density for calculating excited-state forces."
   call messages_info(1)
-  
+
   ! vib_modes for complex wavefunctions will write complex rho, however it is actually real
   ! FIXME: why?
 #ifdef R_TCOMPLEX
@@ -764,14 +764,14 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   if (cas%type /= CASIDA_EPS_DIFF) then
     SAFE_ALLOCATE(lr_fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
   end if
-  
+
   if(cas%type == CASIDA_EPS_DIFF) then
     cas%X(mat_save) = M_ZERO
     do ia = 1, cas%n_pairs
       cas%X(mat_save)(ia, ia) = cas%w(ia)
     end do
   end if
-  
+
   SAFE_ALLOCATE(lr_hmat1(1:cas%nst, 1:cas%nst, 1:cas%nik))
   SAFE_ALLOCATE(cas%X(lr_hmat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
@@ -781,9 +781,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
-      
+
       if(ierr == 0) &
-        call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, restart_vib, phn_rho_tag(iatom, idir), ierr)      
+        call X(lr_load_rho)(X(dl_rho), sys%gr%mesh, st%d%nspin, restart_vib, phn_rho_tag(iatom, idir), ierr)
       if(ierr /= 0) then
         message(1) = "Could not read vib_modes density; previous vib_modes calculation required."
         call messages_fatal(1)
@@ -797,28 +797,28 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
         ddl_rho = TOFLOAT(zdl_rho)
       end if
       call X(casida_get_lr_hmat1)(cas, sys, iatom, idir, ddl_rho, lr_hmat1)
-      
+
       cas%X(lr_hmat2) = M_ZERO
       ! use them to make two-particle matrix elements (as for eigenvalues)
       do ik = 1, cas%nik
         call X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
       end do
-      
+
       if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
         forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
           lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * ddl_rho(ip, :))
         end forall
-        
+
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
-        
+
         call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
           is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else
         cas%X(mat2) = M_ZERO
       end if
-      
+
       cas%X(mat2) = cas%X(mat_save) * factor + cas%X(lr_hmat2) + cas%X(mat2)
       call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
       do ia = 1, cas%n_pairs
@@ -828,7 +828,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   end do
 
   call restart_end(restart_vib)
-  
+
   if(cas%type /= CASIDA_EPS_DIFF) then
     SAFE_DEALLOCATE_A(kxc)
     SAFE_DEALLOCATE_A(lr_fxc)
@@ -840,7 +840,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   SAFE_DEALLOCATE_A(cas%X(lr_hmat2))
   SAFE_DEALLOCATE_A(cas%X(mat2))
   SAFE_DEALLOCATE_A(cas%X(w2))
-  
+
   if(cas%calc_forces_scf) then
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
@@ -851,7 +851,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
       end do
     end do
   end if
-  
+
   POP_SUB(X(casida_forces))
 
 end subroutine X(casida_forces)
@@ -918,7 +918,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   if (iunit > 0) call restart_close(cas%restart_load, iunit)
 
 #ifdef HAVE_MPI
-    call MPI_Bcast(is_saved(1, 1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)
+  call MPI_Bcast(is_saved(1, 1, 1), cas%nst**2, MPI_LOGICAL, 0, mpi_world%comm, mpi_err)
 #endif
 
   all_done = .true.
@@ -974,14 +974,14 @@ end subroutine X(casida_get_lr_hmat1)
 subroutine X(casida_save_pot_init)(this, mesh)
   type(casida_save_pot_t), intent(out)   :: this
   type(mesh_t),            intent(in)    :: mesh
-  
+
   SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
   this%qi = -1
   this%qa = -1
   this%qk = -1
 
 end subroutine X(casida_save_pot_init)
-    
+
 ! -----------------------------------------------------
 
 subroutine X(casida_save_pot_end)(this)
@@ -1016,7 +1016,7 @@ subroutine X(casida_solve)(cas, st)
         * ( st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
     end do
   end if
-      
+
   ! all processors with the exception of the first are done
   if (mpi_grp_is_root(cas%mpi_grp)) then
 
@@ -1031,7 +1031,7 @@ subroutine X(casida_solve)(cas, st)
     ! complete the matrix
     do ia = 1, cas%n_pairs
       eig_diff = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
-      
+
       do jb = ia, cas%n_pairs
         ! FIXME: need the equivalent of this stuff for forces too.
         if(cas%type == CASIDA_CASIDA) then
@@ -1052,7 +1052,7 @@ subroutine X(casida_solve)(cas, st)
     if(cas%type /= CASIDA_CASIDA) then
       SAFE_DEALLOCATE_A(occ_diffs)
     end if
-    
+
     message(1) = "Info: Diagonalizing matrix for resonance energies."
     call messages_info(1)
     ! now we diagonalize the matrix
@@ -1061,11 +1061,11 @@ subroutine X(casida_solve)(cas, st)
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
     call lalg_eigensolve(cas%n_pairs, cas%X(mat), cas%w)
     call profiling_out(prof)
-    
+
     do ia = 1, cas%n_pairs
-      
+
       if(cas%type == CASIDA_CASIDA) then
-        if(cas%w(ia) < -M_EPSILON) then       
+        if(cas%w(ia) < -M_EPSILON) then
           write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
           call messages_warning(1)
           cas%w(ia) = -sqrt(-cas%w(ia))
@@ -1079,12 +1079,12 @@ subroutine X(casida_solve)(cas, st)
           call messages_warning(2)
         end if
       end if
-      
+
       cas%ind(ia) = ia ! diagonalization returns eigenvalues in order.
     end do
-    
+
   end if
-    
+
   POP_SUB(X(casida_solve))
 end subroutine X(casida_solve)
 
@@ -1092,20 +1092,20 @@ end subroutine X(casida_solve)
 subroutine X(casida_write)(cas, sys)
   type(casida_t), intent(in) :: cas
   type(system_t), intent(in) :: sys
-  
+
   character(len=5) :: str
   character(len=50) :: dir_name
   integer :: iunit, ia, jb, idim, index
   logical :: full_printing
   R_TYPE  :: temp
-  
+
   PUSH_SUB(X(casida_write))
-  
+
   full_printing = .false.
   if (cas%print_exst == 'all') full_printing = .true.
 
   if(mpi_grp_is_root(mpi_world)) then
-  ! output excitation energies and oscillator strengths
+    ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR, sys%namespace)
     iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), sys%namespace, action='write')
 
@@ -1117,16 +1117,16 @@ subroutine X(casida_write)(cas, sys)
     else
       write(iunit, '(6x)', advance='no')
     end if
-    
-    write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']' 
+
+    write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']'
     do idim = 1, cas%sb_dim
-      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']' 
+      write(iunit, '(1x,a15)', advance='no') '<' // index2axis(idim) // '> [' // trim(units_abbrev(units_out%length)) // ']'
 #ifdef R_TCOMPLEX
       write(iunit, '(16x)', advance='no')
 #endif
     end do
     write(iunit, '(1x,a15)') '<f>'
-    
+
     do ia = 1, cas%n_pairs
       if((cas%type == CASIDA_EPS_DIFF)) then
         write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
@@ -1140,19 +1140,19 @@ subroutine X(casida_write)(cas, sys)
         (units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim)), idim=1,cas%sb_dim), cas%f(cas%ind(ia))
     end do
     call io_close(iunit)
-  
+
     if(cas%qcalc) call qcasida_write(cas, sys%namespace)
-  
+
     if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
       if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
         dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
         call io_mkdir(trim(dir_name), sys%namespace)
       end if
-      
+
       do ia = 1, cas%n_pairs
-        if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
+        if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then
           write(str,'(i5.5)') ia
-          
+
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
             iunit = io_open(trim(dir_name)//'/'//trim(str), sys%namespace, action='write')
@@ -1163,23 +1163,23 @@ subroutine X(casida_write)(cas, sys)
               write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
                 units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
             end do
-            
+
             ! this stuff should go BEFORE calculation of transition matrix elements!
             ! make the largest component positive and real, to specify the phase
             index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
             temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
-            
+
             do jb = 1, cas%n_pairs
               if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
                 write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
             end do
-            
+
             if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
               call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
             end if
             call io_close(iunit)
           end if
-          
+
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
             iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
@@ -1188,7 +1188,7 @@ subroutine X(casida_write)(cas, sys)
         end if
       end do
     end if
-  
+
   end if
   ! Calculate and write the transition densities
   call X(get_transition_densities)(cas, sys)
@@ -1201,15 +1201,15 @@ subroutine X(write_implied_occupations)(cas, iunit, ind)
   type(casida_t), intent(in) :: cas
   integer,        intent(in) :: iunit
   integer,        intent(in) :: ind
-  
+
   integer :: ik, ast, ist
   FLOAT :: occ
-  
+
   PUSH_SUB(X(write_implied_occupations))
-  
+
   write(iunit, '(a)')
   write(iunit, '(a)') '%Occupations'
-  
+
   do ik = 1, cas%nik
     do ist = 1, cas%n_occ(ik)
       occ = M_ONE * cas%el_per_state
@@ -1230,9 +1230,9 @@ subroutine X(write_implied_occupations)(cas, iunit, ind)
     end do
     write(iunit, '(a)')
   end do
-  
+
   write(iunit, '(a)') '%'
-  
+
   POP_SUB(X(write_implied_occupations))
 end subroutine X(write_implied_occupations)
 

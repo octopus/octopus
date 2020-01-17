@@ -68,16 +68,16 @@ contains
       !TODO: This does not support complex scaling
       if (family_is_mgga_with_exc(hm%xc)) then
         call potential_interpolation_interpolate(tr%vksold, 2, time, dt, time-dt/M_TWO, &
-                  hm%vhxc, vtau = hm%vtau)
+          hm%vhxc, vtau = hm%vtau)
       else
         call potential_interpolation_interpolate(tr%vksold, 2, time, dt, time-dt/M_TWO, &
-                  hm%vhxc)
+          hm%vhxc)
       end if
     end if
 
     !move the ions to time 'time - dt/2'
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
-                time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
+      time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time-dt/M_TWO)
 

@@ -42,13 +42,13 @@ module maxwell_boundary_op_oct_m
   use simul_box_oct_m
   use varinfo_oct_m
   use states_mxll_oct_m
-  
+
   implicit none
 
   private
   public ::                    &
     bc_mxll_init,              &
-    bc_mxll_end,               &   
+    bc_mxll_end,               &
     bc_mxll_write_info,        &
     bc_mxll_t
 
@@ -161,7 +161,7 @@ contains
     type(geometry_t),         intent(in)    :: geo
     FLOAT, optional,          intent(in)    :: dt
 
-    integer             :: idim, ab_shape_dim, nlines, icol, ncols 
+    integer             :: idim, ab_shape_dim, nlines, icol, ncols
     FLOAT               :: bounds(1:2,3), ab_bounds(1:2,3)
     FLOAT               :: mask_width, pml_width, zero_width
     type(block_t)       :: blk
@@ -182,7 +182,7 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedMaxwellIncidentWaves
-    !% <br>&nbsp;&nbsp;   maxwell_zero | maxwell_mirror_pec | maxwell_consant 
+    !% <br>&nbsp;&nbsp;   maxwell_zero | maxwell_mirror_pec | maxwell_consant
     !% <br>%</tt>
     !%
     !% Description follows
@@ -222,7 +222,7 @@ contains
       do icol = 1, ncols
         call parse_block_integer(blk, 0, icol-1, bc%bc_type(icol))
         select case (bc%bc_type(icol))
-          case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO)
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO)
           string = 'Zero'
         case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT)
           string = 'Constant'
@@ -248,7 +248,7 @@ contains
 
       call messages_print_stress(stdout, namespace=namespace)
     end if
-    
+
     !%Variable MaxwellAbsorbingBoundaries
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -399,11 +399,11 @@ contains
           bc%zero_width = zero_width
 
           if ( zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+            zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+            zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
             zero_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                gr%der%order*gr%mesh%spacing(2), &
-                                gr%der%order*gr%mesh%spacing(2))
+              gr%der%order*gr%mesh%spacing(2), &
+              gr%der%order*gr%mesh%spacing(2))
             write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
             write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
             call messages_info(2)
@@ -431,11 +431,11 @@ contains
           call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
           bc%mask_width = mask_width
           if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+            mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+            mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
             mask_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                gr%der%order*gr%mesh%spacing(2), &
-                                gr%der%order*gr%mesh%spacing(2))
+              gr%der%order*gr%mesh%spacing(2), &
+              gr%der%order*gr%mesh%spacing(2))
             write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
             write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
             call messages_info(2)
@@ -473,11 +473,11 @@ contains
           bc%pml_width = pml_width
           if (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) then
             if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+              pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+              pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
               pml_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                  gr%der%order*gr%mesh%spacing(2), &
-                                  gr%der%order*gr%mesh%spacing(2))
+                gr%der%order*gr%mesh%spacing(2), &
+                gr%der%order*gr%mesh%spacing(2))
               write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
               write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
               call messages_info(2)
@@ -506,40 +506,40 @@ contains
       if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
         if (bc%bc_ab_type(idim) == AB_CPML) then
           string = "  PML Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  PML Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(message(2),'(a)') trim(string)
           call messages_info(2)
         else if (bc%bc_ab_type(idim) == AB_MASK) then
           string = "  Mask Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  Mask Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(message(2),'(a)') trim(string)
           call messages_info(2)
         else if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
           string = "  Zero Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
           write(message(1),'(a)') trim(string)
           string = "  Zero Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+            units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
+          write(message(2),'(a)') trim(string)
           call messages_info(2)
         end if
       else
-        write(message(1),'(a,es10.3,3a)') & 
+        write(message(1),'(a,es10.3,3a)') &
           "  Lower bound = ", units_from_atomic(units_inp%length, ab_bounds(1, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
-        write(message(2),'(a,es10.3,3a)') & 
+        write(message(2),'(a,es10.3,3a)') &
           "  Upper bound = ", units_from_atomic(units_inp%length, ab_bounds(2, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
         call messages_info(2)
@@ -770,72 +770,72 @@ contains
 
     POP_SUB(bc_write_info)
 
-    contains
+  contains
 
-      subroutine get_pml_io_function(pml_func, bc, io_func)
-        FLOAT,              intent(in)    :: pml_func(:)
-        type(bc_mxll_t),    intent(in)    :: bc
-        FLOAT,              intent(inout) :: io_func(:)
+    subroutine get_pml_io_function(pml_func, bc, io_func)
+      FLOAT,              intent(in)    :: pml_func(:)
+      type(bc_mxll_t),    intent(in)    :: bc
+      FLOAT,              intent(inout) :: io_func(:)
 
-        integer :: ip, ip_in
+      integer :: ip, ip_in
 
-        do ip_in = 1, bc%pml_points_number
-          ip          = bc%pml_points_map(ip_in)
-          io_func(ip) = pml_func(ip_in)
+      do ip_in = 1, bc%pml_points_number
+        ip          = bc%pml_points_map(ip_in)
+        io_func(ip) = pml_func(ip_in)
+      end do
+
+    end subroutine get_pml_io_function
+
+    subroutine get_mask_io_function(mask_func, bc, io_func)
+      FLOAT,              intent(in)    :: mask_func(:,:)
+      type(bc_mxll_t),    intent(in)    :: bc
+      FLOAT,              intent(inout) :: io_func(:)
+
+      integer :: ip, ip_in, idim
+
+      do ip_in = 1, bc%mask_points_number(idim)
+        ip          = bc%mask_points_map(ip_in, idim)
+        io_func(ip) = mask_func(ip_in, idim)
+      end do
+
+    end subroutine get_mask_io_function
+
+    subroutine get_medium_io_function(medium_func, bc, io_func)
+      FLOAT,              intent(in)    :: medium_func(:,:)
+      type(bc_mxll_t),    intent(in)    :: bc
+      FLOAT,              intent(inout) :: io_func(:)
+
+      integer :: ip, ip_in, idim
+
+      do idim = 1, 3
+        do ip_in = 1, bc%medium_points_number(idim)
+          ip          = bc%medium_points_map(ip_in, idim)
+          io_func(ip) = medium_func(ip_in, idim)
         end do
+      end do
 
-      end subroutine get_pml_io_function
-
-      subroutine get_mask_io_function(mask_func, bc, io_func)
-        FLOAT,              intent(in)    :: mask_func(:,:)
-        type(bc_mxll_t),    intent(in)    :: bc
-        FLOAT,              intent(inout) :: io_func(:)
-
-        integer :: ip, ip_in, idim
-
-        do ip_in = 1, bc%mask_points_number(idim)
-          ip          = bc%mask_points_map(ip_in, idim)
-          io_func(ip) = mask_func(ip_in, idim)
-        end do
-
-      end subroutine get_mask_io_function
-
-      subroutine get_medium_io_function(medium_func, bc, io_func)
-        FLOAT,              intent(in)    :: medium_func(:,:)
-        type(bc_mxll_t),    intent(in)    :: bc
-        FLOAT,              intent(inout) :: io_func(:)
-
-        integer :: ip, ip_in, idim
-
-        do idim = 1, 3
-          do ip_in = 1, bc%medium_points_number(idim)
-            ip          = bc%medium_points_map(ip_in, idim)
-            io_func(ip) = medium_func(ip_in, idim)
-          end do
-        end do
-
-      end subroutine get_medium_io_function
+    end subroutine get_medium_io_function
 
 
-      subroutine write_files(filename, tmp)
-        character(len=*), intent(in) :: filename
-        FLOAT,            intent(in) :: tmp(:)
+    subroutine write_files(filename, tmp)
+      character(len=*), intent(in) :: filename
+      FLOAT,            intent(in) :: tmp(:)
 
-        call dio_function_output(io_function_fill_how("VTK"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("AxisX"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("AxisY"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-        call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", trim(filename), &
-                     namespace, mesh, tmp, unit_one, err)
-      end subroutine write_files
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisX"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisY"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("AxisZ"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneX"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneY"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", trim(filename), &
+        namespace, mesh, tmp, unit_one, err)
+    end subroutine write_files
 
 
   end subroutine bc_mxll_write_info
@@ -976,7 +976,7 @@ contains
     ip_in_max = 0
     do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC .or. &
-          bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
+        bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
         ! allocate zero points map
         ip_in = 0
         do ip = 1, mesh%np
@@ -993,7 +993,7 @@ contains
 
     do idim = 1, 3
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC .or. &
-          bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
+        bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
         ! zero points mapping
         ip_in = 0
         do ip = 1, mesh%np
@@ -1144,7 +1144,7 @@ contains
           end if
           if ((boundary_info == 1) .and. (abs(mesh%x(ip, idim)) >= bounds(1, idim))) then
             ip_bd = ip_bd + 1
-           bc%medium_bdry_map(ip_bd, idim) = ip
+            bc%medium_bdry_map(ip_bd, idim) = ip
           end if
         end do
       end if
@@ -1163,7 +1163,7 @@ contains
     integer :: ii, jj, ip_surf, rankmin, ip_local, ip_global, np_surf(3), max_np_surf
     FLOAT   :: rr(3), dmin
 
-    PUSH_SUB(maxwell_surface_points_mapping) 
+    PUSH_SUB(maxwell_surface_points_mapping)
 
     ! surface elements in each dimension:
     st%surface_element(1) = mesh%spacing(2) * mesh%spacing(3)
@@ -1568,7 +1568,7 @@ contains
             if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_ep * (M_ONE + bc%medium_ep_factor &
-                  * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
+            * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
@@ -1593,13 +1593,13 @@ contains
             if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_mu * (M_ONE + bc%medium_mu_factor &
-                  * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+            * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
         end if
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
       do ip_in = 1, bc%medium_points_number(idim)
         ip = bc%medium_points_map(ip_in, idim)
-        bc%medium_aux_mu(ip_in, :, idim) = & 
+        bc%medium_aux_mu(ip_in, :, idim) = &
           tmp_grad(ip, :)/(M_FOUR*P_mu*bc%medium_mu_factor * M_ONE/(M_ONE + exp(-M_FIVE/dd_max-dd)))
       end do
     end do
@@ -1615,21 +1615,21 @@ contains
           dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
           if (dd < dd_min) dd_min = dd
         end do
-        bc%medium_ep(ip_in, idim) = P_ep * (M_ONE+bc%medium_ep_factor & 
-                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_ep(ip_in, idim) = P_ep * (M_ONE+bc%medium_ep_factor &
+          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
         bc%medium_mu(ip_in, idim) = P_mu * (M_ONE+bc%medium_mu_factor &
-                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
-        bc%medium_sigma_e(ip_in, idim) = (M_ONE+bc%medium_sigma_e_factor & 
-                                               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+        bc%medium_sigma_e(ip_in, idim) = (M_ONE+bc%medium_sigma_e_factor &
+          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
         bc%medium_sigma_m(ip_in, idim) = (M_ONE+bc%medium_sigma_m_factor &
-                                               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
+          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) ) )
         bc%medium_c(ip_in, idim) = M_ONE/sqrt(bc%medium_ep(ip_in, idim)*bc%medium_mu(ip_in, idim))
       end do
     end do
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
- 
+
     POP_SUB(bc_mxll_generate_medium)
   end subroutine bc_mxll_generate_medium
 
@@ -1654,9 +1654,9 @@ contains
     !%Type block
     !%Section MaxwellStates
     !%Description
-    !% The initial electromagnetic fields can be set by the user 
+    !% The initial electromagnetic fields can be set by the user
     !% with the <tt>UserDefinedMaxwellIncidentWaves</tt> block variable.
-    !% The electromagnetic fields have to fulfill the 
+    !% The electromagnetic fields have to fulfill the
     !% Maxwells equations in vacuum.
     !%
     !% Example:
@@ -1773,9 +1773,9 @@ contains
           write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
           call messages_info(4)
           call mxf_read(bc%plane_waves_mx_function(il), namespace, trim(mxf_expression), ierr)
-          if (ierr /= 0) then            
+          if (ierr /= 0) then
             write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), '"" field defined in the &
-                                      UserDefinedMaxwellIncidentWaves block'
+              UserDefinedMaxwellIncidentWaves block'
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
@@ -1818,7 +1818,7 @@ contains
           !write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
           call messages_info(3)
           !call mxf_read(bc%plane_waves_mx_function(il), trim(mxf_expression), ierr)
-          !if (ierr /= 0) then            
+          !if (ierr /= 0) then
           !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), '" field defined in the &
           !                            UserDefinedMaxwellIncidentWaves block'
           !  call messages_fatal(1, namespace=namespace)
@@ -1828,12 +1828,12 @@ contains
           bc%plane_waves_e_field(:, il)  = e_field(:)
           bc%plane_waves_k_vector(:, il) = k_vector(:)
 
-          bc%plane_waves_v_vector(:, il) = M_ZERO 
+          bc%plane_waves_v_vector(:, il) = M_ZERO
           bc%plane_waves_v_vector(3, il) = sqrt(k_vector(1)**2 + k_vector(2)**2)*P_c/k_vector(2)
 
           bc%plane_waves_oam(il) = oam
           bc%plane_waves_sam(il) = sam
-         end if
+        end if
       end do
 
       call messages_print_stress(stdout, namespace=namespace)
@@ -1947,64 +1947,64 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info) 
+  subroutine maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
     type(bc_mxll_t),     intent(inout) :: bc
     type(mesh_t),        intent(in)    :: mesh
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
     type(geometry_t),    intent(in)    :: geo
     integer,             intent(out)   :: point_info
- 
+
     FLOAT   :: rr, dd, xx(3), width(3)
-    
+
     point_info = 0
-    
+
     width(:) = bounds(2, :) - bounds(1, :)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
 
-      if(bc%ab_user_def) then
+    if(bc%ab_user_def) then
 
-        dd = bc%ab_ufn(ip) - bounds(1, 1)
-        if(dd > M_ZERO) then
-          if(bc%ab_ufn(ip) < bounds(2, 1) ) then
-             point_info = 1
-          end if
-        end if
-
-      else ! bc%ab_user_def == .false.
-
-        if(mesh%sb%box_shape == SPHERE) then
-
-          dd = rr -  bounds(1, 1)
-          if(dd > M_ZERO ) then
-            if (dd  <  width(1)) then
-              point_info = 1
-            end if
-          end if
-
-        else if (mesh%sb%box_shape == PARALLELEPIPED) then
-
-          ! Limits of boundary region
-          if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
-            if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
-              point_info = 1
-            else
-              point_info = 0
-            end if
-          else
-            point_info = -1
-          end if
-
-        else
-
-          if(mesh_inborder(mesh, geo, ip, dd, width(1))) then
-            point_info = 1
-          end if
-
+      dd = bc%ab_ufn(ip) - bounds(1, 1)
+      if(dd > M_ZERO) then
+        if(bc%ab_ufn(ip) < bounds(2, 1) ) then
+          point_info = 1
         end if
       end if
+
+    else ! bc%ab_user_def == .false.
+
+      if(mesh%sb%box_shape == SPHERE) then
+
+        dd = rr -  bounds(1, 1)
+        if(dd > M_ZERO ) then
+          if (dd  <  width(1)) then
+            point_info = 1
+          end if
+        end if
+
+      else if (mesh%sb%box_shape == PARALLELEPIPED) then
+
+        ! Limits of boundary region
+        if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
+          if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
+            point_info = 1
+          else
+            point_info = 0
+          end if
+        else
+          point_info = -1
+        end if
+
+      else
+
+        if(mesh_inborder(mesh, geo, ip, dd, width(1))) then
+          point_info = 1
+        end if
+
+      end if
+    end if
 
   end subroutine maxwell_box_point_info
 
@@ -2075,7 +2075,7 @@ contains
     integer,             intent(in)    :: ip
     FLOAT,               intent(in)    :: bounds(:,:)
     integer,             intent(out)   :: boundary_info
- 
+
     FLOAT   :: xx(3)
 
     boundary_info = 0
@@ -2083,8 +2083,8 @@ contains
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     if ( abs(xx(1)) == bounds(1, 1) .and. (abs(xx(2)) <= bounds(1, 2) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
-         abs(xx(2)) == bounds(1, 2) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
-         abs(xx(3)) == bounds(1, 3) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(2)) <= bounds(1, 2)) ) then
+      abs(xx(2)) == bounds(1, 2) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
+      abs(xx(3)) == bounds(1, 3) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(2)) <= bounds(1, 2)) ) then
       boundary_info = 1
     else
       boundary_info = 0

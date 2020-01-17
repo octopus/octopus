@@ -55,7 +55,7 @@ module eigen_rmmdiis_oct_m
   type(profile_t), save :: prof, prof_iter
   type(profile_t), save :: prof_lc, prof_sync
 
-  contains
+contains
 
 #include "real.F90"
 #include "eigen_rmmdiis_inc.F90"
@@ -65,7 +65,7 @@ module eigen_rmmdiis_oct_m
 #include "eigen_rmmdiis_inc.F90"
 #include "undef.F90"
 
-  end module eigen_rmmdiis_oct_m
+end module eigen_rmmdiis_oct_m
 
 
 !! Local Variables:

@@ -23,29 +23,29 @@ module qshep_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
-  
+
   implicit none
 
   private
   public :: qshep_t, &
-            qshep_init, &
-            qshep_interpolate, &
-            qshep_end
+    qshep_init, &
+    qshep_interpolate, &
+    qshep_end
 
   type qshepr_t
-   private
-   integer :: npoints, nq, nw, nr, dim
-   integer, pointer :: lcell(:, :, :), lnext(:)
-   real(8), pointer :: rsq(:), a(:, :)
-   real(8) :: xmin, ymin, dx, dy, rmax, xyzmin(3), xyzdel(3)
+    private
+    integer :: npoints, nq, nw, nr, dim
+    integer, pointer :: lcell(:, :, :), lnext(:)
+    real(8), pointer :: rsq(:), a(:, :)
+    real(8) :: xmin, ymin, dx, dy, rmax, xyzmin(3), xyzdel(3)
 
-   real(8), pointer :: x(:), y(:), z(:)
+    real(8), pointer :: x(:), y(:), z(:)
   end type qshepr_t
 
   type qshep_t
-   private
-   integer :: kind !< 0 for real functions (im is not used);  for complex ones.
-   type(qshepr_t) :: re, im
+    private
+    integer :: kind !< 0 for real functions (im is not used);  for complex ones.
+    type(qshepr_t) :: re, im
   end type qshep_t
 
   interface qshep_init
@@ -150,7 +150,7 @@ module qshep_oct_m
       integer :: ier
     end subroutine qs3grd
   end interface
-  
+
 contains
 
   ! ------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ contains
     POP_SUB(dqshep_init)
   end subroutine dqshep_init
 
-  
+
   ! ------------------------------------------------------------------------------
   subroutine zqshep_init(interp, npoints, f, x, y, z)
     type(qshep_t), intent(out) :: interp
@@ -215,7 +215,7 @@ contains
       interp%nr = nint(sqrt(interp%npoints/3.0_8))
       SAFE_ALLOCATE(interp%lcell(1:interp%nr, 1:interp%nr, 1:1))
       SAFE_ALLOCATE(interp%a(1:5, 1:npoints))
-    case(3) 
+    case(3)
       interp%nq = 17 ! This is the recommended value in qshep3d.f90
       interp%nw = 16 ! The recommended value in qshep3d.f90 is 32, but this speeds up things.
       interp%nr = nint((interp%npoints/3.0_8)**(1.0_8/3.0_8))
@@ -229,16 +229,16 @@ contains
     select case(interp%dim)
     case(2)
       call qshep2 ( npoints, x, y, f, interp%nq, interp%nw, interp%nr, interp%lcell(:, :, 1), &
-                    interp%lnext, interp%xmin, interp%ymin, interp%dx, interp%dy, &
-                    interp%rmax, interp%rsq, interp%a, ier )
+        interp%lnext, interp%xmin, interp%ymin, interp%dx, interp%dy, &
+        interp%rmax, interp%rsq, interp%a, ier )
       SAFE_ALLOCATE(interp%x(1:npoints))
       SAFE_ALLOCATE(interp%y(1:npoints))
       interp%x(1:npoints) = x(1:npoints)
       interp%y(1:npoints) = y(1:npoints)
     case(3)
       call qshep3 ( npoints, x, y, z, f, interp%nq, interp%nw, interp%nr, interp%lcell, &
-                    interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
-                    interp%a, ier )
+        interp%lnext, interp%xyzmin, interp%xyzdel, interp%rmax, interp%rsq, &
+        interp%a, ier )
       SAFE_ALLOCATE(interp%x(1:npoints))
       SAFE_ALLOCATE(interp%y(1:npoints))
       SAFE_ALLOCATE(interp%z(1:npoints))
@@ -261,29 +261,29 @@ contains
     integer :: ier
 
     PUSH_SUB(qshep_interpolater)
-    
+
     select case(interp%dim)
     case(2)
       if(present(gf)) then
         call qs2grd( p(1), p(2), interp%npoints, interp%x, interp%y, &
-                     f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
-                     interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a, &
-                     v, gf(1), gf(2), ier) 
+          f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
+          interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a, &
+          v, gf(1), gf(2), ier)
       else
         v = qs2val ( p(1), p(2), interp%npoints, interp%x, interp%y, &
-                     f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
-                     interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a) 
+          f, interp%nr, interp%lcell(:, :, 1), interp%lnext, interp%xmin, &
+          interp%ymin, interp%dx, interp%dy, interp%rmax, interp%rsq, interp%a)
       end if
     case(3)
       if(present(gf)) then
         call qs3grd( p(1), p(2), p(3), interp%npoints, interp%x, interp%y, interp%z, &
-                     f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
-                     interp%xyzdel, interp%rmax, interp%rsq, interp%a , &
-                     v, gf(1), gf(2), gf(3), ier)
+          f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
+          interp%xyzdel, interp%rmax, interp%rsq, interp%a , &
+          v, gf(1), gf(2), gf(3), ier)
       else
         v = qs3val ( p(1), p(2), p(3), interp%npoints, interp%x, interp%y, interp%z, &
-                     f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
-                     interp%xyzdel, interp%rmax, interp%rsq, interp%a )
+          f, interp%nr, interp%lcell, interp%lnext, interp%xyzmin, &
+          interp%xyzdel, interp%rmax, interp%rsq, interp%a )
       end if
     end select
 
@@ -317,12 +317,12 @@ contains
     real(8), allocatable :: rgf(:), igf(:)
 
     PUSH_SUB(zqshep_interpolate)
-    
+
     if(present(gf)) then
       SAFE_ALLOCATE(rgf(1:size(gf)))
       SAFE_ALLOCATE(igf(1:size(gf)))
       v = cmplx(qshep_interpolater(interp%re, real(f), p, rgf ), &
-                qshep_interpolater(interp%im, aimag(f), p, igf ), 8) 
+        qshep_interpolater(interp%im, aimag(f), p, igf ), 8)
       do i = 1, size(gf)
         gf(i) = cmplx( rgf(i), igf(i), 8)
       end do
@@ -330,7 +330,7 @@ contains
       SAFE_DEALLOCATE_A(igf)
     else
       v = cmplx(qshep_interpolater(interp%re, real(f), p ), &
-                qshep_interpolater(interp%im, aimag(f), p ), 8) 
+        qshep_interpolater(interp%im, aimag(f), p ), 8)
     end if
 
     POP_SUB(zqshep_interpolate)
@@ -364,7 +364,7 @@ contains
       SAFE_DEALLOCATE_P(interp%x)
       SAFE_DEALLOCATE_P(interp%y)
       if(interp%dim .eq. 3) then
-         SAFE_DEALLOCATE_P(interp%z)
+        SAFE_DEALLOCATE_P(interp%z)
       end if
     end if
 

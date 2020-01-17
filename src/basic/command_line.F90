@@ -39,18 +39,18 @@ module command_line_oct_m
   !! The compilation depends on several macros defined at configure time (the m4 code that
   !! takes care of testing the compiler in order to build this macros is in m4/fc_command_line_m4):
   !!
-  !! FC_COMMAND_LINE_ARGUMENTS maybe be "2003", "77", or undefined. In the first case, 
+  !! FC_COMMAND_LINE_ARGUMENTS maybe be "2003", "77", or undefined. In the first case,
   !!   the "get_command_argument", "command_argument_count", and "get_command" routines
   !!   are defined. In the second case, they are coded here, by accessing the non-standard
   !!   FORTRAN 77 "getarg" and "iargc", present in many compiler extensions. If this macro
   !!   is undefined, then the command line arguments cannot be accessed at all.
   !! FC_COMMAND_LINE_MODULE is the module that should be used in order to have access to
-  !!   the getarg and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77".  This 
+  !!   the getarg and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77".  This
   !!   module depends on the compiler, and in some cases it is none at all.
   !! FC_COMMAND_LINE_INCLUDE is the file to be included in order to have access to the getarg
   !!   and iargc procedures, in case "FC_COMMAND_LINE_ARGUMENTS = 77". This file depends on
   !!   the compiler, and in some case it is none at all.
-  !! FC_COMMAND_LINE_INTRINSIC is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the 
+  !! FC_COMMAND_LINE_INTRINSIC is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the
   !!   procedures iargc and getarg are intrinsi, i.e. there is no need to use any module,
   !!   include any file, or declare them.
   !! FC_COMMAND_LINE_IMPLICIT is defined if "FC_COMMAND_LINE_ARGUMENTS = 77", and the procedures
@@ -70,21 +70,21 @@ module command_line_oct_m
 
   private
   public :: getopt_init,                 &
-            getopt_end,                  &
-            getopt_octopus,              &
-            getopt_casida_spectrum,      &
-            getopt_center_geom,          &
-            getopt_dielectric_function,  &
-            getopt_propagation_spectrum, &
-            getopt_vibrational,          &
-            getopt_xyz_anim,             &
-            getopt_oscillator_strength,  &
-            getopt_harmonic_spectrum,    &
-            getopt_help,                 &
-            getopt_photoelectron_spectrum
+    getopt_end,                  &
+    getopt_octopus,              &
+    getopt_casida_spectrum,      &
+    getopt_center_geom,          &
+    getopt_dielectric_function,  &
+    getopt_propagation_spectrum, &
+    getopt_vibrational,          &
+    getopt_xyz_anim,             &
+    getopt_oscillator_strength,  &
+    getopt_harmonic_spectrum,    &
+    getopt_help,                 &
+    getopt_photoelectron_spectrum
 #if FC_COMMAND_LINE_ARGUMENTS != 2003
   public :: command_argument_count,     &
-            get_command_argument
+    get_command_argument
 #endif
 
 
@@ -130,8 +130,8 @@ module command_line_oct_m
     end subroutine getopt_xyz_anim
 
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
-                                          order, nresonances, nfrequencies, time, &
-                                          l, m, damping, file)
+      order, nresonances, nfrequencies, time, &
+      l, m, damping, file)
       implicit none
       integer, intent(inout) :: mode
       real(8), intent(inout) :: omega
@@ -159,7 +159,7 @@ module command_line_oct_m
       character(len=*), intent(inout) :: mode
       character(len=*), intent(inout) :: name
     end subroutine getopt_help
-    
+
     subroutine getopt_photoelectron_spectrum(estep, espan, &
       thstep, thspan, phstep, phspan, pol, center, pvec, integrate)
       implicit none
@@ -186,26 +186,26 @@ module command_line_oct_m
 
   interface command_argument_count
 #ifdef FC_COMMAND_LINE_IMPLICIT
-     integer function iargc() 
-       implicit none
-     end function iargc
+    integer function iargc()
+      implicit none
+    end function iargc
 #else
-     module procedure iargc
+    module procedure iargc
 #endif
   end interface
 
   interface get_command_argument
 #ifdef FC_COMMAND_LINE_IMPLICIT
-     subroutine getarg(c, a)
-       implicit none
-       integer,          intent(in)  :: c
-       character(len=*), intent(out) :: a
-     end subroutine getarg
+    subroutine getarg(c, a)
+      implicit none
+      integer,          intent(in)  :: c
+      character(len=*), intent(out) :: a
+    end subroutine getarg
 #else
-     module procedure getarg
+    module procedure getarg
 #endif
   end interface
-  
+
 #endif /* FC_COMMAND_LINE_ARGUMENTS == 77 */
 
 
@@ -213,7 +213,7 @@ module command_line_oct_m
   !> The following interfaces are private to this module, and should
   !! not be called from outside.
 
-  interface 
+  interface
     subroutine set_number_clarg(argc)
       implicit none
       integer, intent(in) :: argc
@@ -251,7 +251,7 @@ contains
     do i = 0, argc
       call get_command_argument(i, argstring(i))
       call set_clarg(i, argstring(i))
-    end do  
+    end do
     deallocate(argstring)
     ierr = 0
 #else

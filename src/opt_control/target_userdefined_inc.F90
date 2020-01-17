@@ -17,196 +17,196 @@
 !!
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_init_userdefined(gr, namespace, tg, td)
-    type(grid_t),      intent(in)    :: gr
-    type(namespace_t), intent(in)    :: namespace
-    type(target_t),    intent(inout) :: tg
-    type(td_t),        intent(in)    :: td
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_init_userdefined(gr, namespace, tg, td)
+  type(grid_t),      intent(in)    :: gr
+  type(namespace_t), intent(in)    :: namespace
+  type(target_t),    intent(inout) :: tg
+  type(td_t),        intent(in)    :: td
 
-    integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
-    type(block_t)       :: blk
-    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
-    CMPLX, allocatable  :: zpsi(:, :)
-    
-    PUSH_SUB(target_init_userdefined)
+  integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
+  type(block_t)       :: blk
+  FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+  CMPLX, allocatable  :: zpsi(:, :)
 
-    message(1) =  'Info: Target is a user-defined state.'
-    call messages_info(1)
+  PUSH_SUB(target_init_userdefined)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
-    tg%dt = td%dt
+  message(1) =  'Info: Target is a user-defined state.'
+  call messages_info(1)
 
-    SAFE_ALLOCATE(zpsi(gr%mesh%np, 1:tg%st%d%dim))
-      
-    !%Variable OCTTargetUserdefined
-    !%Type block
-    !%Section Calculation Modes::Optimal Control
-    !%Description
-    !% Define a target state. Syntax follows the one of the <tt>UserDefinedStates</tt> block.
-    !% Example:
-    !%
-    !% <tt>%OCTTargetUserdefined
-    !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
-    !% <br>%</tt>
-    !%  
-    !%End
-    if(parse_block(namespace, 'OCTTargetUserdefined', blk) == 0) then
-        
-      no_states = parse_block_n(blk)
-      do ib = 1, no_states
-        call parse_block_integer(blk, ib - 1, 0, idim)
-        call parse_block_integer(blk, ib - 1, 1, inst)
-        call parse_block_integer(blk, ib - 1, 2, inik)
+  tg%move_ions = ion_dynamics_ions_move(td%ions)
+  tg%dt = td%dt
 
-        ! read formula strings and convert to C strings
-        do id = 1, tg%st%d%dim
-          do ist = 1, tg%st%nst
-            do ik = 1, tg%st%d%nik   
-                
-              ! does the block entry match and is this node responsible?
-              if(.not. (id  ==  idim .and. ist  ==  inst .and. ik  ==  inik    &
-                .and. tg%st%st_start  <=  ist .and. tg%st%st_end >= ist) ) cycle
-              
-              ! parse formula string
-              call parse_block_string(                            &
-                blk, ib - 1, 3, tg%st%user_def_states(id, ist, ik))
-              ! convert to C string
-              call conv_to_C_string(tg%st%user_def_states(id, ist, ik))
-              
-              do ip = 1, gr%mesh%np
-                xx = gr%mesh%x(ip, :)
-                rr = sqrt(sum(xx(:)**2))
-                
-                ! parse user-defined expressions
-                call parse_expression(psi_re, psi_im, &
-                  gr%sb%dim, xx, rr, M_ZERO, tg%st%user_def_states(id, ist, ik))
-                ! fill state
-                zpsi(ip, id) = psi_re + M_zI*psi_im
-              end do
-              
-              ! normalize orbital
-              call zmf_normalize(gr%mesh, tg%st%d%dim, zpsi)
+  SAFE_ALLOCATE(zpsi(gr%mesh%np, 1:tg%st%d%dim))
 
-              call states_elec_set_state(tg%st, gr%mesh, ist, ik, zpsi)
-              
+  !%Variable OCTTargetUserdefined
+  !%Type block
+  !%Section Calculation Modes::Optimal Control
+  !%Description
+  !% Define a target state. Syntax follows the one of the <tt>UserDefinedStates</tt> block.
+  !% Example:
+  !%
+  !% <tt>%OCTTargetUserdefined
+  !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
+  !% <br>%</tt>
+  !%
+  !%End
+  if(parse_block(namespace, 'OCTTargetUserdefined', blk) == 0) then
+
+    no_states = parse_block_n(blk)
+    do ib = 1, no_states
+      call parse_block_integer(blk, ib - 1, 0, idim)
+      call parse_block_integer(blk, ib - 1, 1, inst)
+      call parse_block_integer(blk, ib - 1, 2, inik)
+
+      ! read formula strings and convert to C strings
+      do id = 1, tg%st%d%dim
+        do ist = 1, tg%st%nst
+          do ik = 1, tg%st%d%nik
+
+            ! does the block entry match and is this node responsible?
+            if(.not. (id  ==  idim .and. ist  ==  inst .and. ik  ==  inik    &
+              .and. tg%st%st_start  <=  ist .and. tg%st%st_end >= ist) ) cycle
+
+            ! parse formula string
+            call parse_block_string(                            &
+              blk, ib - 1, 3, tg%st%user_def_states(id, ist, ik))
+            ! convert to C string
+            call conv_to_C_string(tg%st%user_def_states(id, ist, ik))
+
+            do ip = 1, gr%mesh%np
+              xx = gr%mesh%x(ip, :)
+              rr = sqrt(sum(xx(:)**2))
+
+              ! parse user-defined expressions
+              call parse_expression(psi_re, psi_im, &
+                gr%sb%dim, xx, rr, M_ZERO, tg%st%user_def_states(id, ist, ik))
+              ! fill state
+              zpsi(ip, id) = psi_re + M_zI*psi_im
             end do
+
+            ! normalize orbital
+            call zmf_normalize(gr%mesh, tg%st%d%dim, zpsi)
+
+            call states_elec_set_state(tg%st, gr%mesh, ist, ik, zpsi)
+
           end do
         end do
       end do
-      call parse_block_end(blk)
-      call density_calc(tg%st, gr, tg%st%rho)
-    else
-      message(1) = '"OCTTargetUserdefined" has to be specified as block.'
-      call messages_fatal(1)
-    end if
-
-    SAFE_DEALLOCATE_A(zpsi)
-    
-    POP_SUB(target_init_userdefined)
-  end subroutine target_init_userdefined
-
-
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_end_userdefined()
-    PUSH_SUB(target_end_userdefined)
-
-    POP_SUB(target_end_userdefined)
-  end subroutine target_end_userdefined
-
-
-  ! ----------------------------------------------------------------------
-  subroutine target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
-    type(target_t),      intent(in) :: tg
-    type(namespace_t),   intent(in) :: namespace
-    type(grid_t),        intent(in) :: gr
-    character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_elec_t), intent(in) :: hm
-    type(output_t),      intent(in) :: outp
-    PUSH_SUB(target_output_userdefined)
-    
-    call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
-
-    POP_SUB(target_output_userdefined)
-  end subroutine target_output_userdefined
-  ! ----------------------------------------------------------------------
-
-
-  ! ----------------------------------------------------------------------
-  !> 
-  FLOAT function target_j1_userdefined(tg, gr, psi) result(j1)
-    type(target_t),      intent(in) :: tg
-    type(grid_t),        intent(in) :: gr
-    type(states_elec_t), intent(in) :: psi
-
-    integer :: ik, ist
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :)
-        
-    PUSH_SUB(target_j1_userdefined)
-
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    
-    j1 = M_ZERO
-    do ik = 1, psi%d%nik
-      do ist = psi%st_start, psi%st_end
-
-        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
-      end do
     end do
+    call parse_block_end(blk)
+    call density_calc(tg%st, gr, tg%st%rho)
+  else
+    message(1) = '"OCTTargetUserdefined" has to be specified as block.'
+    call messages_fatal(1)
+  end if
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    
-    POP_SUB(target_j1_userdefined)
-  end function target_j1_userdefined
+  SAFE_DEALLOCATE_A(zpsi)
+
+  POP_SUB(target_init_userdefined)
+end subroutine target_init_userdefined
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_chi_userdefined(tg, gr, psi_in, chi_out)
-    type(target_t),      intent(in)    :: tg
-    type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi_in
-    type(states_elec_t), intent(inout) :: chi_out
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_end_userdefined()
+  PUSH_SUB(target_end_userdefined)
 
-    integer :: ik, ist
-    CMPLX :: olap
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
-    
-    PUSH_SUB(target_chi_userdefined)
+  POP_SUB(target_end_userdefined)
+end subroutine target_end_userdefined
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
 
-    do ik = 1, psi_in%d%nik
-      do ist = psi_in%st_start, psi_in%st_end
+ ! ----------------------------------------------------------------------
+subroutine target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
+  type(target_t),      intent(in) :: tg
+  type(namespace_t),   intent(in) :: namespace
+  type(grid_t),        intent(in) :: gr
+  character(len=*),    intent(in) :: dir
+  type(geometry_t),    intent(in) :: geo
+  type(hamiltonian_elec_t), intent(in) :: hm
+  type(output_t),      intent(in) :: outp
+  PUSH_SUB(target_output_userdefined)
 
-        call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
-        zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+  call io_mkdir(trim(dir), namespace)
+  call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
-        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+  POP_SUB(target_output_userdefined)
+end subroutine target_output_userdefined
+ ! ----------------------------------------------------------------------
 
-      end do
+
+ ! ----------------------------------------------------------------------
+ !>
+FLOAT function target_j1_userdefined(tg, gr, psi) result(j1)
+  type(target_t),      intent(in) :: tg
+  type(grid_t),        intent(in) :: gr
+  type(states_elec_t), intent(in) :: psi
+
+  integer :: ik, ist
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :)
+
+  PUSH_SUB(target_j1_userdefined)
+
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+
+  j1 = M_ZERO
+  do ik = 1, psi%d%nik
+    do ist = psi%st_start, psi%st_end
+
+      call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
     end do
+  end do
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    SAFE_DEALLOCATE_A(zchi)
-    
-    POP_SUB(target_chi_userdefined)
-  end subroutine target_chi_userdefined
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+
+  POP_SUB(target_j1_userdefined)
+end function target_j1_userdefined
+
+
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_chi_userdefined(tg, gr, psi_in, chi_out)
+  type(target_t),      intent(in)    :: tg
+  type(grid_t),        intent(in)    :: gr
+  type(states_elec_t), intent(in)    :: psi_in
+  type(states_elec_t), intent(inout) :: chi_out
+
+  integer :: ik, ist
+  CMPLX :: olap
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
+
+  PUSH_SUB(target_chi_userdefined)
+
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
+
+  do ik = 1, psi_in%d%nik
+    do ist = psi_in%st_start, psi_in%st_end
+
+      call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
+      zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+
+      call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+  SAFE_DEALLOCATE_A(zchi)
+
+  POP_SUB(target_chi_userdefined)
+end subroutine target_chi_userdefined
 
 !! Local Variables:
 !! mode: f90

@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-! This is the fortran part of the wrapper around the NVTX 
+! This is the fortran part of the wrapper around the NVTX
 ! (NVIDIA Tools Extension) profiling functions.
 
 #include "global.h"
@@ -35,7 +35,7 @@ module nvtx_oct_m
     subroutine nvtx_range_push(range_name)
       use iso_c_binding
       implicit none
-      
+
       character(len=*), intent(in)    :: range_name
     end subroutine nvtx_range_push
 
@@ -44,7 +44,7 @@ module nvtx_oct_m
       implicit none
     end subroutine nvtx_range_pop
   end interface
-  
+
 end module nvtx_oct_m
 
 !! Local Variables:

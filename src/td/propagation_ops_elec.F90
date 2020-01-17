@@ -20,7 +20,7 @@
 
 module propagation_ops_elec_oct_m
   use batch_oct_m
-  use density_oct_m  
+  use density_oct_m
   use exponential_oct_m
   use geometry_oct_m
   use gauge_field_oct_m
@@ -125,10 +125,10 @@ contains
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(propagation_ops_elec_move_ions)    
+    PUSH_SUB(propagation_ops_elec_move_ions)
 
     call profiling_in(prof, 'ELEC_MOVE_IONS')
-   
+
     if (ion_dynamics_ions_move(ions) .and. optional_default(move_ions, .true.)) then
       if (optional_default(save_pos, .false.)) then
         call ion_dynamics_save_state(ions, geo, wo%ions_state)
@@ -151,7 +151,7 @@ contains
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(propagation_ops_elec_restore_ions)    
+    PUSH_SUB(propagation_ops_elec_restore_ions)
 
     call profiling_in(prof, 'ELEC_RESTORE_IONS')
 

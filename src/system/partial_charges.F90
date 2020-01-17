@@ -52,7 +52,7 @@ contains
     PUSH_SUB(partial_charges_init)
 
     this%dummy = 0
-    
+
     POP_SUB(partial_charges_init)
   end subroutine partial_charges_init
 
@@ -69,21 +69,21 @@ contains
     integer :: iatom
     type(profile_t), save :: prof
     type(hirshfeld_t) :: hirshfeld
-    
+
     PUSH_SUB(partial_charges_calculate)
     call profiling_in(prof, 'PARTIAL_CHARGES')
 
     if(present(hirshfeld_charges)) then
 
       call hirshfeld_init(hirshfeld, namespace, mesh, geo, st)
-      
+
       do iatom = 1, geo%natoms
         call hirshfeld_charge(hirshfeld, namespace, iatom, st%rho, hirshfeld_charges(iatom))
       end do
-      
+
       call hirshfeld_end(hirshfeld)
     end if
-    
+
     call profiling_out(prof)
     POP_SUB(partial_charges_calculate)
 

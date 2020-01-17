@@ -46,7 +46,7 @@ module vdw_oct_m
 
   private
   public :: &
-       vdw_run
+    vdw_run
 
 contains
 
@@ -96,7 +96,7 @@ contains
         call io_close(iunit)
       end if
 
-      c3  = c3  + M_THREE/M_PI * domega * pol 
+      c3  = c3  + M_THREE/M_PI * domega * pol
       c6  = c6  + M_THREE/M_PI * domega * pol**2
       cat = cat + M_THREE/M_PI * domega * pol**3
     end do
@@ -201,7 +201,7 @@ contains
           read(iunit, *, iostat=ierr) iomega, domega, pol
           if(ierr /= 0) exit
           gauss_start = gauss_start + 1
-          c3  = c3  + M_THREE/M_PI * domega * pol 
+          c3  = c3  + M_THREE/M_PI * domega * pol
           c6  = c6  + M_THREE/M_PI * domega * pol**2
           cat = cat + M_THREE/M_PI * domega * pol**3
         end do
@@ -235,7 +235,7 @@ contains
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
@@ -287,11 +287,11 @@ contains
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
-        call messages_info(1)   
+        call messages_info(1)
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
-             restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+          restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)

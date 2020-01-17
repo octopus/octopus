@@ -76,12 +76,12 @@ module mesh_function_oct_m
 
   interface mf_surface_integral
     module procedure dmf_surface_integral_scalar, dmf_surface_integral_vector, &
-                     zmf_surface_integral_scalar, zmf_surface_integral_vector
+      zmf_surface_integral_scalar, zmf_surface_integral_vector
   end interface mf_surface_integral
 
   interface mf_line_integral
     module procedure dmf_line_integral_scalar, dmf_line_integral_vector, &
-                     zmf_line_integral_scalar, zmf_line_integral_vector
+      zmf_line_integral_scalar, zmf_line_integral_vector
   end interface mf_line_integral
 
   interface dmf_dotp
@@ -103,10 +103,10 @@ module mesh_function_oct_m
   type(mesh_t), pointer :: mesh_aux => null()
 
   type(profile_t), save ::            &
-       C_PROFILING_MF_INTEGRATE,      &
-       C_PROFILING_MF_DOTP,           &
-       C_PROFILING_MF_REDUCE,         &
-       C_PROFILING_MF_NRM2
+    C_PROFILING_MF_INTEGRATE,      &
+    C_PROFILING_MF_DOTP,           &
+    C_PROFILING_MF_REDUCE,         &
+    C_PROFILING_MF_NRM2
 
 contains
 
@@ -135,73 +135,73 @@ end module mesh_function_oct_m
 !! It expects complex numbers as an array with first real parts, then imaginary parts.
 ! ---------------------------------------------------------
 REAL_DOUBLE function distdot(n, x, ix, y, iy)
-  use comm_oct_m
-  use global_oct_m
-  use messages_oct_m
-  use mesh_function_oct_m
-  use profiling_oct_m
+use comm_oct_m
+use global_oct_m
+use messages_oct_m
+use mesh_function_oct_m
+use profiling_oct_m
 
-  implicit none
+implicit none
 
-  integer,     intent(in) :: n
-  REAL_DOUBLE, intent(in) :: x(n)
-  integer,     intent(in) :: ix
-  REAL_DOUBLE, intent(in) :: y(n)
-  integer,     intent(in) :: iy
+integer,     intent(in) :: n
+REAL_DOUBLE, intent(in) :: x(n)
+integer,     intent(in) :: ix
+REAL_DOUBLE, intent(in) :: y(n)
+integer,     intent(in) :: iy
 
-  integer :: j, ik, ist, idim, k
+integer :: j, ik, ist, idim, k
 
-  ! SPARSKIT only calls this function with ix, iy = 1 i.e. no stride.
-  ASSERT(ix == 1)
-  ASSERT(iy == 1)
+ ! SPARSKIT only calls this function with ix, iy = 1 i.e. no stride.
+ASSERT(ix == 1)
+ASSERT(iy == 1)
 
-  select case(sp_distdot_mode)
-  case(1)
-    distdot = dmf_dotp_aux(x(1:n/2), y(1:n/2)) + dmf_dotp_aux(x(n/2+1:n), y(n/2+1:n))
+select case(sp_distdot_mode)
+case(1)
+  distdot = dmf_dotp_aux(x(1:n/2), y(1:n/2)) + dmf_dotp_aux(x(n/2+1:n), y(n/2+1:n))
 
-  case(2)
-    distdot = M_ZERO
-    j = 1
-    k = n/2+1
-    do ik = sp_kp1, sp_kp2
-      do ist = sp_st1, sp_st2
-        do idim = 1, sp_dim
-          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
-          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
-          j = j + sp_np
-          k = k + sp_np
-        end do
+case(2)
+  distdot = M_ZERO
+  j = 1
+  k = n/2+1
+  do ik = sp_kp1, sp_kp2
+    do ist = sp_st1, sp_st2
+      do idim = 1, sp_dim
+        distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+        distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+        j = j + sp_np
+        k = k + sp_np
       end do
     end do
-    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+  end do
+  if(sp_parallel) call comm_allreduce(sp_comm, distdot)
 
-  case(3)
-    distdot = M_ZERO
-    j = 1
-    k = n/2+1
-    do ik = sp_kp1, sp_kp2
-      do ist = sp_st1, sp_st2
-        do idim = 1, sp_dim
-          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
-          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
-          j = j + sp_np
-          k = k + sp_np
-        end do
+case(3)
+  distdot = M_ZERO
+  j = 1
+  k = n/2+1
+  do ik = sp_kp1, sp_kp2
+    do ist = sp_st1, sp_st2
+      do idim = 1, sp_dim
+        distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+        distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+        j = j + sp_np
+        k = k + sp_np
       end do
     end do
-    do ik = sp_kp1, sp_kp2
-      do ist = sp_st1, sp_st2
-        do idim = 1, sp_dim
-          distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
-          distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
-          j = j + sp_np
-          k = k + sp_np
-        end do
+  end do
+  do ik = sp_kp1, sp_kp2
+    do ist = sp_st1, sp_st2
+      do idim = 1, sp_dim
+        distdot = distdot + dmf_dotp_aux(x(j: j+sp_np-1), y(j:j+sp_np-1))
+        distdot = distdot + dmf_dotp_aux(x(k: k+sp_np-1), y(k:k+sp_np-1))
+        j = j + sp_np
+        k = k + sp_np
       end do
     end do
-    if(sp_parallel) call comm_allreduce(sp_comm, distdot)
+  end do
+  if(sp_parallel) call comm_allreduce(sp_comm, distdot)
 
-  end select
+end select
 
 end function distdot
 

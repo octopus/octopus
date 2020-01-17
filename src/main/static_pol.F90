@@ -157,12 +157,12 @@ contains
     end if
 
     if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
-       bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-       if(i_start > 2 .and. calc_diagonal) then
-          i_start = 2
-          diagonal_done = .false.
-          !FIXME: take derivatives between yz and z (not y) so can restart from only last (z) calc
-       end if
+      bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+      if(i_start > 2 .and. calc_diagonal) then
+        i_start = 2
+        diagonal_done = .false.
+        !FIXME: take derivatives between yz and z (not y) so can restart from only last (z) calc
+      end if
     end if
 
     if(i_start  ==  1) then
@@ -212,11 +212,11 @@ contains
 
     ! calculate dipole
     do jj = 1, sys%gr%mesh%sb%dim
-       center_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
+      center_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
     end do
 
     ! Writes the dipole to file
-    if(.not. center_written) then 
+    if(.not. center_written) then
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
       write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
       call restart_write(restart_dump, iunit, line, 1, ierr)
@@ -314,20 +314,20 @@ contains
       end if
       call restart_close(restart_dump, iunit)
     end do
-    
+
     if(.not. diagonal_done .and. calc_diagonal) then
       write(message(1), '(a)')
       write(message(2), '(a,f6.4,3a, f6.4, 3a)') 'Info: Calculating dipole moment for field ', &
-         units_from_atomic(units_out%force, e_field), ' ', &
-         trim(units_abbrev(units_out%force)), ' in the '//index2axis(2)//'-direction plus ', &
-         units_from_atomic(units_out%force, e_field), ' ', &
-         trim(units_abbrev(units_out%force)), ' in the '//index2axis(3)//'-direction.'
+        units_from_atomic(units_out%force, e_field), ' ', &
+        trim(units_abbrev(units_out%force)), ' in the '//index2axis(2)//'-direction plus ', &
+        units_from_atomic(units_out%force, e_field), ' ', &
+        trim(units_abbrev(units_out%force)), ' in the '//index2axis(3)//'-direction.'
       call messages_info(2)
-  
+
       sys%hm%ep%vpsl(1:sys%gr%mesh%np) = vpsl_save(1:sys%gr%mesh%np) &
         - (sys%gr%mesh%x(1:sys%gr%mesh%np, 2) + sys%gr%mesh%x(1:sys%gr%mesh%np, 3)) * e_field
       call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
-  
+
       if(isign == 1) then
         sign_char = '+'
       else
@@ -356,12 +356,12 @@ contains
       call scf_mix_clear(scfv)
       call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
         gs_run=.false., verbosity = verbosity)
-  
+
       trrho = M_ZERO
       do is = 1, sys%st%d%spin_channels
         trrho(1:sys%gr%mesh%np) = trrho(1:sys%gr%mesh%np) + sys%st%rho(1:sys%gr%mesh%np, is)
       end do
-  
+
       ! calculate dipole
       do jj = 1, sys%gr%mesh%sb%dim
         diag_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
@@ -371,7 +371,7 @@ contains
         print_dipole(1:sys%gr%mesh%sb%dim) = diag_dipole(1:sys%gr%mesh%sb%dim) + ionic_dipole(1:sys%gr%mesh%sb%dim)
         call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
       end if
-  
+
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
       write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
@@ -443,7 +443,7 @@ contains
       !% Use the charge density from the zero-field calculation as the starting density for
       !% SCF calculations with applied fields. For small fields, this will be fastest.
       !% If there is trouble converging with larger fields, set to false,
-      !% to initialize the calculation for each field from scratch, as specified by the LCAO variables. 
+      !% to initialize the calculation for each field from scratch, as specified by the LCAO variables.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
       call parse_variable(sys%namespace, 'EMStartDensityIsZeroField', .true., start_density_is_zero_field)
@@ -497,7 +497,7 @@ contains
 
       POP_SUB(end_)
     end subroutine end_
-  
+
 
     !-------------------------------------------------------------
     subroutine output_init_()
@@ -505,18 +505,18 @@ contains
 
       !allocate memory for what we want to output
       if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
-         bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0 ) then 
+        bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0 ) then
         SAFE_ALLOCATE(lr_rho (1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
       end if
-      
-      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
+
+      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then
         SAFE_ALLOCATE(    elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE( lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(   elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
         SAFE_ALLOCATE(lr_elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin))
       end if
-      
+
       POP_SUB(output_init_)
     end subroutine output_init_
 
@@ -525,14 +525,14 @@ contains
     subroutine output_cycle_()
       integer :: iatom
       type(unit_t) :: fn_unit
-      
+
       PUSH_SUB(output_cycle_)
 
       ! BORN CHARGES
       if(calc_Born) then
         do iatom = 1, sys%geo%natoms
           if(isign == 1) then
-          ! temporary assignment for use in next cycle when isign == 2
+            ! temporary assignment for use in next cycle when isign == 2
             Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom) = sys%geo%atom(iatom)%f(1:sys%gr%mesh%sb%dim)
           else
             Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom) = &
@@ -546,25 +546,25 @@ contains
         end do
       end if
 
-      !DENSITY AND POLARIZABILITY DENSITY   
+      !DENSITY AND POLARIZABILITY DENSITY
       if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
-         bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then 
-         
+        bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+
         if(isign == 1 .and. ii == 2) then
           tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
           ! for use in off-diagonal non-linear densities
         end if
 
-        if(isign == 1) then 
+        if(isign == 1) then
           ! temporary assignment for use in next cycle when isign == 2
           lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
         else
           lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
             -(sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) + lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - &
-              2 * gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / e_field**2
+            2 * gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / e_field**2
 
           lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
-               (sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO*e_field)
+            (sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO*e_field)
 
           !write
           do is = 1, sys%st%d%nspin
@@ -603,27 +603,27 @@ contains
       end if
 
       !ELF
-      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
-         
-        if(isign == 1) then 
+      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then
+
+        if(isign == 1) then
           call elf_calc(sys%st, sys%gr, elf, elfd)
         else
           call elf_calc(sys%st, sys%gr, lr_elf, lr_elfd)
-          
+
           !numerical derivative
           lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
-               ( lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) -  elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO * e_field)
+            ( lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) -  elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO * e_field)
           lr_elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
-               (lr_elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO * e_field)
+            (lr_elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - elfd(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / (M_TWO * e_field)
 
           !write
           do is = 1, sys%st%d%nspin
             write(fname, '(a,i1,2a)') 'lr_elf-sp', is, '-', index2axis(ii)
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                sys%namespace, sys%gr%mesh, lr_elf(:, is), unit_one, ierr, geo = sys%geo)
+              sys%namespace, sys%gr%mesh, lr_elf(:, is), unit_one, ierr, geo = sys%geo)
             write(fname, '(a,i1,2a)') 'lr_elf_D-sp', is, '-', index2axis(ii)
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
-                sys%namespace, sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, geo = sys%geo)
+              sys%namespace, sys%gr%mesh, lr_elfd(:, is), unit_one, ierr, geo = sys%geo)
           end do
         end if
 
@@ -646,11 +646,11 @@ contains
       call io_mkdir(EM_RESP_FD_DIR, sys%namespace)
 
       if((bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
-         bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then 
+        bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) .and. calc_diagonal) then
         lr_rho2(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &
           -(sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) - lr_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) &
           - tmp_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) + gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)) / e_field**2
-  
+
         do is = 1, sys%st%d%nspin
           if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
             fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
@@ -658,7 +658,7 @@ contains
             call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
               sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
           end if
-  
+
           if(bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
             fn_unit = units_out%length**(3-sys%gr%sb%dim) / units_out%energy**2
             write(fname, '(a,i1,a)') 'beta_density-sp', is, '-x-y-z'
@@ -673,7 +673,7 @@ contains
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
         alpha(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim) = (dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1) - &
-             dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 2)) / (M_TWO * e_field)
+          dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 2)) / (M_TWO * e_field)
 
         beta = M_ZERO
 
@@ -681,7 +681,7 @@ contains
           beta(1:sys%gr%mesh%sb%dim, idir, idir) = &
             -(dipole(idir, 1:sys%gr%mesh%sb%dim, 1) + dipole(idir, 1:sys%gr%mesh%sb%dim, 2) - &
             M_TWO * center_dipole(1:sys%gr%mesh%sb%dim)) / e_field**2
-          beta(idir, 1:sys%gr%mesh%sb%dim, idir) = beta(1:sys%gr%mesh%sb%dim, idir, idir) 
+          beta(idir, 1:sys%gr%mesh%sb%dim, idir) = beta(1:sys%gr%mesh%sb%dim, idir, idir)
           beta(idir, idir, 1:sys%gr%mesh%sb%dim) = beta(1:sys%gr%mesh%sb%dim, idir, idir)
         end do
 
@@ -699,7 +699,7 @@ contains
 
         call output_tensor(iunit, alpha, sys%gr%mesh%sb%dim, units_out%polarizability)
         call io_close(iunit)
-        
+
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
         call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR, sys%namespace)
 
@@ -710,12 +710,12 @@ contains
       end if
 
       if(bitand(sys%outp%what, OPTION__OUTPUT__DENSITY) /= 0 .or. &
-         bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then 
+        bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
         SAFE_DEALLOCATE_A(lr_rho)
         SAFE_DEALLOCATE_A(lr_rho2)
       end if
-      
-      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
+
+      if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then
         SAFE_DEALLOCATE_A(lr_elf)
         SAFE_DEALLOCATE_A(elf)
         SAFE_DEALLOCATE_A(lr_elfd)

@@ -50,11 +50,11 @@ module current_oct_m
   use tdfunction_oct_m
   use types_oct_m
   use unit_oct_m
-  use unit_system_oct_m  
+  use unit_system_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  
+
   implicit none
 
   private
@@ -63,7 +63,7 @@ module current_oct_m
     private
     integer :: method
   end type current_t
-    
+
 
   public ::                               &
     current_t,                            &
@@ -113,7 +113,7 @@ contains
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
-    
+
     POP_SUB(current_init)
   end subroutine current_init
 
@@ -148,13 +148,13 @@ contains
     FLOAT, allocatable :: weight(:)
     type(accel_mem_t) :: buff_weight, buff_current
     type(accel_kernel_t), save :: kernel
-        
+
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
     SAFE_ALLOCATE(weight(1:psib%nst))
     forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
- 
+
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
@@ -193,14 +193,14 @@ contains
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
-      
+
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
-      
+
       call accel_create_buffer(buff_current, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, der%mesh%np*3)
-     
+
       call accel_kernel_start_call(kernel, 'density.cl', 'current_accumulate')
-      
+
       call accel_set_kernel_arg(kernel, 0, psib%nst)
       call accel_set_kernel_arg(kernel, 1, der%mesh%np)
       call accel_set_kernel_arg(kernel, 2, buff_weight)
@@ -211,11 +211,11 @@ contains
       call accel_set_kernel_arg(kernel, 7, gpsib(3)%pack%buffer)
       call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack%size(1)))
       call accel_set_kernel_arg(kernel, 9, buff_current)
-      
+
       wgsize = accel_kernel_workgroup_size(kernel)
-      
+
       call accel_kernel_run(kernel, (/pad(der%mesh%np, wgsize)/), (/wgsize/))
-      
+
       SAFE_ALLOCATE(current_tmp(1:der%mesh%sb%dim, der%mesh%np))
 
       call accel_finish()
@@ -227,12 +227,12 @@ contains
           current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + current_tmp(idir, ip)
         end do
       end do
-      
+
       SAFE_DEALLOCATE_A(current_tmp)
-      
+
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
-      
+
     else
 
       do ii = 1, psib%nst
@@ -257,9 +257,9 @@ contains
                 + ww*aimag(conjg(psib%states(ii)%zpsi(ip, 1))*gpsib(idir)%states(ii)%zpsi(ip, 1))
             end do
             !$omp end parallel do
-          end do          
+          end do
         end if
-        
+
       end do
 
     end if
@@ -388,7 +388,7 @@ contains
         .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
 
         ! we can use the packed version
-        
+
         do ik = st%d%kpt%start, st%d%kpt%end
           ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
@@ -421,7 +421,7 @@ contains
                   psib = commpsib(idir))
               end do
             end if
-            
+
             call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
@@ -437,7 +437,7 @@ contains
       else
 
         ! use the slow non-packed version
-        
+
         do ik = st%d%kpt%start, st%d%kpt%end
           ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ist = st%st_start, st%st_end
@@ -451,7 +451,7 @@ contains
               call boundaries_set(der%boundaries, psi(:, idim))
             end do
 
-            if(associated(hm%hm_base%phase)) then 
+            if(associated(hm%hm_base%phase)) then
               call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
             end if
 
@@ -461,7 +461,7 @@ contains
 
             if(this%method == CURRENT_GRADIENT_CORR) then
               !A nonlocal contribution from the MGGA potential must be included
-              !This must be done first, as this is like a position-dependent mass 
+              !This must be done first, as this is like a position-dependent mass
               if (family_is_mgga_with_exc(hm%xc)) then
                 do idim = 1, st%d%dim
                   do idir = 1, der%mesh%sb%dim
@@ -475,7 +475,7 @@ contains
               end if
 
               !A nonlocal contribution from the pseudopotential must be included
-              call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
+              call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)
               !A nonlocal contribution from the scissor must be included
               if(hm%scissor%apply) then
                 call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
@@ -535,7 +535,7 @@ contains
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/))
     end if
 
     if(st%symmetrize_density) then
@@ -563,13 +563,13 @@ contains
 
   end subroutine current_calculate
 
-  
+
   ! ---------------------------------------------------------
   ! Calculate the current matrix element between two states
   ! I_{ij}(t) = <i| J(t) |j>
-  ! This is used only in the floquet_observables utility and 
+  ! This is used only in the floquet_observables utility and
   ! is highly experimental
-  
+
   subroutine current_calculate_mel(der, hm, geo, psi_i, psi_j, ik,  cmel)
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_elec_t),  intent(in)    :: hm
@@ -592,18 +592,18 @@ contains
     cmel = M_z0
 
     ispin = states_elec_dim_get_spin_index(hm%d, ik)
-    ppsi_i(:,:) = M_z0        
-    ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)    
-    ppsi_j(:,:) = M_z0        
-    ppsi_j(1:der%mesh%np,:) = psi_j(1:der%mesh%np,:)    
+    ppsi_i(:,:) = M_z0
+    ppsi_i(1:der%mesh%np,:) = psi_i(1:der%mesh%np,:)
+    ppsi_j(:,:) = M_z0
+    ppsi_j(1:der%mesh%np,:) = psi_j(1:der%mesh%np,:)
 
-      
+
     do idim = 1, hm%d%dim
       call boundaries_set(der%boundaries, ppsi_i(:, idim))
       call boundaries_set(der%boundaries, ppsi_j(:, idim))
     end do
 
-    if(associated(hm%hm_base%phase)) then 
+    if(associated(hm%hm_base%phase)) then
       ! Apply the phase that contains both the k-point and vector-potential terms.
       do idim = 1, hm%d%dim
         !$omp parallel do
@@ -619,9 +619,9 @@ contains
       call zderivatives_grad(der, ppsi_i(:, idim), gpsi_i(:, :, idim), set_bc = .false.)
       call zderivatives_grad(der, ppsi_j(:, idim), gpsi_j(:, :, idim), set_bc = .false.)
     end do
-    
+
     !A nonlocal contribution from the MGGA potential must be included
-    !This must be done first, as this is like a position-dependent mass 
+    !This must be done first, as this is like a position-dependent mass
     if (family_is_mgga_with_exc(hm%xc)) then
       do idim = 1, hm%d%dim
         do idir = 1, der%mesh%sb%dim
@@ -632,11 +632,11 @@ contains
           end do
           !$omp end parallel do
         end do
-      end do 
-     
+      end do
+
       !A nonlocal contribution from the pseudopotential must be included
-      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_i, gpsi_i)                 
-      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_j, gpsi_j)                 
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_i, gpsi_i)
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_j, gpsi_j)
       !A nonlocal contribution from the scissor must be included
       if(hm%scissor%apply) then
         call scissor_commute_r(hm%scissor, der%mesh, ik, ppsi_i, gpsi_i)
@@ -647,18 +647,18 @@ contains
 
 
     do idir = 1, der%mesh%sb%dim
-      
+
       do idim = 1, hm%d%dim
-          
+
         cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim), reduce = .false.)
         cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idir, idim), psi_j(:, idim), reduce = .false.)
-          
+
       end do
     end do
 
     if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
 
-    
+
 
     SAFE_DEALLOCATE_A(gpsi_i)
     SAFE_DEALLOCATE_A(ppsi_i)
@@ -686,28 +686,28 @@ contains
     ASSERT(st%d%dim == 1)
 
     ndim = der%mesh%sb%dim
-    
+
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
     SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
-    
+
     do ip = 1, der%mesh%np
       current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
     end do
-    
-    
+
+
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_elec_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
 
         if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
-        
+
         call states_elec_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim
           call boundaries_set(der%boundaries, psi(:, idim))
         end do
 
-        if(associated(hm%hm_base%phase)) then 
+        if(associated(hm%hm_base%phase)) then
           call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
         end if
 
@@ -715,24 +715,24 @@ contains
           call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
         end do
         do idir = 1, ndim
-          if(associated(hm%hm_base%phase)) then 
+          if(associated(hm%hm_base%phase)) then
             call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, &
               conjugate = .true.)
           end if
-            
+
           !do idim = 1, st%d%dim
           !  call boundaries_set(der%boundaries, psi(:, idim))
           !end do
-           
+
           do idim = 1, st%d%dim
             call boundaries_set(der%boundaries, gpsi(:,idir, idim))
           end do
-            
-          if(associated(hm%hm_base%phase)) then 
+
+          if(associated(hm%hm_base%phase)) then
             call states_elec_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
-                                  der%mesh%np_part,  conjugate = .false.)
+              der%mesh%np_part,  conjugate = .false.)
           end if
-            
+
           do idim = 1, st%d%dim
             call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
           end do
@@ -742,9 +742,9 @@ contains
           do idir = 1, ndim
             !tmp = sum(conjg(g2psi(ip, idir, 1:ndim, idim))*gpsi(ip, idir, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, idir, 1:ndim, idim))
             tmp = sum(conjg(g2psi(ip, 1:ndim, idir, idim))*gpsi(ip, 1:ndim, idim)) - &
-                  sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, 1:ndim, idir, idim))
+              sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, 1:ndim, idir, idim))
             tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + &
-                  sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
+              sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
             current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
           end do
         end do
@@ -753,12 +753,12 @@ contains
 
 
     POP_SUB(current_heat_calculate)
-      
+
   end subroutine current_heat_calculate
 
-  
+
   !! Maxwell-related subroutines
-  
+
   !----------------------------------------------------------
   subroutine get_rs_density_ext(st, mesh, time, rs_current_density_ext)
     type(states_mxll_t), intent(inout) :: st
@@ -803,8 +803,8 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedMaxwellExternalCurrent
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1" 
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2" 
+    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1"
+    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2"
     !% <br>&nbsp;&nbsp; external_current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
     !% <br>%</tt>
     !%
@@ -866,7 +866,7 @@ contains
           if(parse_block_cols(blk, il-1) > 6) then
             call parse_block_string(blk, il-1, 6, phase_expression)
             call tdf_read(st%external_current_td_phase(il), namespace, trim(phase_expression), ierr)
-            if (ierr /= 0) then            
+            if (ierr /= 0) then
               write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
               write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
               call messages_warning(2, namespace=namespace)
@@ -902,7 +902,7 @@ contains
           do idir = 1, st%d%dim
             tt = time
             call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, tt, &
-              & trim(st%external_current_string(idir,jn)))
+            & trim(st%external_current_string(idir,jn)))
             j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
           end do
           current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
@@ -920,7 +920,7 @@ contains
 
     POP_SUB(external_current_calculation)
   end subroutine external_current_calculation
-  
+
 end module current_oct_m
 
 !! Local Variables:

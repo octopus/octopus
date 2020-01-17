@@ -48,7 +48,7 @@ module dos_oct_m
   public ::                    &
     dos_t,                     &
     dos_init,                  &
-    dos_end,                   & 
+    dos_end,                   &
     dos_write_dos
 
   type dos_t
@@ -100,7 +100,7 @@ contains
     !%Default 500
     !%Section Output
     !%Description
-    !% Determines how many energy points <tt>Octopus</tt> should use for 
+    !% Determines how many energy points <tt>Octopus</tt> should use for
     !% the DOS energy grid.
     !%End
     call parse_variable(namespace, 'DOSEnergyPoints', 500, this%epoints)
@@ -173,10 +173,10 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    if(mpi_grp_is_root(mpi_world)) then 
+    if(mpi_grp_is_root(mpi_world)) then
       ! space for state-dependent DOS
       SAFE_ALLOCATE(dos(1:this%epoints, 1:st%nst, 0:ns-1))
-      SAFE_ALLOCATE(iunit(0:ns-1))    
+      SAFE_ALLOCATE(iunit(0:ns-1))
 
       ! compute band/spin-resolved density of states
       do ist = 1, st%nst
@@ -187,7 +187,7 @@ contains
           else
             write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
           end if
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
         end do
@@ -198,13 +198,13 @@ contains
           ! sum up Lorentzians
           do ik = 1, st%d%nik, ns
             do is = 0, ns-1
-             dos(ie, ist, is) = dos(ie, ist, is) + st%d%kweights(ik+is) * M_ONE/M_Pi * &
+              dos(ie, ist, is) = dos(ie, ist, is) + st%d%kweights(ik+is) * M_ONE/M_Pi * &
                 this%gamma / ( (energy - st%eigenval(ist, ik+is))**2 + this%gamma**2 )
             end do
           end do
           do is = 0, ns-1
             write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                          units_from_atomic(unit_one / units_out%energy, dos(ie, ist, is))
+              units_from_atomic(unit_one / units_out%energy, dos(ie, ist, is))
             call messages_info(1, iunit(is))
           end do
         end do
@@ -215,10 +215,10 @@ contains
       end do
 
       ! for spin-polarized calculations also output spin-resolved tDOS
-      if(st%d%nspin > 1) then    
+      if(st%d%nspin > 1) then
         do is = 0, ns-1
           write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
-          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
+          iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
           ! write header
           write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
 
@@ -229,7 +229,7 @@ contains
               tdos = tdos + dos(ie, ist, is)
             end do
             write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                          units_from_atomic(unit_one / units_out%energy, tdos)
+              units_from_atomic(unit_one / units_out%energy, tdos)
             call messages_info(1, iunit(is))
           end do
 
@@ -238,9 +238,9 @@ contains
       end if
 
 
-      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', namespace, action='write')    
+      iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', namespace, action='write')
       write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
-      
+
       ! compute total density of states
       do ie = 1, this%epoints
         energy = this%emin + (ie - 1) * this%de
@@ -251,7 +251,7 @@ contains
           end do
         end do
         write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                      units_from_atomic(unit_one / units_out%energy, tdos)
+          units_from_atomic(unit_one / units_out%energy, tdos)
         call messages_info(1, iunit(0))
       end do
 
@@ -302,7 +302,7 @@ contains
               os%nn = nn
               os%ii = ii
               os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
               work2 = work2 + 1
             end if
           end do
@@ -311,25 +311,25 @@ contains
           os%submeshforperiodic = .false.
           os%spec => geo%atom(ia)%species
           call submesh_null(os%sphere)
- 
+
           do work = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
               call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, work, os%radius, os%ndim)
+                os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
                 norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, work, os%radius, os%ndim)
+                os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
                 norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
             end if
           end do
 
@@ -346,19 +346,19 @@ contains
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
             call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
-                                            vec_pot = hm%hm_base%uniform_vector_potential, &
-                                            vec_pot_var = hm%hm_base%vector_potential)
+              vec_pot = hm%hm_base%uniform_vector_potential, &
+              vec_pot_var = hm%hm_base%vector_potential)
           end if
 
           if(mpi_grp_is_root(mpi_world)) then
             if(os%nn /= 0 ) then
               write(filename,'(a, i3.3, a1, a, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
-                           os%nn, l_notation(os%ll), '.dat'
+                os%nn, l_notation(os%ll), '.dat'
             else
               write(filename,'(a,  i3.3, a1, a, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
-                            l_notation(os%ll), '.dat'
+                l_notation(os%ll), '.dat'
             end if
- 
+
             iunit(0) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
             ! write header
             write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], projected DOS'
@@ -373,38 +373,38 @@ contains
           weight(1:st%d%nik,1:st%nst) = M_ZERO
 
           do ist = st%st_start, st%st_end
-           do ik = st%d%kpt%start, st%d%kpt%end
-            if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
-            if(states_are_real(st)) then
-              call states_elec_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
-              do iorb = 1, os%norbs
-                do idim = 1, st%d%dim
-                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
-                end do
-              end do
-            else
-              call states_elec_get_state(st, mesh, ist, ik, zpsi )
-              if(associated(hm%hm_base%phase)) then
-              ! Apply the phase that contains both the k-point and vector-potential terms.
-                do idim = 1, st%d%dim
-                  !$omp parallel do
-                  do ip = 1, mesh%np
-                    zpsi(ip, idim) = hm%hm_base%phase(ip, ik)*zpsi(ip, idim)
+            do ik = st%d%kpt%start, st%d%kpt%end
+              if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
+              if(states_are_real(st)) then
+                call states_elec_get_state(st, mesh, ist, ik, dpsi )
+                call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
+                do iorb = 1, os%norbs
+                  do idim = 1, st%d%dim
+                    weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
                   end do
-                  !$omp end parallel do
+                end do
+              else
+                call states_elec_get_state(st, mesh, ist, ik, zpsi )
+                if(associated(hm%hm_base%phase)) then
+                  ! Apply the phase that contains both the k-point and vector-potential terms.
+                  do idim = 1, st%d%dim
+                    !$omp parallel do
+                    do ip = 1, mesh%np
+                      zpsi(ip, idim) = hm%hm_base%phase(ip, ik)*zpsi(ip, idim)
+                    end do
+                    !$omp end parallel do
+                  end do
+                end if
+                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), .false., &
+                  zdot(1:st%d%dim,1:os%norbs))
+
+                do iorb = 1, os%norbs
+                  do idim = 1, st%d%dim
+                    weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(zdot(idim,iorb))**2
+                  end do
                 end do
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), .false., &
-                                 zdot(1:st%d%dim,1:os%norbs))
-
-              do iorb = 1, os%norbs
-                do idim = 1, st%d%dim
-                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(zdot(idim,iorb))**2
-                end do
-              end do
-            end if
-           end do
+            end do
           end do
 
           if(st%parallel_in_states .or. st%d%kpt%parallel) then
@@ -421,18 +421,18 @@ contains
               do ist = 1, st%nst
                 do ik = 1, st%d%nik
                   tdos = tdos + weight(ik,ist) * M_ONE/M_Pi * &
-                   this%gamma / ( (energy - st%eigenval(ist, ik))**2 + this%gamma**2 )
+                    this%gamma / ( (energy - st%eigenval(ist, ik))**2 + this%gamma**2 )
                 end do
               end do
               write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                      units_from_atomic(unit_one / units_out%energy, tdos)
+                units_from_atomic(unit_one / units_out%energy, tdos)
               call messages_info(1, iunit(0))
             end do
             call io_close(iunit(0))
           end if
-     
+
         end do
-      
+
         call orbitalset_end(os)
       end do
 

@@ -91,7 +91,7 @@ contains
     type(namespace_t),    intent(in)    :: namespace
 
     PUSH_SUB(get_resp_method)
-    
+
     !%Variable ResponseMethod
     !%Type integer
     !%Default sternheimer
@@ -113,7 +113,7 @@ contains
     !% method, slow and limited only to static response, is kept
     !% mainly because it is simple and useful for testing purposes.
     !%End
-    
+
     call parse_variable(namespace, 'ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
@@ -122,7 +122,7 @@ contains
 
     POP_SUB(get_resp_method)
   end function get_resp_method
-  
+
   ! ---------------------------------------------------------
   subroutine run(namespace, cm)
     type(namespace_t), intent(in) :: namespace

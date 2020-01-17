@@ -77,7 +77,7 @@ contains
     else
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
-    
+
   end function index_from_coords
 
   ! -----------------------------------------------------------------
@@ -103,7 +103,7 @@ contains
         call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix(:, ip), index(ip))
       end do
     end if
-    
+
   end subroutine index_from_coords_vec
 
 
@@ -114,9 +114,9 @@ contains
     integer,       intent(in)    :: ip
     integer,       intent(out)   :: ix(:)
 
-    integer :: idir 
+    integer :: idir
 
-    ! We set all ix to zero first (otherwise the non-existent dimensions would be 
+    ! We set all ix to zero first (otherwise the non-existent dimensions would be
     ! undefined on exit).
     ix = 0
     if(.not. idx%is_hypercube) then
@@ -129,7 +129,7 @@ contains
 
   ! --------------------------------------------------------------
   subroutine index_dump(idx, dir, filename, mpi_grp, namespace, ierr)
-    type(index_t),     intent(in)  :: idx 
+    type(index_t),     intent(in)  :: idx
     character(len=*),  intent(in)  :: dir
     character(len=*),  intent(in)  :: filename
     type(mpi_grp_t),   intent(in)  :: mpi_grp
@@ -218,7 +218,7 @@ contains
         if (.not. idx%is_hypercube) then
           call iopar_read(mpi_grp, iunit, lines, 6, err)
           if (err /= 0) then
-            ierr = ierr + 8            
+            ierr = ierr + 8
           else
             read(lines(1), '(a20,7i8)') str, (idx%nr(1, idir), idir = 1,idx%dim)
             read(lines(2), '(a20,7i8)') str, (idx%nr(2, idir), idir = 1,idx%dim)
@@ -259,7 +259,7 @@ contains
         if (err /= 0) then
           ierr = ierr + 1
           message(1) = "Unable to write index function to '"//trim(dir)//"/lxyz.obf'."
-          call messages_warning(1) 
+          call messages_warning(1)
         end if
       end if
 

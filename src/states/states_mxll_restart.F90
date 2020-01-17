@@ -44,7 +44,7 @@ module states_mxll_restart_oct_m
   use states_elec_restart_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-    
+
   implicit none
 
   type(profile_t), save :: prof_read, prof_write
@@ -71,7 +71,7 @@ contains
     CMPLX, allocatable :: rs_state(:,:), rs_state_add(:,:)
     character(len=150), pointer :: filename_e_field, filename_b_field
     character(1) :: cdim
-    
+
     integer, parameter ::           &
       STATE_FROM_FORMULA  = 1,      &
       STATE_FROM_FILE     = -10010
@@ -89,9 +89,9 @@ contains
     !%Type block
     !%Section MaxwellStates
     !%Description
-    !% The initial electromagnetic fields can be set by the user 
+    !% The initial electromagnetic fields can be set by the user
     !% with the <tt>UserDefinedMaxwellStates</tt> block variable.
-    !% The electromagnetic fields have to fulfill the 
+    !% The electromagnetic fields have to fulfill the
     !% Maxwells equations in vacuum.
     !%
     !% Example:
@@ -103,12 +103,12 @@ contains
     !%
     !% The first column specifies the component of the dimension of
     !% the electric field and magnetic field. Column four
-    !% indicates that column five and six should be interpreted 
-    !% as a formula for the corresponding orbital. P_c is the 
+    !% indicates that column five and six should be interpreted
+    !% as a formula for the corresponding orbital. P_c is the
     !% speed of light constant.
     !%
-    !% Alternatively, if column four states <tt>file</tt> the 
-    !% electric field and magnetic field will be read from 
+    !% Alternatively, if column four states <tt>file</tt> the
+    !% electric field and magnetic field will be read from
     !% the files given in column five and six.
     !%
     !% <tt>%MUserDefinedMaxwellStates
@@ -117,7 +117,7 @@ contains
     !% <br>%</tt>
     !%
     !%Option file -10010
-    !% Read initial orbital from file. 
+    !% Read initial orbital from file.
     !% Accepted file formats: obf, ncdf and csv.
     !%Option formula 1
     !% Calculate initial orbital by given analytic expression.
@@ -175,18 +175,18 @@ contains
             ! parse user-defined expressions
             if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
               call parse_expression(e_value, dummy, st%d%dim, xx, rr, M_ZERO, &
-                                    st%user_def_e_field(idim))
+                st%user_def_e_field(idim))
               b_value = M_ZERO
             else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
               call parse_expression(b_value, dummy, st%d%dim, xx, rr, M_ZERO, &
-                                    st%user_def_b_field(idim))
+                st%user_def_b_field(idim))
               e_value = M_ZERO
             end if
             e_value = units_to_atomic(units_inp%energy/units_inp%length, e_value)
             b_value = units_to_atomic(unit_one/(units_inp%length**2), b_value)
             ! fill state
             call build_rs_element(e_value, b_value, st%rs_sign, rs_state_add(ip,idim), &
-                                          st%ep(ip), st%mu(ip))
+              st%ep(ip), st%mu(ip))
           end do
 
         case(STATE_FROM_FILE)
@@ -221,7 +221,7 @@ contains
           end if
           ! fill state
           call build_rs_vector(e_field(:), b_field(:), st%rs_sign, rs_state_add(:,idim), &
-                                       st%ep(ip), st%mu(ip))
+            st%ep(ip), st%mu(ip))
 
           SAFE_DEALLOCATE_A(e_field)
           SAFE_DEALLOCATE_A(b_field)
@@ -312,27 +312,27 @@ contains
     root = 0
     err2 = 0
     ist = 1
-    
+
     do idim = 1, zff_dim
-       itot = itot + 1
+      itot = itot + 1
 
-       root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
-       write(filename,'(i10.10)') itot
+      root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
+      write(filename,'(i10.10)') itot
 
-       write(lines(1), '(i8,3a)') idim, ' | "', trim(filename), '"'
-       call restart_write(restart, iunit_wfns, lines, 1, err)
-       if (err /= 0) err2(1) = err2(1) + 1
+      write(lines(1), '(i8,3a)') idim, ' | "', trim(filename), '"'
+      call restart_write(restart, iunit_wfns, lines, 1, err)
+      if (err /= 0) err2(1) = err2(1) + 1
 
-       should_write = st%st_start <= ist .and. ist <= st%st_end
-       if (should_write .and. present(st_start_writing)) then
-          if (ist < st_start_writing) should_write = .false.
-       end if
+      should_write = st%st_start <= ist .and. ist <= st%st_end
+      if (should_write .and. present(st_start_writing)) then
+        if (ist < st_start_writing) should_write = .false.
+      end if
 
-       if (should_write) then
-          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
-          if (err /= 0) err2(2) = err2(2) + 1
-       end if
+      if (should_write) then
+        call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
+        call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+        if (err /= 0) err2(2) = err2(2) + 1
+      end if
     end do ! zff_dim
 
     if (err2(1) /= 0) ierr = ierr + 8
@@ -341,7 +341,7 @@ contains
     SAFE_DEALLOCATE_A(zff_global)
 
     lines(1) = '%'
-    call restart_write(restart, iunit_wfns, lines, 1, err) 
+    call restart_write(restart, iunit_wfns, lines, 1, err)
     if (err /= 0) ierr = ierr + 64
     if (present(iter)) then
       write(lines(1),'(a,i7)') 'Iter = ', iter
@@ -451,7 +451,7 @@ contains
     SAFE_ALLOCATE(restart_file_present(1:zff_dim,st%st_start:st%st_end))
     restart_file_present = .false.
 
-    ! Next we read the list of states from the files. 
+    ! Next we read the list of states from the files.
     ! Errors in reading the information of a specific state from the files are ignored
     ! at this point, because later we will skip reading the wavefunction of that state.
     do
@@ -503,31 +503,31 @@ contains
 
     ist = 1
     do idim = 1, zff_dim
-       if (.not. restart_file_present(idim, ist)) then
-          if (present(lowest_missing)) &
-               lowest_missing(idim) = min(lowest_missing(idim), ist)
-          cycle
-       endif
-
-       call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
-            zff(:,idim), err)
-       call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
-
-
-       if (err == 0) then
-          filled(idim, ist) = .true.
-          iread = iread + 1
-       else if (present(lowest_missing)) then
+      if (.not. restart_file_present(idim, ist)) then
+        if (present(lowest_missing)) &
           lowest_missing(idim) = min(lowest_missing(idim), ist)
-       end if
+        cycle
+      endif
 
-       if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-          idone = idone + 1
-          call loct_progress_bar(idone, ntodo)
-       end if
+      call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
+        zff(:,idim), err)
+      call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
+
+
+      if (err == 0) then
+        filled(idim, ist) = .true.
+        iread = iread + 1
+      else if (present(lowest_missing)) then
+        lowest_missing(idim) = min(lowest_missing(idim), ist)
+      end if
+
+      if (mpi_grp_is_root(mpi_world) .and. verbose_) then
+        idone = idone + 1
+        call loct_progress_bar(idone, ntodo)
+      end if
 
     end do
-    
+
     SAFE_DEALLOCATE_A(restart_file)
     SAFE_DEALLOCATE_A(restart_file_present)
     SAFE_DEALLOCATE_A(filled)
@@ -547,7 +547,7 @@ contains
       write(str, '(a,i5)') 'Reading Maxwell states.'
       call messages_print_stress(stdout, trim(str), namespace=namespace)
       write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
-           st%nst * zff_dim, ' could be read.'
+        st%nst * zff_dim, ' could be read.'
       call messages_info(1)
       call messages_print_stress(stdout, namespace=namespace)
     end if

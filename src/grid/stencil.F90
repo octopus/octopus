@@ -37,7 +37,7 @@ module stencil_oct_m
   type stargeneral_arms_t
     ! Components are public by default
     integer          :: arms(1:3,1:3)
-    integer          :: narms  
+    integer          :: narms
   end type stargeneral_arms_t
 
 
@@ -46,15 +46,15 @@ module stencil_oct_m
     integer          :: center
     integer          :: size
     integer          :: npoly
-    integer, pointer :: points(:, :) 
-    
+    integer, pointer :: points(:, :)
+
     ! The stargeneral arms
-    type(stargeneral_arms_t) :: stargeneral 
+    type(stargeneral_arms_t) :: stargeneral
   end type stencil_t
 
 contains
 
-  !-------------------------------------------------------  
+  !-------------------------------------------------------
   subroutine stencil_allocate(this, size)
     type(stencil_t), intent(out) :: this
     integer,         intent(in)  :: size
@@ -71,11 +71,11 @@ contains
     POP_SUB(stencil_allocate)
   end subroutine stencil_allocate
 
-  !-------------------------------------------------------  
+  !-------------------------------------------------------
   subroutine stencil_copy(input, output)
     type(stencil_t), intent(in)  :: input
     type(stencil_t), intent(out) :: output
-    
+
     PUSH_SUB(stencil_copy)
 
     call stencil_allocate(output, input%size)
@@ -87,7 +87,7 @@ contains
   end subroutine stencil_copy
 
 
-  !-------------------------------------------------------  
+  !-------------------------------------------------------
   subroutine stencil_end(this)
     type(stencil_t), intent(inout) :: this
 
@@ -98,7 +98,7 @@ contains
     POP_SUB(stencil_end)
   end subroutine stencil_end
 
-  
+
   !-------------------------------------------------------
   subroutine stencil_union(dim, st1, st2, stu)
     integer,         intent(in)    :: dim
@@ -115,7 +115,7 @@ contains
 
     ! copy the first stencil
     forall (idir = 1:dim, ii = 1:st1%size) stu%points(idir, ii) = st1%points(idir, ii)
-    
+
     nstu = st1%size
 
     do ii = 1, st2%size
@@ -134,7 +134,7 @@ contains
         nstu = nstu + 1
         stu%points(1:dim, nstu) = st2%points(1:dim, ii)
       end if
-      
+
     end do
 
     stu%points(dim + 1:MAX_DIM, 1:nstu) = 0
@@ -151,7 +151,7 @@ contains
   end subroutine stencil_union
 
 
-  !-------------------------------------------------------  
+  !-------------------------------------------------------
   subroutine stencil_init_center(this)
     type(stencil_t), intent(inout) :: this
 
@@ -164,7 +164,7 @@ contains
     do ii = 1, this%size
       if(all(this%points(1:MAX_DIM, ii) == 0)) this%center = ii
     end do
-    
+
     POP_SUB(stencil_init_center)
   end subroutine stencil_init_center
 

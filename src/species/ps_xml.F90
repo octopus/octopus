@@ -77,7 +77,7 @@ contains
     PUSH_SUB(ps_xml_init)
 
     this%initialized = .false.
-    
+
     call pseudo_init(pseudo, filename, fmt, ierr)
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
@@ -99,12 +99,12 @@ contains
       call messages_write("PAW pseudopotential file '" // trim(filename) // "' not supported")
       call messages_fatal(namespace=namespace)
     end if
-    
+
     if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
       call messages_fatal(namespace=namespace)
     end if
-    
+
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
       call messages_fatal(namespace=namespace)
@@ -114,24 +114,24 @@ contains
     this%valence_charge = pseudo_valence_charge(pseudo)
     this%mass = pseudo_mass(pseudo)
     this%lmax = pseudo_lmax(pseudo)
-    this%llocal = pseudo_llocal(pseudo) 
+    this%llocal = pseudo_llocal(pseudo)
     this%nchannels = pseudo_nchannels(pseudo)
-   
+
     this%kleinman_bylander = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
 
     this%grid_size = pseudo_mesh_size(pseudo)
 
     SAFE_ALLOCATE(this%grid(1:this%grid_size))
     SAFE_ALLOCATE(this%weights(1:this%grid_size))
-    
+
     call pseudo_grid(pseudo, this%grid(1))
     call pseudo_grid_weights(pseudo, this%weights(1))
-    
+
     if(.not. this%kleinman_bylander) then
 
       SAFE_ALLOCATE(this%potential(1:this%grid_size, 0:this%lmax))
       SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 0:this%lmax))
-      
+
       do ll = 0, this%lmax
         if(.not. pseudo_has_radial_function(pseudo, ll)) then
           call messages_write("The pseudopotential file '"//trim(filename)//"' does not contain")
@@ -147,13 +147,13 @@ contains
     else
 
       SAFE_ALLOCATE(this%potential(1:this%grid_size, this%llocal:this%llocal))
-      
+
       call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
 
       this%projector = CNST(0.0)
-      
+
       do ll = 0, this%lmax
         if(this%llocal == ll) cycle
         do ic = 1, this%nchannels
@@ -173,16 +173,16 @@ contains
       end do
 
       this%nwavefunctions = pseudo_nwavefunctions(pseudo)
-      
+
       SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 1:this%nwavefunctions))
       SAFE_ALLOCATE(this%wf_n(1:this%nwavefunctions))
       SAFE_ALLOCATE(this%wf_l(1:this%nwavefunctions))
       SAFE_ALLOCATE(this%wf_occ(1:this%nwavefunctions))
-      
+
       do ii = 1, this%nwavefunctions
         call pseudo_wavefunction(pseudo, ii, this%wf_n(ii), this%wf_l(ii), this%wf_occ(ii), this%wavefunction(1, ii))
       end do
-      
+
     end if
 
     this%has_density = pseudo_has_density(pseudo)
@@ -191,7 +191,7 @@ contains
       SAFE_ALLOCATE(this%density(1:this%grid_size))
       call pseudo_density(pseudo, this%density(1))
     end if
-    
+
     this%nlcc = pseudo_has_nlcc(pseudo)
     if(this%nlcc) then
       SAFE_ALLOCATE(this%nlcc_density(1:this%grid_size))
@@ -201,7 +201,7 @@ contains
     if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this, namespace)
 
     this%pseudo = pseudo
-    
+
     POP_SUB(ps_xml_init)
   end subroutine ps_xml_init
 
@@ -210,7 +210,7 @@ contains
   subroutine ps_xml_check_normalization(this, namespace)
     type(ps_xml_t),    intent(in) :: this
     type(namespace_t), intent(in) :: namespace
-    
+
     integer :: ll, ip
     FLOAT   :: nrm, rr
 
@@ -233,10 +233,10 @@ contains
       end if
 
     end do
-    
+
     POP_SUB(ps_xml_check_normalization)
   end subroutine ps_xml_check_normalization
-  
+
   ! ---------------------------------------------------------
   subroutine ps_xml_end(this)
     type(ps_xml_t), intent(inout) :: this

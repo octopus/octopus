@@ -52,7 +52,7 @@ module subspace_oct_m
   use wfs_elec_oct_m
 
   implicit none
-  
+
   private
 
   public ::               &
@@ -67,7 +67,7 @@ module subspace_oct_m
   end type subspace_t
 
   type(profile_t),     save    :: diagon_prof, hamiltonian_elec_prof
-  
+
 contains
 
   subroutine subspace_init(this, namespace, st, no_sd)

@@ -112,7 +112,7 @@ contains
     PUSH_SUB(write_valconf)
 
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
-         (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
+      (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
 
     POP_SUB(write_valconf)
   end subroutine write_valconf
@@ -129,17 +129,17 @@ contains
     PUSH_SUB(read_valconf)
 
     read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
-         (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
+      (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
     do j = 1, c%p
-       select case(lvalues(j))
-       case('s'); c%l(j) = 0
-       case('p'); c%l(j) = 1
-       case('d'); c%l(j) = 2
-       case('f'); c%l(j) = 3
-       case default
-          message(1) = 'read_valconf.'
-          call messages_fatal(1)
-       end select
+      select case(lvalues(j))
+      case('s'); c%l(j) = 0
+      case('p'); c%l(j) = 1
+      case('d'); c%l(j) = 2
+      case('f'); c%l(j) = 3
+      case default
+        message(1) = 'read_valconf.'
+        call messages_fatal(1)
+      end select
     end do
 
     c%j = M_ZERO
@@ -177,7 +177,7 @@ contains
     end do
     ve = M_ZERO
     do is = 1, nspin
-       call vhrtre(rho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
+      call vhrtre(rho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
     end do
     ve(1, 1:nspin) = ve(2, 1:nspin)
 
@@ -317,7 +317,7 @@ contains
       write(message(1),'(a,a)') 'atomxc: Unknown functional ', FUNCTL
       call messages_fatal(1)
     ENDIF
-    
+
     ! initialize xc functional
     if(GGA) then
       call XC_F90(func_init)(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
@@ -334,7 +334,7 @@ contains
         call messages_fatal(1)
       end if
     end if
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize output                                                           !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -348,17 +348,17 @@ contains
         V_XC(IR,IS) = M_ZERO
       end do
     end do
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Loop on mesh points                                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do IR = 1,NR
-    
+
       ! Find interval of neighbour points to calculate derivatives
       IN1 = MAX(  1, IR-NN ) - IR
       IN2 = MIN( NR, IR+NN ) - IR
-      
+
       ! Find weights of numerical derivative from Lagrange
       ! interpolation formula
       do IN = IN1,IN2
@@ -377,21 +377,21 @@ contains
           DGDM(IN) = F1 / F2
         end if
       end do
-      
+
       ! Find dr/dmesh
       DRDM = 0
       do IN = IN1,IN2
         DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
       end do
-      
+
       ! Find differential of volume. Use trapezoidal integration rule
       DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
-      
+
       ! DVMIN is a small number added to avoid a division by zero
       DVOL = DVOL + DVMIN
       if (IR == 1 .or. IR == NR) DVOL = DVOL / 2
       if (GGA) AUX(IR) = DVOL
-      
+
       ! Find the weights for the derivative d(gradF(i))/d(F(j)), of
       ! the gradient at point i with respect to the value at point j
       if (GGA) then
@@ -399,7 +399,7 @@ contains
           DGIDFJ(IN) = DGDM(IN) / DRDM
         end do
       end if
-      
+
       ! Find density and gradient of density at this point
       do IS = 1,NSPIN
         D(IS) = DENS(IR,IS)
@@ -414,15 +414,15 @@ contains
       else
         GD = M_ZERO
       end if
-      
-      ! The XC_F90(gga) routines need as input these combinations of 
+
+      ! The XC_F90(gga) routines need as input these combinations of
       ! the gradient of the densities.
       sigma(1) = gd(3, 1)*gd(3, 1)
       if(NSPIN > 1) then
         sigma(2) = gd(3, 1) * gd(3, 2)
         sigma(3) = gd(3, 2) * gd(3, 2)
       end if
-      
+
       ! Find exchange and correlation energy densities and their
       ! derivatives with respect to density and density gradient
       if (GGA) then
@@ -432,7 +432,7 @@ contains
         call XC_F90(lda_exc_vxc)(x_conf, 1, D(1), EPSX, DEXDD(1))
         call XC_F90(lda_exc_vxc)(c_conf, 1, D(1), EPSC, DECDD(1))
       end if
-      
+
       ! The derivatives of the exchange and correlation energies per particle with
       ! respect to the density gradient have to be recovered from the derivatives
       ! with respect to the sigma values defined above.
@@ -446,7 +446,7 @@ contains
           decdgd(:, 2) = M_TWO * vcsigma(3)*gd(:, 2) + vcsigma(2)*gd(:, 1)
         end if
       end if
-      
+
       ! Add contributions to exchange-correlation energy and its
       ! derivatives with respect to density at all points
       do is = 1, NSPIN
@@ -466,13 +466,13 @@ contains
           V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
         end if
       end do
-      
+
     end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Divide by volume element to obtain the potential (per electron)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
+
     if(GGA) then
       do IS = 1,NSPIN
         do IR = 1,NR
@@ -498,10 +498,10 @@ contains
 
     call XC_F90(func_end)(x_conf)
     call XC_F90(func_end)(c_conf)
-    
+
     POP_SUB(atomxc)
   end subroutine atomxc
-  
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !>   VHRTRE CONSTRUCTS THE ELECTROSTATIC POTENTIAL DUE TO A SUPPLIED           !
@@ -528,18 +528,18 @@ contains
     FLOAT,   intent(in)  :: r(:), drdi(:), srdrdi(:)
     integer, intent(in)  :: nr
     FLOAT,   intent(in)  :: a
-    
+
     FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
     integer :: nrm1,nrm2,ir
-    
+
     PUSH_SUB(vhrtre)
-    
+
     NRM1 = NR - 1
     NRM2 = NR - 2
     A2BY4 = A*A/M_FOUR
     YBYQ = M_ONE - A*A/CNST(48.0)
     QBYY = M_ONE/YBYQ
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  SIMPSON`S RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          !
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
@@ -556,14 +556,14 @@ contains
       QT = QT + DZ
       V0 = V0 + DZ/R(IR)
     end do
-    
+
     do IR=3, NRM2, 2
       DZ = DRDI(IR)*RHO(IR)
       QT = QT + DZ
       V0 = V0 + DZ/R(IR)
     end do
     DZ = DRDI(NR)*RHO(NR)
-    
+
     QT = (QT + QT + DZ)*M_HALF
     V0 = (V0 + V0 + DZ/R(NR))
     V(1) = M_TWO*V0
@@ -577,7 +577,7 @@ contains
     IR   = 2
     T    = SRDRDI(IR)/R(IR)
     BETA = DRDI(IR)*T*RHO(IR)
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE NEXT 4 STATEMENTS INDICATE THAT WE FIRST FIND THE PARTICULAR           !
 !  SOLUTION TO THE INHOMOGENEOUS EQN. FOR WHICH Q(2)=0, WE THEN               !
@@ -670,20 +670,20 @@ contains
     integer,     intent(in)    :: nprin, nnode
     REAL_DOUBLE, intent(in)    :: dr
     integer,     intent(out)   :: ierr
-    
+
     integer :: i,ncor,n1,n2,niter,nt
     REAL_DOUBLE               :: e1, e2, del, de, et, t
     REAL_DOUBLE, parameter    :: tol = CNST(1.0e-5)
-    
+
     PUSH_SUB(egofv)
-    
+
     ncor=nprin-l-1
     n1=nnode
     n2=nnode-1
     e1=e
     e2=e
     ierr = 1
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  the labels 1 and 2 refer to the bisection process, defining the            !
@@ -760,7 +760,7 @@ contains
       !  too many nodes; set e2 and n2
       e2=e
       n2=nt
-    
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -794,7 +794,7 @@ contains
       end do
       call nrmlzg(g,s,n)
     end if
-    
+
     POP_SUB(egofv)
   end subroutine egofv
 
@@ -833,11 +833,11 @@ contains
     REAL_DOUBLE :: y2, g, gsg, x, gin, gsgin, xin
     integer :: n,knk,nndin,i
     REAL_DOUBLE :: zdr, yn, ratio, t
-    
+
     ! No PUSH SUB, called too often.
-    
+
     zdr = z*a*b
-    
+
     do n = nmax, 1, -1
       if( h(n)-e*s(n)  <  M_ONE ) then
         knk = n
@@ -845,7 +845,7 @@ contains
       end if
       y(n)=M_ZERO
     end do
-    
+
     call bcorgn(e,h,s,l,zdr,y2)
 
 
@@ -901,7 +901,7 @@ contains
     de=g*(x+xin+t*g)/gsg
     nnode=nnode+nndin
     if(de < M_ZERO) nnode=nnode+1
-    
+
     do i=knk,n
       y(i) = y(i)*ratio
     end do
@@ -938,7 +938,7 @@ contains
 
     integer :: nm1,nm2,i
     REAL_DOUBLE :: norm, srnrm
-    
+
     PUSH_SUB(nrmlzg)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -971,7 +971,7 @@ contains
     do i=1,n
       g(i) = g(i)/srnrm
     end do
-    
+
     POP_SUB(nrmlzg)
   end subroutine nrmlzg
 
@@ -984,7 +984,7 @@ contains
     REAL_DOUBLE, intent(out) :: y2
 
     REAL_DOUBLE :: t2, t3, d2, c0, c1, c2
-    
+
     ! no PUSH SUB, called too often
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -994,7 +994,7 @@ contains
 
     t2=h(2)-e*s(2)
     d2=-((CNST(24.)+CNST(10.0)*t2)/(CNST(12.)-t2))
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  The following section deals with the fact that the independent             !
 !  variable "y" in the Numerov equation is not zero at the origin             !
@@ -1021,7 +1021,7 @@ contains
       d2=(d2-c1)/(M_ONE-c2)
     end if
     y2=(-M_ONE)/d2
-    
+
     if(l  <  2) then
       if(l  <=  0) then
         c0=zdr/CNST(6.0)
@@ -1036,7 +1036,7 @@ contains
       d2=(d2-c1)/(M_ONE-c2)
     end if
     y2=(-M_ONE)/d2
-    
+
   end subroutine bcorgn
 
 
@@ -1051,22 +1051,22 @@ contains
     REAL_DOUBLE, intent(in)  :: a, b
 
     REAL_DOUBLE :: tnm1, tn, tnp1, beta, dg, c1, c2, c3, dn
-    
+
     PUSH_SUB(bcrmax)
-    
+
     tnm1=h(n-1)-e*s(n-1)
     tn  =h(n  )-e*s(n  )
     tnp1=h(n+1)-e*s(n+1)
     beta=M_ONE+b/rmax
     dg=a*beta*(dr+M_ONE-M_HALF/beta)
-    
+
     c2=CNST(24.)*dg/(CNST(12.)-tn)
     dn=-((CNST(24.)+CNST(10.)*tn)/(CNST(12.)-tn))
-    
+
     c1= (M_ONE-tnm1/CNST(6.0))/(M_ONE-tnm1/CNST(12.))
     c3=-((M_ONE-tnp1/CNST(6.0))/(M_ONE-tnp1/CNST(12.)))
     yn=-((M_ONE-c1/c3)/(dn-c2/c3))
-    
+
     POP_SUB(bcrmax)
   end subroutine bcrmax
 
@@ -1082,9 +1082,9 @@ contains
 
     integer :: i
     REAL_DOUBLE :: t
-    
+
     ! no PUSH SUB, called too often
-   
+
     y(n)=yn
     t=h(n)-e*s(n)
     g=y(n)/(M_ONE-t/CNST(12.))
@@ -1096,7 +1096,7 @@ contains
     gsg=gsg+g*s(i)*g
     x=y(i)-y(n)
     nnode=0
-    
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -1139,9 +1139,9 @@ contains
 
     integer :: i, nm4
     REAL_DOUBLE :: t, xl
-    
+
     ! no PUSH SUB, called too often
-    
+
     y(1)=M_ZERO
     y(2)=y2
     t=h(2)-e*s(2)
@@ -1153,7 +1153,7 @@ contains
     gsg=gsg+g*s(3)*g
     x=y(3)-y(2)
     nnode=0
-    
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  begin the outward integration by the Numerov method                        !

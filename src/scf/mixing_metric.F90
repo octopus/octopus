@@ -41,7 +41,7 @@ module mixing_metric_oct_m
 
   type(derivatives_t), pointer, save :: der_ptr
   type(nl_operator_t), save          :: op
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -66,7 +66,7 @@ contains
 
     call nl_operator_init(op, "Mix metric")
     call stencil_cube_get_lapl(op%stencil, der%mesh%sb%dim, 1)
-    
+
     call nl_operator_build(der%mesh, op, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
 
     if (op%const_w) then
@@ -74,9 +74,9 @@ contains
     else
       maxp = der%mesh%np
     end if
-    
+
     do ip = 1, maxp
-      
+
       do is = 1, op%stencil%size
 
         inb = sum(abs(op%stencil%points(1:der%mesh%sb%dim, is)))
@@ -97,13 +97,13 @@ contains
         case default
           ASSERT(.false.)
         end select
-        
+
       end do
 
       print*, "COSA", ip, sum(op%w(1:op%stencil%size, ip))
 
     end do
-    
+
     call nl_operator_update_weights(op)
 
     POP_SUB(mixing_metric_init)
@@ -140,7 +140,7 @@ contains
     res = dmf_dotp(der_ptr%mesh, xx, opyy)
 
     print*, res, dmf_dotp(der_ptr%mesh, xx, yy)
-    
+
     SAFE_DEALLOCATE_A(yyc)
     SAFE_DEALLOCATE_A(opyy)
 
@@ -149,4 +149,4 @@ contains
   end function mixing_metric_dotp
 
 end module mixing_metric_oct_m
-  
+

@@ -129,7 +129,7 @@ contains
 
     ! no push_sub for recursive function
 
-    if(n<=1) then 
+    if(n<=1) then
       fac = 1
     else
       fac = n*factorial(n-1)
@@ -146,7 +146,7 @@ contains
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
     FLOAT,   parameter :: tiny = CNST(1.e-30)
- 
+
     !   no push_sub: this routine is called too many times
 
     ! if l=0, no calculations are required
@@ -518,9 +518,9 @@ contains
 
     ! no push_sub in pure function
 
-    if(i == j) then 
+    if(i == j) then
       ddelta = M_ONE
-    else 
+    else
       ddelta = M_ZERO
     end if
 
@@ -720,9 +720,9 @@ contains
     FLOAT, intent(out)  :: grad_matrix(:,:)
     FLOAT, intent(in)   :: r     !< radius of hypersphere
     FLOAT, intent(in)   :: x(:)  !< array of hyperspherical angles
-    
+
     integer :: n, l, m
-    
+
     PUSH_SUB(hypersphere_grad_matrix)
 
     n = size(x)+1  ! the dimension of the matrix is (n-1)x(n)
@@ -731,23 +731,23 @@ contains
     grad_matrix = M_ONE
     grad_matrix(1,1) = -r*sin(x(1))
     forall(m = 2:n-1) grad_matrix(m,1) = M_ZERO
-    
+
     ! --- l=2..(n-1) ---
     do l=2, n-1
-       do m=1, n-1
-          if(m == l) then
-             grad_matrix(m,l) = -r*grad_matrix(m,l)*product(sin(x(1:l)))
-          elseif(m < l) then
-             grad_matrix(m,l) = grad_matrix(m,l)*r*cos(x(m))*cos(x(l))*product(sin(x(1:m-1)))*product(sin(x(m+1:l-1)))
-          else
-             grad_matrix(m,l) = M_ZERO
-          end if
-       end do
+      do m=1, n-1
+        if(m == l) then
+          grad_matrix(m,l) = -r*grad_matrix(m,l)*product(sin(x(1:l)))
+        elseif(m < l) then
+          grad_matrix(m,l) = grad_matrix(m,l)*r*cos(x(m))*cos(x(l))*product(sin(x(1:m-1)))*product(sin(x(m+1:l-1)))
+        else
+          grad_matrix(m,l) = M_ZERO
+        end if
+      end do
     end do
-       
+
     ! --- l=n ---
     do m=1, n-1
-       grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
+      grad_matrix(m,n) = r*cos(x(m))*grad_matrix(m,n)*product(sin(x(1:m-1)))*product(sin(x(m+1:n-1)))
     end do
 
     POP_SUB(hypersphere_grad_matrix)
@@ -758,9 +758,9 @@ contains
   integer pure function pad(size, blk)
     integer, intent(in) :: size
     integer, intent(in) :: blk
-    
+
     integer :: mm
-    
+
     mm = mod(size, blk)
     if(mm == 0) then
       pad = size
@@ -775,10 +775,10 @@ contains
     integer, intent(in) :: size
 
     integer :: mm, mm2
-    
+
     mm = size
     pad_pow2 = 1
-    
+
     ! loop below never terminates otherwise! just pick 1 as value.
     if(size == 0) return
 
@@ -790,7 +790,7 @@ contains
       pad_pow2 = pad_pow2*2
       mm = mm2
     end do
-    
+
     ! the rest is handled by log2
     if(mm /= 1) then
       pad_pow2 = pad_pow2*2**(ceiling(log(dble(mm))/log(2.0_8)))
@@ -818,7 +818,7 @@ contains
 
   logical function is_prime(n)
     integer, intent(in) :: n
-    
+
     integer :: i, root
 
     PUSH_SUB(is_prime)
@@ -829,7 +829,7 @@ contains
     end if
     if (n == 1) then
       is_prime = .false.
-      POP_SUB(is_prime); return 
+      POP_SUB(is_prime); return
     end if
 
     root = nint(sqrt(real(n)))
@@ -846,7 +846,7 @@ contains
 
   ! ---------------------------------------------------------
   !>  Generates a rotation matrix R to rotate a vector f to t.
-  !> 
+  !>
   !>	T. Möller and J. F. Hughes, Journal of Graphics Tools 4, 1 (1999)
   !>
   subroutine generate_rotation_matrix(R, ff, tt)
@@ -860,7 +860,7 @@ contains
 
     PUSH_SUB(generate_rotation_matrix)
 
-    dim = size(ff,1)  
+    dim = size(ff,1)
 
     ASSERT((dim < 3) .or. (dim > 2))
     ASSERT(size(tt,1)  ==  dim)
@@ -889,90 +889,90 @@ contains
         R(2,2) = cos(th)
 
       case (3)
-        if(.false.) then 
+        if(.false.) then
           !Old implementation
           SAFE_ALLOCATE(axis(1:dim))
           th = acos(ft)
 
           u = f / dot_product(f,f)
           v = t /dot_product(t,t)
-        
-          axis = dcross_product(u,v)    
+
+          axis = dcross_product(u,v)
           axis = axis / sqrt(dot_product(axis, axis))
 
-          R(1,1) = cos(th) + axis(1)**2 * (1 - cos(th))    
+          R(1,1) = cos(th) + axis(1)**2 * (1 - cos(th))
           R(1,2) = axis(1)*axis(2)*(1-cos(th)) + axis(3)*sin(th)
           R(1,3) = axis(1)*axis(3)*(1-cos(th)) - axis(2)*sin(th)
 
           R(2,1) = axis(2)*axis(1)*(1-cos(th)) - axis(3)*sin(th)
           R(2,2) = cos(th) + axis(2)**2 * (1 - cos(th))
-          R(2,3) = axis(2)*axis(3)*(1-cos(th)) + axis(1)*sin(th) 
+          R(2,3) = axis(2)*axis(3)*(1-cos(th)) + axis(1)*sin(th)
 
           R(3,1) = axis(3)*axis(1)*(1-cos(th)) + axis(2)*sin(th)
           R(3,2) = axis(3)*axis(2)*(1-cos(th)) - axis(1)*sin(th)
-          R(3,3) = cos(th) + axis(3)**2 * (1 - cos(th))          
+          R(3,3) = cos(th) + axis(3)**2 * (1 - cos(th))
 
           SAFE_DEALLOCATE_A(axis)
         end if
-        
-        if(.true.) then 
-        !Naive implementation
+
+        if(.true.) then
+          !Naive implementation
           th = acos(ft)
-          u = dcross_product(f,t)    
-          u = u / sqrt(dot_product(u,u)) 
+          u = dcross_product(f,t)
+          u = u / sqrt(dot_product(u,u))
 
           R(1,1) = u(1)**2 + (1-u(1)**2)*cos(th)
-          R(1,2) = u(1)*u(2)*(1-cos(th)) - u(3)*sin(th) 
+          R(1,2) = u(1)*u(2)*(1-cos(th)) - u(3)*sin(th)
           R(1,3) = u(1)*u(3) + u(2)*sin(th)
 
-          R(2,1) = u(1)*u(2)*(1-cos(th)) + u(3)*sin(th) 
+          R(2,1) = u(1)*u(2)*(1-cos(th)) + u(3)*sin(th)
           R(2,2) = u(2)**2 + (1-u(2)**2)*cos(th)
           R(2,3) = u(2)*u(3)*(1-cos(th)) - u(1)*sin(th)
 
           R(3,1) = u(1)*u(3)*(1-cos(th)) - u(2)*sin(th)
           R(3,2) = u(2)*u(3)*(1-cos(th)) + u(1)*sin(th)
-          R(3,3) = u(3)**2 + (1-u(3)**2)*cos(th)         
+          R(3,3) = u(3)**2 + (1-u(3)**2)*cos(th)
         end if
 
-        if(.false.) then 
+        if(.false.) then
           !Fast
           SAFE_ALLOCATE(p(1:dim))
-        
+
           if(abs(f(1))<=abs(f(2)) .and. abs(f(1))<abs(f(3))) then
             p = (/M_ONE, M_ZERO, M_ZERO/)
           else if(abs(f(2))<abs(f(1)) .and. abs(f(2))<=abs(f(3))) then
             p = (/M_ZERO, M_ONE, M_ZERO/)
           else if(abs(f(3))<=abs(f(1)) .and. abs(f(3))<abs(f(2))) then
             p = (/M_ZERO, M_ZERO, M_ONE/)
-          end if  
-        
+          end if
+
           u = p - f
           v = p - t
-        
+
           uu = dot_product(u,u)
           vv = dot_product(v,v)
           uv = dot_product(u,v)
-        
+
           do i=1,3
             do j=1,3
-          
+
               R(i,j) = ddelta(i,j) - M_TWO * u(i)*u(j)/uu - M_TWO * v(i)*v(j)/vv &
-              + CNST(4)*uv * v(i)*u(j) /(uu*vv)
-  
+                + CNST(4)*uv * v(i)*u(j) /(uu*vv)
+
             end do
           end do
-        
+
           SAFE_DEALLOCATE_A(p)
         end if
 
 
       end select
 
-    else 
+    else
 
       R = M_ZERO
       do i=1,dim
-        R(i,i) = M_ONE 
+        R(i,i) = M_ONE
       end do
 
     end if
@@ -981,7 +981,7 @@ contains
     SAFE_DEALLOCATE_A(u)
     SAFE_DEALLOCATE_A(v)
 
-    POP_SUB(generate_rotation_matrix)  
+    POP_SUB(generate_rotation_matrix)
   end subroutine generate_rotation_matrix
 
   ! ---------------------------------------------------------
@@ -1006,21 +1006,21 @@ contains
     end interface
 
     real(8) :: con = CNST(1.4), &
-               big = CNST(1.0e30), &
-               safe = M_TWO
+      big = CNST(1.0e30), &
+      safe = M_TWO
     integer :: ntab = 20, i, j
     real(8) :: errt, fac, hh, fx1, fx2
     real(8), allocatable :: a(:, :)
 
     PUSH_SUB(numder_ridders)
-    
+
     if(abs(h) <= M_EPSILON) then
       message(1) = "h must be nonzero in numder_ridders"
       call messages_fatal(1)
     end if
 
     SAFE_ALLOCATE(a(1:ntab, 1:ntab))
- 
+
     hh = h
     call f(x+hh, fx1)
     call f(x-hh, fx2)

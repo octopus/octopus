@@ -68,9 +68,9 @@ module system_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   end type system_t
-  
+
 contains
-  
+
   !----------------------------------------------------------
   subroutine system_init(sys, namespace)
     type(system_t),    intent(out) :: sys
@@ -89,7 +89,7 @@ contains
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
     call space_init(sys%space, sys%namespace)
-    
+
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
@@ -117,9 +117,9 @@ contains
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
       sys%ks%xc, sys%mc)
-    
+
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
-  
+
     call profiling_out(prof)
     POP_SUB(system_init)
 
@@ -158,9 +158,9 @@ contains
     call multicomm_end(sys%mc)
 
     call v_ks_end(sys%ks, sys%gr)
-    
+
     call output_end(sys%outp)
-    
+
     if(associated(sys%st)) then
       call states_elec_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)

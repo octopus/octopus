@@ -54,7 +54,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(C_PROFILING_MF_REDUCE)
   end if
-  
+
   POP_SUB(X(mf_integrate))
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
@@ -95,7 +95,7 @@ end subroutine X(mf_normalize)
 !! This function returns the dot product between two vectors,
 !! but using the mesh_aux defined as a global object in this
 !! module. This way it can be called by external libraries,
-!! passing only the two vectors. First, one has to 
+!! passing only the two vectors. First, one has to
 !! make sure that mesh_aux is pointing to some defined
 !! mesh data structure, by calling mesh_init_mesh_aux.
 !! ---------------------------------------------------------
@@ -144,9 +144,9 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   R_TYPE,            intent(in) :: f1(:), f2(:)
   logical, optional, intent(in) :: reduce
   logical, optional, intent(in) :: dotu
-     !< if true, use blas_dotu instead of blas_dot;
-     !! no complex conjugation.  Default is false.
-     !! has no effect if working with real version
+  !< if true, use blas_dotu instead of blas_dot;
+  !! no complex conjugation.  Default is false.
+  !! has no effect if working with real version
   integer, optional, intent(in) :: np
 
 #ifdef R_TCOMPLEX
@@ -219,8 +219,8 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
   R_TYPE,            intent(in) :: f1(:,:), f2(:,:)
   logical, optional, intent(in) :: reduce
   logical, optional, intent(in) :: dotu
-     !< if true, use lalg_dotu instead of lalg_dot;
-     !! no complex conjugation.  Default is false.
+  !< if true, use lalg_dotu instead of lalg_dot;
+  !! no complex conjugation.  Default is false.
   integer, optional, intent(in) :: np
 
   integer :: idim
@@ -249,7 +249,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   type(mesh_t),      intent(in) :: mesh
   R_TYPE,            intent(in) :: ff(:)
   logical, optional, intent(in) :: reduce
- 
+
   R_TYPE, allocatable :: ll(:)
 
   call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
@@ -337,7 +337,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   integer, optional, intent(in)  :: shift
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
-  
+
   integer, save :: iseed = 123
   R_BASE  :: rr
   type(profile_t), save :: prof
@@ -351,7 +351,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   end if
 
   if(present(shift)) then
-    !We skip shift times the seed 
+    !We skip shift times the seed
     call shiftseed(iseed, shift)
   end if
 
@@ -363,11 +363,11 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   end if
 
   call profiling_out(prof)
-  
+
   POP_SUB(X(mf_random))
 end subroutine X(mf_random)
 
-! --------------------------------------------------------- 
+! ---------------------------------------------------------
 !> This function receives a function f_in defined in a mesh, and returns
 !! the interpolated values of the function over the npoints_in defined
 !! by x_in.
@@ -422,7 +422,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
 end subroutine X(mf_interpolate_points)
 
 ! ---------------------------------------------------------
-!> Given a function ff defined on mesh, and a plane, it gives 
+!> Given a function ff defined on mesh, and a plane, it gives
 !! back the values of ff on the plane, by doing the appropriate
 !! interpolation.
 subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
@@ -471,7 +471,7 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 end subroutine X(mf_interpolate_on_plane)
 
 ! ---------------------------------------------------------
-!> Given a function ff defined on mesh, and a line, it gives 
+!> Given a function ff defined on mesh, and a line, it gives
 !! back the values of ff on the line, by doing the appropriate
 !! interpolation.
 subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
@@ -493,7 +493,7 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   do ip = 1, mesh%np_part_global
     xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
   end do
-  
+
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
   call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
@@ -654,14 +654,14 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
 
   ff2(1:mesh%np) = ff(1:mesh%np)
   multipole(1) = X(mf_integrate)(mesh, ff2, mask = inside)
-  
+
   if(lmax > 0) then
     do idim = 1, 3
       ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
       multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
     end do
   end if
-  
+
   if(lmax>1) then
     add_lm = 5
     do ll = 2, lmax

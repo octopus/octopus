@@ -17,7 +17,7 @@
 !!
 
 module checksum_interface_oct_m
-  
+
   public ::                 &
     checksum_calculate
 

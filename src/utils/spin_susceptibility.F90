@@ -106,53 +106,53 @@ program spin_susceptibility
   do iq = 1, kick%nqvec
     !Real part of m_x
     magnetization(:,1,iq) = m_cart(:,(iq-1)*12+1)*kick%trans_vec(1,1)  &
-                          + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,1) &
-                          + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,1)
+      + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,1) &
+      + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,1)
     !We add -Im(m_y)
     magnetization(:,1,iq) = magnetization(:,1,iq) -(m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,2) &
-                           + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,2) &
-                           + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,2))
+      + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,2) &
+      + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,2))
 
     !Im part of m_x
     magnetization(:,2,iq) = m_cart(:,(iq-1)*12+2)*kick%trans_vec(1,1) &
-                          + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,1) &
-                          + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,1)
+      + m_cart(:,(iq-1)*12+4)*kick%trans_vec(2,1) &
+      + m_cart(:,(iq-1)*12+6)*kick%trans_vec(3,1)
     !We add +Re(m_y)
     magnetization(:,2,iq) = magnetization(:,2,iq) +(m_cart(:,(iq-1)*12+1)*kick%trans_vec(1,2) &
-                         + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,2) &
-                         + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,2))
+      + m_cart(:,(iq-1)*12+3)*kick%trans_vec(2,2) &
+      + m_cart(:,(iq-1)*12+5)*kick%trans_vec(3,2))
 
     !Real part of m_x
     magnetization(:,3,iq) = m_cart(:,(iq-1)*12+7)*kick%trans_vec(1,1)  &
-                           + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,1) &
-                           + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,1)
+      + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,1) &
+      + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,1)
     !We add +Im(m_y)
     magnetization(:,3,iq) = magnetization(:,3,iq) +(m_cart(:,(iq-1)*12+8)*kick%trans_vec(1,2) &
-                           + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,2) &
-                           + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,2))
+      + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,2) &
+      + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,2))
 
     !Im part of m_x
     magnetization(:,4,iq) = m_cart(:,(iq-1)*12+8)*kick%trans_vec(1,1)  &
-                          + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,1) &
-                          + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,1)
+      + m_cart(:,(iq-1)*12+10)*kick%trans_vec(2,1) &
+      + m_cart(:,(iq-1)*12+12)*kick%trans_vec(3,1)
     !We add -Re(m_y)
     magnetization(:,4,iq) = magnetization(:,4,iq) -(m_cart(:,(iq-1)*12+7)*kick%trans_vec(1,2) &
-                         + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,2) &
-                         + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,2))
+      + m_cart(:,(iq-1)*12+9)*kick%trans_vec(2,2) &
+      + m_cart(:,(iq-1)*12+11)*kick%trans_vec(3,2))
 
     !Real and Im part of m_z
     magnetization(:,5,iq) = m_cart(:,(iq-1)*12+1)*kick%easy_axis(1)  &
-                          + m_cart(:,(iq-1)*12+3)*kick%easy_axis(2)  &
-                          + m_cart(:,(iq-1)*12+5)*kick%easy_axis(3)
+      + m_cart(:,(iq-1)*12+3)*kick%easy_axis(2)  &
+      + m_cart(:,(iq-1)*12+5)*kick%easy_axis(3)
     magnetization(:,6,iq) = m_cart(:,(iq-1)*12+2)*kick%easy_axis(1)  &
-                          + m_cart(:,(iq-1)*12+4)*kick%easy_axis(2)  &
-                          + m_cart(:,(iq-1)*12+6)*kick%easy_axis(3)
+      + m_cart(:,(iq-1)*12+4)*kick%easy_axis(2)  &
+      + m_cart(:,(iq-1)*12+6)*kick%easy_axis(3)
     magnetization(:,7,iq) = m_cart(:,(iq-1)*12+7)*kick%easy_axis(1)  &
-                          + m_cart(:,(iq-1)*12+9)*kick%easy_axis(2)  &
-                          + m_cart(:,(iq-1)*12+11)*kick%easy_axis(3)
+      + m_cart(:,(iq-1)*12+9)*kick%easy_axis(2)  &
+      + m_cart(:,(iq-1)*12+11)*kick%easy_axis(3)
     magnetization(:,8,iq) = m_cart(:,(iq-1)*12+8)*kick%easy_axis(1)  &
-                          + m_cart(:,(iq-1)*12+10)*kick%easy_axis(2) &
-                          + m_cart(:,(iq-1)*12+12)*kick%easy_axis(3)
+      + m_cart(:,(iq-1)*12+10)*kick%easy_axis(2) &
+      + m_cart(:,(iq-1)*12+12)*kick%easy_axis(3)
   end do
 
   SAFE_DEALLOCATE_A(m_cart)
@@ -162,8 +162,8 @@ program spin_susceptibility
   call messages_info(1)
 
   write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
-            'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
-            'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
+    'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
+    'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
 
   do iq = 1, kick%nqvec
 
@@ -217,7 +217,7 @@ program spin_susceptibility
     do ii = 1, num_col/2
       do kk = 1, energy_steps
         chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
-                    -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/kick%delta_strength
+          -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/kick%delta_strength
       end do
     end do
 
@@ -226,8 +226,8 @@ program spin_susceptibility
 
 
     write(header, '(9a15)') '#        energy', 'Re[\chi_{+-}(q)]', 'Im[\chi_{+-}(q)]', &
-              'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
-              'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
+      'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
+      'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
 
     write(fname, '(a,i3.3)') 'td.general/spin_susceptibility_q', iq
     out_file = io_open(trim(fname), namespace, action='write')
@@ -235,7 +235,7 @@ program spin_susceptibility
     do kk = 1, energy_steps
       ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
       write(out_file, '(13e15.6)') ww,                                   &
-               (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
+        (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
     end do
     call io_close(out_file)
 

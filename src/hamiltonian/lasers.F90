@@ -44,7 +44,7 @@ module lasers_oct_m
     laser_end,                    &
     laser_write_info,             &
     laser_field,                  &
-    laser_electric_field,         & 
+    laser_electric_field,         &
     laser_potential,              &
     laser_vector_potential,       &
     laser_to_numerical,           &
@@ -190,7 +190,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> The td functions that describe the laser field are transformed to a 
+  !> The td functions that describe the laser field are transformed to a
   !! "numerical" representation (i.e. time grid, values at this time grid).
   !!
   !! The possible phase and carrier frequency are evaluated and put together with
@@ -225,7 +225,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> The td functions that describe the laser field are transformed to a 
+  !> The td functions that describe the laser field are transformed to a
   !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
@@ -233,7 +233,7 @@ contains
     FLOAT,           intent(in)    :: dt
     integer,         intent(in)    :: max_iter
     FLOAT,           intent(in)    :: omegamax
-    
+
     PUSH_SUB(lasers_to_numerical)
 
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
@@ -256,7 +256,7 @@ contains
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0, rr, pot_re, pot_im, xx(MAX_DIM)
-    integer :: iop 
+    integer :: iop
 
     PUSH_SUB(laser_init)
 
@@ -265,7 +265,7 @@ contains
     !%Type block
     !%Section Time-Dependent
     !%Description
-    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent 
+    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent
     !% external perturbations that are applied to the system, in the form
     !% <math>f(x,y,z) \cos(\omega t + \phi (t)) g(t)</math>, where <math>f(x,y,z)</math> is defined by
     !% by a field type and polarization or a scalar potential, as below; <math>\omega</math>
@@ -324,7 +324,7 @@ contains
     !% are:
     !%
     !% Hartree / (<math>a_0^2</math> atomic_time) = <math>6.4364086 \times 10^{15} \mathrm{W/cm}^2</math>
-    !% 
+    !%
     !% eV / ( &Aring;<math>^2 (\hbar</math>/eV) ) = <math>2.4341348 \times 10^{12} \mathrm{W/cm}^2</math>
     !%
     !% If, in atomic units, we set the electric-field amplitude to <math>E_0</math>,
@@ -337,7 +337,7 @@ contains
     !% <math> I_0 = 1.327 \times 10^{13} (E_0^2) \mathrm{W/cm}^2 </math>
     !%
     !%Option electric_field 1
-    !% The external field is an electric field, the usual case when we want to describe a 
+    !% The external field is an electric field, the usual case when we want to describe a
     !% laser in the length gauge.
     !%Option magnetic_field 2
     !% The external field is a (homogeneous) time-dependent magnetic field.
@@ -374,7 +374,7 @@ contains
         omega0 = units_to_atomic(units_inp%energy, omega0)
 
         lasers(il)%omega = omega0
-     
+
         call parse_block_string(blk, il-1, jj+2, envelope_expression)
         call tdf_read(lasers(il)%f, namespace, trim(envelope_expression), ierr)
 
@@ -382,7 +382,7 @@ contains
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, phase_expression)
           call tdf_read(lasers(il)%phi, namespace, trim(phase_expression), ierr)
-          if (ierr /= 0) then            
+          if (ierr /= 0) then
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
             call messages_warning(2, namespace=namespace)
@@ -415,11 +415,11 @@ contains
               lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3), REAL_PRECISION))
             case(3)
               lasers(il)%a(ip, :) = (/ xx(2)*lasers(il)%pol(3) - xx(3)*lasers(il)%pol(2), &
-                                xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
-                                xx(1)*lasers(il)%pol(2) - xx(2)*lasers(il)%pol(1)  /)
+                xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
+                xx(1)*lasers(il)%pol(2) - xx(2)*lasers(il)%pol(1)  /)
             end select
           end do
-          lasers(il)%a = -M_HALF * lasers(il)%a 
+          lasers(il)%a = -M_HALF * lasers(il)%a
 
         end select
 
@@ -479,8 +479,8 @@ contains
   subroutine laser_write_info(lasers, iunit, dt, max_iter)
     type(laser_t),     intent(in) :: lasers(:)
     integer,           intent(in) :: iunit
-    FLOAT,   optional, intent(in) :: dt 
-    integer, optional, intent(in) :: max_iter 
+    FLOAT,   optional, intent(in) :: dt
+    integer, optional, intent(in) :: max_iter
 
     FLOAT :: tt, fluence, max_intensity, intensity, dt_, field(MAX_DIM), Up, maxfield,tmp
     integer :: il, iter, idir, no_l, max_iter_
@@ -520,11 +520,11 @@ contains
       write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
         units_from_atomic(units_out%energy, lasers(il)%omega), &
         ' [', trim(units_abbrev(units_out%energy)), ']'
-      write(iunit,'(3x,a)')       'Envelope: ' 
+      write(iunit,'(3x,a)')       'Envelope: '
       call tdf_write(lasers(il)%f, iunit)
 
       if(.not.tdf_is_empty(lasers(il)%phi)) then
-        write(iunit,'(3x,a)')       'Phase: ' 
+        write(iunit,'(3x,a)')       'Phase: '
         call tdf_write(lasers(il)%phi, iunit)
       end if
 
@@ -535,7 +535,7 @@ contains
       if(lasers(il)%field  ==  E_FIELD_ELECTRIC .or. lasers(il)%field  ==  E_FIELD_VECTOR_POTENTIAL) then
         fluence = M_ZERO
         max_intensity = M_ZERO
-        maxfield= M_ZERO   
+        maxfield= M_ZERO
         do iter = 1, max_iter_
           tt = iter * dt_
           field = M_ZERO
@@ -560,8 +560,8 @@ contains
           fluence / CNST(5.4525289841210) , ' [a.u]'
 
         if(abs(lasers(il)%omega) > M_EPSILON)then
-          ! Ponderomotive Energy is the cycle-averaged kinetic energy of 
-          ! a free electron quivering in the field 
+          ! Ponderomotive Energy is the cycle-averaged kinetic energy of
+          ! a free electron quivering in the field
           ! Up = E^2/(4*\omega^2)
           !
           ! subroutine laser_to_numerical_all sets lasers%omega to zero
@@ -569,7 +569,7 @@ contains
           Up = maxfield/(4*lasers(il)%omega**2)
 
           write(iunit,'(a,es17.6,3a)') '   Ponderomotive energy = ', &
-            units_from_atomic(units_out%energy, Up) ,& 
+            units_from_atomic(units_out%energy, Up) ,&
             ' [', trim(units_abbrev(units_out%energy)), ']'
         end if
       end if
@@ -622,8 +622,8 @@ contains
     type(mesh_t),    intent(in)    :: mesh
     FLOAT,           intent(inout) :: aa(:, :)
     FLOAT, optional, intent(in)    :: time
-    
-    FLOAT   :: amp 
+
+    FLOAT   :: amp
     integer :: ip, idir
 
     PUSH_SUB(laser_vector_potential)
@@ -656,7 +656,7 @@ contains
 
     !no PUSH SUB, called too often
 
-    dim = size(field)    
+    dim = size(field)
 
     if(present(time)) then
       amp = tdf(laser%f, time) * exp(M_zI * ( laser%omega * time + tdf(laser%phi, time) ) )
@@ -664,8 +664,8 @@ contains
       amp = M_z1
     end if
     if(laser%field  ==  E_FIELD_SCALAR_POTENTIAL) then
-      ! In this case we will just return the value of the time function. The "field", in fact, 
-      ! should be a function of the position in space (thus, a true "field"), given by the 
+      ! In this case we will just return the value of the time function. The "field", in fact,
+      ! should be a function of the position in space (thus, a true "field"), given by the
       ! gradient of the scalar potential.
       field(1) = field(1) + real(amp)
     else

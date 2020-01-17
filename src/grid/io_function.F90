@@ -70,7 +70,7 @@ module io_function_oct_m
     io_function_output_global_BZ
 
 #if defined(HAVE_NETCDF)
- public ::                        &
+  public ::                        &
     dout_cf_netcdf,               &
     zout_cf_netcdf
 #endif
@@ -111,9 +111,9 @@ contains
     PUSH_SUB(io_function_read_how)
 
     how = 0_8
-    
+
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
-    
+
     !%Variable OutputFormat
     !%Type flag
     !%Default 0
@@ -121,7 +121,7 @@ contains
     !%Description
     !% Describes the format of the output files (see <tt>Output</tt>).
     !% Example: <tt>axis_x + plane_x + dx</tt>
-    !%Option axis_x bit(0) 
+    !%Option axis_x bit(0)
     !% The values of the function on the <i>x</i> axis are printed. The string <tt>.y=0,z=0</tt> is appended
     !% to previous file names.
     !%Option axis_y bit(1)
@@ -149,7 +149,7 @@ contains
     !% Requires the NetCDF library. Only writes the real part of complex functions.
     !%Option mesh_index bit(8)
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
-    !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
+    !% the internal numbering of mesh points. Since this mode produces large datafiles this is only
     !% useful for small meshes and debugging purposes.
     !% The output can also be used to display the mesh directly. A Gnuplot script for mesh visualization
     !% can be found under <tt>PREFIX/share/octopus/util/display_mesh_index.gp</tt>.
@@ -210,7 +210,7 @@ contains
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
       write(message(1), '(a)') 'Must specify output method with variable OutputFormat.'
       call messages_fatal(1, only_root_writes = .true.)
-     end if
+    end if
 
     ! some modes are not available in some circumstances
     if(sb%dim == 1) then
@@ -348,10 +348,10 @@ contains
     write(iunit, '(a)')'.color red'
     write(iunit, *)
     do iatom = 1, geo%natoms
-      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(geo%atom(iatom)%label), & 
-                         'force:', sqrt(sum(forces(iatom,:)**2)),'['//trim(units_abbrev(units_out%force))//']'
+      write(iunit, '(a,1x,i4,1x,a2,1x,a6,1x,f10.6,a)')'.comment :', iatom, trim(geo%atom(iatom)%label), &
+        'force:', sqrt(sum(forces(iatom,:)**2)),'['//trim(units_abbrev(units_out%force))//']'
       write(iunit,fmt=trim(frmt))'.arrow',(center(iatom, idir), idir = 1, mesh%sb%dim), &
-                                 (center(iatom, idir) + forces(iatom, idir), idir = 1, mesh%sb%dim)
+        (center(iatom, idir) + forces(iatom, idir), idir = 1, mesh%sb%dim)
       write(iunit,*)
     end do
 
@@ -485,12 +485,12 @@ contains
     if(simul_box_is_periodic(mesh%sb)) then
       if(index_ == 1) then
         select case(mesh%sb%periodic_dim)
-          case(3)
-            write(iunit, '(a)') 'CRYSTAL'
-          case(2)
-            write(iunit, '(a)') 'SLAB'
-          case(1)
-            write(iunit, '(a)') 'POLYMER'
+        case(3)
+          write(iunit, '(a)') 'CRYSTAL'
+        case(2)
+          write(iunit, '(a)') 'SLAB'
+        case(1)
+          write(iunit, '(a)') 'POLYMER'
         end select
       end if
 
@@ -532,7 +532,7 @@ contains
     PUSH_SUB(ncdf_error)
 
     if(status  ==  NF90_NOERR) then
-    POP_SUB(ncdf_error)
+      POP_SUB(ncdf_error)
       return
     end if
 

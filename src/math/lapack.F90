@@ -32,7 +32,7 @@ module lapack_oct_m
   !!
   !!  The factorization has the form
   !! \f[
-  !!     A = U^T  U,  \mbox{ if UPLO} = 'U', 
+  !!     A = U^T  U,  \mbox{ if UPLO} = 'U',
   !! \f]
   !! or
   !! \f[
@@ -78,7 +78,7 @@ module lapack_oct_m
       integer,      intent(out)   :: info
     end subroutine zpotrf
   end interface lapack_potrf
-  
+
   !>  Computes all the eigenvalues, and optionally, the eigenvectors
   !!  of a real generalized symmetric-definite eigenproblem, of the form
   !!  \f$Ax=(\lambda)Bx,  ABx=(\lambda)x, \mbox{ or } BAx=(\lambda)x \f$.
@@ -130,7 +130,7 @@ module lapack_oct_m
       integer,      intent(out)   :: info
     end subroutine zhegv
   end interface lapack_hegv
-  
+
   !>  Computes for an \f$ N \times N \f$ complex nonsymmetric matrix A, the
   !!  eigenvalues and, optionally, the left and/or right eigenvectors.
   !!
@@ -318,14 +318,14 @@ module lapack_oct_m
       integer            info, lda, lwork, m, n
       complex(4)         a, tau, work
     end subroutine cgeqrf
-    
+
     subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
       implicit none
       integer            info, lda, lwork, m, n
       complex(8)         a, tau, work
     end subroutine zgeqrf
   end interface lapack_geqrf
-  
+
   !>  Generates an \f$ M \times N \f$ real matrix Q with orthonormal columns,
   !!  which is defined as the first N columns of a product of K elementary
   !!  reflectors of order M
@@ -335,13 +335,13 @@ module lapack_oct_m
   !! \f]
   !!
   !!  as returned by DGEQRF.
-  interface lapack_orgqr 
+  interface lapack_orgqr
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
       integer            info, k, lda, lwork, m, n
       double precision   a, tau, work
     end subroutine dorgqr
-    
+
     subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
       integer            info, k, lda, lwork, m, n

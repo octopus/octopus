@@ -53,7 +53,7 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
 
   SAFE_ALLOCATE(v_tmp(1:1))
   if(vp%rank == root) then
-  ! Fill send buffer.
+    ! Fill send buffer.
     SAFE_DEALLOCATE_A(v_tmp)
     SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
@@ -69,8 +69,8 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp(1), vp%np_local_vec, displs(1), R_MPITYPE, v_local(1), &
-                    vp%np_local, R_MPITYPE,                                      &
-                    root, vp%comm, mpi_err)
+    vp%np_local, R_MPITYPE,                                      &
+    root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   SAFE_DEALLOCATE_A(v_tmp)
@@ -91,8 +91,8 @@ subroutine X(vec_gather)(vp, root, v_local, v)
   integer,    intent(in)  :: root
   R_TYPE,     intent(in)  :: v_local(:)
   R_TYPE,     optional, intent(out) :: v(:) !< in order to prevent unassociated pointer errors,
-                                            !< this is optional, so that mpi ranks not expecting an output
-                                            !< do not have to pass a null pointer.
+  !< this is optional, so that mpi ranks not expecting an output
+  !< do not have to pass a null pointer.
 
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
@@ -116,8 +116,8 @@ subroutine X(vec_gather)(vp, root, v_local, v)
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
   call MPI_Gatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
-                   vp%np_local_vec, displs(1), R_MPITYPE,        &
-                   root, vp%comm, mpi_err)
+    vp%np_local_vec, displs(1), R_MPITYPE,        &
+    root, vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
@@ -158,7 +158,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
     POP_SUB(X(vec_allgather))
     return
   end if
-  
+
   ! Unfortunately, vp%xlocal_vec ist not quite the required
   ! displacement vector.
   SAFE_ALLOCATE(displs(1:vp%npart))
@@ -168,8 +168,8 @@ subroutine X(vec_allgather)(vp, v, v_local)
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
   call MPI_Allgatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
-                      vp%np_local_vec, displs(1), R_MPITYPE,        &
-                      vp%comm, mpi_err)
+    vp%np_local_vec, displs(1), R_MPITYPE,        &
+    vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values from v_tmp to their original position in v.

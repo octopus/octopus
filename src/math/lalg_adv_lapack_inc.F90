@@ -92,7 +92,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
 
   SAFE_ALLOCATE(diag(1:n))
 
-  ! store the diagonal of b  
+  ! store the diagonal of b
   forall(ii = 1:n) diag(ii) = b(ii, ii)
 
   lwork = 5*n ! get this from workspace query
@@ -134,7 +134,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
 !*             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
 !*                    minor of order i of B is not positive definite.
 !*                    The factorization of B could not be completed and
-!*                    no eigenvalues or eigenvectors were computed.      
+!*                    no eigenvalues or eigenvectors were computed.
       if(info < 0) then
         write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
       else if(info <= n) then
@@ -156,7 +156,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   if(present(err_code)) then
     err_code = info
   end if
-  
+
   call profiling_out(eigensolver_prof)
   POP_SUB(X(geneigensolve))
 end subroutine X(geneigensolve)
@@ -192,7 +192,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
 
   lwork = -1
   ! Initializing info, if not it can cause that the geev query mode fails.
-  ! Besides, if info is not initialized valgrind complains about it. 
+  ! Besides, if info is not initialized valgrind complains about it.
   info = 0
   ! A bug in the query mode of zgeev demands that the working array has to be larger than 1
   ! problem here is that a value is written somewhere into the array whether it is
@@ -296,7 +296,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   integer            :: m, iwork(5*n), ifail(n), info, lwork ! allocate me
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
-  
+
   PUSH_SUB(dlowest_geneigensolve)
 
   ASSERT(n > 0)
@@ -311,7 +311,7 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', &
       TOSTRING(X(sygvx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  end if  
+  end if
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
@@ -396,7 +396,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
       TOSTRING(X(hegvx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  end if  
+  end if
   lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
 
@@ -427,7 +427,7 @@ subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
       else
         write(message(2), '(a,i5,a)') 'The leading minor of order ', info - n, ' of B is not positive definite.'
       end if
-      call messages_fatal(2)      
+      call messages_fatal(2)
     else
       if(present(bof)) then
         bof = .true.
@@ -577,7 +577,7 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   FLOAT, allocatable :: work(:)
-  
+
   PUSH_SUB(dlowest_eigensolve)
 
   ASSERT(n > 0)
@@ -636,7 +636,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
   integer            :: m, iwork(5*n), ifail(n), info, lwork
   FLOAT              :: abstol
   CMPLX, allocatable :: work(:)
-   
+
   PUSH_SUB(zlowest_eigensolve)
 
   ASSERT(n > 0)
@@ -651,7 +651,7 @@ subroutine zlowest_eigensolve(k, n, a, e, v)
     write(message(1),'(3a,i5)') 'In zlowest_eigensolve, LAPACK ', &
       TOSTRING(X(heevx)), ' workspace query returned error message ', info
     call messages_fatal(1)
-  end if  
+  end if
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
@@ -743,12 +743,12 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
 !*          > 0:  if INFO = i, U(i,i) is exactly zero; the matrix is
 !*                singular and its inverse could not be computed.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else
-      write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
-    end if
-    call messages_fatal(2)
+      if(info < 0) then
+        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+      else
+        write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
+      end if
+      call messages_fatal(2)
     end if
   end if
 
@@ -879,7 +879,7 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
 !*                       value of RCOND would suggest.
     if(info < 0) then
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-      call messages_fatal(2)      
+      call messages_fatal(2)
     else if(info == n+1) then
       message(2) = '(reciprocal of the condition number is less than machine precision)'
       call messages_warning(2)
@@ -955,7 +955,7 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 !*                       value of RCOND would suggest.
     if(info < 0) then
       write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-      call messages_fatal(2)      
+      call messages_fatal(2)
     else if(info == n+1) then
       message(2) = '(reciprocal of the condition number is less than machine precision)'
       call messages_warning(2)
@@ -984,7 +984,7 @@ end subroutine zlinsyssolve
 subroutine dsingular_value_decomp(m, n, a, u, vt, sg_values)
   integer, intent(in)    :: m, n
   FLOAT,   intent(inout) :: a(:,:)          !< (m,n)
-  FLOAT,   intent(out)   :: u(:,:), vt(:,:) !< (m,m) (n,n)  
+  FLOAT,   intent(out)   :: u(:,:), vt(:,:) !< (m,m) (n,n)
   FLOAT,   intent(out)   :: sg_values(:)    !< (min(m,n))
 
   interface
@@ -1042,7 +1042,7 @@ end subroutine dsingular_value_decomp
 
 
 ! ---------------------------------------------------------
-!> computes inverse of a real NxN matrix a(:,:) using the SVD decomposition 
+!> computes inverse of a real NxN matrix a(:,:) using the SVD decomposition
 subroutine dsvd_inverse(m, n, a, threshold)
   integer, intent(in)           :: m, n
   FLOAT,   intent(inout)        :: a(:,:)    !< (m,n); a will be replaced by its inverse
@@ -1099,7 +1099,7 @@ end subroutine dsvd_inverse
 subroutine zsingular_value_decomp(m, n, a, u, vt, sg_values)
   integer, intent(in)    :: m, n
   CMPLX,   intent(inout) :: a(:,:)          !< (m,n)
-  CMPLX,   intent(out)   :: u(:,:), vt(:,:) !< (n,n) and (m,m)  
+  CMPLX,   intent(out)   :: u(:,:), vt(:,:) !< (n,n) and (m,m)
   FLOAT,   intent(out)   :: sg_values(:)    !< (n)
 
   interface
@@ -1160,7 +1160,7 @@ end subroutine zsingular_value_decomp
 
 
 ! ---------------------------------------------------------
-!> computes inverse of a complex MxN matrix a(:,:) using the SVD decomposition 
+!> computes inverse of a complex MxN matrix a(:,:) using the SVD decomposition
 subroutine zsvd_inverse(m, n, a, threshold)
   integer, intent(in)           :: m, n
   CMPLX,   intent(inout)        :: a(:,:)    !< (m,n); a will be replaced by its inverse transposed
@@ -1232,7 +1232,7 @@ subroutine X(invert_upper_triangular)(n, a)
       integer,      intent(out)   :: info
     end subroutine X(trtri)
   end interface
-  
+
   PUSH_SUB(X(invert_upper_triangular))
 
   ASSERT(n > 0)
@@ -1274,7 +1274,7 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
   integer :: rank, info
 #endif
   R_TYPE, allocatable :: ss(:)
-  
+
   interface
     subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
       integer, intent(in)    :: m
@@ -1286,10 +1286,10 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
       integer, intent(in)    :: ldb
       FLOAT,   intent(out)   :: s
       FLOAT,   intent(in)    :: rcond
-      integer, intent(out)   :: rank 
+      integer, intent(out)   :: rank
       FLOAT,   intent(out)   :: work
       integer, intent(in)    :: lwork
-      integer, intent(out)   :: info 
+      integer, intent(out)   :: info
     end subroutine dgelss
   end interface
 
@@ -1299,7 +1299,7 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
 
 ! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
-  
+
   call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
     s = ss(1), rcond = CNST(-1.0), rank = rank, work = dlwork, lwork = -1, info = info)
 

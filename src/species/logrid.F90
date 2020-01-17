@@ -181,7 +181,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivative_in_log_grid(grid, ff, dfdr)
-    type(logrid_t), intent(in)   :: grid    
+    type(logrid_t), intent(in)   :: grid
     FLOAT,          intent(in)   :: ff(:)
     FLOAT,          intent(out)  :: dfdr(:)
 

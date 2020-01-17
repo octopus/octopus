@@ -41,8 +41,8 @@ R_TYPE function X(states_elec_mpdotp_x)(namespace, mesh, excited_state, st, mat)
   SAFE_ALLOCATE(mat_local(1:excited_state%st%nst, 1:st%nst, 1:st%d%nik))
 
   if(present(mat)) then
-      mat_local = mat
-  else 
+    mat_local = mat
+  else
     call X(states_elec_matrix)(excited_state%st, st, mesh, mat_local)
   end if
 
@@ -58,7 +58,7 @@ end function X(states_elec_mpdotp_x)
 
 
 ! -------------------------------------------------------------
-!> The matrix mat should contain the dot products between two 
+!> The matrix mat should contain the dot products between two
 !! states. One of them (the one operating on the left) is an
 !! excited state. The pair_t pair indicates the substitution
 !! of one the occupied spin-orbitals by one unoccupied one
@@ -109,8 +109,8 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
 
   integer :: ispin, nik, nst, ik, i1, j1, k1, i2, j2, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), &
-                          partially_filled1(:), partially_filled2(:), &
-                          half_filled1(:), half_filled2(:)
+    partially_filled1(:), partially_filled2(:), &
+    half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: overlap_mat(:, :, :), op_mat(:, :, :)
   R_TYPE, allocatable :: bb(:, :), cc(:, :)
   R_TYPE :: zz, det
@@ -190,7 +190,7 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
       zz = M_ZERO
       do ii = 1, i1 + k1
         do jj = 1, i1 + k1
-           zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
+          zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
         end do
       end do
       zz = M_TWO * det * zz
@@ -238,7 +238,7 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
         zz = M_ZERO
         do ii = 1, i1
           do jj = 1, i1
-             zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
+            zz = zz + bb(ii, jj) * cc(ii, jj) * (-1)**(ii+jj)
           end do
         end do
 
@@ -249,7 +249,7 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
       end if
 
     end do
-  end select  
+  end select
 
 
   SAFE_DEALLOCATE_A(overlap_mat)
@@ -277,7 +277,7 @@ R_TYPE function X(states_elec_mpdotp_g)(namespace, mesh, st1, st2, mat) result(d
 
   integer :: ik, ispin, nik, nst, i1, j1, i2, j2, k1, k2, ii, jj
   integer, allocatable :: filled1(:), filled2(:), partially_filled1(:), partially_filled2(:), &
-                          half_filled1(:), half_filled2(:)
+    half_filled1(:), half_filled2(:)
   R_TYPE, allocatable :: aa(:, :, :), bb(:, :)
 
   PUSH_SUB(X(states_elec_mpdotp_g))

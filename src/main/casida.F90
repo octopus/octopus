@@ -78,7 +78,7 @@ module casida_oct_m
   type casida_t
     private
     integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF |
-                    !< CASIDA_VARIATIONAL | CASIDA_CASIDA
+    !< CASIDA_VARIATIONAL | CASIDA_CASIDA
 
     logical              :: states_are_real
     integer, allocatable :: n_occ(:)       !< number of occupied states
@@ -97,7 +97,7 @@ module casida_oct_m
     logical              :: herm_conj      !< use Hermitian conjugate of matrix
     type(restart_t)      :: restart_load
     type(restart_t)      :: restart_dump
-    
+
     logical, allocatable :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer              :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), allocatable :: pair(:)
@@ -131,7 +131,7 @@ module casida_oct_m
     FLOAT                :: qvector(MAX_DIM)
     FLOAT, allocatable   :: qf(:)
     FLOAT, allocatable   :: qf_avg(:)      !< Directionally averaged intensity
-    integer              :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
+    integer              :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme)
 
     logical              :: parallel_in_eh_pairs
     type(mpi_grp_t)      :: mpi_grp
@@ -144,7 +144,7 @@ module casida_oct_m
     integer :: qa                    !< previous mtxel calculated in K_term
     integer :: qk                    !< previous mtxel calculated in K_term
     FLOAT, allocatable :: dpot(:)    !< previous exchange potential calculated in K_term
-    CMPLX, allocatable :: zpot(:)    !< previous exchange potential calculated in K_term    
+    CMPLX, allocatable :: zpot(:)    !< previous exchange potential calculated in K_term
   end type casida_save_pot_t
 
   type(profile_t), save :: prof
@@ -152,9 +152,9 @@ module casida_oct_m
 contains
 
   subroutine casida_run_init()
-    
+
     PUSH_SUB(casida_run_init)
-    
+
     ! Pure 'other' parallelization is a bad idea. Trying to solve the Poisson equation separately on each node
     ! consumes excessive memory and time (easily more than is available). In principle, the line below would setup
     ! joint domain/other parallelization, but 'other' parallelization takes precedence, especially since
@@ -376,7 +376,7 @@ contains
     !%Section Linear Response::Casida
     !%Default write all
     !%Description
-    !% Specifies which excitations are written at the end of the calculation. 
+    !% Specifies which excitations are written at the end of the calculation.
     !%
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
@@ -388,9 +388,9 @@ contains
     !%Section Linear Response::Casida
     !%Default -1.
     !%Description
-    !% Specifies the threshold value for which the individual excitations are printed. 
-    !% i.e. juste-h pairs with weight larger than this threshold will be printed. 
-    !% 
+    !% Specifies the threshold value for which the individual excitations are printed.
+    !% i.e. juste-h pairs with weight larger than this threshold will be printed.
+    !%
     !% If a negative value (default) is set, all coefficients will be printed.
     !% For many case, a 0.01 value is a valid option.
     !%End
@@ -773,7 +773,7 @@ contains
 
       do ia = 1, cas%n_pairs
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
-                    st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
+          st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
         if(cas%w(ia) < -M_EPSILON) then
           message(1) = "There is a negative unocc-occ KS eigenvalue difference for"
           write(message(2),'("states ",I5," and ",I5," of k-point ",I5,".")') cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%kk
@@ -837,21 +837,21 @@ contains
   FLOAT function casida_matrix_factor(cas, sys)
     type(casida_t), intent(in)    :: cas
     type(system_t), intent(in)    :: sys
-    
+
     PUSH_SUB(casida_matrix_factor)
-    
+
     casida_matrix_factor = M_ONE
-    
+
     if(cas%type == CASIDA_VARIATIONAL) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
-    
+
     if(sys%st%d%ispin == UNPOLARIZED) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
-    
+
     POP_SUB(casida_matrix_factor)
-    
+
   end function casida_matrix_factor
 
   ! ---------------------------------------------------------
@@ -868,11 +868,11 @@ contains
     call io_mkdir(CASIDA_DIR, namespace)
     iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), namespace, action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
-                                                             '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
+      '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
-                                                                  trim('-'), &
-                                                                  trim('-'), &
-                                                                  trim('a.u.')
+      trim('-'), &
+      trim('-'), &
+      trim('a.u.')
 
     if(cas%avg_order == 0) then
       do ia = 1, cas%n_pairs
@@ -881,8 +881,8 @@ contains
     else
       do ia = 1, cas%n_pairs
         write(iunit, '(3es15.8)') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
-                                  cas%qf    (cas%ind(ia)), &
-                                  cas%qf_avg(cas%ind(ia))
+          cas%qf    (cas%ind(ia)), &
+          cas%qf_avg(cas%ind(ia))
       end do
     end if
 
@@ -897,18 +897,18 @@ contains
     type(casida_t), intent(in) :: cas
 
     select case(cas%type)
-      case(CASIDA_EPS_DIFF)
-        theory_name = "eps_diff"
-      case(CASIDA_PETERSILKA)
-        theory_name = "petersilka"
-      case(CASIDA_TAMM_DANCOFF)
-        theory_name = "tamm_dancoff"
-      case(CASIDA_VARIATIONAL)
-        theory_name = "variational"
-      case(CASIDA_CASIDA)
-        theory_name = "casida"
-      case default
-        theory_name = "unknown"
+    case(CASIDA_EPS_DIFF)
+      theory_name = "eps_diff"
+    case(CASIDA_PETERSILKA)
+      theory_name = "petersilka"
+    case(CASIDA_TAMM_DANCOFF)
+      theory_name = "tamm_dancoff"
+    case(CASIDA_VARIATIONAL)
+      theory_name = "variational"
+    case(CASIDA_CASIDA)
+      theory_name = "casida"
+    case default
+      theory_name = "unknown"
     end select
 
   end function theory_name

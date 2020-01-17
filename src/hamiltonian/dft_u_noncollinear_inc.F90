@@ -1,4 +1,4 @@
-!! Copyright (C) 2017 N. Tancogne-Dejean 
+!! Copyright (C) 2017 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
   SAFE_ALLOCATE(tmp(1:this%max_np))
   SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets))
   this%zcoulomb(1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, &
-                1:st%d%dim, 1:st%d%dim, 1:this%norbsets) = M_ZERO
+    1:st%d%dim, 1:st%d%dim, 1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
   ntodo = 0
@@ -80,11 +80,11 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
           do ip=1,np_sphere
             nn(ip,is1)  = conjg(os%zorb(ip,is1,ist))*os%zorb(ip,is1,jst)
           end do
-          !$omp end parallel do    
+          !$omp end parallel do
 
           !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
           call zpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere,is1), nn(1:np_sphere,is1))
-        end do !is1  
+        end do !is1
 
         klst=0
         do kst = 1, norbs
@@ -96,7 +96,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
 
                 !$omp parallel do
                 do ip=1,np_sphere
-                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,kst))*os%zorb(ip,is2,lst)
+                  tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,kst))*os%zorb(ip,is2,lst)
                 end do
                 !$omp end parallel do
 
@@ -143,7 +143,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
 end subroutine compute_complex_coulomb_integrals
 
 ! ---------------------------------------------------------
-!> This routine computes the effective U in the non-collinear case 
+!> This routine computes the effective U in the non-collinear case
 ! ---------------------------------------------------------
 subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
   type(lda_u_t),     intent(inout) :: this
@@ -164,71 +164,71 @@ subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
   if(norbs > 1) then
 
     do im = 1, norbs
-    do imp = 1,norbs
-      do impp = 1, norbs
-      do imppp = 1, norbs
-        ! We first compute the terms
-        ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
-        ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
-        tmpU = M_z0
-        tmpJ = M_z0
+      do imp = 1,norbs
+        do impp = 1, norbs
+          do imppp = 1, norbs
+            ! We first compute the terms
+            ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}
+            ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
+            tmpU = M_z0
+            tmpJ = M_z0
 
+            do ispin1 = 1, this%spin_channels
+              do ispin2 = 1, this%spin_channels
+                tmpU = tmpU + this%zn_alt(im,imp,ispin1,ios)*this%zn_alt(impp,imppp,ispin2,ios)&
+                  * this%zcoulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
+              end do
+              tmpJ = tmpJ + this%zn_alt(im,imp,ispin1,ios)*this%zn_alt(impp,imppp,ispin1,ios)&
+                * this%zcoulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
+            end do
+            tmpJ = tmpJ + this%zn_alt(im,imp,3,ios)*this%zn_alt(impp,imppp,4,ios) &
+              * this%zcoulomb(im,imppp,impp,imp,1,2,ios)                   &
+              +this%zn_alt(im,imp,4,ios)*this%zn_alt(impp,imppp,3,ios) &
+              * this%zcoulomb(im,imppp,impp,imp,2,1,ios)
+            ! These are the numerator of the ACBN0 U and J
+            numU = numU + tmpU
+            numJ = numJ + tmpJ
+          end do
+        end do
+
+        ! We compute the term
+        ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
+        tmpJ = M_z0
+        tmpU = M_z0
+        if(imp/=im) then
+          do ispin1 = 1, this%spin_channels
+            tmpJ = tmpJ + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
+            tmpU = tmpU + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
+          end do
+          tmpJ = tmpJ + this%zn(im,im,3,ios)*this%zn(imp,imp,4,ios) &
+            + this%zn(im,im,4,ios)*this%zn(imp,imp,3,ios)
+        end if
+        denomJ = denomJ + tmpJ
+
+        ! We compute the term
+        ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
-            tmpU = tmpU + this%zn_alt(im,imp,ispin1,ios)*this%zn_alt(impp,imppp,ispin2,ios)&
-                         * this%zcoulomb(im,imp,impp,imppp,ispin1,ispin2,ios)
+            if(ispin1 /= ispin2) then
+              tmpU = tmpU + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin2,ios)
+            end if
           end do
-          tmpJ = tmpJ + this%zn_alt(im,imp,ispin1,ios)*this%zn_alt(impp,imppp,ispin1,ios)&
-                        * this%zcoulomb(im,imppp,impp,imp,ispin1,ispin1,ios)
         end do
-        tmpJ = tmpJ + this%zn_alt(im,imp,3,ios)*this%zn_alt(impp,imppp,4,ios) &
-                           * this%zcoulomb(im,imppp,impp,imp,1,2,ios)                   &
-                          +this%zn_alt(im,imp,4,ios)*this%zn_alt(impp,imppp,3,ios) &
-                           * this%zcoulomb(im,imppp,impp,imp,2,1,ios)
-        ! These are the numerator of the ACBN0 U and J
-        numU = numU + tmpU
-        numJ = numJ + tmpJ
-      end do
-      end do
 
-      ! We compute the term
-      ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-      tmpJ = M_z0
-      tmpU = M_z0
-      if(imp/=im) then
-        do ispin1 = 1, this%spin_channels
-          tmpJ = tmpJ + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
-          tmpU = tmpU + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
-        end do
-        tmpJ = tmpJ + this%zn(im,im,3,ios)*this%zn(imp,imp,4,ios) &
-                    + this%zn(im,im,4,ios)*this%zn(imp,imp,3,ios)
-      end if
-      denomJ = denomJ + tmpJ
-
-      ! We compute the term
-      ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      do ispin1 = 1, this%spin_channels
-        do ispin2 = 1, this%spin_channels
-          if(ispin1 /= ispin2) then
-            tmpU = tmpU + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin2,ios)
-          end if
-        end do
+        if(im == imp) then
+          tmpU = tmpU - (this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
+            +this%zn(im,im,4,ios)*this%zn(im,im,3,ios))
+        end if
+        denomU = denomU + tmpU
       end do
-
-      if(im == imp) then
-        tmpU = tmpU - (this%zn(im,im,3,ios)*this%zn(im,im,4,ios) &
-                          +this%zn(im,im,4,ios)*this%zn(im,im,3,ios))
-      end if
-      denomU = denomU + tmpU
-    end do
     end do
     this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - &
-                             real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
+      real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
     this%orbsets(ios)%Ubar = real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION)
     this%orbsets(ios)%Jbar = real(numJ,REAL_PRECISION)/real(denomJ,REAL_PRECISION)
 
   else !In the case of s orbitals, the expression is different
-    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
+    ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
     numU = M_z0
     denomU = M_z0
@@ -236,15 +236,15 @@ subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
           numU = numU + this%zn_alt(1,1,ispin1,ios)*this%zn_alt(1,1,ispin2,ios) &
-                          *this%zcoulomb(1,1,1,1,ispin1,ispin2,ios)
+            *this%zcoulomb(1,1,1,1,ispin1,ispin2,ios)
           denomU = denomU + this%zn(1,1,ispin1,ios)*this%zn(1,1,ispin2,ios)
         end if
       end do
     end do
     denomU = denomU + this%zn(1,1,3,ios)*this%zn(1,1,4,ios) &
-                          +this%zn(1,1,4,ios)*this%zn(1,1,3,ios)
+      +this%zn(1,1,4,ios)*this%zn(1,1,3,ios)
 
-    ! We have to be careful in the case of hydrogen atom for instance 
+    ! We have to be careful in the case of hydrogen atom for instance
     if(abs(denomU)> CNST(1.0e-3)) then
       this%orbsets(ios)%Ubar = (real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION))
     else

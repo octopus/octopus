@@ -38,29 +38,29 @@ module double_grid_oct_m
 #endif
 
   implicit none
-  
+
   private
-  
+
   public ::                         &
-       double_grid_t,               &
-       double_grid_init,            &
-       double_grid_end,             &
-       double_grid_apply_local,     &
-       double_grid_apply_non_local, &
-       double_grid_get_rmax,        &
-       double_grid_get_hmax,        &
-       double_grid_enlarge
+    double_grid_t,               &
+    double_grid_init,            &
+    double_grid_end,             &
+    double_grid_apply_local,     &
+    double_grid_apply_non_local, &
+    double_grid_get_rmax,        &
+    double_grid_get_hmax,        &
+    double_grid_enlarge
 
   type double_grid_t
-     private
-     integer :: order
-     integer :: npoints
-     integer :: spacing_divisor
-     integer :: interpolation_min
-     integer :: interpolation_max
-     integer :: nn
-     logical :: use_double_grid
-     FLOAT, pointer :: co(:)
+    private
+    integer :: order
+    integer :: npoints
+    integer :: spacing_divisor
+    integer :: interpolation_min
+    integer :: interpolation_max
+    integer :: nn
+    logical :: use_double_grid
+    FLOAT, pointer :: co(:)
   end type double_grid_t
 
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
@@ -76,7 +76,7 @@ contains
 
     this%spacing_divisor = 3
     this%nn = (this%spacing_divisor - 1)/2
-   
+
     !%Variable DoubleGrid
     !%Type logical
     !%Default no
@@ -86,7 +86,7 @@ contains
     !% increase the precision of the application of the
     !% pseudopotentials. This is experimental, especially in parallel.
     !%End
-    if (sb%dim == 3) then 
+    if (sb%dim == 3) then
       call parse_variable(namespace, 'DoubleGrid', .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
@@ -95,7 +95,7 @@ contains
     if(this%use_double_grid) call messages_experimental('Double grid')
 
     !%Variable DoubleGridOrder
-    !%Type integer 
+    !%Type integer
     !%Default 9
     !%Section Mesh
     !%Description
@@ -104,51 +104,51 @@ contains
     !% recommended.
     !%End
     call parse_variable(namespace, 'DoubleGridOrder', 9, this%order)
-    
+
     ASSERT(mod(this%order,2) == 1)
-    
+
     this%interpolation_min = -this%order/2
     this%interpolation_max =  this%order/2 + 1
     this%npoints = this%interpolation_max - this%interpolation_min + 1
-    
+
     SAFE_ALLOCATE(this%co(this%interpolation_min:this%interpolation_max))
 
     call calc_coefficients()
 
     POP_SUB(double_grid_init)
 
-    contains
+  contains
 
-      subroutine calc_coefficients
-        FLOAT, allocatable :: points(:)
-        integer :: ii
+    subroutine calc_coefficients
+      FLOAT, allocatable :: points(:)
+      integer :: ii
 
-        PUSH_SUB(double_grid_init.calc_coefficients)
+      PUSH_SUB(double_grid_init.calc_coefficients)
 
-        SAFE_ALLOCATE(points(this%interpolation_min:this%interpolation_max))
-        
-        do ii = this%interpolation_min,  this%interpolation_max
-          points(ii) = M_THREE*ii - M_ONE
-        end do
+      SAFE_ALLOCATE(points(this%interpolation_min:this%interpolation_max))
 
-        call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
+      do ii = this%interpolation_min,  this%interpolation_max
+        points(ii) = M_THREE*ii - M_ONE
+      end do
 
-        SAFE_DEALLOCATE_A(points)
-        POP_SUB(double_grid_init.calc_coefficients)
-        
-      end subroutine calc_coefficients
+      call interpolation_coefficients(this%npoints, points, M_ZERO, this%co)
+
+      SAFE_DEALLOCATE_A(points)
+      POP_SUB(double_grid_init.calc_coefficients)
+
+    end subroutine calc_coefficients
 
   end subroutine double_grid_init
 
   subroutine double_grid_end(this)
     type(double_grid_t), intent(inout) :: this
- 
+
     PUSH_SUB(double_grid_end)
     SAFE_DEALLOCATE_P(this%co)
     POP_SUB(double_grid_end)
 
   end subroutine double_grid_end
-  
+
   FLOAT function double_grid_get_hmax(this, mesh) result(hmax)
     type(double_grid_t), intent(in) :: this
     type(mesh_t),        intent(in) :: mesh
@@ -156,8 +156,8 @@ contains
     PUSH_SUB(double_grid_get_hmax)
 
     hmax = maxval(mesh%spacing(1:MAX_DIM))
-      
-    if(this%use_double_grid)  hmax = hmax / this%spacing_divisor    
+
+    if(this%use_double_grid)  hmax = hmax / this%spacing_divisor
 
     POP_SUB(double_grid_get_hmax)
   end function double_grid_get_hmax
@@ -168,12 +168,12 @@ contains
     type(mesh_t),            intent(in) :: mesh
 
     type(ps_t), pointer :: ps
-    
+
     PUSH_SUB(double_grid_get_rmax)
 
     ps => species_ps(spec)
     rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
-    if(this%use_double_grid) then 
+    if(this%use_double_grid) then
       rmax = rmax + this%interpolation_max * maxval(mesh%spacing(1:3))
     end if
     nullify(ps)
@@ -183,10 +183,10 @@ contains
 
   integer function double_grid_enlarge(this)
     type(double_grid_t),     intent(in) :: this
-    
+
     PUSH_SUB(double_grid_enlarge)
 
-    double_grid_enlarge = 0 
+    double_grid_enlarge = 0
     if(this%use_double_grid) double_grid_enlarge = this%interpolation_max * this%nn
 
     POP_SUB(double_grid_enlarge)
@@ -205,15 +205,15 @@ contains
     integer,             intent(in)    :: jxyz_inv(:)
     FLOAT,               intent(in)    :: vv
     FLOAT,               intent(inout) :: vs(:)
-    
+
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
-    
+
     ! no push_sub, threadsafe function
-    
+
     ip = jxyz(is)
     if (mesh%parallel_in_domains) then
-#ifdef HAVE_MPI                    
+#ifdef HAVE_MPI
       !map the local point to a global point
       if (ip <= mesh%np) then
         !inner points
@@ -230,20 +230,20 @@ contains
       end if
 #endif
     end if
-    
+
     start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
-    
+
     pp = start(1)
     do ll = this%interpolation_min, this%interpolation_max
-      
+
       qq = start(2)
       do mm = this%interpolation_min, this%interpolation_max
-        
+
         rr = start(3)
         do nn = this%interpolation_min, this%interpolation_max
-          
+
           ip = mesh%idx%lxyz_inv(pp, qq, rr)
-#ifdef HAVE_MPI      
+#ifdef HAVE_MPI
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
@@ -258,7 +258,7 @@ contains
       pp = pp + ii
     end do
   end subroutine apply_to_nb
-  
+
 #define profiler double_grid_local_prof
 #define profiler_label "DOUBLE_GRID_LOCAL"
 #define double_grid_apply double_grid_apply_local

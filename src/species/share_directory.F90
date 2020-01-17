@@ -19,7 +19,7 @@
 #include "global.h"
 
 module share_directory_oct_m
-  
+
   implicit none
 
   private
@@ -27,10 +27,10 @@ module share_directory_oct_m
     share_directory_set
 
   interface
-    
+
     subroutine share_directory_set(dir)
       implicit none
-      
+
       character(len=*), intent(in)    :: dir
     end subroutine share_directory_set
 

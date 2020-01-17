@@ -57,7 +57,7 @@ contains
     integer,           intent(in)    :: ispin
     character(len=*),  intent(in)    :: filename
     type(namespace_t), intent(in)    :: namespace
-    
+
     character(len=MAX_PATH_LEN) :: fullpath
     integer :: iunit
     logical :: found, ascii
@@ -83,7 +83,7 @@ contains
       message(1) = "Pseudopotential file '" // trim(fullpath) // " not found"
       call messages_fatal(1, namespace=namespace)
     end if
-    
+
     if(ascii) then
       iunit = io_open(fullpath, namespace, action='read', form='formatted', status='old')
     else
@@ -103,7 +103,7 @@ contains
     POP_SUB(ps_psf_init)
   end subroutine ps_psf_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine ps_psf_end(ps_psf)
     type(ps_psf_t), intent(inout) :: ps_psf
@@ -174,7 +174,7 @@ contains
     end do
 
     POP_SUB(build_valconf)
-  end subroutine build_valconf 
+  end subroutine build_valconf
 
   !----------------------------------------------------------------
   subroutine file_to_grid(psf_file, ps_grid)
@@ -239,14 +239,14 @@ contains
 
     POP_SUB(psf_process)
   end subroutine ps_psf_process
-  
+
   ! ---------------------------------------------------------
   subroutine ps_psf_get_eigen(ps_psf, eigen)
     type(ps_psf_t), intent(in)  :: ps_psf
     FLOAT,          intent(out) :: eigen(:,:)
 
     integer :: i
-    
+
     PUSH_SUB(ps_psf_get_eigen)
 
     do i = 1, ps_psf%conf%p
@@ -254,12 +254,12 @@ contains
         eigen(i, 1) = ps_psf%eigen(i, 1)
       else
         eigen(i, 1:2) = ps_psf%eigen(i, 2:3)
-      end if        
+      end if
     end do
-      
+
     POP_SUB(ps_psf_get_eigen)
   end subroutine ps_psf_get_eigen
-    
+
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psf_file, namespace, g, conf, ispin, rphi, eigen)
     type(ps_psf_file_t), intent(inout) :: psf_file
@@ -268,7 +268,7 @@ contains
     type(valconf_t),     intent(in)    :: conf
     integer,             intent(in)    :: ispin
     FLOAT,               intent(out)   :: rphi(:,:,:), eigen(:,:)
-    
+
 
     character(len=3) :: functl
     integer :: iter, ir, is, l, nnode, nprin, ierr

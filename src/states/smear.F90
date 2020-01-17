@@ -34,7 +34,7 @@ module smear_oct_m
   use varinfo_oct_m
 
   implicit none
-  
+
   private
   public ::                           &
     smear_t,                          &
@@ -53,7 +53,7 @@ module smear_oct_m
     integer, public :: method       !< which smearing function to take
     FLOAT,   public :: dsmear       !< the parameter defining this function
     FLOAT,   public :: e_fermi      !< the Fermi energy
-    
+
     integer, public :: el_per_state !< How many electrons can we put in each state (1 or 2)
     FLOAT,   public :: ef_occ       !< Occupancy of the level at the Fermi energy
     logical, public :: integral_occs !< for fixed_occ, are they all integers?
@@ -70,7 +70,7 @@ module smear_oct_m
     SMEAR_METHFESSEL_PAXTON = 4,      &
     SMEAR_SPLINE            = 5,      &
     SMEAR_FIXED_OCC         = 6
-  
+
 contains
 
   !--------------------------------------------------
@@ -243,15 +243,15 @@ contains
           iter = iter + 1
         end do
       end do
-      
+
       call sort(eigenval_list, reorder)
 
       sumq_int = int(qtot) * this%nik_factor
       sumq_frac = qtot * this%nik_factor - sumq_int
-      
+
       do iter = 1, nst * nik
         weight = int(kweights(k_list(reorder(iter))) * this%nik_factor + M_HALF)
-        if(.not. weight > 0) cycle 
+        if(.not. weight > 0) cycle
         this%e_fermi = eigenval_list(iter)
         this%ef_occ  = (sumq_int + sumq_frac) / (weight * this%el_per_state)
 
@@ -330,7 +330,7 @@ contains
       ! do nothing
     else if(this%method == SMEAR_SEMICONDUCTOR) then
       ASSERT(this%fermi_count > 0 .and. this%fermi_count <= nik*nst)
-      
+
       ifermi = 0
       do ik = 1, nik
         do ist = 1, nst
@@ -343,11 +343,11 @@ contains
           else
             occupations(ist, ik) = M_ZERO
           end if
-          
+
         end do
       end do
 
-    else 
+    else
       dsmear = max(CNST(1e-14), this%dsmear)
       do ik = 1, nik
         do ist = 1, nst
@@ -378,23 +378,23 @@ contains
     entropy = M_ZERO
 
     if(this%method == SMEAR_FIXED_OCC .or. this%method == SMEAR_SEMICONDUCTOR) then
-    ! Fermi-Dirac entropy, not quite the same as will be obtained with true smearing
-    ! RM Wentzcovitch, JL Martins, and PB Allen, Phys. Rev. B 45, 11372 (1992) eqn (5)
-    ! also N Marzari PhD thesis p 117, http://quasiamore.mit.edu/phd/Marzari_PhD.pdf
+      ! Fermi-Dirac entropy, not quite the same as will be obtained with true smearing
+      ! RM Wentzcovitch, JL Martins, and PB Allen, Phys. Rev. B 45, 11372 (1992) eqn (5)
+      ! also N Marzari PhD thesis p 117, http://quasiamore.mit.edu/phd/Marzari_PhD.pdf
       do ik = 1, nik
         do ist = 1, nst
           ff = occ(ist, ik) / this%el_per_state
           if(ff > M_ZERO .and. ff  <  M_ONE) then
             term = ff * log(ff) + (1 - ff) * log (1 - ff)
           else ! we have semiconducting smearing, or perverse occupations as in Methfessel-Paxton
-            term = M_ZERO      
+            term = M_ZERO
           end if
           entropy = entropy - kweights(ik) * this%el_per_state * term
         end do
       end do
     else
       dsmear = max(CNST(1e-14), this%dsmear)
-  
+
       do ik = 1, nik
         do ist = 1, nst
           if (eigenvalues(ist, ik) < HUGE(M_ONE)) then
@@ -423,7 +423,7 @@ contains
 
     ! smear_delta_function is not defined for SMEAR_FIXED_OCC
     ASSERT(this%method /= SMEAR_FIXED_OCC)
-    
+
     deltaf = M_ZERO
     select case(this%method)
     case(SMEAR_SEMICONDUCTOR)
@@ -439,7 +439,7 @@ contains
       arg = min(maxarg, xp**2)
 
       deltaf = exp(-arg) / sqrt(M_PI) * (M_TWO - sqrt(M_TWO) * xx)
-      
+
     case(SMEAR_METHFESSEL_PAXTON)
       arg    = min(maxarg, xx**2)
       deltaf = exp(-arg) / sqrt(M_PI)
@@ -464,7 +464,7 @@ contains
       deltaf = sqrt(M_E) * xp * exp(-xp * xp)
 
     end select
-    
+
   end function smear_delta_function
 
 
@@ -504,7 +504,7 @@ contains
 
       stepf = M_HALF * loct_erf(xp) + &
         M_ONE / sqrt(M_TWO * M_PI) * exp(-arg) + M_HALF
-      
+
     case(SMEAR_METHFESSEL_PAXTON)
       stepf = M_HALF * loct_erfc(-xx)
 
@@ -569,7 +569,7 @@ contains
       arg = min(maxarg, xp**2)
 
       entropyf =  M_ONE / sqrt(M_TWO * M_PI) * xp * exp(-arg)
-      
+
     case(SMEAR_METHFESSEL_PAXTON)
       arg = min(maxarg, xx**2)
       entropyf = -M_HALF * exp(-arg) / sqrt(M_PI)

@@ -28,7 +28,7 @@ subroutine X(calculate_eigenvalues)(namespace, hm, der, st)
   R_TYPE, allocatable :: eigen(:, :)
 
   PUSH_SUB(X(calculate_eigenvalues))
-  
+
   if(debug%info) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
     call messages_info(1)
@@ -62,7 +62,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(calculate_expectation_values))
-  
+
   call profiling_in(prof, "EIGENVALUE_CALC")
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -74,11 +74,11 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       if(hamiltonian_elec_apply_packed(hm)) then
         call st%group%psib(ib, ik)%do_pack()
       end if
-      
+
       call st%group%psib(ib, ik)%copy_to(hpsib)
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, terms = terms)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
+      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)
 
       if(hamiltonian_elec_apply_packed(hm)) then
         call st%group%psib(ib, ik)%do_unpack(copy = .false.)
@@ -90,7 +90,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
   end do
 
   if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, &
-                   eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+    eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call profiling_out(prof)
   POP_SUB(X(calculate_expectation_values))
@@ -105,7 +105,7 @@ FLOAT function X(energy_calc_electronic)(namespace, hm, der, st, terms) result(e
   integer,                  intent(in)    :: terms
 
   R_TYPE, allocatable  :: tt(:, :)
- 
+
   PUSH_SUB(X(energy_calc_electronic))
 
   SAFE_ALLOCATE(tt(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))

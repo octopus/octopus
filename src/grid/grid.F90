@@ -83,7 +83,7 @@ contains
     PUSH_SUB(grid_init_stage_0)
 
     call simul_box_init(gr%sb, namespace, geo, space)
-      
+
     POP_SUB(grid_init_stage_0)
   end subroutine grid_init_stage_0
 
@@ -112,7 +112,7 @@ contains
     !% of the forces or other sensitive quantities.
     !% Experimental, and incompatible with domain-parallelization.
     !%End
-    if (gr%sb%dim == 3) then 
+    if (gr%sb%dim == 3) then
       call parse_variable(namespace, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
@@ -121,7 +121,7 @@ contains
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
-    
+
     ! initialize to -1
     grid_spacing = -M_ONE
 
@@ -165,7 +165,7 @@ contains
     end if
 
 #if defined(HAVE_GDLIB)
-    if(gr%sb%box_shape == BOX_IMAGE) then 
+    if(gr%sb%box_shape == BOX_IMAGE) then
       do idir = 1, gr%sb%dim
         ! default grid_spacing is determined from lsize and the size of the image
         if(grid_spacing(idir) < M_ZERO) then
@@ -259,7 +259,7 @@ contains
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
-    
+
     if(gr%have_fine_mesh) then
 
       if(gr%mesh%parallel_in_domains) then
@@ -269,16 +269,16 @@ contains
 
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
-      
+
       call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
 
-      call derivatives_nullify(gr%fine%der)      
+      call derivatives_nullify(gr%fine%der)
       call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
-      
+
       call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
-      
+
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-      
+
       message(1) = "Info: fine mesh"
       call messages_info(1)
       call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
@@ -372,7 +372,7 @@ contains
     if (gr%mesh%use_curvilinear) then
       call curvilinear_write_info(gr%cv, iunit)
     end if
-    
+
     call messages_print_stress(iunit)
 
     POP_SUB(grid_write_info)

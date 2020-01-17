@@ -28,7 +28,7 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
   real(8),           intent(in)    :: beta
   type(accel_mem_t), intent(inout) :: c
   integer(8),        intent(in)    :: offc
-  integer(8),        intent(in)    :: ldc   
+  integer(8),        intent(in)    :: ldc
 
 #ifdef HAVE_OPENCL
   integer :: ierr
@@ -58,10 +58,10 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
 #endif
   call accel_finish()
 #else
-  
+
 #endif
 
-#ifdef HAVE_CUDA    
+#ifdef HAVE_CUDA
   call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
   call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 1)
 
@@ -122,10 +122,10 @@ subroutine X(accel_trsm)(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, 
   ASSERT(offa == 0)
   ASSERT(offb == 0)
 
-#ifdef HAVE_CUDA    
+#ifdef HAVE_CUDA
   call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, 1)
   call accel_write_buffer(alpha_buffer, alpha)
-  
+
   call aX(cuda_blas_, trsm)(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
     m = m, n = n, alpha = alpha_buffer%mem, A = a%mem, lda = lda, B = b%mem, ldb = ldb)
 #endif
@@ -188,7 +188,7 @@ subroutine X(accel_gemm)(transa, transb, m, n, k, alpha, A, offa, lda, B, offb, 
     beta = beta, C = c%mem, offC = offc, ldc = ldc, &
     CommandQueue = accel%command_queue, status = ierr)
   if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
-  
+
 #endif
 #ifdef HAVE_CUDA
 
@@ -230,7 +230,7 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #ifdef HAVE_OPENCL
   integer :: status
   type(accel_mem_t)  :: scratch_buffer
-#endif  
+#endif
 
   PUSH_SUB(X(accel_dot))
 
@@ -238,10 +238,10 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #ifdef R_TREAL
   call cuda_blas_ddot &
 #else
-  call cuda_blas_zdotc &
+    call cuda_blas_zdotc &
 #endif
-  (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
-  y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
+    (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
+    y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
 #endif
 
 #ifdef HAVE_OPENCL
@@ -250,22 +250,22 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #ifdef R_TREAL
   call clblasDdot &
 #else
-  call clblasZdotc &
+    call clblasZdotc &
 #endif
-  (N = n, dotProduct = res%mem, offDP = offres, &
-  X = x%mem, offx = offx, incx = int(incx), &
-  Y = y%mem, offy = offy, incy = int(incy), &
-  scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
+    (N = n, dotProduct = res%mem, offDP = offres, &
+    X = x%mem, offx = offx, incx = int(incx), &
+    Y = y%mem, offy = offy, incy = int(incy), &
+    scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
   if(status /= clblasSuccess) call clblas_print_error(status, 'clblasXdot')
-  
+
   call accel_finish()
-  
+
   call accel_release_buffer(scratch_buffer)
 #endif
 
   POP_SUB(X(accel_dot))
 end subroutine X(accel_dot)
-    
+
 
 ! -----------------------------------------------------------------
 
@@ -281,7 +281,7 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
   integer :: status
   type(accel_mem_t)  :: scratch_buffer
 #endif
-  
+
   PUSH_SUB(X(accel_nrm2))
 
 #ifdef HAVE_CUDA
@@ -296,21 +296,21 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
 #ifdef R_TREAL
   call clblasDnrm2 &
 #else
-  call clblasDznrm2 &
+    call clblasDznrm2 &
 #endif
-  (N = n, NRM2 = res%mem, offNRM2 = offres, &
+    (N = n, NRM2 = res%mem, offNRM2 = offres, &
     X = x%mem, offx = offx, incx = int(incx), &
     scratchBuff = scratch_buffer%mem, CommandQueue = accel%command_queue, status = status)
   if(status /= clblasSuccess) call clblas_print_error(status, 'clblasXnrm2')
-  
+
   call accel_finish()
-  
+
   call accel_release_buffer(scratch_buffer)
 #endif
 
   POP_SUB(X(accel_nrm2))
 end subroutine X(accel_nrm2)
-    
+
 ! -----------------------------------------------------------------------------------
 
 subroutine X(accel_gemv)(transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
@@ -344,7 +344,7 @@ subroutine X(accel_gemv)(transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
     beta = beta, y = y%mem, offy = 0, incy = incy, &
     CommandQueue = accel%command_queue, status = ierr)
   if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
-  
+
 #endif
 #ifdef HAVE_CUDA
 

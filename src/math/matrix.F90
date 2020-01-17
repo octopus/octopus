@@ -37,7 +37,7 @@ module matrix_oct_m
     matrix_get_block,              &
     matrix_print,                  &
     matrix_type
-  
+
   type matrix_t
     ! Components are public by default
     integer               :: dim(1:2)
@@ -58,7 +58,7 @@ module matrix_oct_m
   interface matrix_get_block
     module procedure dmatrix_get_block, zmatrix_get_block
   end interface matrix_get_block
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -76,7 +76,7 @@ contains
     this%type = type
 
     this%mpi_grp = mpi_grp
-    
+
     ASSERT(type == TYPE_FLOAT .or. type == TYPE_CMPLX)
 
     if(type == TYPE_FLOAT) then
@@ -92,7 +92,7 @@ contains
 
   subroutine matrix_end(this)
     type(matrix_t),             intent(inout) :: this !< the object to be destroyed
-    
+
     PUSH_SUB(matrix_end)
 
     SAFE_DEALLOCATE_A(this%dmat)
@@ -113,7 +113,7 @@ contains
     else
       this%zmat = CNST(0.0)
     end if
-    
+
     POP_SUB(matrix_set_zero)
   end subroutine matrix_set_zero
 
@@ -123,7 +123,7 @@ contains
     type(matrix_t), intent(in) :: this
 
     integer :: ii
-    
+
     PUSH_SUB(matrix_print)
 
     do ii = 1, this%dim(1)
@@ -133,7 +133,7 @@ contains
         print*, this%zmat(ii, 1:this%dim(2))
       end if
     end do
-    
+
     POP_SUB(matrix_print)
   end subroutine matrix_print
 
@@ -145,7 +145,7 @@ contains
     matrix_type = this%type
   end function matrix_type
 
-  
+
 #include "undef.F90"
 #include "real.F90"
 

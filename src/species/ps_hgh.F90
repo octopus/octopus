@@ -196,7 +196,7 @@ contains
     FLOAT,          intent(out) :: eigen(:,:)
 
     integer :: i
-    
+
     PUSH_SUB(hgh_get_eigen)
 
     do i = 1, psp%conf%p
@@ -205,7 +205,7 @@ contains
 
     POP_SUB(hgh_get_eigen)
   end subroutine hgh_get_eigen
-  
+
   ! ---------------------------------------------------------
   function load_params(unit, params)
     integer,        intent(in)  :: unit        ! where to read from
@@ -424,7 +424,7 @@ contains
     FLOAT,          intent(in)    :: r
     integer,        intent(in)    :: i
     integer,        intent(in)    :: l
-    
+
     FLOAT                       :: projectorr_scalar
 
     FLOAT :: x, y, rr
@@ -566,7 +566,7 @@ contains
     s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
     s(1) = s(2)
     a2b4 = M_FOURTH*psp%g%a**2
-    
+
     ! "Double" self-consistent loop: nonlocal and XC parts have to be calculated
     ! self-consistently.
     diff = CNST(1e5)

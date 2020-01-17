@@ -99,7 +99,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
   end do spin
 
-#if defined(HAVE_MPI) 
+#if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     call MPI_Barrier(st%mpi_grp%comm, mpi_err)
     do ist = 1, st%nst
@@ -199,7 +199,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
 
       call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
-           R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
+        R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
       call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
 

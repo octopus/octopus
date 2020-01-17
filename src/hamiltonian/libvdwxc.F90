@@ -31,7 +31,7 @@ module libvdwxc_oct_m
     LIBVDWXC_MODE_AUTO = 1,   &
     LIBVDWXC_MODE_SERIAL = 2, &
     LIBVDWXC_MODE_MPI = 3!, &
-    !LIBVDWXC_MODE_PFFT = 3
+  !LIBVDWXC_MODE_PFFT = 3
 
   private
 
@@ -343,55 +343,55 @@ contains
 
     POP_SUB(libvdwxc_calculate)
 
-    contains
+  contains
 
-      subroutine tocube(array, cubearray)
-        FLOAT,                 intent(in)    :: array(:)
-        FLOAT,                 intent(out)   :: cubearray(:,:,:)
+    subroutine tocube(array, cubearray)
+      FLOAT,                 intent(in)    :: array(:)
+      FLOAT,                 intent(out)   :: cubearray(:,:,:)
 
-        PUSH_SUB(libvdwxc_calculate.tocube)
+      PUSH_SUB(libvdwxc_calculate.tocube)
 
-        if (this%cube%parallel_in_domains) then
-          call dmesh_to_cube_parallel(this%mesh, array, this%cube, cf, this%mesh_cube_map)
+      if (this%cube%parallel_in_domains) then
+        call dmesh_to_cube_parallel(this%mesh, array, this%cube, cf, this%mesh_cube_map)
+      else
+        if(this%mesh%parallel_in_domains) then
+          call dmesh_to_cube(this%mesh, array, this%cube, cf, local = .true.)
         else
-          if(this%mesh%parallel_in_domains) then
-            call dmesh_to_cube(this%mesh, array, this%cube, cf, local = .true.)
-          else
-            call dmesh_to_cube(this%mesh, array, this%cube, cf)
-          end if
+          call dmesh_to_cube(this%mesh, array, this%cube, cf)
         end if
-        cubearray(:,:,:) = cf%dRS
-        POP_SUB(libvdwxc_calculate.tocube)
-      end subroutine tocube
+      end if
+      cubearray(:,:,:) = cf%dRS
+      POP_SUB(libvdwxc_calculate.tocube)
+    end subroutine tocube
 
-      subroutine fromcube(cubearray, array)
-        FLOAT,                 intent(in)  :: cubearray(:,:,:)
-        FLOAT,                 intent(out) :: array(:)
+    subroutine fromcube(cubearray, array)
+      FLOAT,                 intent(in)  :: cubearray(:,:,:)
+      FLOAT,                 intent(out) :: array(:)
 
-        PUSH_SUB(libvdwxc_calculate.fromcube)
-        cf%dRS = cubearray
-        if (this%cube%parallel_in_domains) then
-          call dcube_to_mesh_parallel(this%cube, cf, this%mesh, array, this%mesh_cube_map)
+      PUSH_SUB(libvdwxc_calculate.fromcube)
+      cf%dRS = cubearray
+      if (this%cube%parallel_in_domains) then
+        call dcube_to_mesh_parallel(this%cube, cf, this%mesh, array, this%mesh_cube_map)
+      else
+        if(this%mesh%parallel_in_domains) then
+          call dcube_to_mesh(this%cube, cf, this%mesh, array, local=.true.)
         else
-          if(this%mesh%parallel_in_domains) then
-            call dcube_to_mesh(this%cube, cf, this%mesh, array, local=.true.)
-          else
-            call dcube_to_mesh(this%cube, cf, this%mesh, array)
-          end if
+          call dcube_to_mesh(this%cube, cf, this%mesh, array)
         end if
-        POP_SUB(libvdwxc_calculate.fromcube)
-      end subroutine fromcube
+      end if
+      POP_SUB(libvdwxc_calculate.fromcube)
+    end subroutine fromcube
 
-      subroutine libvdwxc_write_array(arr, fname)
-        FLOAT,            intent(in) :: arr(:)
-        character(len=*), intent(in) :: fname
-        integer :: ierr
+    subroutine libvdwxc_write_array(arr, fname)
+      FLOAT,            intent(in) :: arr(:)
+      character(len=*), intent(in) :: fname
+      integer :: ierr
 
-        call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
-          fname, namespace, this%mesh, arr, unit_one, ierr)
-      end subroutine libvdwxc_write_array
+      call dio_function_output(OPTION__OUTPUTFORMAT__DX,  'libvdwxc-debug', &
+        fname, namespace, this%mesh, arr, unit_one, ierr)
+    end subroutine libvdwxc_write_array
 
-    end subroutine libvdwxc_calculate
+  end subroutine libvdwxc_calculate
 
   subroutine libvdwxc_end(this)
     type(libvdwxc_t), intent(inout) :: this

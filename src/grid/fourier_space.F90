@@ -38,7 +38,7 @@ module fourier_space_oct_m
   implicit none
   private
   public ::                     &
-    cube_function_alloc_fs,     & 
+    cube_function_alloc_fs,     &
     cube_function_free_fs,      &
     dcube_function_rs2fs,       &
     zcube_function_rs2fs,       &
@@ -69,16 +69,16 @@ contains
   subroutine cube_function_alloc_fs(cube, cf, force_alloc)
     type(cube_t), target,  intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
-    logical, optional,     intent(in)    :: force_alloc  
-      
+    logical, optional,     intent(in)    :: force_alloc
+
     integer :: n1, n2, n3
     logical :: allocated
-    
+
     PUSH_SUB(cube_function_alloc_fs)
-    
+
     ASSERT(.not. associated(cf%fs))
     ASSERT(associated(cube%fft))
-    
+
     cf%forced_alloc = optional_default(force_alloc, .false.)
 
     n1 = max(1, cube%fs_n(1))
@@ -86,18 +86,18 @@ contains
     n3 = max(1, cube%fs_n(3))
 
     allocated = .false.
-    
+
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
-      if(.not. cf%forced_alloc) then 
+      if(.not. cf%forced_alloc) then
         allocated = .true.
-        ASSERT(associated(cube%fft))  
+        ASSERT(associated(cube%fft))
         if(any(cube%fs_n(1:3) == 0)) then
           cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
         else
           cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
         end if
-      else ! force allocate transposed with PFFT  
+      else ! force allocate transposed with PFFT
         allocated = .true.
         SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
@@ -112,17 +112,17 @@ contains
     if(.not. allocated) then
       SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
     end if
-    
+
     POP_SUB(cube_function_alloc_fs)
   end subroutine cube_function_alloc_fs
 
-  
+
   ! ---------------------------------------------------------
   !> Deallocates the Fourier space grid
   subroutine cube_function_free_fs(cube, cf)
     type(cube_t),          intent(in)    :: cube
     type(cube_function_t), intent(inout) :: cf
-    
+
     logical :: deallocated
 
     PUSH_SUB(cube_function_free_fs)
@@ -148,15 +148,15 @@ contains
       ASSERT(associated(cf%fs))
       SAFE_DEALLOCATE_P(cf%fs)
     end if
-    
+
     POP_SUB(cube_function_free_fs)
   end subroutine cube_function_free_fs
-  
 
-  ! ---------------------------------------------------------  
+
+  ! ---------------------------------------------------------
   subroutine fourier_space_op_end(this)
     type(fourier_space_op_t), intent(inout) :: this
-    
+
     PUSH_SUB(fourier_space_op_end)
 
     if(this%in_device_memory) then

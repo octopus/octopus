@@ -33,13 +33,13 @@ module rkb_projector_oct_m
 
   private
   public :: &
-       rkb_projector_t,    &
-       rkb_projector_null, &
-       rkb_projector_init, &
-       rkb_project,        &
-       rkb_project_bra,    &
-       rkb_project_ket,    &
-       rkb_projector_end
+    rkb_projector_t,    &
+    rkb_projector_null, &
+    rkb_projector_init, &
+    rkb_project,        &
+    rkb_project_bra,    &
+    rkb_project_ket,    &
+    rkb_projector_end
 
   !> The rkb_projector data type holds the KB projectors build with total angular
   !! momentum eigenfunctions.
@@ -74,7 +74,7 @@ contains
     type(atom_t), target,  intent(in)    :: a
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength
- 
+
     integer :: i
     type(ps_t), pointer :: ps
 
@@ -103,7 +103,7 @@ contains
         rkb_p%ket(:, i, 1, 2) = M_z0
       end if
     end do
-    
+
     ! The l- and m-dependent prefactors are included in the KB energies
     rkb_p%f(1, 1, 1) = real(l + so_strength*lm + 1, REAL_PRECISION)
     rkb_p%f(1, 2, 1) = so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
@@ -171,7 +171,7 @@ contains
     type(submesh_t),       intent(in)  :: sm
     type(rkb_projector_t), intent(in)  :: rkb_p
     CMPLX,                 intent(in)  :: psi(:, :)
-    CMPLX,                 intent(out) :: uvpsi(:,:) !< (2, 2)    
+    CMPLX,                 intent(out) :: uvpsi(:,:) !< (2, 2)
 
     integer :: idim, n_s, is
 
@@ -179,7 +179,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "RKB_PROJECT_BRA")
- 
+
 #ifndef HAVE_OPENMP
     PUSH_SUB(rkb_project_bra)
 #endif
@@ -253,7 +253,7 @@ contains
     call profiling_out(prof)
 
   end subroutine rkb_project_ket
-  
+
 end module rkb_projector_oct_m
 
 !! Local Variables:

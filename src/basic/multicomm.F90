@@ -59,18 +59,18 @@ module multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use utils_oct_m
-  
+
   implicit none
-  
+
   private
-  
+
   public ::                          &
     multicomm_divide_range,          &
 #ifdef HAVE_OPENMP
     multicomm_divide_range_omp,      &
 #endif
 #if defined(HAVE_MPI)
-    multicomm_create_all_pairs,      &
+  multicomm_create_all_pairs,      &
 #endif
     multicomm_t,                     &
     multicomm_all_pairs_t,           &
@@ -88,16 +88,16 @@ module multicomm_oct_m
     P_STRATEGY_STATES  = 2,          & !< parallelization in states
     P_STRATEGY_KPOINTS = 3,          & !< parallelization in k-points
     P_STRATEGY_OTHER   = 4,          &   !< something else like e-h pairs
-    P_STRATEGY_MAX     = 4 
+    P_STRATEGY_MAX     = 4
 
   integer, public, parameter ::      &
     P_MASTER           = 1,          &
     P_SLAVE            = 2
-  
+
   integer, public, parameter ::      &
     PAR_AUTO            = -1,        &
     PAR_NO              =  0
-  
+
   integer,           parameter :: n_par_types = 4
   character(len=11), parameter :: par_types(0:n_par_types) = &
     (/                              &
@@ -127,7 +127,7 @@ module multicomm_oct_m
     integer          :: nthreads         !< Number of OMP threads
     integer          :: node_type        !< Is this node a P_MASTER or a P_SLAVE?
     logical          :: have_slaves      !< are slaves available?
-    
+
     integer          :: full_comm        !< The base communicator.
     integer          :: full_comm_rank   !< The rank in the base communicator.
     integer, public  :: master_comm      !< The communicator without slaves.
@@ -159,7 +159,7 @@ contains
     if(associated(apin%schedule)) then
       SAFE_ALLOCATE(apout%schedule(1:size(apin%schedule, 1), 1:size(apin%schedule, 2)))
       apout%schedule = apin%schedule
-    end if    
+    end if
 
     POP_SUB(multicomm_all_pairs_copy)
   end subroutine multicomm_all_pairs_copy
@@ -199,14 +199,14 @@ contains
 
     call messages_obsolete_variable(namespace, 'ParallelizationStrategy')
     call messages_obsolete_variable(namespace, 'ParallelizationGroupRanks')
-    
+
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO
       if(bitand(default_mask, ibset(0, ipar - 1)) /= 0) then
         default(ipar) = PAR_AUTO
       end if
     end do
-    
+
     !%Variable ParDomains
     !%Type integer
     !%Default auto
@@ -225,7 +225,7 @@ contains
     !%Option auto -1
     !% The number of processors is assigned automatically.
     !%Option no 0
-    !% This parallelization strategy is not used.    
+    !% This parallelization strategy is not used.
     !%End
     call parse_variable(namespace, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
 
@@ -248,7 +248,7 @@ contains
     !%Option auto -1
     !% The number of processors is assigned automatically.
     !%Option no 0
-    !% This parallelization strategy is not used.    
+    !% This parallelization strategy is not used.
     !%End
     call parse_variable(namespace, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
 
@@ -269,7 +269,7 @@ contains
     !%Option auto -1
     !% The number of processors is assigned automatically.
     !%Option no 0
-    !% This parallelization strategy is not used.    
+    !% This parallelization strategy is not used.
     !%End
     call parse_variable(namespace, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
 
@@ -294,7 +294,7 @@ contains
     !%Option auto -1
     !% The number of processors is assigned automatically.
     !%Option no 0
-    !% This parallelization strategy is not used.    
+    !% This parallelization strategy is not used.
     !%End
     call parse_variable(namespace, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
 
@@ -335,7 +335,7 @@ contains
       !% of domains used in domain parallelization.
       !%End
       call parse_variable(namespace, 'ParallelizationNumberSlaves', 0, num_slaves)
-      
+
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
       mc%have_slaves = (num_slaves > 0)
@@ -385,9 +385,9 @@ contains
           call messages_write('Parallelization strategies unavailable for this run mode are being discarded.')
           call messages_warning()
         end if
-        
+
         mc%par_strategy = bitand(mc%par_strategy, parallel_mask)
-        
+
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
           message(2) = "Please select a parallelization strategy compatible with"
@@ -406,7 +406,7 @@ contains
         mc%par_strategy = P_STRATEGY_SERIAL
       end if
 
-       mc%nthreads = 1
+      mc%nthreads = 1
 #if defined(HAVE_OPENMP)
       !$omp parallel
       !$omp master
@@ -426,12 +426,12 @@ contains
         write(message(5),'(a)')     ''
         call messages_info(5)
       end if
-      
+
       POP_SUB(multicomm_init.strategy)
     end subroutine strategy
 
     ! ---------------------------------------------------------
-    
+
     subroutine assign_nodes()
       integer :: ii, nn, kk, n_divisors, divisors(1:50)
       integer :: n_group_max(1:P_STRATEGY_MAX)
@@ -457,7 +457,7 @@ contains
 
       ! first loop, check the processors assigned by the user
       do ipar = P_STRATEGY_MAX, 1, -1
-        
+
         if(mc%group_sizes(ipar) == PAR_AUTO) cycle
 
         if(mc%group_sizes(ipar) > n_group_max(ipar)) then
@@ -479,7 +479,7 @@ contains
           call messages_write(').')
           call messages_fatal()
         end if
-        
+
         nn = nn/mc%group_sizes(ipar)
 
       end do
@@ -488,10 +488,10 @@ contains
       do ipar = P_STRATEGY_MAX, 1, -1
 
         if(mc%group_sizes(ipar) /= PAR_AUTO) cycle
-        
+
         n_divisors = ubound(divisors, dim = 1)
         call get_divisors(nn, n_divisors, divisors)
-        
+
         mc%group_sizes(ipar) = nn
         do ii = 2, n_divisors
           if(divisors(ii) > n_group_max(ipar)) then
@@ -499,9 +499,9 @@ contains
             exit
           end if
         end do
-        
+
         nn = nn/mc%group_sizes(ipar)
-        
+
       end do
 
       POP_SUB(multicomm_init.assign_nodes)
@@ -559,7 +559,7 @@ contains
       end if
 
       if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX) .and. &
-             real_group_sizes(1:P_STRATEGY_MAX) >  1)) then
+        real_group_sizes(1:P_STRATEGY_MAX) >  1)) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call messages_warning(2)
@@ -626,8 +626,8 @@ contains
               do kk = 1, mc%group_sizes(3)
                 do ll = 1, mc%group_sizes(4)
                   ranks(nn) = (ll-1)*mc%group_sizes(3)*mc%group_sizes(2)*mc%group_sizes(1) &
-                            + (kk-1)*mc%group_sizes(2)*mc%group_sizes(1) &
-                            + (jj-1)*mc%group_sizes(1) + ii - 1
+                    + (kk-1)*mc%group_sizes(2)*mc%group_sizes(1) &
+                    + (jj-1)*mc%group_sizes(1) + ii - 1
                   nn = nn + 1
                 end do
               end do
@@ -663,7 +663,7 @@ contains
         periodic_mask(P_STRATEGY_DOMAINS) = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
         periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
-        ! We allow reordering of ranks. 
+        ! We allow reordering of ranks.
         call MPI_Cart_create(reorder_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
@@ -685,7 +685,7 @@ contains
         call MPI_Comm_split(mc%full_comm, mc%node_type, mc%full_comm_rank, new_comm, mpi_err)
         ASSERT(new_comm /= MPI_COMM_NULL)
         call MPI_Comm_size(new_comm, new_comm_size, mpi_err)
-        
+
         reorder = .false.
         if(product(mc%group_sizes(:)) /= new_comm_size) then
           write(stderr,*) 'node ', mpi_world%rank, ': mc%group_sizes = ', mc%group_sizes, ' new_comm_size = ', new_comm_size
@@ -694,7 +694,7 @@ contains
         endif
         call MPI_Cart_create(new_comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%master_comm, mpi_err)
         ASSERT(mc%master_comm /= MPI_COMM_NULL)
-        
+
         call MPI_Comm_free(new_comm, mpi_err)
 
         call MPI_Comm_rank(mc%master_comm, mc%master_comm_rank, mpi_err)
@@ -702,10 +702,10 @@ contains
         ! The "lines" of the Cartesian grid.
         ! Initialize all the communicators, even if they are not parallelized
         do i_strategy = 1, P_STRATEGY_MAX
-            dim_mask             = .false.
-            dim_mask(i_strategy) = .true.
-            call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
-            call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
+          dim_mask             = .false.
+          dim_mask(i_strategy) = .true.
+          call MPI_Cart_sub(mc%master_comm, dim_mask, mc%group_comm(i_strategy), mpi_err)
+          call MPI_Comm_rank(mc%group_comm(i_strategy), mc%who_am_i(i_strategy), mpi_err)
         end do
 
         ! The domain-state "planes" of the grid (the ones with periodic dimensions).
@@ -752,7 +752,7 @@ contains
         do irank = 0, mpi_world%size - 1
           if(mpi_world%rank == irank) then
             write(message(1),'(5i10,5x,a)') mpi_world%rank, mc%who_am_i(P_STRATEGY_DOMAINS), mc%who_am_i(P_STRATEGY_STATES), &
-            mc%who_am_i(P_STRATEGY_KPOINTS), mc%who_am_i(P_STRATEGY_OTHER), trim(node_type)
+              mc%who_am_i(P_STRATEGY_KPOINTS), mc%who_am_i(P_STRATEGY_OTHER), trim(node_type)
             call messages_info(1, all_nodes = .true.)
           end if
           call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -787,7 +787,7 @@ contains
 
       ! get the coordinates of the current processor
       call MPI_Cart_coords(mc%full_comm, mc%full_comm_rank, P_STRATEGY_MAX, coords, mpi_err)
-      
+
       !now get the rank of the remote_leader
       if(mc%node_type == P_SLAVE) then
         coords(slave_level) = 0
@@ -805,16 +805,16 @@ contains
     end subroutine create_slave_intercommunicators
 
   end subroutine multicomm_init
-  
+
 
   ! ---------------------------------------------------------
   subroutine multicomm_end(mc)
     type(multicomm_t), intent(inout) :: mc
-    
+
 #if defined(HAVE_MPI)
     integer :: ii
 #endif
-    
+
     PUSH_SUB(multicomm_end)
 
     if(mc%par_strategy /= P_STRATEGY_SERIAL) then
@@ -829,18 +829,18 @@ contains
       call MPI_Comm_free(mc%dom_st_kpt_comm, mpi_err)
       call MPI_Comm_free(mc%full_comm, mpi_err)
       call MPI_Comm_free(mc%master_comm, mpi_err)
-      
+
 #ifdef HAVE_MPI2
       if(multicomm_have_slaves(mc)) call MPI_Comm_free(mc%slave_intercomm, mpi_err)
 #endif
-      
+
 #endif
     end if
 
     SAFE_DEALLOCATE_A(mc%group_sizes)
     SAFE_DEALLOCATE_A(mc%group_comm)
     SAFE_DEALLOCATE_A(mc%who_am_i)
-    
+
     POP_SUB(multicomm_end)
   end subroutine multicomm_end
 
@@ -908,7 +908,7 @@ contains
         get_partner = get_partner_odd(grp_size, in - 1, ir - 1) + 1
       end if
 
-     end function get_partner
+    end function get_partner
 
     ! ---------------------------------------------------------
     integer pure function get_partner_even(grp_size, ii, rr) result(pp)
@@ -933,7 +933,7 @@ contains
     end function get_partner_even
 
     ! ---------------------------------------------------------
-      integer pure function get_partner_odd(grp_size, ii, rr) result(pp)
+    integer pure function get_partner_odd(grp_size, ii, rr) result(pp)
       integer, intent(in) :: grp_size, ii, rr
 
       integer :: mm
@@ -970,17 +970,17 @@ contains
 #ifdef HAVE_SCALAPACK
     integer :: nbl, size
 #endif
-    
+
     scalapack_compat_ = .false.
 #ifdef HAVE_SCALAPACK
     if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
 #endif
     ! no push_sub, threadsafe
     if(scalapack_compat_) then
-#ifdef HAVE_SCALAPACK      
+#ifdef HAVE_SCALAPACK
       nbl = nobjs/nprocs
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
-      
+
       istart(1) = 1
       do rank = 1, nprocs
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
@@ -994,7 +994,7 @@ contains
       end do
 #endif
     else
-      
+
       if(nprocs <= nobjs) then
 
         ! procs are assigned to groups by round robin
@@ -1071,7 +1071,7 @@ contains
 
   logical pure function multicomm_is_slave(this) result(slave)
     type(multicomm_t), intent(in) :: this
-    
+
     slave = this%node_type == P_SLAVE
   end function multicomm_is_slave
 

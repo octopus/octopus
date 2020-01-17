@@ -34,7 +34,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: reduce_
   type(profile_t), save :: profcomm
 #endif
-  
+
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
 
@@ -51,7 +51,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   dd(1:aa%nst, 1:bb%nst) = R_TOTYPE(CNST(0.0))
 
   use_blas = .false.
-  
+
   select case(aa%status())
   case(BATCH_NOT_PACKED)
     use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
@@ -121,7 +121,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
         a = aa%pack%X(psi)(1, 1), lda = ldaa, &
         b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
         beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
-      
+
     else
 
       do ist = 1, aa%nst
@@ -144,7 +144,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
     call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
-    
+
     call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
       M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
       A = aa%pack%buffer, offA = 0_8, lda = int(aa%pack%size(1), 8), &
@@ -168,7 +168,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   case default
     ASSERT(.false.)
-    
+
   end select
 
   if(aa%status() /= BATCH_DEVICE_PACKED) then
@@ -304,7 +304,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   end if
 
   forall(ist = 1:aa%nst)
-    forall(jst = 1:aa%nst) 
+    forall(jst = 1:aa%nst)
       dot(aa%states(ist)%ist, aa%states(jst)%ist) = dd(ist, jst)
       dot(aa%states(jst)%ist, aa%states(ist)%ist) = R_CONJ(dd(ist, jst))
     end forall
@@ -336,7 +336,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   call profiling_in(prof, "DOTPV_BATCH")
 
   cproduct_ = optional_default(cproduct, .false.)
-  
+
   call aa%check_compatibility_with(bb)
 
   status = aa%status()
@@ -348,8 +348,8 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
-           reduce = .false., dotu = cproduct_)
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),&
+          reduce = .false., dotu = cproduct_)
       end do
     end do
 
@@ -358,7 +358,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     SAFE_ALLOCATE(tmp(1:aa%nst_linear))
 
     tmp = M_ZERO
-    
+
     if(mesh%use_curvilinear) then
       if(.not. cproduct_) then
         !$omp parallel do private(ip, ist) reduction(+:tmp)
@@ -439,7 +439,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
-  
+
   call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(prof)
@@ -461,7 +461,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
   integer, allocatable :: send_count(:), recv_count(:), send_disp(:), recv_disp(:), &
-       points_inner(:), points_bndry(:), partno_inner(:), partno_bndry(:)
+    points_inner(:), points_bndry(:), partno_inner(:), partno_bndry(:)
   integer, allocatable :: send_count_nstl(:), recv_count_nstl(:), send_disp_nstl(:), recv_disp_nstl(:)
   R_TYPE, allocatable  :: send_buffer(:, :), recv_buffer(:, :)
 #endif
@@ -524,9 +524,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       SAFE_ALLOCATE(partno_inner(1:np_points))
       SAFE_ALLOCATE(partno_bndry(1:np_points))
       call partition_get_partition_number(mesh%inner_partition, np_inner, &
-           points_inner, partno_inner)
+        points_inner, partno_inner)
       call partition_get_partition_number(mesh%bndry_partition, np_bndry, &
-           points_bndry, partno_bndry)
+        points_bndry, partno_bndry)
       SAFE_DEALLOCATE_A(points_inner)
       SAFE_DEALLOCATE_A(points_bndry)
       do ip = 1, np_inner
@@ -544,8 +544,8 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ! Receiving number of points is the inverse matrix of the sending points
       call mpi_debug_in(mesh%mpi_grp%comm, C_MPI_ALLTOALL)
       call MPI_Alltoall(send_count(1), 1, MPI_INTEGER, &
-                        recv_count(1), 1, MPI_INTEGER, &
-                        mesh%mpi_grp%comm, mpi_err)
+        recv_count(1), 1, MPI_INTEGER, &
+        mesh%mpi_grp%comm, mpi_err)
       call mpi_debug_out(mesh%mpi_grp%comm, C_MPI_ALLTOALL)
       ASSERT(sum(recv_count) == mesh%np)
 
@@ -604,7 +604,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
       SAFE_DEALLOCATE_A(send_disp)
       SAFE_DEALLOCATE_A(recv_disp)
-    
+
     else ! backward map
 
       recv_count = mesh%vp%recv_count
@@ -617,14 +617,14 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
       ASSERT(mesh%vp%recv_disp(npart) + recv_count(npart) == mesh%np)
 
       ! Pack for sending
-      send_count = 0  
+      send_count = 0
       do ip = 1, mesh%np
         ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
       end do
-      
+
       send_count_nstl = send_count * nstl
       send_disp_nstl = mesh%vp%send_disp * nstl
       recv_count_nstl = recv_count * nstl
@@ -692,13 +692,13 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     end do
 
   case(BATCH_PACKED)
-    
+
     SAFE_ALLOCATE(scal(1:aa%nst_linear))
     SAFE_ALLOCATE(ssq(1:aa%nst_linear))
 
     scal = M_ZERO
     ssq  = M_ONE
-    
+
     if(.not. mesh%use_curvilinear) then
 
       !$omp parallel do private(a0)
@@ -772,7 +772,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     SAFE_DEALLOCATE_A(ssq)
 
   end select
-  
+
   ! REDUCTION IS REQUIRED, THIS IS DONE BY THE CALLING FUNCTION
 
   call profiling_out(prof)
@@ -787,7 +787,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
   class(batch_t),    intent(in)    :: psib(:)   !< psi(nst)
-  class(batch_t),    intent(inout) :: phib      
+  class(batch_t),    intent(inout) :: phib
   logical, optional, intent(in)    :: normalize
   R_TYPE,  optional, intent(out)   :: overlap(:,:) !< (nst, phib%nst)
   R_TYPE,  optional, intent(out)   :: norm(:)
@@ -834,7 +834,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
     !TODO: We should reuse phib here for improved performances
     do ist = 1, nst
-      call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.) 
+      call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.)
     end do
 
     if(mesh%parallel_in_domains) then
@@ -842,7 +842,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
       call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if
-   
+
     !TODO: We should have a routine batch_gemv for improved performances
     do ist = 1, nst
       call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib, a_full = .false.)
@@ -852,13 +852,13 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     if(drcgs .and. present(overlap)) then
       do ist = 1, nst
         ss_full(1:phib%nst, ist) = ss_full(1:phib%nst, ist) + ss(1:phib%nst, ist)
-      end do 
+      end do
     end if
   end do
 
   !We have a transpose here because this helps for the Lanczos implementation
   !which is the only routine using this one at the moment
-  !Indeed, Lanczos acts on phib%nst arrays of dimension nst, whereas the code would return 
+  !Indeed, Lanczos acts on phib%nst arrays of dimension nst, whereas the code would return
   !an array of dim (phib%nst, nst)
   !For an orthogalization, it is more natural to have for each state the overlap with the others
   !which is what the code outputs now.

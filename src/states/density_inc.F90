@@ -41,40 +41,40 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
     do idir = 1, gr%mesh%sb%dim
       do ii = 1, psib%nst_linear
         ist = psib%linear_to_ist(ii)
-      
+
         ff = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
         if(abs(ff) <= M_EPSILON) cycle
 
         do ip = 1, gr%mesh%np
-          
+
           psi = psib%states_linear(ii)%X(psi)(ip)
           gpsi = grad_psib(idir)%states_linear(ii)%X(psi)(ip)
           grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi)*gpsi)
-          
+
         end do
       end do
-      
+
     end do
 
   case(BATCH_PACKED)
     do ii = 1, psib%nst_linear
       ist = psib%linear_to_ist(ii)
-      
+
       ff = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
       if(abs(ff) <= M_EPSILON) cycle
 
       do idir = 1, gr%mesh%sb%dim
         do ip = 1, gr%mesh%np
-          
+
           psi = psib%pack%X(psi)(ii, ip)
           gpsi = grad_psib(idir)%pack%X(psi)(ii, ip)
           grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi)*gpsi)
-          
+
         end do
       end do
-      
+
     end do
-      
+
   case(BATCH_DEVICE_PACKED)
     call accel_create_buffer(grad_rho_buff, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
 
@@ -88,9 +88,9 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
     call accel_create_buffer(weights_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%pack%size(1))
     call accel_write_buffer(weights_buff, psib%pack%size(1), weights)
-   
+
     SAFE_DEALLOCATE_A(weights)
-    
+
     call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
       flags = '-D' + R_TYPE_CL)
 

@@ -52,7 +52,7 @@ module species_pot_oct_m
     species_atom_density,           &
     species_atom_density_np,        &
     species_atom_density_derivative,&
-    species_atom_density_derivative_np, & 
+    species_atom_density_derivative_np, &
     species_atom_density_grad
 
   type(mesh_t), pointer :: mesh_p
@@ -102,14 +102,14 @@ contains
       end do
 
     case (SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-      ! We put, for the electron density, the same as the positive density that 
+      ! We put, for the electron density, the same as the positive density that
       ! creates the external potential.
       ! This code is repeated in get_density, and should therefore be cleaned!!!!!
 
-       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-          call volume_init(volume)
-          call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
-       end if
+      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
+        call volume_init(volume)
+        call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
+      end if
 
       call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
         range = M_TWO * maxval(sb%lsize(1:sb%dim)))
@@ -121,19 +121,19 @@ contains
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
           rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          
+
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-             if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
+            if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
           else
-             call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
+            call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip, 1) = rho(ip, 1) + rerho
-       end do
+        end do
       end do
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-         call volume_end(volume)
+        call volume_end(volume)
       end if
       call periodic_copy_end(pp)
 
@@ -166,7 +166,7 @@ contains
 
       if(in_points > 0) then
         ! This probably should be done inside the mesh_function_oct_m module.
- 
+
         if (mesh%use_curvilinear) then
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = atom%x)
@@ -226,7 +226,7 @@ contains
 
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
-      
+
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
@@ -238,7 +238,7 @@ contains
         do isp = 1, spin_channels
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
-        
+
         call periodic_copy_init(pp, sb, atom%x, rmax)
 
         do icell = 1, periodic_copy_num(pp)
@@ -246,23 +246,23 @@ contains
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, r_small)
-            
+
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density(isp))) cycle
               rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
             end do
-            
+
           end do
         end do
-  
+
         call periodic_copy_end(pp)
 
-      else 
+      else
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
         call periodic_copy_init(pp, sb, atom%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
-      
+
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           do ip = 1, mesh%np
@@ -270,14 +270,14 @@ contains
             rr = max(rr, r_small)
 
             if(rr >= spline_range_max(ps%vl)) cycle
-            
+
             do isp = 1, spin_channels
               rho(ip, isp) = rho(ip, isp) + sqrt(abs(spline_eval(ps%vl, rr)))
             end do
-              
+
           end do
         end do
-  
+
         call periodic_copy_end(pp)
 
         ! normalize
@@ -299,7 +299,7 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, sb, atom, namespace, pos,  spin_channels, rho)
+  subroutine species_atom_density_np(mesh, sb, atom, namespace, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
@@ -314,7 +314,7 @@ contains
 
 
     PUSH_SUB(species_atom_density_np)
- 
+
     rho = M_ZERO
     species => atom%species
     ps => species_ps(species)
@@ -335,8 +335,8 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
 
-          rr = max(rr, r_small) 
-           
+          rr = max(rr, r_small)
+
           do isp = 1, spin_channels
             if(rr >= spline_range_max(ps%density(isp))) cycle
             rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
@@ -406,7 +406,7 @@ contains
 
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
-      
+
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
@@ -420,10 +420,10 @@ contains
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           call species_atom_density_derivative_np(mesh, atom, namespace, pos, spin_channels,  drho)
         end do
-  
+
         call periodic_copy_end(pp)
       end if
-       
+
     case default
       call messages_not_implemented('species_atom_density_derivative for non-pseudopotential species', namespace=namespace)
 
@@ -471,7 +471,7 @@ contains
 
     POP_SUB(species_atom_density_derivative_np)
   end subroutine species_atom_density_derivative_np
-  
+
 
   ! ---------------------------------------------------------
   ! Gradient of the atomic density, if available
@@ -501,7 +501,7 @@ contains
 
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
-      
+
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
@@ -513,7 +513,7 @@ contains
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-        
+
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, r_small)
@@ -525,19 +525,19 @@ contains
               do idir = 1, mesh%sb%dim
                 drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir)-pos(idir))/rr
               end do
-           end do
+            end do
           end do
         end do
-  
+
         call periodic_copy_end(pp)
 
-      else 
+      else
         call messages_write('The pseudopotential for')
         call messages_write(species_label(species))
         call messages_write(' does not contain the density.')
         call messages_fatal(namespace=namespace)
       end if
-      
+
     case default
       call messages_not_implemented('species_atom_density_grad for non-pseudopotential species', namespace=namespace)
 
@@ -574,7 +574,7 @@ contains
     FLOAT,    allocatable :: rho_sphere(:)
     FLOAT, parameter      :: threshold = CNST(1e-6)
     FLOAT                 :: norm_factor
-    
+
     PUSH_SUB(species_get_density)
 
     call profiling_in(prof, "SPECIES_DENSITY")
@@ -586,7 +586,7 @@ contains
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
-      
+
       forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
@@ -595,7 +595,7 @@ contains
       ! A small amount of charge is missing with the cutoff, we
       ! renormalize so that the long range potential is exact
       norm_factor = abs(species_zval(species)/dsm_integrate(mesh, sphere, rho_sphere))
-      
+
       do ip = 1, sphere%np
         rho(sphere%map(ip)) = rho(sphere%map(ip)) + norm_factor*rho_sphere(ip)
       end do
@@ -711,7 +711,7 @@ contains
         call volume_init(volume)
         call volume_read_from_block(volume, namespace, trim(species_rho_string(species)))
       end if
-       
+
       call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
@@ -734,7 +734,7 @@ contains
       end do
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-         call volume_end(volume)
+        call volume_end(volume)
       end if
       call periodic_copy_end(pp)
 
@@ -899,7 +899,7 @@ contains
     end do
 
     POP_SUB(getrho)
-  end subroutine getrho 
+  end subroutine getrho
 
 
   ! ---------------------------------------------------------
@@ -923,97 +923,97 @@ contains
 
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
-      select case(species_type(species))
+    select case(species_type(species))
 
-      case(SPECIES_SOFT_COULOMB)
+    case(SPECIES_SOFT_COULOMB)
 
-        do ip = 1, mesh%np
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r2 = sum(xx(1:mesh%sb%dim)**2)
-          vl(ip) = -species_zval(species)/sqrt(r2+species_sc_alpha(species))
-        end do
+      do ip = 1, mesh%np
+        xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+        r2 = sum(xx(1:mesh%sb%dim)**2)
+        vl(ip) = -species_zval(species)/sqrt(r2+species_sc_alpha(species))
+      end do
 
-      case(SPECIES_USDEF)
+    case(SPECIES_USDEF)
 
-        do ip = 1, mesh%np
-          
-          xx = M_ZERO
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          ! Note that as the spec%user_def is in input units, we have to convert
-          ! the units back and forth
-          forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
-          r = units_from_atomic(units_inp%length, r)
-          zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
-          vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
+      do ip = 1, mesh%np
 
-        end do
+        xx = M_ZERO
+        xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+        r = sqrt(sum(xx(1:mesh%sb%dim)**2))
+
+        ! Note that as the spec%user_def is in input units, we have to convert
+        ! the units back and forth
+        forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        r = units_from_atomic(units_inp%length, r)
+        zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
+        vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
+
+      end do
 
 
-      case(SPECIES_FROM_FILE)
+    case(SPECIES_FROM_FILE)
 
-        call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
-        if(err /= 0) then
-          write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
-          write(message(2), '(a,i4)') 'Error code returned = ', err
-          call messages_fatal(2, namespace=namespace)
+      call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
+      if(err /= 0) then
+        write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
+        write(message(2), '(a,i4)') 'Error code returned = ', err
+        call messages_fatal(2, namespace=namespace)
+      end if
+
+    case(SPECIES_JELLIUM)
+      a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
+      a2 = species_z(species)/species_jradius(species)
+      Rb2= species_jradius(species)**2
+
+      do ip = 1, mesh%np
+
+        xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
+        r = sqrt(sum(xx(1:mesh%sb%dim)**2))
+
+        if(r <= species_jradius(species)) then
+          vl(ip) = (a1*(r*r - Rb2) - a2)
+        else
+          vl(ip) = -species_z(species)/r
         end if
 
-      case(SPECIES_JELLIUM)
-        a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
-        a2 = species_z(species)/species_jradius(species)
-        Rb2= species_jradius(species)**2
-        
-        do ip = 1, mesh%np
-          
-          xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          if(r <= species_jradius(species)) then
-            vl(ip) = (a1*(r*r - Rb2) - a2)
-          else
-            vl(ip) = -species_z(species)/r
-          end if
-          
-        end do
-      
-      case(SPECIES_JELLIUM_SLAB)
-        a1 = M_TWO *M_PI * species_z(species)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
+      end do
 
-        do ip = 1, mesh%np
+    case(SPECIES_JELLIUM_SLAB)
+      a1 = M_TWO *M_PI * species_z(species)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
 
-          r = abs( mesh%x(ip, 3 ) )
+      do ip = 1, mesh%np
 
-          if(r <= species_jthick(species)/M_TWO ) then
-            vl(ip) = a1 *( r*r/species_jthick(species) + species_jthick(species)/M_FOUR )
-          else
-            vl(ip) = a1 *r
-          end if
+        r = abs( mesh%x(ip, 3 ) )
 
-        end do
+        if(r <= species_jthick(species)/M_TWO ) then
+          vl(ip) = a1 *( r*r/species_jthick(species) + species_jthick(species)/M_FOUR )
+        else
+          vl(ip) = a1 *r
+        end if
 
-      case(SPECIES_PSEUDO, SPECIES_PSPIO)
-       
-        ps => species_ps(species)
+      end do
 
-        do ip = 1, mesh%np
-          r2 = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
-          if(r2 < spline_range_max(ps%vlr_sq)) then
-            vl(ip) = spline_eval(ps%vlr_sq, r2)
-          else
-            vl(ip) = P_PROTON_CHARGE*species_zval(species)/sqrt(r2)
-          end if
-        end do
+    case(SPECIES_PSEUDO, SPECIES_PSPIO)
 
-        nullify(ps)
-        
-      case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-        vl(1:mesh%np) = M_ZERO
-        
-      end select
+      ps => species_ps(species)
 
-      call profiling_out(prof)
+      do ip = 1, mesh%np
+        r2 = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
+        if(r2 < spline_range_max(ps%vlr_sq)) then
+          vl(ip) = spline_eval(ps%vlr_sq, r2)
+        else
+          vl(ip) = P_PROTON_CHARGE*species_zval(species)/sqrt(r2)
+        end if
+      end do
+
+      nullify(ps)
+
+    case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
+      vl(1:mesh%np) = M_ZERO
+
+    end select
+
+    call profiling_out(prof)
     POP_SUB(species_get_local)
   end subroutine species_get_local
 

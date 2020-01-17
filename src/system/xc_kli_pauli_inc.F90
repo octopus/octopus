@@ -45,26 +45,26 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   n(1:mesh%np) = rho(1:mesh%np,1) + rho(1:mesh%np,2)
   lambda(1:mesh%np) = rho(1:mesh%np,1)*rho(1:mesh%np,2) - (rho(1:mesh%np,3)**2 + rho(1:mesh%np,4)**2)
 
-  ! Potential related quantities 
+  ! Potential related quantities
   ! (Built from HF potentials weighted with orbital densities)
   SAFE_ALLOCATE(weighted_hf(1:mesh%np, 1:st%d%dim,st%d%dim))
   weighted_hf = M_Z0
 
   SAFE_ALLOCATE(psij(1:mesh%np))
-  
+
   ! w_{up,down} = \sum_i \phi_{i,down}^* u_x^{i,up}^* \phi_{i,up}
   do ii = 1,st%d%dim
     do jj = 1,st%d%dim
       do ist = st%st_start,st%st_end
         call states_elec_get_state(st, mesh, jj, ist, 1, psij)
         weighted_hf(1:mesh%np,ii,jj) = weighted_hf(1:mesh%np,ii,jj) + &
-          oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
+          oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j
       end do
     end do
   end do
 
   SAFE_DEALLOCATE_A(psij)
-  
+
   ! reduce over states
   if(st%parallel_in_states) then
     call comm_allreduce(st%mpi_grp%comm, weighted_hf)
@@ -101,7 +101,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
   select case (oep%level)
   case (XC_OEP_SLATER)
-    
+
     oep%vxc = vloc
 
   case (XC_OEP_KLI)
@@ -115,7 +115,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)
     eigen_n = oep%eigen_n
-    if (eigen_n == 0) then 
+    if (eigen_n == 0) then
       oep%vxc = vs
 
     else
@@ -126,7 +126,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
       SAFE_ALLOCATE(psii(1:mesh%np))
       SAFE_ALLOCATE(psij(1:mesh%np))
-      
+
       do ii = 1, st%d%dim
         do jj = ii, st%d%dim
           do ist = 1, eigen_n
@@ -134,7 +134,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
             call states_elec_get_state(st, mesh, ii, kssi, 1, psii)
             call states_elec_get_state(st, mesh, jj, kssi, 1, psij)
-           
+
             rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(psij(1:mesh%np))*psii(1:mesh%np)
             rho_i(1:mesh%np,jj,ii,ist) = conjg(rho_i(1:mesh%np,ii,jj,ist))
           end do
@@ -143,21 +143,21 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
       SAFE_DEALLOCATE_A(psii)
       SAFE_DEALLOCATE_A(psij)
-      
+
       ! arrange them in a 4-vector
       SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
       p_i = M_ZERO
-      p_i(1:mesh%np,1,:) = real(rho_i(1:mesh%np,1,1,:)) 
-      p_i(1:mesh%np,2,:) = real(rho_i(1:mesh%np,2,2,:))  
-      p_i(1:mesh%np,3,:) = M_TWO*real(rho_i(1:mesh%np,1,2,:),REAL_PRECISION)  
-      p_i(1:mesh%np,4,:) = M_TWO*aimag(rho_i(1:mesh%np,1,2,:))  
-      
+      p_i(1:mesh%np,1,:) = real(rho_i(1:mesh%np,1,1,:))
+      p_i(1:mesh%np,2,:) = real(rho_i(1:mesh%np,2,2,:))
+      p_i(1:mesh%np,3,:) = M_TWO*real(rho_i(1:mesh%np,1,2,:),REAL_PRECISION)
+      p_i(1:mesh%np,4,:) = M_TWO*aimag(rho_i(1:mesh%np,1,2,:))
+
       SAFE_DEALLOCATE_A(rho_i)
 
       ! Calculate iteratively response part
       SAFE_ALLOCATE(v_m1(1:mesh%np, 1:4))
-      SAFE_ALLOCATE(delta_v(1:eigen_n)) 
-      SAFE_ALLOCATE(t_vi(1:mesh%np, 1:4, 1:eigen_n)) 
+      SAFE_ALLOCATE(delta_v(1:eigen_n))
+      SAFE_ALLOCATE(t_vi(1:mesh%np, 1:4, 1:eigen_n))
 
       vloc = M_ZERO
       KLI_iteration: do it = 1,oep%scftol%max_iter
@@ -178,15 +178,15 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
         end do
 
         !
-        t_vi(1:mesh%np,1,:) = p_i(1:mesh%np,2,:) 
+        t_vi(1:mesh%np,1,:) = p_i(1:mesh%np,2,:)
         t_vi(1:mesh%np,2,:) = p_i(1:mesh%np,1,:)
-        t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:) 
+        t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:)
         t_vi(1:mesh%np,4,:) =-p_i(1:mesh%np,4,:)
-        forall (ip=1:mesh%np,is=1:st%d%nspin) t_vi(ip,is,:) = t_vi(ip,is,:)*delta_v(:) 
+        forall (ip=1:mesh%np,is=1:st%d%nspin) t_vi(ip,is,:) = t_vi(ip,is,:)*delta_v(:)
 
         vloc = M_ZERO
         do ip = 1, mesh%np
-          vloc(ip,1) = sum(t_vi(ip,2,:) - t_vi(ip,1,:)) 
+          vloc(ip,1) = sum(t_vi(ip,2,:) - t_vi(ip,1,:))
           vloc(ip,2) = -vloc(ip,1)
           vloc(ip,3) = -sum(t_vi(ip,3,:))
           vloc(ip,4) = -sum(t_vi(ip,4,:))
@@ -203,8 +203,8 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
         forall (ip = 1:mesh%np) vloc(ip,:) = (vloc(ip,:) + t_rho(ip,:)*rhov(ip))/n(ip)
         !
-        do is = 1, 4 
-          reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is))) 
+        do is = 1, 4
+          reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is)))
         end do
         if (all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) exit
 
@@ -212,7 +212,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
       if (.not. all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) &
         it = it - 1
-      
+
       write(message(1), '(a,i4,a,es14.6)') &
         "Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
       message(2) = ''

@@ -59,60 +59,60 @@ module sternheimer_oct_m
 
   private
   public ::                       &
-       sternheimer_t,             &
-       sternheimer_init,          &
-       sternheimer_end,           &
-       dsternheimer_solve,        & 
-       zsternheimer_solve,        &
-       dsternheimer_solve_order2, & 
-       zsternheimer_solve_order2, &
-       sternheimer_add_fxc,       &
-       sternheimer_add_hartree,   &
-       sternheimer_build_kxc,     &  
-       dsternheimer_calc_hvar,    &
-       zsternheimer_calc_hvar,    &
-       dsternheimer_set_rhs,      &
-       zsternheimer_set_rhs,      &
-       sternheimer_have_rhs,      &
-       sternheimer_unset_rhs,     &
-       dsternheimer_set_inhomog,  &
-       zsternheimer_set_inhomog,  &
-       sternheimer_have_inhomog,  &
-       sternheimer_unset_inhomog, &
-       sternheimer_unset_kxc,     & 
-       sternheimer_has_converged, &
-       swap_sigma,                &
-       wfs_tag_sigma,             &
-       sternheimer_obsolete_variables, &
-       dcalc_hvar,                &
-       zcalc_hvar,                &
-       dcalc_kvar,                &
-       zcalc_kvar
+    sternheimer_t,             &
+    sternheimer_init,          &
+    sternheimer_end,           &
+    dsternheimer_solve,        &
+    zsternheimer_solve,        &
+    dsternheimer_solve_order2, &
+    zsternheimer_solve_order2, &
+    sternheimer_add_fxc,       &
+    sternheimer_add_hartree,   &
+    sternheimer_build_kxc,     &
+    dsternheimer_calc_hvar,    &
+    zsternheimer_calc_hvar,    &
+    dsternheimer_set_rhs,      &
+    zsternheimer_set_rhs,      &
+    sternheimer_have_rhs,      &
+    sternheimer_unset_rhs,     &
+    dsternheimer_set_inhomog,  &
+    zsternheimer_set_inhomog,  &
+    sternheimer_have_inhomog,  &
+    sternheimer_unset_inhomog, &
+    sternheimer_unset_kxc,     &
+    sternheimer_has_converged, &
+    swap_sigma,                &
+    wfs_tag_sigma,             &
+    sternheimer_obsolete_variables, &
+    dcalc_hvar,                &
+    zcalc_hvar,                &
+    dcalc_kvar,                &
+    zcalc_kvar
 
   type sternheimer_t
-     private
-     type(linear_solver_t) :: solver
-     type(mix_t)           :: mixer
-     type(scf_tol_t)       :: scf_tol
-     FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
-     FLOAT, pointer        :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
-     FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
-     CMPLX, pointer        :: zrhs(:, :, :, :)
-     FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
-     CMPLX, pointer        :: zinhomog(:, :, :, :, :)
-     logical               :: add_fxc
-     logical               :: add_hartree
-     logical               :: ok
-     logical               :: occ_response
-     logical               :: last_occ_response
-     logical               :: occ_response_by_sternheimer
-     logical               :: preorthogonalization
+    private
+    type(linear_solver_t) :: solver
+    type(mix_t)           :: mixer
+    type(scf_tol_t)       :: scf_tol
+    FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
+    FLOAT, pointer        :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
+    FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
+    CMPLX, pointer        :: zrhs(:, :, :, :)
+    FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
+    CMPLX, pointer        :: zinhomog(:, :, :, :, :)
+    logical               :: add_fxc
+    logical               :: add_hartree
+    logical               :: ok
+    logical               :: occ_response
+    logical               :: last_occ_response
+    logical               :: occ_response_by_sternheimer
+    logical               :: preorthogonalization
   end type sternheimer_t
-  
+
   type(profile_t), save :: prof, prof_hvar
 
 contains
-  
+
   !-----------------------------------------------------------
   subroutine sternheimer_init(this, sys, wfs_are_cplx, &
     set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
@@ -147,27 +147,27 @@ contains
     end if
 
     if(present(set_occ_response)) then
-       this%occ_response = set_occ_response
+      this%occ_response = set_occ_response
     else
-       this%occ_response = .false.
+      this%occ_response = .false.
     end if
 
     this%occ_response_by_sternheimer = optional_default(occ_response_by_sternheimer, .false.)
 
     !%Variable Preorthogonalization
-    !%Type logical 
-    !%Section Linear Response::Sternheimer 
-    !%Description 
-    !% Whether initial linear-response wavefunctions should be orthogonalized 
+    !%Type logical
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% Whether initial linear-response wavefunctions should be orthogonalized
     !% or not against the occupied states, at the start of each SCF cycle.
     !% Default is true only if <tt>SmearingFunction = semiconducting</tt>,
     !% or if the <tt>Occupations</tt> block specifies all full or empty states,
     !% and we are not solving for linear response in the occupied subspace too.
-    !%End 
+    !%End
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    call parse_variable(sys%namespace, 'Preorthogonalization', default_preorthog, this%preorthogonalization) 
+    call parse_variable(sys%namespace, 'Preorthogonalization', default_preorthog, this%preorthogonalization)
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -181,7 +181,7 @@ contains
     !% Just <tt>hartree</tt> gives you the random-phase approximation (RPA).
     !% If you want to choose the exchange-correlation kernel, use the variable
     !% <tt>XCKernel</tt>. For <tt>kdotp</tt> and magnetic <tt>em_resp</tt> modes,
-    !% or if <tt>TheoryLevel = independent_particles</tt>, 
+    !% or if <tt>TheoryLevel = independent_particles</tt>,
     !% the value <tt>V_ext_only</tt> is used and this variable is ignored.
     !%Option V_ext_only 0
     !% Neither Hartree nor XC potentials included.
@@ -204,14 +204,14 @@ contains
       this%add_fxc = ((ham_var / 2) == 1)
       this%add_hartree = (mod(ham_var, 2) == 1)
     else
-      this%add_fxc = .false. 
+      this%add_fxc = .false.
       this%add_hartree = .false.
     end if
-    
+
     if(present(set_last_occ_response)) then
-       this%last_occ_response = set_last_occ_response
+      this%last_occ_response = set_last_occ_response
     else
-       this%last_occ_response = .false.
+      this%last_occ_response = .false.
     end if
 
     message(1) = "Variation of the Hamiltonian in Sternheimer equation: V_ext"
@@ -220,18 +220,18 @@ contains
 
     message(2) = "Solving Sternheimer equation for"
     if (this%occ_response) then
-       write(message(2), '(2a)') trim(message(2)), ' full linear response.'
+      write(message(2), '(2a)') trim(message(2)), ' full linear response.'
     else
-       write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only.'
+      write(message(2), '(2a)') trim(message(2)), ' linear response in unoccupied subspace only.'
     end if
 
     message(3) = "Sternheimer preorthogonalization:"
     if (this%preorthogonalization) then
-       write(message(3), '(2a)') trim(message(3)), ' yes'
+      write(message(3), '(2a)') trim(message(3)), ' yes'
     else
-       write(message(3), '(2a)') trim(message(3)), ' no'
+      write(message(3), '(2a)') trim(message(3)), ' no'
     end if
-    call messages_info(3) 
+    call messages_info(3)
 
     call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), set_default_solver)
 
@@ -327,11 +327,11 @@ contains
     POP_SUB(sternheimer_build_kxc)
 
   end subroutine sternheimer_build_kxc
- 
- !---------------------------------------------
+
+  !---------------------------------------------
   subroutine sternheimer_unset_kxc(this)
     type(sternheimer_t), intent(inout) :: this
-    
+
     PUSH_SUB(sternheimer_unset_kxc)
 
     if(this%add_fxc) then
@@ -370,7 +370,7 @@ contains
   !-----------------------------------------------------------
   subroutine sternheimer_unset_rhs(this)
     type(sternheimer_t), intent(inout) :: this
-    
+
     PUSH_SUB(sternheimer_unset_rhs)
 
     nullify(this%drhs)
@@ -388,7 +388,7 @@ contains
   !-----------------------------------------------------------
   subroutine sternheimer_unset_inhomog(this)
     type(sternheimer_t), intent(inout) :: this
-    
+
     PUSH_SUB(sternheimer_unset_inhomog)
 
     nullify(this%dinhomog)
@@ -400,7 +400,7 @@ contains
   !-----------------------------------------------------------
   integer pure function swap_sigma(sigma)
     integer, intent(in) :: sigma
-    
+
     if(sigma == 1) then
       swap_sigma = 2
     else
@@ -423,7 +423,7 @@ contains
       sigma_char = '+'
     case(2)
       sigma_char = '-'
-    case default 
+    case default
       write(message(1),'(a,i2)') "Illegal integer isigma passed to wfs_tag_sigma: ", isigma
       call messages_fatal(1)
     end select
@@ -440,7 +440,7 @@ contains
     type(namespace_t),   intent(in)    :: namespace
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
-    
+
     PUSH_SUB(sternheimer_obsolete_variables)
 
     call messages_obsolete_variable(namespace, trim(old_prefix)//'Preorthogonalization', trim(new_prefix)//'Preorthogonalization')
@@ -451,7 +451,7 @@ contains
 
     POP_SUB(sternheimer_obsolete_variables)
   end subroutine sternheimer_obsolete_variables
-  
+
 #include "complex.F90"
 #include "sternheimer_inc.F90"
 

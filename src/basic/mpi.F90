@@ -31,7 +31,7 @@ module mpi_oct_m
 
   ! some machines do not have a mpi module, but a mpi input file
 #if defined(MPI_H)
-include "mpif.h"
+  include "mpif.h"
 #endif
 
   !> This is defined even when running serial
@@ -41,7 +41,7 @@ include "mpif.h"
     integer :: size !< size of comm (defined also in serial mode)
     integer :: rank !< rank of comm (defined also in serial mode)
   end type mpi_grp_t
- 
+
   type(mpi_grp_t), public :: mpi_world
 
   !> used to store return values of mpi calls
@@ -81,7 +81,7 @@ contains
 
 #ifdef HAVE_SCALAPACK
 
-    ! Initialize Blacs to be able to use ScaLAPACK 
+    ! Initialize Blacs to be able to use ScaLAPACK
     ! Determine my process number and the number of processes in machine
     call blacs_pinfo(iam, nprocs)
 
@@ -114,7 +114,7 @@ contains
 #if defined(HAVE_MPI)
     ! end MPI, if we started it
     if(mpi_world%comm /= -1) call MPI_Finalize(mpi_err)
-#endif 
+#endif
 
   end subroutine mpi_mod_end
 
@@ -156,10 +156,10 @@ contains
   ! ---------------------------------------------------------
   logical function mpi_grp_is_root(grp)
     type(mpi_grp_t), intent(in) :: grp
-    
+
     mpi_grp_is_root = (grp%rank == 0)
   end function mpi_grp_is_root
-  
+
   ! ---------------------------------------------------------
 
 end module mpi_oct_m

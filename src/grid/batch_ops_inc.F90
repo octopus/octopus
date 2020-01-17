@@ -49,12 +49,12 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
       call accel_set_kernel_arg(kernel_daxpy, 5, log2(yy%pack%size(1)))
 
       localsize = accel_kernel_workgroup_size(kernel_daxpy)/yy%pack%size(1)
-      
+
       dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
       dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
 
       call accel_kernel_run(kernel_daxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
-      
+
     else
       zaa = aa
       call accel_set_kernel_arg(kernel_zaxpy, 0, np)
@@ -68,13 +68,13 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
       dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
       dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
-      
+
       call accel_kernel_run(kernel_zaxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
 
     end if
 
     call accel_finish()
-    
+
   case(BATCH_PACKED)
     if(yy%type() == TYPE_CMPLX) then
       call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
@@ -119,7 +119,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   type(accel_mem_t)      :: aa_buffer
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_kernel_t), save :: kernel
-  
+
   PUSH_SUB(X(batch_axpy_vec))
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
@@ -172,7 +172,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
-    
+
     call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, dim2, dim3/), (/yy%pack%size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
@@ -197,7 +197,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       end do
 #endif
     end if
-    
+
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(yy%type() == TYPE_CMPLX) then
@@ -226,7 +226,7 @@ subroutine X(batch_scal_const)(np, aa, xx)
   class(batch_t),    intent(inout) :: xx
 
   R_TYPE, allocatable :: aavec(:)
-  
+
   PUSH_SUB(X(batch_scal_const))
 
   SAFE_ALLOCATE(aavec(1:xx%nst))
@@ -234,9 +234,9 @@ subroutine X(batch_scal_const)(np, aa, xx)
   aavec(1:xx%nst) = aa
 
   call X(batch_scal_vec)(np, aavec, xx, a_full = .false.)
-  
+
   SAFE_DEALLOCATE_A(aavec)
-  
+
   POP_SUB(X(batch_scal_const))
 end subroutine X(batch_scal_const)
 
@@ -256,7 +256,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-  
+
   PUSH_SUB(X(batch_scal_vec))
   call profiling_in(scal_prof, "BATCH_SCAL")
 
@@ -275,7 +275,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     if(.not. optional_default(a_full, .true.)) iaa = iaa - (xx%linear_to_ist(1) - 1)
     aa_linear(ist) = aa(iaa)
   end do
-  
+
   select case(xx%status())
   case(BATCH_DEVICE_PACKED)
     if(xx%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
@@ -311,7 +311,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     call accel_finish()
 
     call accel_release_buffer(aa_buffer)
-    
+
   case(BATCH_PACKED)
     if(xx%type() == TYPE_CMPLX) then
       !$omp parallel do
@@ -322,15 +322,15 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
       end do
     else
 #ifdef R_TREAL
-     !$omp parallel do
-     do ip = 1, np
+      !$omp parallel do
+      do ip = 1, np
         do ist = 1, xx%pack%size(1)
           xx%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip)
         end do
       end do
 #endif
     end if
-    
+
   case(BATCH_NOT_PACKED)
     do ist = 1, xx%nst_linear
       if(xx%type() == TYPE_CMPLX) then
@@ -365,7 +365,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   FLOAT,  allocatable     :: aa_linear_double(:)
   type(accel_mem_t)      :: aa_buffer
   type(accel_kernel_t), save :: kernel
-  
+
   PUSH_SUB(X(batch_xpay_vec))
   call profiling_in(xpay_prof, "BATCH_XPAY")
 
@@ -417,13 +417,13 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
-    
+
     call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, dim2, dim3/), (/yy%pack%size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
 
     call accel_release_buffer(aa_buffer)
-    
+
   case(BATCH_PACKED)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
@@ -442,11 +442,11 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       end do
 #endif
     end if
-    
+
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(yy%type() == TYPE_CMPLX) then
-        !omp parallel do 
+        !omp parallel do
         do ip = 1, np
           yy%states_linear(ist)%zpsi(ip) = xx%states_linear(ist)%zpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%zpsi(ip)
         end do
@@ -479,10 +479,10 @@ subroutine X(batch_xpay_const)(np, xx, aa, yy)
 
   integer :: minst, maxst, ii, ist
   R_TYPE, allocatable :: aavec(:)
-  
+
   minst = HUGE(minst)
   maxst = -HUGE(maxst)
-  
+
   do ii = 1, xx%nst_linear
     ist = xx%linear_to_ist(ii)
     minst = min(minst, ist)
@@ -497,7 +497,7 @@ subroutine X(batch_xpay_const)(np, xx, aa, yy)
   call X(batch_xpay_vec)(np, xx, aavec, yy, a_start = minst)
 
   SAFE_DEALLOCATE_A(aavec)
-  
+
 end subroutine X(batch_xpay_const)
 
 ! --------------------------------------------------------------
@@ -512,7 +512,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   type(profile_t), save :: prof
   type(accel_mem_t) :: tmp
   FLOAT, allocatable :: zpsi(:)
-  
+
   call profiling_in(prof, "BATCH_SET_STATE")
 
   PUSH_SUB(X(batch_set_state1))
@@ -536,7 +536,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     end if
   case(BATCH_PACKED)
     if(this%type() == TYPE_FLOAT) then
-      !omp parallel do 
+      !omp parallel do
       do ip = 1, np
         this%pack%dpsi(ist, ip) = psi(ip)
       end do
@@ -549,22 +549,22 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), this%pack%size(2))
-    
+
     if(this%type() /= R_TYPE_VAL) then
 
       ! this is not ideal, we should do the conversion on the GPU, so
       ! that we copy half of the data there
-      
+
       SAFE_ALLOCATE(zpsi(1:np))
       !omp parallel do
       do ip = 1, np
         zpsi(ip) = psi(ip)
       end do
-      
+
       call accel_write_buffer(tmp, np, zpsi)
 
       SAFE_DEALLOCATE_A(zpsi)
-      
+
     else
       call accel_write_buffer(tmp, np, psi)
     end if
@@ -576,13 +576,13 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     call accel_set_kernel_arg(X(pack), 2, ist - 1)
     call accel_set_kernel_arg(X(pack), 3, tmp)
     call accel_set_kernel_arg(X(pack), 4, this%pack%buffer)
-    
+
     call accel_kernel_run(X(pack), (/this%pack%size(2), 1/), (/accel_max_workgroup_size(), 1/))
-    
+
     call accel_finish()
 
     call accel_release_buffer(tmp)
-    
+
   end select
 
   call profiling_out(prof)
@@ -634,7 +634,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   R_TYPE,         intent(inout) :: psi(:)
 
   integer :: ip
-  type(profile_t), save :: prof 
+  type(profile_t), save :: prof
   type(accel_mem_t) :: tmp
   FLOAT, allocatable :: dpsi(:)
 
@@ -685,7 +685,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     ASSERT(np <= this%pack%size(2))
 
     call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), this%pack%size(2))
-    
+
     if(this%type() == R_TYPE_VAL) then
 
       call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
@@ -693,36 +693,36 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       call accel_set_kernel_arg(X(unpack), 2, ist - 1)
       call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
       call accel_set_kernel_arg(X(unpack), 4, tmp)
-      
+
       call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
-      
+
       call accel_finish()
-      
+
       call accel_read_buffer(tmp, np, psi)
 
     else
 
       ! the output buffer is complex, we get it as real
-      
+
       ASSERT(this%type() == TYPE_FLOAT)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
-      
+
       call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
       call accel_set_kernel_arg(dunpack, 1, np)
       call accel_set_kernel_arg(dunpack, 2, ist - 1)
       call accel_set_kernel_arg(dunpack, 3, this%pack%buffer)
       call accel_set_kernel_arg(dunpack, 4, tmp)
-      
+
       call accel_kernel_run(dunpack, (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
-      
+
       SAFE_ALLOCATE(dpsi(1:np))
-      
+
       call accel_finish()
 
       call accel_read_buffer(tmp, np, dpsi)
 
       ! and convert to complex on the cpu
-      
+
       !omp parallel do
       do ip = 1, np
         psi(ip) = dpsi(ip)
@@ -733,7 +733,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
 
     call accel_release_buffer(tmp)
-    
+
   end select
 
   call profiling_out(prof)
@@ -781,12 +781,12 @@ end subroutine X(batch_get_state3)
 
 subroutine X(batch_get_points)(this, sp, ep, psi)
   class(batch_t), intent(in)    :: this
-  integer,        intent(in)    :: sp  
+  integer,        intent(in)    :: sp
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
 
   integer :: idim, ist, ii, ip
-  
+
   PUSH_SUB(X(batch_get_points))
   call profiling_in(get_points_prof, 'GET_POINTS')
 
@@ -799,7 +799,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   case(BATCH_NOT_PACKED)
 
     if(this%type() == TYPE_FLOAT) then
-      
+
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
@@ -857,7 +857,7 @@ end subroutine X(batch_get_points)
 
 subroutine X(batch_set_points)(this, sp, ep, psi)
   class(batch_t), intent(inout) :: this
-  integer,        intent(in)    :: sp  
+  integer,        intent(in)    :: sp
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
 
@@ -944,7 +944,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   integer :: iprange
   type(accel_mem_t) :: ff_buffer
 #endif
-  
+
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")
 
@@ -961,7 +961,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
     ! We reuse here the routine to apply the local potential
     call batch_set_zero(yy)
-    
+
     call accel_create_buffer(ff_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np)
     call accel_write_buffer(ff_buffer, np, ff)
 
@@ -972,9 +972,9 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     call accel_set_kernel_arg(kernel_vpsi, 4, log2(xx%pack%size_real(1)))
     call accel_set_kernel_arg(kernel_vpsi, 5, yy%pack%buffer)
     call accel_set_kernel_arg(kernel_vpsi, 6, log2(yy%pack%size_real(1)))
-    
+
     iprange = accel_kernel_workgroup_size(kernel_vpsi)/xx%pack%size_real(1)
-    
+
     call accel_kernel_run(kernel_vpsi, (/xx%pack%size_real(1), pad(np, iprange)/), (/xx%pack%size_real(1), iprange/))
 
     call accel_release_buffer(ff_buffer)

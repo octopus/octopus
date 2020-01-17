@@ -26,36 +26,36 @@ module scf_tol_oct_m
   use varinfo_oct_m
 
   implicit none
-  
+
   private
 
   integer, public, parameter :: &
-       SCF_TOL_FIXED    = 0,    &
-       SCF_TOL_ADAPTIVE = 1,    &
-       SCF_TOL_LINEAR   = 2,    &
-       SCF_TOL_EXP      = 3
+    SCF_TOL_FIXED    = 0,    &
+    SCF_TOL_ADAPTIVE = 1,    &
+    SCF_TOL_LINEAR   = 2,    &
+    SCF_TOL_EXP      = 3
 
   public ::                       &
-       scf_tol_t,                 &
-       scf_tol_init,              & 
-       scf_tol_end,               & 
-       scf_tol_stop,              & 
-       scf_tol_step,              &
-       scf_tol_final,             &
-       scf_tol_obsolete_variables
+    scf_tol_t,                 &
+    scf_tol_init,              &
+    scf_tol_end,               &
+    scf_tol_stop,              &
+    scf_tol_step,              &
+    scf_tol_final,             &
+    scf_tol_obsolete_variables
 
   type scf_tol_t
     private
-     integer, public   :: max_iter
-     integer           :: scheme
-     FLOAT,   public   :: conv_rel_dens
-     FLOAT,   public   :: conv_abs_dens
-     FLOAT             :: conv_threshold_use
-     FLOAT             :: dynamic_tol_factor
-     FLOAT             :: current_tol
-     FLOAT             :: initial_tol
-     FLOAT,   public   :: final_tol
-     integer           :: iter_window
+    integer, public   :: max_iter
+    integer           :: scheme
+    FLOAT,   public   :: conv_rel_dens
+    FLOAT,   public   :: conv_abs_dens
+    FLOAT             :: conv_threshold_use
+    FLOAT             :: dynamic_tol_factor
+    FLOAT             :: current_tol
+    FLOAT             :: initial_tol
+    FLOAT,   public   :: final_tol
+    integer           :: iter_window
   end type scf_tol_t
 
 contains
@@ -71,7 +71,7 @@ contains
     integer :: def_maximumiter_
 
     PUSH_SUB(scf_tol_init)
-    
+
     !%Variable LRMaximumIter
     !%Type integer
     !%Default 200
@@ -83,7 +83,7 @@ contains
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
     call parse_variable(namespace, 'LRMaximumIter', def_maximumiter_, this%max_iter)
-    
+
     !%Variable LRConvAbsDens
     !%Type float
     !%Default 1e-5
@@ -107,7 +107,7 @@ contains
     !% <math>\varepsilon = \frac{1}{N_{\rm elec}}</math> <tt>LRConvAbsDens</tt>.
     !% A zero value means do not use this criterion.
     !%End
-    
+
     call parse_variable(namespace, 'LRConvRelDens', M_ZERO, this%conv_rel_dens)
 
     ! value to use for adaptive tol scheme
@@ -138,7 +138,7 @@ contains
     !%Option tol_fixed 0
     !% The solver tolerance is fixed for all the iterations; this
     !% improves convergence but increases the computational cost
-    !%Option tol_adaptive 1 
+    !%Option tol_adaptive 1
     !% The tolerance is increased according to the level of
     !% convergence of the SCF.
     !%Option tol_linear 2
@@ -176,7 +176,7 @@ contains
 
     call parse_variable(namespace, 'LRTolFinalTol', CNST(1e-6), this%final_tol)
 
-    if(this%scheme == SCF_TOL_ADAPTIVE) then 
+    if(this%scheme == SCF_TOL_ADAPTIVE) then
       !%Variable LRTolAdaptiveFactor
       !%Type float
       !%Default 0.1
@@ -205,7 +205,7 @@ contains
     POP_SUB(scf_tol_init)
 
   end subroutine scf_tol_init
-    
+
 
   !-----------------------------------------------------------------
   FLOAT function scf_tol_step(this, iter, scf_res) result(r)
@@ -241,7 +241,7 @@ contains
         real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
       r = exp(r)
     end select
-      
+
     ! tolerance can never be larger than final tolerance
     r = max(r, this%final_tol)
     ! tolerance always has to decrease

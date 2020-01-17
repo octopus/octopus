@@ -15,9 +15,9 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
- 
+
 #include "global.h"
-  
+
 module submesh_oct_m
   use batch_oct_m
   use boundaries_oct_m
@@ -32,9 +32,9 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-    
+
   implicit none
-  private 
+  private
 
   public ::                      &
     submesh_t,                   &
@@ -42,7 +42,7 @@ module submesh_oct_m
     submesh_init,                &
     submesh_merge,               &
     submesh_shift_center,        &
-    submesh_broadcast,           &    
+    submesh_broadcast,           &
     submesh_copy,                &
     submesh_get_inv,             &
     submesh_build_global,        &
@@ -50,7 +50,7 @@ module submesh_oct_m
     dsm_integrate,               &
     zsm_integrate,               &
     dsm_integrate_frommesh,      &
-    zsm_integrate_frommesh,      & 
+    zsm_integrate_frommesh,      &
     dsm_nrm2,                    &
     zsm_nrm2,                    &
     submesh_add_to_mesh,         &
@@ -79,11 +79,11 @@ module submesh_oct_m
     type(mesh_t), pointer :: mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
     integer               :: np_global      !< total number of points in the entire mesh
-    FLOAT,    allocatable :: x_global(:,:)  
+    FLOAT,    allocatable :: x_global(:,:)
     integer,  allocatable :: part_v(:)
     integer,  allocatable :: global2local(:)
   end type submesh_t
-  
+
   interface submesh_add_to_mesh
     module procedure ddsubmesh_add_to_mesh, zdsubmesh_add_to_mesh, zzsubmesh_add_to_mesh
   end interface submesh_add_to_mesh
@@ -92,12 +92,12 @@ module submesh_oct_m
     module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
 
-   type(profile_t), save ::           &
-       C_PROFILING_SM_REDUCE,         &
-       C_PROFILING_SM_NRM2
+  type(profile_t), save ::           &
+    C_PROFILING_SM_REDUCE,         &
+    C_PROFILING_SM_NRM2
 
 contains
-  
+
   subroutine submesh_null(sm)
     type(submesh_t), intent(inout) :: sm !< valgrind objects to intent(out) due to the initializations above
 
@@ -123,7 +123,7 @@ contains
     type(mesh_t), target, intent(in)     :: mesh
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
-    
+
     FLOAT :: r2, xx(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz
@@ -133,7 +133,7 @@ contains
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
 
-    
+
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
 
@@ -147,11 +147,11 @@ contains
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
-    if(.not. simul_box_is_periodic(sb)) then 
+    if(.not. simul_box_is_periodic(sb)) then
 
       SAFE_ALLOCATE(map_inv(0:this%mesh%np_part))
       map_inv(0:this%mesh%np_part) = 0
-      
+
       nmin = 0
       nmax = 0
 
@@ -191,10 +191,10 @@ contains
       end do
       this%np = is
       this%np_part = is + isb
-      
+
       SAFE_ALLOCATE(this%map(1:this%np_part))
       SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
-      
+
       ! Generate the table and the positions
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
@@ -220,7 +220,7 @@ contains
 
       SAFE_DEALLOCATE_A(map_inv)
 
-    ! This is the case for a periodic system
+      ! This is the case for a periodic system
     else
 
       ! Get the total number of points inside the sphere considering
@@ -229,7 +229,7 @@ contains
       ! this requires some optimization
 
       call periodic_copy_init(pp, sb, center(1:sb%dim), rc)
-      
+
       SAFE_ALLOCATE(center_copies(1:sb%dim, 1:periodic_copy_num(pp)))
 
       do icell = 1, periodic_copy_num(pp)
@@ -246,12 +246,12 @@ contains
         end do
         if (ip == mesh%np) this%np = is
       end do
-      
+
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
       SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
-            
+
       !iterate again to fill the tables
       is = 0
       do ip = 1, mesh%np_part
@@ -263,17 +263,17 @@ contains
           this%map(is) = ip
           xtmp(is, 0) = sqrt(r2)
           xtmp(is, 1:sb%dim) = xx(1:sb%dim)
-         end do
+        end do
       end do
 
       SAFE_DEALLOCATE_A(center_copies)
-      
+
       call periodic_copy_end(pp)
 
     end if
 
     ! now order points for better locality
-    
+
     SAFE_ALLOCATE(order(1:this%np_part))
     SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
 
@@ -284,7 +284,7 @@ contains
     forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
 
     !check whether points overlap
-    
+
     this%overlap = .false.
     do ip = 1, this%np_part - 1
       if(this%map(ip) == this%map(ip + 1)) then
@@ -310,12 +310,12 @@ contains
     type(submesh_t),      intent(in)     :: sm1
     type(submesh_t),      intent(in)     :: sm2
     FLOAT, optional,      intent(in)     :: shift(:) !< If present, shifts the center of sm2
-    
-    FLOAT :: r2 
+
+    FLOAT :: r2
     integer :: ip, is
     type(profile_t), save :: prof
     FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM)
-    
+
     PUSH_SUB(submesh_merge)
     call profiling_in(prof, "SUBMESH_MERGE")
 
@@ -336,7 +336,7 @@ contains
       xx(1:sb%dim) = sm2%x(ip, 1:sb%dim)-diff_centers(1:sb%dim)
       !If the point is not in sm1, we add it
       if(sum(xx(1:sb%dim)**2) > sm1%radius**2) is = is + 1
-    end do 
+    end do
 
     this%np = is
     this%np_part = this%np
@@ -366,21 +366,21 @@ contains
   ! --------------------------------------------------------------
   !This routine shifts the center of a submesh, without changing the grid points
   subroutine submesh_shift_center(this, sb, newcenter)
-    type(submesh_t),      intent(inout)  :: this 
+    type(submesh_t),      intent(inout)  :: this
     type(simul_box_t),    intent(in)     :: sb
     FLOAT,                intent(in)     :: newcenter(:)
-    
+
     FLOAT :: r2
     integer :: ip
     type(profile_t), save :: prof
     FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM), oldcenter(1:MAX_DIM)
-    
+
     PUSH_SUB(submesh_shift_center)
     call profiling_in(prof, "SUBMESH_SHIFT")
 
     oldcenter(1:sb%dim) = this%center(1:sb%dim)
     this%center(1:sb%dim)  = newcenter(1:sb%dim)
-   
+
 
     diff_centers(1:sb%dim) = newcenter(1:sb%dim)-oldcenter(1:sb%dim)
 
@@ -411,8 +411,8 @@ contains
 
     PUSH_SUB(submesh_broadcast)
     call profiling_in(prof, 'SUBMESH_BCAST')
-    
-    if(root /= mpi_grp%rank) then    
+
+    if(root /= mpi_grp%rank) then
       this%mesh => mesh
       this%center(1:mesh%sb%dim) = center(1:mesh%sb%dim)
       this%radius = radius
@@ -423,7 +423,7 @@ contains
       if(root == mpi_grp%rank) then
         nparray(1) = this%np
         nparray(2) = this%np_part
-        if(this%overlap) then 
+        if(this%overlap) then
           nparray(3) = 1
         else
           nparray(3) = 0
@@ -457,12 +457,12 @@ contains
     call profiling_out(prof)
     POP_SUB(submesh_broadcast)
   end subroutine submesh_broadcast
-   
+
   ! --------------------------------------------------------------
 
   subroutine submesh_end(this)
     type(submesh_t),   intent(inout)  :: this
-    
+
     PUSH_SUB(submesh_end)
 
     if( this%np /= -1 ) then
@@ -483,7 +483,7 @@ contains
     type(submesh_t),          intent(out)  :: sm_out
 
     PUSH_SUB(submesh_copy)
-    
+
     ASSERT(sm_out%np == -1)
 
     sm_out%mesh => sm_in%mesh
@@ -493,7 +493,7 @@ contains
 
     sm_out%np = sm_in%np
     sm_out%np_part = sm_in%np_part
-    
+
     SAFE_ALLOCATE(sm_out%map(1:sm_out%np_part))
     SAFE_ALLOCATE(sm_out%x(1:sm_out%np_part, 0:ubound(sm_in%x, 2)))
 
@@ -513,7 +513,7 @@ contains
     integer :: is
 
     PUSH_SUB(submesh_get_inv)
-    
+
     map_inv(1:this%mesh%np_part) = 0
     forall (is = 1:this%np) map_inv(this%map(is)) = is
 
@@ -525,7 +525,7 @@ contains
   logical function submesh_overlap(sm1, sm2) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
-    
+
     integer :: ii, jj, dd
     FLOAT :: distance
 
@@ -535,11 +535,11 @@ contains
       !first check the distance
       distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
       overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
-      
+
       ! if they are very far, no need to check in detail
       if(.not. overlap) return
     end if
-    
+
     ! Otherwise check whether they have the some point in common. We
     ! can make the comparison faster using that the arrays are sorted.
     overlap = .false.
@@ -562,12 +562,12 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
     end if
 #endif
-    
+
   end function submesh_overlap
 
   ! -------------------------------------------------------------
 
-    subroutine submesh_build_global(this)
+  subroutine submesh_build_global(this)
     type(submesh_t),      intent(inout)   :: this
 
     integer, allocatable :: part_np(:)
@@ -578,15 +578,15 @@ contains
     if(.not. this%mesh%parallel_in_domains) then
       POP_SUB(submesh_build_global)
       return
-    end if 
+    end if
 
     SAFE_ALLOCATE(part_np(this%mesh%vp%npart))
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-  #if defined(HAVE_MPI)
+#if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
-  #endif 
+#endif
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -606,13 +606,13 @@ contains
         end do
       end if
       ind = ind + part_np(ipart)
-    end do 
+    end do
 
-   #if defined(HAVE_MPI)
+#if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
-   #endif 
+#endif
 
     SAFE_DEALLOCATE_A(part_np)
 
@@ -633,19 +633,19 @@ contains
     POP_SUB(submesh_end_global)
   end subroutine submesh_end_global
 
-  
+
   ! -----------------------------------------------------------
-  
+
   subroutine zzsubmesh_add_to_mesh(this, sphi, phi, factor)
     type(submesh_t),  intent(in)    :: this
     CMPLX,            intent(in)    :: sphi(:)
     CMPLX,            intent(inout) :: phi(:)
     CMPLX,  optional, intent(in)    :: factor
-    
+
     integer :: ip, m
-    
+
     PUSH_SUB(zzdsubmesh_add_to_mesh)
-   
+
     if(present(factor)) then
       !Loop unrolling inspired by BLAS axpy routine
       m = mod(this%np,4)
@@ -673,8 +673,8 @@ contains
           phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
         end do
       end if
-    end if 
-    
+    end if
+
     POP_SUB(zzdsubmesh_add_to_mesh)
   end subroutine zzsubmesh_add_to_mesh
 
@@ -686,13 +686,13 @@ contains
     CMPLX,             intent(in) :: sphi(:)
     CMPLX,             intent(in) :: phi(:)
     logical, optional, intent(in) :: reduce
-  
+
     integer :: is, m, ip
-  
+
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
-  
+
     dotp = cmplx(M_ZERO, M_ZERO)
-  
+
     if(this%mesh%use_curvilinear) then
       do is = 1, this%np
         dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*conjg(sphi(is))
@@ -705,20 +705,20 @@ contains
       if( this%np.ge.4) then
         do ip = m+1, this%np, 4
           dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
-                      + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
-                      + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
-                      + phi(this%map(ip+3))*conjg(sphi(ip+3))
+            + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
+            + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
+            + phi(this%map(ip+3))*conjg(sphi(ip+3))
         end do
       end if
-        dotp = dotp*this%mesh%vol_pp(1)
+      dotp = dotp*this%mesh%vol_pp(1)
     end if
-  
+
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
       call comm_allreduce(this%mesh%vp%comm, dotp)
       call profiling_out(C_PROFILING_SM_REDUCE)
-    end if 
- 
+    end if
+
     POP_SUB(zzsubmesh_to_mesh_dotp)
   end function zzsubmesh_to_mesh_dotp
 

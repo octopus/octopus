@@ -30,7 +30,7 @@ module scaling_function_oct_m
   public ::            &
     scaling_function,  &
     scf_recursion
-    
+
 contains
 
   !!****h* BigDFT/scaling_function
@@ -162,11 +162,11 @@ contains
         ! periodically wrap index if necessary
         ind=j+2*i
         loop99: do
-          if (ind < 0) then 
+          if (ind < 0) then
             ind=ind+nt
             cycle loop99
           end if
-          if (ind >= nt) then 
+          if (ind >= nt) then
             ind=ind-nt
             cycle loop99
           end if
@@ -214,11 +214,11 @@ contains
         ! periodically wrap index if necessary
         ind=i-j
         loop99: do
-          if (ind < 0) then 
+          if (ind < 0) then
             ind=ind+nt/2
             cycle loop99
           end if
-          if (ind >= nt/2) then 
+          if (ind >= nt/2) then
             ind=ind-nt/2
             cycle loop99
           end if
@@ -233,7 +233,7 @@ contains
 
   end subroutine back_trans_8
   !!***
-  
+
   !!****h* BigDFT/scf_recursion_8
   !! NAME
   !!   scf_recursion_8
@@ -280,7 +280,7 @@ contains
     end do loop_iter_scf
   end subroutine scf_recursion_8
   !!***
-  
+
 end module scaling_function_oct_m
 
 !! Local Variables:

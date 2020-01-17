@@ -35,8 +35,8 @@ module energy_oct_m
   type energy_t
     ! Components are public by default
     ! Energies
-    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
-                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
+    FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc]
+    !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
     FLOAT :: exchange
     FLOAT :: correlation
@@ -45,8 +45,8 @@ module energy_oct_m
     FLOAT :: intnvxc     !< Int[n vxc]
     FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
     FLOAT :: int_ee_pcm  !< 1/2 [v_Hartree]*[q_pcm_e] dot product of vectors of dimension n_tesserae
-    FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n] 
-    FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e] 
+    FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n]
+    FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e]
     FLOAT :: int_nn_pcm  !< 1/2 [v_n]*[q_pcm_n]
     FLOAT :: int_e_ext_pcm  !< [v_Hartree]*[q_pcm_ext]
     FLOAT :: int_n_ext_pcm  !< [v_n]*[q_pcm_ext]

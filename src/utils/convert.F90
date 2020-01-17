@@ -55,7 +55,7 @@ program oct_convert
   character(len=256) :: config_str
   integer :: ierr
   type(namespace_t) :: default_namespace
-  
+
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
   if(ierr  ==  0) call getopt_octopus(config_str)
@@ -66,7 +66,7 @@ program oct_convert
 
   call parser_init()
   default_namespace = namespace_t("")
-  
+
   call messages_init(default_namespace)
 
   call io_init(default_namespace)
@@ -97,7 +97,7 @@ program oct_convert
 contains
 
   ! -------------
-  !> Reads an binary file and writes the equivalent files, 
+  !> Reads an binary file and writes the equivalent files,
   !! defined with OutputFormat.
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
@@ -107,7 +107,7 @@ contains
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
     logical                  :: iterate_folder, subtract_file
-    integer, parameter       :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3 
+    integer, parameter       :: CONVERT_FORMAT = 1, FOURIER_TRANSFORM = 2, OPERATION = 3
 
     PUSH_SUB(convert)
 
@@ -124,8 +124,8 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% Input filename. The original filename which is going to be converted in the format
-    !% specified in <tt>OutputFormat</tt>. It is going to convert various files, it should 
-    !% only contain the beginning of the name. For instance, in the case of the restart 
+    !% specified in <tt>OutputFormat</tt>. It is going to convert various files, it should
+    !% only contain the beginning of the name. For instance, in the case of the restart
     !% files, it should be one space ' '.
     !%End
     call parse_variable(default_namespace, 'ConvertFilename', 'density', basename)
@@ -151,7 +151,7 @@ contains
     !% A fourier transform of the mesh function will be computed.
     !% It requieres that ConvertStart and ConvertEnd have to be set.
     !%Option operation 3
-    !% Convert utility will generate a new mesh function constructed by linear 
+    !% Convert utility will generate a new mesh function constructed by linear
     !% combination of scalar function of different mesh functions,
     !%End
     call parse_variable(default_namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
@@ -161,7 +161,7 @@ contains
     !%Default true
     !%Section Utilities::oct-convert
     !%Description
-    !% This variable decides if a folder is going to be iterated or the 
+    !% This variable decides if a folder is going to be iterated or the
     !% filename is going to be iterated.
     !%End
     call parse_variable(default_namespace, 'ConvertIterateFolder', .true., iterate_folder)
@@ -173,7 +173,7 @@ contains
       folder_default  = 'restart'
       c_start_default = 1
     end if
-    
+
     !%Variable ConvertFolder
     !%Type string
     !%Section Utilities::oct-convert
@@ -227,7 +227,7 @@ contains
         ref_name = trim(ref_name(1:length-4))
       end if
     end if
-    
+
     !%Variable ConvertSubtract
     !%Type logical
     !%Default false
@@ -246,21 +246,21 @@ contains
     !%End
     call parse_variable(default_namespace, 'ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
-    
+
     select case (c_how)
     CASE(OPERATION)
       call convert_operate(sys%gr%mesh, default_namespace, sys%geo, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
-      ! Compute Fourier transform 
+      ! Compute Fourier transform
       call convert_transform(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, subtract_file, &
-         ref_name, ref_folder)
+        c_start, c_end, c_step, sys%outp, subtract_file, &
+        ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
       call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, iterate_folder, &
-         subtract_file, ref_name, ref_folder)
+        c_start, c_end, c_step, sys%outp, iterate_folder, &
+        subtract_file, ref_name, ref_folder)
     end select
 
     call system_end(sys)
@@ -269,9 +269,9 @@ contains
   end subroutine convert
 
   ! ---------------------------------------------------------
-  !> Giving a range of input files, it writes the corresponding 
+  !> Giving a range of input files, it writes the corresponding
   !! output files
-  subroutine convert_low(mesh, namespace, geo, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+  subroutine convert_low(mesh, namespace, geo, psolver, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, &
     subtract_file, ref_name, ref_folder)
     type(mesh_t),      intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
@@ -285,9 +285,9 @@ contains
     integer,           intent(in)    :: c_step         !< The step between files
     type(output_t),    intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
     logical,           intent(in)    :: iterate_folder !< If true, it iterates over the folders, keeping the filename fixed.
-                                                       !! If false, it iterates over the filenames
-    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
-    character(len=*),  intent(inout) :: ref_name       !< Reference file name 
+    !! If false, it iterates over the filenames
+    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference
+    character(len=*),  intent(inout) :: ref_name       !< Reference file name
     character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
     type(restart_t)          :: restart
@@ -301,15 +301,15 @@ contains
     SAFE_ALLOCATE(read_rff(1:mesh%np))
     SAFE_ALLOCATE(pot(1:mesh%np))
     read_rff(:) = M_ZERO
-   
+
     write(message(1),'(5a,i5,a,i5,a,i5)') "Converting '", trim(in_folder), "/", trim(basename), &
-         "' from ", c_start, " to ", c_end, " every ", c_step
+      "' from ", c_start, " to ", c_end, " every ", c_step
     call messages_info(1)
- 
+
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
-                        dir=trim(ref_folder), mesh = mesh)
+        dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
@@ -329,11 +329,11 @@ contains
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
       restart_folder = folder(1:folder_index)
-    else 
+    else
       restart_folder = in_folder
     end if
     call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
-                      dir=trim(restart_folder), mesh = mesh)
+      dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
       if (iterate_folder) then
@@ -350,7 +350,7 @@ contains
           write(frmt,'(a,i0,a)')"(a,i0.",10-len_trim(basename),")"
           write(filename, fmt=trim(frmt)) trim(basename), ii
           write(out_name, '(a)') trim(filename)
-        else 
+        else
           ! Assuming filename is given complete in the 'ConvertFilename'
           write(filename, '(a,a,a,a)') trim(folder),"/", trim(basename)
           filename = basename
@@ -371,25 +371,25 @@ contains
         cycle
       end if
       if (subtract_file) then
-        read_ff(:) = read_ff(:) - read_rff(:) 
+        read_ff(:) = read_ff(:) - read_rff(:)
         write(out_name, '(a,a)') trim(out_name),"-ref"
       end if
       ! Write the corresponding output
-      call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
-           trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
-      
+      call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
+        trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+
       if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
-             trim(out_name), namespace, mesh, pot, units_out%energy, ierr, geo = geo)
+          trim(out_name), namespace, mesh, pot, units_out%energy, ierr, geo = geo)
       end if
-      call loct_progress_bar(ii-c_start, c_end-c_start) 
+      call loct_progress_bar(ii-c_start, c_end-c_start)
       ! It does not matter if the current write has failed for the next iteration
       ierr = 0
     end do
     call restart_end(restart)
-    
+
     SAFE_DEALLOCATE_A(read_ff)
     SAFE_DEALLOCATE_A(read_rff)
     SAFE_DEALLOCATE_A(pot)
@@ -399,8 +399,8 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
-       subtract_file, ref_name, ref_folder)
+  subroutine convert_transform(mesh, namespace, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, &
+    subtract_file, ref_name, ref_folder)
     type(mesh_t)    ,  intent(in)    :: mesh
     type(namespace_t), intent(in)    :: namespace
     type(geometry_t),  intent(in)    :: geo
@@ -411,8 +411,8 @@ contains
     integer,           intent(in)    :: c_end          !< The last file number
     integer,           intent(in)    :: c_step         !< The step between files
     type(output_t),    intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
-    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference 
-    character(len=*),  intent(inout) :: ref_name       !< Reference file name 
+    logical,           intent(in)    :: subtract_file  !< If true, it subtracts the density from the reference
+    character(len=*),  intent(inout) :: ref_name       !< Reference file name
     character(len=*),  intent(inout) :: ref_folder     !< Reference folder name
 
     integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
@@ -427,7 +427,7 @@ contains
     type(kick_t)            :: kick
     integer                 :: ft_method
     type(spectrum_t)        :: spectrum
-    type(batch_t)           :: tdrho_b, wdrho_b 
+    type(batch_t)           :: tdrho_b, wdrho_b
     FLOAT, allocatable      :: tdrho_a(:,:,:), wdrho_a(:,:,:)
     type(fft_t)             :: fft
     type(profile_t), save   :: prof_fftw, prof_io
@@ -480,19 +480,19 @@ contains
     call messages_print_var_value(wd_info, 'ConvertReadSize', chunk_size)
     !Check that default value is set when ConvertReadSize = 0
     if ( chunk_size == 0) chunk_size = mesh%np
-    ! Parallel version just work in domains and chunk_size equal to mesh%np 
+    ! Parallel version just work in domains and chunk_size equal to mesh%np
     if(mesh%mpi_grp%size > 1 .and. chunk_size /= mesh%np) then
       write(message(1),*)'Incompatible value for ConvertReadSize and Parallelizaion in Domains'
       write(message(2),*)'Use the default value for ConvertReadSize (or set it to 0)'
       call messages_fatal(2)
     end if
-    
+
     ! Calculate the limits in frequency space.
     start_time = c_start * dt
     dt         = dt * c_step
-    time_steps = (c_end - c_start) / c_step 
+    time_steps = (c_end - c_start) / c_step
     dw         = M_TWO * M_PI / (dt * time_steps)
-    w_max      = M_TWO * M_PI / dt 
+    w_max      = M_TWO * M_PI / dt
 
     !%Variable ConvertEnergyMax
     !%Type float
@@ -505,10 +505,10 @@ contains
     call parse_variable(namespace, 'ConvertEnergyMax',fdefault, max_energy, units_inp%energy)
     if (max_energy > w_max) then
       write(message(1),'(a,f12.7)')'Impossible to set ConvertEnergyMax to ', &
-           units_from_atomic(units_inp%energy, max_energy)
+        units_from_atomic(units_inp%energy, max_energy)
       write(message(2),'(a)')'ConvertEnergyMax is too large.'
       write(message(3),'(a,f12.7,a)')'ConvertEnergyMax reset to ', &
-           units_from_atomic(units_inp%energy, w_max),'[' // trim(units_abbrev(units_out%energy)) // ']'
+        units_from_atomic(units_inp%energy, w_max),'[' // trim(units_abbrev(units_out%energy)) // ']'
       call messages_info(3)
       max_energy = w_max
     end if
@@ -525,7 +525,7 @@ contains
     !%Option standard_fourier 2
     !% Uses polinomial approach to the computation of discrete Fourier Transform.
     !% It uses the same variable described in how to obtain spectrum from
-    !% a time-propagation calculation. 
+    !% a time-propagation calculation.
     !%End
     call parse_variable(namespace, 'ConvertFTMethod', 1, ft_method)
     call messages_print_var_option(wd_info, 'ConvertFTMethod', ft_method)
@@ -536,56 +536,56 @@ contains
     SAFE_ALLOCATE(read_rff(1:mesh%np))
 
     select case(ft_method)
-      case (FAST_FOURIER)
-        nn(1) = time_steps + 1
-        nn(2) = 1
-        nn(3) = 1
-        SAFE_ALLOCATE(out_fft(0:time_steps))
-        optimize = .false.
-        optimize_parity = -1
-        call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
-      case (STANDARD_FOURIER)
-        !%Variable ConvertEnergyStep
-        !%Type float
-        !%Default <math>2 \pi / T</math>, where <math>T</math> is the total propagation time
-        !%Section Utilities::oct-convert
-        !%Description
-        !% Energy step to output from Fourier transform.
-        !% Sampling rate for the Fourier transform. If you supply a number equal or smaller than zero, then
-        !% the sampling rate will be <math>2 \pi / T</math>, where <math>T</math> is the total propagation time.
-        !%End
-        fdefault = M_TWO * M_PI / (dt * time_steps)
-        call parse_variable(namespace, 'ConvertEnergyStep',fdefault, dw, units_inp%energy)
-        if (dw <= M_ZERO) dw = M_TWO * M_PI / (dt * time_steps)
-        
-        call spectrum_init(spectrum, namespace, dw, w_max)
-        ! Manually setting already defined variables on spectrum.
-        spectrum%start_time = c_start * dt
-        spectrum%end_time = c_end * dt 
-        spectrum%energy_step =  dw
-        spectrum%max_energy = max_energy
-        SAFE_ALLOCATE(tdrho_a(0:time_steps, 1, 1))
-        SAFE_ALLOCATE(wdrho_a(0:time_steps, 1, 1))
+    case (FAST_FOURIER)
+      nn(1) = time_steps + 1
+      nn(2) = 1
+      nn(3) = 1
+      SAFE_ALLOCATE(out_fft(0:time_steps))
+      optimize = .false.
+      optimize_parity = -1
+      call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
+    case (STANDARD_FOURIER)
+      !%Variable ConvertEnergyStep
+      !%Type float
+      !%Default <math>2 \pi / T</math>, where <math>T</math> is the total propagation time
+      !%Section Utilities::oct-convert
+      !%Description
+      !% Energy step to output from Fourier transform.
+      !% Sampling rate for the Fourier transform. If you supply a number equal or smaller than zero, then
+      !% the sampling rate will be <math>2 \pi / T</math>, where <math>T</math> is the total propagation time.
+      !%End
+      fdefault = M_TWO * M_PI / (dt * time_steps)
+      call parse_variable(namespace, 'ConvertEnergyStep',fdefault, dw, units_inp%energy)
+      if (dw <= M_ZERO) dw = M_TWO * M_PI / (dt * time_steps)
+
+      call spectrum_init(spectrum, namespace, dw, w_max)
+      ! Manually setting already defined variables on spectrum.
+      spectrum%start_time = c_start * dt
+      spectrum%end_time = c_end * dt
+      spectrum%energy_step =  dw
+      spectrum%max_energy = max_energy
+      SAFE_ALLOCATE(tdrho_a(0:time_steps, 1, 1))
+      SAFE_ALLOCATE(wdrho_a(0:time_steps, 1, 1))
     end select
     call messages_print_var_value(wd_info, 'ConvertEnergyStep', dw, unit = units_out%energy)
 
-    !TODO: set system variable common for all the program in 
+    !TODO: set system variable common for all the program in
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
     call kick_init(kick, namespace, mesh%sb, 1)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)
     write(message(1),'(a,1x,i0.7,a,f12.7,a,i0.7,a,f12.7,a)')'Frequency index:',e_start,'(',&
-         units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')' 
+      units_from_atomic(units_out%energy, e_start * dw),')-',e_end,'(',units_from_atomic(units_out%energy, e_end * dw),')'
     write(message(2),'(a,f12.7,a)')'Frequency Step, dw:  ', units_from_atomic(units_out%energy, dw), &
-         '[' // trim(units_abbrev(units_out%energy)) // ']'
+      '[' // trim(units_abbrev(units_out%energy)) // ']'
     call messages_info(2)
 
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call messages_info(1)
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
-                        dir=trim(ref_folder), mesh = mesh)
+        dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(ref_name), mesh, read_rff, ierr)
@@ -596,13 +596,13 @@ contains
         call messages_fatal(2)
       end if
     end if
-    
+
     call messages_print_stress(wd_info, "File Information")
     do i_energy = e_start, e_end
       write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
       write(message(1),'(a,a,f12.7,a,1x,i7,a)')trim(filename),' w =', &
-           units_from_atomic(units_out%energy,(i_energy) * dw), & 
-           '[' // trim(units_abbrev(units_out%energy)) // ']'
+        units_from_atomic(units_out%energy,(i_energy) * dw), &
+        '[' // trim(units_abbrev(units_out%energy)) // ']'
       if (mpi_world%rank == 0) write(wd_info,'(a)') message(1)
       call messages_info(1)
       call io_mkdir(trim(filename), namespace)
@@ -615,10 +615,10 @@ contains
       folder_index = index(folder, '/', .true.)
       restart_folder = folder(1:folder_index)
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
-                        dir=trim(restart_folder), mesh = mesh)
+        dir=trim(restart_folder), mesh = mesh)
     end if
-   
-    !For each mesh point, open density file and read corresponding point.  
+
+    !For each mesh point, open density file and read corresponding point.
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
 
     SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:time_steps))
@@ -628,7 +628,7 @@ contains
       ! Time
       t_point = 0
       do i_time = c_start, c_end, c_step
-        
+
         if (mesh%parallel_in_domains .and. i_space == 1) then
           write(folder,'(a,i0.7,a)') in_folder(folder_index+1:len_trim(in_folder)-1),i_time,"/"
           write(filename, '(a,a,a)') trim(folder), trim(basename)
@@ -678,11 +678,11 @@ contains
         tdrho_a(0:time_steps, 1, 1) = read_ft(0:time_steps)
         call batch_init(tdrho_b, 1, 1, 1, tdrho_a)
         call batch_init(wdrho_b, 1, 1, 1, wdrho_a)
-        call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 1, & 
-                                  kick%time, dt, tdrho_b)
+        call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 1, &
+          kick%time, dt, tdrho_b)
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-              c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, min_energy, max_energy, &
-              spectrum%energy_step, wdrho_b)
+          c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, min_energy, max_energy, &
+          spectrum%energy_step, wdrho_b)
         call tdrho_b%end()
         call wdrho_b%end()
         do e_point = e_start, e_end
@@ -691,9 +691,9 @@ contains
       end select
 
       if (mod(i_space-1, 1000) == 0 .and. mpi_world%rank == 0) then
-        call loct_progress_bar(i_space-1, mesh%np) 
+        call loct_progress_bar(i_space-1, mesh%np)
       end if
-      
+
       !print out wd densities from (ii-chunksize,ii] if running in serial
       if (mesh%mpi_grp%size == 1) then
         if (mod(i_space, chunk_size) == 0) then
@@ -704,16 +704,16 @@ contains
             write(filename,'(a14,i0.7,a12)')'wd.general/wd.',i_energy,'/density.obf'
             ! If it is the first time entering here, write the header. But, only once
             if (i_space == chunk_size) &
-               !call write_header(trim(filename), mesh%np_global, ierr)
-                call dwrite_header(trim(filename),mesh%np_global, ierr)
+            !call write_header(trim(filename), mesh%np_global, ierr)
+              call dwrite_header(trim(filename),mesh%np_global, ierr)
             call io_binary_write(trim(filename), chunk_size, point_tmp(1:chunk_size, i_energy), ierr, &
-                nohead = .true.)
+              nohead = .true.)
           end do
         end if
       end if
     end do ! Space
 
-    if (mpi_world%rank == 0) call loct_progress_bar(mesh%np, mesh%np) 
+    if (mpi_world%rank == 0) call loct_progress_bar(mesh%np, mesh%np)
 #ifdef HAVE_MPI
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
@@ -721,9 +721,9 @@ contains
     if(mesh%parallel_in_domains) then
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
-        call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), namespace, mesh, point_tmp(:, i_energy), &
-           units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+        call dio_function_output(outp%how, trim(filename), &
+          trim('density'), namespace, mesh, point_tmp(:, i_energy), &
+          units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       end do
       call restart_end(restart)
     else
@@ -732,13 +732,13 @@ contains
         do i_energy = e_start, e_end
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
-          call dio_function_output(outp%how, trim(filename), & 
-             trim('density'), namespace, mesh, read_rff, &
-             units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+          call dio_function_output(outp%how, trim(filename), &
+            trim('density'), namespace, mesh, read_rff, &
+            units_out%length**(-mesh%sb%dim), ierr, geo = geo)
         end do
       end if
     end if
-    
+
     SAFE_DEALLOCATE_A(point_tmp)
     SAFE_DEALLOCATE_A(read_ft)
     SAFE_DEALLOCATE_A(read_rff)
@@ -755,7 +755,7 @@ contains
     POP_SUB(convert_transform)
   end subroutine convert_transform
   ! ---------------------------------------------------------
-  !> Given a set of mesh function operations it computes a  
+  !> Given a set of mesh function operations it computes a
   !! a resulting mesh function from linear combination of them.
   subroutine convert_operate(mesh, namespace, geo, mc, outp)
     type(mesh_t),      intent(in)    :: mesh
@@ -766,7 +766,7 @@ contains
 
     integer             :: ierr, ip, i_op, length, n_operations
     type(block_t)       :: blk
-    type(restart_t)     :: restart 
+    type(restart_t)     :: restart
     type(unit_t)        :: units
     real(8)             :: f_re, f_im
     FLOAT, allocatable  :: tmp_ff(:), scalar_ff(:)
@@ -782,7 +782,7 @@ contains
     !%Description
     !% This variable is used to generate a new mesh function as a linear combination
     !% different mesh function having the same mesh. Each row defines an operation for
-    !% for a single mesh function. 
+    !% for a single mesh function.
     !% The format of the block is the following: <br>
     !% 'variable name' | 'folder' | 'file' | 'operation'
     !%End
@@ -802,7 +802,7 @@ contains
     !%Section Utilities::oct-convert
     !%Description
     !% The folder name where the output files will be write. The default is
-    !% <tt>convert</tt>. 
+    !% <tt>convert</tt>.
     !%End
     call parse_variable(namespace, 'ConvertOutputFolder', "convert", out_folder)
     call add_last_slash(out_folder)
@@ -813,8 +813,8 @@ contains
     !%Default "density"
     !%Section Utilities::oct-convert
     !%Description
-    !% Output filename. The name of the file in which the converted mesh function will be 
-    !% written in the format specified in <tt>OutputFormat</tt>. 
+    !% Output filename. The name of the file in which the converted mesh function will be
+    !% written in the format specified in <tt>OutputFormat</tt>.
     !%End
     call parse_variable(namespace, 'ConvertOutputFilename', 'density', out_filename)
 
@@ -840,7 +840,7 @@ contains
       ! FIXME: why only real functions? Please generalize.
       ! TODO: check if mesh function are real or complex.
       call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
-                        dir=trim(folder), mesh = mesh, exact=.true.)
+        dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)
       else
@@ -853,10 +853,10 @@ contains
 
       do ip = 1, mesh%np
         call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
-        !TODO: implement use of complex functions. 
+        !TODO: implement use of complex functions.
         scalar_ff(ip) = scalar_ff(ip) + f_re
       end do
-      
+
       call restart_end(restart)
 
     end do
@@ -867,10 +867,10 @@ contains
     call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
     ! Write the corresponding output
-    !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
+    !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...)
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, mesh, & 
+    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, mesh, &
       scalar_ff, units, ierr, geo = geo)
 
     SAFE_DEALLOCATE_A(tmp_ff)

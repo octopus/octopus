@@ -99,16 +99,16 @@ contains
     integer, intent(in) :: idir
 
     select case(idir)
-      case(1)
-        ch = 'x'
-      case(2)
-        ch = 'y'
-      case(3)
-        ch = 'z'
-      case(4)
-        ch = 'w'
-      case default
-        write(ch,'(i1)') idir
+    case(1)
+      ch = 'x'
+    case(2)
+      ch = 'y'
+    case(3)
+      ch = 'z'
+    case(4)
+      ch = 'w'
+    case default
+      write(ch,'(i1)') idir
     end select
 
   end function index2axis
@@ -119,16 +119,16 @@ contains
     character(len=2) :: ch
 
     select case(idir)
-      case(1)
-        ch = "kx"
-      case(2)
-        ch = "ky"
-      case(3)
-        ch = "kz"
-      case(4)
-        ch = "kw"
-      case default
-        write(ch,'(i2)') idir
+    case(1)
+      ch = "kx"
+    case(2)
+      ch = "ky"
+    case(3)
+      ch = "kz"
+    case(4)
+      ch = "kw"
+    case default
+      write(ch,'(i2)') idir
     end select
 
   end function index2axisBZ
@@ -141,7 +141,7 @@ contains
     integer,           intent(in) :: ndim
     type(unit_t),      intent(in) :: unit
     logical, optional, intent(in) :: write_average
-    
+
     FLOAT :: trace
     integer :: jj, kk
     logical :: write_average_
@@ -169,17 +169,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_dipole(iunit, dipole, ndim) 
+  subroutine output_dipole(iunit, dipole, ndim)
     integer, intent(in) :: iunit
     FLOAT,   intent(in) :: dipole(:)
     integer, intent(in) :: ndim
-    
+
     integer :: idir
 
     PUSH_SUB(output_dipole)
 
     write(iunit, '(a,a20,a17)') 'Dipole:', '[' // trim(units_abbrev(units_out%length)) // ']', &
-          '[' // trim(units_abbrev(unit_debye)) // ']'
+      '[' // trim(units_abbrev(unit_debye)) // ']'
     do idir = 1, ndim
       write(iunit, '(6x,3a,es14.5,3x,2es14.5)') '<', index2axis(idir), '> = ', &
         units_from_atomic(units_out%length, dipole(idir)), units_from_atomic(unit_debye, dipole(idir))
@@ -188,17 +188,17 @@ contains
     POP_SUB(output_dipole)
   end subroutine output_dipole
 
-  !> This subroutine prints the logo followed by information about 
-  !! the compilation and the system. It also prints the start time 
+  !> This subroutine prints the logo followed by information about
+  !! the compilation and the system. It also prints the start time
   !! of the execution.
   ! ---------------------------------------------------------
   subroutine print_header()
 #ifdef HAVE_FC_COMPILER_VERSION
     use iso_fortran_env
 #endif
-    
+
     character(len=256) :: sys_name
-    
+
     ! Let us print our logo
     call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
 
@@ -209,11 +209,11 @@ contains
     call messages_info(3)
 
     message(1) = &
-         "Version                : " // trim(conf%version)
+      "Version                : " // trim(conf%version)
     message(2) = &
-         "Commit                 : "// trim(conf%git_commit)
+      "Commit                 : "// trim(conf%git_commit)
     message(3) = &
-         "Build time             : "// trim(conf%build_time)
+      "Build time             : "// trim(conf%build_time)
     call messages_info(3)
 
     message(1) = 'Configuration options  : ' // trim(get_config_opts())
@@ -223,16 +223,16 @@ contains
     call messages_info(3)
 
     message(1) = &
-         "C compiler             : "//trim(conf%cc)
+      "C compiler             : "//trim(conf%cc)
     message(2) = &
-         "C compiler flags       : "//trim(conf%cflags)
+      "C compiler flags       : "//trim(conf%cflags)
 #ifdef HAVE_FC_COMPILER_VERSION
     message(3) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
 #else
     message(3) = "Fortran compiler       : "//trim(conf%fc)
 #endif
     message(4) = &
-         "Fortran compiler flags : "//trim(conf%fcflags)
+      "Fortran compiler flags : "//trim(conf%fcflags)
     call messages_info(4)
 
     message(1) = ""
@@ -355,10 +355,10 @@ contains
   end function get_optional_libraries
 
   ! ---------------------------------------------------------
-  
+
   logical function dleading_dimension_is_known(array) result(known)
     real(8), intent(in) :: array(:, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -371,10 +371,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  
+
   logical function zleading_dimension_is_known(array) result(known)
     complex(8), intent(in) :: array(:, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -382,14 +382,14 @@ contains
       known = ubound(array, dim = 1) == (loc(array(1, 2)) - loc(array(1, 1)))/sizeof(array(1, 1))
     end if
 #endif
-    
+
   end function zleading_dimension_is_known
 
   ! ---------------------------------------------------------
-  
+
   logical function sleading_dimension_is_known(array) result(known)
     real(4), intent(in) :: array(:, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -401,10 +401,10 @@ contains
   end function sleading_dimension_is_known
 
   ! ---------------------------------------------------------
-  
+
   logical function cleading_dimension_is_known(array) result(known)
     complex(4), intent(in) :: array(:, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -412,14 +412,14 @@ contains
       known = ubound(array, dim = 1) == (loc(array(1, 2)) - loc(array(1, 1)))/sizeof(array(1, 1))
     end if
 #endif
-    
+
   end function cleading_dimension_is_known
 
   ! ---------------------------------------------------------
-  
+
   logical function dleading_dimension_is_known2(array) result(known)
     real(8), intent(in) :: array(:, :, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -432,10 +432,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  
+
   logical function zleading_dimension_is_known2(array) result(known)
     complex(8), intent(in) :: array(:, :, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -443,14 +443,14 @@ contains
       known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
     end if
 #endif
-    
+
   end function zleading_dimension_is_known2
 
   ! ---------------------------------------------------------
-  
+
   logical function sleading_dimension_is_known2(array) result(known)
     real(4), intent(in) :: array(:, :, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -463,10 +463,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  
+
   logical function cleading_dimension_is_known2(array) result(known)
     complex(4), intent(in) :: array(:, :, :)
-    
+
     known = .true.
 
 #if defined(HAVE_FORTRAN_LOC) && defined(HAVE_FC_SIZEOF)
@@ -474,16 +474,16 @@ contains
       known = ubound(array, dim = 1) == (loc(array(1, 2, 1)) - loc(array(1, 1, 1)))/sizeof(array(1, 1, 1))
     end if
 #endif
-    
+
   end function cleading_dimension_is_known2
 
   ! ---------------------------------------------------------
 
   integer function dlead_dim(array) result(lead_dim)
     real(8), intent(in) :: array(:, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1)
   end function dlead_dim
 
@@ -491,9 +491,9 @@ contains
 
   integer function zlead_dim(array) result(lead_dim)
     complex(8), intent(in) :: array(:, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1)
   end function zlead_dim
 
@@ -501,9 +501,9 @@ contains
 
   integer function slead_dim(array) result(lead_dim)
     real(4), intent(in) :: array(:, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1)
   end function slead_dim
 
@@ -511,9 +511,9 @@ contains
 
   integer function clead_dim(array) result(lead_dim)
     complex(4), intent(in) :: array(:, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1)
   end function clead_dim
 
@@ -521,9 +521,9 @@ contains
 
   integer function dlead_dim2(array) result(lead_dim)
     real(8), intent(in) :: array(:, :, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function dlead_dim2
 
@@ -531,9 +531,9 @@ contains
 
   integer function zlead_dim2(array) result(lead_dim)
     complex(8), intent(in) :: array(:, :, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function zlead_dim2
 
@@ -541,9 +541,9 @@ contains
 
   integer function slead_dim2(array) result(lead_dim)
     real(4), intent(in) :: array(:, :, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function slead_dim2
 
@@ -551,9 +551,9 @@ contains
 
   integer function clead_dim2(array) result(lead_dim)
     complex(4), intent(in) :: array(:, :, :)
-    
+
     ASSERT(leading_dimension_is_known(array))
-    
+
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function clead_dim2
 

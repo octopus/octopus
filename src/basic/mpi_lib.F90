@@ -43,7 +43,7 @@ module mpi_lib_oct_m
 
   type(profile_t), save :: prof_allgatherv
 #endif
-  
+
 contains
 
 #if defined(HAVE_MPI)

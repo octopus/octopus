@@ -56,13 +56,13 @@ module potential_interpolation_oct_m
   integer :: interpolation_steps
 
 contains
-  
+
   ! ---------------------------------------------------------
   subroutine potential_interpolation_nullify(this)
     type(potential_interpolation_t), intent(out) :: this
-    
+
     PUSH_SUB(potential_interpolation_nullify)
-    
+
     this%v_old => null()
     this%vtau_old => null()
 
@@ -74,7 +74,7 @@ contains
   subroutine potential_interpolation_copy(vkso, vksi)
     type(potential_interpolation_t), intent(inout) :: vkso
     type(potential_interpolation_t), intent(in)    :: vksi
-    
+
     PUSH_SUB(potential_interpolation_copy)
 
     call loct_pointer_copy(vkso%v_old, vksi%v_old)
@@ -90,14 +90,14 @@ contains
     integer, intent(in) :: np, nspin
     logical, intent(in) :: mgga_with_exc
     integer, optional, intent(in) :: order
-    
+
     PUSH_SUB(potential_interpolation_init)
 
     interpolation_steps = optional_default(order, 3)
 
     SAFE_ALLOCATE(potential_interpolation%v_old(1:np, 1:nspin, 0:interpolation_steps))
     potential_interpolation%v_old(:, :, :) = M_ZERO
-    
+
     potential_interpolation%mgga_with_exc = mgga_with_exc
 
     if(potential_interpolation%mgga_with_exc) then
@@ -105,7 +105,7 @@ contains
       SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:interpolation_steps))
       potential_interpolation%vtau_old(:, :, :) = M_ZERO
 
-   end if
+    end if
 
     POP_SUB(potential_interpolation_init)
   end subroutine potential_interpolation_init
@@ -114,10 +114,10 @@ contains
   ! ---------------------------------------------------------
   subroutine potential_interpolation_end(potential_interpolation)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
-    
+
     PUSH_SUB(potential_interpolation_end)
 
-    ASSERT(associated(potential_interpolation%v_old)) 
+    ASSERT(associated(potential_interpolation%v_old))
     SAFE_DEALLOCATE_P(potential_interpolation%v_old)
     SAFE_DEALLOCATE_P(potential_interpolation%vtau_old)
 
@@ -133,18 +133,18 @@ contains
     FLOAT, optional,   intent(in)    :: vtau(:, :)
 
     integer :: i, ispin, ip
-    
+
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
     forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
       potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
     end forall
-    
-   if(present(vtau)) then
+
+    if(present(vtau)) then
       forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
       end forall
-    end if 
+    end if
 
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter
@@ -173,7 +173,7 @@ contains
     end do
     call lalg_copy(np, nspin, vhxc(:, :),     potential_interpolation%v_old(:, :, 1))
     call interpolate( times, potential_interpolation%v_old(:, :, 1:interpolation_steps), &
-         time, potential_interpolation%v_old(:, :, 0))
+      time, potential_interpolation%v_old(:, :, 0))
 
     if(present(vtau)) then
       do j = interpolation_steps, 2, -1
@@ -181,7 +181,7 @@ contains
       end do
       call lalg_copy(np, nspin, vtau(:, :),     potential_interpolation%vtau_old(:, :, 1))
       call interpolate( times, potential_interpolation%vtau_old(:, :, 1:interpolation_steps), &
-           time, potential_interpolation%vtau_old(:, :, 0))
+        time, potential_interpolation%vtau_old(:, :, 0))
     end if
 
     SAFE_DEALLOCATE_A(times)
@@ -200,7 +200,7 @@ contains
     PUSH_SUB(potential_interpolation_set)
 
     call lalg_copy(np, nspin, vhxc, potential_interpolation%v_old(:, :, i))
-    
+
     if(present(vtau)) then
       call lalg_copy(np, nspin, vtau, potential_interpolation%vtau_old(:, :, i))
     end if
@@ -353,7 +353,7 @@ contains
   ! ---------------------------------------------------------
 
 end module potential_interpolation_oct_m
-  
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

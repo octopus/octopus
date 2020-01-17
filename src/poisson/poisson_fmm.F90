@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch, 
+!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch,
 !! J. Alberdi-Rodriguez, P. Garcia Risueño, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -85,14 +85,14 @@ module poisson_fmm_oct_m
 contains
 
   ! ---------------------------------------------------------
-  !> Initialises the FMM parameters and vectors. Also it calls to 
+  !> Initialises the FMM parameters and vectors. Also it calls to
   !! the library initialisation.
   subroutine poisson_fmm_init(this, der, all_nodes_comm)
     type(poisson_fmm_t),         intent(out)   :: this
     type(derivatives_t), target, intent(in)    :: der
     integer,                     intent(in)    :: all_nodes_comm
 
-#ifdef HAVE_LIBFM    
+#ifdef HAVE_LIBFM
     integer :: is
     logical, allocatable :: remains(:)
     integer, allocatable :: dend(:)
@@ -102,9 +102,9 @@ contains
     type(mesh_t), pointer :: mesh
 
     logical ::  short_range_flag = .true.
-    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_a 
-    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_b 
-    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_c 
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_a
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_b
+    real(kind = fcs_real_kind_isoc), dimension(3)   ::  box_c
     real(kind = fcs_real_kind_isoc), dimension(3)   ::  offset = (/M_ZERO,M_ZERO,M_ZERO/)
     logical, dimension(3)                           ::  periodicity = (/.false.,.false.,.false./)
     integer(kind = fcs_integer_kind_isoc)           ::  total_particles
@@ -118,8 +118,8 @@ contains
     method = "fmm"
     !%Variable DeltaEFMM
     !%Type float
-    !%Default 0.0001 
-    !%Section Hamiltonian::Poisson 
+    !%Default 0.0001
+    !%Section Hamiltonian::Poisson
     !%Description
     !% Dimensionless parameter for relative convergence of <tt>PoissonSolver = FMM</tt>.
     !% Sets energy error bound.
@@ -139,11 +139,11 @@ contains
     !%Variable AlphaFMM
     !%Type float
     !%Default 0.291262136
-    !%Section Hamiltonian::Poisson 
+    !%Section Hamiltonian::Poisson
     !%Description
     !% Dimensionless parameter for the correction of the self-interaction of the
     !% electrostatic Hartree potential, when using <tt>PoissonSolver = FMM</tt>.
-    !% 
+    !%
     !% Octopus represents charge density on a real-space grid, each
     !% point containing a value <math>\rho</math> corresponding to the charge
     !% density in the cell centered in such point. Therefore, the
@@ -190,7 +190,7 @@ contains
       SAFE_ALLOCATE(this%dsize(1:1))
 
       dend = der%mesh%np
-      this%sp = 1 
+      this%sp = 1
       this%ep = der%mesh%np
       this%dsize(1) = der%mesh%np
       this%disps = 0
@@ -198,7 +198,7 @@ contains
 
       subcomm = this%all_nodes_grp%comm
 
-    else 
+    else
 #ifdef HAVE_MPI
       call MPI_Cartdim_get(this%all_nodes_grp%comm, cdim, mpi_err)
 
@@ -278,7 +278,7 @@ contains
 
 #ifdef HAVE_LIBFM
     type(c_ptr) ::  ret
-    
+
     PUSH_SUB(poisson_fmm_end)
 
     call nl_operator_end(this%corrector)
@@ -293,12 +293,12 @@ contains
   end subroutine poisson_fmm_end
 
   ! ---------------------------------------------------------
-  !> Both direct solvers and FMM calculate the Hartree potential via 
+  !> Both direct solvers and FMM calculate the Hartree potential via
   !! direct additions, without solving the Poisson equation itself.
   !! Direct solvers in any dimension does not require any initialization.
   !! However, fmm requires initialization because, in contrast to Octopus`
   !! direct solvers, FMM reads some parameters from the inp file.
-  subroutine poisson_fmm_solve(this, der, pot, rho)  
+  subroutine poisson_fmm_solve(this, der, pot, rho)
     type(poisson_fmm_t),         intent(in)    :: this
     type(derivatives_t), target, intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
@@ -307,7 +307,7 @@ contains
 #ifdef HAVE_LIBFM
     integer(8) :: totalcharges
 
-    real(kind = fcs_real_kind_isoc), allocatable :: q(:)  
+    real(kind = fcs_real_kind_isoc), allocatable :: q(:)
     real(kind = fcs_real_kind_isoc), allocatable :: pot_lib_fmm(:)
     real(kind = fcs_real_kind_isoc), allocatable :: xyz(:)
     real(kind = fcs_real_kind_isoc), allocatable :: fields(:)
@@ -333,7 +333,7 @@ contains
     SAFE_ALLOCATE(pot_lib_fmm(this%sp:this%ep))
     SAFE_ALLOCATE(fields(1:3 * (this%nlocalcharges)))
 
-    totalcharges = mesh%np_global 
+    totalcharges = mesh%np_global
 
     if (.not. mesh%use_curvilinear) then
       do ii = this%sp, this%ep
@@ -349,18 +349,18 @@ contains
     index = 0
     do ii = this%sp, this%ep
       do jj = 1, der%mesh%sb%dim
-         index = index + 1 
-         xyz(index) = mesh%x(ii, jj)
+        index = index + 1
+        xyz(index) = mesh%x(ii, jj)
       end do
     end do
 
-    pot_lib_fmm = M_ZERO 
+    pot_lib_fmm = M_ZERO
     fields = M_ZERO
 
     call profiling_in(prof_fmm_lib, "FMM_LIB")
     ret = fcs_tune(this%handle, this%nlocalcharges, this%nlocalcharges, xyz(1), q(this%sp))
     ret = fcs_run(this%handle, this%nlocalcharges, this%nlocalcharges, xyz(1), q(this%sp), fields(1), &
-         pot_lib_fmm(this%sp))
+      pot_lib_fmm(this%sp))
     call profiling_out(prof_fmm_lib)
 
     call profiling_in(prof_fmm_gat, "FMM_GATHER")
@@ -393,7 +393,7 @@ contains
 
     SAFE_ALLOCATE(ix(1:mesh%sb%dim))
     SAFE_ALLOCATE(rho_tmp(1:mesh%np_part))
-    SAFE_ALLOCATE(pot_tmp(1:mesh%np)) 
+    SAFE_ALLOCATE(pot_tmp(1:mesh%np))
 
     call lalg_copy(mesh%np, rho, rho_tmp)
 
@@ -414,7 +414,7 @@ contains
         end do
 
       else ! Not common mesh; we add the self-interaction of the cell
-        do ii = 1, mesh%np 
+        do ii = 1, mesh%np
           aux = M_TWO*M_PI*(CNST(3.0)*mesh%vol_pp(ii)/(M_PI*CNST(4.0)))**(CNST(2.0)/CNST(3.0))
           pot(ii) = pot(ii) + aux*rho_tmp(ii)
         end do

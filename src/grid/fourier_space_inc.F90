@@ -34,7 +34,7 @@ subroutine X(cube_function_rs2fs)(cube, cf)
   else
     ASSERT(associated(cf%X(rs)))
     ASSERT(associated(cf%fs))
-    
+
     call X(fft_forward)(cube%fft, cf%X(rs), cf%fs)
   end if
 
@@ -84,14 +84,14 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   if(cube%fft%library /= FFTLIB_ACCEL .or. .not. optional_default(in_device, .true.)) then
     this%in_device_memory = .false.
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-    forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
+    forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1))
       this%X(op)(ii, jj, kk) = op(ii, jj, kk)
     end forall
   else
     this%in_device_memory = .true.
 
     ASSERT(all(cube%fs_n(1:3) == ubound(op)))
-    
+
     size = product(cube%fs_n(1:3))
 
     SAFE_ALLOCATE(op_linear(1:size))
@@ -107,7 +107,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
 
     call accel_create_buffer(this%op_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, size)
     call accel_write_buffer(this%op_buffer, size, op_linear)
-    
+
     SAFE_DEALLOCATE_A(op_linear)
   end if
 
@@ -121,7 +121,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   type(fourier_space_op_t), intent(in)     :: this
   type(cube_t),             intent(in)     :: cube
   type(cube_function_t),    intent(inout)  :: cf
-  
+
   integer :: ii, jj, kk
   integer :: bsize
 
@@ -138,7 +138,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   call profiling_in(prof, "OP_APPLY")
 
   call X(cube_function_rs2fs)(cube, cf)
-   
+
   call profiling_in(prof_g,"G_APPLY")
 
   if(cube%fft%library == FFTLIB_PFFT) then
@@ -179,7 +179,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 #endif
 
   call profiling_out(prof_g)
-  
+
   call X(cube_function_fs2rs)(cube, cf)
   call cube_function_free_fs(cube, cf)
   call profiling_out(prof)

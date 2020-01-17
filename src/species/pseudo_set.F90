@@ -37,23 +37,23 @@ module pseudo_set_oct_m
     pseudo_set_llocal,                       &
     pseudo_set_spacing,                      &
     pseudo_set_radius
-  
+
   type pseudo_set_t
     private
     integer(8) :: dummy
   end type pseudo_set_t
 
   interface
-    
+
     subroutine pseudo_set_nullify(pseudo_set)
       import :: pseudo_set_t
       implicit none
 
       type(pseudo_set_t),   intent(inout) :: pseudo_set
     end subroutine pseudo_set_nullify
-    
+
     ! -------------------------------------------------
-    
+
     subroutine pseudo_set_end(pseudo_set)
       import :: pseudo_set_t
       implicit none
@@ -67,18 +67,18 @@ module pseudo_set_oct_m
       use element_oct_m
       import :: pseudo_set_t
       implicit none
-      
+
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
     end function pseudo_set_lmax
-    
+
     ! -------------------------------------------------
 
     integer function pseudo_set_llocal(pseudo_set, element)
       use element_oct_m
       import :: pseudo_set_t
       implicit none
-      
+
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
     end function pseudo_set_llocal
@@ -89,19 +89,19 @@ module pseudo_set_oct_m
       use element_oct_m
       import :: pseudo_set_t
       implicit none
-      
+
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
       real(8),            intent(in)    :: etol
     end function pseudo_set_spacing
-    
+
     ! -------------------------------------------------
 
     real(8) function pseudo_set_radius(pseudo_set, element)
       use element_oct_m
       import :: pseudo_set_t
       implicit none
-      
+
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
     end function pseudo_set_radius
@@ -116,19 +116,19 @@ contains
     character(len=*),   intent(in)    :: dirname
     integer,            intent(out)   :: ierr
     logical, optional,  intent(in)    :: automatic !< use automatic spacing (true by default)
-    
+
     interface
       subroutine pseudo_set_init_low(pseudo_set, dirname, automatic_int, ierr)
         import :: pseudo_set_t
         implicit none
-        
+
         type(pseudo_set_t), intent(out)   :: pseudo_set
         character(len=*),   intent(in)    :: dirname
         integer,            intent(in)    :: automatic_int
         integer,            intent(out)   :: ierr
       end subroutine pseudo_set_init_low
     end interface
-    
+
     integer :: auto_int
 
     auto_int = 1;
@@ -137,42 +137,42 @@ contains
     end if
 
     call pseudo_set_init_low(pseudo_set, dirname, auto_int, ierr)
-    
+
   end subroutine pseudo_set_init
 
   ! -----------------------------------------------------------------------
-  
+
   logical function pseudo_set_has(pseudo_set, element)
     type(pseudo_set_t), intent(in)    :: pseudo_set
     type(element_t),    intent(in)    :: element
-    
+
     interface
       integer function pseudo_set_has_low(pseudo_set, element)
         use element_oct_m
         import :: pseudo_set_t
         implicit none
-      
+
         type(pseudo_set_t), intent(in)    :: pseudo_set
         type(element_t),    intent(in)    :: element
       end function pseudo_set_has_low
     end interface
 
     pseudo_set_has = pseudo_set_has_low(pseudo_set, element) /= 0
-    
+
   end function pseudo_set_has
 
   ! -----------------------------------------------------------------
-  
+
   character(len=MAX_PATH_LEN) function pseudo_set_file_path(pseudo_set, element)
     type(pseudo_set_t), intent(in)    :: pseudo_set
     type(element_t),    intent(in)    :: element
-    
+
     interface
       subroutine pseudo_set_file_path_low(pseudo_set, element, path)
         use element_oct_m
         import :: pseudo_set_t
         implicit none
-      
+
         type(pseudo_set_t), intent(in)    :: pseudo_set
         type(element_t),    intent(in)    :: element
         character(len=*),   intent(out)   :: path
@@ -180,9 +180,9 @@ contains
     end interface
 
     call pseudo_set_file_path_low(pseudo_set, element, pseudo_set_file_path)
-    
+
   end function pseudo_set_file_path
-  
+
 end module pseudo_set_oct_m
 
 !! Local Variables:

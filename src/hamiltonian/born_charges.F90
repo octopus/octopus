@@ -43,7 +43,7 @@ module born_charges_oct_m
   type Born_charges_t
     private
     CMPLX, pointer, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
-    CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
+    CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule
     CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?
   end type Born_charges_t
@@ -107,12 +107,12 @@ contains
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: dim
 
-    CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation 
+    CMPLX :: Born_sum(MAX_DIM, MAX_DIM)        ! the sum of Born charges from the calculation
     integer :: iatom
 
     PUSH_SUB(correct_Born_charges)
 
-    Born_sum(1:dim, 1:dim) = M_ZERO 
+    Born_sum(1:dim, 1:dim) = M_ZERO
 
     do iatom = 1, geo%natoms
       Born_sum(1:dim, 1:dim) = Born_sum(1:dim, 1:dim) + this%charge(1:dim, 1:dim, iatom)

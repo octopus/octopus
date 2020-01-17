@@ -82,7 +82,7 @@ module states_elec_block_oct_m
     C_PROFILING_BLOCK_MATR,        &
     C_PROFILING_BLOCK_MATR_CP,     &
     C_PROFILING_BLOCK_MATR_MM
-  
+
 contains
 
   ! ---------------------------------------------------------

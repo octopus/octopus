@@ -61,16 +61,16 @@ module gauge_field_oct_m
 
   type gauge_field_t
     private
-    FLOAT   :: vecpot(1:MAX_DIM)   
+    FLOAT   :: vecpot(1:MAX_DIM)
     FLOAT   :: vecpot_vel(1:MAX_DIM)
-    FLOAT   :: vecpot_acc(1:MAX_DIM)    
+    FLOAT   :: vecpot_acc(1:MAX_DIM)
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
     integer :: ndim
     logical, public :: with_gauge_field
     integer :: dynamics
-    FLOAT   :: kicktime 
+    FLOAT   :: kicktime
   end type gauge_field_t
 
 contains
@@ -186,7 +186,7 @@ contains
     call parse_variable(namespace, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
-       this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
+      this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
     endif
 
     POP_SUB(gauge_field_init)
@@ -278,7 +278,7 @@ contains
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
     type(namespace_t),    intent(in)    :: namespace
-    
+
     logical, save :: warning_shown = .false.
     integer :: idim
 
@@ -299,7 +299,7 @@ contains
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
       if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
-         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
+        abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
 
         warning_shown = .true.
 
@@ -330,13 +330,13 @@ contains
     type(gauge_field_t),  intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
     type(states_elec_t),  intent(in)    :: st
-    
+
     PUSH_SUB(gauge_field_init_vec_pot)
 
     this%wp2 = M_FOUR*M_PI*st%qtot/sb%rcell_volume
 
     write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
-         units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
+      units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
     call messages_info(1)
 
     POP_SUB(gauge_field_init_vec_pot)
@@ -362,11 +362,11 @@ contains
 
     integer :: err
     FLOAT, allocatable :: vecpot(:,:)
-    
+
     PUSH_SUB(gauge_field_dump)
 
     ierr = 0
-    
+
     if (restart_skip(restart)) then
       POP_SUB(gauge_field_dump)
       return
@@ -403,11 +403,11 @@ contains
 
     integer :: err
     FLOAT, allocatable :: vecpot(:,:)
-    
+
     PUSH_SUB(gauge_field_load)
 
     ierr = 0
-    
+
     if (restart_skip(restart)) then
       ierr = -1
       POP_SUB(gauge_field_load)
@@ -426,7 +426,7 @@ contains
     call gauge_field_set_vec_pot(gfield, vecpot(:,1))
     call gauge_field_set_vec_pot_vel(gfield, vecpot(:,2))
     SAFE_DEALLOCATE_A(vecpot)
-    
+
     if (debug%info) then
       message(1) = "Debug: Reading gauge field restart done."
       call messages_info(1)
@@ -449,16 +449,16 @@ contains
 
     select case(this%dynamics)
     case(OPTION__GAUGEFIELDDYNAMICS__NONE)
-      this%force(1:gr%sb%dim) = M_ZERO 
+      this%force(1:gr%sb%dim) = M_ZERO
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
       istot = 1
       if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
-        do ispin = 1, istot                      
+        do ispin = 1, istot
           this%force(idir) = this%force(idir) - &
-                               CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+            CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
       end do
 

@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-!Here ff is a function in the submesh 
+!Here ff is a function in the submesh
 R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
@@ -49,8 +49,8 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
     call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
     call comm_allreduce(mesh%vp%comm, res)
     call profiling_out(C_PROFILING_SM_REDUCE)
-  end if 
- 
+  end if
+
   POP_SUB(X(sm_integrate))
 end function X(sm_integrate)
 
@@ -143,12 +143,12 @@ subroutine X(submesh_copy_from_mesh)(this, phi, sphi, conjugate)
   PUSH_SUB(X(submesh_copy_from_mesh))
 
   if(.not. optional_default(conjugate, .false.) ) then
-    !$omp parallel do 
+    !$omp parallel do
     do ip = 1,this%np
       sphi(ip) = phi(this%map(ip))
     end do
   else
-    !$omp parallel do 
+    !$omp parallel do
     do ip = 1,this%np
       sphi(ip) = R_CONJ(phi(this%map(ip)))
     end do
@@ -172,36 +172,36 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   ASSERT(psib%status()/= BATCH_DEVICE_PACKED)
 
   select case(psib%status())
-    case(BATCH_NOT_PACKED)
-      do ist = 1, psib%nst_linear
-        !$omp parallel do
-        do ip = 1,this%np
-          spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
-        end do
+  case(BATCH_NOT_PACKED)
+    do ist = 1, psib%nst_linear
+      !$omp parallel do
+      do ip = 1,this%np
+        spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
       end do
-    case(BATCH_PACKED)
-      m = mod(psib%nst_linear,4)
-      !$omp parallel do private(ii,ip_map)
-      do ip = 1, this%np
-        ip_map = this%map(ip)
-        do ii = 1, m
-          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
-        end do
-        do ii = m+1, psib%nst_linear, 4
-          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
-          spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,ip_map)
-          spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,ip_map)
-          spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,ip_map)
-        end do
+    end do
+  case(BATCH_PACKED)
+    m = mod(psib%nst_linear,4)
+    !$omp parallel do private(ii,ip_map)
+    do ip = 1, this%np
+      ip_map = this%map(ip)
+      do ii = 1, m
+        spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
       end do
-      !$omp end parallel do
+      do ii = m+1, psib%nst_linear, 4
+        spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
+        spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,ip_map)
+        spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,ip_map)
+        spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,ip_map)
+      end do
+    end do
+    !$omp end parallel do
   end select
 
   POP_SUB(X(submesh_copy_from_mesh_batch))
-   call profiling_out(prof)
+  call profiling_out(prof)
 end subroutine X(submesh_copy_from_mesh_batch)
 
- 
+
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector
 FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
@@ -265,9 +265,9 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, sphi, phi, reduce) result(dotp)
     if( this%np.ge.4) then
       do ip = m+1, this%np, 4
         dotp = dotp + phi(this%map(ip))*sphi(ip) &
-                    + phi(this%map(ip+1))*sphi(ip+1) &
-                    + phi(this%map(ip+2))*sphi(ip+2) &
-                    + phi(this%map(ip+3))*sphi(ip+3)
+          + phi(this%map(ip+1))*sphi(ip+1) &
+          + phi(this%map(ip+2))*sphi(ip+2) &
+          + phi(this%map(ip+3))*sphi(ip+3)
       end do
     end if
     dotp = dotp*this%mesh%vol_pp(1)
@@ -294,12 +294,12 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
 
   integer :: ist, jst, idim, jdim, is, ii
   type(profile_t), save :: prof
-  
+
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
   ASSERT(.not. ss%is_packed())
-  
+
   select case(mm%status())
   case(BATCH_DEVICE_PACKED)
     ASSERT(.false.)
@@ -317,7 +317,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
                 mm%states(ist)%X(psi)(this%map(is), idim) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
             end forall
           else
-            
+
 #ifdef R_TCOMPLEX
             forall(is = 1:this%np)
               mm%states(ist)%X(psi)(this%map(is), idim) = &
@@ -327,7 +327,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
@@ -339,7 +339,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
         ii = mm%ist_idim_to_linear((/ist, idim/))
-        
+
         ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
         jdim = min(idim, ss%dim)
         do jst = 1, ss%nst
@@ -348,7 +348,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
               mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%states(jst)%dpsi(is, jdim)
             end forall
           else
-            
+
 #ifdef R_TCOMPLEX
             forall(is = 1:this%np)
               mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%states(jst)%zpsi(is, jdim)
@@ -357,23 +357,23 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
     end do
     !$omp end parallel do
-    
+
   end select
-    
+
   call profiling_count_operations(mm%nst*mm%dim*ss%nst*this%np*(R_ADD + R_MUL))
-  
+
   call profiling_out(prof)
   POP_SUB(X(submesh_batch_add_matrix))
 end subroutine X(submesh_batch_add_matrix)
 
 
-!------------------------------------------------------------ 
+!------------------------------------------------------------
 
 !> The following function takes a batch of functions defined in
 !! submesh (ss) and adds one of them to each of the mesh functions in
@@ -392,7 +392,7 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
   ASSERT(.not. ss%is_packed())
   ASSERT(.not. mm%is_packed())
-  
+
   ASSERT(mm%nst == ss%nst)
 
   !$omp parallel do private(ist, idim, jdim, is)
@@ -406,10 +406,10 @@ subroutine X(submesh_batch_add)(this, ss, mm)
           mm%states(ist)%X(psi)(this%map(is), idim) = &
             mm%states(ist)%X(psi)(this%map(is), idim) + ss%states(ist)%dpsi(is, jdim)
         end forall
-        
+
       else
 
-#ifdef R_TCOMPLEX        
+#ifdef R_TCOMPLEX
         forall(is = 1:this%np)
           mm%states(ist)%X(psi)(this%map(is), idim) = &
             mm%states(ist)%X(psi)(this%map(is), idim) + ss%states(ist)%zpsi(is, jdim)
@@ -418,12 +418,12 @@ subroutine X(submesh_batch_add)(this, ss, mm)
         message(1) = "Internal error: cannot call dsubmesh_batch_add with complex batch ss"
         call messages_fatal(1)
 #endif
-        
+
       end if
     end do
   end do
   !$omp end parallel do
-  
+
   POP_SUB(X(submesh_batch_add))
 end subroutine X(submesh_batch_add)
 
@@ -479,7 +479,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
         dot(ist, jst) = dotp
       end do
     end do
-    
+
   else
 
     !$omp parallel do private(ist, jst, dotp, idim, jdim, is)
@@ -516,7 +516,7 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
         dot(jst, ist) = dotp*this%mesh%volume_element
       end do
     end do
-    
+
   end if
 
 #if defined(HAVE_MPI)

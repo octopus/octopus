@@ -50,7 +50,7 @@ module propagator_magnus_oct_m
     td_cfmagnus4
 
 contains
-  
+
   ! ---------------------------------------------------------
   !> Magnus propagator
   subroutine td_magnus(hm, gr, st, tr, namespace, time, dt)
@@ -162,7 +162,7 @@ contains
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
     call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
-    ! propagate by dt/2 
+    ! propagate by dt/2
     call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
@@ -183,4 +183,4 @@ end module propagator_magnus_oct_m
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
-!! End: 
+!! End:

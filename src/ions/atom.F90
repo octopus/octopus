@@ -112,7 +112,7 @@ contains
     this%f_vdw     = M_ZERO
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
-    this%f_fields  = M_ZERO    
+    this%f_fields  = M_ZERO
     this%f_u       = M_ZERO
 
     this%move  = .true.
@@ -129,7 +129,7 @@ contains
     label=trim(adjustl(this%label))
 
   end function atom_get_label
-  
+
   ! ---------------------------------------------------------
   subroutine atom_set_species(this, species)
     type(atom_t),            intent(inout) :: this
@@ -141,7 +141,7 @@ contains
     POP_SUB(atom_set_species)
 
   end subroutine atom_set_species
-  
+
   ! ---------------------------------------------------------
   subroutine atom_get_species(this, species)
     type(atom_t),    target,  intent(in)  :: this
@@ -153,7 +153,7 @@ contains
     if(associated(this%species)) species => this%species
 
   end subroutine atom_get_species
-  
+
   ! ---------------------------------------------------------
   elemental function atom_same_species_aa(this, that) result(is)
     type(atom_t), intent(in) :: this
@@ -218,7 +218,7 @@ contains
 
   end subroutine atom_write_xyz
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine atom_read_xyz(this, dim, unit)
     type(atom_t),      intent(inout) :: this
     integer, optional, intent(in) :: dim
@@ -227,7 +227,7 @@ contains
     character(len=19)          :: frmt, dum
     integer                    :: i, dim_
     FLOAT, dimension(MAX_DIM)  :: tmp
- 
+
 
     PUSH_SUB(atom_read_xyz)
 
@@ -239,7 +239,7 @@ contains
     do i=1, dim_
       this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
- 
+
     POP_SUB(atom_read_xyz)
 
   end subroutine atom_read_xyz
@@ -283,7 +283,7 @@ contains
     label=trim(adjustl(this%label))
     return
   end function atom_classical_get_label
-  
+
   ! ---------------------------------------------------------
   subroutine atom_classical_write_xyz(this, dim, unit)
     type(atom_classical_t), intent(in) :: this

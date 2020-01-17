@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-  
+
 module alloc_cache_oct_m
 #ifdef HAVE_OPENCL
   use cl
@@ -36,7 +36,7 @@ module alloc_cache_oct_m
     alloc_cache_end,                         &
     alloc_cache_put,                         &
     alloc_cache_get
-  
+
   type alloc_cache_t
     private
     integer(8) :: dummy
@@ -44,7 +44,7 @@ module alloc_cache_oct_m
 
   integer(8), public, parameter ::              &
     ALLOC_CACHE_ANY_SIZE = -1_8
-  
+
   interface
 
     subroutine alloc_cache_init(alloc_cache, max_size)
@@ -56,7 +56,7 @@ module alloc_cache_oct_m
     end subroutine alloc_cache_init
 
     ! -------------------------------------------------
-    
+
     subroutine alloc_cache_end(alloc_cache, hits, misses, vol_hits, vol_misses)
       import :: alloc_cache_t
       implicit none
@@ -103,23 +103,23 @@ contains
     end interface
 
     integer :: iput
-    
+
     call alloc_cache_put_low(alloc_cache, size, loc, iput)
 
     put = (iput /= 0)
-    
+
   end subroutine alloc_cache_put
 
   ! -------------------------------------------------
-  
+
   subroutine alloc_cache_get(alloc_cache, size, found, loc)
-      type(alloc_cache_t),   intent(inout) :: alloc_cache
-      integer(8),            intent(in)    :: size
-      logical,               intent(out)   :: found
+    type(alloc_cache_t),   intent(inout) :: alloc_cache
+    integer(8),            intent(in)    :: size
+    logical,               intent(out)   :: found
 #ifdef HAVE_OPENCL
-      type(cl_mem),          intent(out)   :: loc
+    type(cl_mem),          intent(out)   :: loc
 #else
-      type(c_ptr),           intent(out)   :: loc
+    type(c_ptr),           intent(out)   :: loc
 #endif
 
     interface
@@ -130,7 +130,7 @@ contains
         use iso_c_binding
         import :: alloc_cache_t
         implicit none
-        
+
         type(alloc_cache_t),   intent(inout) :: alloc_cache
         integer(8),            intent(in)    :: size
         integer,               intent(in)    :: found
@@ -147,9 +147,9 @@ contains
     call alloc_cache_get_low(alloc_cache, size, ifound, loc)
 
     found = (ifound /= 0)
-    
+
   end subroutine alloc_cache_get
-  
+
 
 end module alloc_cache_oct_m
 

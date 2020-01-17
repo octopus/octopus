@@ -95,7 +95,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT                                         :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
     FLOAT                                         :: rashba_coupling
     type(nl_operator_t),      pointer,     public :: kinetic
-    type(projector_matrix_t), allocatable, public :: projector_matrices(:) 
+    type(projector_matrix_t), allocatable, public :: projector_matrices(:)
     FLOAT,                    allocatable, public :: potential(:, :)
     FLOAT,                    allocatable, public :: Impotential(:, :)
     FLOAT,                    allocatable, public :: uniform_magnetic_field(:)
@@ -142,7 +142,7 @@ module hamiltonian_elec_base_oct_m
   integer, parameter, public ::          &
     TERM_ALL                 = HUGE(1),  &
     TERM_KINETIC             =   1,      &
-    TERM_LOCAL_POTENTIAL     =   2,      & 
+    TERM_LOCAL_POTENTIAL     =   2,      &
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16,      &
@@ -179,7 +179,7 @@ contains
 
     nullify(this%spin)
     this%projector_self_overlap = .false.
-    
+
     POP_SUB(hamiltonian_elec_base_init)
   end subroutine hamiltonian_elec_base_init
 
@@ -192,7 +192,7 @@ contains
     if(allocated(this%potential) .and. accel_is_enabled()) then
       call accel_release_buffer(this%potential_opencl)
     end if
-    
+
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
@@ -205,7 +205,7 @@ contains
     POP_SUB(hamiltonian_elec_base_end)
   end subroutine hamiltonian_elec_base_end
 
-  ! ---------------------------------------------------------- 
+  ! ----------------------------------------------------------
   !
   !> This functions sets to zero all fields that are currently
   !! allocated.
@@ -235,7 +235,7 @@ contains
 
     PUSH_SUB(hamiltonian_elec_base_allocate)
 
-    if(bitand(FIELD_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_POTENTIAL, field) /= 0) then
       if(.not. allocated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
@@ -249,21 +249,21 @@ contains
       end if
     end if
 
-    if(bitand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then
       if(.not. allocated(this%uniform_vector_potential)) then
         SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
         this%uniform_vector_potential = M_ZERO
       end if
     end if
 
-    if(bitand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_VECTOR_POTENTIAL, field) /= 0) then
       if(.not. allocated(this%vector_potential)) then
         SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
         this%vector_potential = M_ZERO
       end if
     end if
 
-    if(bitand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
+    if(bitand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then
       if(.not. allocated(this%uniform_magnetic_field)) then
         SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
         this%uniform_magnetic_field = M_ZERO
@@ -273,7 +273,7 @@ contains
     POP_SUB(hamiltonian_elec_base_allocate)
   end subroutine hamiltonian_elec_base_allocate
 
-  ! ---------------------------------------------------------- 
+  ! ----------------------------------------------------------
   !
   !> If both a uniform and non-uniform vector potentials are allocated,
   !! this function copies the uniform in the non-uniform one. In the
@@ -310,7 +310,7 @@ contains
       integer :: idir, ip
 
       PUSH_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
-      
+
       ! copy the uniform vector potential onto the non-uniform one
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
@@ -319,14 +319,14 @@ contains
             this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
         end do
       end do
-      
+
       ! and deallocate
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_elec_base_update.unify_vector_potentials)      
+      POP_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
     end subroutine unify_vector_potentials
 
   end subroutine hamiltonian_elec_base_update
-  
+
   !--------------------------------------------------------
 
   subroutine hamiltonian_elec_base_destroy_proj(this)
@@ -363,7 +363,7 @@ contains
   end subroutine hamiltonian_elec_base_destroy_proj
 
   !-----------------------------------------------------------------
-    
+
   subroutine hamiltonian_elec_base_build_proj(this, mesh, epot)
     type(hamiltonian_elec_base_t), target, intent(inout) :: this
     type(mesh_t),                     intent(in)    :: mesh
@@ -398,7 +398,7 @@ contains
 
     head(1) = 1
     nregion = 0
-    do 
+    do
       nregion = nregion + 1
       ASSERT(nregion <= epot%natoms)
 
@@ -470,7 +470,7 @@ contains
         this%apply_projector_matrices = .true.
         !The HGH pseudopotentials are now supporting the SOC
         if(epot%reltype /= NOREL .and. &
-             (.not. projector_is(epot%proj(iatom), PROJ_HGH) .or. accel_is_enabled())) then 
+          (.not. projector_is(epot%proj(iatom), PROJ_HGH) .or. accel_is_enabled())) then
           this%apply_projector_matrices = .false.
           exit
         end if
@@ -499,7 +499,7 @@ contains
     this%regions(this%nregions + 1) = this%nprojector_matrices + 1
 
     this%projector_mix = .false.
-    
+
     iproj = 0
     do iregion = 1, this%nregions
       this%regions(iregion) = iproj + 1
@@ -508,7 +508,7 @@ contains
         iatom = order(iorder)
 
         if(projector_is(epot%proj(iatom), PROJ_NONE)) cycle
-          
+
         INCR(iproj, 1)
 
         pmat => this%projector_matrices(iproj)
@@ -519,7 +519,7 @@ contains
         lloc = epot%proj(iatom)%lloc
 
         if(projector_is(epot%proj(iatom), PROJ_KB)) then
-          
+
           ! count the number of projectors for this matrix
           nmat = 0
           do ll = 0, lmax
@@ -528,9 +528,9 @@ contains
               INCR(nmat, epot%proj(iatom)%kb_p(ll, mm)%n_c)
             end do
           end do
-          
+
           call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .false.)
-          
+
           ! generate the matrix
           pmat%dprojectors = M_ZERO
           imat = 1
@@ -551,7 +551,7 @@ contains
         else if(projector_is(epot%proj(iatom), PROJ_HGH)) then
 
           this%projector_mix = .true.
-          
+
           ! count the number of projectors for this matrix
           nmat = 0
           do ll = 0, lmax
@@ -560,9 +560,9 @@ contains
               nmat = nmat + 3
             end do
           end do
-          
+
           call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true., &
-                                            is_cmplx = (epot%reltype == SPIN_ORBIT) )
+            is_cmplx = (epot%reltype == SPIN_ORBIT) )
 
           ! generate the matrix
           if(epot%reltype == SPIN_ORBIT) then
@@ -586,7 +586,7 @@ contains
                   do jc = 1, 3
                     pmat%zmix(imat - 1 + ic, imat - 1 + jc, 1) = hgh_p%h(ic, jc) + M_HALF*mm*hgh_p%k(ic, jc)
                     pmat%zmix(imat - 1 + ic, imat - 1 + jc, 2) = hgh_p%h(ic, jc) - M_HALF*mm*hgh_p%k(ic, jc)
-     
+
                     if(mm < ll) then
                       pmat%zmix(imat - 1 + ic, imat + 3 - 1 + jc, 3) = M_HALF*hgh_p%k(ic, jc)*sqrt(real(ll*(ll+1)-mm*(mm+1)))
                     end if
@@ -603,7 +603,7 @@ contains
                   end do
                 end do
               end if
-              
+
               do ic = 1, 3
                 if(epot%reltype == SPIN_ORBIT) then
                   forall(ip = 1:pmat%npoints) pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
@@ -613,14 +613,14 @@ contains
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do
-              
+
             end do
           end do
 
           this%projector_self_overlap = this%projector_self_overlap .or. epot%proj(iatom)%sphere%overlap
-          
+
         else
-          cycle          
+          cycle
         end if
 
         forall(ip = 1:pmat%npoints)
@@ -638,7 +638,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, this%projector_self_overlap, 1, MPI_LOGICAL, MPI_LOR, mesh%mpi_grp%comm, mpi_err)
     end if
 #endif
-    
+
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(head)
 
@@ -709,7 +709,7 @@ contains
         else
           offsets(MIX, imat) = -1
         end if
-        
+
         do is = 1, pmat%npoints
           ip = pmat%map(is)
           INCR(cnt(ip), 1)
@@ -748,7 +748,7 @@ contains
       call accel_create_buffer(this%buff_position, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 3*this%total_points)
       call accel_create_buffer(this%buff_scals, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, scal_size)
       if(mix_offset > 0) call accel_create_buffer(this%buff_mix, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, mix_offset)
-      
+
       ! now copy
       do imat = 1, this%nprojector_matrices
         pmat => this%projector_matrices(imat)
@@ -783,26 +783,26 @@ contains
     end subroutine build_opencl
 
   end subroutine hamiltonian_elec_base_build_proj
-    
+
   ! ----------------------------------------------------------------------------------
 
   logical pure function hamiltonian_elec_base_has_magnetic(this) result(has_magnetic)
     type(hamiltonian_elec_base_t), intent(in) :: this
-    
+
     has_magnetic = allocated(this%vector_potential) &
       .or. allocated(this%uniform_magnetic_field)
-    
+
   end function hamiltonian_elec_base_has_magnetic
 
   ! ----------------------------------------------------------------------------------
 
   logical pure function hamiltonian_elec_base_projector_self_overlap(this) result(projector_self_overlap)
     type(hamiltonian_elec_base_t), intent(in) :: this
-    
+
     projector_self_overlap = this%projector_self_overlap
   end function hamiltonian_elec_base_projector_self_overlap
 
- ! ----------------------------------------------------------------------------------
+  ! ----------------------------------------------------------------------------------
 
   subroutine hamiltonian_elec_base_set_phase_corr(hm_base, mesh, psib)
     type(hamiltonian_elec_base_t), intent(in) :: hm_base
@@ -828,7 +828,7 @@ contains
 
   end subroutine hamiltonian_elec_base_set_phase_corr
 
- ! ----------------------------------------------------------------------------------
+  ! ----------------------------------------------------------------------------------
 
   subroutine hamiltonian_elec_base_unset_phase_corr(hm_base, mesh, psib)
     type(hamiltonian_elec_base_t), intent(in) :: hm_base

@@ -70,7 +70,7 @@ module loct_oct_m
 
   interface loct_clock
     function oct_clock()
-     implicit none
+      implicit none
       real(8) :: oct_clock
     end function oct_clock
   end interface loct_clock
@@ -119,10 +119,10 @@ module loct_oct_m
   end interface
 
   interface loct_basename
-     subroutine oct_basename(fnam, dnam)
-       character(len=*), intent(in)  :: fnam
-       character(len=*), intent(out) :: dnam
-     end subroutine oct_basename
+    subroutine oct_basename(fnam, dnam)
+      character(len=*), intent(in)  :: fnam
+      character(len=*), intent(out) :: dnam
+    end subroutine oct_basename
   end interface
 
 
@@ -266,11 +266,11 @@ module loct_oct_m
   end interface loct_gdimagedestroy
 #endif
 
- interface loct_get_memory_usage
-   integer(SIZEOF_VOIDP) function oct_get_memory_usage()
-     implicit none
-   end function oct_get_memory_usage
- end interface loct_get_memory_usage
+  interface loct_get_memory_usage
+    integer(SIZEOF_VOIDP) function oct_get_memory_usage()
+      implicit none
+    end function oct_get_memory_usage
+  end interface loct_get_memory_usage
 
 contains
 

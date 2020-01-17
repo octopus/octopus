@@ -121,7 +121,7 @@ contains
       end do
     class default
       message(1) = "Internal error: imcompatible batches in wfs_elec_clone_to_array."
-      call messages_fatal(1) 
+      call messages_fatal(1)
     end select
 
     POP_SUB(wfs_elec_clone_to_array)

@@ -45,15 +45,15 @@ module linear_solver_oct_m
   private
 
   public ::                              &
-       linear_solver_t,                  &
-       linear_solver_init,               &
-       linear_solver_end,                &
-       dlinear_solver_solve_HXeY,        & 
-       zlinear_solver_solve_HXeY,        &
-       dlinear_solver_solve_HXeY_batch,  & 
-       zlinear_solver_solve_HXeY_batch,  &
-       linear_solver_ops_per_iter,       &
-       linear_solver_obsolete_variables
+    linear_solver_t,                  &
+    linear_solver_init,               &
+    linear_solver_end,                &
+    dlinear_solver_solve_HXeY,        &
+    zlinear_solver_solve_HXeY,        &
+    dlinear_solver_solve_HXeY_batch,  &
+    zlinear_solver_solve_HXeY_batch,  &
+    linear_solver_ops_per_iter,       &
+    linear_solver_obsolete_variables
 
   type linear_solver_t
     private
@@ -90,7 +90,7 @@ contains
     integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
-    integer :: defsolver_ 
+    integer :: defsolver_
 
     PUSH_SUB(linear_solver_init)
 
@@ -131,8 +131,8 @@ contains
     !% wavefunctions. You need unoccupied states to use this method.
     !% Unlike the other methods, may not give the correct answer.
     !%Option idrs 11
-    !% This is the "Induced Dimension Reduction", IDR(s) (for s=4). IDR(s) is a robust and efficient short recurrence 
-    !% Krylov subspace method for solving large nonsymmetric systems of linear equations. It is described in 
+    !% This is the "Induced Dimension Reduction", IDR(s) (for s=4). IDR(s) is a robust and efficient short recurrence
+    !% Krylov subspace method for solving large nonsymmetric systems of linear equations. It is described in
     !% [Peter Sonneveld and Martin B. van Gijzen, SIAM J. Sci. Comput. 31, 1035 (2008)]. We have adapted the code
     !% released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
     !%End
@@ -174,39 +174,39 @@ contains
 
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)), namespace=namespace)
-    
-    ! solver 
+
+    ! solver
     select case(this%solver)
-      case(OPTION__LINEARSOLVER__CG)
-        message(1)='Linear Solver: Conjugate Gradients'
+    case(OPTION__LINEARSOLVER__CG)
+      message(1)='Linear Solver: Conjugate Gradients'
 
-      case(OPTION__LINEARSOLVER__BICGSTAB)
-        message(1)='Linear Solver: Biconjugate Gradients Stabilized'
+    case(OPTION__LINEARSOLVER__BICGSTAB)
+      message(1)='Linear Solver: Biconjugate Gradients Stabilized'
 
-      case(OPTION__LINEARSOLVER__IDRS)
-        message(1)='Linear Solver: IDRS'
+    case(OPTION__LINEARSOLVER__IDRS)
+      message(1)='Linear Solver: IDRS'
 
-      case(OPTION__LINEARSOLVER__MULTIGRID)
-        message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
+    case(OPTION__LINEARSOLVER__MULTIGRID)
+      message(1)='Multigrid (currently only Gauss-Jacobi - EXPERIMENTAL)'
 
-      case(OPTION__LINEARSOLVER__QMR_SYMMETRIC)
-        message(1)='Linear Solver: Quasi-Minimal Residual, for symmetric matrix'
+    case(OPTION__LINEARSOLVER__QMR_SYMMETRIC)
+      message(1)='Linear Solver: Quasi-Minimal Residual, for symmetric matrix'
 
-      case(OPTION__LINEARSOLVER__QMR_SYMMETRIZED)
-        message(1)='Linear Solver: Quasi-Minimal Residual, for symmetrized matrix'
+    case(OPTION__LINEARSOLVER__QMR_SYMMETRIZED)
+      message(1)='Linear Solver: Quasi-Minimal Residual, for symmetrized matrix'
 
-      case(OPTION__LINEARSOLVER__QMR_DOTP)
-        message(1)='Linear Solver: Quasi-Minimal Residual, symmetric with conjugated dot product'
+    case(OPTION__LINEARSOLVER__QMR_DOTP)
+      message(1)='Linear Solver: Quasi-Minimal Residual, symmetric with conjugated dot product'
 
-      case(OPTION__LINEARSOLVER__QMR_GENERAL)
-        message(1)='Linear Solver: Quasi-Minimal Residual, general algorithm'
+    case(OPTION__LINEARSOLVER__QMR_GENERAL)
+      message(1)='Linear Solver: Quasi-Minimal Residual, general algorithm'
 
-      case(OPTION__LINEARSOLVER__SOS)
-        message(1)='Linear Solver: Sum-over-States'
+    case(OPTION__LINEARSOLVER__SOS)
+      message(1)='Linear Solver: Sum-over-States'
     end select
 
     call messages_info(1)
-    
+
     call messages_print_stress(stdout, namespace=namespace)
 
     if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
@@ -231,23 +231,23 @@ contains
   ! ---------------------------------------------------------
   integer function linear_solver_ops_per_iter(this) result(n)
     type(linear_solver_t), intent(inout) :: this
-    
+
     select case(this%solver)
     case(OPTION__LINEARSOLVER__BICGSTAB)
       n = 2
     case default ! LS_CG, LS_MULTIGRID, LS_QMR, LS_SOS
       n = 1
     end select
-  
+
   end function linear_solver_ops_per_iter
 
   ! ----------------------------------------------------------
-  
+
   subroutine linear_solver_obsolete_variables(namespace, old_prefix, new_prefix)
     type(namespace_t),   intent(in)    :: namespace
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
-    
+
     call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
     call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
 

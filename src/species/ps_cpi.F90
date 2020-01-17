@@ -70,7 +70,7 @@ contains
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
       call messages_fatal(namespace=namespace)
     end if
-    
+
     iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
@@ -83,7 +83,7 @@ contains
     POP_SUB(ps_cpi_init)
   end subroutine ps_cpi_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine ps_cpi_end(ps_cpi)
     type(ps_cpi_t), intent(inout) :: ps_cpi
@@ -107,7 +107,7 @@ contains
     call ps_in_grid_init(ps_grid,                      &
       LOGRID_CPI, cpi_file%a, cpi_file%rofi(2), cpi_file%nr,  &
       cpi_file%no_l_channels, 0)
-    
+
     ps_grid%zval        = cpi_file%zval
     ps_grid%vps(:,:)    = cpi_file%vps(:,:)
     ps_grid%rphi(:,:,1) = cpi_file%rphi(:,:)

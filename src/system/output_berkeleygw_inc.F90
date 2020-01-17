@@ -62,7 +62,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   SAFE_ALLOCATE(mtxel(1:ndiag + noffdiag, 1:st%d%nspin))
 
   set_null = .false.
-  
+
   if(bgw%calc_exchange) then
     if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', namespace, action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
@@ -96,7 +96,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
 
   ! in case of hybrids, we should apply exchange operator too here
   ! in that case, we can write x.dat file as well
-  
+
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
     kpoint(1:gr%sb%dim) = gr%sb%kpoints%reduced%red_point(1:gr%sb%dim, ik) ! crystal coordinates
 
@@ -140,7 +140,7 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   end do
 
   if(set_null) nullify(hm%hf_st)
-  
+
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
   SAFE_DEALLOCATE_A(psi)
@@ -158,15 +158,15 @@ subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
   end if
 
 #else
-    message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1, namespace=namespace)
+  message(1) = "Cannot do BerkeleyGW output: the library was not linked."
+  call messages_fatal(1, namespace=namespace)
 #endif
 
   POP_SUB(X(bgw_vxc_dat))
 
 end subroutine X(bgw_vxc_dat)
 
-! --------------------------------------------------------- 
+! ---------------------------------------------------------
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
 subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   type(output_bgw_t),  intent(in) :: bgw
@@ -189,7 +189,7 @@ subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   SAFE_ALLOCATE(vmtxel(1:nmat))
   SAFE_ALLOCATE(rvec(1:gr%mesh%np))
 
-  forall(ip = 1:gr%mesh%np) 
+  forall(ip = 1:gr%mesh%np)
     rvec(ip) = dot_product(gr%mesh%x(ip, 1:3), bgw%vmtxel_polarization(1:3))
   end forall
 
@@ -230,10 +230,10 @@ subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   SAFE_DEALLOCATE_A(rvec)
 
   POP_SUB(X(bgw_vmtxel))
-  
+
 end subroutine X(bgw_vmtxel)
 
-! --------------------------------------------------------- 
+! ---------------------------------------------------------
 subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, is_wfn)
   integer,               intent(in)    :: iunit
   R_TYPE, target,        intent(in)    :: field_r(:,:)
@@ -272,7 +272,7 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 !      norm = M_ZERO
 !      do iz = 1, cube%rs_n_global(3)
 !        do iy = 1, cube%rs_n_global(2)
-!          do ix = 1, cube%rs_n_global(1) 
+!          do ix = 1, cube%rs_n_global(1)
 !            norm = norm + abs(cf%zrs(ix, iy, iz))**2
 !          end do
 !        end do
@@ -282,14 +282,14 @@ subroutine X(bgw_write_fs)(iunit, field_r, field_g, shell, nspin, gr, cube, cf, 
 !      norm = M_ZERO
 !      do iz = 1, cube%fs_n_global(3)
 !        do iy = 1, cube%fs_n_global(2)
-!          do ix = 1, cube%fs_n_global(1) 
+!          do ix = 1, cube%fs_n_global(1)
 !            norm = norm + abs(cf%fs(ix, iy, iz))**2
 !          end do
 !        end do
 !      end do
 !      norm = sqrt(norm * gr%mesh%volume_element / product(cube%rs_n_global(1:3)))
 !    end if
-!    
+!
     field_g(:,:) = M_ZERO
     norm = M_ZERO
     do ig = 1, shell%ngvectors

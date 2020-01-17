@@ -53,28 +53,28 @@ module pert_oct_m
 
   private
   public ::                            &
-     pert_t,                           &
-     pert_init,                        &
-     pert_end,                         &
-     pert_info,                        &
-     pert_setup_dir,                   &
-     pert_setup_atom,                  &
-     pert_setup_mixed_dir,             &
-     pert_type,                        &
-     dpert_apply,                      &
-     zpert_apply,                      &
-     dpert_apply_batch,                &
-     zpert_apply_batch,                &
-     dpert_apply_order_2,              &
-     zpert_apply_order_2,              &
-     dpert_expectation_value,          &
-     zpert_expectation_value,          &
-     dpert_states_elec_expectation_value,   &
-     zpert_states_elec_expectation_value,   &
-     dpert_expectation_density,        &
-     zpert_expectation_density,        &
-     dionic_pert_matrix_elements_2,    &
-     zionic_pert_matrix_elements_2
+    pert_t,                           &
+    pert_init,                        &
+    pert_end,                         &
+    pert_info,                        &
+    pert_setup_dir,                   &
+    pert_setup_atom,                  &
+    pert_setup_mixed_dir,             &
+    pert_type,                        &
+    dpert_apply,                      &
+    zpert_apply,                      &
+    dpert_apply_batch,                &
+    zpert_apply_batch,                &
+    dpert_apply_order_2,              &
+    zpert_apply_order_2,              &
+    dpert_expectation_value,          &
+    zpert_expectation_value,          &
+    dpert_states_elec_expectation_value,   &
+    zpert_states_elec_expectation_value,   &
+    dpert_expectation_density,        &
+    zpert_expectation_density,        &
+    dionic_pert_matrix_elements_2,    &
+    zionic_pert_matrix_elements_2
 
   integer, public, parameter :: &
     PERTURBATION_ELECTRIC = 1,  &
@@ -123,11 +123,11 @@ contains
     type(geometry_t),  intent(in)  :: geo
 
     PUSH_SUB(pert_init)
-    
+
     this%pert_type = pert_type
 
-    this%dir = -1 
-    this%dir2 = -1 
+    this%dir = -1
+    this%dir2 = -1
     this%atom1 = -1
     this%atom2 = -1
 
@@ -147,10 +147,10 @@ contains
       !%Option icl 2
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
-      
+
       call parse_variable(namespace, 'MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
-           call messages_input_error('MagneticGaugeCorrection')
+        call messages_input_error('MagneticGaugeCorrection')
 
     end if
 
@@ -180,7 +180,7 @@ contains
       !%Option grad_vel 0
       !% <math>-i \left(\nabla + \left[r, V_{\rm nl} \right] \right)</math>
       !%Option hcom_vel 1
-      !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
+      !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>.
       !%End
       call parse_variable(namespace, 'KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
     end if
@@ -214,7 +214,7 @@ contains
         call messages_info(1)
       end if
     end if
-   
+
     POP_SUB(pert_info)
   end subroutine pert_info
 
@@ -276,15 +276,15 @@ contains
     integer, optional, intent(in)    :: jatom
     integer, optional, intent(in)    :: jdir
     FLOAT,   optional, intent(in)    :: valuej
-    
+
     logical :: have_dir_2
 
     PUSH_SUB(pert_setup_mixed_dir)
 
     this%ionic%pure_dir = .false.
-    
+
     this%ionic%mix1(iatom, idir) = val
-    
+
     have_dir_2 = present(jatom) .and. present(jdir) .and. present(jatom)
 
     if(have_dir_2) then
@@ -295,7 +295,7 @@ contains
 
     POP_SUB(pert_setup_mixed_dir)
   end subroutine pert_setup_mixed_dir
-    
+
   ! --------------------------------------------------------------------
   integer pure function pert_type(this)
     type(pert_t), intent(in) :: this

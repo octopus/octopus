@@ -32,11 +32,11 @@ module basins_oct_m
 
   private
   public :: &
-     basins_t,       &
-     basins_init,    &
-     basins_end,     &
-     basins_analyze, &
-     basins_write
+    basins_t,       &
+    basins_init,    &
+    basins_end,     &
+    basins_analyze, &
+    basins_write
 
   type basins_t
     private
@@ -56,12 +56,12 @@ contains
   subroutine basins_init(this, mesh)
     type(basins_t), intent(out) :: this
     type(mesh_t),   intent(in)  :: mesh
-    
+
     PUSH_SUB(basins_init)
 
     if(mesh%parallel_in_domains) &
       call messages_experimental("Bader basins parallel in domains")
-    
+
     SAFE_ALLOCATE(this%map(1:mesh%np))
     this%map(1:mesh%np) = -1
 
@@ -84,7 +84,7 @@ contains
       SAFE_DEALLOCATE_P(this%volume)
       SAFE_DEALLOCATE_P(this%population)
     end if
-    
+
     POP_SUB(basins_end)
   end subroutine basins_end
 
@@ -179,7 +179,7 @@ contains
         do yy = -ymax, ymax
           do zz = -zmax, zmax
             if(xx==0.and.yy==0.and.zz==0) cycle
-              
+
             point2(:) = point(:)
             point2(1) = point2(1) + xx
             point2(2) = point2(2) + yy
@@ -200,7 +200,7 @@ contains
 
           end do
         end do
-      end do     
+      end do
 
       POP_SUB(basins_analyze.get_max)
     end function get_max
@@ -247,7 +247,7 @@ contains
             this%population(ii) = this%population(ii) + mesh%volume_element*sum(rho(jj, :))
           end if
         end do
-        
+
         this%position(ii) = ii_max
         this%val(ii)      = f_max
       end do
@@ -279,7 +279,7 @@ contains
       write(iunit, '(a,i5)') '# ', ii
       xx = units_from_atomic(units_out%length, mesh_x_global(mesh, this%position(ii)))
       write(iunit, '(a,3(f12.6,a), a)') '  position = (', &
-         xx(1), ',', xx(2), ',', xx(3), ') ', units_abbrev(units_out%length)
+        xx(1), ',', xx(2), ',', xx(3), ') ', units_abbrev(units_out%length)
       write(iunit, '(a,f12.6)') '  value = ', this%val(ii)
       write(iunit, '(a,f12.6,a,a)') '  volume = ', units_from_atomic(unit_vol, this%volume(ii)), ' ', units_abbrev(unit_vol)
       write(iunit, '(a,f12.6)') '  population = ', this%population(ii)

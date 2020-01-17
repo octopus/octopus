@@ -48,7 +48,7 @@ module states_elec_parallel_oct_m
   end interface states_elec_parallel_gather
 
   type(profile_t), save:: prof_gather
-  
+
 contains
 
   subroutine states_elec_parallel_blacs_blocksize(st, namespace, mesh, blocksize, total_np)
@@ -73,10 +73,10 @@ contains
       message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
       call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     end if
-    
+
     if (mesh%parallel_in_domains) then
       blocksize(1) = maxval(mesh%vp%np_local_vec) + (st%d%dim - 1) * &
-       maxval(mesh%vp%np_local_vec + mesh%vp%np_bndry + mesh%vp%np_ghost)
+        maxval(mesh%vp%np_local_vec + mesh%vp%np_bndry + mesh%vp%np_ghost)
     else
       blocksize(1) = mesh%np + (st%d%dim - 1)*mesh%np_part
     end if
@@ -104,15 +104,15 @@ contains
 
   subroutine states_elec_parallel_remote_access_start(this)
     type(states_elec_t),       intent(inout) :: this
-    
+
     integer :: ib, iqn
-    
+
     PUSH_SUB(states_elec_parallel_remote_access_start)
 
     ASSERT(associated(this%group%psib))
 
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
-    
+
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
@@ -126,21 +126,21 @@ contains
         end if
       end do
     end do
-    
+
     POP_SUB(states_elec_parallel_remote_access_start)
   end subroutine states_elec_parallel_remote_access_start
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
 
   subroutine states_elec_parallel_remote_access_stop(this)
     type(states_elec_t),       intent(inout) :: this
-    
+
     integer :: ib, iqn
-    
+
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
     ASSERT(associated(this%group%psib))
-    
+
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
@@ -154,7 +154,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(this%group%rma_win)
-    
+
     POP_SUB(states_elec_parallel_remote_access_stop)
   end subroutine states_elec_parallel_remote_access_stop
 
@@ -168,11 +168,11 @@ contains
     class(wfs_elec_t),           pointer    :: psib
 
     type(profile_t), save :: prof
-    
+
     PUSH_SUB(states_elec_parallel_get_block)
 
     call profiling_in(prof, "STATES_GET_BLOCK")
-    
+
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
     else
@@ -184,9 +184,9 @@ contains
       else
         call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
-      
+
       call psib%do_pack(copy = .false.)
-      
+
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
@@ -199,13 +199,13 @@ contains
           this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
           this%group%rma_win(ib, iqn), mpi_err)
       end if
-        
+
       call MPI_Win_unlock(this%group%block_node(ib), this%group%rma_win(ib, iqn),  mpi_err)
 #endif
     end if
 
     call profiling_out(prof)
-    
+
     POP_SUB(states_elec_parallel_get_block)
   end subroutine states_elec_parallel_get_block
 
@@ -224,12 +224,12 @@ contains
       call psib%end()
       SAFE_DEALLOCATE_P(psib)
     end if
-    
+
     POP_SUB(states_elec_parallel_release_block)
   end subroutine states_elec_parallel_release_block
 
   ! --------------------------------------
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "states_elec_parallel_inc.F90"
@@ -238,8 +238,8 @@ contains
 #include "complex.F90"
 #include "states_elec_parallel_inc.F90"
 #include "undef.F90"
-  
-  
+
+
 end module states_elec_parallel_oct_m
 
 !! Local Variables:

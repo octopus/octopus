@@ -226,7 +226,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:)
 
   if (n1 < 1) return
-  
+
   PUSH_SUB(FNAME(axpy_1))
 
   ASSERT(ubound(dx, dim = 1) >= n1)
@@ -235,7 +235,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   call profiling_in(axpy_profile, "BLAS_AXPY")
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
-  
+
 #if TYPE == 1 || TYPE == 2
   call profiling_count_operations(n1*2)
 #else
@@ -348,7 +348,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:)
 
   if (n1 < 1) return
-  
+
   PUSH_SUB(FNAME(axpy_5))
 
   ASSERT(ubound(dx, dim = 1) >= n1)
@@ -373,7 +373,7 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
   TYPE1,   intent(inout) :: dy(:, :)
 
   if (n1 < 1) return
-  
+
   PUSH_SUB(FNAME(axpy_6))
 
   call profiling_in(axpy_profile, "BLAS_AXPY")
@@ -475,7 +475,7 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   PUSH_SUB(FNAME(copy_4))
 
   call profiling_in(copy_profile, "BLAS_COPY")
- 
+
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
@@ -629,7 +629,7 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   TYPE1,   intent(in)    :: a(:,:)  !< a(k, m)
   TYPE1,   intent(in)    :: b(:,:)  !< b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  !< c(m, n)
-  
+
   ! no PUSH_SUB, called too often
 
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
@@ -669,7 +669,7 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   case('r', 'R')
     lda = max(1, n)
   end select
-  
+
   call blas_symm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
 
 end subroutine FNAME(symm_1)
@@ -691,7 +691,7 @@ subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
   case('r', 'R')
     lda = max(1, n)
   end select
-  
+
   call blas_symm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
 
   POP_SUB(FNAME(symm_2))
@@ -713,12 +713,12 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
   ! no push_sub, called too frequently
 
   select case(side)
-    case('L', 'l')
-      lda = max(1, m)
-    case('R', 'r')
-      lda = max(1, n)
+  case('L', 'l')
+    lda = max(1, m)
+  case('R', 'r')
+    lda = max(1, n)
   end select
-      
+
   call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
 
 end subroutine FNAME(trmm_1)

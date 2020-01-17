@@ -25,13 +25,13 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 
   PUSH_SUB(X(pnfft_forward))
 
-!   print *, mpi_world%rank, "---> pnfft%N_local       ", pnfft%N_local 
-!   print *, mpi_world%rank, "---> pnfft%M             ", pnfft%M 
-!   print *, mpi_world%rank, "---> size(in)            ", size(in,1), size(in,2), size(in,3) 
-!   print *, mpi_world%rank, "---> size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
-!   print *, mpi_world%rank, "---> size(out)           ", size(out,1), size(out,2), size(out,3)  
-!   print *, mpi_world%rank, "---> size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3) 
-  
+!   print *, mpi_world%rank, "---> pnfft%N_local       ", pnfft%N_local
+!   print *, mpi_world%rank, "---> pnfft%M             ", pnfft%M
+!   print *, mpi_world%rank, "---> size(in)            ", size(in,1), size(in,2), size(in,3)
+!   print *, mpi_world%rank, "---> size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3)
+!   print *, mpi_world%rank, "---> size(out)           ", size(out,1), size(out,2), size(out,3)
+!   print *, mpi_world%rank, "---> size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3)
+
 !   do i1 = 1, pnfft%N_local(1)
 !     do i2 = 1, pnfft%N_local(2)
 !       do i3 = 1, pnfft%N_local(3)
@@ -40,7 +40,7 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 !     end do
 !   end do
 
-! #ifdef R_TCOMPLEX 
+! #ifdef R_TCOMPLEX
 !   pnfft%f_hat(:,:,:) = cmplx(real(in(:,:,:)),aimag(in(:,:,:)), C_DOUBLE_COMPLEX)
 ! #else
 !   pnfft%f_hat(:,:,:) = cmplx(in(:,:,:), C_DOUBLE_COMPLEX)
@@ -51,7 +51,7 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 #ifdef HAVE_PNFFT
   call pnfft_trafo(pnfft%plan)
 #endif
-  
+
   out(:,:,:) = pnfft%f(:,:,:)
 
 
@@ -65,7 +65,7 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 !   end do
 
   POP_SUB(X(pnfft_forward))
-    
+
 end subroutine X(pnfft_forward)
 
 
@@ -79,12 +79,12 @@ subroutine X(pnfft_backward)(pnfft, in, out)
 
   PUSH_SUB(X(pnfft_backward))
 
-!   print *, mpi_world%rank, "<--- pnfft%N_local       ", pnfft%N_local 
-!   print *, mpi_world%rank, "<--- pnfft%M             ", pnfft%M 
-!   print *, mpi_world%rank, "<--- size(in)            ", size(in,1), size(in,2), size(in,3) 
-!   print *, mpi_world%rank, "<--- size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3) 
-!   print *, mpi_world%rank, "<--- size(out)           ", size(out,1), size(out,2), size(out,3)  
-!   print *, mpi_world%rank, "<--- size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3) 
+!   print *, mpi_world%rank, "<--- pnfft%N_local       ", pnfft%N_local
+!   print *, mpi_world%rank, "<--- pnfft%M             ", pnfft%M
+!   print *, mpi_world%rank, "<--- size(in)            ", size(in,1), size(in,2), size(in,3)
+!   print *, mpi_world%rank, "<--- size(pnfft%f_hat)   ", size(pnfft%f_hat,1), size(pnfft%f_hat,2), size(pnfft%f_hat, 3)
+!   print *, mpi_world%rank, "<--- size(out)           ", size(out,1), size(out,2), size(out,3)
+!   print *, mpi_world%rank, "<--- size(pnfft%f)       ", size(pnfft%f,1), size(pnfft%f,2), size(pnfft%f,3)
 
 
 !   do i1 = 1, pnfft%M(1)
@@ -100,7 +100,7 @@ subroutine X(pnfft_backward)(pnfft, in, out)
 #ifdef HAVE_PNFFT
   call pnfft_adj(pnfft%plan)
 #endif
-  
+
   out(:,:,:) = pnfft%f_hat(:,:,:)
 
 !   do i1 = 1,pnfft%N_local(1)

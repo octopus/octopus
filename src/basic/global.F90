@@ -36,14 +36,14 @@ module global_oct_m
   public ::           &
     conf_t,           &
     global_init,      &
-    global_end,       & 
+    global_end,       &
     optional_default, &
     assert_die,       &
     not_in_openmp,    &
     operator(+),      &
     bitand
-    
-  
+
+
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
@@ -62,12 +62,12 @@ module global_oct_m
   end type conf_t
 
   type(conf_t),      public :: conf
-   
+
   FLOAT, public, parameter :: r_small = CNST(0.0001)
 
   !> some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)
-  FLOAT, public, parameter :: M_E         = CNST(2.7182818284590452353602874713526625)  
+  FLOAT, public, parameter :: M_E         = CNST(2.7182818284590452353602874713526625)
   FLOAT, public, parameter :: M_ZERO      = CNST(0.0)
   FLOAT, public, parameter :: M_ONE       = CNST(1.0)
   FLOAT, public, parameter :: M_TWO       = CNST(2.0)
@@ -115,7 +115,7 @@ module global_oct_m
 
   integer,    public :: global_alloc_err
   integer(8), public :: global_sizeof
-  
+
   ! The code directories should be defined here, and not hard coded in the Fortran files.
   character(len=*), public, parameter :: GS_DIR = "gs/"
   character(len=*), public, parameter :: TD_DIR = "td/"
@@ -139,7 +139,7 @@ module global_oct_m
 
 
   !> This function is defined in messages.F90
-  interface 
+  interface
     subroutine assert_die(s, f, l)
       implicit none
       character(len=*), intent(in) :: s, f
@@ -157,7 +157,7 @@ module global_oct_m
     module procedure bitand88
     module procedure bitand44
   end interface bitand
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -188,10 +188,10 @@ contains
     conf%cc         = CC
     ! not indented to have the whole line in case it is long
     conf%cflags     = &
-CFLAGS
+      CFLAGS
     conf%fc         = FC
     conf%fcflags    = &
-FCFLAGS
+      FCFLAGS
 
     ! initialize info for the input variables
     call varinfo_init(trim(conf%share)//'/varinfo')
@@ -215,7 +215,7 @@ FCFLAGS
   FLOAT pure function doptional_default(opt, def) result(val)
     FLOAT, optional, intent(in) :: opt
     FLOAT,           intent(in) :: def
-    
+
     val = def
     if(present(opt)) val = opt
   end function doptional_default
@@ -225,7 +225,7 @@ FCFLAGS
   CMPLX pure function zoptional_default(opt, def) result(val)
     CMPLX, optional, intent(in) :: opt
     CMPLX,           intent(in) :: def
-    
+
     val = def
     if(present(opt)) val = opt
   end function zoptional_default
@@ -235,17 +235,17 @@ FCFLAGS
   integer pure function ioptional_default(opt, def) result(val)
     integer, optional, intent(in) :: opt
     integer,           intent(in) :: def
-    
+
     val = def
     if(present(opt)) val = opt
   end function ioptional_default
-  
+
   !----------------------------------------------------------
 
   logical pure function loptional_default(opt, def) result(val)
     logical, optional, intent(in) :: opt
     logical,           intent(in) :: def
-    
+
     val = def
     if(present(opt)) val = opt
   end function loptional_default
@@ -264,10 +264,10 @@ FCFLAGS
 
   logical &
 #ifndef HAVE_OPENMP
-    pure & 
+    pure &
 #endif
     function not_in_openmp()
-    
+
 #ifdef HAVE_OPENMP
     not_in_openmp = .not. omp_in_parallel()
 #else
@@ -284,7 +284,7 @@ FCFLAGS
 
     character(len=len(str1) + len(str2)) :: cat
     cat = str1//str2
-    
+
   end function cat
 
   ! -----------------------------------------------------------
@@ -294,7 +294,7 @@ FCFLAGS
     integer(8), intent(in) :: val2
 
     bitand48 = iand(int(val1, 8), val2)
-    
+
   end function bitand48
 
   ! -----------------------------------------------------------
@@ -304,7 +304,7 @@ FCFLAGS
     integer(4), intent(in) :: val2
 
     bitand84 = iand(val1, int(val2, 8))
-        
+
   end function bitand84
 
   ! -----------------------------------------------------------
@@ -312,9 +312,9 @@ FCFLAGS
   integer(8) pure function bitand88(val1, val2)
     integer(8), intent(in) :: val1
     integer(8), intent(in) :: val2
-    
+
     bitand88 = iand(val1, val2)
-    
+
   end function bitand88
 
   ! -----------------------------------------------------------
@@ -322,9 +322,9 @@ FCFLAGS
   integer(4) pure function bitand44(val1, val2)
     integer(4), intent(in) :: val1
     integer(4), intent(in) :: val2
-    
+
     bitand44 = iand(val1, val2)
-    
+
   end function bitand44
 
 end module global_oct_m

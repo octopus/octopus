@@ -55,7 +55,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 #ifdef HAVE_SCALAPACK
     call calc_mode_par_set_scalapack_compat()
-#endif    
+#endif
 
     POP_SUB(ground_state_run_init)
   end subroutine ground_state_run_init
@@ -78,7 +78,7 @@ contains
     if(sys%st%parallel_in_states) then
       call messages_experimental('State parallelization for ground state calculations')
     end if
-    
+
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
 #ifdef HAVE_MPI
@@ -92,7 +92,7 @@ contains
       ! load wavefunctions
       ! in RDMFT we need the full ground state
       call restart_init(restart_load, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
-                        mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
+        mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
       if(ierr == 0) &
         call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
 
@@ -124,9 +124,9 @@ contains
     call scf_state_info(sys%st)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
-    
+
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
-    if(sys%ks%theory_level == RDMFT) then 
+    if(sys%ks%theory_level == RDMFT) then
       call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc, fromScratch)
       call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
         restart_dump)
@@ -134,7 +134,7 @@ contains
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
-                     restart_load=restart_load, restart_dump=restart_dump)
+          restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &

@@ -171,7 +171,7 @@ subroutine X(output_lr) (outp, namespace, dir, st, gr, lr, idir, isigma, geo, pe
     SAFE_DEALLOCATE_A(dtmp)
   end if
 
-POP_SUB(X(output_lr))
+  POP_SUB(X(output_lr))
 
 contains
 
@@ -179,7 +179,7 @@ contains
   subroutine lr_elf(filename1, filename2)
     character(len=*), intent(in) :: filename1
     character(len=*), intent(in) :: filename2
-    
+
     integer :: is, ierr
 
     PUSH_SUB(X(output_lr).lr_elf)

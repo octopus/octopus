@@ -67,7 +67,7 @@ contains
 
     POP_SUB(oct_exchange_nullify)
   end subroutine oct_exchange_nullify
-  
+
   ! ---------------------------------------------------------
   logical function oct_exchange_enabled(this) result(oct_exchange)
     type(oct_exchange_t), intent(in) :: this

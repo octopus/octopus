@@ -126,7 +126,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
         recvcnt = xpsi2_count(ll)
         call MPI_Irecv(recvbuf(1, 1, 1), mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, &
           st%mpi_grp%comm, reqs(1), mpi_err)
-        call MPI_Isend(sendbuf(1, 1, 1), mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  & 
+        call MPI_Isend(sendbuf(1, 1, 1), mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  &
           st%mpi_grp%comm, reqs(2), mpi_err)
       end if
       ! Do the matrix multiplication.
@@ -196,7 +196,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     ASSERT(psi2b%is_ok())
 
     call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
-    
+
     call psi1b%end()
     call psi2b%end()
 
@@ -412,7 +412,7 @@ subroutine X(states_elec_compactify)(dim, mesh, in_start, idx, in, out)
       call lalg_copy(mesh%np, in(:, idim, idx(ist) - in_start + 1), out(:, idim, ist))
     end do
   end do
-  
+
   POP_SUB(X(states_elec_compactify))
   call profiling_out(prof)
 end subroutine X(states_elec_compactify)
@@ -443,7 +443,7 @@ subroutine X(states_elec_uncompactify)(dim, mesh, out_start, idx, in, out)
       call lalg_copy(mesh%np, in(:, idim, ist), out(:, idim, idx(ist) - out_start + 1))
     end do
   end do
-  
+
   POP_SUB(X(states_elec_uncompactify))
   call profiling_out(prof)
 end subroutine X(states_elec_uncompactify)

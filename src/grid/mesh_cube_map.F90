@@ -107,7 +107,7 @@ contains
     if(associated(this%map)) then
 
       SAFE_DEALLOCATE_P(this%map)
-      
+
       if(accel_is_enabled()) call accel_release_buffer(this%map_buffer)
 
     end if
@@ -116,7 +116,7 @@ contains
   end subroutine mesh_cube_map_end
 
   ! ---------------------------------------------------------
-  
+
 end module mesh_cube_map_oct_m
 
 !! Local Variables:

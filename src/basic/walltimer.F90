@@ -16,10 +16,10 @@
 !! 02110-1301, USA.
 !!
 
-!> This module provices a simple timer class which can be used to trigger 
+!> This module provices a simple timer class which can be used to trigger
 !! the writing of a restart file before the requested CPU time is up.
 !!
-!! It allows to take into account the time required for one iteration and 
+!! It allows to take into account the time required for one iteration and
 !! optionally a time margin for completing the restart dump process.
 
 #include "global.h"
@@ -30,17 +30,17 @@ module walltimer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  
+
   implicit none
-  
+
   private
-  
+
   FLOAT :: start_time       !< time the timer was started
   FLOAT :: last_tap         !< time of the last call to tap()
   FLOAT :: iteration_time   !< time difference of two calls to tap()
   FLOAT :: margin           !< additional time margin for writing the restart file
   FLOAT :: duration         !< time when the alarm should trigger
-  
+
   logical :: active         !< if .false. the timer will not issue an alarm.
   logical :: auto_tap       !< if .true., tap() is automatically called in every wakeUp() call.
 
@@ -49,7 +49,7 @@ module walltimer_oct_m
     walltimer_end,  &
     walltimer_tap,  &
     walltimer_alarm
-  
+
 contains
 
   !> initialize the timer
@@ -84,7 +84,7 @@ contains
     !%End0.0
     call parse_variable(namespace, 'Walltime', M_ZERO, alarm_time)
     call set_alarm(alarm_time*CNST(60.0))
-    
+
     !%Variable RestartWriteTime
     !%Type float
     !%Default 5
@@ -96,9 +96,9 @@ contains
     call parse_variable(namespace, 'RestartWriteTime', CNST(5.0), write_time)
     if(write_time > alarm_time/CNST(4.0)) write_time = alarm_time/CNST(4.0)
     call set_margin(write_time*CNST(60.0))
-    
+
     call start()
-    
+
     POP_SUB(walltimer_init)
   end subroutine walltimer_init
 
@@ -135,7 +135,7 @@ contains
     POP_SUB(set_margin)
   end subroutine set_margin
 
-  !> start the timer (save starting time)  
+  !> start the timer (save starting time)
   subroutine start()
 
     PUSH_SUB(start)
@@ -145,11 +145,11 @@ contains
 
     !> disable timer if duration is less than one second.
     if(duration > M_ONE) active = .true.
-    
+
     POP_SUB(start)
   end subroutine start
 
-  !> measure time of on itertion  
+  !> measure time of on itertion
   subroutine walltimer_tap(print)
     logical, optional, intent(in) :: print
 
@@ -158,10 +158,10 @@ contains
     PUSH_SUB(walltimer_tap)
 
     now = loct_clock()
-    
+
     iteration_time = now - last_tap
     last_tap = now
-    
+
     if(optional_default(print, .false.)) then
       write(message(1), '("Walltimer_tap:   elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
         now - start_time, duration, iteration_time, margin, active
@@ -180,22 +180,22 @@ contains
     PUSH_SUB(walltimer_alarm)
 
     now = loct_clock()
-    
+
     if(optional_default(print, .false.)) then
       write(message(1), '("Walltimer_alarm: elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
         now - start_time, duration, iteration_time, margin, active
       call messages_info(1, all_nodes=.true.)
     end if
-    
+
     if(auto_tap) call walltimer_tap()
-  
-    walltimer_alarm = active .and. (now > start_time + duration - iteration_time - margin) 
-  
+
+    walltimer_alarm = active .and. (now > start_time + duration - iteration_time - margin)
+
     if(walltimer_alarm) then
       write(message(1), '("Walltimer stopping execution after = ",F6.2," minutes.")') (now - start_time)/CNST(60.0)
       call messages_info(1)
     end if
-  
+
     POP_SUB(walltimer_alarm)
   end function walltimer_alarm
 

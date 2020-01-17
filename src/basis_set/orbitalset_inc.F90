@@ -1,4 +1,4 @@
-!! Copyright (C) 2017 N. Tancogne-Dejean 
+!! Copyright (C) 2017 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
 
   if(.not. basisfromstates) then
     if(.not.has_phase .or..not.simul_box_is_periodic(os%sphere%mesh%sb) &
-            .or. os%submeshforperiodic) then
+      .or. os%submeshforperiodic) then
       SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
       do idim = 1, ndim
         forall(ip=1:os%sphere%np)
@@ -52,7 +52,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
         idim_orb = min(idim,os%ndim)
         do im = 1, os%norbs
           dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,im,idim_orb,ik),&
-                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
+            psi(1:os%sphere%mesh%np,idim), reduce=.false.)
         end do
       end do
     else
@@ -60,10 +60,10 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim, im) = zmf_dotp(os%sphere%mesh, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
-                              spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np )
+            spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np )
         end do
       end do
-    endif 
+    endif
 #endif
   else
     do im = 1, os%norbs
@@ -71,13 +71,13 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%mesh%np,idim_orb,im),&
-                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
-        end do 
+            psi(1:os%sphere%mesh%np,idim), reduce=.false.)
+        end do
       else
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,idim_orb,im),&
-                               spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np)
+            spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np)
         end do
       end if
     end do
@@ -85,7 +85,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
 
   if(os%sphere%mesh%parallel_in_domains) then
     call profiling_in(prof_reduce, "ORBSET_GET_COEFF_REDUCE")
-    call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
+    call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot)
     call profiling_out(prof_reduce)
   end if
 
@@ -115,10 +115,10 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, basisfromstates, dot)
   do ist = 1, psib%nst
     call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
     call X(orbitalset_get_coefficients)(os, ndim, psi, psib%ik, psib%has_phase, basisfromstates, &
-                                                  dot(1:ndim,1:os%norbs,ist))
+      dot(1:ndim,1:os%norbs,ist))
   end do
   SAFE_DEALLOCATE_A(psi)
-  
+
   POP_SUB(X(orbitalset_get_coeff_batch))
   call profiling_out(prof)
 end subroutine X(orbitalset_get_coeff_batch)
@@ -148,7 +148,7 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
           idim_orb = min(idim,os%ndim)
 
           call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%eorb_mesh(1:os%sphere%mesh%np,im,idim_orb,ik), &
-                                  psi(1:os%sphere%mesh%np,idim))
+            psi(1:os%sphere%mesh%np,idim))
         end do
       end do
     else
@@ -157,7 +157,7 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
           idim_orb = min(idim,os%ndim)
 
           call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik), &
-                                  psi(1:os%sphere%mesh%np,idim), weight(idim,im))
+            psi(1:os%sphere%mesh%np,idim), weight(idim,im))
         end do
       end do
     endif
@@ -169,10 +169,10 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
 
         if(basisfromstates) then
           call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%X(orb)(1:os%sphere%mesh%np,idim_orb,im), &
-                                  psi(1:os%sphere%mesh%np,idim))
+            psi(1:os%sphere%mesh%np,idim))
         else
           call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb, im), &
-                                    psi(1:os%sphere%mesh%np,idim), weight(idim,im))
+            psi(1:os%sphere%mesh%np,idim), weight(idim,im))
         end if
       end do
     end do
@@ -201,7 +201,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
 
   PUSH_SUB(X(orbitalset_add_to_batch))
 
-  ! This routine uses blocking to optimize cache usage.   
+  ! This routine uses blocking to optimize cache usage.
   block_size = hardware%X(block_size)
 
   if(os%sphere%mesh%use_curvilinear .or. psib%status() == BATCH_DEVICE_PACKED) then
@@ -239,10 +239,10 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             bind = psib%ist_idim_to_linear((/ist, idim/))
             if(basisfromstates) then
               call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind), os%X(orb)(1:os%sphere%mesh%np,idim_orb,iorb), &
-                                  psi(1:os%sphere%mesh%np,idim))
+                psi(1:os%sphere%mesh%np,idim))
             else
               call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, idim_orb, iorb), &
-                                  psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
+                psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
             end if
           end do
         end do
@@ -282,7 +282,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             end do
             do ip = 1,os%sphere%np
               psib%states_linear(ist)%zpsi(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%zpsi(os%sphere%map(ip)) + sorb(ip)
+                psib%states_linear(ist)%zpsi(os%sphere%map(ip)) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
@@ -295,10 +295,10 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             do ist = 1, psib%nst_linear
               idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%X(orb)(sp,idim,1), &
-                    os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
-                       psib%states_linear(ist)%X(psi)(sp), 1)
+                os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
+                psib%states_linear(ist)%X(psi)(sp), 1)
             end do
-          end do 
+          end do
         else
           SAFE_ALLOCATE(sorb(1:os%sphere%np))
           do ist = 1, psib%nst_linear
@@ -312,7 +312,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             end do
             do ip = 1,os%sphere%np
               psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
+                psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
@@ -335,11 +335,11 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
 
                 do ip = sp,ep
                   psib%pack%zpsi(ist, ip) = &
-                     psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim1, psib%ik)
+                    psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim1, psib%ik)
                   psib%pack%zpsi(ist + 1, ip) = &
-                     psib%pack%zpsi(ist + 1, ip) + weight(iorb, ist + 1)*os%eorb_mesh(ip, iorb, idim2, psib%ik)
+                    psib%pack%zpsi(ist + 1, ip) + weight(iorb, ist + 1)*os%eorb_mesh(ip, iorb, idim2, psib%ik)
                   psib%pack%zpsi(ist + 2, ip) = &
-                     psib%pack%zpsi(ist + 2, ip) + weight(iorb, ist + 2)*os%eorb_mesh(ip, iorb, idim3, psib%ik)
+                    psib%pack%zpsi(ist + 2, ip) + weight(iorb, ist + 2)*os%eorb_mesh(ip, iorb, idim3, psib%ik)
                   psib%pack%zpsi(ist + 3, ip) = &
                     psib%pack%zpsi(ist + 3, ip) + weight(iorb, ist + 3)*os%eorb_mesh(ip, iorb, idim4, psib%ik)
                 end do
@@ -349,7 +349,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
                 idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip = sp, ep
                   psib%pack%zpsi(ist, ip) = &
-                     psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim, psib%ik)
+                    psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim, psib%ik)
                 end do
               end do
             end do
@@ -368,14 +368,14 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             end do
             do ip = 1,os%sphere%np
               psib%pack%zpsi(ist,os%sphere%map(ip)) = psib%pack%zpsi(ist,os%sphere%map(ip)) &
-                                + sorb(ip)
+                + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
         end if
 #endif
       else
-        if(basisfromstates) then 
+        if(basisfromstates) then
           do iorb = 1, os%norbs
             do sp = 1, os%sphere%mesh%np, block_size
               ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
@@ -387,11 +387,11 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
 
                 do ip = sp,ep
                   psib%pack%X(psi)(ist,ip) = &
-                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim1,iorb)
+                    psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim1,iorb)
                   psib%pack%X(psi)(ist+1,ip) = &
-                     psib%pack%X(psi)(ist+1,ip) + weight(iorb,ist+1)*os%X(orb)(ip,idim2,iorb)
+                    psib%pack%X(psi)(ist+1,ip) + weight(iorb,ist+1)*os%X(orb)(ip,idim2,iorb)
                   psib%pack%X(psi)(ist+2,ip) = &
-                     psib%pack%X(psi)(ist+2,ip) + weight(iorb,ist+2)*os%X(orb)(ip,idim3,iorb)
+                    psib%pack%X(psi)(ist+2,ip) + weight(iorb,ist+2)*os%X(orb)(ip,idim3,iorb)
                   psib%pack%X(psi)(ist+3,ip) = &
                     psib%pack%X(psi)(ist+3,ip) + weight(iorb,ist+3)*os%X(orb)(ip,idim4,iorb)
                 end do
@@ -401,7 +401,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
                 idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip=sp,ep
                   psib%pack%X(psi)(ist,ip) = &
-                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
+                    psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
                 end do
               end do
             end do
@@ -419,7 +419,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             end do
             do ip = 1,os%sphere%np
               psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
-                                + sorb(ip)
+                + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)

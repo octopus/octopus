@@ -1,5 +1,5 @@
 !!  Copyright (C) 20182019 M. S. Mrudul, N. Tancogne-Dejean
-!!  
+!!
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@ program oct_unfold
   FLOAT, allocatable   :: highsympoints(:,:), coord_along_path(:)
   type(kpoints_grid_t) :: path_kpoints_grid
 
-  
+
   ! the usual initializations
   call global_init(is_serial = .false.)
   call parser_init()
@@ -120,7 +120,7 @@ program oct_unfold
 
   if(sys%st%parallel_in_states) then
     call messages_not_implemented("oct-unfold with states parallelization.")
-  end if 
+  end if
 
   if(sys%st%d%ispin == SPINORS) then
     call messages_not_implemented("oct-unfold for spinors")
@@ -150,7 +150,7 @@ program oct_unfold
   !%Default 1 | 1 | 1
   !%Section Utilities::oct-unfold
   !%Description
-  !% The lattice parameters of the primitive cell, on which unfolding is performed. 
+  !% The lattice parameters of the primitive cell, on which unfolding is performed.
   !%End
   lparams(:) = M_ONE
   if(parse_block(default_namespace, 'UnfoldLatticeParameters', blk) == 0) then
@@ -167,7 +167,7 @@ program oct_unfold
   !%Default simple cubic
   !%Section Utilities::oct-unfold
   !%Description
-  !% Lattice vectors of the primitive cell on which the unfolding is performed. 
+  !% Lattice vectors of the primitive cell on which the unfolding is performed.
   !%End
   rlattice_pc = M_ZERO
   forall(idim = 1:sb%dim) rlattice_pc(idim, idim) = M_ONE
@@ -231,7 +231,7 @@ program oct_unfold
     end if
 
     do idir = 1, sb%dim
-        call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
+      call parse_block_float(blk, ik, idir-1, highsympoints(idir, ik))
     end do
   end do
 
@@ -240,7 +240,7 @@ program oct_unfold
   SAFE_ALLOCATE(coord_along_path(1:nkpoints))
 
   call kpoints_path_generate(sb%dim, klattice_pc, nkpoints, nsegments, resolution, &
-           nhighsympoints, highsympoints, path_kpoints_grid%point, coord_along_path)
+    nhighsympoints, highsympoints, path_kpoints_grid%point, coord_along_path)
 
   SAFE_DEALLOCATE_A(resolution)
   SAFE_DEALLOCATE_A(highsympoints)
@@ -248,7 +248,7 @@ program oct_unfold
   !We convert the k-point to the reduced coordinate of the supercell
   do ik = 1, path_kpoints_grid%npoints
     call kpoints_to_reduced(sb%rlattice, path_kpoints_grid%point(:, ik), &
-                                path_kpoints_grid%red_point(:, ik), sb%dim)
+      path_kpoints_grid%red_point(:, ik), sb%dim)
   end do
 
   call kpoints_fold_to_1BZ(path_kpoints_grid, klattice_pc)
@@ -256,7 +256,7 @@ program oct_unfold
   if(run_mode == OPTION__UNFOLDMODE__UNFOLD_SETUP) then
 
     call unfold_setup()
-    
+
   else if(run_mode == OPTION__UNFOLDMODE__UNFOLD_RUN) then
 
     !Sanity check
@@ -268,7 +268,7 @@ program oct_unfold
       call messages_fatal(1)
     end if
     call io_close(file_gvec)
- 
+
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, default_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
@@ -277,7 +277,7 @@ program oct_unfold
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
     end if
-    call restart_end(restart)  
+    call restart_end(restart)
 
     call cube_init(zcube, sys%gr%mesh%idx%ll, sb, default_namespace, &
       fft_type = FFT_COMPLEX, dont_optimize = .true.)
@@ -292,7 +292,7 @@ program oct_unfold
     call cube_end(zcube)
 
   else
-    message(1) = "Unsupported or incorrect value of UnfoldMode." 
+    message(1) = "Unsupported or incorrect value of UnfoldMode."
     call messages_fatal(1)
   end if
 
@@ -331,9 +331,9 @@ contains
       do ik = 1, path_kpoints_grid%npoints
         gvec(1:sb%dim) = nint(path_kpoints_grid%red_point(:, ik) + M_HALF * CNST(1e-7))
         write(file_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)')  &
-                 ' 1. | ', path_kpoints_grid%red_point(1, ik) - gvec(1), &
-                    ' | ', path_kpoints_grid%red_point(2, ik) - gvec(2), &
-                    ' | ', path_kpoints_grid%red_point(3, ik) - gvec(3)
+          ' 1. | ', path_kpoints_grid%red_point(1, ik) - gvec(1), &
+          ' | ', path_kpoints_grid%red_point(2, ik) - gvec(2), &
+          ' | ', path_kpoints_grid%red_point(3, ik) - gvec(3)
         write(file_gvec,'(3i3)') gvec(1:3)
       end do
       write(file_kpts,'(a)') '%'
@@ -353,18 +353,18 @@ contains
 
     FLOAT, allocatable :: pkm(:,:), ake(:,:), eigs(:)
     CMPLX, allocatable :: zpsi(:), field_g(:)
-    integer :: file_ake, iq, ist, idim, nenergy 
+    integer :: file_ake, iq, ist, idim, nenergy
     integer :: ig, ix, iy, iz, ik, ie, gmin, gmax
     FLOAT   :: eigmin, eigmax, de, norm, tol=1e-7
     integer, parameter          :: nextend = 10
     FLOAT :: vec_pc(MAX_DIM),vec_sc(MAX_DIM)
-    type(fourier_shell_t)       :: shell 
+    type(fourier_shell_t)       :: shell
     character(len=MAX_PATH_LEN) :: filename
     FLOAT, allocatable          :: gvec_abs(:,:)
     logical, allocatable        :: g_select(:)
 
     PUSH_SUB(wfs_extract_spec_fn)
-   
+
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
 
     !%Variable UnfoldEnergyStep
@@ -374,7 +374,7 @@ contains
     !%Description
     !% Specifies the energy resolution for the unfolded band structure.
     !% If you specify 0, the resolution will be set to be 1/1000 points between <tt>UnfoldMinEnergy</tt>
-    !% and <tt>UnfoldMaxEnergy</tt> 
+    !% and <tt>UnfoldMaxEnergy</tt>
     !%End
     call parse_variable(default_namespace, 'UnfoldEnergyStep', M_ZERO, de)
     if(de < M_ZERO) then
@@ -399,17 +399,17 @@ contains
     !% The default value correspond to the largest eigenvalue.
     !%End
     call parse_variable(default_namespace, 'UnfoldMaxEnergy', maxval(st%eigenval(:, :)), eigmax)
- 
+
     if(de == M_ZERO) then
       de = (eigmax - eigmin) / CNST(1000)
     end if
-    
+
     !We increase a bit the energy range
     nenergy = floor((eigmax - eigmin + 2 * nextend * de) / de)
     SAFE_ALLOCATE(eigs(1:nenergy))
     do ie = 1, nenergy
       eigs(ie) = eigmin - nextend * de + (ie - 1) * de
-    end do        
+    end do
 
     SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
@@ -419,8 +419,8 @@ contains
     do ik = 1, st%d%nik
       read(file_gvec,*) vec_sc(1:3)
       call kpoints_to_absolute(sb%klattice, vec_sc(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim, ik), &
-                 sb%periodic_dim)
-    end do 
+        sb%periodic_dim)
+    end do
     call io_close(file_gvec)
 
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, (st%d%kpt%end - st%d%kpt%start + 1) * st%nst)
@@ -431,9 +431,9 @@ contains
     SAFE_ALLOCATE(pkm(st%d%kpt%start:st%d%kpt%end, 1:st%nst))
     pkm(:, :) = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      iq = states_elec_dim_get_kpoint_index(st%d, ik) 
+      iq = states_elec_dim_get_kpoint_index(st%d, ik)
 
-      call fourier_shell_init(shell, zcube, gr%mesh, kk = sb%kpoints%reduced%red_point(:, iq))  
+      call fourier_shell_init(shell, zcube, gr%mesh, kk = sb%kpoints%reduced%red_point(:, iq))
 
       gmin = minval(shell%red_gvec(:,:))
       gmax = maxval(shell%red_gvec(:,:))
@@ -458,7 +458,7 @@ contains
             end do !iy
           end do !ix
         end do !ig
-           
+
       case(2)
 
         do ig = 1, shell%ngvectors
@@ -467,31 +467,31 @@ contains
             do iy = gmin, gmax
               vec_pc(1:2) = ix * klattice_pc(1:2,1) + iy * klattice_pc(1:2,2)
               if(abs(vec_sc(1) - vec_pc(1) - gvec_abs(1, ik)) < tol &
-                  .and. abs(vec_sc(2) - vec_pc(2) - gvec_abs(2, ik)) < tol) then
-                  g_select(ig) = .true.
+                .and. abs(vec_sc(2) - vec_pc(2) - gvec_abs(2, ik)) < tol) then
+                g_select(ig) = .true.
               end if
             end do !ix
           end do !ix
         end do !ig
 
       case default
-        call messages_not_implemented("Unfolding for periodic dimensions other than 2 or 3") 
+        call messages_not_implemented("Unfolding for periodic dimensions other than 2 or 3")
       end select
 
       if(mpi_grp_is_root(gr%mesh%mpi_grp)) then
         write(filename,"(a13,i3.3,a4)") "./static/ake_",ik,".dat"
         file_ake = io_open(trim(filename), default_namespace, action='write')
         write(file_ake, '(a)') '#Energy Ak(E)'
-        write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
+        write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy
       end if
 
-      do ist = 1, st%nst 
+      do ist = 1, st%nst
         !loop over states
         do idim = 1, st%d%dim
-          ! Getting wavefunctions 
+          ! Getting wavefunctions
           ! for the moment we treat all functions as complex
           call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-            
+
           if(gr%mesh%parallel_in_domains) then
             call zmesh_to_cube(gr%mesh, zpsi, zcube, cf, local = .true.)
           else
@@ -514,56 +514,56 @@ contains
           do ig = 1, shell%ngvectors
             if(.not. g_select(ig)) cycle
             pkm(ik,ist) = pkm(ik,ist) + abs(field_g(ig))**2
-          end do 
+          end do
 
           SAFE_DEALLOCATE_A(field_g)
         end do !idim
 
         !ist loop end
         if(mpi_grp_is_root(mpi_world)) then
-           call loct_progress_bar((ik - st%d%kpt%start) * st%nst + ist, &
-                                    (st%d%kpt%end - st%d%kpt%start + 1) * st%nst)
+          call loct_progress_bar((ik - st%d%kpt%start) * st%nst + ist, &
+            (st%d%kpt%end - st%d%kpt%start + 1) * st%nst)
         end if
       end do !ist
 
-      ! Calculating the spectral function 
+      ! Calculating the spectral function
       !TODO: We could implement here a different broadening
       do ist = 1, st%nst
         do ie = 1, nenergy
-          ake(ie, ik) = ake(ie, ik) + pkm(ik, ist) * (M_THREE * de / M_PI) / & 
-                     ((eigs(ie) - st%eigenval(ist, ik))**2 + (M_THREE * de)**2) 
-        end do   
-      end do 
-        
+          ake(ie, ik) = ake(ie, ik) + pkm(ik, ist) * (M_THREE * de / M_PI) / &
+            ((eigs(ie) - st%eigenval(ist, ik))**2 + (M_THREE * de)**2)
+        end do
+      end do
+
       ! writing Spectral-Function
       do ie = 1, nenergy
         write(file_ake, '(1es19.12,1x,1es19.12)') eigs(ie), ake(ie, ik)
       end do
 
-      if (mpi_grp_is_root(gr%mesh%mpi_grp)) call io_close(file_ake) 
+      if (mpi_grp_is_root(gr%mesh%mpi_grp)) call io_close(file_ake)
 
       call fourier_shell_end(shell)
       SAFE_DEALLOCATE_A(g_select)
 
     end do !ik
 
-#if defined(HAVE_MPI)        
+#if defined(HAVE_MPI)
     if(st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, ake)
     end if
-#endif  
+#endif
 
     if(mpi_grp_is_root(mpi_world)) then
       file_ake = io_open("static/ake.dat", default_namespace, action='write')
       write(file_ake, '(a)') '#Energy Ak(E)'
-      write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
+      write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy
       do ik = 1, st%d%nik
         do ie = 1, nenergy
           write(file_ake,fmt ='(1es19.12,1x,1es19.12,1x,1es19.12)') coord_along_path(ik), &
-                   eigs(ie), ake(ie, ik)
+            eigs(ie), ake(ie, ik)
         end do
       end do
-      
+
       call io_close(file_ake)
     end if
 
@@ -580,7 +580,7 @@ contains
 
 end program oct_unfold
 !! Local Variables:
-!! mode: f90                              
-!! coding: utf-8 
+!! mode: f90
+!! coding: utf-8
 !! End:
 

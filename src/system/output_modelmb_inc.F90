@@ -90,7 +90,7 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
         write (tmpstring, '(3x,I4,1x,I4)') st%mmb_nspindown(itype,mm), st%mmb_iyoung(itype,mm)
         youngstring = trim(youngstring) // trim(tmpstring)
       end do
-    else 
+    else
       youngstring  = " state does not have an associated Young diagram"
     end if
     write (iunit, '(a,I5,3x,E16.6,5x,E14.6,2x,a)') &

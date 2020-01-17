@@ -25,7 +25,7 @@ module memory_oct_m
   use states_elec_oct_m
   use system_oct_m
   use unit_system_oct_m
-  
+
   implicit none
 
   private
@@ -69,7 +69,7 @@ contains
     call messages_write('  real    :')
     call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
     call messages_write(' (par_kpoints + par_states + par_domains)')
-    call messages_new_line()    
+    call messages_new_line()
 
     call messages_write('  complex :')
     call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')

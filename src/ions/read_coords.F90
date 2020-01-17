@@ -135,7 +135,7 @@ contains
     !%Description
     !% If this variable is present, the program tries to read the atomic coordinates
     !% from the file specified by its value. The PDB (<a href=http://www.rcsb.org/pdb>Protein Data Bank</a>)
-    !% format is quite complicated, and it goes 
+    !% format is quite complicated, and it goes
     !% well beyond the scope of this manual. You can find a comprehensive
     !% description <a href=http://www.wwpdb.org/docs.html>here</a>.
     !% From the plethora of instructions defined in the PDB standard, <tt>Octopus</tt>
@@ -378,7 +378,7 @@ contains
 
       call io_close(iunit)
     end if
-    
+
     !%Variable Coordinates
     !%Type block
     !%Section System::Coordinates
@@ -502,17 +502,17 @@ contains
         else
           gf%atom(ia)%x = units_to_atomic(units_inp%length, gf%atom(ia)%x)
         end if
-        
+
       end do
     end if
 
     POP_SUB(read_coords_read)
 
   contains
-    
+
     subroutine check_duplicated(done)
       logical, intent(inout) :: done
-      
+
       PUSH_SUB(read_coords_read.check_duplicated)
 
       if(.not. done) then
@@ -541,7 +541,7 @@ contains
     PUSH_SUB(read_coords_read_PDB)
 
     ! TODO: read the specification of the crystal structure.
-    
+
     ! First count number of atoms
     rewind(iunit)
     do

@@ -23,20 +23,20 @@ subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
 
   integer :: maxst, ist, i1, i2, irank, ist_local
   R_TYPE, allocatable :: sendpsi(:, :, :), recvpsi(:, :, :)
-  
+
   !no PUSH_SUB, called too often
-  
+
   call profiling_in(prof_gather, 'STATES_GATHER')
 
   if(st%parallel_in_states) then
 
     maxst = maxval(st%dist%num(0:st%mpi_grp%size - 1))
-    
+
     SAFE_ALLOCATE(sendpsi(1:dims(1), 1:dims(2), 1:maxst))
     SAFE_ALLOCATE(recvpsi(1:dims(1), 1:dims(2), 1:maxst*st%mpi_grp%size))
 
     ! We have to use a temporary array to make the data contiguous
-    
+
     do ist = 1, st%lnst
       do i1 = 1, dims(1)
         do i2 = 1, dims(2)
@@ -65,7 +65,7 @@ subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
 
     SAFE_DEALLOCATE_A(sendpsi)
     SAFE_DEALLOCATE_A(recvpsi)
-    
+
   end if
 
   call profiling_out(prof_gather)
@@ -81,17 +81,17 @@ subroutine X(states_elec_parallel_gather_1)(st, aa)
 
   R_TYPE, allocatable :: sendaa(:)
   integer, allocatable :: displs(:)
-  
+
   call profiling_in(prof_gather, 'STATES_GATHER')
 
   if(st%parallel_in_states) then
 
     SAFE_ALLOCATE(sendaa(st%st_start:st%st_end))
     SAFE_ALLOCATE(displs(0:st%mpi_grp%size - 1))
-    
+
     sendaa(st%st_start:st%st_end) = aa(st%st_start:st%st_end)
     displs(0:st%mpi_grp%size - 1) = st%dist%range(1, 0:st%mpi_grp%size - 1) - 1
-    
+
 #ifdef HAVE_MPI
     call MPI_Allgatherv(sendaa(st%st_start), st%lnst, R_MPITYPE, &
       aa(1), st%dist%num(0), displs(0), R_MPITYPE, st%mpi_grp%comm, mpi_err)
@@ -99,7 +99,7 @@ subroutine X(states_elec_parallel_gather_1)(st, aa)
 
     SAFE_DEALLOCATE_A(sendaa)
     SAFE_DEALLOCATE_A(displs)
-    
+
   end if
 
   call profiling_out(prof_gather)

@@ -41,7 +41,7 @@ program wannier90_interface
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m  
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use orbitalset_oct_m
@@ -83,8 +83,8 @@ program wannier90_interface
   integer              :: w90_num_wann                             ! input paramter
   FLOAT, allocatable   :: w90_proj_centers(:,:)                    ! projections centers
   integer, allocatable :: w90_proj_lmr(:,:)                        ! definitions for real valued Y_lm*R_r
-  integer :: w90_nproj                                             ! number of such projections        
-  integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
+  integer :: w90_nproj                                             ! number of such projections
+  integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
   integer              :: w90_num_exclude
   logical, allocatable :: exclude_list(:)                          ! list of excluded bands
@@ -153,7 +153,7 @@ program wannier90_interface
   !% This needs files previously generated
   !% by <tt>wannier90.x -pp w90 </tt>
   !%Option w90_wannier 3
-  !% Parse the output of wannier90 to generate the Wannier states on the real-space grid. 
+  !% Parse the output of wannier90 to generate the Wannier states on the real-space grid.
   !% The states will be written in the folder wannier. By default, the states are written as
   !% binary files, similar to the Kohn-Sham states.
   !%End
@@ -189,7 +189,7 @@ program wannier90_interface
   !%Section Utilities::oct-wannier90
   !%Description
   !% By default oct-wannier90 uses the ground-state states to compute the necessary information.
-  !% By setting this variable to yes, oct-wannier90 will use the TD states instead. 
+  !% By setting this variable to yes, oct-wannier90 will use the TD states instead.
   !%End
   call parse_variable(namespace, 'Wannier90UseTD', .false., read_td_states)
 
@@ -209,31 +209,31 @@ program wannier90_interface
 
 
   if(sys%st%d%ispin /= UNPOLARIZED) then
-    call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized") 
+    call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized")
   end if
 
   w90_spinors = .false.
 
   ! create setup files
-  select case(w90_mode) 
+  select case(w90_mode)
   case(OPTION__WANNIER90MODE__W90_SETUP)
     call wannier90_setup(sys%gr%sb, sys%geo)
 
-  ! load states and calculate interface files
+    ! load states and calculate interface files
   case(OPTION__WANNIER90MODE__W90_OUTPUT)
     call wannier90_output()
 
   case(OPTION__WANNIER90MODE__W90_WANNIER)
     call read_wannier90_files()
 
-   ! normal interface run
+    ! normal interface run
     call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+        sys%mc, ierr, sys%gr%der%mesh)
     else
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+        sys%mc, ierr, sys%gr%der%mesh)
     end if
 
     if(ierr == 0) then
@@ -241,8 +241,8 @@ program wannier90_interface
       if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
         call states_elec_load(restart, namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
-         write(message(1),'(a)') 'Restart structure not commensurate.'
-         call messages_fatal(1)
+        write(message(1),'(a)') 'Restart structure not commensurate.'
+        call messages_fatal(1)
       end if
     end if
     call restart_end(restart)
@@ -294,8 +294,8 @@ contains
 
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
-         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+      write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), &
+        matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI)
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -309,7 +309,7 @@ contains
     write(w90_win,'(a)') ' '
 
     if(sys%st%d%ispin == SPINORS) then
-       write(w90_win,'(a)') 'spinors = .true.'
+      write(w90_win,'(a)') 'spinors = .true.'
     end if
 
     !This is for convenience. This is needed for plotting the Wannier states, if requested.
@@ -342,7 +342,7 @@ contains
       !Put a minus sign here for the wrong convention in Octopus
 
       do ii = 1, sb%kpoints%reduced%npoints-npath
-        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
+        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii)
       end do
       write(w90_win,'(a)')  'end kpoints '
     end if
@@ -362,19 +362,19 @@ contains
     call states_elec_allocate_wfns(sys%st, sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     if(read_td_states) then
       call restart_init(restart, namespace, RESTART_TD, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+        sys%mc, ierr, sys%gr%der%mesh)
     else
       call restart_init(restart, namespace, RESTART_GS, RESTART_TYPE_LOAD, &
-                       sys%mc, ierr, sys%gr%der%mesh)
+        sys%mc, ierr, sys%gr%der%mesh)
     end if
 
     if(ierr == 0) then
       call states_elec_look(restart, nik, dim, nst, ierr)
       if(dim == sys%st%d%dim .and. nik == sys%gr%sb%kpoints%reduced%npoints .and. nst == sys%st%nst) then
-         call states_elec_load(restart, namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+        call states_elec_load(restart, namespace, sys%st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
-         write(message(1),'(a)') 'Restart structure not commensurate.'
-         call messages_fatal(1)
+        write(message(1),'(a)') 'Restart structure not commensurate.'
+        call messages_fatal(1)
       end if
     end if
     call restart_end(restart)
@@ -385,14 +385,14 @@ contains
     !%Section Utilities::oct-wannier90
     !%Description
     !% By default oct-wannier90 uses the projection method to generate the .amn file.
-    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead. 
+    !% By setting this variable to yes, oct-wannier90 will use SCDM method instead.
     !%End
     call parse_variable(namespace, 'Wannier90UseSCDM', .false., w90_scdm)
 
     if(w90_scdm) then
       !%Variable SCDMsigma
       !%Type float
-      !%Section Utilities::oct-wannier90  
+      !%Section Utilities::oct-wannier90
       !%Description
       !% Broadening of SCDM smearing function
       !%End
@@ -402,7 +402,7 @@ contains
       !%Type float
       !%Section Utilities::oct-wannier90
       !%Description
-      !% Energy range up to which states are considered for SCDM 
+      !% Energy range up to which states are considered for SCDM
       !%End
       call parse_variable(namespace, 'SCDMmu', M_HUGE, scdm_mu)
 
@@ -413,15 +413,15 @@ contains
 
       ! smear the states at gamma
       do ist = 1, w90_num_bands
-         occ_temp(ist)= sys%st%occ(ist, 1) 
-         sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
+        occ_temp(ist)= sys%st%occ(ist, 1)
+        sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
       call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands
-         sys%st%occ(ist, 1) = occ_temp(ist)
+        sys%st%occ(ist, 1) = occ_temp(ist)
       end do
 
       SAFE_ALLOCATE(uk(1:w90_num_bands, 1:w90_num_bands, 1:nik))
@@ -441,8 +441,8 @@ contains
           smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
           do jst = 1, w90_num_bands
-             chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) &
-                 * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
+            chi(ist, jst) = smear * conjg(psi(jpvt(jst), 1)) &
+              * exp(M_zI * dot_product(sys%gr%der%mesh%x(jpvt(jst), 1:3), kvec(1:3)))
           end do
         end do
 
@@ -451,13 +451,13 @@ contains
         chi_diag = matmul(conjg(transpose(chi)), chi)
         call lalg_eigensolve(w90_num_bands, chi_diag, chi_eigenval)
         chi2 = conjg(transpose(chi_diag))
-        
+
         !we need the eigenvalues to be >0
         if( any(chi_eigenval(:) .lt. M_ZERO) ) then
-           message(1) = 'SCDM Wannierization failed because chi matrix is'
-           message(2) = 'ill conditioned. Try increasingin scdm_sigma and/or'
-           message(3) = 'change scdm_mu.'
-           call messages_fatal(3)
+          message(1) = 'SCDM Wannierization failed because chi matrix is'
+          message(2) = 'ill conditioned. Try increasingin scdm_sigma and/or'
+          message(3) = 'change scdm_mu.'
+          call messages_fatal(3)
         end if
 
         do ist = 1, w90_num_bands
@@ -469,7 +469,7 @@ contains
         uk(:,:,ik) = matmul(chi, matmul(chi_diag,chi2))
 
       end do
-      
+
       SAFE_DEALLOCATE_A(chi)
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(chi_diag)
@@ -514,7 +514,7 @@ contains
     PUSH_SUB(read_wannier90_files)
 
     w90_num_kpts = product(sys%gr%sb%kpoints%nik_axis(1:3))
-    w90_num_exclude = 0 
+    w90_num_exclude = 0
 
     ! open nnkp file
     filename = trim(adjustl(w90_prefix)) //'.nnkp'
@@ -525,7 +525,7 @@ contains
     inquire(file=filename,exist=exist)
     if(.not. exist) then
       message(1) = 'oct-wannier90: Cannot find specified Wannier90 nnkp file.'
-      write(message(2),'(a)') 'Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.' 
+      write(message(2),'(a)') 'Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.'
       call messages_fatal(2)
     end if
 
@@ -579,7 +579,7 @@ contains
         exit
       end if
     end do
-   
+
     if(.not. parse_is_ok) then
       message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
       call messages_fatal(1)
@@ -660,27 +660,27 @@ contains
           SAFE_ALLOCATE(w90_proj_centers(w90_nproj, 3))
           SAFE_ALLOCATE(w90_proj_lmr(w90_nproj, 3))
           if(w90_spinors) then
-            SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj)) 
+            SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj))
           end if
           if(w90_spinors) then
             SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj, 3))
           end if
 
           do ii=1, w90_nproj
-             read(w90_nnkp, *) w90_proj_centers(ii, 1:3), w90_proj_lmr(ii, 1:3)
-             ! skip a line for now
-             read(w90_nnkp, *) dummyr(1:7)
-             if(w90_spinors) then
-                read(w90_nnkp, *) w90_spin_proj_component(ii), w90_spin_proj_axis(ii, 1:3)
-                ! use octopus spindim conventions
-                if(w90_spin_proj_component(ii) == -1) w90_spin_proj_component(ii) = 2
-             end if
+            read(w90_nnkp, *) w90_proj_centers(ii, 1:3), w90_proj_lmr(ii, 1:3)
+            ! skip a line for now
+            read(w90_nnkp, *) dummyr(1:7)
+            if(w90_spinors) then
+              read(w90_nnkp, *) w90_spin_proj_component(ii), w90_spin_proj_axis(ii, 1:3)
+              ! use octopus spindim conventions
+              if(w90_spin_proj_component(ii) == -1) w90_spin_proj_component(ii) = 2
+            end if
           end do
           !make sure we are at the end of the block
           read(w90_nnkp, *) dummy
           if(dummy /= 'end') then
-             message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
-             call messages_fatal(1)
+            message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
+            call messages_fatal(1)
           end if
           exit
         end if
@@ -714,7 +714,7 @@ contains
         end if
       end do
       call io_close(w90_nnkp)
- 
+
     end if
 
     message(1) = "Info: Finished parsing "//filename
@@ -757,8 +757,8 @@ contains
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
-       write(w90_mmn,*) 'Created by oct-wannier90'
-       write(w90_mmn,*) w90_num_bands, w90_num_kpts, w90_nntot
+      write(w90_mmn,*) 'Created by oct-wannier90'
+      write(w90_mmn,*) w90_num_bands, w90_num_kpts, w90_nntot
     end if
 
     SAFE_ALLOCATE(psim(1:mesh%np, 1:st%d%dim))
@@ -768,68 +768,68 @@ contains
 
     ! loop over the pairs specified in the nnkp file (read before in init)
     do ii = 1, w90_num_kpts * w90_nntot
-       ik = w90_nnk_list(1, ii)
-       iknn = w90_nnk_list(2, ii)
-       G(1:3) = w90_nnk_list(3:5, ii)
-       if(mpi_grp_is_root(mpi_world)) write(w90_mmn, '(I10,2x,I10,2x,I3,2x,I3,2x,I3)') ik, iknn, G(1:3)
+      ik = w90_nnk_list(1, ii)
+      iknn = w90_nnk_list(2, ii)
+      G(1:3) = w90_nnk_list(3:5, ii)
+      if(mpi_grp_is_root(mpi_world)) write(w90_mmn, '(I10,2x,I10,2x,I3,2x,I3,2x,I3)') ik, iknn, G(1:3)
 
-       Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
+      Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
 
-       do ip = 1, mesh%np
-         phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3), Gr(1:3)))
-       end do
+      do ip = 1, mesh%np
+        phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3), Gr(1:3)))
+      end do
 
-       ! loop over bands
-       do jst = 1, st%nst
-         if(exclude_list(jst)) cycle
-         call states_elec_get_state(st, mesh, jst, iknn, psin)
+      ! loop over bands
+      do jst = 1, st%nst
+        if(exclude_list(jst)) cycle
+        call states_elec_get_state(st, mesh, jst, iknn, psin)
 
-         !Do not apply the phase if the phase factor is null
-         if(any(G(1:3) /= 0)) then
-           ! add phase
-           do idim = 1, st%d%dim
-             do ip = 1, mesh%np
-               psin(ip, idim) = psin(ip, idim) * phase(ip)
-             end do
-           end do
-         end if
+        !Do not apply the phase if the phase factor is null
+        if(any(G(1:3) /= 0)) then
+          ! add phase
+          do idim = 1, st%d%dim
+            do ip = 1, mesh%np
+              psin(ip, idim) = psin(ip, idim) * phase(ip)
+            end do
+          end do
+        end if
 
 
-         !See Eq. (25) in PRB 56, 12847 (1997)
-         do ist = 1, st%nst
-           if(exclude_list(ist)) cycle
+        !See Eq. (25) in PRB 56, 12847 (1997)
+        do ist = 1, st%nst
+          if(exclude_list(ist)) cycle
 
-           batch => st%group%psib(st%group%iblock(ist, ik), ik)
-           select case(batch%status())
-           case(BATCH_NOT_PACKED)
-             overlap(band_index(ist)) = M_z0
-             do idim = 1, st%d%dim
-               ibind = batch%inv_index((/ist, idim/))
-               overlap(band_index(ist)) = overlap(band_index(ist)) + &
-                    zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
-             end do
-           !Not properly done at the moment
-           case(BATCH_PACKED, BATCH_DEVICE_PACKED)
-             call states_elec_get_state(st, mesh, ist, ik, psim)
-             overlap(band_index(ist)) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
-           end select
-         end do
+          batch => st%group%psib(st%group%iblock(ist, ik), ik)
+          select case(batch%status())
+          case(BATCH_NOT_PACKED)
+            overlap(band_index(ist)) = M_z0
+            do idim = 1, st%d%dim
+              ibind = batch%inv_index((/ist, idim/))
+              overlap(band_index(ist)) = overlap(band_index(ist)) + &
+                zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+            end do
+            !Not properly done at the moment
+          case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+            call states_elec_get_state(st, mesh, ist, ik, psim)
+            overlap(band_index(ist)) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
+          end select
+        end do
 
-         if(mesh%parallel_in_domains) then
-           call profiling_in(reduce_prof, "W90_MMN_REDUCE")
-           call comm_allreduce(mesh%mpi_grp%comm, overlap)
-           call profiling_out(reduce_prof)
-         end if
- 
-         ! write to W90 file
-         if(mpi_grp_is_root(mpi_world)) then
-           do ist = 1, st%nst
-             if(exclude_list(ist)) cycle
-             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(band_index(ist))
-           end do
-         end if
+        if(mesh%parallel_in_domains) then
+          call profiling_in(reduce_prof, "W90_MMN_REDUCE")
+          call comm_allreduce(mesh%mpi_grp%comm, overlap)
+          call profiling_out(reduce_prof)
+        end if
 
-       end do
+        ! write to W90 file
+        if(mpi_grp_is_root(mpi_world)) then
+          do ist = 1, st%nst
+            if(exclude_list(ist)) cycle
+            write(w90_mmn,'(e13.6,2x,e13.6)') overlap(band_index(ist))
+          end do
+        end if
+
+      end do
     end do
 
     call io_close(w90_mmn)
@@ -866,7 +866,7 @@ contains
         do ist = 1, sys%st%nst
           if(exclude_list(ist)) cycle
           write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
-                             units_from_atomic(unit_eV, sys%st%eigenval(ist, ik))
+            units_from_atomic(unit_eV, sys%st%eigenval(ist, ik))
         end do
       end do
 
@@ -892,7 +892,7 @@ contains
     if(st%d%kpt%parallel) then
       call messages_not_implemented("w90_unk output with k-point parallelization")
     end if
-      
+
     if(sys%gr%mesh%parallel_in_domains) then
       call messages_not_implemented("w90_unk output with domain parallelization")
     end if
@@ -907,7 +907,7 @@ contains
     SAFE_ALLOCATE(psi(1:mesh%np))
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, verbose = .false., &
-                     need_partition=.not.mesh%parallel_in_domains)
+      need_partition=.not.mesh%parallel_in_domains)
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf)
 
@@ -956,7 +956,7 @@ contains
 
   subroutine create_wannier90_amn(mesh, sb, st)
     type(mesh_t),         intent(in) :: mesh
-    type(simul_box_t),    intent(in) :: sb 
+    type(simul_box_t),    intent(in) :: sb
     type(states_elec_t),  intent(in) :: st
 
     integer ::  ist, ik, w90_amn, idim, iw, ip
@@ -997,7 +997,7 @@ contains
           if(exclude_list(ist)) cycle
           if(mpi_grp_is_root(mpi_world)) then
             do iw = 1, w90_nproj
-              write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') band_index(ist), iw, ik, uk(band_index(ist),iw,ik) 
+              write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') band_index(ist), iw, ik, uk(band_index(ist),iw,ik)
             end do
           end if
         end do !ist
@@ -1007,37 +1007,37 @@ contains
 
       message(1) = "Info: Computing the projection matrix";
       call messages_info(1)
-      
+
       !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
       call parse_variable(namespace, 'AOThreshold', CNST(0.01), threshold)
-      
+
       SAFE_ALLOCATE(orbitals(1:w90_nproj))
       ! precompute orbitals
       do iw=1, w90_nproj
         call orbitalset_nullify(orbitals(iw))
         call orbitalset_init(orbitals(iw))
-      
+
         orbitals(iw)%norbs = 1
         orbitals(iw)%ndim = 1
         orbitals(iw)%radius = -log(threshold)
         orbitals(iw)%submeshforperiodic = .false.
-      
+
         ! cartesian coordinate of orbital center
         center(1:3) =  matmul(sb%rlattice(1:3,1:3), w90_proj_centers(iw,1:3))
         call submesh_init(orbitals(iw)%sphere, sb, mesh, center, orbitals(iw)%radius)
-      
+
         ! make transpose table of submesh points for use in pwscf routine
         SAFE_ALLOCATE(rr(1:3,orbitals(iw)%sphere%np))
         do ip=1,orbitals(iw)%sphere%np
           rr(1:3,ip) = orbitals(iw)%sphere%x(ip,1:3)
         end do
-      
+
         ! get dorb as submesh points
         SAFE_ALLOCATE(orbitals(iw)%zorb(1:orbitals(iw)%sphere%np, 1:1, 1:1))
         SAFE_ALLOCATE(ylm(1:orbitals(iw)%sphere%np))
         ! (this is a routine from pwscf)
         call ylm_wannier(ylm, w90_proj_lmr(iw,1), w90_proj_lmr(iw,2), &
-                              rr, orbitals(iw)%sphere%np)
+          rr, orbitals(iw)%sphere%np)
         if(w90_proj_lmr(iw,3) == 1) then
           ! apply radial function
           do ip=1,orbitals(iw)%sphere%np
@@ -1046,33 +1046,33 @@ contains
         else
           call messages_not_implemented("oct-wannier90: r/=1 for the radial part")
         end if
-      
-        orbitals(iw)%zorb(1:orbitals(iw)%sphere%np, 1, 1) = ylm(1:orbitals(iw)%sphere%np) 
+
+        orbitals(iw)%zorb(1:orbitals(iw)%sphere%np, 1, 1) = ylm(1:orbitals(iw)%sphere%np)
         SAFE_DEALLOCATE_A(ylm)
-      
+
         SAFE_ALLOCATE(orbitals(iw)%phase(1:orbitals(iw)%sphere%np, 1:w90_num_kpts))
         orbitals(iw)%phase(:,:) = M_Z0
         SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
         orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
-      
+
         call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, &
-                                        kpt_max = w90_num_kpts)
-      
+          kpt_max = w90_num_kpts)
+
         SAFE_DEALLOCATE_A(rr)
       end do
-      
+
       SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(phase(1:mesh%np))
       SAFE_ALLOCATE(projection(1:w90_nproj))
-      
+
       do ik = 1, w90_num_kpts
         !This will not work for spin-polarized calculations
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
-      
+
         forall(ip=1:mesh%np)
           phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
         end forall
-      
+
         do ist = 1, st%nst
           if(exclude_list(ist)) cycle
           call states_elec_get_state(st, mesh, ist, ik, psi)
@@ -1082,23 +1082,23 @@ contains
               psi(ip, idim) = psi(ip, idim)*phase(ip)
             end forall
           end do
-      
+
           do iw = 1, w90_nproj
             idim = 1
             if(w90_spinors) idim = w90_spin_proj_component(iw)
-      
+
             !At the moemnt the orbitals do not depend on idim
             !The idim index for eorb_mesh would be for a spin-resolved orbital like j=1/2
             projection(iw) = zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                        orbitals(iw)%eorb_mesh(1:mesh%np,1,1,ik), reduce = .false.)
+              orbitals(iw)%eorb_mesh(1:mesh%np,1,1,ik), reduce = .false.)
           end do
-      
+
           if(mesh%parallel_in_domains) then
             call profiling_in(reduce_prof, "W90_AMN_REDUCE")
             call comm_allreduce(mesh%mpi_grp%comm, projection)
             call profiling_out(reduce_prof)
           end if
-      
+
           if(mpi_grp_is_root(mpi_world)) then
             do iw = 1, w90_nproj
               write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') band_index(ist), iw, ik, projection(iw)
@@ -1106,17 +1106,17 @@ contains
           end if
         end do !ik
       end do !ist
-      
+
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(phase)
       SAFE_DEALLOCATE_A(projection)
-      
+
       do iw = 1, w90_nproj
         call orbitalset_end(orbitals(iw))
       end do
       SAFE_DEALLOCATE_A(orbitals)
     end if
-    
+
     call io_close(w90_amn)
 
     call profiling_out(prof)
@@ -1160,8 +1160,8 @@ contains
     read(w90_xyz, *)
     do iw = 1, w90_num_wann
       read(w90_xyz, *) dum, centers(1:3, iw)
-    end do    
-    call io_close(w90_xyz) 
+    end do
+    call io_close(w90_xyz)
 
 
     inquire(file=trim(trim(adjustl(w90_prefix))//'_u_dis.mat'),exist=exist)
@@ -1176,11 +1176,11 @@ contains
       write(message(2),'(a)') 'Please run wannier90.x with "write_u_matrices=.true." in '// trim(adjustl(w90_prefix)) // '.'
       call messages_fatal(2)
     end if
-    w90_u_mat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), namespace, action='read')    
+    w90_u_mat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), namespace, action='read')
 
     !To be read later
     w90_num_wann = w90_num_bands
-    
+
     !Skip one line
     read(w90_u_mat, *)
     !Read num_kpts, num_wann, num_wann for consistency check
@@ -1189,8 +1189,8 @@ contains
       message(1) = "The file contains U matrices is inconsistent with the .win file."
       call messages_fatal(1)
     end if
-   
-    SAFE_ALLOCATE(Umnk(1:w90_num_wann, 1:w90_num_wann, 1:w90_num_kpts)) 
+
+    SAFE_ALLOCATE(Umnk(1:w90_num_wann, 1:w90_num_wann, 1:w90_num_kpts))
 
     do ik = 1, w90_num_kpts
       !Skip one line
@@ -1199,7 +1199,7 @@ contains
       read(w90_u_mat, *)
       read(w90_u_mat, '(f15.10,sp,f15.10)') ((Umnk(iw, iw2, ik), iw=1, w90_num_wann), iw2=1, w90_num_wann)
     end do
-    
+
     call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
@@ -1227,9 +1227,9 @@ contains
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
             zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
-                      exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
+              exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
           end forall
-        end do!ik   
+        end do!ik
       end do!iw2
 
 
@@ -1244,14 +1244,14 @@ contains
         end if
       end do
       call lalg_scal(mesh%np, sqrt(wmodmax)/zwn(ipmax), zwn)
-     
+
 
       forall(ip=1:mesh%np)
         dwn(ip) = real(zwn(ip), REAL_PRECISION)
       end forall
-        
+
       call dio_function_output(how, 'wannier', trim(fname), namespace, mesh, &
-          dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(Umnk)
@@ -1292,8 +1292,8 @@ contains
       do iR2=1,MP_factors(2)
         do iR3=1,MP_factors(3)
           Rvec(:)=sys%gr%sb%rlattice(:,1)*(iR1-int(MP_factors(1)/2)-1) + &
-                  sys%gr%sb%rlattice(:,2)*(iR2-int(MP_factors(2)/2)-1) + &
-                  sys%gr%sb%rlattice(:,3)*(iR3-int(MP_factors(3)/2)-1)
+            sys%gr%sb%rlattice(:,2)*(iR2-int(MP_factors(2)/2)-1) + &
+            sys%gr%sb%rlattice(:,3)*(iR3-int(MP_factors(3)/2)-1)
           iR = iR+1
           RR(:,iR) = Rvec
         end do
@@ -1304,19 +1304,19 @@ contains
       kvec(:) = sys%gr%sb%kpoints%reduced%point(:,ik)
       eigk(:,:) = M_ZERO
       do ist=1,w90_num_bands
-         eigk(ist,ist) = st%eigenval(ist, ik)
+        eigk(ist,ist) = st%eigenval(ist, ik)
       end do
       hk(:,:) = matmul(conjg(transpose(uk(:,:,ik))),matmul(eigk,uk(:,:,ik)))
 
       ! accumulate lattice Fouriertransform of Hamiltonian in Wannier basis
       do iR=1,nR
-         Rvec(:)=RR(:,iR)
-         kvec(:) = sys%gr%sb%kpoints%reduced%point(:,ik)
-         hR(:,:,iR) = hR(:,:,iR)+ M_ONE/nik*hk(:,:)*exp(-M_zI*dot_product(Rvec(:),kvec(:)))
+        Rvec(:)=RR(:,iR)
+        kvec(:) = sys%gr%sb%kpoints%reduced%point(:,ik)
+        hR(:,:,iR) = hR(:,:,iR)+ M_ONE/nik*hk(:,:)*exp(-M_zI*dot_product(Rvec(:),kvec(:)))
       end do
     end do
-    
-    ! back interpolation                                                                                                                                                                         
+
+    ! back interpolation
     npath = SIZE(sys%gr%sb%kpoints%coord_along_path)
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ik < st%d%nik-npath+1 ) cycle
@@ -1331,10 +1331,10 @@ contains
         st%eigenval(ist, ik) = hk_eigenval(ist)
       end do
     end do
- 
+
     call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, &
-                                               dummyphase)
- 
+      dummyphase)
+
     SAFE_DEALLOCATE_A(eigk)
     SAFE_DEALLOCATE_A(hk_eigenval)
     SAFE_DEALLOCATE_A(hk)
@@ -1343,7 +1343,7 @@ contains
 
     POP_SUB(wannier_interpolation)
   end subroutine wannier_interpolation
-    
+
 end program wannier90_interface
 
 !! Local Variables:

@@ -26,7 +26,7 @@ module gauss_legendre_oct_m
   private
   public :: &
     gauss_legendre_points
-  
+
 
   ! 2 point
   FLOAT, target :: GL_points_2(1) = (/                                   &
@@ -57,7 +57,7 @@ module gauss_legendre_oct_m
     CNST(-0.932469514203), CNST(-0.661209386466), CNST(-0.238619186083) /)
   FLOAT, target :: GL_weights_6(3) = (/                                  &
     CNST(0.171324492379), CNST(0.360761573048), CNST(0.467913934573) /)
-  
+
   ! 7 point
   FLOAT, target :: GL_points_7(4) = (/                                   &
     CNST(-0.949107912343), CNST(-0.741531185599), CNST(-0.405845151377), &
@@ -135,7 +135,7 @@ contains
     case(11); points_ref  => GL_points_11; weights_ref => GL_weights_11
     case(12); points_ref  => GL_points_12; weights_ref => GL_weights_12
     end select
-    
+
     do i = 1, n/2
       points (i)     =  points_ref(i)
       points (n-i+1) = -points_ref(i)

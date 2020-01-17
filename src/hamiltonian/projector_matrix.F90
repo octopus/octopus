@@ -59,7 +59,7 @@ contains
     this%is_cmplx = .false.
 
   end subroutine projector_matrix_nullify
-  
+
   ! -------------------------------------------------
 
   subroutine projector_matrix_allocate(this, npoints, nprojs, has_mix_matrix, is_cmplx)

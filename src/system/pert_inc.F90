@@ -28,14 +28,14 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, f_in, f_out)
 
   integer :: ist
   R_TYPE, allocatable :: fi(:, :), fo(:, :)
-  
+
   PUSH_SUB(X(pert_apply_batch))
 
   ASSERT(f_in%status() == f_out%status())
-  
+
   SAFE_ALLOCATE(fi(1:gr%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(fo(1:gr%mesh%np, 1:hm%d%dim))
-  
+
   select case(this%pert_type)
   case(PERTURBATION_ELECTRIC)
 
@@ -51,20 +51,20 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, f_in, f_out)
 
   SAFE_DEALLOCATE_A(fi)
   SAFE_DEALLOCATE_A(fo)
-  
+
   POP_SUB(X(pert_apply_batch))
 
 contains
-  
+
   subroutine electric()
     integer :: ii, ip
 
     select case(f_in%status())
-      
+
     case(BATCH_NOT_PACKED)
       do ii = 1, f_in%nst_linear
         do ip = 1, gr%mesh%np
-          f_out%states_linear(ii)%X(psi)(ip) = gr%mesh%x(ip, this%dir)*f_in%states_linear(ii)%X(psi)(ip) 
+          f_out%states_linear(ii)%X(psi)(ip) = gr%mesh%x(ip, this%dir)*f_in%states_linear(ii)%X(psi)(ip)
         end do
       end do
 
@@ -77,13 +77,13 @@ contains
       end do
 
     case(BATCH_DEVICE_PACKED)
-      
+
       ASSERT(.false.)
 
     end select
 
   end subroutine electric
-  
+
 end subroutine X(pert_apply_batch)
 
 ! --------------------------------------------------------------------------
@@ -123,7 +123,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
     else
       do idim = 1, hm%d%dim
         call lalg_copy(gr%mesh%np_part, f_in(:, idim), f_in_copy(:, idim))
-      end do 
+      end do
     end if
   end if
   ! no derivatives in electric, so ghost points not needed
@@ -140,23 +140,23 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
   end if
 
   select case(this%pert_type)
-    case(PERTURBATION_ELECTRIC)
-      call electric()
+  case(PERTURBATION_ELECTRIC)
+    call electric()
 
-    case(PERTURBATION_MAGNETIC)
-      call magnetic()
+  case(PERTURBATION_MAGNETIC)
+    call magnetic()
 
-    case(PERTURBATION_IONIC)
-      call ionic()
+  case(PERTURBATION_IONIC)
+    call ionic()
 
-    case(PERTURBATION_KDOTP)
-      call kdotp()
+  case(PERTURBATION_KDOTP)
+    call kdotp()
 
-    case(PERTURBATION_NONE)
-      call none()
+  case(PERTURBATION_NONE)
+    call none()
 
   end select
-  
+
   if (apply_kpoint) then
 #ifdef R_TCOMPLEX
     call states_elec_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
@@ -197,7 +197,7 @@ contains
 
   ! --------------------------------------------------------------------------
   subroutine kdotp()
-  ! perturbation is grad + [V,r]
+    ! perturbation is grad + [V,r]
     R_TYPE, allocatable :: grad(:, :, :), Hxpsi(:,:)
     integer :: iatom
 
@@ -223,10 +223,10 @@ contains
           end if
         end do
       end if
-    
+
       SAFE_DEALLOCATE_A(grad)
     else
-      SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
+      SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -249,7 +249,7 @@ contains
     end if
 
     POP_SUB(X(pert_apply).kdotp)
-    
+
   end subroutine kdotp
 
   ! --------------------------------------------------------------------------
@@ -258,7 +258,7 @@ contains
     R_TYPE :: cross(1:MAX_DIM), vv(1:MAX_DIM)
     FLOAT :: xx(1:MAX_DIM)
     integer :: iatom, idir
-    
+
     PUSH_SUB(X(pert_apply).magnetic)
 
     SAFE_ALLOCATE(lf(1:gr%mesh%np, 1:gr%sb%dim))
@@ -273,7 +273,7 @@ contains
 
     if(this%gauge == GAUGE_GIPAW .or. this%gauge == GAUGE_ICL) then
       SAFE_ALLOCATE(vrnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%sb%dim))
-      
+
       do iatom = 1, geo%natoms
 
         vrnl = M_ZERO
@@ -281,20 +281,20 @@ contains
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
-        
+
         xx(1:gr%mesh%sb%dim) = geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-        
+
         do idim = 1, hm%d%dim
           do ip = 1, gr%mesh%np
-            
+
             if(this%gauge == GAUGE_ICL) xx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
-            
+
             vv(1:gr%mesh%sb%dim) = vrnl(ip, idim, 1:gr%mesh%sb%dim)
-            
+
             cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
             cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
             cross(3) = xx(1) * vv(2) - xx(2) * vv(1)
-            
+
 #if !defined(R_TCOMPLEX)
             f_out(ip, idim) = f_out(ip, idim) + M_HALF*cross(this%dir)
 #else
@@ -306,11 +306,11 @@ contains
 
       SAFE_DEALLOCATE_A(vrnl)
     end if
-    
+
     POP_SUB(X(pert_apply).magnetic)
-    
+
   end subroutine magnetic
-  
+
   ! --------------------------------------------------------------------------
   subroutine ionic
     integer :: iatom, idir
@@ -322,19 +322,19 @@ contains
     ASSERT(hm%d%dim == 1)
 
     f_out(1:gr%mesh%np, 1) = M_ZERO
-    
+
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
         call X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir)
-        
+
         call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir), tmp, f_out(:, 1))
 
       end do
     end do
-      
+
     SAFE_DEALLOCATE_A(tmp)
     POP_SUB(X(pert_apply).ionic)
 
@@ -342,7 +342,7 @@ contains
 
 end subroutine X(pert_apply)
 
-  ! --------------------------------------------------------------------------
+ ! --------------------------------------------------------------------------
 subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom, idir)
   type(grid_t),         intent(in)    :: gr
   type(namespace_t),    intent(in)    :: namespace
@@ -351,9 +351,9 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
-  integer,              intent(in)    :: iatom, idir    
+  integer,              intent(in)    :: iatom, idir
 
-  ! FIX ME: may need to tell derivatives_perform not to apply boundary conditions 
+  ! FIX ME: may need to tell derivatives_perform not to apply boundary conditions
   ! more things about ghost points may need to be done
 
   R_TYPE, allocatable :: grad(:,:), fin(:, :), fout(:, :)
@@ -512,7 +512,7 @@ contains
             call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
             ! -x vnl |f>
-            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) 
+            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
               dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
             end forall
 
@@ -558,27 +558,27 @@ contains
   subroutine ionic
     integer :: iatom, idir, jdir
     R_TYPE, allocatable  :: tmp(:)
-    
+
     PUSH_SUB(X(pert_apply_order_2).ionic)
 
     ASSERT(hm%d%dim == 1)
 
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    
+
     f_out(1:gr%mesh%np, 1) = M_ZERO
-    
+
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
         do jdir = 1, gr%mesh%sb%dim
-          
+
           if (this%ionic%pure_dir &
-               .and. iatom /= this%atom1 .and. idir /= this%dir &
-               .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
+            .and. iatom /= this%atom1 .and. idir /= this%dir &
+            .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
 
           call X(ionic_perturbation_order_2)(gr, namespace, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir, jdir)
-          
+
           call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out(:, 1))
-          
+
         end do
       end do
     end do
@@ -606,7 +606,7 @@ contains
       f_out(1:gr%mesh%np, 1:hm%d%dim) = M_ZERO
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:hm%d%dim))
       cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
-    
+
       if(this%use_nonlocalpps) then
         do iatom = 1, geo%natoms
           if(species_is_ps(geo%atom(iatom)%species)) then
@@ -638,11 +638,11 @@ contains
       end if
 
       if(this%dir == this%dir2) then
-      ! add delta_ij
+        ! add delta_ij
         forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in(ip, idim)
       end if
-    else 
-      SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
+    else
+      SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))
       cpsi(:,:) = M_ZERO
       call pert_init(pert_kdotp, namespace, PERTURBATION_KDOTP, gr, geo)
       call pert_setup_dir(pert_kdotp, this%dir)
@@ -652,9 +652,9 @@ contains
           f_out(ip,idim) = gr%mesh%x(ip,this%dir2)*cpsi(ip,idim)
         end do
       end do
-    
+
       do idim = 1, hm%d%dim
-        do ip = 1, gr%mesh%np_part 
+        do ip = 1, gr%mesh%np_part
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir2)*f_in_copy(ip,idim)
         end do
       end do
@@ -665,7 +665,7 @@ contains
           f_out(ip,idim) = f_out(ip,idim) - cpsi(ip,idim)
         end do
       end do
-    
+
       call pert_end(pert_kdotp)
     end if
 
@@ -709,7 +709,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
-   
+
   !di^T dj^T v |f>
   forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
   call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
@@ -770,14 +770,14 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
   do ist = 1, st%nst
 
     call states_elec_get_state(st, gr%der%mesh, ist, ik, psi)
-    
+
     do idim = 1, st%d%dim
       call X(derivatives_grad)(gr%der, psi(:, idim), gpsi(:, idim, :))
       do idir = 1, gr%sb%dim
         call X(derivatives_grad)(gr%der, gpsi(:, idim, idir), g2psi(:, idim, idir, :))
       end do
     end do
-    
+
     ! This term applies only to matrix elements (iatom, idir; iatom, jdir)
     do imat = 1, vib%num_modes
       iatom = vibrations_get_atom(vib, imat)
@@ -796,7 +796,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
         call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1))
 
-        !2<f|di^T dj^T v |f> 
+        !2<f|di^T dj^T v |f>
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim)
         call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1))
@@ -807,7 +807,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
 
     end do
   end do
-  
+
   POP_SUB(X(ionic_pert_matrix_elements_2))
 end subroutine X(ionic_pert_matrix_elements_2)
 
@@ -846,7 +846,7 @@ subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, st, psia, 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      if(order == 1) then 
+      if(order == 1) then
         call X(pert_apply)(this, namespace, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%smear%el_per_state
       else
@@ -899,11 +899,11 @@ R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, st, psi
   expval = X(mf_integrate)(gr%mesh, density)
 
 #ifdef HAVE_MPI
-    ! reduce density
-    if(st%parallel_in_states) then
-        call MPI_Allreduce(expval, expval_tmp, 1, R_MPITYPE, MPI_SUM, st%mpi_grp%comm, mpi_err)
-        expval = expval_tmp
-    end if
+  ! reduce density
+  if(st%parallel_in_states) then
+    call MPI_Allreduce(expval, expval_tmp, 1, R_MPITYPE, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    expval = expval_tmp
+  end if
 #endif
 
   SAFE_DEALLOCATE_A(density)
@@ -932,9 +932,9 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
   if(present(pert_order)) order = pert_order
 
   ASSERT(order == 1)
-  
+
   SAFE_ALLOCATE(tt(st%st_start:st%st_end))
-  
+
   expval = M_ZERO
   do ik = st%d%kpt%start, st%d%kpt%end
     tt = M_ZERO
@@ -951,11 +951,11 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
       call hpsib%end(copy = .false.)
 
     end do
-    
+
     do ist = st%st_start, st%st_end
       expval = expval + st%d%kweights(ik)*st%smear%el_per_state*tt(ist)
     end do
-    
+
   end do
 
   if(st%parallel_in_states) call comm_allreduce(st%mpi_grp%comm, expval)

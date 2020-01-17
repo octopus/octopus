@@ -61,12 +61,12 @@ module output_me_oct_m
 
   type output_me_t
     private
-    integer :: what                !< what to output 
+    integer :: what                !< what to output
     !> If output_ksdipole, this number sets up which matrix elements will
-    !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
+    !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
-    integer :: ks_multipoles      
+    integer :: ks_multipoles
 
     integer :: st_start !Start index for the output
     integer :: st_end   !Stop index for the output
@@ -82,7 +82,7 @@ module output_me_oct_m
     OUTPUT_ME_DIPOLE         =  32
 
 contains
-  
+
   ! ---------------------------------------------------------
   subroutine output_me_init(this, namespace, sb, st, nst)
     type(output_me_t),   intent(out) :: this
@@ -148,12 +148,12 @@ contains
       !% This variable decides which multipole moments are printed out for
       !% <tt>OutputMatrixElements = ks_multipoles</tt>:
       !%
-      !% In 3D, if, for example, <tt>OutputMEMultipoles = 1</tt>, then the program will print three 
+      !% In 3D, if, for example, <tt>OutputMEMultipoles = 1</tt>, then the program will print three
       !% files, <tt>ks_me_multipoles.x</tt> (<tt>x</tt>=1,2,3), containing
       !% respectively the (1,-1), (1,0) and (1,1) multipole matrix elements
       !% between Kohn-Sham states.
       !%
-      !% In 2D, this variable is ignored: it will always print two files, 
+      !% In 2D, this variable is ignored: it will always print two files,
       !% <tt>ks_me_multipoles.i</tt> (<tt>i</tt>=1,2), containing the <math>x</math> and
       !% <math>y</math> dipole matrix elements.
       !%
@@ -206,7 +206,7 @@ contains
     FLOAT, allocatable :: doneint(:), dtwoint(:)
     CMPLX, allocatable :: zoneint(:), ztwoint(:)
     integer, allocatable :: iindex(:,:), jindex(:,:), kindex(:,:), lindex(:,:)
-    
+
     PUSH_SUB(output_me)
 
     if(bitand(this%what, output_me_momentum) /= 0) then
@@ -273,11 +273,11 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
-          if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
-          else
-            call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
-          end if
+        if (states_are_real(st)) then
+          call doutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+        else
+          call zoutput_me_dipole(this, fname, namespace, st, gr, hm, geo, ik)
+        end if
       end do
     end if
 
@@ -291,7 +291,7 @@ contains
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization", &
         namespace=namespace)
       if (family_is_mgga_with_exc(hm%xc)) &
-      call messages_not_implemented("OutputMatrixElements=one_body with MGGA", namespace=namespace)
+        call messages_not_implemented("OutputMatrixElements=one_body with MGGA", namespace=namespace)
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')
 
@@ -354,13 +354,13 @@ contains
       else
         SAFE_ALLOCATE(ztwoint(1:id))
         if(associated(hm%hm_base%phase)) then
-          !We cannot pass the phase array like that if kpt%start is not 1.  
-          ASSERT(.not.st%d%kpt%parallel) 
+          !We cannot pass the phase array like that if kpt%start is not 1.
+          ASSERT(.not.st%d%kpt%parallel)
           call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
+            iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase)
         else
           call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint)
+            iindex, jindex, kindex, lindex, ztwoint)
         end if
 
         do ll = 1, id
@@ -368,7 +368,7 @@ contains
         enddo
         SAFE_DEALLOCATE_A(ztwoint)
       end if
-      
+
       SAFE_DEALLOCATE_A(iindex)
       SAFE_DEALLOCATE_A(jindex)
       SAFE_DEALLOCATE_A(kindex)
@@ -405,7 +405,7 @@ contains
     if(st%d%nspin == 2) ns = 2
 
     write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
-    call messages_info(1, iunit)      
+    call messages_info(1, iunit)
     if (st%d%nik > ns) then
       message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
       call messages_info(1, iunit)
@@ -437,14 +437,14 @@ contains
       write(str_tmp, '(4x,a12,1x)') 'Occupation '
       message(1) = trim(message(1)) // trim(str_tmp)
       call messages_info(1, iunit)
-      
+
       do ist = 1, st%nst
         do is = 0, ns-1
 
           if(is  ==  0) cspin = 'up'
           if(is  ==  1) cspin = 'dn'
           if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
-          
+
           write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
           do idir = 1, gr%sb%dim
             write(str_tmp, '(f12.6)') momentum(idir, ist, ik+is)
@@ -453,15 +453,15 @@ contains
           write(str_tmp, '(3x,f12.6)') st%occ(ist, ik+is)
           message(1) = trim(message(1)) // trim(str_tmp)
           call messages_info(1, iunit)
-          
+
         end do
       end do
-      
+
       write(message(1),'(a)') ''
-      call messages_info(1, iunit)      
-      
+      call messages_info(1, iunit)
+
     end do
-    
+
     SAFE_DEALLOCATE_A(momentum)
     call io_close(iunit)
 
@@ -525,9 +525,9 @@ contains
 #if defined(HAVE_MPI)
     if(st%d%kpt%parallel) then
       kn = st%d%kpt%nlocal
-      
+
       ASSERT(.not. st%parallel_in_states)
-      
+
       ! note: could use lmpi_gen_allgatherv here?
       SAFE_ALLOCATE(lang(1:st%lnst, 1:kn))
       do idir = 1, 3
@@ -541,9 +541,9 @@ contains
         ang2, st%d%kpt%num(:)*st%nst, (st%d%kpt%range(1, :) - 1)*st%nst, MPI_FLOAT, &
         st%d%kpt%mpi_grp%comm, mpi_err)
       SAFE_DEALLOCATE_A(lang)
-   end if
+    end if
 
-   if(st%parallel_in_states) then
+    if(st%parallel_in_states) then
       SAFE_ALLOCATE(lang(1:st%lnst, 1))
     end if
 #endif
@@ -553,7 +553,7 @@ contains
 
         kpoint = M_ZERO
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
-        
+
         write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
         do idir = 1, gr%sb%dim
           write(tmp_str(1), '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
@@ -566,7 +566,7 @@ contains
         end do
         call messages_info(1, iunit)
       end if
-      
+
       ! Exchange ang and ang2.
 #if defined(HAVE_MPI)
       if(st%parallel_in_states) then
@@ -589,11 +589,11 @@ contains
       if(mpi_grp_is_root(mpi_world)) then
         do ist = 1, st%nst
           do is = 0, ns-1
-            
+
             if(is  ==  0) cspin = 'up'
             if(is  ==  1) cspin = 'dn'
             if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
-            
+
             write(tmp_str(1), '(i4,3x,a2)') ist, trim(cspin)
             write(tmp_str(2), '(1x,4f12.6,3x,f12.6)') &
               (ang(ist, ik+is, idir), idir = 1, 3), ang2(ist, ik+is), st%occ(ist, ik+is)
@@ -604,7 +604,7 @@ contains
       end if
       write(message(1),'(a)') ''
       call messages_info(1, iunit)
-      
+
     end do
 
     write(message(1),'(a)') 'Total Angular Momentum L [dimensionless]'
@@ -618,10 +618,10 @@ contains
       SAFE_DEALLOCATE_A(lang)
     end if
 #endif
-    
+
     SAFE_DEALLOCATE_A(ang)
     SAFE_DEALLOCATE_A(ang2)
-    
+
     POP_SUB(output_me_out_ang_momentum)
   end subroutine output_me_out_ang_momentum
 

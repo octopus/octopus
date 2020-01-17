@@ -100,10 +100,10 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     if (young_used (idiagram_combo) > 0) cycle
 
     call X(modelmb_sym_state_1diag)(gr, &
-       modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
-       dg_combo_iy(:, idiagram_combo), &
-       antisymwf, sym_ok_alltypes, norm)
-   
+      modelmbparticles, dg_combo_ndown(:, idiagram_combo), &
+      dg_combo_iy(:, idiagram_combo), &
+      antisymwf, sym_ok_alltypes, norm)
+
     ! test the overall symmetrization (no 0.0 norms for present combination of Young diagrams)
     ! check if all types of particles have been properly symmetrized
     if (sum(sym_ok_alltypes) == modelmbparticles%ntype_of_particle .and. abs(norm) > 1.e-6) then
@@ -147,8 +147,8 @@ end subroutine X(modelmb_sym_state)
 ! ---------------------------------------------------------
 !> project out states for a single combination of Young diagrams (1 diagram for each particle type)
 subroutine X(modelmb_sym_state_1diag)(gr, &
-           modelmbparticles, nspindown_in, iyoung_in, &
-           antisymwf, sym_ok_alltypes, norm)
+  modelmbparticles, nspindown_in, iyoung_in, &
+  antisymwf, sym_ok_alltypes, norm)
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   type(grid_t),             intent(in)    :: gr
   integer,                  intent(in)    :: nspindown_in(:) !< (1:modelmbparticles%ntype_of_particle)
@@ -208,7 +208,7 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
     if (modelmbparticles%bosonfermion(ikeeppart) /= 1) then ! 1 = fermion
       sym_ok_alltypes(itype) = 1
       POP_SUB(X(modelmb_sym_state_1diag))
-      return 
+      return
     end if
 
     npptype = modelmbparticles%nparticles_per_type(itype)
@@ -228,7 +228,7 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
 
     ! generate all Young diagrams, decorated, for this distribution of up
     ! and downs
-    ! we will only use the diagram indexed iyoung_in(itype) - this is necessary for several particle types : 
+    ! we will only use the diagram indexed iyoung_in(itype) - this is necessary for several particle types :
     ! we need 1 diagram per type.
     call young_init (young, nspinup, nspindown_in(itype))
 
@@ -240,17 +240,17 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
 
     ! symmetrize pairs of up/down spins in the YD
     call X(modelmb_sym_updown) (ndimmb, npptype, &
-           ofst, nspindown_in(itype), p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
+      ofst, nspindown_in(itype), p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
 
     SAFE_DEALLOCATE_A(p_of_type_up)
     SAFE_DEALLOCATE_A(p_of_type_down)
 
     ! antisymmetrize up spins amongst themselves
     call X(modelmb_antisym_1spin) (nspinup,             perms_up, ndimmb, npptype, ofst, &
-           young%young_up(:,iyoung_in(itype)), gr, normalizer, antisymwf)
+      young%young_up(:,iyoung_in(itype)), gr, normalizer, antisymwf)
     ! antisymmetrize down spins amongst themselves
     call X(modelmb_antisym_1spin) (nspindown_in(itype), perms_down, ndimmb, npptype, ofst, &
-           young%young_down(:,iyoung_in(itype)), gr, normalizer, antisymwf)
+      young%young_down(:,iyoung_in(itype)), gr, normalizer, antisymwf)
 
     call permutations_end(perms_up)
     call permutations_end(perms_down)
@@ -277,7 +277,7 @@ end subroutine X(modelmb_sym_state_1diag)
 
 !> input 1 wave function, and symmetrize wrt spin down labeled particles, according to the given young diagrams
 subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
-           ofst, ndown, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
+  ofst, ndown, p_of_type_up, p_of_type_down, gr, normalizer, antisymwf)
   integer, intent(in) :: ndimmb
   integer, intent(in) :: npptype
   integer, intent(in) :: ndown
@@ -313,15 +313,15 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
     do ip = 1, gr%mesh%np_global
       ! get present position
       call index_to_coords(gr%mesh%idx, ip, ix)
-  
+
       ! invert coordinates of ipart1 and ipart2
       ixp = ix
       ! permutate the particles ipart1 and its spin up partner
       ixp (ofst(ipart1)+1:ofst(ipart1)+ndimmb) = &
-          ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb)
+        ix (ofst(ipart2)+1:ofst(ipart2)+ndimmb)
       ixp (ofst(ipart2)+1:ofst(ipart2)+ndimmb) = &
-          ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
-      
+        ix (ofst(ipart1)+1:ofst(ipart1)+ndimmb)
+
       ! get position of exchanged point
       ipp = index_from_coords(gr%mesh%idx, ixp)
       ASSERT (ipp <= gr%mesh%np_global)
@@ -342,7 +342,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
 
   end do ! idown
 
-  if (debug_antisym) then 
+  if (debug_antisym) then
     if (gr%mesh%parallel_in_domains) then
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
       call X(mesh_batch_dotp_self)(gr%mesh, antisymwfbatch, wfdotp, reduce=.true.)
@@ -352,7 +352,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
       norm = TOFLOAT(sum(R_CONJ(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
     end if
     write (message(1), '(a,I7,a,E20.10)') 'norm of pair-symmetrized-state with ',&
-            ndown, ' spins down is ', norm
+      ndown, ' spins down is ', norm
     call messages_info(1)
   end if
   SAFE_DEALLOCATE_A(forward_map_exchange)
@@ -399,7 +399,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
       call index_to_coords(gr%mesh%idx, ip, ix)
       ! initialize coordinates for all particles
       ixp = ix
-      ! permute the particles labeled spin up 
+      ! permute the particles labeled spin up
       do i1spin = 1, n1spin
         ! get image of ipart1 under permutation iperm1
         ipart1 = young_1spin(i1spin)
@@ -409,7 +409,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
       ! get position of exchanged point
       forward_map_exchange(ip) = index_from_coords(gr%mesh%idx, ixp)
     end do ! ip
-  
+
     if (gr%mesh%parallel_in_domains) then
       antisymwf_swap=antisymwf
       ! set up batch type for global exchange operation: 1 state, the loop over MB states is outside this routine
@@ -427,7 +427,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
   antisymwf = antisymwf_acc / TOFLOAT(perms_1spin%npermutations)
 
   ! the following could be removed for production
-  if (debug_antisym) then 
+  if (debug_antisym) then
     if (gr%mesh%parallel_in_domains) then
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
       call X(mesh_batch_dotp_self)(gr%mesh, antisymwfbatch, wfdotp, reduce=.true.)
@@ -437,7 +437,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
       norm = TOFLOAT(sum(R_CONJ(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
     end if
     write (message(1), '(a,I7,a,E20.10)') 'norm of 1spin-antisym+pairsym-state with ',&
-            n1spin, ' spins of present type is ', norm
+      n1spin, ' spins of present type is ', norm
     call messages_info(1)
   end if
   SAFE_DEALLOCATE_A(forward_map_exchange)

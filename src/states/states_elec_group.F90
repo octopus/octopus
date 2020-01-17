@@ -111,12 +111,12 @@ contains
     logical, optional,    intent(in)    :: copy_data
 
     integer :: qn_start, qn_end, ib, iqn
-    
+
     PUSH_SUB(states_elec_group_copy)
 
     call states_elec_group_null(group_out)
 
-    
+
     group_out%nblocks           = group_in%nblocks
     group_out%block_start       = group_in%block_start
     group_out%block_end         = group_in%block_end
@@ -126,8 +126,8 @@ contains
 
       ASSERT(associated(group_in%psib))
 
-      qn_start = d%kpt%start 
-      qn_end   = d%kpt%end 
+      qn_start = d%kpt%start
+      qn_end   = d%kpt%end
 
       SAFE_ALLOCATE(group_out%psib(1:group_out%nblocks, qn_start:qn_end))
 
@@ -136,19 +136,19 @@ contains
           call group_in%psib(ib, iqn)%copy_to(group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
         end do
       end do
-      
+
       call loct_pointer_copy(group_out%iblock, group_in%iblock)
       call loct_pointer_copy(group_out%block_range, group_in%block_range)
       call loct_pointer_copy(group_out%block_size, group_in%block_size)
       call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
       call loct_allocatable_copy(group_out%block_node, group_in%block_node)
       call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
-    
+
     end if
 
     POP_SUB(states_elec_group_copy)
   end subroutine states_elec_group_copy
-  
+
 end module states_elec_group_oct_m
 
 

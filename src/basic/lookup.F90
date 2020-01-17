@@ -34,14 +34,14 @@ module lookup_oct_m
     lookup_end,            &
     lookup_copy,           &
     lookup_get_list
-    
+
   type lookup_t
     private
     integer        :: nobjs
     integer        :: dim
     FLOAT, pointer :: pos(:, :)
   end type lookup_t
-  
+
 contains
 
   elemental subroutine lookup_nullify(this)
@@ -52,19 +52,19 @@ contains
     nullify(this%pos)
 
   end subroutine lookup_nullify
-  
+
   subroutine lookup_init(this, dim, nobjs, pos)
     type(lookup_t), intent(out) :: this
     integer,        intent(in)  :: dim
     integer,        intent(in)  :: nobjs
     FLOAT,          intent(in)  :: pos(:, :)
-    
+
     PUSH_SUB(lookup_init)
 
     this%nobjs = nobjs
     this%dim = dim
     SAFE_ALLOCATE(this%pos(1:this%dim, 1:this%nobjs))
-    
+
     this%pos(1:this%dim, 1:this%nobjs) = pos(1:this%dim, 1:this%nobjs)
 
     POP_SUB(lookup_init)
@@ -91,7 +91,7 @@ contains
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
     call loct_pointer_copy(cout%pos, cin%pos)
-   
+
     POP_SUB(lookup_copy)
   end subroutine lookup_copy
 
@@ -114,7 +114,7 @@ contains
       SAFE_ALLOCATE(list(1:this%nobjs, 1:npoint))
     end if
 
-    nlist(1:npoint) = 0    
+    nlist(1:npoint) = 0
 
     do ipoint = 1, npoint
       do ii = 1, this%nobjs
@@ -122,7 +122,7 @@ contains
         if(r2 < radius**2) then
           nlist(ipoint) = nlist(ipoint) + 1
 !This is a PGI pragma to force the optimization level of this file to -O0.
-!-O2 or below is needed for 10.5. -O1 or below is needed for 10.8.   
+!-O2 or below is needed for 10.5. -O1 or below is needed for 10.8.
 !The line after the pragma causes a segmentation fault otherwise.
 !pgi$r opt=0
           if(present(list)) list(nlist(ipoint), ipoint) = ii

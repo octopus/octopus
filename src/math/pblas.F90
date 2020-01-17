@@ -21,13 +21,13 @@
 module pblas_oct_m
   implicit none
 
-  private 
+  private
 
   public ::            &
     pblas_gemm,        &
     pblas_herk,        &
     pblas_trsm
-  
+
 
   !> Performs any one of the following combined matrix computations:
   !!
@@ -44,7 +44,7 @@ module pblas_oct_m
   !!  C := \alpha A^T B^T + \beta C
   !! \f]
   interface pblas_gemm
-    subroutine pdgemm ( transa, transb, m, n, k, alpha, & 
+    subroutine pdgemm ( transa, transb, m, n, k, alpha, &
       a, ia, ja, desca, b, ib, jb, descb, &
       beta, c, ic, jc, descc )
       implicit none
@@ -56,7 +56,7 @@ module pblas_oct_m
       integer          :: desca, descb, descc
     end subroutine pdgemm
 
-    subroutine pzgemm ( transa, transb, m, n, k, alpha, & 
+    subroutine pzgemm ( transa, transb, m, n, k, alpha, &
       a, ia, ja, desca, b, ib, jb, descb, &
       beta, c, ic, jc, descc )
       implicit none
@@ -68,7 +68,7 @@ module pblas_oct_m
       integer          :: desca, descb, descc
     end subroutine pzgemm
   end interface
-  
+
   !>  Performs one of the symmetric rank k operations
   !!
   !! \f[
@@ -91,7 +91,7 @@ module pblas_oct_m
       integer,      intent(in)    :: n
       integer,      intent(in)    :: k
       real(8),      intent(in)    :: alpha
-      real(8),      intent(in)    :: a    
+      real(8),      intent(in)    :: a
       integer,      intent(in)    :: ia
       integer,      intent(in)    :: ja
       integer,      intent(in)    :: desca
@@ -109,7 +109,7 @@ module pblas_oct_m
       integer,      intent(in)    :: n
       integer,      intent(in)    :: k
       complex(8),   intent(in)    :: alpha
-      complex(8),   intent(in)    :: a    
+      complex(8),   intent(in)    :: a
       integer,      intent(in)    :: ia
       integer,      intent(in)    :: ja
       integer,      intent(in)    :: desca
@@ -119,15 +119,15 @@ module pblas_oct_m
       integer,      intent(in)    :: jc
       integer,      intent(in)    :: descc
     end subroutine pzherk
- 
+
   end interface pblas_herk
-  
+
   !> Solves one of the matrix equations
   !!
   !! \f[
-  !!     op( A )X = \alpha B, 
+  !!     op( A )X = \alpha B,
   !! \f]
-  !! or 
+  !! or
   !! \f[
   !! X op( A ) = \alpha B,
   !! \f]

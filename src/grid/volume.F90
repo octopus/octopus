@@ -32,11 +32,11 @@ module volume_oct_m
 
   private
   public :: &
-       volume_t,                &
-       volume_init,             &
-       volume_end,              &
-       volume_read_from_block,  &
-       volume_in_volume
+    volume_t,                &
+    volume_init,             &
+    volume_end,              &
+    volume_read_from_block,  &
+    volume_in_volume
 
   type volume_t
     private
@@ -73,7 +73,7 @@ contains
 
     !%Variable Volume
     !%Type block
-    !%Default 
+    !%Default
     !%Section Utilities::
     !%Description
     !% Describes a volume in space defined through the addition and substraction of
@@ -82,7 +82,7 @@ contains
     !%Option vol_sphere 10001
     !%
     !% <tt>%Volume
-    !% <br>&nbsp;&nbsp; "+"/"-" | vol_sphere | center_x | center_y | center_z | radius 
+    !% <br>&nbsp;&nbsp; "+"/"-" | vol_sphere | center_x | center_y | center_z | radius
     !% <br>%</tt>
     !%Option vol_slab 10002
     !%

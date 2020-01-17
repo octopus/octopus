@@ -41,15 +41,15 @@ module maxwell_function_oct_m
   implicit none
 
   public :: mxf_t,                       &
-            mxf_init,                    &
-            mxf_init_const_wave,         &
-            mxf_init_const_phase,        &
-            mxf_init_gaussian_wave,      &
-            mxf_init_cosinoidal_wave,    &
-            mxf_init_fromexpr,           &
-            mxf,                         &
-            mxf_read,                    &
-            mxf_is_empty
+    mxf_init,                    &
+    mxf_init_const_wave,         &
+    mxf_init_const_phase,        &
+    mxf_init_gaussian_wave,      &
+    mxf_init_cosinoidal_wave,    &
+    mxf_init_fromexpr,           &
+    mxf,                         &
+    mxf_read,                    &
+    mxf_is_empty
 
   integer, public, parameter ::  &
     MXF_EMPTY            =  10001,  &
@@ -128,7 +128,7 @@ contains
     !%Option mxf_const_phase 10004
     !%
     !% <tt>%MaxwellFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | mxf_const_phase | kx | ky | kz | x0 | y0 | z0  
+    !% <br>&nbsp;&nbsp; "function-name" | mxf_const_phase | kx | ky | kz | x0 | y0 | z0
     !% <br>%</tt>
     !%
     !% The function is a constant phase of <math> f(x,y,z) = a0 * (kx*x0 + ky*y0 + kz*z0)
@@ -138,11 +138,11 @@ contains
     !% <tt>%MaxwellFunctions
     !% <br>&nbsp;&nbsp; "function-name" | mxf_gaussian_wave | kx | ky | kz | x0 | y0 | z0 | width
     !% <br>%</tt>
-    !% 
+    !%
     !% The function is a Gaussian, <math> f(x,y,z) = a0 * \exp( -( kx*(x-x0) + ky*(y-y0) + kz*(z-z0) )^2 / (2 width^2) ) </math>
     !%
     !%Option mxf_cosinoidal_wave 10006
-    !% 
+    !%
     !% <tt>%MaxwellFunctions
     !% <br>&nbsp;&nbsp; "function-name" | mxf_cosinoidal_wave | kx | ky | kz | x0 | y0 | z0 | width
     !% <br>%</tt>
@@ -154,17 +154,17 @@ contains
     !%Option mxf_logistic_wave 10007
     !%
     !% <tt>%MaxwellFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | mxf_logistic_wave | kx | ky | kz | x0 | y0 | z0 | gr | width 
+    !% <br>&nbsp;&nbsp; "function-name" | mxf_logistic_wave | kx | ky | kz | x0 | y0 | z0 | gr | width
     !% <br>%</tt>
-    !% 
+    !%
     !% The function is a logistic function, <math> f(x,y,z) = a0 * 1/(1+exp(gr*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))+width/2))) * 1/(1+exp(-gr*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))-width/2)))  </math>
     !%
     !%Option mxf_trapezoidal_wave 10008
     !%
     !% <tt>%MaxwellFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | mxf_trapezoidal_wave | kx | ky | kz | x0 | y0 | z0 | gr | width 
+    !% <br>&nbsp;&nbsp; "function-name" | mxf_trapezoidal_wave | kx | ky | kz | x0 | y0 | z0 | gr | width
     !% <br>%</tt>
-    !% 
+    !%
     !% The function is a logistic function, <math> f(x,y,z) = a0 * ( ( 1-gr*(k*(r-r0)-width/2)*Theta(k*(r-r0)-width/2) ) * Theta(-(k*(r-r0)+width/2+1/gr))
     !%                                                             + (-1+gr*(k*(r-r0)+width/2)*Theta(k*(r-r0)+width/2) ) * Theta(-(k*(r-r0)-width/2+1/gr)) </math>
     !%
@@ -174,8 +174,8 @@ contains
     !% <br>&nbsp;&nbsp; "function-name" | mxf_from_expr | "expression"
     !% <br>%</tt>
     !%
-    !% The temporal shape of the field is given as an expression (e.g., <tt>cos(2.0*x-3*y+4*z)</tt>. The 
-    !% letter <i>x</i>, <i>y</i>, <i>z</i> means spatial coordinates, obviously. 
+    !% The temporal shape of the field is given as an expression (e.g., <tt>cos(2.0*x-3*y+4*z)</tt>. The
+    !% letter <i>x</i>, <i>y</i>, <i>z</i> means spatial coordinates, obviously.
     !% The expression is used to construct the function <i>f</i>
     !% that defines the field.
     !%End
@@ -250,12 +250,12 @@ contains
           call parse_block_float(blk, i-1, 8, gr, units_inp%length)
           call parse_block_float(blk, i-1, 9, width, units_inp%length)
           call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
-        !case(MXF_BESSEL_WAVE)
-        !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
-        !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
-        !  call parse_block_integer(blk, i-1, 4, order, unit_one)
-        !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
-        !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
+          !case(MXF_BESSEL_WAVE)
+          !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
+          !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
+          !  call parse_block_integer(blk, i-1, 4, order, unit_one)
+          !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
+          !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
         case (MXF_FROM_EXPR)
           call parse_block_string(blk, i-1, 2, function_expression)
           call mxf_init_fromexpr(f, trim(function_expression))
@@ -383,7 +383,7 @@ contains
     POP_SUB(mxf_init_cosinoidal_wave)
   end subroutine mxf_init_cosinoidal_wave
   !------------------------------------------------------------
-    
+
 
   !------------------------------------------------------------
   subroutine mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
@@ -463,7 +463,7 @@ contains
     f%expression = trim(expression)
     nullify(f%val)
     nullify(f%valww)
-    
+
     POP_SUB(mxf_init_fromexpr)
   end subroutine mxf_init_fromexpr
   !------------------------------------------------------------
@@ -485,7 +485,7 @@ contains
 
     case (MXF_CONST_PHASE)
 
-      y = f%a0 * sum(f%k_vector(:)*(x(:) - f%r0(:))) 
+      y = f%a0 * sum(f%k_vector(:)*(x(:) - f%r0(:)))
 
     case (MXF_GAUSSIAN_WAVE)
 
@@ -504,7 +504,7 @@ contains
     case (MXF_LOGISTIC_WAVE)
 
       r = M_ONE/(M_ONE + exp(f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO))) &
-          + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO))) - M_ONE
+        + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO))) - M_ONE
       y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
     case (MXF_TRAPEZOIDAL_WAVE)
@@ -525,11 +525,11 @@ contains
       end if
       y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
 
-   ! case (MXF_BESSEL_WAVE)
+      ! case (MXF_BESSEL_WAVE)
 
-   !   rad = sqrt(x(1)**2 + x(2)**2)
-   !   phi = atan2(x(2), x(1))
-   !   r   = loct_bessel(order, f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3) + order*phi))
+      !   rad = sqrt(x(1)**2 + x(2)**2)
+      !   phi = atan2(x(2), x(1))
+      !   r   = loct_bessel(order, f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3) + order*phi))
 
     case default
 

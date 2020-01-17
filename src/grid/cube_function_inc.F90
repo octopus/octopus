@@ -29,7 +29,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
   logical, optional,     intent(in)    :: force_alloc
 
   logical :: allocated
-  
+
   PUSH_SUB(X(cube_function_alloc_rs))
 
   ASSERT(.not.associated(cf%X(rs)))
@@ -43,7 +43,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
     case(FFTLIB_PFFT)
 
       ASSERT(associated(cube%fft))
-      if(.not. cf%forced_alloc) then  
+      if(.not. cf%forced_alloc) then
         allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
@@ -77,24 +77,24 @@ subroutine X(cube_function_free_rs)(cube, cf)
   deallocated = .false.
 
   if(associated(cube%fft)) then
-     select case(cube%fft%library)
-     case(FFTLIB_PFFT)
-        if(.not. cf%forced_alloc) then
-           deallocated = .true.
-           nullify(cf%X(rs))
-        end if
-     case(FFTLIB_ACCEL)
-        if(cf%in_device_memory) then
-           deallocated = .true.
-           ASSERT(cf%in_device_memory)
-           call accel_release_buffer(cf%real_space_buffer)
-           cf%in_device_memory = .false.
-        end if
-     end select
+    select case(cube%fft%library)
+    case(FFTLIB_PFFT)
+      if(.not. cf%forced_alloc) then
+        deallocated = .true.
+        nullify(cf%X(rs))
+      end if
+    case(FFTLIB_ACCEL)
+      if(cf%in_device_memory) then
+        deallocated = .true.
+        ASSERT(cf%in_device_memory)
+        call accel_release_buffer(cf%real_space_buffer)
+        cf%in_device_memory = .false.
+      end if
+    end select
   end if
 
   if(.not. deallocated) then
-     SAFE_DEALLOCATE_P(cf%X(rs))
+    SAFE_DEALLOCATE_P(cf%X(rs))
   end if
 
   POP_SUB(X(cube_function_free_rs))
@@ -113,7 +113,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   R_TYPE, allocatable :: cf_tmp(:)
   type(profile_t), save :: prof_allgather
 #endif
-  
+
   PUSH_SUB(X(cube_function_allgather))
 
 #ifdef HAVE_MPI
@@ -121,16 +121,16 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
 
   if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &
     (cube_getFFTLibrary(cube) == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
-    
+
     SAFE_ALLOCATE(cf_tmp(1:cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)))
     call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
     ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
     ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
-    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
+    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the
     ! Fortran compiler should do a temporary copy.
     call MPI_Allgatherv ( cf_local, cube%np_local(cube%mpi_grp%rank+1), R_MPITYPE, &
-         cf_tmp, cube%np_local, cube%xlocal - 1, R_MPITYPE, &
-         cube%mpi_grp%comm, mpi_err)
+      cf_tmp, cube%np_local, cube%xlocal - 1, R_MPITYPE, &
+      cube%mpi_grp%comm, mpi_err)
     call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
     if(optional_default(gatherfs,.false.)) then
@@ -151,16 +151,16 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   else
     order_ = (/1,2,3/)
     if(present(order)) order_ = order
-  
+
     SAFE_ALLOCATE(cf_tmp(1:cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3)))
     call mpi_debug_in(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
     ! Warning: in the next line we have to pass the full cf_local array, not just the first element.
     ! This is because cf_local might be a pointer to a subarray when using PFFT, such that
-    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the 
+    ! memory will not be contiguous (see cube_function_alloc_rs). In that case the
     ! Fortran compiler should do a temporary copy.
     call MPI_Allgatherv ( cf_local, cube%np_local_fs(cube%mpi_grp%rank+1), R_MPITYPE, &
-         cf_tmp, cube%np_local_fs, cube%xlocal_fs - 1, R_MPITYPE, &
-         cube%mpi_grp%comm, mpi_err)
+      cf_tmp, cube%np_local_fs, cube%xlocal_fs - 1, R_MPITYPE, &
+      cube%mpi_grp%comm, mpi_err)
     call mpi_debug_out(cube%mpi_grp%comm, C_MPI_ALLGATHERV)
 
     do index = 1, cube%fs_n_global(1)*cube%fs_n_global(2)*cube%fs_n_global(3)
@@ -168,7 +168,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
       iy = cube%local_fs(index, order_(2))
       iz = cube%local_fs(index, order_(3))
       cf(ix, iy, iz) = cf_tmp(index)
-    end do    
+    end do
 
   end if
 
@@ -192,7 +192,7 @@ end subroutine X(cube_function_allgather)
 
 subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   type(mesh_t),          intent(in)    :: mesh
-  R_TYPE,  target,       intent(in)    :: mf(:) !< function defined on the mesh. Can be 
+  R_TYPE,  target,       intent(in)    :: mf(:) !< function defined on the mesh. Can be
   !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
@@ -252,7 +252,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
     call accel_write_buffer(mf_buffer, mesh%np_global, gmf)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(mesh_to_cube)))
-    
+
     call accel_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
     call accel_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
     call accel_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
@@ -287,7 +287,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   type(cube_t),          intent(in)  :: cube
   type(cube_function_t), intent(in)  :: cf
   type(mesh_t),          intent(in)  :: mesh
-  R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the mesh. Can be 
+  R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the mesh. Can be
   !< mf(mesh%np) or mf(mesh%np_global), depending if it is a local or global function
   logical, optional,     intent(in)  :: local  !< If .true. the mf array is a local array. Considered .false. if not present.
 
@@ -339,7 +339,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
     call accel_create_buffer(mf_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, mesh%np_global)
 
     call accel_kernel_start_call(kernel, 'mesh_to_cube.cl', TOSTRING(X(cube_to_mesh)))
-   
+
     call accel_set_kernel_arg(kernel, 0, mesh%cube_map%nmap)
     call accel_set_kernel_arg(kernel, 1, cube%fft%stride_rs(1))
     call accel_set_kernel_arg(kernel, 2, cube%fft%stride_rs(2))
@@ -364,14 +364,14 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   if(local_) then
 #ifdef HAVE_MPI
     first = mesh%vp%xlocal
-    last = mesh%vp%np_local   
+    last = mesh%vp%np_local
     do ii = 1, last
       mf(ii) = gmf(mesh%vp%local(ii+first-1))
     end do
 #endif
     SAFE_DEALLOCATE_P(gmf)
   end if
-  
+
   call profiling_count_transfers(mesh%np_global, mf(1))
 
   call profiling_out(prof_c2m)
@@ -433,7 +433,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
     max_x = cube%rs_istart(1) + cube%rs_n(1)
     max_y = cube%rs_istart(2) + cube%rs_n(2)
     max_z = cube%rs_istart(3) + cube%rs_n(3)
-  
+
     ! Initialize to zero the input matrix
     forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
 
@@ -441,7 +441,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-    
+
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       if (ix >= min_x .and. ix < max_x) then
         iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -511,7 +511,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
     SAFE_ALLOCATE(gcf(1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
     if (mpi_world%size > 1) then
 #ifdef HAVE_MPI
-    call X(cube_function_allgather)(cube, gcf, cf%X(rs))
+      call X(cube_function_allgather)(cube, gcf, cf%X(rs))
 #endif
     else
       gcf = cf%X(rs)

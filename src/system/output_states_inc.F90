@@ -63,7 +63,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
       call io_function_output_vector(outp%how, dir, fname, namespace, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
         geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
     end do
-    
+
     SAFE_DEALLOCATE_A(polarization)
   end if
 

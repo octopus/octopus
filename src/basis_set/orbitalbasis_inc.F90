@@ -1,4 +1,4 @@
-!! Copyright (C) 2018 N. Tancogne-Dejean 
+!! Copyright (C) 2018 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   type(mesh_t),              intent(in)       :: mesh
   type(distributed_t),       intent(in)       :: kpt
   integer,                   intent(in)       :: ndim
-  logical,                   intent(in)       :: skip_s_orb 
+  logical,                   intent(in)       :: skip_s_orb
   logical,                   intent(in)       :: use_all_orb
   logical, optional,         intent(in)       :: verbose
 
@@ -52,7 +52,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
-  
+
       !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
       hasjdependence = .false.
       call species_iwf_j(geo%atom(ia)%species, 1, jj)
@@ -73,12 +73,12 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   else
     do ia = 1, geo%natoms
       if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
-           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+        .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
       work = 0
       n_s_orb = 0
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm) 
+        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
         call species_iwf_j(geo%atom(ia)%species, iorb, jj)
         if(ll == 0) n_s_orb = n_s_orb + 1
         work = max(work, ii)
@@ -86,7 +86,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         if( hubbardj /= 0 .and. abs(jj) > M_EPSILON ) then
           write(message(1),'(a,i1,a)') 'Atom ', ia, ' has no j-dependent atomic wavefunction.'
           write(message(2),'(a)') 'This is not compatible with the hubbard_j option.'
-          call messages_fatal(2)  
+          call messages_fatal(2)
         end if
       end do
       if(skip_s_orb) work = work-n_s_orb
@@ -114,7 +114,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   iorbset = 0
   do ia = 1, geo%natoms
     if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
-           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+      .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
 
     hubbardj = species_hubbard_j(geo%atom(ia)%species)
     !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
@@ -124,14 +124,14 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     if (debug%info .and. hasjdependence .and. verbose_) then
       write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
       call messages_info(1)
-    end if 
+    end if
 
     if(.not. use_all_orb) then
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
       !In this case we only have one orbital or we only want one
       if(.not. hasjdependence .or. hubbardj /= M_ZERO &
-            .or. hubbardl == 0 ) then
+        .or. hubbardl == 0 ) then
         iorbset = iorbset + 1
         os => this%orbsets(iorbset)
         norb = 0
@@ -144,7 +144,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
             os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                          this%truncation, this%threshold)
+              this%truncation, this%threshold)
           end if
         end do
         if( hasjdependence ) then
@@ -174,7 +174,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
             os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                        this%truncation, this%threshold)
+              this%truncation, this%threshold)
           end if
         end do
         os%ndim = ndim
@@ -199,7 +199,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
             call orbitalset_set_jln(os, jj, hubbardl, nn)
             os%ii = ii
             os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                        this%truncation, this%threshold)
+              this%truncation, this%threshold)
           end if
         end do
         os%ndim = ndim
@@ -218,7 +218,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
         if(ll == 0) n_s_orb = n_s_orb + 1
-        work = max(work, ii)          
+        work = max(work, ii)
       end do
       offset = 0
       if(skip_s_orb) then
@@ -240,7 +240,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
             call orbitalset_set_jln(os, jj, ll, nn)
             os%ii = ii
             os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                               this%truncation, this%threshold)
+              this%truncation, this%threshold)
           end if
         end do
         os%norbs = work2
@@ -256,7 +256,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     end if
   end do
 
-  ! We have to normalize the orbitals, 
+  ! We have to normalize the orbitals,
   ! in case the orbitals that comes out of the pseudo are not properly normalised
   do iorbset = 1, this%norbsets
     os => this%orbsets(iorbset)
@@ -274,7 +274,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
       else
         if(verbose_) then
           write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
-                           ' norm= ',  norm
+            ' norm= ',  norm
           call messages_info(1)
         end if
       end if
@@ -289,40 +289,40 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
 
     nullify(os%phase)
     ! In case of complex wavefunction, we allocate the array for the phase correction
-  #ifdef R_TCOMPLEX
+#ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
     os%phase(:,:) = M_ZERO
-    if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
+    if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
       SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
       SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
       os%eorb_submesh(:,:,:,:) = M_ZERO
     end if
-  #endif
+#endif
 
     ! We need to know the maximum number of points in order to allocate a temporary array
     ! to apply the phase in lda_u_apply
     if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
 
-  end do  
+  end do
 
   do ios = 1, this%norbsets
     if(this%orbsets(ios)%sphere%np == -1) then
-       write(message(1),'(a,a4,i1,a1,a)')    'Internal error: the orbital ',trim(species_label(this%orbsets(ios)%spec)), &
-                      this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ' has no grid point.'
-       write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
-       call messages_fatal(2)
+      write(message(1),'(a,a4,i1,a1,a)')    'Internal error: the orbital ',trim(species_label(this%orbsets(ios)%spec)), &
+        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ' has no grid point.'
+      write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
+      call messages_fatal(2)
     end if
     if(verbose_) then
       write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
-                         this%orbsets(ios)%Ueff   , ' Ha.'
+        this%orbsets(ios)%Ueff   , ' Ha.'
       write(message(2),'(a,i2,a)')    'It contains ', this%orbsets(ios)%norbs, ' orbitals.'
       write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
-                        ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
-       call messages_info(3)
+        ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
+      call messages_info(3)
     end if
-  end do 
+  end do
 
   this%size = 0
   do ios = 1, this%norbsets
@@ -391,7 +391,7 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
 
   this%maxnorbs = nstates
-  this%max_np = mesh%np 
+  this%max_np = mesh%np
 
   nullify(os%phase)
   ! In case of complex wavefunction, we allocate the array for the phase correction

@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-!> This module calculates the derivatives (gradients, Laplacians, etc.) 
+!> This module calculates the derivatives (gradients, Laplacians, etc.)
 !! of a function. Note that the function whose derivative is to be calculated
 !! *has* to be defined (1:mesh%np_part), while the (1:mesh%np) values of the derivative
 !! are calculated. This was made to simplify the parallel mode, and has to be
@@ -82,7 +82,7 @@ subroutine X(derivatives_batch_finish)(handle)
   if(derivatives_overlap(handle%der) .and. handle%der%mesh%parallel_in_domains .and. handle%ghost_update) then
 
     done = .true.
-    
+
     if(handle%factor_present) then
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, &
         ghost_update = .false., points = OP_INNER, factor = handle%factor)
@@ -98,7 +98,7 @@ subroutine X(derivatives_batch_finish)(handle)
     else
       call X(nl_operator_operate_batch)(handle%op, handle%ff, handle%opff, ghost_update = .false., points = OP_OUTER)
     end if
-    
+
   end if
 #endif
 
@@ -168,7 +168,7 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
 
   call batch_ff%end()
   call batch_op_ff%end()
-        
+
   POP_SUB(X(derivatives_perform))
 
 end subroutine X(derivatives_perform)
@@ -185,7 +185,7 @@ subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
   PUSH_SUB(X(derivatives_lapl))
 
   call X(derivatives_perform)(der%lapl, der, ff, op_ff, ghost_update, set_bc)
-        
+
   POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
 
@@ -200,7 +200,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
 
   integer :: idir,ip
   logical :: set_bc_, ghost_update_
-  
+
   PUSH_SUB(X(derivatives_grad))
   call profiling_in(gradient_prof, "GRADIENT")
 
@@ -208,7 +208,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
 
   set_bc_ = optional_default(set_bc, .true.)
   ghost_update_ = optional_default(ghost_update, .true.)
-    
+
   do idir = 1, der%dim
     call X(derivatives_perform) (der%grad(idir), der, ff, op_ff(:, idir), ghost_update_, set_bc_)
 
@@ -281,10 +281,10 @@ end subroutine X(derivatives_div)
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:,:)    !< ff(der%mesh%np_part, der%dim) 
+  R_TYPE,              intent(inout) :: ff(:,:)    !< ff(der%mesh%np_part, der%dim)
   R_TYPE,              intent(out)   :: op_ff(:,:)
-    !< if dim = 2, op_ff(der%mesh%np, der%dim)
-    !! if dim = 1, op_ff(der%mesh%np, 1)
+  !< if dim = 2, op_ff(der%mesh%np, der%dim)
+  !! if dim = 1, op_ff(der%mesh%np, 1)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
@@ -340,11 +340,11 @@ end subroutine X(derivatives_curl)
 
 subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_blocksize)
   type(derivatives_t), intent(in) :: this
-  type(namespace_t),   intent(in) :: namespace    
+  type(namespace_t),   intent(in) :: namespace
   integer,             intent(in) :: repetitions
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
-  
+
   R_TYPE, allocatable :: ff(:), opff(:, :)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist
@@ -362,13 +362,13 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 #ifdef R_TREAL
 #ifdef SINGLE_PRECISION
   type = 'real single'
-#else  
+#else
   type = 'real'
-#endif  
+#endif
 #else
 #ifdef SINGLE_PRECISION
   type = 'complex single'
-#else  
+#else
   type = 'complex'
 #endif
 #endif
@@ -389,10 +389,10 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 #endif
 
   blocksize = min_blocksize
-    
+
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
 
-  do 
+  do
 
     call batch_init(ffb, 1, blocksize)
     call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
@@ -437,7 +437,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 #ifdef R_TREAL
       blocksize*this%mesh%np*CNST(2.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
 #else
-      blocksize*this%mesh%np*CNST(4.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
+    blocksize*this%mesh%np*CNST(4.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
 #endif
 
     call messages_info(1)
@@ -452,7 +452,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 
-  forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np) 
+  forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np)
     opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))
   end forall
 

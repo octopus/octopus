@@ -17,134 +17,134 @@
 !!
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_init_groundstate(gr, namespace, tg, td, restart)
-    type(grid_t),      intent(in)    :: gr
-    type(namespace_t), intent(in)    :: namespace
-    type(target_t),    intent(inout) :: tg
-    type(td_t),        intent(in)    :: td
-    type(restart_t),   intent(in)    :: restart
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_init_groundstate(gr, namespace, tg, td, restart)
+  type(grid_t),      intent(in)    :: gr
+  type(namespace_t), intent(in)    :: namespace
+  type(target_t),    intent(inout) :: tg
+  type(td_t),        intent(in)    :: td
+  type(restart_t),   intent(in)    :: restart
 
-    integer :: ierr
+  integer :: ierr
 
-    PUSH_SUB(target_init_groundstate)
+  PUSH_SUB(target_init_groundstate)
 
-    message(1) =  'Info: Using Ground State for TargetOperator'
-    call messages_info(1)
+  message(1) =  'Info: Using Ground State for TargetOperator'
+  call messages_info(1)
 
-    call states_elec_load(restart, namespace, tg%st, gr, ierr)
-    if (ierr /= 0) then
-      message(1) = "Unable to read wavefunctions."
-      call messages_fatal(1)
-    end if
+  call states_elec_load(restart, namespace, tg%st, gr, ierr)
+  if (ierr /= 0) then
+    message(1) = "Unable to read wavefunctions."
+    call messages_fatal(1)
+  end if
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
-    tg%dt = td%dt
+  tg%move_ions = ion_dynamics_ions_move(td%ions)
+  tg%dt = td%dt
 
-    POP_SUB(target_init_groundstate)
-  end subroutine target_init_groundstate
-
-
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_end_groundstate()
-    PUSH_SUB(target_end_groundstate)
-
-    POP_SUB(target_end_groundstate)
-  end subroutine target_end_groundstate
+  POP_SUB(target_init_groundstate)
+end subroutine target_init_groundstate
 
 
-  ! ----------------------------------------------------------------------
-  subroutine target_output_groundstate(tg, namespace, gr, dir, geo, hm, outp)
-    type(target_t),      intent(in) :: tg
-    type(namespace_t),   intent(in) :: namespace
-    type(grid_t),        intent(in) :: gr
-    character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_elec_t), intent(in) :: hm
-    type(output_t),      intent(in) :: outp
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_end_groundstate()
+  PUSH_SUB(target_end_groundstate)
 
-    PUSH_SUB(target_output_groundstate)
-    
-    call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
-
-    POP_SUB(target_output_groundstate)
-  end subroutine target_output_groundstate
-  ! ----------------------------------------------------------------------
+  POP_SUB(target_end_groundstate)
+end subroutine target_end_groundstate
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  FLOAT function target_j1_groundstate(tg, gr, psi) result(j1)
-    type(target_t),      intent(in) :: tg
-    type(grid_t),        intent(in) :: gr
-    type(states_elec_t), intent(in) :: psi
+ ! ----------------------------------------------------------------------
+subroutine target_output_groundstate(tg, namespace, gr, dir, geo, hm, outp)
+  type(target_t),      intent(in) :: tg
+  type(namespace_t),   intent(in) :: namespace
+  type(grid_t),        intent(in) :: gr
+  character(len=*),    intent(in) :: dir
+  type(geometry_t),    intent(in) :: geo
+  type(hamiltonian_elec_t), intent(in) :: hm
+  type(output_t),      intent(in) :: outp
 
-    integer :: ist, ik
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :)
-    
-    PUSH_SUB(target_j1_groundstate)
+  PUSH_SUB(target_output_groundstate)
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    
-    do ik = 1, psi%d%nik
-      do ist = psi%st_start, psi%st_end
-        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
+  call io_mkdir(trim(dir), namespace)
+  call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
-      end do
+  POP_SUB(target_output_groundstate)
+end subroutine target_output_groundstate
+ ! ----------------------------------------------------------------------
+
+
+ ! ----------------------------------------------------------------------
+ !>
+FLOAT function target_j1_groundstate(tg, gr, psi) result(j1)
+  type(target_t),      intent(in) :: tg
+  type(grid_t),        intent(in) :: gr
+  type(states_elec_t), intent(in) :: psi
+
+  integer :: ist, ik
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :)
+
+  PUSH_SUB(target_j1_groundstate)
+
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+
+  do ik = 1, psi%d%nik
+    do ist = psi%st_start, psi%st_end
+      call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      j1 = j1 + psi%occ(ist, ik)*abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
+
     end do
+  end do
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    
-    POP_SUB(target_j1_groundstate)
-  end function target_j1_groundstate
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+
+  POP_SUB(target_j1_groundstate)
+end function target_j1_groundstate
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_chi_groundstate(tg, gr, psi_in, chi_out)
-    type(target_t),       intent(in)    :: tg
-    type(grid_t),         intent(in)    :: gr
-    type(states_elec_t),  intent(in)    :: psi_in
-    type(states_elec_t),  intent(inout) :: chi_out
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_chi_groundstate(tg, gr, psi_in, chi_out)
+  type(target_t),       intent(in)    :: tg
+  type(grid_t),         intent(in)    :: gr
+  type(states_elec_t),  intent(in)    :: psi_in
+  type(states_elec_t),  intent(inout) :: chi_out
 
-    integer :: ik, ist
-    CMPLX :: olap
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
-    
-    PUSH_SUB(target_chi_groundstate)
+  integer :: ik, ist
+  CMPLX :: olap
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
-    
-    do ik = 1, psi_in%d%nik
-      do ist = psi_in%st_start, psi_in%st_end
+  PUSH_SUB(target_chi_groundstate)
 
-        call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
-        zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
 
-        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+  do ik = 1, psi_in%d%nik
+    do ist = psi_in%st_start, psi_in%st_end
 
-      end do
+      call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
+      zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+
+      call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+
     end do
+  end do
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    SAFE_DEALLOCATE_A(zchi)
-    
-    POP_SUB(target_chi_groundstate)
-  end subroutine target_chi_groundstate
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+  SAFE_DEALLOCATE_A(zchi)
+
+  POP_SUB(target_chi_groundstate)
+end subroutine target_chi_groundstate
 
 
 !! Local Variables:

@@ -39,37 +39,37 @@ module linear_response_oct_m
   private
 
   public ::               &
-       lr_t,              &
-       lr_init,           &
-       lr_allocate,       &
-       lr_zero,           &
-       lr_copy,           &
-       dlr_orth_vector,   & 
-       zlr_orth_vector,   & 
-       dlr_build_dl_rho,  & 
-       zlr_build_dl_rho,  &
-       dlr_orth_response, &
-       zlr_orth_response, &
-       lr_alpha_j,        &
-       lr_dealloc,        &
-       lr_is_allocated,   &
-       dlr_swap_sigma,    &
-       zlr_swap_sigma,    &
-       dlr_dump_rho,      &
-       zlr_dump_rho,      &
-       dlr_load_rho,      &
-       zlr_load_rho
+    lr_t,              &
+    lr_init,           &
+    lr_allocate,       &
+    lr_zero,           &
+    lr_copy,           &
+    dlr_orth_vector,   &
+    zlr_orth_vector,   &
+    dlr_build_dl_rho,  &
+    zlr_build_dl_rho,  &
+    dlr_orth_response, &
+    zlr_orth_response, &
+    lr_alpha_j,        &
+    lr_dealloc,        &
+    lr_is_allocated,   &
+    dlr_swap_sigma,    &
+    zlr_swap_sigma,    &
+    dlr_dump_rho,      &
+    zlr_dump_rho,      &
+    dlr_load_rho,      &
+    zlr_load_rho
 
 
 
   type lr_t
     ! Components are public by default
     logical, private :: is_allocated, is_allocated_rho
-     
+
     !> the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     !< response of the density
     FLOAT, pointer :: ddl_psi(:,:,:,:) !< linear change of the real KS orbitals
-    
+
     !> and the complex version
     CMPLX, pointer :: zdl_rho(:,:)     !< response of the density
     CMPLX, pointer :: zdl_psi(:,:,:,:) !< linear change of the complex KS orbitals
@@ -80,7 +80,7 @@ module linear_response_oct_m
     FLOAT, pointer :: ddl_elf(:,:)    !< normalized ELF
     CMPLX, pointer :: zdl_de(:,:)     !< unnormalized ELF
     CMPLX, pointer :: zdl_elf(:,:)    !< normalized ELF
-    
+
   end type lr_t
 
 contains
@@ -124,7 +124,7 @@ contains
     end if
 
     lr%is_allocated = .true.
-    
+
     call lr_zero(lr, st)
 
     POP_SUB(lr_allocate)
@@ -212,7 +212,7 @@ contains
         do idim = 1, st%d%dim
           if(states_are_complex(st)) then
             call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))
-          else 
+          else
             call lalg_copy(mesh%np_part, src%ddl_psi(:, idim, ist, ik), dest%ddl_psi(:, idim, ist, ik))
           end if
         end do
@@ -226,7 +226,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function lr_is_allocated(this) 
+  logical function lr_is_allocated(this)
     type(lr_t), intent(in) :: this
 
     PUSH_SUB(lr_is_allocated)
@@ -238,7 +238,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function lr_alpha_j(st, jst, ik) 
+  FLOAT function lr_alpha_j(st, jst, ik)
     type(states_elec_t), intent(in) :: st
     integer,             intent(in) :: jst
     integer,             intent(in) :: ik

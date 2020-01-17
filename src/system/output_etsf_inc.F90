@@ -46,7 +46,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   type(etsf_dims) :: geometry_dims, density_dims, wfs_dims, pw_dims
   type(etsf_groups_flags) :: geometry_flags, density_flags, wfs_flags, pw_flags
 #endif
- 
+
   PUSH_SUB(output_etsf)
 
 #ifndef HAVE_ETSF_IO
@@ -59,7 +59,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
   call cube_init(zcube, gr%mesh%idx%ll, gr%sb, namespace, &
     fft_type=FFT_COMPLEX, dont_optimize = .true.)
   call cube_function_null(cf)
-  
+
 #ifdef HAVE_ETSF_IO
 
   ! Careful: only root processor in MPI should attempt to create or modify files.
@@ -132,7 +132,7 @@ subroutine output_etsf(outp, namespace, dir, st, gr, geo)
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
       if (.not. lstat) call output_etsf_error(error_data, namespace)
     end if
-    
+
     call dcube_function_free_rs(dcube, cf)
   end if
 
@@ -222,7 +222,7 @@ subroutine output_etsf_error(error_data, namespace)
   type(namespace_t),       intent(in) :: namespace
 
   PUSH_SUB(output_etsf_error)
-  
+
   call output_etsf_io_low_error_handle(error_data)
   message(1) = "ETSF_IO returned a fatal error. See message above."
   call messages_fatal(1, only_root_writes = .true., namespace=namespace)
@@ -237,7 +237,7 @@ subroutine output_etsf_geometry_dims(geo, sb, dims, flags)
   type(simul_box_t),       intent(in)    :: sb
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
-  
+
   PUSH_SUB(output_etsf_geometry_dims)
 
   flags%geometry = etsf_geometry_all - etsf_geometry_valence_charges - etsf_geometry_pseudo_types
@@ -322,7 +322,7 @@ subroutine output_etsf_geometry_write(geo, sb, ncid, namespace)
 
   call etsf_io_geometry_put(ncid, geometry, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data, namespace)
-  
+
   ! Free the geometry container
   SAFE_DEALLOCATE_P(geometry%primitive_vectors)
   SAFE_DEALLOCATE_P(geometry%reduced_symmetry_matrices)
@@ -343,7 +343,7 @@ subroutine output_etsf_kpoints_dims(sb, dims, flags)
   type(simul_box_t),       intent(in)    :: sb
   type(etsf_dims),         intent(inout) :: dims
   type(etsf_groups_flags), intent(inout) :: flags
-  
+
   PUSH_SUB(output_etsf_kpoints_dims)
 
   flags%kpoints = etsf_kpoints_red_coord_kpt + etsf_kpoints_kpoint_weights
@@ -359,7 +359,7 @@ subroutine output_etsf_kpoints_write(sb, ncid, namespace)
   type(simul_box_t),      intent(in)    :: sb
   integer,                intent(in)    :: ncid
   type(namespace_t),      intent(in)    :: namespace
-  
+
   type(etsf_kpoints), target :: kpoints
   integer  :: nkpoints, ikpoint
   type(etsf_io_low_error)  :: error_data
@@ -368,17 +368,17 @@ subroutine output_etsf_kpoints_write(sb, ncid, namespace)
   PUSH_SUB(output_etsf_kpoints_write)
 
   nkpoints = sb%kpoints%reduced%npoints
-  
+
   !Create the kpoints container
   SAFE_ALLOCATE(kpoints%reduced_coordinates_of_kpoints(1:3, 1:nkpoints))
   SAFE_ALLOCATE(kpoints%kpoint_weights(1:nkpoints))
-  
+
   do ikpoint = 1, nkpoints
     kpoints%reduced_coordinates_of_kpoints(1:3, ikpoint) = M_ZERO
     kpoints%reduced_coordinates_of_kpoints(1:sb%dim, ikpoint) = sb%kpoints%reduced%red_point(1:sb%dim, ikpoint)
     kpoints%kpoint_weights(ikpoint) = kpoints_get_weight(sb%kpoints, ikpoint)
   end do
-  
+
   call etsf_io_kpoints_put(ncid, kpoints, lstat, error_data = error_data)
   if (.not. lstat) call output_etsf_error(error_data, namespace)
 
@@ -399,7 +399,7 @@ subroutine output_etsf_electrons_dims(st, dims, flags)
 
   flags%electrons = etsf_electrons_eigenvalues + etsf_electrons_occupations + &
     etsf_electrons_number_of_electrons
-  
+
   !Set the dimensions
   dims%number_of_spins = 1
   if (st%d%ispin == SPIN_POLARIZED) dims%number_of_spins = 2
@@ -437,7 +437,7 @@ subroutine output_etsf_electrons_write(st, ncid, namespace)
 
   do ist = 1, st%nst
     do ik = 1, nkpoints
-      do ispin = 1, nspin 
+      do ispin = 1, nspin
         electrons%eigenvalues%data3D(ist, ik, ispin) = st%eigenval(ist, nspin*(ik-1) + ispin)
         electrons%occupations%data3D(ist, ik, ispin) = st%occ(ist, nspin*(ik-1) + ispin)
       end do
@@ -471,7 +471,7 @@ subroutine output_etsf_density_dims(st, cube, dims, flags)
   dims%number_of_grid_points_vector2 = cube%rs_n_global(2)
   dims%number_of_grid_points_vector3 = cube%rs_n_global(3)
   dims%real_or_complex_density = 1
-  
+
   POP_SUB(output_etsf_density_dims)
 end subroutine output_etsf_density_dims
 
@@ -627,7 +627,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid, namespace)
     call etsf_io_main_put(ncid, main, lstat, error_data = error_data)
     if (.not. lstat) call output_etsf_error(error_data, namespace)
   end if
-    
+
   SAFE_DEALLOCATE_A(local_wfs)
 
   POP_SUB(output_etsf_wfs_rsp_write)
@@ -659,7 +659,7 @@ subroutine output_etsf_basisdata_write(mesh, shell, ncid, namespace)
   type(etsf_io_low_error) :: error_data
   logical :: lstat
   integer :: ng
- 
+
   PUSH_SUB(output_etsf_basisdata_write)
 
   if((maxval(mesh%spacing(1:3)) - minval(mesh%spacing(1:3))) > CNST(1e-10)) then
@@ -761,7 +761,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid, namespace)
           ix = shell%coords(1, ig)
           iy = shell%coords(2, ig)
           iz = shell%coords(3, ig)
-          
+
           local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cf%fs(ix, iy, iz), 8)
           local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cf%fs(ix, iy, iz))
         end do
@@ -810,15 +810,15 @@ end subroutine output_etsf_wfs_pw_write
 !! SOURCE
 subroutine output_etsf_io_low_error_handle(error_data)
   type(etsf_io_low_error), intent(in) :: error_data
-  
+
   integer :: i
-  
+
   if(.not. mpi_grp_is_root(mpi_world)) return
 
   PUSH_SUB(output_etsf_io_low_error_handle)
 
   ! Error handling
-  write(stderr,*) 
+  write(stderr,*)
   write(stderr,*) "    ***"
   write(stderr,*) "    *** ETSF I/O ERROR"
   write(stderr,*) "    ***"
@@ -842,7 +842,7 @@ subroutine output_etsf_io_low_error_handle(error_data)
     write(stderr,*) "    *** Error id           : ", error_data%error_id
   end if
   write(stderr,*) "    ***"
-  write(stderr,*) 
+  write(stderr,*)
 
   POP_SUB(output_etsf_io_low_error_handle)
 

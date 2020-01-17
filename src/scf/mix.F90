@@ -103,7 +103,7 @@ module mix_oct_m
     CMPLX :: zgamma             !< which is stored here for possible auxiliarry mixfields
 
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
-                                !< include the iterations done in previous calculations.
+    !< include the iterations done in previous calculations.
 
     integer :: ns               !< number of steps used to extrapolate the new vector
 
@@ -122,24 +122,24 @@ module mix_oct_m
     type(nl_operator_t)          :: preconditioner
 
     FLOAT :: residual_coeff
-    
+
   end type mix_t
 
   interface mixfield_set_vin
     module procedure dmixfield_set_vin2, dmixfield_set_vin3, &
-                     zmixfield_set_vin2, zmixfield_set_vin3, &
-                     ddmixfield_set_vin2
+      zmixfield_set_vin2, zmixfield_set_vin3, &
+      ddmixfield_set_vin2
   end interface mixfield_set_vin
- 
+
   interface mixfield_set_vout
     module procedure dmixfield_set_vout2, dmixfield_set_vout3, &
-                     zmixfield_set_vout2, zmixfield_set_vout3, &
-                     ddmixfield_set_vout2
+      zmixfield_set_vout2, zmixfield_set_vout3, &
+      ddmixfield_set_vout2
   end interface mixfield_set_vout
 
   interface mixfield_get_vnew
     module procedure dmixfield_get_vnew, ddmixfield_get_vnew, &
-                     zmixfield_get_vnew
+      zmixfield_get_vnew
   end interface mixfield_get_vnew
 
 
@@ -165,16 +165,16 @@ contains
 
     def = OPTION__MIXINGSCHEME__BROYDEN
     if(present(def_)) def = def_
-    if(present(func_type_)) then 
+    if(present(func_type_)) then
       func_type = func_type_
-    else 
+    else
       func_type = TYPE_FLOAT
     end if
     prefix = ""
     if(present(prefix_)) prefix = prefix_
 
     call messages_obsolete_variable(namespace, 'TypeOfMixing', 'MixingScheme')
-    
+
     !%Variable MixingScheme
     !%Type integer
     !%Default broyden
@@ -186,7 +186,7 @@ contains
     !%Option linear 0
     !% Simple linear mixing.
     !%Option broyden 2
-    !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
+    !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965);
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
     !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
     !% with a complex dot product.
@@ -216,20 +216,20 @@ contains
     !%End
     call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
-    
+
     !%Variable Mixing
     !%Type float
     !%Default 0.3
     !%Section SCF::Mixing
     !%Description
-    !% The linear, Broyden and DIIS scheme depend on a "mixing parameter", set by this variable. 
+    !% The linear, Broyden and DIIS scheme depend on a "mixing parameter", set by this variable.
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
     call parse_variable(namespace, trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
     if(smix%coeff <= M_ZERO .or. smix%coeff > M_ONE) then
       call messages_input_error('Mixing', 'Value should be positive and smaller than one.')
     end if
-    
+
     !%Variable MixingResidual
     !%Type float
     !%Default 0.05
@@ -242,7 +242,7 @@ contains
     if(smix%residual_coeff <= M_ZERO .or. smix%residual_coeff > M_ONE) then
       call messages_input_error('MixingResidual', 'Value should be positive and smaller than one.')
     end if
-    
+
     !%Variable MixNumberSteps
     !%Type integer
     !%Default 3
@@ -258,7 +258,7 @@ contains
     else
       smix%ns = 0
     end if
-    
+
     !%Variable MixInterval
     !%Type integer
     !%Default 1
@@ -271,12 +271,12 @@ contains
     !%End
     call parse_variable(namespace, trim(prefix)//'MixInterval', 1, smix%interval)
     if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
-    
+
     smix%iter = 0
 
     smix%nauxmixfield = 0
     do ii=1,MAX_AUXMIXFIELD
-      nullify(smix%auxmixfield(ii)%p)   
+      nullify(smix%auxmixfield(ii)%p)
     end do
 
 
@@ -299,7 +299,7 @@ contains
 
       integer :: ns, maxp, ip, is
       FLOAT, parameter :: weight = CNST(50.0)
-      
+
       ! This the mixing preconditioner from GPAW:
       !
       !   https://wiki.fysik.dtu.dk/gpaw/documentation/densitymix/densitymix.html
@@ -307,11 +307,11 @@ contains
 
       ASSERT(.not. der%mesh%use_curvilinear)
       ASSERT(der%mesh%sb%dim == 3)
-      
+
       call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
       call stencil_cube_get_lapl(smix%preconditioner%stencil, der%mesh%sb%dim, 1)
       call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
-      
+
       ns = smix%preconditioner%stencil%size
 
       if (smix%preconditioner%const_w) then
@@ -338,7 +338,7 @@ contains
 
         end do
       end do
-      
+
       call nl_operator_update_weights(smix%preconditioner)
 
     end subroutine init_preconditioner
@@ -349,7 +349,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mix_clear(smix)
     type(mix_t),             intent(inout) :: smix
-    
+
     PUSH_SUB(mix_clear)
 
     call mixfield_clear(smix%scheme, smix%mixfield)
@@ -365,12 +365,12 @@ contains
   subroutine mix_end(smix)
     type(mix_t), intent(inout) :: smix
 
-    integer :: ii 
+    integer :: ii
 
     PUSH_SUB(mix_end)
 
     if(smix%precondition) call nl_operator_end(smix%preconditioner)
-   
+
     call mixfield_end(smix, smix%mixfield)
 
     smix%nauxmixfield = 0
@@ -388,14 +388,14 @@ contains
     FLOAT, intent(in):: newmixing
 
     PUSH_SUB(mix_set_mixing)
-    
+
     if(smix%scheme == OPTION__MIXINGSCHEME__LINEAR) then
       smix%coeff = newmixing
     else
-    !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
-    !  call messages_fatal(1)
+      !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
+      !  call messages_fatal(1)
     end if
-    
+
     POP_SUB(mix_set_mixing)
   end subroutine mix_set_mixing
 
@@ -443,7 +443,7 @@ contains
     if (err /= 0) ierr = ierr + 1
     call restart_close(restart, iunit)
 
-    ! Now we write the different functions. 
+    ! Now we write the different functions.
     ! These are not needed when using linear mixing, so we will make sure we skip this step in that case.
     err2 = 0
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
@@ -466,7 +466,7 @@ contains
               call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zdv(1:mesh%np, id2, id3, id4), err)
             end if
             if (err /= 0) err2(2) = err2(2) + 1
-              
+
           end do
 
           write(filename,'(a6,i2.2,i2.2)') 'f_old_', id2, id3
@@ -484,7 +484,7 @@ contains
             call zrestart_write_mesh_function(restart, filename, mesh, smix%mixfield%zvin_old(1:mesh%np, id2, id3), err)
           end if
           if (err /= 0) err2(4) = err2(4) + 1
-          
+
         end do
       end do
 
@@ -584,7 +584,7 @@ contains
                 call zrestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%zdf(1:mesh%np, id2, id3, id4), err)
               end if
               if (err /= 0) err2(1) = err2(1) + 1
-          
+
               write(filename,'(a3,i2.2,i2.2,i2.2)') 'dv_', id2, id3, id4
               if (smix%mixfield%func_type == TYPE_FLOAT) then
                 call drestart_read_mesh_function(restart, trim(filename), mesh, smix%mixfield%ddv(1:mesh%np, id2, id3, id4), err)
@@ -636,7 +636,7 @@ contains
 
   FLOAT pure function mix_coefficient(this) result(coefficient)
     type(mix_t), intent(in) :: this
-    
+
     coefficient = this%coeff
   end function mix_coefficient
 
@@ -646,7 +646,7 @@ contains
     scheme = this%scheme
   end function mix_scheme
 
-  integer pure function mix_d4(this) 
+  integer pure function mix_d4(this)
     type(mix_t), intent(in) :: this
 
     mix_d4 = this%mixfield%d4
@@ -662,7 +662,7 @@ contains
   ! ---------------------------------------------------------
   subroutine mixing(smix)
     type(mix_t),  intent(inout) :: smix
-  
+
     PUSH_SUB(mixing)
 
     if(smix%mixfield%func_type == TYPE_FLOAT) then
@@ -670,7 +670,7 @@ contains
     else
       call zmixing(smix, smix%mixfield%zvin, smix%mixfield%zvout, smix%mixfield%zvnew)
     end if
-  
+
     POP_SUB(mixing)
   end subroutine mixing
 
@@ -681,7 +681,7 @@ contains
     PUSH_SUB(mix_add_auxmixfield)
 
     smix%nauxmixfield = smix%nauxmixfield + 1
-    smix%auxmixfield(smix%nauxmixfield)%p => mixfield 
+    smix%auxmixfield(smix%nauxmixfield)%p => mixfield
 
     if( smix%scheme == OPTION__MIXINGSCHEME__DIIS) &
       call messages_input_error('Mixing scheme  DIIS is not implemented for auxiliary mixing fields')
@@ -716,7 +716,7 @@ contains
     POP_SUB(mixfield_nullify)
   end subroutine mixfield_nullify
 
-  subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
+  subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type )
     type(mix_t),      intent(inout) :: smix
     type(mixfield_t), intent(inout) :: mixfield
     integer,          intent(in)    :: d1, d2, d3, d4
@@ -731,7 +731,7 @@ contains
     mixfield%d3 = d3
     mixfield%d4 = d4
 
-    mixfield%func_type = func_type 
+    mixfield%func_type = func_type
 
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(mixfield%func_type == TYPE_FLOAT) then
@@ -746,7 +746,7 @@ contains
         SAFE_ALLOCATE(  mixfield%zf_old(1:d1, 1:d2, 1:d3))
       end if
     end if
-  
+
     if(mixfield%func_type == TYPE_FLOAT) then
       SAFE_ALLOCATE(mixfield%dvin(1:d1, 1:d2, 1:d3))
       SAFE_ALLOCATE(mixfield%dvout(1:d1, 1:d2, 1:d3))
@@ -755,12 +755,12 @@ contains
       SAFE_ALLOCATE(mixfield%zvin(1:d1, 1:d2, 1:d3))
       SAFE_ALLOCATE(mixfield%zvout(1:d1, 1:d2, 1:d3))
       SAFE_ALLOCATE(mixfield%zvnew(1:d1, 1:d2, 1:d3))
-    end if 
+    end if
 
     POP_SUB(mixfield_init)
-  end subroutine mixfield_init 
+  end subroutine mixfield_init
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine mixfield_end(smix, mixfield)
     type(mix_t),      intent(inout) :: smix
     type(mixfield_t), intent(inout) :: mixfield
@@ -832,7 +832,7 @@ contains
     PUSH_SUB(ddmixfield_set_vin2)
 
     mixfield%zvin(1:mixfield%d1, 1, 1:mixfield%d3) = vin_re(1:mixfield%d1, 1:mixfield%d3) &
-                                            + M_zI * vin_im(1:mixfield%d1, 1:mixfield%d3)
+      + M_zI * vin_im(1:mixfield%d1, 1:mixfield%d3)
 
     POP_SUB(ddmixfield_set_vin2)
   end subroutine ddmixfield_set_vin2
@@ -845,7 +845,7 @@ contains
     PUSH_SUB(ddmixfield_set_vout2)
 
     mixfield%zvout(1:mixfield%d1, 1, 1:mixfield%d3) = vout_re(1:mixfield%d1, 1:mixfield%d3) &
-                                            + M_zI * vout_im(1:mixfield%d1, 1:mixfield%d3)
+      + M_zI * vout_im(1:mixfield%d1, 1:mixfield%d3)
 
     POP_SUB(ddmixfield_set_vout2)
   end subroutine ddmixfield_set_vout2

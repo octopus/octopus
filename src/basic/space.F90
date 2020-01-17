@@ -62,7 +62,7 @@ contains
     integer, optional, intent(in)    :: dim
 
     PUSH_SUB(space_init_simple)
-    
+
     if(present(dim))then
       this%dim=dim
     else
@@ -99,12 +99,12 @@ contains
 
     eqv=(sa%dim==sb%dim)
   end function space_equal
-  
+
   ! -----------------------------------------------------
   elemental function space_not_equal(sa, sb) result(neqv)
     type(space_t), intent(in) :: sa
     type(space_t), intent(in) :: sb
-    
+
     logical :: neqv
 
     neqv=(sa%dim/=sb%dim)

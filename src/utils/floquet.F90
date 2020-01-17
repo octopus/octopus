@@ -69,14 +69,14 @@ program oct_floquet
   type(mesh_t) :: mesh
   type(restart_t) :: restart
   type(namespace_t) :: default_namespace
-  
+
   ! the usual initializations
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
   call parser_init()
   default_namespace = namespace_t("")
-  
+
   call messages_init(default_namespace)
 
   call io_init(default_namespace)
@@ -105,19 +105,19 @@ program oct_floquet
   call states_elec_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
   if (gauge_field_is_applied(sys%hm%ep%gfield)) then
-     !if the gauge field is applied, we need to tell v_ks to calculate the current
-     call v_ks_calculate_current(sys%ks, .true.)
+    !if the gauge field is applied, we need to tell v_ks to calculate the current
+    call v_ks_calculate_current(sys%ks, .true.)
 
-     ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-     call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
+    ! initialize the vector field and update the hamiltonian
+    call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+    call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time = M_ZERO)
   end if
 
   call restart_init(restart, default_namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
   if(ierr == 0) call states_elec_load(restart, default_namespace, st, gr, ierr, label = ": gs")
   if (ierr /= 0) then
-     message(1) = 'Unable to read ground-state wavefunctions.'
-     call messages_fatal(1)
+    message(1) = 'Unable to read ground-state wavefunctions.'
+    call messages_fatal(1)
   end if
 
   call density_calc(st, gr, st%rho)
@@ -147,57 +147,57 @@ program oct_floquet
 
 contains
 
-    !------------------------------------------------
-    subroutine floquet_init()
+  !------------------------------------------------
+  subroutine floquet_init()
 
-      PUSH_SUB(floquet_init)
+    PUSH_SUB(floquet_init)
 
-      !for now no domain distribution allowed
-      ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
+    !for now no domain distribution allowed
+    ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
 
-      ! variables documented in td/td_write.F90
-      call parse_variable(default_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
-      call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
-      if(abs(omega)<=M_EPSILON) then
-         message(1) = "Please give a non-zero value for TDFloquetFrequency"
-         call messages_fatal(1)
-      endif
+    ! variables documented in td/td_write.F90
+    call parse_variable(default_namespace, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+    call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
+    if(abs(omega)<=M_EPSILON) then
+      message(1) = "Please give a non-zero value for TDFloquetFrequency"
+      call messages_fatal(1)
+    endif
 
-      ! get time of one cycle
-      Tcycle=M_TWO*M_PI/omega
+    ! get time of one cycle
+    Tcycle=M_TWO*M_PI/omega
 
-      call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
-      call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
-      dt = Tcycle/real(nT)
+    call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
+    call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
+    dt = Tcycle/real(nT)
 
-      call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
-      if(Forder.ge.0) then
-        call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
-        !Dimension of multiphoton Floquet-Hamiltonian
-        Fdim = 2*Forder+1
-      else
-        message(1) = 'Floquet-Hamiltonian is downfolded'
-        call messages_info(1)
-        downfolding = .true.
-        Forder = 1
-        Fdim = 3
-      endif
+    call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
+    if(Forder.ge.0) then
+      call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
+      !Dimension of multiphoton Floquet-Hamiltonian
+      Fdim = 2*Forder+1
+    else
+      message(1) = 'Floquet-Hamiltonian is downfolded'
+      call messages_info(1)
+      downfolding = .true.
+      Forder = 1
+      Fdim = 3
+    endif
 
-      dt = Tcycle/real(nT)
+    dt = Tcycle/real(nT)
 
-      POP_SUB(floquet_init)
+    POP_SUB(floquet_init)
 
   end subroutine floquet_init
 
   !---------------------------------------------------
-  subroutine floquet_solve_non_interacting()	
+  subroutine floquet_solve_non_interacting()
     type(states_elec_t) :: hm_st
 
     PUSH_SUB(floquet_solve_non_interacting)
 
     mesh = gr%der%mesh
     nst = st%nst
-    
+
     SAFE_ALLOCATE(hmss(1:nst,1:nst))
     SAFE_ALLOCATE( psi(1:nst,1:st%d%dim,1:mesh%np))
     SAFE_ALLOCATE(hpsi(1:nst,1:st%d%dim,1:mesh%np))
@@ -210,11 +210,11 @@ contains
     nik=gr%sb%kpoints%nik_skip
 
     ! multiphoton Floquet Hamiltonian, layout:
-    !     (H_{-n,-m} ...  H_{-n,0} ...  H_{-n,m}) 
+    !     (H_{-n,-m} ...  H_{-n,0} ...  H_{-n,m})
     !     (    .      .      .      .      .    )
     ! H = (H_{0,-m}  ...  H_{0,0}  ...  H_{0,m} )
     !     (    .      .      .      .      .    )
-    !     (H_{n,-m}  ...  H_{n,0}  ...  H_{n,m} )    
+    !     (H_{n,-m}  ...  H_{n,0}  ...  H_{n,m} )
     SAFE_ALLOCATE(HFloquet(1:nik,1:nst*Fdim, 1:nst*Fdim))
     HFloquet(1:nik,1:nst*Fdim, 1:nst*Fdim) = M_ZERO
 
@@ -250,35 +250,35 @@ contains
         call comm_allreduce(mpi_world%comm, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
         call zgemm( 'n',                               &
-                    'c',                               &
-                    nst,                               &
-                    nst,                               &
-                    mesh%np_global*st%d%dim,           &
-                    cmplx(mesh%volume_element,kind=8), &
-                    hpsi(1, 1, 1),                     &
-                    ubound(hpsi, dim = 1),             &
-                    psi(1, 1, 1),                      &
-                    ubound(psi, dim = 1),              &
-                    cmplx(0.,kind=8),                  &
-                    hmss(1, 1),                        &
-                    ubound(hmss, dim = 1))
+          'c',                               &
+          nst,                               &
+          nst,                               &
+          mesh%np_global*st%d%dim,           &
+          cmplx(mesh%volume_element,kind=8), &
+          hpsi(1, 1, 1),                     &
+          ubound(hpsi, dim = 1),             &
+          psi(1, 1, 1),                      &
+          ubound(psi, dim = 1),              &
+          cmplx(0.,kind=8),                  &
+          hmss(1, 1),                        &
+          ubound(hmss, dim = 1))
 
         hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))
 
         ! accumulate the Floquet integrals
         do in=-Forder,Forder
-           do im=-Forder,Forder
-              ii=(in+Forder)*nst
-              jj=(im+Forder)*nst
-              HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) =  &
-                HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
-              ! diagonal term
-              if(in==im) then
-                 do ist=1,nst
-                    HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
-                 end do
-              end if
-           end do
+          do im=-Forder,Forder
+            ii=(in+Forder)*nst
+            jj=(im+Forder)*nst
+            HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) =  &
+              HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
+            ! diagonal term
+            if(in==im) then
+              do ist=1,nst
+                HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
+              end do
+            end if
+          end do
         end do
       end do !ik
 
@@ -288,36 +288,36 @@ contains
 
     ! diagonalize Floquet Hamiltonian
     if(downfolding) then
-       ! here perform downfolding
-       SAFE_ALLOCATE(HFloq_eff(1:nst,1:nst))
-       SAFE_ALLOCATE(eigenval(1:nst))
-       SAFE_ALLOCATE(bands(1:nik,1:nst))
+      ! here perform downfolding
+      SAFE_ALLOCATE(HFloq_eff(1:nst,1:nst))
+      SAFE_ALLOCATE(eigenval(1:nst))
+      SAFE_ALLOCATE(bands(1:nik,1:nst))
 
-       HFloq_eff(1:nst,1:nst) = M_ZERO
-       do ik=1,nik
-          ! the HFloquet blocks are copied directly out of the super matrix
-          m0 = nst ! the m=0 start position
-          n0 = nst ! the n=0 start postion
-          n1 = 2*nst ! the n=+1 start postion
-          HFloq_eff(1:nst,1:nst) = HFloquet(ik,n0+1:n0+nst,m0+1:m0+nst) + &
-               M_ONE/omega*(matmul(HFloquet(ik,1:nst,m0+1:m0+nst), HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst))- &
-                            matmul(HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst), HFloquet(ik,1:nst,m0+1:m0+nst)))
+      HFloq_eff(1:nst,1:nst) = M_ZERO
+      do ik=1,nik
+        ! the HFloquet blocks are copied directly out of the super matrix
+        m0 = nst ! the m=0 start position
+        n0 = nst ! the n=0 start postion
+        n1 = 2*nst ! the n=+1 start postion
+        HFloq_eff(1:nst,1:nst) = HFloquet(ik,n0+1:n0+nst,m0+1:m0+nst) + &
+          M_ONE/omega*(matmul(HFloquet(ik,1:nst,m0+1:m0+nst), HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst))- &
+          matmul(HFloquet(ik,n1+1:n1+nst,m0+1:m0+nst), HFloquet(ik,1:nst,m0+1:m0+nst)))
 
-           eigenval(1:nst) = M_ZERO
-          call lalg_eigensolve(nst, HFloq_eff, eigenval)
-          bands(ik,1:nst) = eigenval(1:nst)
-       end do
-       SAFE_DEALLOCATE_A(HFloq_eff)
+        eigenval(1:nst) = M_ZERO
+        call lalg_eigensolve(nst, HFloq_eff, eigenval)
+        bands(ik,1:nst) = eigenval(1:nst)
+      end do
+      SAFE_DEALLOCATE_A(HFloq_eff)
     else
-      ! the full Floquet 
+      ! the full Floquet
       SAFE_ALLOCATE(eigenval(1:nst*Fdim))
       SAFE_ALLOCATE(bands(1:nik,1:nst*Fdim))
       SAFE_ALLOCATE(temp(1:nst*Fdim, 1:nst*Fdim))
 
       do ik=1,nik
-         temp(1:nst*Fdim,1:nst*Fdim) = HFloquet(ik,1:nst*Fdim,1:nst*Fdim)
-         call lalg_eigensolve(nst*Fdim, temp, eigenval)
-         bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
+        temp(1:nst*Fdim,1:nst*Fdim) = HFloquet(ik,1:nst*Fdim,1:nst*Fdim)
+        call lalg_eigensolve(nst*Fdim, temp, eigenval)
+        bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
       end do
     end if
 
@@ -326,8 +326,8 @@ contains
       lim_nst = nst
       filename="downfolded_floquet_bands"
     else
-       lim_nst = nst*Fdim
-       filename="floquet_bands"
+      lim_nst = nst*Fdim
+      filename="floquet_bands"
     end if
     ! write bands (full or downfolded)
     if(mpi_world%rank==0) then
@@ -341,7 +341,7 @@ contains
       end do
       call io_close(file)
     endif
-    
+
     if(.not.downfolding) then
       ! for the full Floquet case compute also the trivially shifted
       ! Floquet bands for reference (i.e. setting H_{nm}=0 for n!=m)
@@ -355,7 +355,7 @@ contains
         call lalg_eigensolve(nst*Fdim, temp, eigenval)
         bands(ik,1:nst*Fdim) = eigenval(1:nst*Fdim)
       end do
-    
+
       if(mpi_world%rank==0) then
         filename='trivial_floquet_bands'
         file = io_open(filename, sys%namespace, action = 'write')
@@ -367,8 +367,8 @@ contains
         end do
         call io_close(file)
       endif
-     end if
-  
+    end if
+
     ! reset time in Hamiltonian
     call hamiltonian_elec_update(sys%hm, gr%mesh, default_namespace, time=M_ZERO)
 
@@ -384,10 +384,10 @@ contains
     POP_SUB(solve_non_interacting)
 
   end subroutine floquet_solve_non_interacting
-  
+
 end program oct_floquet
-  
+
 !! Local Variables:
-!! mode: f90				  
-!! coding: utf-8 
+!! mode: f90
+!! coding: utf-8
 !! End:

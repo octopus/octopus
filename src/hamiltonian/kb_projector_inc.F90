@@ -18,7 +18,7 @@
 
 
 !------------------------------------------------------------------------------
-!> X(kb_project) calculates the action of the projector kb_p on the psi 
+!> X(kb_project) calculates the action of the projector kb_p on the psi
 !! wavefunction. The action of the projector kb_p is defined as:
 !! \f[
 !! \hat{kb_p} |psi> = \sum_{i}^kb_p\%n_c p\%e(i) |kb_p\%p(:, i)><kb_p\%p(:, i)|psi>
@@ -150,7 +150,7 @@ subroutine X(kb_mul_energies)(kb_p, dim, uvpsi)
   type(kb_projector_t), intent(in)    :: kb_p
   integer,              intent(in)    :: dim
   R_TYPE,               intent(inout) :: uvpsi(:,:) !< (1:dim, 1:kb_p%n_c)
-  
+
   integer :: idim
 
   do idim = 1, dim

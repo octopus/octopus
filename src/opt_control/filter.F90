@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module filter_oct_m  
+module filter_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
@@ -31,14 +31,14 @@ module filter_oct_m
   implicit none
 
   private
-  
+
   public ::             &
-       filter_t,        &
-       filter_number,   &
-       filter_init,     &
-       filter_apply,    &
-       filter_write,    &
-       filter_end
+    filter_t,        &
+    filter_number,   &
+    filter_init,     &
+    filter_apply,    &
+    filter_write,    &
+    filter_end
 
   type filter_t
     private
@@ -51,12 +51,12 @@ module filter_oct_m
   integer, parameter, public  ::  &
     filter_freq = 1,              &
     filter_time = 2
-  
+
 contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_init(steps, namespace, dt, filter)    
+  subroutine filter_init(steps, namespace, dt, filter)
     integer,           intent(in)  :: steps
     type(namespace_t), intent(in)  :: namespace
     FLOAT,             intent(in)  :: dt
@@ -70,7 +70,7 @@ contains
     filter%no_filters = 0
     nullify(filter%domain)
     nullify(filter%expression)
-        
+
     !%Variable OCTFilter
     !%Type block
     !%Section Calculation Modes::Optimal Control
@@ -79,20 +79,20 @@ contains
     !% that are applied to the optimized laser field in each iteration.
     !% The filter forces the laser field to obtain the given form in frequency space.
     !% Each line of the block describes a filter; this way you can actually have more
-    !% than one filter function (<i>e.g.</i> a filter in time and two in frequency space). 
-    !% The filters are applied in the given order, <i>i.e.</i>, first the filter specified 
-    !% by the first line is applied, then second line. 
+    !% than one filter function (<i>e.g.</i> a filter in time and two in frequency space).
+    !% The filters are applied in the given order, <i>i.e.</i>, first the filter specified
+    !% by the first line is applied, then second line.
     !% The syntax of each line is, then:
     !%
     !% <tt>%OCTFilter
     !% <br>&nbsp;&nbsp;domain | function
     !% <br>%</tt>
-    !%  
+    !%
     !%
     !% Possible arguments for domain are:
-    !%  
+    !%
     !% (i) <tt>frequency_filter</tt>: Specifies a spectral filter.
-    !% 
+    !%
     !% (ii) <tt>time_filter</tt>: DISABLED IN THIS VERSION.
     !%
     !% Example:
@@ -101,7 +101,7 @@ contains
     !% <br>&nbsp;&nbsp;time | "exp(-80*( w + 0.1567 )^2  ) + exp(-80*( w - 0.1567 )^2  )"
     !% <br>%</tt>
     !%
-    !% Be careful that also the negative-frequency component is filtered since the resulting 
+    !% Be careful that also the negative-frequency component is filtered since the resulting
     !% field has to be real-valued.
     !%
     !%Option frequency_filter 1
@@ -136,9 +136,9 @@ contains
   end subroutine filter_init
   ! ---------------------------------------------------------
 
-  
+
   ! ---------------------------------------------------------
-  subroutine filter_apply(f, filter)  
+  subroutine filter_apply(f, filter)
     type(tdf_t), intent(inout) :: f
     type(filter_t), intent(in) :: filter
 
@@ -151,24 +151,24 @@ contains
       POP_SUB(filter_apply)
       return
     end if
-    
+
     do i = 1, no_f
-      write(message(1),'(a,i2)') "Info: Applying filter "         
+      write(message(1),'(a,i2)') "Info: Applying filter "
       call messages_info(1)
 
       nfreqs = tdf_nfreqs(f)
 
       select case(filter%domain(i))
       case(filter_freq)
-       call tdf_numerical_to_fourier(f)
-       call tdf_set_numerical(f, 1, tdf(f, 1)*tdf(filter%f(i), 1))
-       do j = 2, nfreqs !+ 1
-         call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j) / sqrt(M_TWO))
-       end do
-       do j = nfreqs + 1, 2*nfreqs - 1
-         call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j-nfreqs+1) / sqrt(M_TWO) )
-       end do
-       call tdf_fourier_to_numerical(f)
+        call tdf_numerical_to_fourier(f)
+        call tdf_set_numerical(f, 1, tdf(f, 1)*tdf(filter%f(i), 1))
+        do j = 2, nfreqs !+ 1
+          call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j) / sqrt(M_TWO))
+        end do
+        do j = nfreqs + 1, 2*nfreqs - 1
+          call tdf_set_numerical(f, j, tdf(f, j)*tdf(filter%f(i), j-nfreqs+1) / sqrt(M_TWO) )
+        end do
+        call tdf_fourier_to_numerical(f)
 
       case default
         message(1) = "...I don't know this filter type..."
@@ -210,7 +210,7 @@ contains
           call parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
-       
+
       case default
         write(message(1),'(a)') "Unknown choice of domain for filter."
         write(message(2),'(a)') "Choose: time or freq ."
@@ -219,18 +219,18 @@ contains
 
       call tdf_set_numerical(filter%f(i), 1, real(ff(1), REAL_PRECISION))
       do j = 2, nfreqs !+ 1
-         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*real(ff(j), REAL_PRECISION))
+        call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*real(ff(j), REAL_PRECISION))
       end do
       ! WARNING: all the sine coefficients (imaginary part of ff) should be null.
       do j = nfreqs + 1, 2*nfreqs - 1
-         call tdf_set_numerical(filter%f(i), j, -sqrt(M_TWO)*aimag(ff(j-nfreqs+1)))
+        call tdf_set_numerical(filter%f(i), j, -sqrt(M_TWO)*aimag(ff(j-nfreqs+1)))
       end do
 
       SAFE_DEALLOCATE_A(ff)
       SAFE_DEALLOCATE_A(grid)
 
     end do
-    
+
     POP_SUB(build_filter)
   end subroutine build_filter
   ! ---------------------------------------------------------

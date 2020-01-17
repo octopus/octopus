@@ -43,7 +43,7 @@ module mesh_oct_m
   use unit_system_oct_m
 
   implicit none
-  
+
   private
   public ::                        &
     mesh_t,                        &
@@ -80,12 +80,12 @@ module mesh_oct_m
   type, extends(basis_set_abst_t) :: mesh_t
     ! Components are public by default
     type(simul_box_t),   pointer :: sb  !< simulation box
-    type(curvilinear_t), pointer :: cv  
-    type(index_t)                :: idx 
+    type(curvilinear_t), pointer :: cv
+    type(index_t)                :: idx
     logical :: use_curvilinear
-    
+
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
-    
+
     !> When running serially, the local number of points is
     !! equal to the global number of points.
     !! Otherwise, the next two are different on each node.
@@ -95,7 +95,7 @@ module mesh_oct_m
     integer  :: np_part_global   !< Global number of inner points and boundary points.
     !> will I run parallel in domains?
     !! yes or no??
-    logical         :: parallel_in_domains 
+    logical         :: parallel_in_domains
     type(mpi_grp_t) :: mpi_grp             !< the mpi group describing parallelization in domains
     type(pv_t)      :: vp                  !< describes parallel vectors defined on the mesh.
     type(partition_t) :: inner_partition   !< describes how the inner points are assigned to the domains
@@ -118,8 +118,8 @@ module mesh_oct_m
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
   end type mesh_t
-  
-  !> This data type defines a plane, and a regular grid defined on 
+
+  !> This data type defines a plane, and a regular grid defined on
   !! this plane (or, rather, on a portion of this plane)
   !! n should be a unit vector, that determines the normal of the plane.
   !! Origin is a point belonging to the plane
@@ -135,7 +135,7 @@ module mesh_oct_m
     FLOAT :: spacing
     integer :: nu, mu, nv, mv
   end type mesh_plane_t
-  
+
   !> This data type defines a line, and a regular grid defined on this
   !! line (or rather, on a portion of this line).
   type mesh_line_t
@@ -146,9 +146,9 @@ module mesh_oct_m
     FLOAT :: spacing
     integer :: nu, mu
   end type mesh_line_t
-  
+
   character(len=17), parameter :: dump_tag = '*** mesh_dump ***'
-  
+
 contains
 
   subroutine mesh_init(this)
@@ -170,11 +170,11 @@ contains
     integer,           intent(out) :: db(MAX_DIM)
 
     integer :: idir
-    
+
     PUSH_SUB(mesh_double_box)
 
     db = 1
-    
+
     ! double mesh with 2n points
     do idir = 1, sb%periodic_dim
       db(idir) = mesh%idx%ll(idir)
@@ -182,44 +182,44 @@ contains
     do idir = sb%periodic_dim + 1, sb%dim
       db(idir) = nint(alpha * (mesh%idx%ll(idir) - 1)) + 1
     end do
-    
+
     POP_SUB(mesh_double_box)
   end subroutine mesh_double_box
-  
-  
+
+
   ! ---------------------------------------------------------
   subroutine mesh_write_info(this, unit)
     class(mesh_t), intent(in) :: this
     integer,      intent(in) :: unit
-    
+
     integer :: ii
     FLOAT :: cutoff
 
     if(.not.mpi_grp_is_root(mpi_world)) return
-    
+
     PUSH_SUB(mesh_write_info)
-    
+
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
     do ii = 1, this%sb%dim
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
       write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, this%spacing(ii))
     end do
     write(message(1), '(5a,f12.5)') trim(message(1)), ') ', &
-         '   volume/point [', trim(units_abbrev(units_out%length**this%sb%dim)), '] = ',      &
-         units_from_atomic(units_out%length**this%sb%dim, this%vol_pp(1))
-    
+      '   volume/point [', trim(units_abbrev(units_out%length**this%sb%dim)), '] = ',      &
+      units_from_atomic(units_out%length**this%sb%dim, this%vol_pp(1))
+
     write(message(2),'(a, i10)') '  # inner mesh = ', this%np_global
     write(message(3),'(a, i10)') '  # total mesh = ', this%np_part_global
-    
+
     cutoff = mesh_gcutoff(this)**2 / M_TWO
     write(message(4),'(3a,f12.6,a,f12.6)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
       units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * M_TWO
     call messages_info(4, unit)
-    
+
     POP_SUB(mesh_write_info)
   end subroutine mesh_write_info
-  
-  
+
+
   ! ---------------------------------------------------------
   subroutine mesh_r(mesh, ip, rr, origin, coords)
     type(mesh_t), intent(in)  :: mesh
@@ -227,23 +227,23 @@ contains
     FLOAT,        intent(out) :: rr
     FLOAT,        intent(in),  optional :: origin(:) !< origin(sb%dim)
     FLOAT,        intent(out), optional :: coords(:) !< coords(sb%dim)
-   
+
     FLOAT :: xx(MAX_DIM)
 
     ! no push_sub because it is called too frequently
-    
+
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     if(present(origin)) xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) - origin(1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
-    
+
     if(present(coords)) then
       coords(1:MAX_DIM) = M_ZERO
       coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
 
   end subroutine mesh_r
-  
-  
+
+
   !---------------------------------------------------------------------
   !> Finds out if a given point of a mesh belongs to the "border" of the
   !! mesh. A point belongs to the border of the mesh if it is too close
@@ -263,11 +263,11 @@ contains
     FLOAT,            intent(in)  :: width  !< the width of the border
     !> distance from border. The distances of the point to the walls,
     !! for each of the walls that the point is too close to.
-    FLOAT,            intent(out) :: dist   
-    
+    FLOAT,            intent(out) :: dist
+
     integer :: iatom, jatom, idir
     FLOAT   :: xx(MAX_DIM), rr, dd, radius
-    
+
     ! no PUSH SUB, called too often
 
     is_on_border = .false.
@@ -303,16 +303,16 @@ contains
         call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x, coords=xx)
         if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%species)
         dd = rr - (radius - width)
-	! check if the point is on the spherical shell of atom # iatom
-	if ((dd < M_ZERO) .or. (rr > radius)) cycle
- 
+        ! check if the point is on the spherical shell of atom # iatom
+        if ((dd < M_ZERO) .or. (rr > radius)) cycle
+
         ! make sure that the point is not inside some other atomic sphere
         is_on_border = .true.
         do jatom = 1, geo%natoms
           if(jatom == iatom) cycle
           call mesh_r(mesh, ip, rr, origin=geo%atom(jatom)%x)
           if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(jatom)%species)
-          if(rr < radius - width) then 
+          if(rr < radius - width) then
             is_on_border = .false.
             exit
           end if
@@ -333,17 +333,17 @@ contains
       dist = sqrt(dist)
 
     case(BOX_IMAGE, BOX_USDEF)
-    ! not implemented
-      dist = -1 
+      ! not implemented
+      dist = -1
 
     end select
-    
+
     ! This may happen if the point is on more than one border at the same time.
     if(dist > width) dist = width
 
   end function mesh_inborder
-  
-  
+
+
   !---------------------------------------------------------------------
   !> Returns the index of the point which is nearest to a given vector
   !! position pos. Variable dmin will hold, on exit, the distance between
@@ -356,30 +356,30 @@ contains
     FLOAT,        intent(in)  :: pos(MAX_DIM)
     FLOAT,        intent(out) :: dmin
     integer,      intent(out) :: rankmin
-    
+
     FLOAT :: dd
     integer :: imin, ip
 #if defined(HAVE_MPI)
     FLOAT :: min_loc_in(2), min_loc_out(2)
 #endif
-    
+
     PUSH_SUB(mesh_nearest_point)
-    
+
     !find the point of the grid that is closer to the atom
     dmin = M_ZERO
     do ip = 1, mesh%np
       dd = sum((pos(1:mesh%sb%dim) - mesh%x(ip, 1:mesh%sb%dim))**2)
-      if((dd < dmin) .or. (ip == 1)) then 
+      if((dd < dmin) .or. (ip == 1)) then
         imin = ip
         dmin = dd
       end if
     end do
-    
+
     rankmin = 0
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       min_loc_in(1) = dmin
-      min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, REAL_PRECISION) 
+      min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, REAL_PRECISION)
       call MPI_Allreduce(min_loc_in, min_loc_out, 1, MPI_2FLOAT, &
         MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
       dmin = min_loc_out(1)
@@ -387,7 +387,7 @@ contains
       rankmin = nint(min_loc_out(2))/mesh%np_global
     end if
 #endif
-    
+
     ind = imin
     POP_SUB(mesh_nearest_point)
   end function mesh_nearest_point
@@ -436,10 +436,10 @@ contains
         end if
       end do
     end if
- 
+
   end subroutine mesh_nearest_point_infos
 
- 
+
   ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the
   !! grid mesh, in terms of the maximum G vector. For a cubic regular
@@ -453,9 +453,9 @@ contains
 
     POP_SUB(mesh_gcutoff)
   end function mesh_gcutoff
-  
-  
-  ! -------------------------------------------------------------- 
+
+
+  ! --------------------------------------------------------------
   subroutine mesh_dump(this, dir, filename, mpi_grp, namespace, ierr)
     class(mesh_t),    intent(in)  :: this
     character(len=*), intent(in)  :: dir
@@ -463,7 +463,7 @@ contains
     type(mpi_grp_t),  intent(in)  :: mpi_grp
     type(namespace_t), intent(in)  :: namespace
     integer,          intent(out) :: ierr
-    
+
     integer :: iunit, err
 
     PUSH_SUB(mesh_dump)
@@ -490,9 +490,9 @@ contains
 
     POP_SUB(mesh_dump)
   end subroutine mesh_dump
-  
-  
-  ! -------------------------------------------------------------- 
+
+
+  ! --------------------------------------------------------------
   !> Read the mesh parameters from file that were written by mesh_dump.
   subroutine mesh_load(this, dir, filename, mpi_grp, namespace, ierr)
     class(mesh_t),     intent(inout) :: this
@@ -640,11 +640,11 @@ contains
           read(lines(4), '(a20,i21)')  str, checksum
 
           ASSERT(read_np_part >= read_np)
-            
+
           if (read_np_part == mesh%np_part_global &
-               .and. read_np == mesh%np_global &
-               .and. algorithm == 1 &
-               .and. checksum == mesh%idx%checksum) then
+            .and. read_np == mesh%np_global &
+            .and. algorithm == 1 &
+            .and. checksum == mesh%idx%checksum) then
             read_np_part = 0
             read_np = 0
           end if
@@ -672,7 +672,7 @@ contains
 
     integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
     integer, allocatable :: read_lxyz(:,:)
-    
+
     PUSH_SUB(mesh_check_dump_compatibility)
 
     ierr = 0
@@ -718,7 +718,7 @@ contains
             xx = 0
             xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
             if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
-                 any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
+              any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
               map(ip) = 0
               grid_reordered = .false.
             else
@@ -762,52 +762,52 @@ contains
       call partition_end(this%bndry_partition)
 #endif
     end if
-    
+
     POP_SUB(mesh_end)
   end subroutine mesh_end
 
-  
+
   !> This function returns the point inside the grid corresponding to
   !! a boundary point when PBCs are used. In case the point does not
   !! have a correspondence (i.e. other BCs are used in that direction),
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
-  ! ---------------------------------------------------------  
+  ! ---------------------------------------------------------
   integer function mesh_periodic_point(mesh, ip_global, ip_local) result(ipp)
     type(mesh_t), intent(in)    :: mesh
     integer,      intent(in)    :: ip_global, ip_local
-    
+
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
     FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
-    
+
     ! no push_sub, called too frequently
 
     ix = mesh%idx%lxyz(ip_global, :)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
-    
+
     do idim = 1, mesh%sb%periodic_dim
       if(ix(idim) < nr(1, idim)) ix(idim) = ix(idim) + mesh%idx%ll(idim)
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
-    
+
     ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip_local, rr, coords = xx)
       call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
       if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
-    end if 
-    
+    end if
+
   end function mesh_periodic_point
-  
+
 
   ! ---------------------------------------------------------
   real(8) pure function mesh_global_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
-    
+
     memory = 0.0_8
-    
+
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     ! resolution
@@ -823,9 +823,9 @@ contains
   ! ---------------------------------------------------------
   real(8) pure function mesh_local_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
-    
+
     memory = 0.0_8
-    
+
     ! x
     memory = memory + REAL_PRECISION * dble(mesh%np_part) * MAX_DIM
   end function mesh_local_memory
@@ -846,7 +846,7 @@ contains
 
     force_ = .false.
     if (present(force)) force_ = force
-      
+
     if(mesh%parallel_in_domains .or. force_) then
       call index_to_coords(mesh%idx, ip, ix)
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
@@ -864,10 +864,10 @@ contains
   ! ---------------------------------------------------------
   logical pure function mesh_compact_boundaries(mesh) result(cb)
     type(mesh_t),       intent(in) :: mesh
-    
+
     cb = .not. mesh%use_curvilinear .and. &
-         .not. mesh%parallel_in_domains .and.  &
-         simul_box_has_zero_bc(mesh%sb)
+      .not. mesh%parallel_in_domains .and.  &
+      simul_box_has_zero_bc(mesh%sb)
 
   end function mesh_compact_boundaries
 
@@ -881,15 +881,15 @@ contains
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     !If all the axis have the same spacing and the same length
-    !the grid is by obviously symmetric 
+    !the grid is by obviously symmetric
     !Indeed, reduced coordinates are proportional to the point index
     !and the reduced rotation are integer matrices
     !The result of the product is also proportional to an integer
     !and therefore belong to the grid.
     if(mesh%idx%ll(1) == mesh%idx%ll(2) .and.     &
-        mesh%idx%ll(2) == mesh%idx%ll(3) .and.    &
-         mesh%spacing(1) == mesh%spacing(2) .and. &
-          mesh%spacing(2) == mesh%spacing(3) ) return 
+      mesh%idx%ll(2) == mesh%idx%ll(3) .and.    &
+      mesh%spacing(1) == mesh%spacing(2) .and. &
+      mesh%spacing(2) == mesh%spacing(3) ) return
 
     PUSH_SUB(mesh_check_symmetries)
 
@@ -902,9 +902,9 @@ contains
     nops = symmetries_number(mesh%sb%symm)
 
     do ip = 1, mesh%np
-      !We use floating point coordinates to check if the symmetric point 
+      !We use floating point coordinates to check if the symmetric point
       !belong to the grid.
-      !If yes, it should have integer reduced coordinates 
+      !If yes, it should have integer reduced coordinates
       if(mesh%parallel_in_domains) then
         ! convert to global point
         destpoint(1:3) = real(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3), REAL_PRECISION) - offset(1:3)
@@ -923,7 +923,7 @@ contains
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint)
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
@@ -931,7 +931,7 @@ contains
         ! move back to reference to origin at corner of cell
         srcpoint = srcpoint + real(int(lsize)/2, REAL_PRECISION)
 
-        ! apply periodic boundary conditions in periodic directions 
+        ! apply periodic boundary conditions in periodic directions
         do idim = 1, mesh%sb%periodic_dim
           if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
             srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
@@ -941,7 +941,7 @@ contains
         ASSERT(all(srcpoint < lsize))
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
- 
+
         if(any(srcpoint-anint(srcpoint)> SYMPREC*M_TWO)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
           message(2) = "Change your spacing or use SymmetrizeDensity=no."

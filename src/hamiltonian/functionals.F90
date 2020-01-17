@@ -32,7 +32,7 @@ module xc_functl_oct_m
   ! Otherwise the code might compile, but not run properly, as the variables documentations
   ! will be incomplete.
 #include "functionals_list.F90"
-  
+
   private
   public ::                     &
     xc_functl_t,                &
@@ -100,9 +100,9 @@ contains
 
   ! ---------------------------------------------------------
 
- subroutine xc_functl_init_functl(functl, namespace, id, ndim, nel, spin_channels)
-   type(xc_functl_t),  intent(out) :: functl
-   type(namespace_t),  intent(in)  :: namespace
+  subroutine xc_functl_init_functl(functl, namespace, id, ndim, nel, spin_channels)
+    type(xc_functl_t),  intent(out) :: functl
+    type(namespace_t),  intent(in)  :: namespace
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     FLOAT,             intent(in)  :: nel
@@ -218,7 +218,7 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
     end if
-    
+
 !    XC_NON_RELATIVISTIC     =   0
 !    XC_RELATIVISTIC         =   1
 
@@ -243,7 +243,7 @@ contains
 #else
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
 #endif
-      
+
       ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
       !%Variable Interaction1D
@@ -283,7 +283,7 @@ contains
         call XC_F90(lda_c_1d_csc_set_par)(functl%conf, interact_1d, alpha)
       end if
 #endif
-      
+
     case(XC_LDA_C_2D_PRM)
 #ifdef HAVE_LIBXC4
       parameters(1) = nel
@@ -291,8 +291,8 @@ contains
 #else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 #endif
-      
-    ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
+
+      ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
       !%Type logical
@@ -317,12 +317,12 @@ contains
       !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
       call parse_variable(namespace, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
-      
+
     end select
-    
+
     POP_SUB(xc_functl_init_functl)
   end subroutine xc_functl_init_functl
-  
+
 
   ! ---------------------------------------------------------
   subroutine xc_functl_end(functl)
@@ -331,7 +331,7 @@ contains
     PUSH_SUB(xc_functl_end)
 
     if (functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
-        functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
+      functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -354,7 +354,7 @@ contains
 #if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
     type(XC_F90(pointer_t)) :: str
 #endif
-    
+
     PUSH_SUB(xc_functl_write_info)
 
     if(functl%family == XC_FAMILY_OEP) then
@@ -383,7 +383,7 @@ contains
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
       call messages_info(2, iunit)
-      
+
     else if(functl%family /= XC_FAMILY_NONE) then ! all the other families
       select case(functl%type)
       case(XC_EXCHANGE)
@@ -401,15 +401,15 @@ contains
 
       call XC_F90(info_name)  (functl%info, s1)
       select case(functl%family)
-        case (XC_FAMILY_LDA);       write(s2,'(a)') "LDA"
-        case (XC_FAMILY_GGA);       write(s2,'(a)') "GGA"
-        case (XC_FAMILY_HYB_GGA);   write(s2,'(a)') "Hybrid GGA"
-        case (XC_FAMILY_HYB_MGGA);  write(s2,'(a)') "Hybrid MGGA"
-        case (XC_FAMILY_MGGA);      write(s2,'(a)') "MGGA"
+      case (XC_FAMILY_LDA);       write(s2,'(a)') "LDA"
+      case (XC_FAMILY_GGA);       write(s2,'(a)') "GGA"
+      case (XC_FAMILY_HYB_GGA);   write(s2,'(a)') "Hybrid GGA"
+      case (XC_FAMILY_HYB_MGGA);  write(s2,'(a)') "Hybrid MGGA"
+      case (XC_FAMILY_MGGA);      write(s2,'(a)') "MGGA"
       end select
       write(message(2), '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       call messages_info(2, iunit)
-      
+
       ii = 0
 #if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
       call XC_F90(info_refs)(functl%info, ii, s1)

@@ -90,19 +90,19 @@ subroutine X(lr_orth_vector) (mesh, st, vec, ist, ik, omega, min_proj)
         theta_ij = smear_step_function(st%smear,  xx)
         theta_ji = smear_step_function(st%smear, -xx)
       end if
-      
+
       beta_ij(jst) = theta_Fi(ist)*Theta_ij + Theta_Fi(jst)*Theta_ji
-          
+
       alpha_j = lr_alpha_j(st, jst, ik)
       delta_e = st%eigenval(ist, ik) - st%eigenval(jst, ik) - omega
-        
+
       if(abs(delta_e) >= CNST(1e-5)) then
         beta_ij(jst) = beta_ij(jst) + alpha_j*Theta_ji*(Theta_Fi(ist) - Theta_Fi(jst))/delta_e
       else
         ! cannot calculate for fixed occ, ignore
         ! the kernel is supposed to kill off these KS resonances anyway
         ! in dynamic case, need to add 'self term' without omega, for variation of occupations
-        if(st%smear%method /= SMEAR_FIXED_OCC) then 
+        if(st%smear%method /= SMEAR_FIXED_OCC) then
           xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
           yy = (st%smear%e_fermi - st%eigenval(jst, ik) + CNST(1e-14))/dsmear
           ! average for better numerics, as in ABINIT
@@ -152,7 +152,7 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   ! changes the charge of the system, as in "computational alchemy" (PRL 66 2116 (1991)).
   ! n(r,E_F) * dV_SCF = dl_rho, before correction.
   is_ef_shift = .not. smear_is_semiconducting(st%smear) .and. st%smear%method /= SMEAR_FIXED_OCC
-  
+
   ! initialize density
   do isigma = 1, nsigma
     lr(isigma)%X(dl_rho)(:, :) = M_ZERO
@@ -162,16 +162,16 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   dsmear = max(CNST(1e-14), st%smear%dsmear)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  
+
   ! calculate density
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin = states_elec_dim_get_spin_index(st%d, ik)
     do ist  = st%st_start, st%st_end
 
       call states_elec_get_state(st, mesh, ist, ik, psi)
-      
+
       weight = st%d%kweights(ik)*st%smear%el_per_state
-      
+
       if(nsigma == 1) then  ! either omega purely real or purely imaginary
         do ip = 1, mesh%np
           dd = weight*psi(ip, 1)*R_CONJ(lr(1)%X(dl_psi)(ip, 1, ist, ik))
@@ -220,9 +220,9 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
 
         call states_elec_get_state(st, mesh, ist, ik, psi)
         do ip = 1, mesh%np
-          psi2(ip, 1) = R_CONJ(psi(ip, 1))*psi(ip, 1) 
+          psi2(ip, 1) = R_CONJ(psi(ip, 1))*psi(ip, 1)
         end do
-          
+
         do isigma = 1, nsigma
           call lalg_axpy(mesh%np, ef_shift(isigma)*weight, psi2(:,1), lr(isigma)%X(dl_rho)(:, ispin))
         end do
@@ -232,8 +232,8 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
     SAFE_DEALLOCATE_A(psi2)
   end if
 
-  SAFE_DEALLOCATE_A(psi)  
-      
+  SAFE_DEALLOCATE_A(psi)
+
   POP_SUB(X(lr_build_dl_rho))
 end subroutine X(lr_build_dl_rho)
 
@@ -247,16 +247,16 @@ subroutine X(lr_orth_response)(mesh, st, lr, omega)
   type(states_elec_t), intent(in)    :: st
   type(lr_t),          intent(inout) :: lr
   R_TYPE,              intent(in)    :: omega
-  
+
   integer :: ist, ik
   PUSH_SUB(X(lr_orth_response))
-  
+
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = 1, st%nst
       call X(lr_orth_vector) (mesh, st, lr%X(dl_psi)(:,:, ist, ik), ist, ik, omega)
     end do
   end do
-  
+
   POP_SUB(X(lr_orth_response))
 end subroutine X(lr_orth_response)
 

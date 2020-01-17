@@ -237,7 +237,7 @@ contains
     POP_SUB(test_hartree)
   end subroutine test_hartree
 
- ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine test_projector(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
@@ -272,7 +272,7 @@ contains
 
     do itime = 1, param%repetitions
       call zproject_psi_batch(sys%gr%mesh, sys%gr%der%boundaries, sys%hm%ep%proj,  &
-                              sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
+        sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
     end do
 
     do itime = 1, epsib%nst
@@ -525,7 +525,7 @@ contains
   end subroutine test_boundaries
 
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine test_exponential(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
@@ -648,8 +648,8 @@ contains
     !% Tests batch_nrm2 operation
     !%End
     ops = OPTION__TESTBATCHOPS__OPS_AXPY &
-        + OPTION__TESTBATCHOPS__OPS_SCAL &
-        + OPTION__TESTBATCHOPS__OPS_NRM2
+      + OPTION__TESTBATCHOPS__OPS_SCAL &
+      + OPTION__TESTBATCHOPS__OPS_NRM2
     call parse_variable(namespace, 'TestBatchOps', ops, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
@@ -869,10 +869,10 @@ contains
     do itime = 1, psib%nst
       if(states_are_real(st)) then
         write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%dpsi)
+          psib%states(itime)%dpsi)
       else
         write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%zpsi)
+          psib%states(itime)%zpsi)
       end if
       call messages_info(1)
     end do

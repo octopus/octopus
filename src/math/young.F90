@@ -30,14 +30,14 @@ module young_oct_m
   private
 
   public :: young_init,           &
-            young_write_allspins, &
-            young_write,          &
-            young_write_one,      &
-            young_copy,           &
-            young_ndiagrams,      &
-            young_nullify,        &
-            young_end,            &
-            young_t
+    young_write_allspins, &
+    young_write,          &
+    young_write_one,      &
+    young_copy,           &
+    young_ndiagrams,      &
+    young_nullify,        &
+    young_end,            &
+    young_t
 
   type young_t
     private
@@ -45,7 +45,7 @@ module young_oct_m
     integer                  :: nup, ndown, iyoung
     integer, pointer, public :: young_up(:,:)
     integer, pointer, public :: young_down(:,:)
-  end type young_t 
+  end type young_t
 
 contains
 
@@ -145,7 +145,7 @@ contains
               call young_reset_1val (this, 0)
             end if
           end if
-        ! or in the paired spins, provided the box below has been filled
+          ! or in the paired spins, provided the box below has been filled
         else if (this%young_down(iup, this%iyoung) /= -999) then
           this%young_up(iup, this%iyoung) = nn
           ! call again with smaller diagram
@@ -168,7 +168,7 @@ contains
       POP_SUB(young_fill)
       return
     end if
-    
+
     call young_reset_1val (this, nn)
 
 !
@@ -210,12 +210,12 @@ contains
     integer :: iyoung
 
     PUSH_SUB(young_write)
-    
+
     write (iunit, '(a,I4,a,I4,a)') ' Young diagrams for ', this%nup, ' spins up, and ', this%ndown, ' down '
     do iyoung = 1, this%nyoung
       call young_write_one (iunit, this, iyoung)
     end do
-    
+
     POP_SUB(young_write)
   end subroutine young_write
 
@@ -228,11 +228,11 @@ contains
     integer, intent(in) :: iyoung
 
     PUSH_SUB(young_write_one)
-    
+
     write (iunit,'(a,I7)') ' Young diagram ', iyoung
     write (iunit,'(10I7)') this%young_up(:, iyoung)
     write (iunit,'(10I7)') this%young_down(:, iyoung)
-    
+
     POP_SUB(young_write_one)
   end subroutine young_write_one
 
@@ -255,7 +255,7 @@ contains
     end do
     POP_SUB(young_write_allspins)
 
-  end subroutine young_write_allspins 
+  end subroutine young_write_allspins
 
   !------------------------------------------------------------
   subroutine young_ndiagrams (nparticles, ndiagrams)

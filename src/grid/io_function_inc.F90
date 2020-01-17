@@ -82,7 +82,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     SAFE_DEALLOCATE_A(ff_global)
 #else
     ! internal error
-    ASSERT(.false.) 
+    ASSERT(.false.)
 #endif
   else
     call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
@@ -108,7 +108,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   FLOAT, allocatable :: x_out(:, :)
   type(cube_t) :: cube
   type(cube_function_t) :: cf
-  
+
 #if defined(HAVE_NETCDF)
   character(len=512) :: file
   integer :: ncid, status
@@ -170,7 +170,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
 
         call io_binary_read(io_workpath(filename, namespace), np, read_ff, ierr)
         call profiling_count_transfers(np, read_ff(1))
-        
+
         if (ierr == 0) then
           ff(1:mesh%np_global) = M_ZERO
           do ip = 1, min(np, ubound(map, dim = 1))
@@ -190,19 +190,19 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     if (mesh%sb%box_shape /= PARALLELEPIPED .and. mesh%sb%box_shape /= HYPERCUBE) then
       message(1) = "Box shape must be parallelepiped or hypercube when a .csv file is used."
       call messages_fatal(1)
-    end if 
+    end if
 
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
-    
+
     call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
-    
+
     if (ierr /= 0) then
       message(1) = "Could not read file "//trim(io_workpath(filename, namespace))//""
       call messages_fatal(1)
     end if
-    
+
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
 #ifdef R_TREAL
     call dread_csv(io_workpath(filename, namespace), dims(1)*dims(2)*dims(3), read_ff, ierr)
@@ -218,35 +218,35 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
     if(mesh%sb%dim == 1) then
       SAFE_ALLOCATE(x_in(1:dims(1), 1:1))
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
-      
+
       do ii = 1, int(dims(1))
         x_in(ii,:) = (/ real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) /)
       end do
 
-      
+
       do ii = 1, cube%rs_n_global(1)
         x_out(ii,1) = real(ii-1, REAL_PRECISION)
       end do
-        
+
 ! TODO: find out why this was called with ndim 2 as a first argument, in the mesh%sb%dim 1 case
       call X(mf_interpolate_points)(1, int(dims(1), FC_INTEGER_SIZE), x_in(:,:),&
         read_ff, cube%rs_n_global(1), x_out(:,:), ff)
-           
+
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
-      
+
     else if(mesh%sb%dim == 2) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)), 1:2))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)), 1:2))
-      
+
       do ii = 1, int(dims(2))
         do jj = 1, int(dims(1))
-          x_in((ii-1)*dims(1) + jj,:) = & 
+          x_in((ii-1)*dims(1) + jj,:) = &
             (/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
-               real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
+            real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
         end do
       end do
-      
+
       do ii = 1, cube%rs_n_global(2)
         do jj = 1, cube%rs_n_global(1)
           x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
@@ -254,44 +254,44 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2), FC_INTEGER_SIZE), x_in(:,:),&
         read_ff, cube%rs_n_global(1)*cube%rs_n_global(2), x_out(:,:), ff)
-           
+
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
     else if(mesh%sb%dim == 3) then
       SAFE_ALLOCATE(x_in(1:(dims(1)*dims(2)*dims(3)), 1:3))
       SAFE_ALLOCATE(x_out(1:(cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)), 1:3))
-      
+
       do ii = 1, int(dims(3))
         do jj = 1, int(dims(2))
           do kk = 1, int(dims(1))
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
               (/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
-                 real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
-                 real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
+              real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
+              real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
           end do
         end do
       end do
-    
+
       do ii = 1, cube%rs_n_global(3)
         do jj = 1, cube%rs_n_global(2)
           do kk = 1, cube%rs_n_global(1)
             x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
               (/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
-            end do
           end do
         end do
+      end do
       call X(mf_interpolate_points)(3, int(dims(1)*dims(2)*dims(3), FC_INTEGER_SIZE), x_in(:,:),&
         read_ff, cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), x_out(:,:), ff)
       SAFE_DEALLOCATE_A(x_in)
       SAFE_DEALLOCATE_A(x_out)
     end if
-    
+
     cf%X(RS) = reshape(ff, (/ cube%rs_n_global(1), cube%rs_n_global(2), cube%rs_n_global(3) /))
-    
+
     call X(cube_to_mesh) (cube, cf, mesh, ff)
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
-    
+
     SAFE_DEALLOCATE_P(read_ff)
   case default
     ierr = 1
@@ -506,11 +506,11 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
       !lives
 
       do ivd = 1, vector_dim
-#ifdef HAVE_MPI        
+#ifdef HAVE_MPI
         call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
 #endif
       end do
-      
+
     else
       ff_global => ff
     end if
@@ -526,7 +526,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   if(i_am_root) then
 
     how_seq = how
-    
+
     if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
     how_seq = bitand(how_seq, not(OPTION__OUTPUTFORMAT__VTK)) ! remove from the list of formats
 
@@ -537,7 +537,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
         else
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
-        
+
         call X(io_function_output_global)(how_seq, dir, full_fname, namespace, mesh, &
           ff_global(:, ivd), unit, ierr, geo)
       end do
@@ -553,7 +553,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
     call MPI_Barrier(comm, mpi_err)
   end if
 #endif
-  
+
   if(mesh%parallel_in_domains .and. .not. is_global_) then
     SAFE_DEALLOCATE_P(ff_global)
   else
@@ -568,7 +568,7 @@ contains
     type(cube_t) :: cube
     type(cube_function_t), allocatable :: cf(:)
     character(len=MAX_PATH_LEN) :: filename
-    FLOAT :: dk(3)  
+    FLOAT :: dk(3)
     integer :: ii
 
     PUSH_SUB(X(io_function_output_vector).out_vtk)
@@ -597,14 +597,14 @@ contains
 
     SAFE_DEALLOCATE_A(cf)
 
-    POP_SUB(X(io_function_output_vector).out_vtk)    
+    POP_SUB(X(io_function_output_vector).out_vtk)
   end subroutine out_vtk
 
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
 subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, ff, vector_dim, &
-    unit, ierr, grp, root, vector_dim_labels)
+  unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
@@ -649,10 +649,10 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
     i_am_root = (grp%rank == root_)
 
     SAFE_ALLOCATE(ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim))
-    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
- 
+    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)
+
     do ivd = 1, vector_dim
-      ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
+      ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd)
     end do
 #ifdef HAVE_MPI
     call comm_allreduce(comm, ff_global)
@@ -677,7 +677,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
         else
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
-        
+
         call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, &
           ff_global(:, ivd), unit, ierr)
       end do
@@ -693,7 +693,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
     call MPI_Barrier(comm, mpi_err)
   end if
 #endif
-  
+
   if(kpt%parallel) then
     SAFE_DEALLOCATE_P(ff_global)
   else
@@ -864,13 +864,13 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
 #else
     do jj = 1, 1 ! only real part
 #endif
-      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z;
       if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
       if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
     end do
     if(bitand(how, OPTION__OUTPUTFORMAT__MESHGRID) /= 0) then
       do jj = 4, 5 ! meshgrid
-        if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+        if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z;
         if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
         if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
       end do
@@ -904,7 +904,7 @@ contains
   ! ---------------------------------------------------------
   subroutine out_axis(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
-    
+
     integer :: ixvect(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM)
     R_TYPE  :: fu
@@ -960,7 +960,7 @@ contains
         ixvect_test = 1
         ixvect_test(jdim) = ix
         ip = index_from_coords(mesh%idx, ixvect_test)
-        if(ip /= 0) then 
+        if(ip /= 0) then
           call index_to_coords(mesh%idx, ip, ixvect_test)
           if(ixvect_test(jdim) == 0) exit
         end if
@@ -970,7 +970,7 @@ contains
 
     ! have found ix such that coordinate d1 is 0 for this value of ix
     ! ixvect is prepared for all dimensions apart from d2 and d3
-    
+
     do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
       write(iunit, mformat, iostat=ierr)
       do iz = mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
@@ -993,7 +993,7 @@ contains
     POP_SUB(X(io_function_output_global).out_plane)
   end subroutine out_plane
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine out_integrate_plane(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
 
@@ -1010,17 +1010,17 @@ contains
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
 
     do iz = mesh%idx%nr(1, d3), mesh%idx%nr(2, d3)
- 
+
       fu = R_TOTYPE(M_ZERO)
       np = 0
       ixvect(d3) = iz
       do ix = mesh%idx%nr(1, d1), mesh%idx%nr(2, d1)
         do iy = mesh%idx%nr(1, d2), mesh%idx%nr(2, d2)
-       
+
           ixvect(d1) = ix
           ixvect(d2) = iy
           ip = index_from_coords(mesh%idx, ixvect)
-         
+
           if(ip <= np_max .and. ip > 0) then
             xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
             if(mesh%use_curvilinear) then
@@ -1033,7 +1033,7 @@ contains
           end if
         end do
       end do
-     
+
       if(.not.mesh%use_curvilinear) fu = fu*mesh%surface_element(d3)
       if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
     end do
@@ -1056,12 +1056,12 @@ contains
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_matlab)
-    
+
     min_d2 = mesh%idx%nr(1, d2) + mesh%idx%enlarge(d2)
     max_d2 = mesh%idx%nr(2, d2) - mesh%idx%enlarge(d2)
     min_d3 = mesh%idx%nr(1, d3) + mesh%idx%enlarge(d3)
-    max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
-    
+    max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)
+
     if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
       min_d2 = mesh%idx%nr(1, d2)
       max_d2 = mesh%idx%nr(2, d2)
@@ -1069,7 +1069,7 @@ contains
       max_d3 = mesh%idx%nr(2, d3)
     end if
 
-    select case(out_what)      
+    select case(out_what)
     case(1:3)
       filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0.matlab"
 #if defined(R_TCOMPLEX)
@@ -1086,13 +1086,13 @@ contains
 
 
     SAFE_ALLOCATE(out_vec(min_d3:max_d3))
-    
+
     do ix = min_d2, max_d2
 
       out_vec = M_ZERO
 
       do iy = min_d3, max_d3
-        
+
         select case(d1)
         case(1)
           ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
@@ -1105,14 +1105,14 @@ contains
         select case(out_what)
         case(4)
           xx(:) = mesh_x_global(mesh, ip)
-          out_vec(iy) = xx(d2)      ! meshgrid d2 (this is swapped wrt. 
+          out_vec(iy) = xx(d2)      ! meshgrid d2 (this is swapped wrt.
         case(5)
           xx(:) = mesh_x_global(mesh, ip)
           out_vec(iy) = xx(d3)      ! meshgrid d3  to the filenames)
         end select
 
         if (ip < 1 .or. ip > np_max) cycle
-        
+
         fu = units_from_atomic(unit, ff(ip))
 
         select case(out_what)
@@ -1123,7 +1123,7 @@ contains
         case(3)
           out_vec(iy) = R_ABS(fu)   ! absolute value
         end select
-        
+
       end do
 
       ! now we write to the disk
@@ -1156,13 +1156,13 @@ contains
 
     do ip = 1, np_max
       xx = mesh_x_global(mesh, ip)
-       if (ierr == 0 .and. x0 /= xx(1)) then
-          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = xx(1)
-       end if
-       fu = units_from_atomic(unit, ff(ip))
-       if(ierr==0) write(iunit, mformat2, iostat=ierr) ip, &
-         (units_from_atomic(units_out%length, xx(idir)), idir = 1, 3), fu
+      if (ierr == 0 .and. x0 /= xx(1)) then
+        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
+        x0 = xx(1)
+      end if
+      fu = units_from_atomic(unit, ff(ip))
+      if(ierr==0) write(iunit, mformat2, iostat=ierr) ip, &
+        (units_from_atomic(units_out%length, xx(idir)), idir = 1, 3), fu
     end do
 
     if(ierr == 0) write(iunit, mformat, iostat=ierr)
@@ -1206,11 +1206,11 @@ contains
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%rs_n_global(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
+      mesh%spacing(1)*mesh%sb%rlattice_primitive(idir, 1)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
+      mesh%spacing(2)*mesh%sb%rlattice_primitive(idir, 2)), idir = 1, 3)
     write(iunit, '(a,3f12.6)') ' delta ', (units_from_atomic(units_out%length, &
-                                           mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
+      mesh%spacing(3)*mesh%sb%rlattice_primitive(idir, 3)), idir = 1, 3)
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts', cube%rs_n_global(1:3)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ', nitems, ' data follows'
@@ -1276,7 +1276,7 @@ contains
     write(iunit, '(i5,3f12.6)') geo%natoms, offset(1:3)
 
     ! According to http://gaussian.com/cubegen/
-    ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
+    ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms.
     int_unit(1:3) = 1
     if (units_out%length%abbrev == "b") then
       int_unit(1) = -1
@@ -1301,7 +1301,7 @@ contains
             write(fmt, '(a,i1,a)') '(', cube%rs_n_global(3) - iz + 1, 'e14.6)'
             write(iunit, trim(fmt)) units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3))))
           end if
-        
+
         end do
       end do
     end do
@@ -1368,7 +1368,7 @@ contains
         lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
       end do
     end do
-    
+
     iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", namespace, action='write')
 
     ASSERT(present(geo))
@@ -1376,7 +1376,7 @@ contains
 
     write(iunit, '(a,i1,a)') 'BEGIN_BLOCK_DATAGRID_', mesh%sb%dim, 'D'
     write(iunit, '(4a)') 'units: coords = ', trim(units_abbrev(units_out%length)), &
-                            ', function = ', trim(units_abbrev(unit))
+      ', function = ', trim(units_abbrev(unit))
     write(iunit, '(a,i1,a)') 'BEGIN_DATAGRID_', mesh%sb%dim, 'D_function'
     write(iunit, '(3i7)') my_n(1:mesh%sb%dim)
     write(iunit, '(a)') '0.0 0.0 0.0'
@@ -1450,8 +1450,8 @@ contains
 
     filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", namespace)
 
-     
-    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
+
+    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, &
       units_from_atomic(units_out%length, mesh%spacing), .true., unit)
 
     call X(cube_function_free_RS)(cube, cf)
@@ -1463,32 +1463,32 @@ contains
 
 
 #endif /*defined(HAVE_NETCDF)*/
- 
+
   ! ---------------------------------------------------------
 
   subroutine out_vtk()
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     FLOAT :: dk(3), pnt(3)
-    integer :: i, i1, i2, i3 
+    integer :: i, i1, i2, i3
     FLOAT, ALLOCATABLE :: points(:,:,:,:)
-    
+
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
     forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
-    
+
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
     filename = trim(dir)//'/'//trim(fname)//".vtk"
-   
+
 
     if(mesh%sb%nonorthogonal) then
       ! non-orthogonal grid
       SAFE_ALLOCATE(points(cube%rs_n_global(1),cube%rs_n_global(2),cube%rs_n_global(3),3))
-      
+
       do i1 =1 , cube%rs_n_global(1)
         do i2 =1 , cube%rs_n_global(2)
           do i3 =1 , cube%rs_n_global(3)
@@ -1497,13 +1497,13 @@ contains
           end do
         end do
       end do
-      
-      call X(vtk_out_cf_structured)(filename, namespace, fname, ierr, cf, cube, unit, points)     
-      SAFE_DEALLOCATE_A(points) 
-    else  
+
+      call X(vtk_out_cf_structured)(filename, namespace, fname, ierr, cf, cube, unit, points)
+      SAFE_DEALLOCATE_A(points)
+    else
       !Ordinary grid
       call X(vtk_out_cf)(filename, namespace, fname, ierr, cf, cube, dk(:), unit)
-    end if  
+    end if
 
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
@@ -1543,7 +1543,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
 
   np_max = mesh%sb%kpoints%reduced%npoints
 
-  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
+  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary")
   if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
   if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Outpur_KPT with format axis y")
   if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Outpur_KPT with format axis z")
@@ -1565,7 +1565,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   call profiling_out(write_prof)
 
 
- contains
+contains
   ! ---------------------------------------------------------
   subroutine out_plane(d1, d2, d3)
     integer, intent(in) :: d1, d2, d3
@@ -1586,12 +1586,12 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
 
     do ik = 1, mesh%sb%kpoints%reduced%npoints
       kk(1:dim) = units_from_atomic(units_out%length**(-1), &
-                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
+        mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
       if(abs(kk(d1)) < CNST(1.0e-6)) then
         fu = units_from_atomic(unit, ff(ik))
         write(iunit, mformat, iostat=ierr)  &
           kk(d2), kk(d3), fu
-         
+
       end if
     end do
 
@@ -1612,7 +1612,7 @@ logical pure function X(inside_isolevel)(ff, ip, isosurface_value) result(inside
   inside = ff(ip) > isosurface_value
 #else
   inside = abs(ff(ip)) > isosurface_value
-#endif  
+#endif
 
 end function X(inside_isolevel)
 
@@ -1627,7 +1627,7 @@ function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(po
   FLOAT                       :: pos(1:3)
 
   FLOAT :: v1, v2, x1(MAX_DIM), x2(MAX_DIM)
-  
+
 #ifdef R_TREAL
   v1 = ff(ip1)
   v2 = ff(ip2)
@@ -1637,7 +1637,7 @@ function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(po
 #endif
   x1(:) = mesh_x_global(mesh, ip1)
   x2(:) = mesh_x_global(mesh, ip2)
-  
+
   if(abs(v2 - v1) > M_EPSILON) then
     pos(1:3) = x1(1:3) + (isosurface_value - v1)*(x2(1:3) - x1(1:3))/(v2 - v1)
   else
@@ -1646,186 +1646,186 @@ function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(po
   end if
 
 end function X(interpolate_isolevel)
- 
+
 
 #if defined(HAVE_NETCDF)
-  ! --------------------------------------------------------- 
-  !>  Writes a cube_function in netcdf format
-  ! ---------------------------------------------------------
-  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose, unit)
-    character(len=*),      intent(in) :: filename        !< the file name
-    integer,               intent(out):: ierr            !< error message   
-    type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
-    type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
-    integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
-    FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
-    logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
-    type(unit_t),          intent(in) :: unit            !< unit of data in cf
+ ! ---------------------------------------------------------
+ !>  Writes a cube_function in netcdf format
+ ! ---------------------------------------------------------
+subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose, unit)
+  character(len=*),      intent(in) :: filename        !< the file name
+  integer,               intent(out):: ierr            !< error message
+  type(cube_function_t), intent(in) :: cf              !< the cube_function to be written
+  type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
+  integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
+  FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
+  logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
+  type(unit_t),          intent(in) :: unit            !< unit of data in cf
 
-    integer :: ncid, status, data_id, pos_id, dim_min
-    integer :: dim_data_id(3), dim_pos_id(2)
+  integer :: ncid, status, data_id, pos_id, dim_min
+  integer :: dim_data_id(3), dim_pos_id(2)
 
-    REAL_SINGLE :: pos(2, 3)
-    FLOAT, allocatable :: xx(:, :, :)
-    
+  REAL_SINGLE :: pos(2, 3)
+  FLOAT, allocatable :: xx(:, :, :)
+
 #if defined(R_TCOMPLEX)
-    integer :: data_im_id
+  integer :: data_im_id
 #endif
 
-    PUSH_SUB(X(out_cf_netcdf))
+  PUSH_SUB(X(out_cf_netcdf))
 
-    ierr = 0
+  ierr = 0
 
-    status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
-    if(status /= NF90_NOERR) then
-      ierr = 2
-      POP_SUB(X(out_cf_netcdf))
-      return
-    end if
-
-    ! dimensions
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_1", cube%rs_n_global(3), dim_data_id(1))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_2", cube%rs_n_global(2), dim_data_id(2))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_3", cube%rs_n_global(1), dim_data_id(3))
-      call ncdf_error('nf90_der_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "pos_1", 2, dim_pos_id(1))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "pos_2", 3, dim_pos_id(2))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    dim_min = 3 - sb_dim + 1
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id(dim_min:3), data_im_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-#endif
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-
-    ! attributes
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_id, "field", "rdata, scalar")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_id, "positions", "pos, regular")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_im_id, "field", "idata, scalar")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_im_id, "positions", "pos, regular")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-#endif
-
-    ! end definitions
-    status = nf90_enddef (ncid)
-
-    ! FIXME: needs explicit casts to single-precision. Why single-precision anyway?
-    ! data
-    pos(:,:) = M_ZERO
-    pos(1, 1:sb_dim) = &
-      real( - (cube%rs_n_global(1:sb_dim) - 1)/2*spacing(1:sb_dim), 4)
-    pos(2, 1:sb_dim) = real(spacing(1:sb_dim), 4)
-
-    if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, pos_id, pos(:,:))
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-
-    SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      if (transpose) then
-        call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
-      else
-        xx = real(cf%X(RS), REAL_PRECISION)
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      if ( transpose ) then
-        call transpose3(aimag(cf%X(RS)), xx)
-      else
-        xx = aimag(cf%X(RS))
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_im_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-#else
-    if(status == NF90_NOERR) then
-      if ( transpose ) then 
-        call transpose3(cf%X(RS), xx)
-      else             
-        xx=cf%X(RS)
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-#endif
-    SAFE_DEALLOCATE_A(xx)
-
-    ! close
-    status = nf90_close(ncid)
-
+  status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
+  if(status /= NF90_NOERR) then
+    ierr = 2
     POP_SUB(X(out_cf_netcdf))
-    
-    contains
+    return
+  end if
 
-      ! ---------------------------------------------------------
-      subroutine write_variable(ncid, data_id, status, sb_dim, xx)
-        integer, intent(in)  :: ncid, data_id
-        integer, intent(out) :: status
-        integer, intent(in)  :: sb_dim
-        FLOAT,   intent(in)  :: xx(:,:,:)
+  ! dimensions
+  if(status == NF90_NOERR) then
+    status = nf90_def_dim (ncid, "dim_1", cube%rs_n_global(3), dim_data_id(1))
+    call ncdf_error('nf90_def_dim', status, filename, ierr)
+  end if
 
-        PUSH_SUB(X(out_cf_netcdf).write_variable)
+  if(status == NF90_NOERR) then
+    status = nf90_def_dim (ncid, "dim_2", cube%rs_n_global(2), dim_data_id(2))
+    call ncdf_error('nf90_def_dim', status, filename, ierr)
+  end if
 
-        select case(sb_dim)
-        case(1)
-          status = nf90_put_var (ncid, data_id, xx(1,1,:))
-        case(2)
-          status = nf90_put_var (ncid, data_id, xx(1,:,:))
-        case(3)
-          status = nf90_put_var (ncid, data_id, xx)
-        end select
-        
-        POP_SUB(X(out_cf_netcdf).write_variable)
-      end subroutine write_variable
+  if(status == NF90_NOERR) then
+    status = nf90_def_dim (ncid, "dim_3", cube%rs_n_global(1), dim_data_id(3))
+    call ncdf_error('nf90_der_dim', status, filename, ierr)
+  end if
 
-  end subroutine X(out_cf_netcdf)
+  if(status == NF90_NOERR) then
+    status = nf90_def_dim (ncid, "pos_1", 2, dim_pos_id(1))
+    call ncdf_error('nf90_def_dim', status, filename, ierr)
+  end if
+
+  if(status == NF90_NOERR) then
+    status = nf90_def_dim (ncid, "pos_2", 3, dim_pos_id(2))
+    call ncdf_error('nf90_def_dim', status, filename, ierr)
+  end if
+
+  dim_min = 3 - sb_dim + 1
+
+  if(status == NF90_NOERR) then
+    status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
+    call ncdf_error('nf90_def_var', status, filename, ierr)
+  end if
+#if defined(R_TCOMPLEX)
+  if(status == NF90_NOERR) then
+    status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id(dim_min:3), data_im_id)
+    call ncdf_error('nf90_def_var', status, filename, ierr)
+  end if
+#endif
+  if(status == NF90_NOERR) then
+    status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
+    call ncdf_error('nf90_def_var', status, filename, ierr)
+  end if
+
+  ! attributes
+  if(status == NF90_NOERR) then
+    status = nf90_put_att (ncid, data_id, "field", "rdata, scalar")
+    call ncdf_error('nf90_put_att', status, filename, ierr)
+  end if
+  if(status == NF90_NOERR) then
+    status = nf90_put_att (ncid, data_id, "positions", "pos, regular")
+    call ncdf_error('nf90_put_att', status, filename, ierr)
+  end if
+#if defined(R_TCOMPLEX)
+  if(status == NF90_NOERR) then
+    status = nf90_put_att (ncid, data_im_id, "field", "idata, scalar")
+    call ncdf_error('nf90_put_att', status, filename, ierr)
+  end if
+  if(status == NF90_NOERR) then
+    status = nf90_put_att (ncid, data_im_id, "positions", "pos, regular")
+    call ncdf_error('nf90_put_att', status, filename, ierr)
+  end if
+#endif
+
+  ! end definitions
+  status = nf90_enddef (ncid)
+
+  ! FIXME: needs explicit casts to single-precision. Why single-precision anyway?
+  ! data
+  pos(:,:) = M_ZERO
+  pos(1, 1:sb_dim) = &
+    real( - (cube%rs_n_global(1:sb_dim) - 1)/2*spacing(1:sb_dim), 4)
+  pos(2, 1:sb_dim) = real(spacing(1:sb_dim), 4)
+
+  if(status == NF90_NOERR) then
+    status = nf90_put_var (ncid, pos_id, pos(:,:))
+    call ncdf_error('nf90_put_var', status, filename, ierr)
+  end if
+
+  SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
+#if defined(R_TCOMPLEX)
+  if(status == NF90_NOERR) then
+    if (transpose) then
+      call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
+    else
+      xx = real(cf%X(RS), REAL_PRECISION)
+    end if
+    xx = units_from_atomic(unit, xx)
+    call write_variable(ncid, data_id, status, sb_dim, xx)
+    call ncdf_error('nf90_put_var', status, filename, ierr)
+  end if
+  if(status == NF90_NOERR) then
+    if ( transpose ) then
+      call transpose3(aimag(cf%X(RS)), xx)
+    else
+      xx = aimag(cf%X(RS))
+    end if
+    xx = units_from_atomic(unit, xx)
+    call write_variable(ncid, data_im_id, status, sb_dim, xx)
+    call ncdf_error('nf90_put_var', status, filename, ierr)
+  end if
+#else
+  if(status == NF90_NOERR) then
+    if ( transpose ) then
+      call transpose3(cf%X(RS), xx)
+    else
+      xx=cf%X(RS)
+    end if
+    xx = units_from_atomic(unit, xx)
+    call write_variable(ncid, data_id, status, sb_dim, xx)
+    call ncdf_error('nf90_put_var', status, filename, ierr)
+  end if
+#endif
+  SAFE_DEALLOCATE_A(xx)
+
+  ! close
+  status = nf90_close(ncid)
+
+  POP_SUB(X(out_cf_netcdf))
+
+contains
+
+  ! ---------------------------------------------------------
+  subroutine write_variable(ncid, data_id, status, sb_dim, xx)
+    integer, intent(in)  :: ncid, data_id
+    integer, intent(out) :: status
+    integer, intent(in)  :: sb_dim
+    FLOAT,   intent(in)  :: xx(:,:,:)
+
+    PUSH_SUB(X(out_cf_netcdf).write_variable)
+
+    select case(sb_dim)
+    case(1)
+      status = nf90_put_var (ncid, data_id, xx(1,1,:))
+    case(2)
+      status = nf90_put_var (ncid, data_id, xx(1,:,:))
+    case(3)
+      status = nf90_put_var (ncid, data_id, xx)
+    end select
+
+    POP_SUB(X(out_cf_netcdf).write_variable)
+  end subroutine write_variable
+
+end subroutine X(out_cf_netcdf)
 
 
 

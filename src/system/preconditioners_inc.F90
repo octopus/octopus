@@ -60,8 +60,8 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
     call multigrid()
 
   case default
-   write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
-   call messages_fatal(1, namespace=namespace)
+    write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
+    call messages_fatal(1, namespace=namespace)
 
   end select
 

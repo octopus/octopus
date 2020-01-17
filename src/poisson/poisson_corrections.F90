@@ -60,7 +60,7 @@ module poisson_corrections_oct_m
 
   type(derivatives_t), pointer :: der_pointer
   type(mesh_t),        pointer :: mesh_pointer
-  
+
   integer, parameter  ::     &
     CORR_MULTIPOLE = 1,     &
     CORR_EXACT     = 3
@@ -179,7 +179,7 @@ contains
       SAFE_DEALLOCATE_P(this%gaussian)
     case(CORR_EXACT)
     end select
-    
+
     POP_SUB(poisson_corrections_end)
   end subroutine poisson_corrections_end
 
@@ -243,7 +243,7 @@ contains
     case(CORR_EXACT)
 
       forall(ip = 1:der%mesh%np) vh_correction(ip) = M_ZERO
-      
+
       do ip = der%mesh%np + 1, der%mesh%np_part
         vv = M_ZERO
         do ip2 = 1, der%mesh%np
@@ -256,7 +256,7 @@ contains
       ASSERT(.not. nl_operator_compact_boundaries(der%lapl))
 
       call dderivatives_lapl(der, vh_correction, rho_corrected, set_bc = .false.)
- 
+
       forall(ip = 1:der%mesh%np) rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
 
     end select
@@ -316,7 +316,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine poisson_boundary_conditions(this, mesh, rho, pot)
-    type(poisson_corr_t), intent(in)    :: this    
+    type(poisson_corr_t), intent(in)    :: this
     type(mesh_t),         intent(in)    :: mesh
     FLOAT,                intent(in)    :: rho(:)  !< rho(mesh%np)
     FLOAT,                intent(inout) :: pot(:)  !< pot(mesh%np_part)

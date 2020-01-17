@@ -27,21 +27,21 @@ subroutine X(to_submatrix)(this, bsize, proc, nproc, submatrix)
   integer :: ic1, ic2, ib1, ib2, i1, i2
 
   PUSH_SUB(X(to_submatrix))
-  
+
   ic1 = 1
   do ib1 = 1 + bsize(1)*proc(1), this%dim(1), bsize(1)*nproc(1)
     do i1 = ib1, min(ib1 - 1 + bsize(1), this%dim(1))
-      
+
       ic2 = 1
       do ib2 = 1 + bsize(2)*proc(2), this%dim(2), bsize(2)*nproc(2)
         do i2 = ib2, min(ib2 - 1 + bsize(2), this%dim(2))
-          
+
           submatrix(ic1, ic2) = this%X(mat)(i1, i2)
-          
+
           ic2 = ic2 + 1
         end do
       end do
-      
+
       ic1 = ic1 + 1
     end do
   end do
@@ -61,21 +61,21 @@ subroutine X(from_submatrix)(this, bsize, proc, nproc, submatrix)
   integer :: ic1, ic2, ib1, ib2, i1, i2
 
   PUSH_SUB(X(from_submatrix))
-  
+
   ic1 = 1
   do ib1 = 1 + bsize(1)*proc(1), this%dim(1), bsize(1)*nproc(1)
     do i1 = ib1, min(ib1 - 1 + bsize(1), this%dim(1))
-      
+
       ic2 = 1
       do ib2 = 1 + bsize(2)*proc(2), this%dim(2), bsize(2)*nproc(2)
         do i2 = ib2, min(ib2 - 1 + bsize(2), this%dim(2))
-          
+
           this%X(mat)(i1, i2) = submatrix(ic1, ic2)
-          
+
           ic2 = ic2 + 1
         end do
       end do
-      
+
       ic1 = ic1 + 1
     end do
   end do
@@ -97,8 +97,8 @@ subroutine X(matrix_gather)(this, bsize, proc_grid, submatrix)
   PUSH_SUB(matrix_gather)
 
   call profiling_in(prof_gather, "MATRIX_GATHER")
-  
-  do ip1 = 1, proc_grid%nprow      
+
+  do ip1 = 1, proc_grid%nprow
     do ip2 = 1, proc_grid%npcol
 
 #ifdef HAVE_SCALAPACK
@@ -120,7 +120,7 @@ subroutine X(matrix_gather)(this, bsize, proc_grid, submatrix)
       call MPI_Bcast(submatrix_rem(1, 1), nr1r*nr2r, R_MPITYPE, iproc, this%mpi_grp%comm, mpi_err)
       call MPI_Barrier(this%mpi_grp%comm, mpi_err)
 #endif
-      
+
       call X(from_submatrix)(this, bsize, (/ip1, ip2/) - 1, (/proc_grid%nprow, proc_grid%npcol/), submatrix_rem)
 
       SAFE_DEALLOCATE_A(submatrix_rem)

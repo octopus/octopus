@@ -68,7 +68,7 @@ contains
     PUSH_SUB(dsort)
 
     if(size(a) > 0) then
-      
+
       if(.not. present(ind)) then
         call dsort1(size(a), a(1))
       else
@@ -90,13 +90,13 @@ contains
     PUSH_SUB(isort)
 
     if(size(a) > 0) then
-      
+
       if(.not. present(ind)) then
         call isort1(size(a), a(1))
       else
         call isort2(size(a), a(1), ind(1))
       end if
-      
+
     end if
 
     POP_SUB(isort)

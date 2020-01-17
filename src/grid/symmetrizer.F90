@@ -56,7 +56,7 @@ contains
     type(mesh_t),        target, intent(in)  :: mesh
 
     PUSH_SUB(symmetrizer_init)
-    
+
     this%mesh => mesh
 
     POP_SUB(symmetrizer_init)
@@ -74,7 +74,7 @@ contains
   end subroutine symmetrizer_end
 
   ! ---------------------------------------------------------
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "symmetrizer_inc.F90"

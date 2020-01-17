@@ -20,16 +20,16 @@ subroutine X(partition_transfer)(this, f_in, f_out)
   type(partition_transfer_t), intent(in)  :: this
   R_TYPE,                     intent(in)  :: f_in(:)
   R_TYPE,                     intent(out) :: f_out(:)
-    
-  PUSH_SUB(X(partition_transfer))  
+
+  PUSH_SUB(X(partition_transfer))
 
   call profiling_in(prof_transfer, "PARTITION_TRANSFER")
 
 #ifdef HAVE_MPI
   call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(f_in, this%scounts(1), this%sdispls(1), R_MPITYPE, &
-       f_out, this%rcounts(1), this%rdispls(1), R_MPITYPE,    &
-       this%comm, mpi_err)
+    f_out, this%rcounts(1), this%rdispls(1), R_MPITYPE,    &
+    this%comm, mpi_err)
   call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
 #endif
 

@@ -68,16 +68,16 @@ module projector_oct_m
     zprojector_commute_r_allatoms_alldir, &
     dr_project_psi,            &
     zr_project_psi
-  
+
   integer, parameter :: MAX_NPROJECTIONS = 4
   integer, parameter :: MAX_L = 5
 
   !> The projector data type is intended to hold the local and
   !! non-local parts of the pseudopotentials. The definition of the
   !! action of a projector (which is done through the X(project)
-  !! subroutine) depends on the type of the projector. 
+  !! subroutine) depends on the type of the projector.
   !!
-  !! There are four different types: 
+  !! There are four different types:
   !! - local -> a local operator
   !! - HGH projector -> "normal"
   !! - normal Kleinman-Bylander projector (no spin-orbit)
@@ -93,7 +93,7 @@ module projector_oct_m
     integer         :: reltype
 
     type(submesh_t), public  :: sphere
-    
+
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
@@ -143,7 +143,7 @@ contains
     integer,              intent(in)    :: reltype
 
     type(ps_t), pointer :: ps
-    
+
     PUSH_SUB(projector_init)
 
     call projector_null(p)
@@ -171,7 +171,7 @@ contains
         call messages_warning(namespace=namespace)
       end if
     end if
-    
+
     select case(p%type)
     case(PROJ_KB)
       p%nprojections = dim*ps%kbc
@@ -197,7 +197,7 @@ contains
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim, idim, stdim
-    FLOAT, allocatable :: diff(:,:) 
+    FLOAT, allocatable :: diff(:,:)
 
     PUSH_SUB(projector_init_phases)
 
@@ -221,15 +221,15 @@ contains
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))
-      
+
       kpoint = M_ZERO
       kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
-        
+
       do idim = 1, stdim
         do is = 1, ns
           ! this is only the correction to the global phase, that can
           ! appear if the sphere crossed the boundary of the cell.
-          
+
           kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
 
           if(present(vec_pot)) then
@@ -354,7 +354,7 @@ contains
       end if
 
     end select
-    
+
     p%type = PROJ_NONE
 
     SAFE_DEALLOCATE_P(p%phase)

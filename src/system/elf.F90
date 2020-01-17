@@ -35,7 +35,7 @@ module elf_oct_m
 
   private
   public :: elf_init,               &
-            elf_calc
+    elf_calc
 
   logical :: with_current_term = .true.
 
@@ -43,7 +43,7 @@ contains
 
   subroutine elf_init(namespace)
     type(namespace_t),    intent(in)    :: namespace
-    
+
     PUSH_SUB(elf_init)
 
     !%Variable ELFWithCurrentTerm
@@ -69,9 +69,9 @@ contains
     type(grid_t),          intent(in)    :: gr
     !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
     !! On output, it should contain the global ELF if st%d%ispin = 1,
-    !! otherwise elf(:, 3) contains the global ELF, and 
+    !! otherwise elf(:, 3) contains the global ELF, and
     !! elf(:, 1) and elf(:, 2) the spin-resolved ELF.
-    FLOAT,            intent(inout) :: elf(:,:) 
+    FLOAT,            intent(inout) :: elf(:,:)
     FLOAT,  optional, intent(inout):: de(:,:)
 
     FLOAT :: factor, D0, dens
@@ -84,7 +84,7 @@ contains
 
     ASSERT(gr%sb%dim == 2 .or. gr%sb%dim == 3)
 
-    ! We may or may not want the total ELF. 
+    ! We may or may not want the total ELF.
     ! If we want it, the argument elf should have three components.
     nelfs = size(elf, 2)
 
@@ -98,7 +98,7 @@ contains
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
     call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
-                                paramagnetic_current = jj, density_gradient = grho)
+      paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities
     if(st%d%ispin == UNPOLARIZED) then
@@ -107,7 +107,7 @@ contains
       jj = jj/M_TWO
       grho = grho/M_TWO
     end if
-    
+
     if(.not.with_current_term) jj = M_ZERO
 
     ! kappa will contain rho * D
@@ -127,8 +127,8 @@ contains
     SAFE_DEALLOCATE_A(jj)   ! these are no longer needed
 
     select case(gr%sb%dim)
-      case(3); factor = M_THREE / M_FIVE * (CNST(6.0) * M_PI**2)**M_TWOTHIRD
-      case(2); factor = M_TWO * M_Pi
+    case(3); factor = M_THREE / M_FIVE * (CNST(6.0) * M_PI**2)**M_TWOTHIRD
+    case(2); factor = M_TWO * M_Pi
     end select
 
     select case(st%d%ispin)
@@ -136,8 +136,8 @@ contains
       do ip = 1, gr%mesh%np
         if(rho(ip, 1) >= dmin) then
           select case(gr%sb%dim)
-            case(3); D0 = factor * rho(ip, 1)**(CNST(8.0) / M_THREE)
-            case(2); D0 = factor * rho(ip, 1)**3
+          case(3); D0 = factor * rho(ip, 1)**(CNST(8.0) / M_THREE)
+          case(2); D0 = factor * rho(ip, 1)**3
           end select
           elf(ip, 1) = D0 * D0 / (D0 * D0 + kappa(ip, 1)**2)
         else
@@ -151,8 +151,8 @@ contains
           dens = rho(ip, 1) + rho(ip, 2)
           if( dens >= dmin ) then
             select case(gr%sb%dim)
-              case(3); D0 = factor * dens ** (M_FIVE/M_THREE) * rho(ip, 1) * rho(ip, 2)
-              case(2); D0 = factor * dens ** 2 * rho(ip, 1) * rho(ip, 2)
+            case(3); D0 = factor * dens ** (M_FIVE/M_THREE) * rho(ip, 1) * rho(ip, 2)
+            case(2); D0 = factor * dens ** 2 * rho(ip, 1) * rho(ip, 2)
             end select
             elf(ip, 3) = D0 * D0 / (D0 * D0 + (kappa(ip, 1) * rho(ip, 2) + kappa(ip,2) * rho(ip, 1))**2)
           else
@@ -164,8 +164,8 @@ contains
         do is = 1, st%d%spin_channels
           if(rho(ip, is) >= dmin) then
             select case(gr%sb%dim)
-              case(3); D0 = factor * rho(ip, is)**(CNST(8.0)/M_THREE)
-              case(2); D0 = factor * rho(ip, is)**3
+            case(3); D0 = factor * rho(ip, is)**(CNST(8.0)/M_THREE)
+            case(2); D0 = factor * rho(ip, is)**3
             end select
             elf(ip, is) = D0 * D0 / (D0 * D0 + kappa(ip,is)**2)
           else

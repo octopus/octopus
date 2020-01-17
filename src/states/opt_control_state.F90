@@ -34,16 +34,16 @@ module opt_control_state_oct_m
 
   private
   public :: opt_control_state_t,       &
-            opt_control_state_init,    &
-            opt_control_get_qs,        &
-            opt_control_get_classical, &
-            opt_control_set_classical, &
-            opt_control_point_qs,      &
-            opt_control_point_q,       &
-            opt_control_point_p,       &
-            opt_control_state_copy,    &
-            opt_control_state_end,     &
-            opt_control_state_null
+    opt_control_state_init,    &
+    opt_control_get_qs,        &
+    opt_control_get_classical, &
+    opt_control_set_classical, &
+    opt_control_point_qs,      &
+    opt_control_point_q,       &
+    opt_control_point_p,       &
+    opt_control_state_copy,    &
+    opt_control_state_end,     &
+    opt_control_state_null
 
 
   !> This is the datatype that contains the objects that are propagated: in principle this
@@ -179,7 +179,7 @@ contains
         ocs%p(iatom, idim) = species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%v(idim)
       end do
     end do
-    
+
     POP_SUB(opt_control_state_init)
   end subroutine opt_control_state_init
 

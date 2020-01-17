@@ -66,19 +66,19 @@ module target_oct_m
 
   private
   public :: target_t,                &
-            target_get_state,        &
-            target_init,             &
-            target_end,              &
-            target_output,           &
-            target_tdcalc,           &
-            target_inh,              &
-            target_mode,             &
-            target_type,             &
-            target_j1,               &
-            target_chi,              &
-            target_move_ions,        &
-            target_curr_functional,  &
-            target_init_propagation
+    target_get_state,        &
+    target_init,             &
+    target_end,              &
+    target_output,           &
+    target_tdcalc,           &
+    target_inh,              &
+    target_mode,             &
+    target_type,             &
+    target_j1,               &
+    target_chi,              &
+    target_move_ions,        &
+    target_curr_functional,  &
+    target_init_propagation
 
 
   integer, public, parameter ::       &
@@ -86,7 +86,7 @@ module target_oct_m
     oct_tg_excited          = 2,      &
     oct_tg_gstransformation = 3,      &
     oct_tg_userdefined      = 4,      &
-    oct_tg_jdensity         = 5,      &        
+    oct_tg_jdensity         = 5,      &
     oct_tg_local            = 6,      &
     oct_tg_td_local         = 7,      &
     oct_tg_exclude_state    = 8,      &
@@ -141,7 +141,7 @@ module target_oct_m
     CMPLX :: spin_matrix(2, 2)
     type(fft_t) :: fft_handler
   end type target_t
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -207,7 +207,7 @@ contains
     !%Description
     !% The variable <tt>OCTTargetOperator</tt> prescribes which kind of target functional is
     !% to be used.
-    !%Option oct_tg_groundstate 1 
+    !%Option oct_tg_groundstate 1
     !% The target operator is a projection operator on the ground state, <i>i.e.</i> the
     !% objective is to populate the ground state as much as possible.
     !%Option oct_tg_excited 2
@@ -220,7 +220,7 @@ contains
     !% See the documentation of subroutine <tt>excited_states_elec_init</tt> in the source
     !% code in order to use this feature.
     !%Option oct_tg_gstransformation 3
-    !% The target operator is a projection operator on a transformation of the ground-state 
+    !% The target operator is a projection operator on a transformation of the ground-state
     !% orbitals defined by the block <tt>OCTTargetTransformStates</tt>.
     !%Option oct_tg_userdefined 4
     !% (Experimental) Allows to define target state by using <tt>OCTTargetUserdefined</tt>.
@@ -251,17 +251,17 @@ contains
     !% (Experimental)
     !%End
     call parse_variable(namespace, 'OCTTargetOperator', oct_tg_gstransformation, tg%type)
-      if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
-      if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
-      if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
-      if(tg%type == oct_tg_local) call messages_experimental('OCTTargetOperator = oct_tg_local')
-      if(tg%type == oct_tg_td_local) call messages_experimental('OCTTargetOperator = oct_tg_td_local')
-      if(tg%type == oct_tg_exclude_state) call messages_experimental('OCTTargetOperator = oct_tg_exclude_state')
-      if(tg%type == oct_tg_hhg) call messages_experimental('OCTTargetOperator = oct_tg_hhg')
-      if(tg%type == oct_tg_velocity) call messages_experimental('OCTTargetOperator = oct_tg_velocity')
-      if(tg%type == oct_tg_hhgnew) call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
-      if(tg%type == oct_tg_classical) call messages_experimental('OCTTargetOperator = oct_tg_classical')
-      if(tg%type == oct_tg_spin) call messages_experimental('OCTTargetOperator = oct_tg_spin')
+    if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
+    if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
+    if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
+    if(tg%type == oct_tg_local) call messages_experimental('OCTTargetOperator = oct_tg_local')
+    if(tg%type == oct_tg_td_local) call messages_experimental('OCTTargetOperator = oct_tg_td_local')
+    if(tg%type == oct_tg_exclude_state) call messages_experimental('OCTTargetOperator = oct_tg_exclude_state')
+    if(tg%type == oct_tg_hhg) call messages_experimental('OCTTargetOperator = oct_tg_hhg')
+    if(tg%type == oct_tg_velocity) call messages_experimental('OCTTargetOperator = oct_tg_velocity')
+    if(tg%type == oct_tg_hhgnew) call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
+    if(tg%type == oct_tg_classical) call messages_experimental('OCTTargetOperator = oct_tg_classical')
+    if(tg%type == oct_tg_spin) call messages_experimental('OCTTargetOperator = oct_tg_spin')
 
 
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
@@ -287,7 +287,7 @@ contains
       call target_init_exclude(gr, namespace, tg, td, restart)
     case(oct_tg_gstransformation)
       call target_init_gstransformation(gr, namespace, tg, td, restart)
-    case(oct_tg_userdefined) 
+    case(oct_tg_userdefined)
       call target_init_userdefined(gr, namespace, tg, td)
     case(oct_tg_jdensity)
       call target_init_density(gr, namespace, tg, stin, td, restart)
@@ -339,7 +339,7 @@ contains
       call target_end_exclude()
     case(oct_tg_gstransformation)
       call target_end_gstransformation()
-    case(oct_tg_userdefined) 
+    case(oct_tg_userdefined)
       call target_end_userdefined()
     case(oct_tg_jdensity)
       call target_end_density(tg)
@@ -383,7 +383,7 @@ contains
       call target_output_exclude(tg, namespace, gr, dir, geo, hm, outp)
     case(oct_tg_gstransformation)
       call target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
-    case(oct_tg_userdefined) 
+    case(oct_tg_userdefined)
       call target_output_userdefined(tg, namespace, gr, dir, geo, hm, outp)
     case(oct_tg_jdensity)
       call target_output_density(tg, namespace, gr, dir, geo, outp)
@@ -400,7 +400,7 @@ contains
     case(oct_tg_classical)
       call target_output_classical()
     end select
-    
+
     POP_SUB(target_output)
   end subroutine target_output
   ! ----------------------------------------------------------------------
@@ -458,7 +458,7 @@ contains
     FLOAT,               intent(in)        :: time
     type(states_elec_t), intent(inout)     :: inh
     integer,             intent(in)        :: iter
- 
+
     integer :: ik, ist, ip, idim, ib
     CMPLX, allocatable :: zpsi(:)
     CMPLX :: gvec(MAX_DIM)
@@ -466,7 +466,7 @@ contains
     PUSH_SUB(target_inh)
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
-    
+
     select case(tg%type)
     case(oct_tg_td_local)
 
@@ -481,7 +481,7 @@ contains
           end do
         end do
       end do
-      
+
     case(oct_tg_hhgnew)
       gvec(1:gr%sb%dim) = real(tg%gvec(iter + 1, 1:gr%sb%dim), REAL_PRECISION)
 
@@ -510,7 +510,7 @@ contains
           end do
         end do
       end do
-   
+
     case(oct_tg_jdensity)
 
       do ik = inh%d%kpt%start, inh%d%kpt%end
@@ -518,19 +518,19 @@ contains
           call batch_set_zero(inh%group%psib(ib, ik))
         end do
       end do
-        
+
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
         call chi_current(tg, gr, CNST(-1.0), psi, inh)
-      end if     
+      end if
 
     case default
       write(message(1),'(a)') 'Internal error in target_inh'
       call messages_fatal(1)
-  
+
     end select
 
     SAFE_DEALLOCATE_A(zpsi)
-    
+
     POP_SUB(target_inh)
   end subroutine target_inh
   !----------------------------------------------------------
@@ -539,7 +539,7 @@ contains
   ! ---------------------------------------------------------
   !> Calculates the J1 functional, i.e.:
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
-  !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
+  !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in
   !! the time-dependent case.
   FLOAT function target_j1(tg, namespace, gr, qcpsi, geo) result(j1)
     type(target_t),             intent(inout)   :: tg
@@ -610,7 +610,7 @@ contains
     case(oct_tg_groundstate)
 
       call target_chi_groundstate(tg, gr, psi_in, chi_out)
-    case(oct_tg_excited) 
+    case(oct_tg_excited)
       call target_chi_excited(tg, namespace, gr, psi_in, chi_out)
     case(oct_tg_gstransformation)
       call target_chi_gstransformation(tg, gr, psi_in, chi_out)
@@ -667,7 +667,7 @@ contains
     ! Attention: yet combined with static density target,
     ! the total target is considered td.
     select case(tg%curr_functional)
-    case(oct_curr_square_td) 
+    case(oct_curr_square_td)
       target_mode = oct_targetmode_td
     end select
 

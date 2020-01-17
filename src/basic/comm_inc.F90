@@ -47,21 +47,21 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
   PUSH_SUB(X(comm_allreduce_1))
 
   dim1 = ubound(aa, dim = 1)
-  if(present(dim)) dim1 = dim  
+  if(present(dim)) dim1 = dim
 
   ASSERT(ubound(aa, dim = 1) >= dim1)
 
   if(dim1 > 0) then
 
 #if defined(HAVE_MPI2)
-     call MPI_Allreduce(MPI_IN_PLACE, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #elif defined(HAVE_MPI)
-     
-     SAFE_ALLOCATE(aac(1:dim1))
-     aac(1:dim1) = aa(1:dim1)
-     call MPI_Allreduce(aac, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
-     SAFE_DEALLOCATE_A(aac)
-     
+
+    SAFE_ALLOCATE(aac(1:dim1))
+    aac(1:dim1) = aa(1:dim1)
+    call MPI_Allreduce(aac, aa, dim1, R_MPITYPE, MPI_SUM, comm, mpi_err)
+    SAFE_DEALLOCATE_A(aac)
+
 #endif
   end if
 
@@ -84,7 +84,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   PUSH_SUB(X(comm_allreduce_2))
 
   dim_ = ubound(aa)
-  if(present(dim)) dim_ = dim  
+  if(present(dim)) dim_ = dim
 
   ASSERT(all(ubound(aa) >= dim_))
 
@@ -115,7 +115,7 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
     call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
     aa(1:dim_(1), 1:dim_(2)) = aac(1:dim_(1), 1:dim_(2))
 #elif defined(HAVE_MPI)
-   
+
     SAFE_ALLOCATE(aac(1:dim_(1), 1))
     do ii = 1, dim_(2)
       aac(1:dim_(1), 1) = aa(1:dim_(1), ii)
@@ -142,7 +142,7 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
   integer :: ii, jj
 #endif
 
-  
+
   PUSH_SUB(X(comm_allreduce_3))
 
   dim_ = ubound(aa)
@@ -160,35 +160,35 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
 
 #if defined(HAVE_MPI2)
 
-      call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
 
 #elif defined(HAVE_MPI)
-      SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
-      aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
-      call MPI_Allreduce(aac(1, 1, 1), aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
-      SAFE_DEALLOCATE_A(aac)
+    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
+    aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
+    call MPI_Allreduce(aac(1, 1, 1), aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    SAFE_DEALLOCATE_A(aac)
 #endif
 
   else
 
 #if defined(HAVE_MPI2)
 
-      SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
-      aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
-      call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
-      aa(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aac(1:dim_(1), 1:dim_(2), 1:dim_(3))
-      SAFE_DEALLOCATE_A(aac)
+    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
+    aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
+    call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+    aa(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aac(1:dim_(1), 1:dim_(2), 1:dim_(3))
+    SAFE_DEALLOCATE_A(aac)
 
 #elif defined(HAVE_MPI)
 
-      SAFE_ALLOCATE(aac(1:dim_(1), 1, 1))
-      do jj = 1, dim_(3)
-        do ii = 1, dim_(2)
-          aac(1:dim_(1), 1, 1) = aa(1:dim_(1), ii, jj)
-          call MPI_Allreduce(aac(1, 1, 1), aa(1, ii, jj), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
-        end do
+    SAFE_ALLOCATE(aac(1:dim_(1), 1, 1))
+    do jj = 1, dim_(3)
+      do ii = 1, dim_(2)
+        aac(1:dim_(1), 1, 1) = aa(1:dim_(1), ii, jj)
+        call MPI_Allreduce(aac(1, 1, 1), aa(1, ii, jj), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
       end do
-      SAFE_DEALLOCATE_A(aac)
+    end do
+    SAFE_DEALLOCATE_A(aac)
 #endif
   end if
 
@@ -204,19 +204,19 @@ subroutine X(comm_allreduce_4)(comm, aa)
 
   integer :: dim_(1:4)
   R_TYPE, allocatable :: aac(:, :, :, :)
-  
+
   PUSH_SUB(X(comm_allreduce_4))
 
   dim_ = ubound(aa)
 
 #if defined(HAVE_MPI2)
 
-    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+  call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
 
 #elif defined(HAVE_MPI)
-    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)))
-    aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4))
-    call MPI_Allreduce(aac(1, 1, 1, 1), aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+  SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)))
+  aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4))
+  call MPI_Allreduce(aac(1, 1, 1, 1), aa(1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
 
   SAFE_DEALLOCATE_A(aac)
@@ -232,21 +232,21 @@ subroutine X(comm_allreduce_5)(comm, aa)
 
   integer :: dim_(1:5)
   R_TYPE, allocatable :: aac(:, :, :, :, :)
-  
+
   PUSH_SUB(X(comm_allreduce_5))
 
   dim_ = ubound(aa)
 
 #if defined(HAVE_MPI2)
 
-    call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+  call MPI_Allreduce(MPI_IN_PLACE, aa(1, 1, 1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
 
 #elif defined(HAVE_MPI)
-    SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)))
-    aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)) = &
-      aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5))
-    call MPI_Allreduce(aac(1, 1, 1, 1, 1), aa(1, 1, 1, 1, 1), product(dim_), &
-      R_MPITYPE, MPI_SUM, comm, mpi_err)
+  SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)))
+  aac(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5)) = &
+    aa(1:dim_(1), 1:dim_(2), 1:dim_(3), 1:dim_(4), 1:dim_(5))
+  call MPI_Allreduce(aac(1, 1, 1, 1, 1), aa(1, 1, 1, 1, 1), product(dim_), &
+    R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
 
   SAFE_DEALLOCATE_A(aac)

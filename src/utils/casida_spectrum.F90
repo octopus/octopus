@@ -84,7 +84,7 @@ program casida_spectrum
   !%Default 0.001 Ha
   !%Section Utilities::oct-casida_spectrum
   !%Description
-  !% Sampling rate for the spectrum. 
+  !% Sampling rate for the spectrum.
   !%End
   call parse_variable(default_namespace, 'CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
 
@@ -126,7 +126,7 @@ program casida_spectrum
   !% will also be output. Size of matrix must be <tt>Dimensions</tt>.
   !%End
 
-  if (parse_block(default_namespace, 'CasidaSpectrumRotationMatrix', blk) == 0) then 
+  if (parse_block(default_namespace, 'CasidaSpectrumRotationMatrix', blk) == 0) then
     rotation(:,:) = M_ZERO
     do idir = 1, cs%space%dim
       do jdir = 1, cs%space%dim
@@ -188,7 +188,7 @@ contains
     logical :: is_complex
 
     PUSH_SUB(calc_broad)
-    
+
     nsteps = int((cs%max_energy - cs%min_energy) / cs%energy_step)
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
@@ -210,7 +210,7 @@ contains
     end if
 
     read(iunit, *) ! skip header
-    
+
     read(iunit, '(a)') string
     ! complex has this many columns; real lacks the imaginary columns (im_tm)
     read(string, *, iostat = ios) trash(1:ncols), energy, (re_tm(idir), im_tm(idir), idir = 1, cs%space%dim), ff(cs%space%dim+1)

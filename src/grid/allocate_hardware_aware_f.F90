@@ -117,62 +117,62 @@ module allocate_hardware_aware_oct_m
 contains
 
   function zallocate_hardware_aware(size)
-      integer(c_int) :: size
-      type(c_ptr) :: zallocate_hardware_aware
+    integer(c_int) :: size
+    type(c_ptr) :: zallocate_hardware_aware
 
-      ! allocate pinned memory for GPU runs, otherwise aligned memory
-      if(accel_is_enabled()) then
-        zallocate_hardware_aware = zallocate_pinned(size)
-      else
-        zallocate_hardware_aware = zallocate_aligned(size)
-      end if
+    ! allocate pinned memory for GPU runs, otherwise aligned memory
+    if(accel_is_enabled()) then
+      zallocate_hardware_aware = zallocate_pinned(size)
+    else
+      zallocate_hardware_aware = zallocate_aligned(size)
+    end if
   end function zallocate_hardware_aware
 
   function dallocate_hardware_aware(size)
-      integer(c_int) :: size
-      type(c_ptr) :: dallocate_hardware_aware
+    integer(c_int) :: size
+    type(c_ptr) :: dallocate_hardware_aware
 
-      ! allocate pinned memory for GPU runs, otherwise aligned memory
-      if(accel_is_enabled()) then
-        dallocate_hardware_aware = dallocate_pinned(size)
-      else
-        dallocate_hardware_aware = dallocate_aligned(size)
-      end if
+    ! allocate pinned memory for GPU runs, otherwise aligned memory
+    if(accel_is_enabled()) then
+      dallocate_hardware_aware = dallocate_pinned(size)
+    else
+      dallocate_hardware_aware = dallocate_aligned(size)
+    end if
   end function dallocate_hardware_aware
 
   function callocate_hardware_aware(size)
-      integer(c_int) :: size
-      type(c_ptr) :: callocate_hardware_aware
+    integer(c_int) :: size
+    type(c_ptr) :: callocate_hardware_aware
 
-      ! allocate pinned memory for GPU runs, otherwise aligned memory
-      if(accel_is_enabled()) then
-        callocate_hardware_aware = callocate_pinned(size)
-      else
-        callocate_hardware_aware = callocate_aligned(size)
-      end if
+    ! allocate pinned memory for GPU runs, otherwise aligned memory
+    if(accel_is_enabled()) then
+      callocate_hardware_aware = callocate_pinned(size)
+    else
+      callocate_hardware_aware = callocate_aligned(size)
+    end if
   end function callocate_hardware_aware
 
   function sallocate_hardware_aware(size)
-      integer(c_int) :: size
-      type(c_ptr) :: sallocate_hardware_aware
+    integer(c_int) :: size
+    type(c_ptr) :: sallocate_hardware_aware
 
-      ! allocate pinned memory for GPU runs, otherwise aligned memory
-      if(accel_is_enabled()) then
-        sallocate_hardware_aware = sallocate_pinned(size)
-      else
-        sallocate_hardware_aware = sallocate_aligned(size)
-      end if
+    ! allocate pinned memory for GPU runs, otherwise aligned memory
+    if(accel_is_enabled()) then
+      sallocate_hardware_aware = sallocate_pinned(size)
+    else
+      sallocate_hardware_aware = sallocate_aligned(size)
+    end if
   end function sallocate_hardware_aware
 
   subroutine deallocate_hardware_aware(array)
-      type(c_ptr), value :: array
+    type(c_ptr), value :: array
 
-      ! deallocate pinned memory for GPU runs, otherwise aligned memory
-      if(accel_is_enabled()) then
-        call deallocate_pinned(array)
-      else
-        call deallocate_aligned(array)
-      end if
+    ! deallocate pinned memory for GPU runs, otherwise aligned memory
+    if(accel_is_enabled()) then
+      call deallocate_pinned(array)
+    else
+      call deallocate_aligned(array)
+    end if
   end subroutine deallocate_hardware_aware
 
 end module allocate_hardware_aware_oct_m

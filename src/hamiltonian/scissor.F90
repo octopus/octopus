@@ -46,13 +46,13 @@ module scissor_oct_m
   private
 
   public ::                  &
-       scissor_t,            &
-       scissor_nullify,      &
-       scissor_init,         &
-       dscissor_apply,       &
-       zscissor_apply,       &
-       scissor_commute_r,    &
-       scissor_end
+    scissor_t,            &
+    scissor_nullify,      &
+    scissor_init,         &
+    dscissor_apply,       &
+    zscissor_apply,       &
+    scissor_commute_r,    &
+    scissor_end
 
   type scissor_t
     private
@@ -60,106 +60,106 @@ module scissor_oct_m
     FLOAT                   :: gap
     type(states_elec_t)     :: gs_st
   end type scissor_t
- 
+
   interface scissor_commute_r
     module procedure dscissor_commute_r, zscissor_commute_r
   end interface
 
 contains
 
- subroutine scissor_init(this, namespace, st, gr, d, gap, mc)
-  type(scissor_t),          intent(inout) :: this
-  type(namespace_t),        intent(in)    :: namespace
-  type(states_elec_t),      intent(in)    :: st
-  type(grid_t),             intent(in)    :: gr
-  type(states_elec_dim_t),  intent(in)    :: d
-  FLOAT,                    intent(in)    :: gap
-  type(multicomm_t),        intent(in)    :: mc
+  subroutine scissor_init(this, namespace, st, gr, d, gap, mc)
+    type(scissor_t),          intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(states_elec_t),      intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_dim_t),  intent(in)    :: d
+    FLOAT,                    intent(in)    :: gap
+    type(multicomm_t),        intent(in)    :: mc
 
-  CMPLX, allocatable   :: phase(:)
-  type(restart_t) :: restart_gs
-  integer :: ierr
-  integer :: ist, ik, ip
-  CMPLX, allocatable :: temp_state(:,:)
-  FLOAT   :: kpoint(1:MAX_DIM)
+    CMPLX, allocatable   :: phase(:)
+    type(restart_t) :: restart_gs
+    integer :: ierr
+    integer :: ist, ik, ip
+    CMPLX, allocatable :: temp_state(:,:)
+    FLOAT   :: kpoint(1:MAX_DIM)
 
-  PUSH_SUB(scissor_init)
+    PUSH_SUB(scissor_init)
 
-  ASSERT(.not. this%apply)
-  ASSERT(.not. states_are_real(st))
+    ASSERT(.not. this%apply)
+    ASSERT(.not. states_are_real(st))
 
-  call messages_print_stress(stdout, "TDScissor", namespace=namespace)
+    call messages_print_stress(stdout, "TDScissor", namespace=namespace)
 
-  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
+    if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
+    if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
-  this%apply = .true.
-  this%gap = real(gap)
+    this%apply = .true.
+    this%gap = real(gap)
 
-  write(message(1),'(a)')    'Start loading GS states.'
-  call messages_info(1) 
-  !We need to load GS states and to store them in this%gs_st
-  call states_elec_copy(this%gs_st, st)
-  
-  call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
-  if(ierr /= 0) then
-     message(1) = "Unable to read states information."
-     call messages_fatal(1, namespace=namespace)
-  end if
-
-  call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
-  if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
-    message(1) = "Unable to read wavefunctions for TDScissor."
-    call messages_fatal(1, namespace=namespace)
-  end if
-  call restart_end(restart_gs)
-
-  if (simul_box_is_periodic(gr%sb) .and. &
-        .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
-
-    write(message(1),'(a)')    'Adding the phase for GS states.'
+    write(message(1),'(a)')    'Start loading GS states.'
     call messages_info(1)
-  
-    SAFE_ALLOCATE(temp_state(1:gr%mesh%np_part,1:this%gs_st%d%dim))
-    SAFE_ALLOCATE(phase(1:gr%mesh%np))
-    ! We apply the phase to these states, as we need it for the projectors later
-    do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
-      
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
-      forall (ip = 1:gr%mesh%np)
-        phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-      end forall
+    !We need to load GS states and to store them in this%gs_st
+    call states_elec_copy(this%gs_st, st)
 
-      do ist=this%gs_st%st_start, this%gs_st%st_end
-        call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
-        call states_elec_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
-        call states_elec_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
+    call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+    if(ierr /= 0) then
+      message(1) = "Unable to read states information."
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
+    if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
+      message(1) = "Unable to read wavefunctions for TDScissor."
+      call messages_fatal(1, namespace=namespace)
+    end if
+    call restart_end(restart_gs)
+
+    if (simul_box_is_periodic(gr%sb) .and. &
+      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
+
+      write(message(1),'(a)')    'Adding the phase for GS states.'
+      call messages_info(1)
+
+      SAFE_ALLOCATE(temp_state(1:gr%mesh%np_part,1:this%gs_st%d%dim))
+      SAFE_ALLOCATE(phase(1:gr%mesh%np))
+      ! We apply the phase to these states, as we need it for the projectors later
+      do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
+
+        kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
+        forall (ip = 1:gr%mesh%np)
+          phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
+        end forall
+
+        do ist=this%gs_st%st_start, this%gs_st%st_end
+          call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
+          call states_elec_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
+          call states_elec_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
+        end do
+
       end do
-   
-    end do
 
-    SAFE_DEALLOCATE_A(temp_state) 
-    SAFE_DEALLOCATE_A(phase)
-  end if
+      SAFE_DEALLOCATE_A(temp_state)
+      SAFE_DEALLOCATE_A(phase)
+    end if
 
-  call messages_print_stress(stdout, namespace=namespace)
+    call messages_print_stress(stdout, namespace=namespace)
 
-  POP_SUB(scissor_init)
- end subroutine scissor_init
+    POP_SUB(scissor_init)
+  end subroutine scissor_init
 
 
- subroutine scissor_nullify(this)
-   type(scissor_t), intent(out) :: this
-   
-   this%apply = .false.
- end subroutine scissor_nullify
+  subroutine scissor_nullify(this)
+    type(scissor_t), intent(out) :: this
 
- subroutine scissor_end(this)
-   type(scissor_t), intent(inout) :: this
-  
-   this%apply = .false.
-   call states_elec_end(this%gs_st)
- end subroutine scissor_end
+    this%apply = .false.
+  end subroutine scissor_nullify
+
+  subroutine scissor_end(this)
+    type(scissor_t), intent(inout) :: this
+
+    this%apply = .false.
+    call states_elec_end(this%gs_st)
+  end subroutine scissor_end
 
 #include "undef.F90"
 #include "real.F90"

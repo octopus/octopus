@@ -765,9 +765,9 @@ contains
 
   ! ---------------------------------------------------------
   integer(8) pure function io_get_open_count() result(count)
-    
+
     count = io_open_count
-  
+
   end function io_get_open_count
 
   ! ---------------------------------------------------------
@@ -796,7 +796,7 @@ contains
     integer, intent(in) :: iio
 
     integer :: open_count
-   
+
     open_count = int(iio/100)
     io_open_count = io_open_count + open_count
     io_close_count = io_close_count + iio - open_count * 100

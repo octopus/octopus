@@ -80,7 +80,7 @@ contains
       message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
       call messages_info(1)
     end select
-    
+
     SAFE_ALLOCATE(os%a(1:os%vsize, 1:os%vsize))
     SAFE_ALLOCATE(os%b(1:os%vsize))
     SAFE_ALLOCATE(os%c(1:os%vsize))
@@ -620,19 +620,19 @@ contains
   end subroutine ode_pd89_coeff
 
 ! ---------------------------------------------------------
-subroutine ode_solver_end(os)
-  type(ode_solver_t), intent(inout) :: os
+  subroutine ode_solver_end(os)
+    type(ode_solver_t), intent(inout) :: os
 
-  PUSH_SUB(ode_solver_end)
+    PUSH_SUB(ode_solver_end)
 
-  ! cleanup
-  SAFE_DEALLOCATE_P(os%a)
-  SAFE_DEALLOCATE_P(os%b)
-  SAFE_DEALLOCATE_P(os%c)
-  SAFE_DEALLOCATE_P(os%e)
+    ! cleanup
+    SAFE_DEALLOCATE_P(os%a)
+    SAFE_DEALLOCATE_P(os%b)
+    SAFE_DEALLOCATE_P(os%c)
+    SAFE_DEALLOCATE_P(os%e)
 
-  POP_SUB(ode_solver_end)
-end subroutine ode_solver_end
+    POP_SUB(ode_solver_end)
+  end subroutine ode_solver_end
 
 #include "undef.F90"
 #include "complex.F90"

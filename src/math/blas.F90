@@ -305,18 +305,18 @@ module blas_oct_m
       complex(8),   intent(inout) :: y !< y(:)
     end subroutine zsymv
   end interface blas_symv
-  
+
   !> ----------------- gemv ------------------
   !! SGEMV  performs one of the matrix-vector operations
   !!
   !! \f[
-  !!     y := \alpha A x + \beta y,   
+  !!     y := \alpha A x + \beta y,
   !! \f]
-  !! or 
+  !! or
   !! \f[
   !!     y := \alpha A^Tx + \beta y
   !! \f]
-  !!  
+  !!
   !!  where \f$\alpha\f$ and \f$\beta\f$ are scalars, x and y are
   !!  vectors and A is an \f$m\times n\f$ matrix.
   interface blas_gemv
@@ -444,7 +444,7 @@ module blas_oct_m
     end subroutine zdgemm
   end interface
 
-  !> ----------------- trmm ------------------ 
+  !> ----------------- trmm ------------------
   !! Performs one of the matrix-matrix operations
   !!
   !! \f[
@@ -548,7 +548,7 @@ module blas_oct_m
   !!     C := \alpha A A^T + \beta C,
   !!
   !! \f]
-  !! or 
+  !! or
   !! \f[
   !!     C := \alpha A^T A + \beta*C
   !! \f]
@@ -597,9 +597,9 @@ module blas_oct_m
   !! Solves one of the matrix equations
   !!
   !! \f[
-  !!     op( A )X = \alpha B, 
+  !!     op( A )X = \alpha B,
   !! \f]
-  !! or 
+  !! or
   !! \f[
   !! X op( A ) = \alpha B,
   !! \f]

@@ -59,7 +59,7 @@ module ps_oct_m
     ps_has_density,             &
     ps_has_nlcc,                &
     ps_density_volume
-  
+
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
@@ -70,7 +70,7 @@ module ps_oct_m
     PROJ_HGH  = 1,  &
     PROJ_KB   = 2,  &
     PROJ_RKB  = 3
-  
+
   integer, parameter, public :: INVALID_L = 333
 
   character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_PSP8) = &
@@ -97,12 +97,12 @@ module ps_oct_m
     type(spline_t) :: vl         !< local part
 
     FLOAT :: projectors_sphere_threshold !< The projectors are localized in real
-                                         !! space, and so they are contained in a
-                                         !! sphere whose radius is computed by
-                                         !! making sure that the projector
-                                         !! functions absolute value is below this
-                                         !! threshold, for points outside the
-                                         !! sphere.
+    !! space, and so they are contained in a
+    !! sphere whose radius is computed by
+    !! making sure that the projector
+    !! functions absolute value is below this
+    !! threshold, for points outside the
+    !! sphere.
     FLOAT :: rc_max !< The radius of the spheres that contain the projector functions.
 
     integer  :: kbc      !< Number of KB components (1 or 2 for TM ps, 3 for HGH)
@@ -116,12 +116,12 @@ module ps_oct_m
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
-    
+
     logical, private :: has_long_range
 
     type(spline_t), private :: vlr !< the long-range part of the local potential
     type(spline_t) :: vlr_sq       !< the long-range part of the
-                                   !< local potential in terms of r^2, to avoid the sqrt
+    !< local potential in terms of r^2, to avoid the sqrt
     type(spline_t) :: nlr          !< the charge density associated with the long-range part
 
     FLOAT :: sigma_erf             !< the a constant in erf(r/(sqrt(2)*sigma))/r
@@ -129,7 +129,7 @@ module ps_oct_m
     logical,        private :: has_density     !< does the species have a density?
     type(spline_t), pointer :: density(:)      !< the atomic density for each spin
     type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
-    
+
     logical, private :: is_separated
     logical          :: local
     logical          :: hamann
@@ -154,7 +154,7 @@ contains
     integer,           intent(in)    :: ispin
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
-    
+
     integer :: l, ii, ll, is, ierr
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
@@ -162,13 +162,13 @@ contains
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
-    FLOAT, allocatable :: eigen(:, :)  !< eigenvalues    
-    
+    FLOAT, allocatable :: eigen(:, :)  !< eigenvalues
+
     PUSH_SUB(ps_init)
 
     ps%exchange_functional = PSEUDO_EXCHANGE_UNKNOWN
     ps%correlation_functional = PSEUDO_CORRELATION_UNKNOWN
-    
+
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
     call messages_obsolete_variable(namespace, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
@@ -184,10 +184,10 @@ contains
     !% These projectors are localized in real space -- that is, the function <math>v</math>
     !% has a finite support around the nucleus. This region where the projectors are localized should
     !% be small or else the computation time required to operate with them will be very large.
-    !% 
+    !%
     !% In practice, this localization is fixed by requiring the definition of the projectors to be
-    !% contained in a sphere of a certain radius. This radius is computed by making sure that the 
-    !% absolute value of the projector functions, at points outside the localization sphere, is 
+    !% contained in a sphere of a certain radius. This radius is computed by making sure that the
+    !% absolute value of the projector functions, at points outside the localization sphere, is
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
     call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
@@ -202,7 +202,7 @@ contains
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
-                          new_line = .true.)
+        new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal(namespace=namespace)
     end if
@@ -211,32 +211,32 @@ contains
     ps%ispin   = ispin
     ps%hamann  = .false.
     ps%projector_type = PROJ_KB
-    
+
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
       ps%has_density = .true.
     case default
       ps%has_density = .false.
     end select
-       
+
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
-      
+
       call ps_psf_init(ps_psf, ispin, filename, namespace)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
       ps%conf%z = nint(z) ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
-      
+
       ps%lmax = ps_psf%ps_grid%no_l_channels - 1
 
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
-                       " is larger than number available in pseudopotential."
+            " is larger than number available in pseudopotential."
           call messages_fatal(1, namespace=namespace)
         end if
       end if
@@ -250,13 +250,13 @@ contains
       else
         ps%llocal = user_llocal
       end if
-      
+
       call ps_psf_process(ps_psf, namespace, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
-      
+
       call valconf_null(ps%conf)
 
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
@@ -283,7 +283,7 @@ contains
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
           message(1) = "lmax in Species block for " // trim(label) // &
-                       " is larger than number available in pseudopotential."
+            " is larger than number available in pseudopotential."
           call messages_fatal(1, namespace=namespace)
         end if
       end if
@@ -296,7 +296,7 @@ contains
       else
         ps%llocal = user_llocal
       end if
-      
+
       if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_process(ps_cpi, ps%llocal, namespace)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
@@ -308,7 +308,7 @@ contains
     case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
-      
+
       call hgh_init(ps_hgh, trim(filename), namespace)
       call valconf_copy(ps%conf, ps_hgh%conf)
 
@@ -321,36 +321,36 @@ contains
       call logrid_copy(ps_hgh%g, ps%g)
 
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
-      
+
       if(.not. xml_warned) then
         call messages_experimental('XML (QSO, UPF, and PSML, PSP8) pseudopotential support')
         xml_warned = .true.
       end if
-      
+
       call ps_xml_init(ps_xml, namespace, trim(filename), ps%file_format, ierr)
 
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
       ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
-      
+
       call valconf_null(ps%conf)
-      
+
       ps%z      = z
       ps%conf%z = nint(z)
-      
+
       if(ps_xml%kleinman_bylander) then
         ps%conf%p = ps_xml%nwavefunctions
       else
         ps%conf%p = ps_xml%lmax + 1
       end if
-      
+
       do ll = 0, ps_xml%lmax
         ps%conf%l(ll + 1) = ll
       end do
-      
+
       ps%kbc    = ps_xml%nchannels
       ps%lmax  = ps_xml%lmax
-      
+
       if(ps_xml%kleinman_bylander) then
         ps%llocal = ps_xml%llocal
       else
@@ -361,11 +361,11 @@ contains
         ASSERT(ps%llocal >= 0)
         ASSERT(ps%llocal <= ps%lmax)
       end if
-      
+
       nullify(ps%g%drdi, ps%g%s)
-      
+
       ps%g%nrval = ps_xml%grid_size
-      
+
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
 
@@ -373,9 +373,9 @@ contains
         ps%g%rofi(ii) = ps_xml%grid(ii)
         ps%g%r2ofi(ii) = ps_xml%grid(ii)**2
       end do
-      
+
     end select
-    
+
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
 
     ! We allocate all the stuff
@@ -400,7 +400,7 @@ contains
 
     SAFE_ALLOCATE(eigen(1:ps%conf%p, 1:ps%ispin))
     eigen = M_ZERO
-    
+
     ! Now we load the necessary information.
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF)
@@ -423,7 +423,7 @@ contains
       call ps_xml_end(ps_xml)
     end select
 
-    if(ps_has_density(ps)) then 
+    if(ps_has_density(ps)) then
       do is = 1, ps%ispin
         call spline_der(ps%density(is), ps%density_der(is))
       end do
@@ -434,19 +434,19 @@ contains
     end if
 
     call ps_check_bound(ps, eigen)
-    
+
     ps%has_long_range = .true.
     ps%is_separated = .false.
-    
+
     call ps_info(ps, filename)
 
     SAFE_DEALLOCATE_A(eigen)
-    
+
     POP_SUB(ps_init)
   end subroutine ps_init
 
   !------------------------------------------------------------------------
-  
+
   subroutine ps_info(ps, filename)
     type(ps_t),       intent(in) :: ps
     character(len=*), intent(in) :: filename
@@ -455,7 +455,7 @@ contains
     call messages_write("    type             : pseudopotential", new_line = .true.)
     call messages_write("    file             : '"//trim(filename)//"'")
     call messages_info()
-    
+
     call messages_write("    file format      :")
     select case(ps%file_format)
     case(PSEUDO_FORMAT_UPF1)
@@ -486,7 +486,7 @@ contains
     call messages_write("    atomic number    :")
     call messages_write(nint(ps%z), fmt = '(i4)')
     call messages_info()
-    
+
     call messages_write("    form on file     :")
     select case(ps%pseudo_type)
     case(PSEUDO_TYPE_ULTRASOFT)
@@ -526,7 +526,7 @@ contains
     call messages_write("    projectors per l :")
     call messages_write(ps%kbc, fmt = '(i2)')
     call messages_info()
-    
+
     call messages_write("    total projectors :")
     if(ps%llocal < 0) then
       call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
@@ -550,10 +550,10 @@ contains
     call messages_info()
 
     call messages_info()
-    
+
   end subroutine ps_info
 
-  
+
   ! ---------------------------------------------------------
   !> separate the local potential into (soft) long-ranged and (hard) short-ranged parts
   subroutine ps_separate(ps)
@@ -562,7 +562,7 @@ contains
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
     FLOAT :: r, exp_arg
     integer :: ii
-    
+
     PUSH_SUB(ps_separate)
 
     ASSERT(ps%g%nrval > 0)
@@ -572,7 +572,7 @@ contains
     SAFE_ALLOCATE(nlr(1:ps%g%nrval))
 
     ps%sigma_erf = CNST(0.625) ! This is hard-coded to a reasonable value
-    
+
     vlr(1) = -ps%z_val*M_TWO/(sqrt(M_TWO*M_PI)*ps%sigma_erf)
 
     do ii = 1, ps%g%nrval
@@ -589,31 +589,31 @@ contains
         nlr(ii) = M_ZERO
       end if
     end do
-    
+
     call spline_init(ps%vlr)
     call spline_fit(ps%g%nrval, ps%g%rofi, vlr, ps%vlr)
 
     call spline_init(ps%vlr_sq)
     call spline_fit(ps%g%nrval, ps%g%r2ofi, vlr, ps%vlr_sq)
-    
+
     call spline_init(ps%nlr)
     call spline_fit(ps%g%nrval, ps%g%rofi, nlr, ps%nlr)
-    
+
     !overwrite vl
     call spline_end(ps%vl)
     call spline_init(ps%vl)
     call spline_fit(ps%g%nrval, ps%g%rofi, vsr, ps%vl)
-    
+
     SAFE_DEALLOCATE_A(vsr)
     SAFE_DEALLOCATE_A(vlr)
     SAFE_DEALLOCATE_A(nlr)
-    
+
     ps%is_separated = .true.
 
     POP_SUB(ps_separate)
   end subroutine ps_separate
-  
-  
+
+
   ! ---------------------------------------------------------
   subroutine ps_getradius(ps)
     type(ps_t), intent(inout) :: ps
@@ -629,7 +629,7 @@ contains
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
     end do
-    
+
     POP_SUB(ps_getradius)
   end subroutine ps_getradius
 
@@ -680,7 +680,7 @@ contains
           call spline_filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
         end do
       end do
-      
+
       if(ps_has_nlcc(ps)) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
@@ -714,11 +714,11 @@ contains
           call spline_filter_bessel(ps%kb(l, k), l, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end do
-      
+
       if(ps_has_nlcc(ps)) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
-      
+
       if(ps_has_density(ps)) then
         do ispin = 1, ps%ispin
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
@@ -732,7 +732,7 @@ contains
     call profiling_out(prof)
     POP_SUB(ps_filter)
   end subroutine ps_filter
-    
+
   ! ---------------------------------------------------------
   subroutine ps_check_bound(ps, eigen)
     type(ps_t), intent(inout) :: ps
@@ -740,7 +740,7 @@ contains
 
     integer :: i, is, ir
     FLOAT :: ur1, ur2
-    
+
     PUSH_SUB(ps_check_bound)
 
     ! Unbound states have positive eigenvalues
@@ -750,7 +750,7 @@ contains
       ps%bound = .true.
     end where
 
-    ! We might not have information about the eigenvalues, so we need to check the wavefunctions    
+    ! We might not have information about the eigenvalues, so we need to check the wavefunctions
     do i = 1, ps%conf%p
       do is = 1, ps%ispin
         if (.not. ps%bound(i, is)) cycle
@@ -773,7 +773,7 @@ contains
         end do
       end do
     end do
-    
+
     POP_SUB(ps_check_bound)
   end subroutine ps_check_bound
 
@@ -821,10 +821,10 @@ contains
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
       write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
-                                                         'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+        'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
     end do
 
-    
+
     call io_close(iunit)
 
     ! Local part of the pseudopotential
@@ -841,7 +841,7 @@ contains
     iunit  = io_open(trim(dir)//'/local_long_range_density', namespace, action='write')
     call spline_print(ps%nlr, iunit)
     call io_close(iunit)
-    
+
     ! Fourier transform of the local part
     iunit = io_open(trim(dir)//'/local_ft', namespace, action='write')
     SAFE_ALLOCATE(fw(1:1, 1:1))
@@ -1014,7 +1014,7 @@ contains
           hato(1) = hato(2)
 
           forall(ip = 1:ps_hgh%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
-          
+
           call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, hato, ps%ur(l, is))
           call spline_fit(ps_hgh%g%nrval, ps_hgh%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
@@ -1078,7 +1078,7 @@ contains
           hato(1)  = first_point_extrapolate(g%rofi, hato)
 
           forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
-          
+
           call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
           call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
 
@@ -1086,7 +1086,7 @@ contains
 
         call spline_fit(g%nrval, g%rofi, dens, ps%density(is))
       end do
-      
+
 
       ! the Kleinman-Bylander projectors
       do l = 1, ps%lmax+1
@@ -1101,7 +1101,7 @@ contains
       ! where the asymptotic part is subtracted
       hato(:) = ps_grid%vlocal(:)/M_TWO
       call spline_fit(g%nrval, g%rofi, hato, ps%vl)
-      
+
       if(ps_grid%core_corrections) then
         ! find cutoff radius
         hato(2:) = ps_grid%chcore(2:)/(M_FOUR*M_PI*g%rofi(2:)**2)
@@ -1121,11 +1121,11 @@ contains
 
       SAFE_DEALLOCATE_A(hato)
       SAFE_DEALLOCATE_A(dens)
-      
+
       POP_SUB(ps_grid_load.get_splines)
     end subroutine get_splines
   end subroutine ps_grid_load
-  
+
   ! ---------------------------------------------------------
 
   subroutine ps_xml_load(ps, ps_xml)
@@ -1141,7 +1141,7 @@ contains
     PUSH_SUB(ps_xml_load)
 
     ps%hamann = (ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1)
-    
+
     ps%nlcc = ps_xml%nlcc
 
     ps%z_val = ps_xml%valence_charge
@@ -1209,7 +1209,7 @@ contains
         do ll = 0, ps_xml%lmax
 
           if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
-              pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+            pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
             forall(ic = 1:ps_xml%nchannels)
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
@@ -1220,9 +1220,9 @@ contains
             matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
             call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
           end if
-          
+
           do ic = 1, ps_xml%nchannels
-            
+
             do ip = 1, ps%g%nrval
               kbprojector(ip) = M_ZERO
               if(ip <= ps_xml%grid_size) then
@@ -1231,20 +1231,20 @@ contains
                 end do
               end if
             end do
-            
+
             call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
-            
+
             ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
-            
+
           end do
         end do
       end if
-      
+
       SAFE_DEALLOCATE_A(matrix)
       SAFE_DEALLOCATE_A(eigenvalues)
-      
+
       ps%conf%p = ps_xml%nwavefunctions
-      
+
       do ii = 1, ps_xml%nwavefunctions
 
         ps%conf%n(ii) = ps_xml%wf_n(ii)
@@ -1269,7 +1269,7 @@ contains
             wavefunction(ip) = CNST(0.0)
           end if
         end do
-      
+
         do is = 1, ps%ispin
           call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ii, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ii, is))
@@ -1278,7 +1278,7 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(cmap)
-      
+
     else
 
       do ll = 0, ps_xml%lmax
@@ -1298,7 +1298,7 @@ contains
         kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
         if(ll /= ps%llocal) then
-          ps%h(ll, 1, 1) = kbcos        
+          ps%h(ll, 1, 1) = kbcos
           kbprojector = kbprojector*kbnorm
         else
           ps%h(ll, 1, 1) = CNST(0.0)
@@ -1324,28 +1324,28 @@ contains
     end if
 
     ps%has_density = ps_xml%has_density
-    
+
     if(ps_has_density(ps)) then
-      
+
       SAFE_ALLOCATE(dens(1:ps%g%nrval))
-      
+
       dens(1:ps_xml%grid_size) = ps_xml%density(1:ps_xml%grid_size)/ps%ispin
       dens(ps_xml%grid_size + 1:ps%g%nrval) = CNST(0.0)
-      
+
       do is = 1, ps%ispin
         call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
       end do
-      
+
       SAFE_DEALLOCATE_A(dens)
     end if
-    
+
     !Non-linear core-corrections
     if(ps_xml%nlcc) then
 
       SAFE_ALLOCATE(nlcc_density(1:ps%g%nrval))
 
       nlcc_density(1:ps_xml%grid_size) = ps_xml%nlcc_density(1:ps_xml%grid_size)
-      
+
       ! find cutoff radius
       do ir = ps_xml%grid_size - 1, 1, -1
         if(nlcc_density(ir) > eps) then
@@ -1355,12 +1355,12 @@ contains
       end do
 
       nlcc_density(nrc:ps%g%nrval) = M_ZERO
-      
+
       call spline_fit(ps%g%nrval, ps%g%rofi, nlcc_density, ps%core)
 
       SAFE_DEALLOCATE_A(nlcc_density)
     end if
-    
+
     call ps_getradius(ps)
 
     SAFE_DEALLOCATE_A(kbprojector)
@@ -1372,11 +1372,11 @@ contains
   ! ---------------------------------------------------------
 
   logical function is_diagonal(dim, matrix)
-    integer, intent(in)    :: dim 
+    integer, intent(in)    :: dim
     FLOAT,   intent(in)    :: matrix(:, :)
 
     integer :: ii, jj
-    
+
     is_diagonal = .true.
     do ii = 1, dim
       do jj = 1, dim
@@ -1384,9 +1384,9 @@ contains
         if(abs(matrix(ii, jj)) > CNST(1e10)) is_diagonal = .false.
       end do
     end do
-    
+
   end function is_diagonal
-  
+
   ! ---------------------------------------------------------
   !> Returns the number of atomic orbitals taking into account then m quantum number multiplicity
   pure integer function ps_niwfs(ps)
@@ -1435,7 +1435,7 @@ contains
     has_nlcc = ps%nlcc
 
   end function ps_has_nlcc
-  
+
   !---------------------------------------
   FLOAT function ps_density_volume(ps, namespace) result(volume)
     type(ps_t),        intent(in) :: ps
@@ -1445,16 +1445,16 @@ contains
     FLOAT :: rr
     FLOAT, allocatable ::vol(:)
     type(spline_t) :: volspl
-    
+
     PUSH_SUB(ps_density_volume)
-    
+
     if (.not. ps_has_density(ps)) then
-       message(1) = "The pseudopotential does not contain an atomic density"
-       call messages_fatal(1, namespace=namespace)
+      message(1) = "The pseudopotential does not contain an atomic density"
+      call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
-    
+
     do ip = 1, ps%g%nrval
       rr = ps%g%rofi(ip)
       vol(ip) = CNST(0.0)
@@ -1469,12 +1469,12 @@ contains
     call spline_end(volspl)
 
     SAFE_DEALLOCATE_A(vol)
-    
+
     POP_SUB(ps_density_volume)
   end function ps_density_volume
-  
+
 #include "ps_pspio_inc.F90"
- 
+
 end module ps_oct_m
 
 !! Local Variables:

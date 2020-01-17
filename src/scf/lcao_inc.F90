@@ -41,7 +41,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 #ifdef R_TCOMPLEX
   FLOAT, allocatable :: dorbital(:)
 #endif
-  
+
   call profiling_in(prof, "ATOMIC_ORBITAL")
   PUSH_SUB(X(lcao_atomic_orbital))
 
@@ -62,7 +62,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   radius = this%orbital_scale_factor*species_get_iwf_radius(spec, ii, ispin)
   ! make sure that if the spacing is too large, the orbitals fit in a few points at least
   radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
-  
+
   call submesh_init(sphere, mesh%sb, mesh, geo%atom(iatom)%x, radius)
 
 #ifdef R_TCOMPLEX
@@ -79,20 +79,20 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
     SAFE_ALLOCATE(orbital(1:sphere%np))
 
     call X(atomic_orbital_get_submesh)(spec, sphere, ii, ll, mm, ispin, orbital)
-    
+
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
-    
+
     SAFE_DEALLOCATE_A(orbital)
 
 #ifdef R_TCOMPLEX
   end if
 #endif
-  
+
   call submesh_end(sphere)
 
 
-  
+
   POP_SUB(X(lcao_atomic_orbital))
   call profiling_out(prof)
 
@@ -121,7 +121,7 @@ subroutine X(lcao_simple)(this, namespace, st, gr, geo, start)
   SAFE_ALLOCATE(orbital(1:gr%mesh%np, 1:st%d%dim))
 
   call st%set_zero()
-  
+
   do iqn = st%d%kpt%start, st%d%kpt%end
     ispin = states_elec_dim_get_spin_index(st%d, iqn)
 
@@ -137,7 +137,7 @@ subroutine X(lcao_simple)(this, namespace, st, gr, geo, start)
       call states_elec_get_state(st, gr%mesh, ist, iqn, orbital)
       call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, orbital, ispin, add = .true.)
       call states_elec_set_state(st, gr%mesh, ist, iqn, orbital)
-      
+
     end do
 
     ! if we don't have all states we can't orthogonalize right now
@@ -180,11 +180,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 #endif
 
   PUSH_SUB(X(lcao_wf))
-  
+
   write(message(1),'(a,i6,a)') 'Info: Performing initial LCAO calculation with ', &
-       this%norbs,' orbitals.'
+    this%norbs,' orbitals.'
   call messages_info(1)
-          
+
 
   nst = min(st%nst, this%norbs)
   kstart = st%d%kpt%start
@@ -223,7 +223,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! FIXME: these loops should not be over st%d%spin_channels but rather 1 unless spin-polarized in which case 2.
   do n1 = 1, this%norbs
-    
+
     do ispin = 1, st%d%spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
@@ -265,7 +265,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 #endif
         end do
       end do
-      
+
       ie = ie + 1
     end do
 
@@ -331,8 +331,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     tmp(1:nst, kstart:kend) = st%eigenval(1:nst, kstart:kend)
     if(nst<st%nst) tmp(nst+1:st%nst, kstart:kend) = M_ZERO
     call MPI_Allgatherv(tmp(:, kstart:), st%nst * (kend - kstart + 1), MPI_FLOAT, &
-         st%eigenval, st%d%kpt%num(:) * st%nst, (st%d%kpt%range(1, :)-1) * st%nst, MPI_FLOAT, &
-         st%d%kpt%mpi_grp%comm, mpi_err)
+      st%eigenval, st%d%kpt%num(:) * st%nst, (st%d%kpt%range(1, :)-1) * st%nst, MPI_FLOAT, &
+      st%d%kpt%mpi_grp%comm, mpi_err)
     SAFE_DEALLOCATE_A(tmp)
   end if
 #endif
@@ -340,7 +340,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   ! Change of basis
   do n2 = 1, this%norbs
     do ispin = 1, st%d%spin_channels
-      
+
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
@@ -353,14 +353,14 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
           end do
         end do
       end do
-      
+
     end do
   end do
 
   SAFE_DEALLOCATE_A(ev)
   SAFE_DEALLOCATE_A(hamilt)
   SAFE_DEALLOCATE_A(overlap)
-  
+
   SAFE_DEALLOCATE_A(lcaopsi)
   SAFE_DEALLOCATE_A(lcaopsi2)
 
@@ -445,7 +445,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
   end if
 
   this%initialized_orbitals = .true.
-  
+
   SAFE_DEALLOCATE_A(ao)
 
   POP_SUB(X(init_orbitals))
@@ -465,7 +465,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   logical,             intent(in)    :: use_psi
 
   PUSH_SUB(X(get_ao))
-  
+
   if(this%ck(iorb, ispin) == 0 .and. this%initialized_orbitals) then
     ao(1:mesh%np, 1:st%d%dim) = this%X(buff)(1:mesh%np, 1:st%d%dim, iorb, ispin)
   else
@@ -477,7 +477,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   end if
 
   POP_SUB(X(get_ao))
-  
+
 end subroutine X(get_ao)
 
 ! ---------------------------------------------------------
@@ -587,7 +587,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   end if
 
   SAFE_ALLOCATE(aa(1:this%maxorb, 1:this%maxorb))
-  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))  
+  SAFE_ALLOCATE(bb(1:this%maxorb, 1:this%maxorb))
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, 1:this%maxorb))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:this%maxorb))
 
@@ -669,14 +669,14 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
           call X(submesh_batch_dotp_matrix)(this%sphere(jatom), hpsib, this%orbitals(jatom), aa)
 
-          if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then 
+          if(dist2 > (this%radius(iatom) + this%radius(jatom))**2) then
             bb = M_ZERO
           else
             call X(submesh_batch_dotp_matrix)(this%sphere(jatom), psib, this%orbitals(jatom), bb)
           end if
 
           if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(jatom))
-          
+
           !now, store the result in the matrix
 
           if (.not. this%parallel) then
@@ -748,15 +748,15 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
       call profiling_out(prof_matrix)
       ! the number of eigenvectors we need
-      nev = min(this%norbs, st%nst) 
+      nev = min(this%norbs, st%nst)
 
       SAFE_ALLOCATE(eval(1:this%norbs))
 
       if(this%parallel) then
         SAFE_ALLOCATE(levec(1:this%lsize(1), 1:this%lsize(2)))
         SAFE_ALLOCATE(evec(1:this%norbs, st%st_start:min(st%st_end, this%norbs)))
-      else 
-        if (mpi_grp_is_root(gr%mesh%mpi_grp)) then 
+      else
+        if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
           SAFE_ALLOCATE(evec(1:this%norbs, 1:this%norbs))
         end if
       end if
@@ -775,7 +775,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
       ! The output will show ******* for the eigenvalues which looks like something horrible has gone wrong.
 
       SAFE_DEALLOCATE_A(eval)
-      
+
       if (.not. this%parallel .and. gr%mesh%parallel_in_domains) then
 
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, this%norbs * nev)
@@ -789,12 +789,12 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
           block_evec_max = min(nev, states_elec_block_max(st, ib))
           block_evec_size = block_evec_max - states_elec_block_min(st, ib) + 1
-          
+
           SAFE_ALLOCATE(block_evec(1:this%norbs, 1:block_evec_size))
 
           if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
             block_evec(1:this%norbs, 1:block_evec_size) = &
-                 evec(1:this%norbs, states_elec_block_min(st, ib):block_evec_max)
+              evec(1:this%norbs, states_elec_block_min(st, ib):block_evec_max)
           end if
 #ifdef HAVE_MPI
           call MPI_Bcast(block_evec(1,1), size(block_evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
@@ -811,7 +811,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
             ! FIXME: this call handles spinors incorrectly.
             call X(submesh_batch_add_matrix)(this%sphere(iatom), block_evec(ibasis:, :), &
-                 this%orbitals(iatom), st%group%psib(ib, ik))
+              this%orbitals(iatom), st%group%psib(ib, ik))
 
             ibasis = ibasis + norbs
             if(mpi_grp_is_root(mpi_world)) then
@@ -850,7 +850,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
           do ib = st%group%block_start, st%group%block_end
             ! FIXME: this call handles spinors incorrectly.
             call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_elec_block_min(st, ib):), &
-                 this%orbitals(iatom), st%group%psib(ib, ik))
+              this%orbitals(iatom), st%group%psib(ib, ik))
           end do
 
           if(.not. this%keep_orb) call lcao_alt_end_orbital(this%orbitals(iatom))
@@ -858,7 +858,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
           ibasis = ibasis + norbs
           if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ibasis - 1, this%norbs)
         end do
-        
+
         SAFE_DEALLOCATE_A(evec)
       end if
 
@@ -886,7 +886,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   POP_SUB(X(lcao_alt_wf))
 
 contains
-  
+
   !> \return evec the eigenvector
   subroutine diagonalization()
 
@@ -916,7 +916,7 @@ contains
 
     call profiling_in(prof, "LCAO_DIAG")
     if(this%parallel) then
-#ifdef HAVE_SCALAPACK            
+#ifdef HAVE_SCALAPACK
       SAFE_ALLOCATE(ifail(1:this%norbs))
       SAFE_ALLOCATE(iclustr(1:2*st%dom_st_proc_grid%nprocs))
       SAFE_ALLOCATE(gap(1:st%dom_st_proc_grid%nprocs))
@@ -1080,7 +1080,7 @@ contains
         recv_buffer(1, 1), recv_count(1), recv_disp(1), R_MPITYPE, &
         st%dom_st_mpi_grp%comm, mpi_err)
       call mpi_debug_out(st%dom_st_mpi_grp%comm, C_MPI_ALLTOALLV)
-      
+
       do node = 1, st%dom_st_mpi_grp%size
         do ii = 1, recv_count(node)
           evec(recv_pos(1, ii, node), recv_pos(2, ii, node)) = recv_buffer(ii, node)
@@ -1088,11 +1088,11 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(send_disp)
-      SAFE_DEALLOCATE_A(send_count)      
+      SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_buffer)
       SAFE_DEALLOCATE_A(recv_pos)
       SAFE_DEALLOCATE_A(recv_disp)
-      SAFE_DEALLOCATE_A(recv_count)      
+      SAFE_DEALLOCATE_A(recv_count)
       SAFE_DEALLOCATE_A(recv_buffer)
 
 #endif /* HAVE_SCALAPACK */
@@ -1105,7 +1105,7 @@ contains
         ASSERT(allocated(hamiltonian))
         ASSERT(allocated(overlap))
 
-#ifdef R_TREAL    
+#ifdef R_TREAL
         call lapack_sygvx(itype = 1, jobz = 'V', range = 'I', uplo = 'U', &
           n = this%norbs, a = hamiltonian(1, 1), lda = this%norbs, b = overlap(1, 1), ldb = this%norbs, &
           vl = M_ZERO, vu = M_ONE, il = 1, iu = nev, abstol = this%diag_tol, &
@@ -1124,7 +1124,7 @@ contains
           write(message(1), '(a,i4,a)') 'Workspace query for LCAO diagonalization failed. LAPACK returned info code ', info, '.'
           call messages_warning(1)
         end if
-        
+
         lwork = nint(R_REAL(tmp(1)))
         SAFE_ALLOCATE(work(1:lwork))
 
@@ -1148,7 +1148,7 @@ contains
           write(message(1), '(a,i4,a)') 'LCAO diagonalization failed. LAPACK returned info code ', info, '.'
           call messages_warning(1)
         end if
-        
+
         SAFE_DEALLOCATE_A(ifail)
         SAFE_DEALLOCATE_A(iwork)
         SAFE_DEALLOCATE_A(work)
@@ -1183,52 +1183,52 @@ contains
 
 end subroutine X(lcao_alt_wf)
 
-  ! --------------------------------------------------------- 
-  
-  !> This function generates the set of an atomic orbitals for an atom
-  !! and stores it in the batch orbitalb. It can be called when the
-  !! orbitals are already stored. In that case it does not do anything.
-  subroutine X(lcao_alt_get_orbital)(orbitalb, sphere, geo, ispin, iatom, norbs)
-    type(batch_t),     intent(inout) :: orbitalb
-    type(submesh_t),   intent(in)    :: sphere
-    type(geometry_t),  intent(in)    :: geo
-    integer,           intent(in)    :: ispin
-    integer,           intent(in)    :: iatom
-    integer,           intent(in)    :: norbs
+ ! ---------------------------------------------------------
 
-    integer :: iorb, ii, ll, mm
-    logical :: derivative
+ !> This function generates the set of an atomic orbitals for an atom
+ !! and stores it in the batch orbitalb. It can be called when the
+ !! orbitals are already stored. In that case it does not do anything.
+subroutine X(lcao_alt_get_orbital)(orbitalb, sphere, geo, ispin, iatom, norbs)
+  type(batch_t),     intent(inout) :: orbitalb
+  type(submesh_t),   intent(in)    :: sphere
+  type(geometry_t),  intent(in)    :: geo
+  integer,           intent(in)    :: ispin
+  integer,           intent(in)    :: iatom
+  integer,           intent(in)    :: norbs
 
-    PUSH_SUB(X(lcao_alt_get_orbital))
+  integer :: iorb, ii, ll, mm
+  logical :: derivative
 
-    if(.not. orbitalb%is_ok()) then
+  PUSH_SUB(X(lcao_alt_get_orbital))
 
-      call profiling_in(prof_orbitals, "LCAO_ORBITALS")
+  if(.not. orbitalb%is_ok()) then
 
-      ! allocate memory
-      call orbitalb%X(allocate)(1, norbs, sphere%np)
-      
-      ! generate the orbitals
-      do iorb = 1, norbs
-        if(iorb > species_niwfs(geo%atom(iatom)%species)) then
-          call species_iwf_ilm(geo%atom(iatom)%species, &
-            iorb - species_niwfs(geo%atom(iatom)%species), ispin, ii, ll, mm)
-          derivative = .true.
-        else
-          call species_iwf_ilm(geo%atom(iatom)%species, iorb, ispin, ii, ll, mm)
-          derivative = .false.
-        end if
+    call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
-        call X(atomic_orbital_get_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
-          ispin, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
-      end do
- 
-      call profiling_out(prof_orbitals)
-    end if
+    ! allocate memory
+    call orbitalb%X(allocate)(1, norbs, sphere%np)
 
-    POP_SUB(X(lcao_alt_get_orbital))
+    ! generate the orbitals
+    do iorb = 1, norbs
+      if(iorb > species_niwfs(geo%atom(iatom)%species)) then
+        call species_iwf_ilm(geo%atom(iatom)%species, &
+          iorb - species_niwfs(geo%atom(iatom)%species), ispin, ii, ll, mm)
+        derivative = .true.
+      else
+        call species_iwf_ilm(geo%atom(iatom)%species, iorb, ispin, ii, ll, mm)
+        derivative = .false.
+      end if
 
-  end subroutine X(lcao_alt_get_orbital)
+      call X(atomic_orbital_get_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
+        ispin, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
+    end do
+
+    call profiling_out(prof_orbitals)
+  end if
+
+  POP_SUB(X(lcao_alt_get_orbital))
+
+end subroutine X(lcao_alt_get_orbital)
 
 !! Local Variables:
 !! mode: f90

@@ -47,7 +47,7 @@ module states_mxll_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  
+
   implicit none
 
   private
@@ -96,12 +96,12 @@ module states_mxll_oct_m
     type(batch_t), pointer       :: rs_longb
     type(batch_t), pointer       :: rs_curr_dens_rest1b
     type(batch_t), pointer       :: rs_curr_dens_rest2b
-    
+
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
 !   CMPLX, pointer               :: rs_state(:,:)
 !    CMPLX, pointer              :: rs_state_trans(:,:)
 !    CMPLX, pointer              :: rs_state_long(:,:)
-    
+
     logical                      :: rs_current_density_restart = .false.
 !    CMPLX, pointer              :: rs_current_density_restart_t1(:,:)
 !    CMPLX, pointer              :: rs_current_density_restart_t2(:,:)
@@ -209,7 +209,7 @@ contains
 
     call states_elec_dim_null(st%d)
 !    call states_elec_group_null(st%group)
-    call distributed_nullify(st%dist) 
+    call distributed_nullify(st%dist)
     st%priv%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
     st%parallel_in_states = .false.
@@ -236,7 +236,7 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
-    
+
     st%d%dim = 3
     st%nst   = 1
     st%d%ispin = UNPOLARIZED
@@ -257,8 +257,8 @@ contains
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
     st%packed = .false.
-    
-    st%d%block_size = 1    
+
+    st%d%block_size = 1
     call distributed_nullify(st%d%kpt, st%d%nik)
 
     !%Variable RiemannSilbersteinSign
@@ -280,7 +280,7 @@ contains
     !%Description
     !%
     !% <tt>%Coordinates
-    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0 
+    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0
     !% <br>&npsp;&nbsp;     0.0 | 1.0 | -2.0
     !% <br>%</tt>
     !%
@@ -296,8 +296,8 @@ contains
       do il=1, nlines
         ncols = parse_block_cols(blk,0)
         if (ncols < 3 .or. ncols > 3) then
-            message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
-            call messages_fatal(1, namespace=namespace)
+          message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
+          call messages_fatal(1, namespace=namespace)
         end if
         do idim=1, st%d%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
@@ -316,9 +316,9 @@ contains
     end if
 
     POP_SUB(states_mxll_init)
-      
+
   end subroutine states_mxll_init
-  
+
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
   subroutine states_mxll_allocate(st, mesh)
@@ -334,7 +334,7 @@ contains
     call batch_init(st%rs_transb, st%d%dim, 1)
     call st%rs_transb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_transb)
- 
+
     call batch_init(st%rs_longb, st%d%dim, 1)
     call st%rs_longb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_longb)
@@ -342,11 +342,11 @@ contains
     call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
     call st%rs_curr_dens_rest1b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest1b)
-    
+
     call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
     call st%rs_curr_dens_rest2b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_curr_dens_rest2b)
-   
+
 !    Another alternative
 !    call batch_init(st%rs_state_transb, hm%d%dim, 1)
 !    call st%rs_state_transb%add_state(1, st%rs_state_trans)
@@ -377,7 +377,7 @@ contains
 
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
-  
+
 
   !----------------------------------------------------------
   subroutine build_rs_element(e_element, b_element, rs_sign, rs_element, ep_element, mu_element)
@@ -394,7 +394,7 @@ contains
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
     else
       rs_element = sqrt(P_ep/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_element
-    end if 
+    end if
 
   end subroutine build_rs_element
 
@@ -434,12 +434,12 @@ contains
 
     do ip = 1, np_
       if (present(ep_field) .and. present(mu_field)) then
-        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
-                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
+        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) &
+          + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
       else
         rs_state(ip, :) = sqrt(P_ep/M_TWO) * e_field(ip, :) &
-                       + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
-      end if 
+          + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
+      end if
     end do
 
     POP_SUB(build_rs_state)
@@ -492,7 +492,7 @@ contains
 
     ! no PUSH_SUB, called too often
     np_ = optional_default(np, mesh%np)
- 
+
     do ip = 1, np_
       if (present(ep_field)) then
         rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
@@ -530,7 +530,7 @@ contains
 
     ! no PUSH_SUB, called too often
 
-    if (present(mu_element)) then    
+    if (present(mu_element)) then
       magnetic_field_vector(:) = sqrt(M_TWO*mu_element) * rs_sign * aimag(rs_state_vector(:))
     else
       magnetic_field_vector(:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state_vector(:))
@@ -554,15 +554,15 @@ contains
 
     np_ = optional_default(np, mesh%np)
     SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
-    
+
     do ii = 1, 3
-       call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
+      call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
     end do
-     
+
     do ip = 1, np_
       if (present(ep_field)) then
         electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
-      else 
+      else
         electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
       end if
     end do
@@ -595,18 +595,18 @@ contains
       call batch_get_state(rsb, np, ii, rs_aux(:, ii))
     end do
 
-    
+
     do ip = 1, np_
       if (present(mu_field)) then
         magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
       else
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
       end if
-   end do
+    end do
 
-   SAFE_DEALLOCATE_A(rs_aux)
+    SAFE_DEALLOCATE_A(rs_aux)
 
-   POP_SUB(get_magnetic_field_state)
+    POP_SUB(get_magnetic_field_state)
 
   end subroutine get_magnetic_field_state
 
@@ -656,7 +656,7 @@ contains
     integer :: ip, np_
 
     PUSH_SUB(get_current_state)
-    
+
     np_ = optional_default(np, mesh%np)
 
     do ip = 1, np_
@@ -747,20 +747,20 @@ contains
 
     SAFE_ALLOCATE(rs_aux(1:gr%mesh%np, 1:3))
     do ii = 1, 3
-       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
+      call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
     end do
 
     if (present(ep_field) .and. present(mu_field)) then
       do ip = 1, gr%mesh%np
         poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
-                              * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+          * sqrt(M_TWO*mu_field(ip)) &
+          * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     else
       do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
-                              * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+          * sqrt(M_TWO*st%mu(ip)) &
+          * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
       end do
     end if
 
@@ -781,8 +781,8 @@ contains
 
     do ip = 1, gr%mesh%np
       poynting_vector(ip, :) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) &
-               & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
-               & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
+      & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
+      & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
 
     POP_SUB(get_poynting_vector_plane_waves)
@@ -808,7 +808,7 @@ contains
     ztmp(:) = TOCMPLX(M_ZERO,M_ZERO)
     do idim=1, gr%sb%dim
       ztmp(1:gr%mesh%np) = ztmp(1:gr%mesh%np) + &
-                                   abs(rs_state_old(1:gr%mesh%np, idim)-ztmp_rs(1:gr%mesh%np, idim))
+        abs(rs_state_old(1:gr%mesh%np, idim)-ztmp_rs(1:gr%mesh%np, idim))
       d = zmf_nrm2(gr%mesh, ztmp)
     end do
     if(d > diff) diff = d

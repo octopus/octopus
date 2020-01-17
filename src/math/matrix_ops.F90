@@ -38,7 +38,7 @@ module matrix_ops_oct_m
     matrix_diagonalize_hermitian
 
   type(profile_t), save :: prof_gather
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -69,7 +69,7 @@ contains
       return
     end if
 #endif
-    
+
     if(this%mpi_grp%rank == 0) then
 
       if(present(metric)) then
@@ -132,7 +132,7 @@ contains
 
       SAFE_DEALLOCATE_A(work)
       SAFE_DEALLOCATE_A(zwork)
-      
+
     end if
 
     if(this%mpi_grp%size > 1) then
@@ -153,7 +153,7 @@ contains
   end subroutine matrix_diagonalize_hermitian
 
   ! -----------------------------------------------------------------------------------------------------------
-  
+
   subroutine diagonalize_hermitian_scalapack(this, eigenvalues, metric)
     type(matrix_t),           intent(inout) :: this            !< The matrix to diagonalize
     FLOAT,                    intent(out)   :: eigenvalues(:)  !< The eigenvalues of the matrix
@@ -169,17 +169,17 @@ contains
     CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:), rwork(:)
     FLOAT :: dworksize
     CMPLX :: zworksize, lrwork
-#endif   
- 
+#endif
+
     PUSH_SUB(matrix_diagonalize_hermitian_scalapack)
 
     ASSERT(.not. present(metric))
-    
+
     ! divide the processors
     ndiv = 10
     SAFE_ALLOCATE(div(1:ndiv))
     call get_divisors(this%mpi_grp%size, ndiv, div)
-    
+
     np1 = div((ndiv + 1)/2)
     np2 = this%mpi_grp%size/np1
 
@@ -189,7 +189,7 @@ contains
 
     nb1 = 10
     nb2 = 10
-    
+
     call blacs_proc_grid_init(proc_grid, this%mpi_grp, procdim = (/np1, np2/))
 
 #ifdef HAVE_SCALAPACK
@@ -207,7 +207,7 @@ contains
 
       call pdsyev(jobz = 'V', uplo = 'U', n = this%dim(1), a = da(1, 1) , ia = 1, ja = 1, desca = desc(1), &
         w = eigenvalues(1), z = devec(1, 1), iz = 1, jz = 1, descz = desc(1), work = dworksize, lwork = -1, info = info)
-      
+
       if(info /= 0) then
         write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
         call messages_fatal(1)
@@ -223,27 +223,27 @@ contains
         call messages_write(info)
         call messages_fatal()
       end if
-      
+
       SAFE_DEALLOCATE_A(dwork)
 
       call dmatrix_gather(this, (/nb1, nb2/), proc_grid, devec)
 
       SAFE_DEALLOCATE_A(da)
-      SAFE_DEALLOCATE_A(devec)      
-      
+      SAFE_DEALLOCATE_A(devec)
+
     else if(matrix_type(this) == TYPE_CMPLX) then
 
       SAFE_ALLOCATE(za(1:nr1, 1:nr2))
       SAFE_ALLOCATE(zevec(1:nr1, 1:nr2))
-      
+
       call zto_submatrix(this, (/nb1, nb2/), (/proc_grid%myrow, proc_grid%mycol/), (/proc_grid%nprow, proc_grid%npcol/), za)
 
       lrwork = M_z0
-      
+
       call pzheev(jobz = 'V', uplo = 'U', n = this%dim(1), a = za(1, 1) , ia = 1, ja = 1, desca = desc(1), &
         w = eigenvalues(1), z = zevec(1, 1), iz = 1, jz = 1, descz = desc(1), work = zworksize, lwork = -1, &
         rwork = lrwork, lrwork = -1, info = info)
-      
+
       if(info /= 0) then
         write(message(1),'(a,i6)') "ScaLAPACK pdsyev workspace query failure, error code = ", info
         call messages_fatal(1)
@@ -261,27 +261,27 @@ contains
         call messages_write(info)
         call messages_fatal()
       end if
-      
+
       SAFE_DEALLOCATE_A(zwork)
       SAFE_DEALLOCATE_A(rwork)
 
       call zmatrix_gather(this, (/nb1, nb2/), proc_grid, zevec)
 
       SAFE_DEALLOCATE_A(za)
-      SAFE_DEALLOCATE_A(zevec)      
+      SAFE_DEALLOCATE_A(zevec)
 
     else
 
       ASSERT(.false.)
-      
+
     end if
 #endif
-    
+
     call blacs_proc_grid_end(proc_grid)
 
     POP_SUB(matrix_diagonalize_hermitian_scalapack)
   end subroutine diagonalize_hermitian_scalapack
-    
+
 #include "undef.F90"
 #include "real.F90"
 

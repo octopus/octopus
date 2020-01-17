@@ -27,25 +27,25 @@ module pcm_eom_oct_m
 
   private
   public :: pcm_charges_propagation, &
-            pcm_eom_enough_initial,  &
-            pcm_eom_end,             &
-            pcm_tessera_t,           &
-            debye_param_t,           &
-            drude_param_t,           &
-            PCM_DEBYE_MODEL,         &
-            PCM_DRUDE_MODEL,         &
-            PCM_NUCLEI,              &
-            PCM_ELECTRONS,           &
-            PCM_EXTERNAL_POTENTIAL,  &
-            PCM_EXTERNAL_PLUS_KICK,  &
-            PCM_KICK
+    pcm_eom_enough_initial,  &
+    pcm_eom_end,             &
+    pcm_tessera_t,           &
+    debye_param_t,           &
+    drude_param_t,           &
+    PCM_DEBYE_MODEL,         &
+    PCM_DRUDE_MODEL,         &
+    PCM_NUCLEI,              &
+    PCM_ELECTRONS,           &
+    PCM_EXTERNAL_POTENTIAL,  &
+    PCM_EXTERNAL_PLUS_KICK,  &
+    PCM_KICK
   save
 
   !> tesselation derived type
   type :: pcm_tessera_t
-    FLOAT :: point(1:3)                           !< representative point of the tessera  
+    FLOAT :: point(1:3)                           !< representative point of the tessera
     FLOAT :: area                                 !< area of the tessera
-    FLOAT :: normal(1:3)                          !< unitary outgoing vector normal to the tessera surface  
+    FLOAT :: normal(1:3)                          !< unitary outgoing vector normal to the tessera surface
     FLOAT :: r_sphere                             !< radius of the sphere to which the tessera belongscd
   end type pcm_tessera_t
 
@@ -68,13 +68,13 @@ module pcm_eom_oct_m
   end type drude_param_t
 
   integer, parameter :: PCM_DEBYE_MODEL = 1, &
-                        PCM_DRUDE_MODEL = 2
+    PCM_DRUDE_MODEL = 2
 
   integer, parameter :: PCM_ELECTRONS          = 0, &
-                        PCM_NUCLEI             = 1, &
-                        PCM_EXTERNAL_POTENTIAL = 2, &
-                        PCM_KICK               = 3, &
-                        PCM_EXTERNAL_PLUS_KICK = 4
+    PCM_NUCLEI             = 1, &
+    PCM_EXTERNAL_POTENTIAL = 2, &
+    PCM_KICK               = 3, &
+    PCM_EXTERNAL_PLUS_KICK = 4
 
 
   type(debye_param_t) :: deb
@@ -82,13 +82,13 @@ module pcm_eom_oct_m
 
 
   integer :: which_eom                            !< flag for PCM charges due to:
-                                                  !< electrons, external potential (including kick) or just the kick
+  !< electrons, external potential (including kick) or just the kick
 
   integer :: which_eps			          !< flag for Debye (PCM_DEBYE_MODEL) and Drude-Lorentz (PCM_DRUDE_MODEL) models
 
   FLOAT :: dt 					  !< time-step of the propagation
 
-						  !< polarization charges and variation of it in the previous iteration:
+  !< polarization charges and variation of it in the previous iteration:
   FLOAT, allocatable :: q_tp(:), dq_tp(:)	  !<   due to solute electrons
   FLOAT, allocatable :: qext_tp(:), dqext_tp(:)	  !<   due to external potential
   FLOAT, allocatable :: qkick_tp(:), dqkick_tp(:) !<   due to kick
@@ -96,30 +96,30 @@ module pcm_eom_oct_m
   FLOAT, allocatable :: pot_tp(:)		  !< Hartree (electrons) potential in previous iteration
   FLOAT, allocatable :: potext_tp(:)		  !< external potential in previous iteration
 
-                                                  !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
+  !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm...
   FLOAT :: f1, f2, f3, f4, f5			  !< auxiliar constants for VV
-                                                  !< analogous to force in the equation of motion for the pol.charges, prev. iter.
+  !< analogous to force in the equation of motion for the pol.charges, prev. iter.
   FLOAT, allocatable :: force_tp(:)	          !<    due to solute electrons
   FLOAT, allocatable :: force_qext_tp(:)          !< 	due to external potential
   FLOAT, allocatable :: force_qkick_tp(:)         !< 	due to kick
 
-                                                  !< In Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416... - Debye dielectric func. (eps)
-                                                  !< In Ref.2 - In J. Phys. Chem. C 2016, 120, 28774−28781... - Drude-Lorentz eps
+  !< In Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416... - Debye dielectric func. (eps)
+  !< In Ref.2 - In J. Phys. Chem. C 2016, 120, 28774−28781... - Drude-Lorentz eps
   FLOAT, allocatable :: cals(:,:), cald(:,:)      !< Calderon matrices S and D from Eq.(5), Ref.1
   FLOAT, allocatable :: eigv(:), eigt(:,:)        !< \Lambda and T matrices from Eq.(10), Ref.1
   FLOAT, allocatable :: sm12(:,:), sp12(:,:)      !< S^{-1/2} and S^{1/2}
-                                                  !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
+  !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
   FLOAT, allocatable :: matq0(:,:), matqd(:,:)       !<    for solute
   FLOAT, allocatable :: matq0_lf(:,:), matqd_lf(:,:) !<    for external potential
-                                                  !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
-                                                  !< Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
+  !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
+  !< Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
   FLOAT, allocatable :: matqv(:,:), matqq(:,:)    !< 	for solute
   FLOAT, allocatable :: matqv_lf(:,:)             !<    for external potential
-                                                  !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
-                                                  !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
-                                                  !< N.B.: matrices R (in case of Debye) and Q_{\omega} (in case of Drude-Lorentz), 
-                                                  !< i.e., matqq in this implementation, 
-                                                  !< are the same in the EOMs for polarization charges due to the solute or ext.pot.
+  !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
+  !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
+  !< N.B.: matrices R (in case of Debye) and Q_{\omega} (in case of Drude-Lorentz),
+  !< i.e., matqq in this implementation,
+  !< are the same in the EOMs for polarization charges due to the solute or ext.pot.
 
   logical :: enough_initial = .false.
 
@@ -129,7 +129,7 @@ contains
   !> Driving subroutine for the Equation of Motion (EOM) propagation of the polarization charges
   !> within the Integral Equation Formalism (IEF) formulation of the Polarization Continuum Model (PCM).
   subroutine pcm_charges_propagation(q_t, pot_t, this_dt, this_cts_act, input_asc, this_eom, &
-      this_eps, namespace, this_deb, this_drl) 
+    this_eps, namespace, this_deb, this_drl)
     save
     FLOAT,                         intent(out) :: q_t(:)
     FLOAT,                         intent(in)  :: pot_t(:)
@@ -151,7 +151,7 @@ contains
 
     which_eom = this_eom
     if (which_eom /= PCM_ELECTRONS .and. which_eom /= PCM_EXTERNAL_POTENTIAL .and. &
-        which_eom /= PCM_EXTERNAL_PLUS_KICK .and. which_eom /= PCM_KICK) then
+      which_eom /= PCM_EXTERNAL_PLUS_KICK .and. which_eom /= PCM_KICK) then
       message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons"
       message(2) = "or external potential (including the kick)."
       call messages_fatal(2, namespace=namespace)
@@ -212,8 +212,8 @@ contains
     end if
 
     if ((initial_electron .and. which_eom == PCM_ELECTRONS) .or. &
-        (initial_external .and. (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK)) .or. &
-        (initial_kick     .and. which_eom == PCM_KICK)) then
+      (initial_external .and. (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK)) .or. &
+      (initial_kick     .and. which_eom == PCM_KICK)) then
 
       !> initialize pcm matrices
       call pcm_bem_init(namespace)
@@ -223,7 +223,7 @@ contains
 
       if (initial_electron .and. which_eom == PCM_ELECTRONS) initial_electron = .false.
       if (initial_external .and. (which_eom == PCM_EXTERNAL_POTENTIAL .or. &
-          which_eom == PCM_EXTERNAL_PLUS_KICK)) initial_external = .false.
+        which_eom == PCM_EXTERNAL_PLUS_KICK)) initial_external = .false.
       if (initial_kick     .and. which_eom == PCM_KICK) initial_kick = .false.
 
     else
@@ -236,7 +236,7 @@ contains
       end if
 
     end if
-  
+
     POP_SUB(pcm_charges_propagation)
   end subroutine pcm_charges_propagation
 
@@ -276,7 +276,7 @@ contains
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
-      qkick_tp = q_t  
+      qkick_tp = q_t
     end if
     call io_close(asc_unit)
 
@@ -301,12 +301,12 @@ contains
       !< The latter is valid when starting the propagation from the ground state but does not hold in general.
       message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
       call messages_warning(1, namespace=namespace)
-  
+
       SAFE_ALLOCATE(pot_tp(1:nts_act))
       pot_tp = pot_t
 
       !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
-      q_t = matmul(matq0, pot_t) 
+      q_t = matmul(matq0, pot_t)
 
       SAFE_ALLOCATE(q_tp(1:nts_act))
       q_tp = q_t
@@ -317,7 +317,7 @@ contains
         dq_tp = M_ZERO
         force_tp = M_ZERO
       end if
-			    
+
     else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
       !< Here (instead) we consider zero the potential at any earlier time.
       !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
@@ -376,18 +376,18 @@ contains
     if (which_eom == PCM_ELECTRONS) then
       !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
       q_t(:) = q_tp(:) - dt*matmul(matqq, q_tp)   + &
-                         dt*matmul(matqv, pot_tp) + &
-			 matmul(matqd, pot_t - pot_tp)
+        dt*matmul(matqv, pot_tp) + &
+        matmul(matqd, pot_t - pot_tp)
 
       q_tp = q_t
 
       pot_tp = pot_t
 
-    else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then 
+    else if (which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK) then
       !> analogous to Eq.(47) ibid. with different matrices
       q_t(:) = qext_tp(:) - dt*matmul(matqq, qext_tp)   + &
-                            dt*matmul(matqv_lf, potext_tp) + &
-                            matmul(matqd_lf, pot_t - potext_tp)             !< N.B. matqq
+        dt*matmul(matqv_lf, potext_tp) + &
+        matmul(matqd_lf, pot_t - potext_tp)             !< N.B. matqq
 
       qext_tp = q_t
 
@@ -559,7 +559,7 @@ contains
   !> Following from
   !> Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416.    - Debye case
   !> Ref.2 - J.Phys.Chem.C 2016, 120, 28-774-28781. - Drude-Lorentz case
-  !> The matrices are required for the EOMs, eq.(37) in Ref.1 and eq.(15) in Ref.2 
+  !> The matrices are required for the EOMs, eq.(37) in Ref.1 and eq.(15) in Ref.2
   subroutine do_PCM_propMat(namespace)
     type(namespace_t), intent(in) :: namespace
     save
@@ -567,11 +567,11 @@ contains
     FLOAT, allocatable :: scr4(:,:), scr1(:,:)
     FLOAT, allocatable :: scr2(:,:), scr3(:,:)
     FLOAT, allocatable :: fact1(:), fact2(:)   !< tau^{-1} and tau^{-1}K_0 from (38)-(39), respectively, with Eq.(32), Ref.1
-                                               !< K_{\omega} and K_f from (19)-(10), respectively, Ref.2
+    !< K_{\omega} and K_f from (19)-(10), respectively, Ref.2
     FLOAT, allocatable :: Kdiag0(:), Kdiagd(:) !< correspond to K_0 (static dielec. const.) and K_d (dynamic dielec. const.) in Ref.1
-                                               !< e.g. Eq.(38) -^                               ^- e.g. implicitly in Q_d^{IEF(d)}, 
-                                               !<                                                       see Eq.(18) and (37)
-                                               !< not used in Ref.2
+    !< e.g. Eq.(38) -^                               ^- e.g. implicitly in Q_d^{IEF(d)},
+    !<                                                       see Eq.(18) and (37)
+    !< not used in Ref.2
     FLOAT :: sgn,sgn_lf, fac_eps0, fac_epsd
     FLOAT :: temp
 
@@ -579,8 +579,8 @@ contains
 
     PUSH_SUB(do_PCM_propMat)
 
-    sgn = M_ONE ! In the case of NP this is -1 because the normal to the cavity is always pointing outward 
-                ! and the field acreated by a positive unit charge outside the cavity is directed inward.
+    sgn = M_ONE ! In the case of NP this is -1 because the normal to the cavity is always pointing outward
+    ! and the field acreated by a positive unit charge outside the cavity is directed inward.
 
     sgn_lf = M_ONE
     !> 'local field' differ from 'standard' PCM response matrix in some sign changes
@@ -602,7 +602,7 @@ contains
         cald(i, j) = temp
       end do
     end do
-    if (firsttime) then 
+    if (firsttime) then
       call allocate_TS_matrix()
       call do_TS_matrix(namespace)
       firsttime = .false.
@@ -617,7 +617,7 @@ contains
 
     if (which_eps == PCM_DEBYE_MODEL) then
       if (deb%eps_0 /= M_ONE) then
-        fac_eps0 = (deb%eps_0 + M_ONE)/(deb%eps_0 - M_ONE)			 
+        fac_eps0 = (deb%eps_0 + M_ONE)/(deb%eps_0 - M_ONE)
         Kdiag0(:) = sgn_lf*(M_TWO*M_PI - sgn*sgn_lf*eigv(:))/(M_TWO*M_PI*fac_eps0 - sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
       else
         Kdiag0(:) = M_ZERO
@@ -629,7 +629,7 @@ contains
         Kdiagd(:) = M_ZERO
       end if
       fact1(:) = ((M_TWO*M_PI - sgn*eigv(:))*deb%eps_0 + M_TWO*M_PI + eigv(:))/ &       !< inverse of Eq.(32), ibid.
-                 ((M_TWO*M_PI - sgn*eigv(:))*deb%eps_d + M_TWO*M_PI + eigv(:))/deb%tau
+        ((M_TWO*M_PI - sgn*eigv(:))*deb%eps_d + M_TWO*M_PI + eigv(:))/deb%tau
       fact2(:) = Kdiag0(:)*fact1(:)		                              !< tau^{-1}K_0 in Eq.(38), ibid.
 
     else if (which_eps == PCM_DRUDE_MODEL) then
@@ -717,7 +717,7 @@ contains
 
   !------------------------------------------------------------------------------------------------------------------------------
   !> Subroutine to build BEM matrix corresponding to the Calderon operator S, using the Green function of an isotropic medium (!)
-  !> Only solvents can be treated with this. To be changed for surfaces, spherical nanoparticles, etc.    
+  !> Only solvents can be treated with this. To be changed for surfaces, spherical nanoparticles, etc.
   subroutine green_s(i, j, value)
     integer, intent(in):: i,j
     FLOAT,   intent(out) :: value
@@ -814,7 +814,7 @@ contains
       end do
     end do
     call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &
-                iwork,liwork,info)        !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
+      iwork,liwork,info)        !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
 
     SAFE_DEALLOCATE_A(work)
     SAFE_DEALLOCATE_A(iwork)

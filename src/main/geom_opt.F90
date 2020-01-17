@@ -77,7 +77,7 @@ module geom_opt_oct_m
     integer                      :: size
     integer                      :: fixed_atom
     type(restart_t)              :: restart_dump
-    
+
   end type geom_opt_t
 
   type(geom_opt_t), save :: g_opt
@@ -104,7 +104,7 @@ contains
     PUSH_SUB(geom_opt_run)
 
     call init_(fromscratch)
-    
+
 
     ! load wavefunctions
     if(.not. fromscratch) then
@@ -178,7 +178,7 @@ contains
     end if
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()
-  
+
     ! print out geometry
     call from_coords(g_opt, coords)
     message(1) = "Writing final coordinates to min.xyz"
@@ -241,7 +241,7 @@ contains
           g_opt%size = g_opt%size  - g_opt%dim
         end if
       end do
-      
+
       !%Variable GOMethod
       !%Type integer
       !%Default fire
@@ -259,19 +259,19 @@ contains
       !% conjugate-gradient algorithm proceeds as a succession of line
       !% minimizations. The sequence of search directions is used to build
       !% up an approximation to the curvature of the function in the
-      !% neighborhood of the minimum. 
+      !% neighborhood of the minimum.
       !%Option cg_pr 3
       !% Polak-Ribiere conjugate-gradient algorithm.
       !%Option cg_bfgs 4
       !% Vector Broyden-Fletcher-Goldfarb-Shanno (BFGS) conjugate-gradient algorithm.
-      !% It is a quasi-Newton method which builds up an approximation to the second 
+      !% It is a quasi-Newton method which builds up an approximation to the second
       !% derivatives of the function <i>f</i> using the difference between successive gradient
-      !% vectors.  By combining the first and second derivatives, the algorithm is able 
-      !% to take Newton-type steps towards the function minimum, assuming quadratic 
+      !% vectors.  By combining the first and second derivatives, the algorithm is able
+      !% to take Newton-type steps towards the function minimum, assuming quadratic
       !% behavior in that region.
       !%Option cg_bfgs2 5
-      !% The bfgs2 version of this minimizer is the most efficient version available, 
-      !% and is a faithful implementation of the line minimization scheme described in 
+      !% The bfgs2 version of this minimizer is the most efficient version available,
+      !% and is a faithful implementation of the line minimization scheme described in
       !% Fletcher, <i>Practical Methods of Optimization</i>, Algorithms 2.6.2 and 2.6.4.
       !%Option simplex 6
       !% This is experimental, and in fact, <b>not</b> recommended unless you just want to
@@ -299,7 +299,7 @@ contains
       !% this criterion is ignored.
       !%End
       call parse_variable(sys%namespace, 'GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
-      
+
       !%Variable GOMinimumMove
       !%Type float
       !%Section Calculation Modes::Geometry Optimization
@@ -321,7 +321,7 @@ contains
       call parse_variable(sys%namespace, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
-      
+
       !%Variable GOStep
       !%Type float
       !%Section Calculation Modes::Geometry Optimization
@@ -375,9 +375,9 @@ contains
       !% achieved by setting all the atom masses equal, to the value
       !% specified by this variable.
       !% By default the mass of a proton is selected (1 amu).
-      !% However, a selection of <tt>GOFireMass = 0.01</tt> can, in manys systems, 
+      !% However, a selection of <tt>GOFireMass = 0.01</tt> can, in manys systems,
       !% speed up the geometry optimization procedure.
-      !% If <tt>GOFireMass</tt> <= 0, the masses of each 
+      !% If <tt>GOFireMass</tt> <= 0, the masses of each
       !% species will be used.
       !%End
       call parse_variable(sys%namespace, 'GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
@@ -389,7 +389,7 @@ contains
       !%Description
       !% The Fire algorithm (<tt>GOMethod = fire</tt>) uses a molecular dynamics
       !% integrator to compute new geometries and velocities.
-      !% Currently, two integrator schemes can be selected 
+      !% Currently, two integrator schemes can be selected
       !%Option verlet 1
       !% The Velocity Verlet algorithm.
       !%Option euler 0
@@ -425,9 +425,9 @@ contains
       !%Type string
       !%Section Calculation Modes::Geometry Optimization
       !%Description
-      !% <tt>Octopus</tt> will try to read the coordinate-dependent constrains from the XYZ file 
+      !% <tt>Octopus</tt> will try to read the coordinate-dependent constrains from the XYZ file
       !% specified by the variable <tt>XYZGOConstrains</tt>.
-      !% Note: It is important for the contrains to maintain the ordering 
+      !% Note: It is important for the contrains to maintain the ordering
       !% in which the atoms were defined in the coordinates specifications.
       !% Moreover, constrains impose fixed absolute coordinates, therefore
       !% constrains are not compatible with GOCenter = yes
@@ -467,7 +467,7 @@ contains
       !% in this example the x coordinates of both atoms will remain fixed and the
       !% distance between the two atoms along the x axis will be constant.
       !%
-      !% Note: It is important for the constrains to maintain the ordering 
+      !% Note: It is important for the constrains to maintain the ordering
       !% in which the atoms were defined in the coordinates specifications.
       !% Moreover, constrains impose fixed absolute coordinates, therefore
       !% constrains are not compatible with GOCenter = yes
@@ -491,9 +491,9 @@ contains
         end do
 
         call read_coords_end(xyz)
-       
+
         if(g_opt%fixed_atom /= 0) &
-          call messages_not_implemented("GOCenter with constrains") 
+          call messages_not_implemented("GOCenter with constrains")
       else
         do iatom = 1, g_opt%geo%natoms
           g_opt%geo%atom(iatom)%c = M_ZERO
@@ -510,7 +510,7 @@ contains
       end if
 
       if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last', sys%namespace)
-      
+
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
       do
@@ -522,7 +522,7 @@ contains
         else
           exit
         end if
-      ! TODO: clean forces directory
+        ! TODO: clean forces directory
       end do
 
       call restart_init(g_opt%restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
@@ -560,7 +560,7 @@ contains
     REAL_DOUBLE, intent(inout) :: objective
     integer,     intent(in)    :: getgrad
     REAL_DOUBLE, intent(inout) :: df(size)
-    
+
     integer :: iatom
 
     PUSH_SUB(calc_point)
@@ -617,9 +617,9 @@ contains
 
     integer :: getgrad
     REAL_DOUBLE , allocatable :: df(:)
-    
+
     PUSH_SUB(calc_point_ng)
-    
+
     ASSERT(size == g_opt%size)
 
     getgrad = 0
@@ -644,7 +644,7 @@ contains
     integer :: iunit
 
     PUSH_SUB(write_iter_info)
-    
+
     write(c_geom_iter, '(a,i4.4)') "go.", geom_iter
     write(title, '(f16.10,2x,a)') units_from_atomic(units_out%energy, energy), trim(units_abbrev(units_out%energy))
     call io_mkdir('geom', g_opt%syst%namespace)
@@ -652,7 +652,7 @@ contains
     call geometry_write_xyz(g_opt%geo, './last', g_opt%syst%namespace)
 
     if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-    write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
+      write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
       if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
           g_opt%syst%namespace)
@@ -669,14 +669,14 @@ contains
         action = 'write', position = 'append')
 
       if(geom_iter == 1) then
-        write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', & 
-                             'max_force [' // trim(units_abbrev(units_out%force)) // ']',&
-                             ' max_dr [' // trim(units_abbrev(units_out%length)) // ']'
+        write(iunit, '(a10,3(5x,a20))') '#     iter','energy [' // trim(units_abbrev(units_out%energy)) // ']', &
+          'max_force [' // trim(units_abbrev(units_out%force)) // ']',&
+          ' max_dr [' // trim(units_abbrev(units_out%length)) // ']'
       end if
 
-      write(iunit, '(i10,3f25.15)')  geom_iter, units_from_atomic(units_out%energy, energy), & 
-                                                units_from_atomic(units_out%force,maxdf), &
-                                                units_from_atomic(units_out%length,maxdx)
+      write(iunit, '(i10,3f25.15)')  geom_iter, units_from_atomic(units_out%energy, energy), &
+        units_from_atomic(units_out%force,maxdf), &
+        units_from_atomic(units_out%length,maxdx)
 
       call io_close(iunit)
     end if
@@ -774,7 +774,7 @@ contains
 
     icoord = 1
     do iatom = 1, gopt%geo%natoms
-      if(gopt%fixed_atom == iatom) cycle      
+      if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
         if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) &
@@ -788,7 +788,7 @@ contains
 
     POP_SUB(from_coords)
   end subroutine from_coords
-    
+
   ! ---------------------------------------------------------
   !> Same as write_iter_info, but without the gradients.
   subroutine write_iter_info_ng(geom_iter, size, energy, maxdx, coords)

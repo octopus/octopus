@@ -89,7 +89,7 @@ module states_elec_calc_oct_m
   interface states_elec_rotate
     module procedure dstates_elec_rotate, zstates_elec_rotate
   end interface states_elec_rotate
-  
+
 contains
 
   ! ---------------------------------------------------------

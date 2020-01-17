@@ -234,7 +234,7 @@ contains
         do idim = 1, st%d%dim
           root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
-          
+
           write(lines(1), '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           call restart_write(restart, iunit_wfns, lines, 1, err)
           if (err /= 0) err2(1) = err2(1) + 1
@@ -298,7 +298,7 @@ contains
     lines(1) = '%'
     call restart_write(restart, iunit_occs, lines, 1, err)
     if (err /= 0) ierr = ierr + 32
-    call restart_write(restart, iunit_wfns, lines, 1, err) 
+    call restart_write(restart, iunit_wfns, lines, 1, err)
     if (err /= 0) ierr = ierr + 64
     if (present(iter)) then
       write(lines(1),'(a,i7)') 'Iter = ', iter
@@ -361,7 +361,7 @@ contains
     integer              :: iread_tmp
     integer, allocatable :: lowest_missing_tmp(:, :)
 #endif
-    
+
     PUSH_SUB(states_elec_load)
 
     ierr = 0
@@ -476,7 +476,7 @@ contains
         message(1) = "Cannot read real states from complex wavefunctions."
         call messages_warning(1, namespace=namespace)
         ierr = ierr - 2**6
-      else if (str(2:5) /= 'Real') then 
+      else if (str(2:5) /= 'Real') then
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
         call messages_warning(1, namespace=namespace)
       end if
@@ -507,7 +507,7 @@ contains
     SAFE_ALLOCATE(restart_file_present(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
     restart_file_present = .false.
 
-    ! Next we read the list of states from the files. 
+    ! Next we read the list of states from the files.
     ! Errors in reading the information of a specific state from the files are ignored
     ! at this point, because later we will skip reading the wavefunction of that state.
     do
@@ -528,8 +528,8 @@ contains
       end if
 
       if (ist >= st%st_start .and. ist <= st%st_end .and. &
-           st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
-          
+        st%d%kpt%start <= ik .and. st%d%kpt%end >= ik) then
+
         restart_file(idim, ist, ik) = trim(filename)
         restart_file_present(idim, ist, ik) = .true.
       end if
@@ -540,7 +540,7 @@ contains
 
         if (err == 0) then
           read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
-               (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
+            (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
           ! we do not want to read the k-weights, we have already set them appropriately
         else
           ! There is a problem with this states information, so we skip it.
@@ -565,7 +565,7 @@ contains
         if (read_occ) then
           st%occ(ist, ik) = my_occ
           integral_occs = integral_occs .and. &
-               abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
+            abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
         end if
       end if
     end do
@@ -704,10 +704,10 @@ contains
       call messages_print_stress(stdout, trim(str), namespace=namespace)
       if(.not. present(skip)) then
         write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
-             st%nst * st%d%nik * st%d%dim, ' could be read.'
+          st%nst * st%d%nik * st%d%dim, ' could be read.'
       else
         write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
-             st%nst * st%d%nik * st%d%dim, ' were loaded.'
+          st%nst * st%d%nik * st%d%dim, ' were loaded.'
         ierr = 0
       end if
       call messages_info(1)
@@ -958,7 +958,7 @@ contains
       call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
-      if(associated(st%frozen_tau)) then 
+      if(associated(st%frozen_tau)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_tau'
         else
@@ -1051,7 +1051,7 @@ contains
         call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_tau(:,isp), err)
         if (err /= 0) err2 = err2 + 1
       end if
-      
+
       if(associated(st%frozen_gdens)) then
         do idir = 1, gr%sb%dim
           if(st%d%nspin==1) then
@@ -1064,7 +1064,7 @@ contains
         end do
       end if
 
-      if(associated(st%frozen_ldens)) then 
+      if(associated(st%frozen_ldens)) then
         if(st%d%nspin==1) then
           write(filename, fmt='(a)') 'frozen_ldens'
         else
@@ -1147,7 +1147,7 @@ contains
     !% the orbital. The default (no sixth column given) is to renormalize.
     !%
     !%Option file -10010
-    !% Read initial orbital from file. 
+    !% Read initial orbital from file.
     !% Accepted file formats, detected by extension: obf, ncdf and csv (real only).
     !%Option formula 1
     !% Calculate initial orbital by given analytic expression.
@@ -1283,7 +1283,7 @@ contains
   end subroutine states_elec_read_user_def_orbitals
 
   ! ---------------------------------------------------------
-  ! This is needed as for the generalized Bloch theorem we need to label 
+  ! This is needed as for the generalized Bloch theorem we need to label
   ! the states from the expectation value of Sz computed from the GS.
   subroutine states_elec_dump_spin(restart, st, gr, ierr)
     type(restart_t),      intent(in)  :: restart
@@ -1317,7 +1317,7 @@ contains
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         write(lines(1), '(i8,a,i8,3(a,f18.12))') ik, ' | ', ist, ' | ', &
-                            st%spin(1,ist,ik), ' | ', st%spin(2,ist,ik),' | ', st%spin(3,ist,ik)
+          st%spin(1,ist,ik), ' | ', st%spin(2,ist,ik),' | ', st%spin(3,ist,ik)
         call restart_write(restart, iunit_spin, lines, 1, err)
         if (err /= 0) err2(1) = err2(1) + 1
       end do ! st%nst
@@ -1354,7 +1354,7 @@ contains
     FLOAT                :: spin(3)
     character(len=1)     :: char
 
-    
+
     PUSH_SUB(states_elec_load_spin)
 
     ierr = 0
@@ -1382,16 +1382,16 @@ contains
       return
     end if
 
-    ! Next we read the list of states from the files. 
+    ! Next we read the list of states from the files.
     ! Errors in reading the information of a specific state from the files are ignored
     ! at this point, because later we will skip reading the wavefunction of that state.
     do
       call restart_read(restart, spin_file, lines, 1, err)
       read(lines(1), '(a)') char
       if (char == '%') then
-          !We reached the end of the file
-          exit
-        else
+        !We reached the end of the file
+        exit
+      else
         read(lines(1), *) ik, char, ist, char,  spin(1), char, spin(2), char, spin(3)
       end if
 
@@ -1404,7 +1404,7 @@ contains
 
     call profiling_out(prof_read)
     POP_SUB(states_elec_load_spin)
- end subroutine states_elec_load_spin
+  end subroutine states_elec_load_spin
 
 end module states_elec_restart_oct_m
 

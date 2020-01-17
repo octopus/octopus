@@ -29,9 +29,9 @@ module nfft_oct_m
   use parser_oct_m
   use varinfo_oct_m
   implicit none
-  
+
   private
-  
+
   public ::          &
     nfft_t,          &
     nfft_copy_info,  &
@@ -148,7 +148,7 @@ contains
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
     call parse_variable(namespace, 'NFFTPrecompute', NFFT_PRE_PSI, nfft%precompute)
-     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
+    if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 
 !     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute, is_flag=.true.)) then
@@ -190,7 +190,7 @@ contains
       nfft%sigma = nfft_options%sigma
       nfft%precompute = nfft_options%precompute
     end if
-    
+
     ! set unused dimensions to 1
     nfft%M(dim+1:3) = 1
 
@@ -204,12 +204,12 @@ contains
 
     if(nfft%guru) then ! Guru interface
       nfft_flags =  nfft_PRE_PHI_HUT  + nfft_MALLOC_X +nfft_MALLOC_F_HAT +&
-                    nfft_MALLOC_F + nfft_FFTW_INIT + nfft_FFT_OUT_OF_PLACE
+        nfft_MALLOC_F + nfft_FFTW_INIT + nfft_FFT_OUT_OF_PLACE
 
       nfft_flags = nfft_flags + nfft%precompute
 
       call  oct_nfft_init_guru(nfft%plan, dim, N, M(1)*M(2)*M(3), my_N, nfft%mm, &
-                    nfft_flags, FFTW_MEASURE + FFTW_DESTROY_INPUT)
+        nfft_flags, FFTW_MEASURE + FFTW_DESTROY_INPUT)
 
     else ! Default interfaces
 
@@ -354,60 +354,60 @@ contains
     eps = M_ONE+M_EPSILON ! the sample nodes must be in [0.5,0.5)
 
     select case(nfft%dim)
-      case(3)
-        length = (maxval(X1)-minval(X1))*eps
-        cc = (minval(X1)+maxval(X1))/M_TWO
-        x1_ =(X1-cc)/length
-        length = (maxval(X2)-minval(X2))*eps
-        cc = (minval(X2)+maxval(X2))/M_TWO
-        x2_ =(X2-cc)/length
-        length = (maxval(X3)-minval(X3))*eps
-        cc = (minval(X3)+maxval(X3))/M_TWO
-        x3_ =(X3-cc)/length
-        call oct_nfft_precompute_one_psi_3d(nfft%plan, nfft%M, x1_, x2_, x3_)
+    case(3)
+      length = (maxval(X1)-minval(X1))*eps
+      cc = (minval(X1)+maxval(X1))/M_TWO
+      x1_ =(X1-cc)/length
+      length = (maxval(X2)-minval(X2))*eps
+      cc = (minval(X2)+maxval(X2))/M_TWO
+      x2_ =(X2-cc)/length
+      length = (maxval(X3)-minval(X3))*eps
+      cc = (minval(X3)+maxval(X3))/M_TWO
+      x3_ =(X3-cc)/length
+      call oct_nfft_precompute_one_psi_3d(nfft%plan, nfft%M, x1_, x2_, x3_)
 
-        ! Set the normalization factor
-        do ii = 1, nfft%M(1)-1
-          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
-        end  do
-        do ii = 1, nfft%M(2)-1
-          dX2(ii)= abs(x2_(ii+1)-x2_(ii))
-        end do
-        do ii = 1, nfft%M(3)-1
-          dX3(ii)= abs(x3_(ii+1)-x3_(ii))
-        end do
-        nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)) * minval(dX3(:)))
+      ! Set the normalization factor
+      do ii = 1, nfft%M(1)-1
+        dX1(ii)= abs(x1_(ii+1)-x1_(ii))
+      end  do
+      do ii = 1, nfft%M(2)-1
+        dX2(ii)= abs(x2_(ii+1)-x2_(ii))
+      end do
+      do ii = 1, nfft%M(3)-1
+        dX3(ii)= abs(x3_(ii+1)-x3_(ii))
+      end do
+      nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)) * minval(dX3(:)))
 
-      case(2)
-        length = (maxval(X1)-minval(X1))*eps
-        cc = (minval(X1)+maxval(X1))/M_TWO
-        x1_ =(X1-cc)/length
-        length = (maxval(X2)-minval(X2))*eps
-        cc = (minval(X2)+maxval(X2))/M_TWO
-        x2_ =(X2-cc)/length
-        call oct_nfft_precompute_one_psi_2d(nfft%plan, nfft%M, x1_, x2_)
+    case(2)
+      length = (maxval(X1)-minval(X1))*eps
+      cc = (minval(X1)+maxval(X1))/M_TWO
+      x1_ =(X1-cc)/length
+      length = (maxval(X2)-minval(X2))*eps
+      cc = (minval(X2)+maxval(X2))/M_TWO
+      x2_ =(X2-cc)/length
+      call oct_nfft_precompute_one_psi_2d(nfft%plan, nfft%M, x1_, x2_)
 
-        ! Set the normalization factor
-        do ii = 1, nfft%M(1)-1
-          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
-        end do
-        do ii = 1, nfft%M(2)-1
-          dX2(ii)= abs(x2_(ii+1)-x2_(ii))
-        end do
-        nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)))
+      ! Set the normalization factor
+      do ii = 1, nfft%M(1)-1
+        dX1(ii)= abs(x1_(ii+1)-x1_(ii))
+      end do
+      do ii = 1, nfft%M(2)-1
+        dX2(ii)= abs(x2_(ii+1)-x2_(ii))
+      end do
+      nfft%norm = M_ONE/(minval(dX1(:)) * minval(dX2(:)))
 
 
-      case(1)
-        length = (maxval(X1)-minval(X1))*eps
-        cc = (minval(X1)+maxval(X1))/M_TWO
-        x1_ =(X1-cc)/length
-        call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M(1),x1_)
+    case(1)
+      length = (maxval(X1)-minval(X1))*eps
+      cc = (minval(X1)+maxval(X1))/M_TWO
+      x1_ =(X1-cc)/length
+      call oct_nfft_precompute_one_psi_1d(nfft%plan,nfft%M(1),x1_)
 
-        ! Set the normalization factor
-        do ii = 1, nfft%M(1)-1
-          dX1(ii)= abs(x1_(ii+1)-x1_(ii))
-        end do
-        nfft%norm = M_ONE/(minval(dX1(:)))
+      ! Set the normalization factor
+      do ii = 1, nfft%M(1)-1
+        dX1(ii)= abs(x1_(ii+1)-x1_(ii))
+      end do
+      nfft%norm = M_ONE/(minval(dX1(:)))
 
     end select
 
@@ -432,14 +432,14 @@ contains
     integer:: b(6)
 
     PUSH_SUB(dnfft_forward)
-    
+
     b(1) = lbound(in, dim=1)
     b(2) = ubound(in, dim=1)
     b(3) = lbound(in, dim=2)
     b(4) = ubound(in, dim=3)
     b(5) = lbound(in, dim=3)
     b(6) = ubound(in, dim=3)
-    
+
 !    SAxFE_ALLOCATE(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     allocate(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     zin = in
@@ -450,7 +450,7 @@ contains
     POP_SUB(dnfft_forward)
   end subroutine dnfft_forward
 
-!--------------------------------------------  
+!--------------------------------------------
   subroutine znfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in(:,:,:)
@@ -459,7 +459,7 @@ contains
     call znfft_forward1(nfft, in, out)
     POP_SUB(znfft_forward)
   end subroutine znfft_forward
-  
+
 !--------------
   subroutine dnfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
@@ -477,15 +477,15 @@ contains
     b(4) = ubound(out, dim=3)
     b(5) = lbound(out, dim=3)
     b(6) = ubound(out, dim=3)
-    
+
     allocate(zout(b(1):b(2),b(3):b(4),b(5):b(6)))
-    
+
     call znfft_backward1(nfft, in, zout)
     out = zout
     deallocate(zout)
     POP_SUB(dnfft_backward)
   end subroutine dnfft_backward
-  
+
   subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)

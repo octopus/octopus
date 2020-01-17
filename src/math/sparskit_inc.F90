@@ -78,31 +78,31 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   ! Start iterative solution of the linear system
   solver_iter: do iter = 1, sk%maxiter
 
-#ifdef HAVE_SPARSKIT    
+#ifdef HAVE_SPARSKIT
     select case(sk%solver_type)
     case(SK_CG)
       call cg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_CGNR)                          
+    case(SK_CGNR)
       call cgnr(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_BCG)                           
+    case(SK_BCG)
       call bcg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_DBCG)                          
+    case(SK_DBCG)
       call dbcg(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_BCGSTAB)                       
+    case(SK_BCGSTAB)
       call bcgstab(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_TFQMR)                         
+    case(SK_TFQMR)
       call tfqmr(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_FOM)                           
+    case(SK_FOM)
       call fom(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_GMRES)                         
+    case(SK_GMRES)
       call gmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_FGMRES)                        
+    case(SK_FGMRES)
       call fgmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
-    case(SK_DQGMRES)                       
+    case(SK_DQGMRES)
       call dqgmres(sk%size, sk%sk_b, sk%sk_y, sk%ipar, sk%fpar, sk%sk_work)
     case default
       write(message(1), '(a,i4,a)') "Input: '", sk%solver_type, &
-           "' is not a valid SPARSKIT solver."
+        "' is not a valid SPARSKIT solver."
       message(2) = '( SPARSKITSolver =  cg | cgnr | bcg | dbcg | bcgstab | tfqmr | fom | gmres | fgmres | dqgmres )'
       call messages_fatal(2)
     end select
@@ -116,7 +116,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 #endif
 #ifdef R_TCOMPLEX
       call op(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk%sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
-           sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+        sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
 #endif
     case(2)
       ! call atmux(n,w(sk%ipar(8)),w(sk%ipar(9)),a,ja,ia)
@@ -125,7 +125,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
 #endif
 #ifdef R_TCOMPLEX
       call opt(sk%sk_work(sk%ipar(8):sk%ipar(8)+sk%size/2),sk%sk_work(sk%ipar(8)+sk%size/2:sk%ipar(8)+sk%size), &
-           sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
+        sk%sk_work(sk%ipar(9):sk%ipar(9)+sk%size/2),sk%sk_work(sk%ipar(9)+sk%size/2:sk%ipar(9)+sk%size))
 #endif
     case(3, 4, 5, 6)
       ! left preconditioner solver
@@ -169,7 +169,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
         call messages_info(1)
       end if
     end if
-#endif    
+#endif
 
   end do solver_iter
 
@@ -182,7 +182,7 @@ subroutine X(sparskit_solver_run)(sk, op, opt, sol, rhs)
   sk%ipar(1) = 0
   ! store the number of iterations used
   sk%used_iter = iter - 1
-  ! reset 
+  ! reset
   sk%ipar(7) = 0
 
   ! store current error norm

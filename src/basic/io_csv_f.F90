@@ -23,7 +23,7 @@ module io_csv_oct_m
   use global_oct_m
   use messages_oct_m
 
-  implicit none 
+  implicit none
 
   private
 
@@ -45,7 +45,7 @@ contains
 
     POP_SUB(dread_csv)
   end subroutine dread_csv
-  
+
   subroutine io_csv_get_info(fname, dims, ierr)
     character(len=*),    intent(in)    :: fname
     integer(8),          intent(inout) :: dims(:)

@@ -78,7 +78,7 @@ module geometry_oct_m
     logical :: nlcc                 !< does any species have non-local core corrections?
     type(distributed_t) :: atoms_dist
     logical          :: reduced_coordinates !< If true the coordinates are stored in
-                                            !! reduced coordinates and need to be converted.
+    !! reduced coordinates and need to be converted.
     !> variables for passing info from XSF input to simul_box_init
     integer :: periodic_dim
     FLOAT :: lsize(MAX_DIM)
@@ -98,7 +98,7 @@ contains
     geo%space => space
 
     call species_init_global(namespace)
-    
+
     ! initialize geometry
     call geometry_init_xyz(geo, namespace)
     call geometry_init_species(geo, namespace, print_info=print_info)
@@ -214,7 +214,7 @@ contains
       call species_read(geo%species(k), namespace)
       ! these are the species which do not represent atoms
       geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
-      
+
       if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
         message(1) = "Pseudopotentials may only be used with Dimensions = 3."
         call messages_fatal(1, namespace=namespace)
@@ -310,7 +310,7 @@ contains
     geo%nspecies=0
 
     call species_end_global()
-    
+
     POP_SUB(geometry_end)
   end subroutine geometry_end
 
@@ -483,9 +483,9 @@ contains
 
     read(iunit, '(i4)') geo%natoms
     if (present(comment)) then
-      read(iunit, *) 
+      read(iunit, *)
     else
-      read(iunit, *)  
+      read(iunit, *)
     end if
     do iatom = 1, geo%natoms
       call atom_read_xyz(geo%atom(iatom), geo%space%dim, iunit)
@@ -561,7 +561,7 @@ contains
 
   subroutine geometry_grid_defaults_info(geo)
     type(geometry_t), intent(in) :: geo
-  
+
     integer :: ispec
 
     PUSH_SUB(geometry_grid_defaults_info)

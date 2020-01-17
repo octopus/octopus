@@ -47,7 +47,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !%Type integer
   !%Section Hamiltonian::Poisson
   !%Description
-  !% Order of the multipolar expansion for boundary corrections. 
+  !% Order of the multipolar expansion for boundary corrections.
   !%
   !% The Poisson solvers <tt>multigrid</tt>, <tt>cg</tt>, and <tt>cg_corrected</tt>
   !% (and <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>)
@@ -150,10 +150,10 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
     call messages_info(1)
 
     call poisson_multigrid_init(this%mg, namespace, this%der%mesh, maxl, threshold)
-     
+
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, namespace, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
-    
+
   case(POISSON_LIBISF)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
@@ -164,7 +164,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
     if (this%cube%parallel_in_domains) then
       call mesh_cube_parallel_map_init(this%mesh_cube_map, this%der%mesh, this%cube)
     end if
-    
+
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
@@ -220,10 +220,10 @@ subroutine poisson_solve_direct(this, pot, rho)
   integer              :: ip, jp
   integer              :: dim           !< physical dimensions
   integer              :: dim_effective !< effective dimensions (= dim,  if no soft coulomb)
-                                        !<                      (= dim+1 if soft coulomb)
+  !<                      (= dim+1 if soft coulomb)
 
   FLOAT                :: xx1(1:MAX_DIM+1), xx2(1:MAX_DIM+1), xx3(1:MAX_DIM+1), xx4(1:MAX_DIM+1)
-  FLOAT                :: xx(1:MAX_DIM+1), yy(1:MAX_DIM+1) 
+  FLOAT                :: xx(1:MAX_DIM+1), yy(1:MAX_DIM+1)
 
   logical              :: include_diag
 
@@ -260,7 +260,7 @@ subroutine poisson_solve_direct(this, pot, rho)
   case(2)
     prefactor = M_TWO*sqrt(M_PI)
   case(1)
-    prefactor = M_ONE 
+    prefactor = M_ONE
   case default
     message(1) = "Internal error: poisson_solve_direct can only be called for 1D, 2D or 3D."
     ! why not? all that is needed is the appropriate prefactors to be defined above, actually. then 1D, 4D etc. can be done
@@ -281,7 +281,7 @@ subroutine poisson_solve_direct(this, pot, rho)
       ip_v(ip) = ip
     end do
     call partition_get_partition_number(this%der%mesh%inner_partition, this%der%mesh%np_global, ip_v, part_v)
-    
+
     pot = M_ZERO
     do ip = 1, this%der%mesh%np_global
       xg = mesh_x_global(this%der%mesh, ip)
@@ -321,14 +321,14 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   else ! serial mode
 #endif
-    
+
     do ip = 1, this%der%mesh%np - 4 + 1, 4
 
       xx1(1:dim) = this%der%mesh%x(ip    , 1:dim)
       xx2(1:dim) = this%der%mesh%x(ip + 1, 1:dim)
       xx3(1:dim) = this%der%mesh%x(ip + 2, 1:dim)
       xx4(1:dim) = this%der%mesh%x(ip + 3, 1:dim)
-      
+
       if(this%der%mesh%use_curvilinear) then
 
         if(.not. include_diag) then
@@ -337,19 +337,19 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
           aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/this%der%mesh%sb%dim)
         end if
-        
+
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
 
         do jp = 1, this%der%mesh%np
           yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2)) & 
-                                                         *this%der%mesh%vol_pp(jp)
-          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2)) & 
-                                                         *this%der%mesh%vol_pp(jp)
-          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2)) & 
-                                                         *this%der%mesh%vol_pp(jp)
-          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2)) & 
-                                                         *this%der%mesh%vol_pp(jp)
+          if(ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_effective) - yy(1:dim_effective))**2)) &
+            *this%der%mesh%vol_pp(jp)
+          if(ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_effective) - yy(1:dim_effective))**2)) &
+            *this%der%mesh%vol_pp(jp)
+          if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2)) &
+            *this%der%mesh%vol_pp(jp)
+          if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2)) &
+            *this%der%mesh%vol_pp(jp)
         end do
 
       else
@@ -375,16 +375,16 @@ subroutine poisson_solve_direct(this, pot, rho)
           if(ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_effective) - yy(1:dim_effective))**2))
           if(ip + 3 /= jp .or. include_diag) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim_effective) - yy(1:dim_effective))**2))
         end do
-        
+
       end if
 
       pot(ip    ) = this%der%mesh%volume_element*aa1
       pot(ip + 1) = this%der%mesh%volume_element*aa2
       pot(ip + 2) = this%der%mesh%volume_element*aa3
       pot(ip + 3) = this%der%mesh%volume_element*aa4
-      
+
     end do
-    
+
     do ip = ip, this%der%mesh%np
 
       aa1 = CNST(0.0)
@@ -411,14 +411,14 @@ subroutine poisson_solve_direct(this, pot, rho)
       end if
 
       pot(ip) = this%der%mesh%volume_element*aa1
-      
+
     end do
-    
+
 #ifdef HAVE_MPI
   end if
 #endif
 
-  POP_SUB(poisson_solve_direct) 
+  POP_SUB(poisson_solve_direct)
 end subroutine poisson_solve_direct
 
 !! Local Variables:

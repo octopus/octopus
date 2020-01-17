@@ -82,22 +82,22 @@ module fft_oct_m
 
   !> global constants
   integer, public, parameter :: &
-       FFT_NONE    = 0,         &
-       FFT_REAL    = 1,         &
-       FFT_COMPLEX = 2
+    FFT_NONE    = 0,         &
+    FFT_REAL    = 1,         &
+    FFT_COMPLEX = 2
 
   integer, public, parameter :: &
-       FFTLIB_NONE  = 0, &
-       FFTLIB_FFTW  = 1, &
-       FFTLIB_PFFT  = 2, &
-       FFTLIB_ACCEL = 3, &
-       FFTLIB_NFFT  = 4, &
-       FFTLIB_PNFFT = 5
-       
+    FFTLIB_NONE  = 0, &
+    FFTLIB_FFTW  = 1, &
+    FFTLIB_PFFT  = 2, &
+    FFTLIB_ACCEL = 3, &
+    FFTLIB_NFFT  = 4, &
+    FFTLIB_PNFFT = 5
+
   integer, parameter :: &
     FFT_MAX  = 10, &
     FFT_NULL = -1
-  
+
   type fft_t
     private
     integer         :: slot    !< in which slot do we have this fft
@@ -121,13 +121,13 @@ module fft_oct_m
     !integer(ptrdiff_t_kind) :: pfft_planf !< PFFT plan for forward transform
     !integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
-    !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT 
+    !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT
     FLOAT, pointer, public :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer, public :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
     CMPLX, pointer, public ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
 #ifdef HAVE_CLFFT
     !> data for clfft
-    type(clfftPlanHandle) :: cl_plan_fw 
+    type(clfftPlanHandle) :: cl_plan_fw
     type(clfftPlanHandle) :: cl_plan_bw !< for real transforms we need a different plan, so we always use 2
 #endif
     type(c_ptr)           :: cuda_plan_fw
@@ -145,7 +145,7 @@ module fft_oct_m
   integer, public       :: fft_default_lib = -1
   type(nfft_t), save    :: nfft_options
   type(pnfft_t), save   :: pnfft_options
-  
+
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
     CUFFT_C2R = z'2c',   &
@@ -160,7 +160,7 @@ contains
   !> initialize the table
   subroutine fft_all_init(namespace)
     type(namespace_t),      intent(in)   :: namespace
-    
+
     integer :: ii
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     integer :: iret
@@ -169,13 +169,13 @@ contains
     PUSH_SUB(fft_all_init)
 
     fft_initialized = .true.
-    
+
     !%Variable FFTOptimize
     !%Type logical
     !%Default yes
     !%Section Mesh::FFTs
     !%Description
-    !% Should <tt>octopus</tt> optimize the FFT dimensions? 
+    !% Should <tt>octopus</tt> optimize the FFT dimensions?
     !% This means that the mesh to which FFTs are applied is not taken to be as small
     !% as possible: some points may be added to each direction in order to get a "good number"
     !% for the performance of the FFT algorithm.
@@ -199,7 +199,7 @@ contains
     !%Section Mesh::FFTs
     !%Description
     !% The FFTs are performed in octopus with the help of <a href=http://www.fftw.org>FFTW</a> and similar packages.
-    !% Before doing the actual computations, this package prepares a "plan", which means that 
+    !% Before doing the actual computations, this package prepares a "plan", which means that
     !% the precise numerical strategy to be followed to compute the FFT is machine/compiler-dependent,
     !% and therefore the software attempts to figure out which is this precise strategy (see the
     !% FFTW documentation for details). This plan preparation, which has to be done for each particular
@@ -245,15 +245,15 @@ contains
         call messages_fatal()
       end if
     end if
-    
+
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
 
       call messages_write('Info: Initializing Multi-threaded FFTW')
       call messages_info()
-      
+
       iret = fftw_init_threads()
-      if (iret == 0) then 
+      if (iret == 0) then
         call messages_write('Initialization of FFTW3 threads failed.')
         call messages_fatal()
       end if
@@ -264,7 +264,7 @@ contains
 
     call nfft_guru_options(nfft_options, namespace)
     call pnfft_guru_options(pnfft_options, namespace)
-    
+
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
 
@@ -293,7 +293,7 @@ contains
 #endif
 
     fft_initialized = .false.
-    
+
     POP_SUB(fft_all_end)
   end subroutine fft_all_end
 
@@ -306,7 +306,7 @@ contains
     integer,           intent(in)    :: library  !< FFT library to be used. Can be overridden.
     logical,           intent(in)    :: optimize(3) !< whether we should optimize grid in each direction
     integer,           intent(in)    :: optimize_parity(3) !< choose optimized grid in each direction as
-                                                 !! even (0), odd (1), or whatever (negative).
+    !! even (0), odd (1), or whatever (negative).
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we want to use for the parallelization
 
@@ -321,12 +321,12 @@ contains
 #endif
 #ifdef HAVE_PFFT
     integer :: ierror
-#endif 
+#endif
 
     PUSH_SUB(fft_init)
 
     ASSERT(fft_initialized)
-    
+
     ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
 
     mpi_grp_ = mpi_world
@@ -351,7 +351,7 @@ contains
 
     select case (library_)
     case (FFTLIB_ACCEL)
-    
+
       do ii = 1, fft_dim
         ! the AMD OpenCL FFT only supports sizes 2, 3 and 5, but size
         ! 5 gives an fpe error on the Radeon 7970 (APPML 1.8), so we
@@ -362,38 +362,38 @@ contains
         nn_temp(ii) = fft_size(nn(ii), (/2, 3, 5, 7/))
 #endif
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
-      end do 
-      
+      end do
+
       ! if we can't optimize, in some cases we can't use the library
       if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
         call messages_write('Invalid grid size for clfft. FFTW will be used instead.')
         call messages_warning()
         library_ = FFTLIB_FFTW
       end if
-      
+
     case (FFTLIB_NFFT)
-            
+
       do ii = 1, fft_dim
         !NFFT likes even grids
         !The underlying FFT grids are optimized inside the nfft_init routine
         if(int(nn(ii)/2)*2 /= nn(ii) .and. (fft_optimize .and. optimize(ii)) )&
-          nn(ii)=nn(ii)+1 
-      end do 
+          nn(ii)=nn(ii)+1
+      end do
 
     case (FFTLIB_PNFFT)
-          
+
       do ii = 1, fft_dim
         !also PNFFT likes even grids
-        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
-      end do 
-          
+        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1
+      end do
+
       if(fft_dim < 3) &
-          call messages_not_implemented('PNFFT support for dimension < 3')
-                    
+        call messages_not_implemented('PNFFT support for dimension < 3')
+
     case default
 
       if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
-           call messages_not_implemented('PFFT support for dimension < 3')
+        call messages_not_implemented('PFFT support for dimension < 3')
 
 
       ! FFT optimization
@@ -401,12 +401,12 @@ contains
         message(1) = "Internal error in fft_init: optimize_parity must be negative, 0, or 1."
         call messages_fatal(1)
       end if
-      
+
       do ii = 1, fft_dim
         call loct_fft_optimize(nn_temp(ii), optimize_parity(ii))
         if(fft_optimize .and. optimize(ii)) nn(ii) = nn_temp(ii)
       end do
-      
+
     end select
 
     ! find out if fft has already been allocated
@@ -414,10 +414,10 @@ contains
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
-             .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
-             .and. library_ /= FFTLIB_PNFFT ) then
-             ! NFFT and PNFFT plans are always allocated from scratch since they 
-             ! are very likely to be different
+          .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
+          .and. library_ /= FFTLIB_PNFFT ) then
+          ! NFFT and PNFFT plans are always allocated from scratch since they
+          ! are very likely to be different
           this = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           if (present(mpi_comm)) mpi_comm = fft_array(ii)%comm ! also return the MPI communicator
@@ -451,11 +451,11 @@ contains
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT
       call pfft_init()
- 
+
       call pfft_decompose(mpi_grp_%size, column_size, row_size)
- 
-      ierror = pfft_create_procmesh_2d(mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)        
-   
+
+      ierror = pfft_create_procmesh_2d(mpi_grp_%comm, column_size, row_size, fft_array(jj)%comm)
+
       if (ierror /= 0) then
         message(1) = "The number of rows and columns in PFFT processor grid is not equal to "
         message(2) = "the number of processor in the MPI communicator."
@@ -465,13 +465,13 @@ contains
 #endif
 
     case (FFTLIB_PNFFT)
-      call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm) 
+      call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm)
 
     case default
       fft_array(jj)%comm = -1
 
     end select
-    
+
     if (present(mpi_comm)) mpi_comm = fft_array(jj)%comm
 
     ! Get dimentions of arrays
@@ -484,10 +484,10 @@ contains
       fft_array(jj)%fs_istart = 1
 
     case (FFTLIB_PFFT)
-#ifdef HAVE_PFFT     
+#ifdef HAVE_PFFT
       call pfft_get_dims(fft_array(jj)%rs_n_global, mpi_comm, type == FFT_REAL, &
-           alloc_size, fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
-           fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
+        alloc_size, fft_array(jj)%fs_n_global, fft_array(jj)%rs_n, &
+        fft_array(jj)%fs_n, fft_array(jj)%rs_istart, fft_array(jj)%fs_istart)
       !write(*,"(6(A,3I4,/),A,I10,/)") "PFFT: rs_n_global = ",fft_array(jj)%rs_n_global,&
       !  "fs_n_global = ",fft_array(jj)%fs_n_global,&
       !  "rs_n        = ",fft_array(jj)%rs_n,&
@@ -497,7 +497,7 @@ contains
       !  "alloc_size  = ",alloc_size
 #endif
 
-      ! Allocate memory. Note that PFFT may need extra memory space 
+      ! Allocate memory. Note that PFFT may need extra memory space
       ! and that in fourier space the function will be transposed
       if (type == FFT_REAL) then
         n_1 = max(1, fft_array(jj)%rs_n(1))
@@ -531,8 +531,8 @@ contains
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
       fft_array(jj)%rs_istart = 1
       fft_array(jj)%fs_istart = 1
-    
-    case(FFTLIB_PNFFT)       
+
+    case(FFTLIB_PNFFT)
       fft_array(jj)%fs_n_global = fft_array(jj)%rs_n_global
       fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
@@ -547,27 +547,27 @@ contains
     select case (library_)
     case (FFTLIB_FFTW)
       call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
-           type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan+FFTW_UNALIGNED)
+        type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan+FFTW_UNALIGNED)
       call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
-           type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
+        type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
 
     case(FFTLIB_NFFT)
-     call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
-                    fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
+      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine
+      call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
+        fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
 
     case (FFTLIB_PFFT)
-#ifdef HAVE_PFFT     
+#ifdef HAVE_PFFT
       if(type == FFT_REAL) then
         call pfft_prepare_plan_r2c(fft_array(jj)%planf, fft_array(jj)%rs_n_global, fft_array(jj)%drs_data, &
-             fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
+          fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
         call pfft_prepare_plan_c2r(fft_array(jj)%planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
-             fft_array(jj)%drs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
+          fft_array(jj)%drs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       else
         call pfft_prepare_plan_c2c(fft_array(jj)%planf, fft_array(jj)%rs_n_global, fft_array(jj)%zrs_data, &
-             fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
+          fft_array(jj)%fs_data, FFTW_FORWARD, fft_prepare_plan, mpi_comm)
         call pfft_prepare_plan_c2c(fft_array(jj)%planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
-             fft_array(jj)%zrs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
+          fft_array(jj)%zrs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       end if
 #endif
     case (FFTLIB_PNFFT)
@@ -575,21 +575,21 @@ contains
 
       ! NOTE:
       ! PNFFT (likewise NFFT) breaks the symmetry between real space and Fourier space
-      ! by allowing the possibility to have an unstructured grid in rs and by 
+      ! by allowing the possibility to have an unstructured grid in rs and by
       ! using different parallelizations (the rs is transposed w.r.t. fs).
-      ! Octopus, in fourier_space_m, uses the convention for which the mapping 
+      ! Octopus, in fourier_space_m, uses the convention for which the mapping
       ! between rs and fs is done with a forward transform (and fs->rs with backward).
-      ! This is exactly the opposite of the definitions used by all the libraries 
-      ! performing FFTs (PNFFT and NFFT included) [see e.g. M. Frigo, and S. G. Johnson, Proc. 
+      ! This is exactly the opposite of the definitions used by all the libraries
+      ! performing FFTs (PNFFT and NFFT included) [see e.g. M. Frigo, and S. G. Johnson, Proc.
       ! IEEE 93, 216-231 (2005)].
-      ! While this leads to no problem on ordinary ffts where fs and rs can be exchanged 
-      ! it does makes a fundamental difference for PNFFT (for some reason I don`t know NFFT 
+      ! While this leads to no problem on ordinary ffts where fs and rs can be exchanged
+      ! it does makes a fundamental difference for PNFFT (for some reason I don`t know NFFT
       ! is still symmetric).
-      ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
-      ! backward transform.     
+      ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the
+      ! backward transform.
 
       call pnfft_init_plan(fft_array(jj)%pnfft, pnfft_options, mpi_comm, fft_array(jj)%fs_n_global, &
-           fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
+        fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
 
     case(FFTLIB_ACCEL)
 
@@ -606,7 +606,7 @@ contains
       call cuda_fft_plan3d(fft_array(jj)%cuda_plan_bw, &
         fft_array(jj)%rs_n_global(3), fft_array(jj)%rs_n_global(2), fft_array(jj)%rs_n_global(1), CUFFT_Z2D)
 #endif
-      
+
 #ifdef HAVE_CLFFT
 
       ! create the plans
@@ -672,7 +672,7 @@ contains
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetResultLocation')
 
       ! the strides
-      
+
       call clfftSetPlanInStride(fft_array(jj)%cl_plan_fw, fft_dim, int(fft_array(jj)%stride_rs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanInStride')
 
@@ -684,7 +684,7 @@ contains
 
       call clfftSetPlanOutStride(fft_array(jj)%cl_plan_bw, fft_dim, int(fft_array(jj)%stride_rs, 8), status)
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanOutStride')
-       
+
       ! set the scaling factors
 
       scale = 1.0_8/(product(real(fft_array(jj)%rs_n_global(1:fft_dim), 8)))
@@ -696,18 +696,18 @@ contains
       if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanScale')
 
       if(type == FFT_REAL) then
-        
+
         call clfftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, 1.0_8, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanScale')
-        
+
         call clfftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_BACKWARD, scale, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanScale')
 
       else
-        
+
         call clfftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_FORWARD, scale, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanScale')
-        
+
         call clfftSetPlanScale(fft_array(jj)%cl_plan_bw, CLFFT_BACKWARD, 1.0_8, status)
         if(status /= CLFFT_SUCCESS) call clfft_print_error(status, 'clfftSetPlanScale')
 
@@ -727,7 +727,7 @@ contains
       call messages_write('Invalid FFT library.')
       call messages_fatal()
     end select
-    
+
     this = fft_array(jj)
 
     ! Write information
@@ -753,7 +753,7 @@ contains
       end if
       call messages_info()
     end if
-    
+
     select case (library_)
     case (FFTLIB_PFFT)
       write(message(1),'(a)') "Info: FFT library = PFFT"
@@ -768,7 +768,7 @@ contains
       call messages_write("Info: FFT library = PNFFT")
       call messages_info()
       call pnfft_write_info(fft_array(jj)%pnfft)
-      
+
     case (FFTLIB_NFFT)
       call messages_write("Info: FFT library = NFFT")
       call messages_info()
@@ -778,19 +778,19 @@ contains
 
     POP_SUB(fft_init)
   end subroutine fft_init
-  
+
   ! ---------------------------------------------------------
-  !> Some fft-libraries (only NFFT for the moment) need an additional 
-  !! precomputation stage that depends on the spatial grid whose size 
+  !> Some fft-libraries (only NFFT for the moment) need an additional
+  !! precomputation stage that depends on the spatial grid whose size
   !! may change after fft_init
   subroutine fft_init_stage1(this, namespace, XX, nn)
     type(fft_t),       intent(inout) :: this     !< FFT data type
     !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
-    !! and z-axis XX(:,3) 
+    !! and z-axis XX(:,3)
     type(namespace_t), intent(in)    :: namespace
-    FLOAT,             intent(in)    :: XX(:,:)  
-    integer, optional, intent(in)    :: nn(:)  
- 
+    FLOAT,             intent(in)    :: XX(:,:)
+    integer, optional, intent(in)    :: nn(:)
+
     integer :: slot
 
     PUSH_SUB(fft_init_stage1)
@@ -800,16 +800,16 @@ contains
     slot = this%slot
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
-    !Do nothing 
+      !Do nothing
     case (FFTLIB_NFFT)
       ASSERT(present(nn))
       call nfft_precompute(fft_array(slot)%nfft, &
-          XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
+        XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3))
 
     case (FFTLIB_PFFT)
-    !Do nothing 
+      !Do nothing
     case(FFTLIB_ACCEL)
-    !Do nothing 
+      !Do nothing
     case(FFTLIB_PNFFT)
       call pnfft_set_sp_nodes(fft_array(slot)%pnfft, namespace, XX)
 
@@ -866,10 +866,10 @@ contains
 
         case(FFTLIB_NFFT)
           call nfft_end(fft_array(ii)%nfft)
-          
+
         case(FFTLIB_PNFFT)
           call pnfft_end(fft_array(ii)%pnfft)
-          
+
         end select
         fft_refs(ii) = FFT_NULL
       end if
@@ -962,7 +962,7 @@ contains
     SAFE_ALLOCATE(exponents(1:nfactors))
 
     fft_size = size
-    do 
+    do
       call get_exponents(fft_size, nfactors, factors, exponents, nondiv)
       if(nondiv == 1) exit
       fft_size = fft_size + 1
@@ -995,7 +995,7 @@ contains
         exponents(ifactor) = exponents(ifactor) + 1
       end do
     end do
-    
+
     POP_SUB(get_exponents)
   end subroutine get_exponents
 
@@ -1017,15 +1017,15 @@ contains
 
 
   ! ----------------------------------------------------------
-  
+
   !> This function returns the factor required to normalize a function
-  !> after a forward and backward transform.  
+  !> after a forward and backward transform.
   FLOAT pure function fft_scaling_factor(fft) result(scaling_factor)
     type(fft_t), intent(in)  :: fft
 
     ! for the moment this factor is handled by the backwards transform for most libraries
     scaling_factor = M_ONE
-    
+
     select case (fft_array(fft%slot)%library)
     case(FFTLIB_ACCEL)
 #ifdef HAVE_CUDA
@@ -1033,7 +1033,7 @@ contains
         M_ONE/(fft_array(fft%slot)%rs_n_global(1)*fft_array(fft%slot)%rs_n_global(2)*fft_array(fft%slot)%rs_n_global(3))
 #endif
     end select
-  
+
   end function fft_scaling_factor
 
 #include "undef.F90"

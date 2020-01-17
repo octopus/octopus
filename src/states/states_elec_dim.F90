@@ -165,13 +165,13 @@ contains
   integer pure function states_elec_dim_get_kpoint_index(this, iq) result(index)
     type(states_elec_dim_t), intent(in) :: this
     integer,                 intent(in) :: iq
-    
+
     if(this%ispin == SPIN_POLARIZED) then
       index = 1 + (iq - 1)/2
     else
       index = iq
     end if
-    
+
   end function states_elec_dim_get_kpoint_index
 
 
@@ -185,7 +185,7 @@ contains
 
     POP_SUB(kpoints_distribute)
   end subroutine kpoints_distribute
-  
+
   ! ---------------------------------------------------------
   subroutine states_elec_choose_kpoints(dd, sb, namespace)
     type(states_elec_dim_t), intent(inout) :: dd
@@ -215,10 +215,10 @@ contains
       integer :: iunit
 
       PUSH_SUB(states_elec_choose_kpoints.print_kpoints_debug)
-      
+
       call io_mkdir('debug/', namespace)
       iunit = io_open('debug/kpoints', namespace, action = 'write')
-      call kpoints_write_info(sb%kpoints, namespace, iunit, absolute_coordinates = .true.)      
+      call kpoints_write_info(sb%kpoints, namespace, iunit, absolute_coordinates = .true.)
       call io_close(iunit)
 
       POP_SUB(states_elec_choose_kpoints.print_kpoints_debug)

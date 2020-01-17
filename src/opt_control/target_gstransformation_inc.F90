@@ -17,151 +17,151 @@
 !!
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_init_gstransformation(gr, namespace, tg, td, restart)
-    type(grid_t),      intent(in)    :: gr
-    type(namespace_t), intent(in)    :: namespace
-    type(target_t),    intent(inout) :: tg
-    type(td_t),        intent(in)    :: td
-    type(restart_t),   intent(inout) :: restart
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_init_gstransformation(gr, namespace, tg, td, restart)
+  type(grid_t),      intent(in)    :: gr
+  type(namespace_t), intent(in)    :: namespace
+  type(target_t),    intent(inout) :: tg
+  type(td_t),        intent(in)    :: td
+  type(restart_t),   intent(inout) :: restart
 
-    PUSH_SUB(target_init_gstransformation)
+  PUSH_SUB(target_init_gstransformation)
 
-    message(1) =  'Info: Using Superposition of States for TargetOperator'
-    call messages_info(1)
+  message(1) =  'Info: Using Superposition of States for TargetOperator'
+  call messages_info(1)
 
-    tg%move_ions = ion_dynamics_ions_move(td%ions)
-    tg%dt = td%dt
+  tg%move_ions = ion_dynamics_ions_move(td%ions)
+  tg%dt = td%dt
 
-    !%Variable OCTTargetTransformStates
-    !%Type block
-    !%Default no
-    !%Section Calculation Modes::Optimal Control
-    !%Description
-    !% If <tt>OCTTargetOperator = oct_tg_gstransformation</tt>, you must specify a
-    !% <tt>OCTTargetTransformStates</tt> block, in order to specify which linear
-    !% combination of the states present in <tt>restart/gs</tt> is used to
-    !% create the target state.
-    !% 
-    !% The syntax is the same as the <tt>TransformStates</tt> block.
-    !%End
-    call transform_states(tg%st, namespace, restart, gr, prefix = "OCTTarget")
+  !%Variable OCTTargetTransformStates
+  !%Type block
+  !%Default no
+  !%Section Calculation Modes::Optimal Control
+  !%Description
+  !% If <tt>OCTTargetOperator = oct_tg_gstransformation</tt>, you must specify a
+  !% <tt>OCTTargetTransformStates</tt> block, in order to specify which linear
+  !% combination of the states present in <tt>restart/gs</tt> is used to
+  !% create the target state.
+  !%
+  !% The syntax is the same as the <tt>TransformStates</tt> block.
+  !%End
+  call transform_states(tg%st, namespace, restart, gr, prefix = "OCTTarget")
 
-    if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
-      message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
-      message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
-      call messages_fatal(2)
-    end if
-    call density_calc(tg%st, gr, tg%st%rho)
-    
-    POP_SUB(target_init_gstransformation)
-  end subroutine target_init_gstransformation
+  if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
+    message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
+    message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
+    call messages_fatal(2)
+  end if
+  call density_calc(tg%st, gr, tg%st%rho)
 
-
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_end_gstransformation()
-    PUSH_SUB(target_init_gstransformation)
+  POP_SUB(target_init_gstransformation)
+end subroutine target_init_gstransformation
 
 
-    POP_SUB(target_init_gstransformation)
-  end subroutine target_end_gstransformation
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_end_gstransformation()
+  PUSH_SUB(target_init_gstransformation)
 
 
-  ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
-    type(target_t),      intent(in) :: tg
-    type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in) :: gr
-    character(len=*),    intent(in) :: dir
-    type(geometry_t),    intent(in) :: geo
-    type(hamiltonian_elec_t), intent(in) :: hm
-    type(output_t),      intent(in) :: outp
-    PUSH_SUB(target_output_gstransformation)
-    
-    call io_mkdir(trim(dir), namespace)
-    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
-
-    POP_SUB(target_output_gstransformation)
-  end subroutine target_output_gstransformation
-  ! ----------------------------------------------------------------------
+  POP_SUB(target_init_gstransformation)
+end subroutine target_end_gstransformation
 
 
+ ! ----------------------------------------------------------------------
+subroutine target_output_gstransformation(tg, namespace, gr, dir, geo, hm, outp)
+  type(target_t),      intent(in) :: tg
+  type(namespace_t),   intent(in)    :: namespace
+  type(grid_t),        intent(in) :: gr
+  character(len=*),    intent(in) :: dir
+  type(geometry_t),    intent(in) :: geo
+  type(hamiltonian_elec_t), intent(in) :: hm
+  type(output_t),      intent(in) :: outp
+  PUSH_SUB(target_output_gstransformation)
 
-  ! ----------------------------------------------------------------------
-  !> 
-  FLOAT function target_j1_gstransformation(tg, gr, psi) result(j1)
-    type(target_t),      intent(in) :: tg
-    type(grid_t),        intent(in) :: gr
-    type(states_elec_t), intent(in) :: psi
+  call io_mkdir(trim(dir), namespace)
+  call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
-    integer :: ik, ist
+  POP_SUB(target_output_gstransformation)
+end subroutine target_output_gstransformation
+ ! ----------------------------------------------------------------------
 
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :)
-    
-    PUSH_SUB(target_j1_gstransformation)
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    
-    j1 = M_ZERO
-    do ik = 1, psi%d%nik
-      do ist = psi%st_start, psi%st_end
 
-        call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        j1 = j1 + abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
-        
-      end do
+ ! ----------------------------------------------------------------------
+ !>
+FLOAT function target_j1_gstransformation(tg, gr, psi) result(j1)
+  type(target_t),      intent(in) :: tg
+  type(grid_t),        intent(in) :: gr
+  type(states_elec_t), intent(in) :: psi
+
+  integer :: ik, ist
+
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :)
+
+  PUSH_SUB(target_j1_gstransformation)
+
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+
+  j1 = M_ZERO
+  do ik = 1, psi%d%nik
+    do ist = psi%st_start, psi%st_end
+
+      call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      j1 = j1 + abs(zmf_dotp(gr%mesh, psi%d%dim, zpsi, zst))**2
+
     end do
+  end do
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    
-    POP_SUB(target_j1_gstransformation)
-  end function target_j1_gstransformation
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+
+  POP_SUB(target_j1_gstransformation)
+end function target_j1_gstransformation
 
 
-  ! ----------------------------------------------------------------------
-  !> 
-  subroutine target_chi_gstransformation(tg, gr, psi_in, chi_out)
-    type(target_t),      intent(in)    :: tg
-    type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi_in
-    type(states_elec_t), intent(inout) :: chi_out
+ ! ----------------------------------------------------------------------
+ !>
+subroutine target_chi_gstransformation(tg, gr, psi_in, chi_out)
+  type(target_t),      intent(in)    :: tg
+  type(grid_t),        intent(in)    :: gr
+  type(states_elec_t), intent(in)    :: psi_in
+  type(states_elec_t), intent(inout) :: chi_out
 
-    integer :: ik, ist
-    CMPLX :: olap
-    CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
-    
-    PUSH_SUB(target_chi_gstransformation)
+  integer :: ik, ist
+  CMPLX :: olap
+  CMPLX, allocatable :: zpsi(:, :), zst(:, :), zchi(:, :)
 
-    SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
-    SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
-    
-    do ik = 1, psi_in%d%nik
-      do ist = psi_in%st_start, psi_in%st_end
+  PUSH_SUB(target_chi_gstransformation)
 
-        call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
-        call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
-        
-        olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
-        zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
-        
-        call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zst(1:gr%mesh%np, 1:tg%st%d%dim))
+  SAFE_ALLOCATE(zchi(1:gr%mesh%np, 1:tg%st%d%dim))
 
-      end do
+  do ik = 1, psi_in%d%nik
+    do ist = psi_in%st_start, psi_in%st_end
+
+      call states_elec_get_state(psi_in, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(tg%st, gr%mesh, ist, ik, zst)
+
+      olap = zmf_dotp(gr%mesh, zst(:, 1), zpsi(:, 1))
+      zchi(1:gr%mesh%np, 1:tg%st%d%dim) = olap*zst(1:gr%mesh%np, 1:tg%st%d%dim)
+
+      call states_elec_set_state(chi_out, gr%mesh, ist, ik, zchi)
+
     end do
+  end do
 
-    SAFE_DEALLOCATE_A(zpsi)
-    SAFE_DEALLOCATE_A(zst)
-    SAFE_DEALLOCATE_A(zchi)
-    
-    POP_SUB(target_chi_gstransformation)
-  end subroutine target_chi_gstransformation
+  SAFE_DEALLOCATE_A(zpsi)
+  SAFE_DEALLOCATE_A(zst)
+  SAFE_DEALLOCATE_A(zchi)
+
+  POP_SUB(target_chi_gstransformation)
+end subroutine target_chi_gstransformation
 
 !! Local Variables:
 !! mode: f90

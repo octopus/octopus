@@ -67,7 +67,7 @@ contains
     integer,                    intent(in)  :: part_out(:) !< point -> partition
     integer,                    intent(out) :: nsend
     integer,                    intent(out) :: nrec
-    integer, pointer,           intent(out) :: order_in(:) 
+    integer, pointer,           intent(out) :: order_in(:)
     integer, pointer,           intent(out) :: order_out(:)
 
     logical :: found
@@ -79,7 +79,7 @@ contains
 
     PUSH_SUB(partition_transfer_init)
     call profiling_in(prof,"P_TRANS_INIT")
-   
+
     ! In order to avoid unnecessary communications, all the data
     ! transfer is going to be made from the point of view of the group
     ! that has more processes.
@@ -107,7 +107,7 @@ contains
     tmp_partno(2) = grp2%rank + 1
 #ifdef HAVE_MPI
     call MPI_Allgather(tmp_partno(1), 2, MPI_INTEGER, partno_list(1, 1), 2, MPI_INTEGER, &
-         this%comm, mpi_err)
+      this%comm, mpi_err)
 #endif
 
     ! Build partition map. This is a matrix with n12 columns and
@@ -120,10 +120,10 @@ contains
     part_map = 0
     do ipart = 1, grp2%size
       pcount = 0
-      do ip = 1, grp1%size        
+      do ip = 1, grp1%size
         if (partno_list(2, ip) == ipart) then
           pcount = pcount + 1
-          
+
           if (pcount > n12 .or. any(partno_list(1, ip) == part_map(1:ipart,:))) then
             message(1) = "Incompatible mpi groups in partition_transfer_init"
             call messages_fatal(1)
@@ -199,7 +199,7 @@ contains
     call iihash_end(map_out)
 
 
-    ! Displacements and number of points to be received 
+    ! Displacements and number of points to be received
     ! These are obtained from the corresponding "send" information
     SAFE_ALLOCATE(this%rdispls(1:grp1%size))
     SAFE_ALLOCATE(this%rcounts(1:grp1%size))
@@ -207,8 +207,8 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoall(this%scounts(1), 1, MPI_INTEGER, &
-                      this%rcounts(1), 1, MPI_INTEGER, &
-                      this%comm, mpi_err)
+      this%rcounts(1), 1, MPI_INTEGER, &
+      this%comm, mpi_err)
     call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
 #endif
 
@@ -223,8 +223,8 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(order_in(1), this%scounts(1), this%sdispls(1), MPI_INTEGER, &
-         order_out(1), this%rcounts(1), this%rdispls(1), MPI_INTEGER,    &
-         this%comm, mpi_err)
+      order_out(1), this%rcounts(1), this%rdispls(1), MPI_INTEGER,    &
+      this%comm, mpi_err)
     call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
 #endif
 
@@ -257,7 +257,7 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "partition_transfer_inc.F90"
-  
+
 end module partition_transfer_oct_m
 
 !! Local Variables:

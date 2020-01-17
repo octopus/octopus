@@ -45,7 +45,7 @@ module states_abst_oct_m
 
     procedure(nullify),    deferred :: nullify
     procedure(pack),       deferred :: pack
-    procedure(unpack),     deferred :: unpack  
+    procedure(unpack),     deferred :: unpack
     procedure(write_info), deferred :: write_info
     procedure(set_zero),   deferred :: set_zero
     procedure, non_overridable      :: are_packed
@@ -73,7 +73,7 @@ module states_abst_oct_m
     subroutine pack(st, copy)
       import states_abst_t
       class(states_abst_t), intent(inout) :: st
-      logical, optional,    intent(in)    :: copy 
+      logical, optional,    intent(in)    :: copy
     end subroutine pack
 
     subroutine unpack(st, copy)
@@ -125,7 +125,7 @@ contains
     class(states_abst_t),    intent(in) :: st
 
     res = st%wfs_type
-  end function get_type 
+  end function get_type
 
 
 end module states_abst_oct_m

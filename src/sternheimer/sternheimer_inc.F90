@@ -17,15 +17,15 @@
 !!
 
 !--------------------------------------------------------------
-!> This routine calculates the first-order variations of the wavefunctions 
+!> This routine calculates the first-order variations of the wavefunctions
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
   this, sys, lr, nsigma, omega, perturbation,       &
   restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr(:) 
-  integer,                intent(in)    :: nsigma 
+  type(lr_t),             intent(inout) :: lr(:)
+  integer,                intent(in)    :: nsigma
   R_TYPE,                 intent(in)    :: omega
   type(pert_t),           intent(in)    :: perturbation
   type(restart_t),        intent(inout) :: restart
@@ -53,7 +53,7 @@ subroutine X(sternheimer_solve)(                           &
 #ifdef HAVE_MPI
   logical :: states_conv_reduced
 #endif
-  
+
   PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
 
@@ -63,7 +63,7 @@ subroutine X(sternheimer_solve)(                           &
   st => sys%st
 
   call mix_clear(this%mixer)
-  
+
   calculate_rho = this%add_fxc .or. this%add_hartree
 
   if (st%d%ispin == SPINORS .and. calculate_rho) then
@@ -101,9 +101,9 @@ subroutine X(sternheimer_solve)(                           &
   total_iter = 0
 
   ! preorthogonalization
-  if (this%preorthogonalization) then 
+  if (this%preorthogonalization) then
     do sigma = 1, nsigma
-      if(sigma == 1) then 
+      if(sigma == 1) then
         omega_sigma = omega
       else
         omega_sigma = -R_CONJ(omega)
@@ -150,7 +150,7 @@ subroutine X(sternheimer_solve)(                           &
       ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
 
       do ib = st%group%block_start, st%group%block_end
-        
+
         sst = states_elec_block_min(st, ib)
         est = states_elec_block_max(st, ib)
 
@@ -176,12 +176,12 @@ subroutine X(sternheimer_solve)(                           &
             rhs_tmp(1:mesh%np, idim, ii) = -rhs_tmp(1:mesh%np, idim, ii)
           end do
         end do
-        
+
         do sigma = 1, nsigma
 
-          if(sigma == 1) then 
+          if(sigma == 1) then
             omega_sigma = omega
-          else 
+          else
             omega_sigma = -R_CONJ(omega)
           end if
 
@@ -190,7 +190,7 @@ subroutine X(sternheimer_solve)(                           &
             ii = ii + 1
 
             call lalg_copy(mesh%np, st%d%dim, rhs_tmp(:,:,ii), rhs(:,:,ii))
-            
+
             if(calculate_rho) then
               call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
               do idim = 1, st%d%dim
@@ -201,7 +201,7 @@ subroutine X(sternheimer_solve)(                           &
             if(sternheimer_have_inhomog(this)) then
               do idim = 1, st%d%dim
                 call lalg_axpy(mesh%np, R_TOTYPE(M_ONE), this%X(inhomog)(:, idim, ist, ik-st%d%kpt%start + 1, sigma), &
-                                   rhs(:, idim, ii))
+                  rhs(:, idim, ii))
               end do
             end if
 
@@ -230,7 +230,7 @@ subroutine X(sternheimer_solve)(                           &
           do ist = sst, est
             ii = ii + 1
 
-            if (this%preorthogonalization) then 
+            if (this%preorthogonalization) then
               ! should remove degenerate states here too
               if (this%occ_response) then
                 call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
@@ -300,7 +300,7 @@ subroutine X(sternheimer_solve)(                           &
       end if
     end if
 
-    do sigma = 1, nsigma 
+    do sigma = 1, nsigma
       !save all frequencies as positive
       sigma_alt = sigma
       if(R_REAL(omega) < M_ZERO) sigma_alt = swap_sigma(sigma)
@@ -334,7 +334,7 @@ subroutine X(sternheimer_solve)(                           &
 
     ! all the rest is the mixing and checking for convergence
 
-    if(this%scf_tol%max_iter == iter) then 
+    if(this%scf_tol%max_iter == iter) then
       message(1) = "Self-consistent iteration for response did not converge."
       this%ok = .false.
       call messages_warning(1)
@@ -358,8 +358,8 @@ subroutine X(sternheimer_solve)(                           &
     call messages_info(2)
 
     if( (abs_dens <= this%scf_tol%conv_abs_dens .or. this%scf_tol%conv_abs_dens <= M_ZERO) .and. &
-      (rel_dens <= this%scf_tol%conv_rel_dens .or. this%scf_tol%conv_rel_dens <= M_ZERO)) then 
-      if(conv_last .and. states_conv) then 
+      (rel_dens <= this%scf_tol%conv_rel_dens .or. this%scf_tol%conv_rel_dens <= M_ZERO)) then
+      if(conv_last .and. states_conv) then
         ! if not all states are converged, keep working
         conv = .true.
       else
@@ -463,9 +463,9 @@ subroutine X(sternheimer_add_occ)(sys, lr_psi, rhs, sst, est, ik, omega_sigma, d
       mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, rhs(:, :, ii))
 
       call lalg_axpy(sys%gr%mesh%np, sys%st%d%dim, mtxel / (ediff - omega_sigma), &
-          psi(1:sys%gr%mesh%np, 1:sys%st%d%dim), lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist))
+        psi(1:sys%gr%mesh%np, 1:sys%st%d%dim), lr_psi(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist))
 
-     ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
+      ! need to get psi(ist) to do this. correct for a Hermitian operator, not for kdotp (which would need -mtxel)
 !     lr%X(dl_psi)(:, :, ist2, ik) = lr%X(dl_psi)(:, :, ist2, ik) + &
 !       sys%st%X(psi)(:, :, ist, ik) * R_CONJ(mtxel) / (sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik) - omega_sigma)
 
@@ -482,8 +482,8 @@ end subroutine X(sternheimer_add_occ)
 subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t),         intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr(:) 
-  integer,                intent(in)    :: nsigma 
+  type(lr_t),             intent(inout) :: lr(:)
+  integer,                intent(in)    :: nsigma
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
 
   PUSH_SUB(X(sternheimer_calc_hvar))
@@ -504,7 +504,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   logical,                intent(in)    :: add_hartree
   type(system_t),         intent(inout) :: sys
   R_TYPE,                 intent(in)    :: lr_rho(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
-  integer,                intent(in)    :: nsigma 
+  integer,                intent(in)    :: nsigma
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
   FLOAT, optional,        intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
 
@@ -537,9 +537,9 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
     hvar(1:np, ispin, 1) = M_ZERO
 
     !* hartree
-   if (abs(coeff_hartree) > M_EPSILON) &
-     hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + coeff_hartree * hartree(1:np)
-    
+    if (abs(coeff_hartree) > M_EPSILON) &
+      hvar(1:np, ispin, 1) = hvar(1:np, ispin, 1) + coeff_hartree * hartree(1:np)
+
     !* fxc
     if(present(fxc)) then
       do ispin2 = 1, sys%st%d%nspin
@@ -547,7 +547,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
       end do
     end if
   end do
-  
+
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
 
   if (add_hartree) then
@@ -564,7 +564,7 @@ subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
   type(system_t),         intent(inout) :: sys
   R_TYPE,                 intent(in)    :: lr_rho1(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
   R_TYPE,                 intent(in)    :: lr_rho2(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
-  integer,                intent(in)    :: nsigma 
+  integer,                intent(in)    :: nsigma
   R_TYPE,                 intent(out)   :: kvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
 
   integer :: np, ispin, ispin2, ispin3
@@ -585,7 +585,7 @@ subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
       end do
     end if
   end do
-  
+
   if (nsigma==2) kvar(1:np,1:sys%st%d%nspin,2) = R_CONJ(kvar(1:np,1:sys%st%d%nspin,1))
 
   POP_SUB(X(calc_kvar))
@@ -617,16 +617,16 @@ end subroutine X(sternheimer_set_inhomog)
 
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
-     sh1, sh2, sh_2ndorder, sys, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
-     lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
-     give_pert1psi2, give_dl_eig1)
+  sh1, sh2, sh_2ndorder, sys, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
+  lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
+  give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
   type(sternheimer_t),    intent(inout) :: sh_2ndorder
   type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr1(:) 
-  type(lr_t),             intent(inout) :: lr2(:) 
-  integer,                intent(in)    :: nsigma 
+  type(lr_t),             intent(inout) :: lr1(:)
+  type(lr_t),             intent(inout) :: lr2(:)
+  integer,                intent(in)    :: nsigma
   R_TYPE,                 intent(in)    :: omega1
   R_TYPE,                 intent(in)    :: omega2
   type(pert_t),           intent(in)    :: pert1
@@ -682,10 +682,10 @@ subroutine X(sternheimer_solve_order2)( &
     do ist = st%st_start, st%st_end
 
       call states_elec_get_state(st, sys%gr%mesh, ist, ik, psi)
-    
+
       do idim = 1, st%d%dim
         do ip = 1, mesh%np
-          psi2(ip, idim) = R_CONJ(psi(ip, idim))*psi(ip, idim) 
+          psi2(ip, idim) = R_CONJ(psi(ip, idim))*psi(ip, idim)
         end do
       end do
 
@@ -743,7 +743,7 @@ subroutine X(sternheimer_solve_order2)( &
     omega1 + omega2, pert_2ndorder, restart, rho_tag, wfs_tag, &
     have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
-  
+
   ! call X(sternheimer_solve) for difference frequency
   ! unless of course they are identical (one or both freqs the same)
 

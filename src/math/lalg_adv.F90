@@ -25,7 +25,7 @@ module lalg_adv_oct_m
   use profiling_oct_m
   use sort_oct_m
   use utils_oct_m
-  
+
   implicit none
 
   private
@@ -100,7 +100,7 @@ module lalg_adv_oct_m
   interface lalg_invert_upper_triangular
     module procedure dinvert_upper_triangular, zinvert_upper_triangular
   end interface lalg_invert_upper_triangular
-  
+
   interface lalg_lowest_geneigensolve
     module procedure dlowest_geneigensolve, zlowest_geneigensolve
   end interface lalg_lowest_geneigensolve
@@ -128,7 +128,7 @@ contains
         character(1), intent(in) :: cmach
       end function dlamch
     end interface
-    
+
     sfmin = dlamch('S')
   end function sfmin
 
@@ -152,10 +152,10 @@ contains
     call dgeev(jobvl, jobvr, n, a(1, 1), lda, wr(1), wi(1), vl(1, 1), ldvl, vr(1, 1), ldvr, work(1), lwork, rwork(1), info)
 
     w(1:n) = cmplx(wr(1:n), wi(1:n), REAL_PRECISION)
-    
+
     SAFE_DEALLOCATE_A(wr)
     SAFE_DEALLOCATE_A(wi)
-    
+
     POP_SUB(lalg_dgeev)
   end subroutine lalg_dgeev
 
@@ -203,7 +203,7 @@ contains
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
     CMPLX :: deter
-    
+
     integer :: ii
 
     PUSH_SUB(zlalg_exp)
@@ -234,17 +234,17 @@ contains
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
       call lalg_eigensolve_nonh(nn, evectors, zevalues)
-      
+
       zevalues(1:nn) = exp(pp*zevalues(1:nn))
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
       deter = lalg_inverter(nn, evectors)
-      
+
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
       end do
-      
+
       ex(1:nn, 1:nn) = matmul(ex(1:nn, 1:nn), evectors(1:nn, 1:nn))
 
       SAFE_DEALLOCATE_A(zevalues)
@@ -260,7 +260,7 @@ contains
   !!
   !! This routine calculates phi(pp*A), where A is a matrix,
   !! pp is any complex number, and phi is the function:
-  !! 
+  !!
   !! phi(x) = (e^x - 1)/x
   !!
   !! For the Hermitian case, for any function f:
@@ -282,7 +282,7 @@ contains
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
     CMPLX :: deter
-    
+
     integer :: ii
 
     PUSH_SUB(zlalg_phi)
@@ -313,17 +313,17 @@ contains
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
       call lalg_eigensolve_nonh(nn, evectors, zevalues)
-      
+
       forall(ii = 1:nn) zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
       deter = lalg_inverter(nn, evectors)
-      
+
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
       end do
-      
+
       ex(1:nn, 1:nn) = matmul(ex(1:nn, 1:nn), evectors(1:nn, 1:nn))
 
       SAFE_DEALLOCATE_A(zevalues)
@@ -342,7 +342,7 @@ contains
   !! This follows the scheme of J. R. Magnus,
   !! Econometric Theory 1, 179 (1985), restricted to
   !! Hermitean matrices, although probably this can be
-  !! found in other sources. 
+  !! found in other sources.
   !!---------------------------------------------
   subroutine lalg_zeigenderivatives(n, mat, zeigenvec, zeigenval, zmat)
     integer, intent(in) :: n
@@ -405,9 +405,9 @@ contains
 
     PUSH_SUB(lalg_zpseudoinverse)
 
-    SAFE_ALLOCATE(u(1:n, 1:n)) 
-    SAFE_ALLOCATE(vt(1:n, 1:n)) 
-    SAFE_ALLOCATE(sigma(1:n, 1:n)) 
+    SAFE_ALLOCATE(u(1:n, 1:n))
+    SAFE_ALLOCATE(vt(1:n, 1:n))
+    SAFE_ALLOCATE(sigma(1:n, 1:n))
     SAFE_ALLOCATE(sg_values(1:n))
 
     imat = mat
@@ -439,8 +439,8 @@ contains
       call messages_fatal(1)
     end if
 
-    SAFE_DEALLOCATE_A(u) 
-    SAFE_DEALLOCATE_A(vt) 
+    SAFE_DEALLOCATE_A(u)
+    SAFE_DEALLOCATE_A(vt)
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sg_values)
     POP_SUB(lalg_zpseudoinverse)
@@ -504,51 +504,51 @@ contains
 
         write(*, '(2i1,4f24.12)') alpha, beta, zder_direct, (zeigplus(2) - zeigminus(2))/(M_TWO * deltah)
         write(*, '(2i1,4f24.12)') alpha, beta, &
-            zuder_direct, (zuder_directplus - zuder_directminus) / (M_TWO * deltah)
+          zuder_direct, (zuder_directplus - zuder_directminus) / (M_TWO * deltah)
 
         do gamma = 1, n
           do delta = 1, n
             if(alpha == gamma .and. beta == delta) then
-               zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
+              zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
 
-               zeigenvec = dm
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeig0)
+              zeigenvec = dm
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeig0)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplus)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminus)
 
-               write(*, '(4i1,4f24.12)') alpha, beta, gamma, delta, &
-                 zder_direct, (zeigplus(1) + zeigminus(1) - M_TWO*zeig0(1))/(deltah**2)
+              write(*, '(4i1,4f24.12)') alpha, beta, gamma, delta, &
+                zder_direct, (zeigplus(1) + zeigminus(1) - M_TWO*zeig0(1))/(deltah**2)
             else
-               zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
+              zder_direct = lalg_zd2ni(zeigref_(:, 1), mmatrix(:, :, 1), alpha, beta, gamma, delta)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
-               zeigenvec(gamma, delta) = zeigenvec(gamma, delta) + deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
+              zeigenvec(gamma, delta) = zeigenvec(gamma, delta) + deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplus)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
-               zeigenvec(gamma, delta) = zeigenvec(gamma, delta) - deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
+              zeigenvec(gamma, delta) = zeigenvec(gamma, delta) - deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminus)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
-               zeigenvec(gamma, delta) = zeigenvec(gamma, delta) - deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplusminus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
+              zeigenvec(gamma, delta) = zeigenvec(gamma, delta) - deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplusminus)
 
-               zeigenvec = dm
-               zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
-               zeigenvec(gamma, delta) = zeigenvec(gamma, delta) + deltah
-               call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminusplus)
+              zeigenvec = dm
+              zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
+              zeigenvec(gamma, delta) = zeigenvec(gamma, delta) + deltah
+              call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminusplus)
 
-               write(*, '(4i1,4f24.12)') alpha, beta, gamma, delta, &
-                 zder_direct, (zeigplus(1) + zeigminus(1) - zeigplusminus(1) - zeigminusplus(1))/(M_FOUR*deltah**2)
+              write(*, '(4i1,4f24.12)') alpha, beta, gamma, delta, &
+                zder_direct, (zeigplus(1) + zeigminus(1) - zeigplusminus(1) - zeigminusplus(1))/(M_FOUR*deltah**2)
 
 
             end if
@@ -587,13 +587,13 @@ contains
     integer, intent(in) :: alpha, beta, gamma, delta
     CMPLX :: eigenvec(2), mmatrix(2, 2)
     lalg_zd2ni  = conjg(mmatrix(alpha, delta) * eigenvec(gamma)) * eigenvec(beta) + &
-                  conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
+      conjg(eigenvec(alpha)) * mmatrix(beta, gamma) * eigenvec(delta)
   end function lalg_zd2ni
 
 #include "undef.F90"
 #include "complex.F90"
 #include "lalg_adv_lapack_inc.F90"
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "lalg_adv_lapack_inc.F90"

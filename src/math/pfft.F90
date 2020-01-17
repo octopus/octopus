@@ -27,38 +27,38 @@ module pfft_params_oct_m
   private
 
 #ifdef HAVE_PFFT
-  
+
   ! make public some symbols from the pfft library
   public :: pfft_cleanup,               &
-            pfft_create_procmesh_2d,    &
-            pfft_destroy_plan,          &
-            pfft_execute,               &
-            pfft_init,                  &
-            pfft_local_size_dft_r2c_3d, &
-            pfft_local_size_dft_3d,     &
-            pfft_plan_dft_c2r_3d,       &
-            pfft_plan_dft_r2c_3d,       &
-            pfft_plan_dft_3d,           &
-            PFFT_INT,                   &
-            PFFT_PTRDIFF_T,             &
-            PFFT_FLOAT,                 &
-            PFFT_DOUBLE,                &
-            PFFT_LDOUBLE,               &
-            PFFT_UNSIGNED,              &
-            PFFT_TRANSPOSED_IN,         &
-            PFFT_TRANSPOSED_OUT,        &
-            PFFT_ESTIMATE,              &
-            PFFT_TUNE,                  &
-            PFFT_DESTROY_INPUT,         &
-            PFFT_MEASURE,               &
-            PFFT_FORWARD,               &
-            PFFT_BACKWARD
+    pfft_create_procmesh_2d,    &
+    pfft_destroy_plan,          &
+    pfft_execute,               &
+    pfft_init,                  &
+    pfft_local_size_dft_r2c_3d, &
+    pfft_local_size_dft_3d,     &
+    pfft_plan_dft_c2r_3d,       &
+    pfft_plan_dft_r2c_3d,       &
+    pfft_plan_dft_3d,           &
+    PFFT_INT,                   &
+    PFFT_PTRDIFF_T,             &
+    PFFT_FLOAT,                 &
+    PFFT_DOUBLE,                &
+    PFFT_LDOUBLE,               &
+    PFFT_UNSIGNED,              &
+    PFFT_TRANSPOSED_IN,         &
+    PFFT_TRANSPOSED_OUT,        &
+    PFFT_ESTIMATE,              &
+    PFFT_TUNE,                  &
+    PFFT_DESTROY_INPUT,         &
+    PFFT_MEASURE,               &
+    PFFT_FORWARD,               &
+    PFFT_BACKWARD
 
   include "pfft.f03"
 #endif
 
 end module pfft_params_oct_m
- 
+
 !> The low level module to work with the PFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
 module pfft_oct_m
@@ -91,16 +91,16 @@ contains
     integer, intent(out) :: dim2   !< Second out dimension
 
     integer :: np, i
-    
+
     PUSH_SUB(pfft_decompose)
 
     ASSERT(n_proc > 0)
-    
+
     dim1 = 1
     dim2 = 1
     np = n_proc
     i = n_proc-1
-    
+
     if (is_prime(n_proc)) then
       dim1 = n_proc
     else
@@ -120,7 +120,7 @@ contains
     end if
 
     ASSERT(dim1*dim2 == n_proc)
-    
+
     POP_SUB(pfft_decompose)
   end subroutine pfft_decompose
 
@@ -133,9 +133,9 @@ contains
     CMPLX,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
     integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_FORWARD
     integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,          intent(in)    :: mpi_comm   !< MPI communicator
-    
+
     integer(C_INTPTR_T) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_r2c)
@@ -146,8 +146,8 @@ contains
     tmp_n(1:3) = n(3:1:-1)
 
     plan = pfft_plan_dft_r2c_3d(tmp_n,in,out,mpi_comm,sign,&
-      PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
-    
+      PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE)
+
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_r2c)
   end subroutine pfft_prepare_plan_r2c
@@ -161,9 +161,9 @@ contains
     FLOAT,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
     integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. Has to be FFTW_BACKWARD
     integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,          intent(in)    :: mpi_comm   !< MPI communicator
-    
+
     integer(C_INTPTR_T) :: tmp_n(3)
     type(profile_t), save   :: prof
     PUSH_SUB(pfft_prepare_plan_c2r)
@@ -174,25 +174,25 @@ contains
     tmp_n(1:3) = n(3:1:-1)
 
     plan = pfft_plan_dft_c2r_3d(tmp_n,in,out,mpi_comm, sign, &
-      PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+      PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE)
     !call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
-    !     PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+    !     PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE)
 
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_c2r)
   end subroutine pfft_prepare_plan_c2r
 
-  ! ---------------------------------------------------------  
+  ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_c2c(plan, n, in, out, sign, flags, mpi_comm)
     type(C_PTR),      intent(out)   :: plan       !< The plan that is created by PFFT
     integer,          intent(in)    :: n(:)       !< The size of the global matrix
     CMPLX,   pointer, intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
     CMPLX,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
-    integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction. 
-                                                         !! Has to be FFTW_FORWARD or FFTW_BACKWARD
+    integer,          intent(in)    :: sign       !< Sign flag to decide FFT direction.
+    !! Has to be FFTW_FORWARD or FFTW_BACKWARD
     integer,          intent(in)    :: flags      !< Flags for FFT library. Could be changed with the input variable
-                                                  !! FFTPreparePlan. Default value is FFTW_MEASURE
+    !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,          intent(in)    :: mpi_comm   !< MPI communicator
 
     integer(C_INT) :: pfft_flags
@@ -238,16 +238,16 @@ contains
     tmp_n(1:3) = rs_n_global(3:1:-1)
 
     if (is_real) then
-       tmp_alloc_size = pfft_local_size_dft_r2c_3d(tmp_n, mpi_comm, PFFT_TRANSPOSED_OUT, &
-         tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart) 
-       !call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
-       !       tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
-       fs_n_global(1) = rs_n_global(1)/2 + 1
+      tmp_alloc_size = pfft_local_size_dft_r2c_3d(tmp_n, mpi_comm, PFFT_TRANSPOSED_OUT, &
+        tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart)
+      !call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
+      !       tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
+      fs_n_global(1) = rs_n_global(1)/2 + 1
     else
-       tmp_alloc_size = pfft_local_size_dft_3d(tmp_n,mpi_comm, PFFT_TRANSPOSED_OUT, &
-         tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
-       !call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
-       !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
+      tmp_alloc_size = pfft_local_size_dft_3d(tmp_n,mpi_comm, PFFT_TRANSPOSED_OUT, &
+        tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
+      !call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
+      !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
     end if
 
     alloc_size       = tmp_alloc_size

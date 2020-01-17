@@ -34,7 +34,7 @@ module symmetries_oct_m
   implicit none
 
   private
-  
+
   public ::                        &
     symmetries_t,                  &
     symmetries_init,               &
@@ -110,9 +110,9 @@ contains
     integer                  :: fullnops
     integer, allocatable     :: rotation(:, :, :)
     real(8), allocatable     :: translation(:, :)
-    character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
+    character(kind=c_char) :: c_symbol(11), c_schoenflies(7)
     logical :: def_sym_comp
-    
+
     PUSH_SUB(symmetries_init)
 
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
@@ -131,7 +131,7 @@ contains
 
     def_sym_comp = (geo%natoms < 100)
     def_sym_comp = def_sym_comp .and. dim == 3
-    
+
     !%Variable SymmetriesCompute
     !%Type logical
     !%Section Execution::Symmetries
@@ -147,7 +147,7 @@ contains
     if(this%symmetries_compute .and. dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')
     end if
-    
+
     if(this%any_non_spherical .or. .not. this%symmetries_compute) then
       call init_identity()
 
@@ -195,7 +195,7 @@ contains
 
         if(.not. geo%reduced_coordinates) then
           ! Transform atomic positions to reduced coordinates
-          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
+          position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI)
         else
           position(1:dim4syms,iatom) = geo%atom(iatom)%x(1:dim4syms)
         end if
@@ -220,10 +220,10 @@ contains
       end do
 
       this%space_group = spg_get_international(c_symbol, lattice(1,1), &
-                 position(1,1), typs(1), geo%natoms, SYMPREC)
+        position(1,1), typs(1), geo%natoms, SYMPREC)
       this%space_group = spg_get_schoenflies(c_schoenflies, lattice(1, 1), &
-                 position(1, 1), typs(1), geo%natoms, SYMPREC)
-      
+        position(1, 1), typs(1), geo%natoms, SYMPREC)
+
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
         call messages_warning(1, namespace=namespace)
@@ -241,9 +241,9 @@ contains
 
       call c_to_f_string(c_symbol, this%symbol)
       call c_to_f_string(c_schoenflies, this%schoenflies)
-      
+
       max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), &
-                                      typs(1), geo%natoms, SYMPREC)
+        typs(1), geo%natoms, SYMPREC)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
@@ -255,7 +255,7 @@ contains
       do iop = 1, fullnops
         ! transpose due to array order difference between C and fortran
         rotation(:,:,iop) = transpose(rotation(:,:,iop))
-        ! sometimes spglib may return lattice vectors as 'fractional' translations        
+        ! sometimes spglib may return lattice vectors as 'fractional' translations
         translation(:, iop) = translation(:, iop) - anint(translation(:, iop) + M_HALF*SYMPREC)
       end do
 
@@ -279,7 +279,7 @@ contains
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
         call messages_fatal(1, namespace=namespace)
       end if
-    
+
       if(is_supercell) then
         message(1) = "Disabling fractional translations. System appears to be a supercell."
         call messages_info(1)
@@ -319,11 +319,11 @@ contains
       this%nops = 0
       do iop = 1, fullnops
         call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
-                              klattice(1:dim4syms,1:dim4syms), dim4syms, &
-                              real(translation(1:3, iop), REAL_PRECISION))
+          klattice(1:dim4syms,1:dim4syms), dim4syms, &
+          real(translation(1:3, iop), REAL_PRECISION))
 
         if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
-         .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
+          .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
@@ -340,22 +340,22 @@ contains
     call symmetries_write_info(this, namespace, dim, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
-    
+
   contains
 
     subroutine init_identity()
-      
+
       PUSH_SUB(symmetries_init.init_identity)
-      
+
       SAFE_ALLOCATE(this%ops(1:1))
       this%nops = 1
-      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), & 
-                  rlattice, klattice, dim4syms)
+      call symm_op_init(this%ops(1), reshape((/1, 0, 0, 0, 1, 0, 0, 0, 1/), (/3, 3/)), &
+        rlattice, klattice, dim4syms)
       this%breakdir = M_ZERO
       this%space_group = 1
-      
+
       POP_SUB(symmetries_init.init_identity)
-      
+
     end subroutine init_identity
 
     subroutine c_to_f_string(c_string, f_string)
@@ -373,10 +373,10 @@ contains
       if (i <= len(f_string)) f_string(i:) = ' '
 
     end subroutine c_to_f_string
-    
+
   end subroutine symmetries_init
 
-  
+
 
   ! -------------------------------------------------------------------------------
   subroutine symmetries_copy(inp, outp)
@@ -389,7 +389,7 @@ contains
 
     outp%nops = inp%nops
     outp%breakdir = inp%breakdir
-    
+
     SAFE_ALLOCATE(outp%ops(1:outp%nops))
 
     do iop = 1, outp%nops
@@ -425,10 +425,10 @@ contains
   end subroutine symmetries_end
 
   ! -------------------------------------------------------------------------------
-  
+
   integer pure function symmetries_number(this) result(number)
     type(symmetries_t),  intent(in) :: this
-    
+
     number = this%nops
   end function symmetries_number
 
@@ -453,7 +453,7 @@ contains
 
   integer pure function symmetries_space_group_number(this) result(number)
     type(symmetries_t),  intent(in) :: this
-    
+
     number = this%space_group
   end function symmetries_space_group_number
 
@@ -471,7 +471,7 @@ contains
     type(symmetries_t),  intent(in)  :: this
 
     integer :: iop
-    
+
     do iop = 1, this%nops
       if(symm_op_is_identity(this%ops(iop))) then
         index = iop
@@ -487,11 +487,11 @@ contains
     type(namespace_t),     intent(in) :: namespace
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
-    
+
     integer :: iop
- 
+
     PUSH_SUB(symmetries_write_info)
-    
+
     call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
@@ -529,14 +529,14 @@ contains
         ! list all operations and leave those that kept the symmetry-breaking
         ! direction invariant and (for the moment) that do not have a translation
         if(dim == 1) &
-        write(message(1),'(i5,1x,a,2x,1(1i4,2x),1f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
-                                                                    symm_op_translation_vector_red(this%ops(iop))
+          write(message(1),'(i5,1x,a,2x,1(1i4,2x),1f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+          symm_op_translation_vector_red(this%ops(iop))
         if(dim == 2) &
-        write(message(1),'(i5,1x,a,2x,2(2i4,2x),2f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
-                                                                    symm_op_translation_vector_red(this%ops(iop))
+          write(message(1),'(i5,1x,a,2x,2(2i4,2x),2f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+          symm_op_translation_vector_red(this%ops(iop))
         if(dim == 3) &
-        write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
-                                                                    symm_op_translation_vector_red(this%ops(iop))
+          write(message(1),'(i5,1x,a,2x,3(3i4,2x),3f12.6)') iop, ':', symm_op_rotation_matrix_red(this%ops(iop)), &
+          symm_op_translation_vector_red(this%ops(iop))
         call messages_info(1,iunit = iunit)
       end do
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'

@@ -117,7 +117,7 @@ contains
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
     forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
-    
+
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 
@@ -157,7 +157,7 @@ contains
     call curv_gygi_jacobian(sb_p, cv_p, y, f, jf, i_p)
     f(1:sb_p%dim) = f(1:sb_p%dim) - chi_p(1:sb_p%dim)
 
-  end subroutine getf 
+  end subroutine getf
 
 
   ! ---------------------------------------------------------

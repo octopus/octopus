@@ -39,7 +39,7 @@ subroutine X(vlaser_operator_quadratic) (laser, der, psi, hpsi)
   select case(laser_kind(laser))
   case(E_FIELD_ELECTRIC) ! do nothing
   case(E_FIELD_MAGNETIC)
-    if(.not. allocated(aa)) then 
+    if(.not. allocated(aa)) then
       SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       aa = M_ZERO
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
@@ -82,7 +82,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
   type(laser_t),       intent(in)      :: laser
   type(derivatives_t), intent(in)      :: der
   type(states_elec_dim_t),  intent(in) :: std
-  R_TYPE,              intent(inout)   :: psi(:,:) 
+  R_TYPE,              intent(inout)   :: psi(:,:)
   R_TYPE,              intent(inout)   :: hpsi(:,:)
   integer,             intent(in)      :: ik
   FLOAT,               intent(in)      :: gyromagnetic_ratio
@@ -106,7 +106,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
 
   select case(laser_kind(laser))
   case(E_FIELD_SCALAR_POTENTIAL)
-    if(.not. allocated(vv)) then 
+    if(.not. allocated(vv)) then
       SAFE_ALLOCATE(vv(1:der%mesh%np))
     end if
     vv = M_ZERO
@@ -114,7 +114,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     electric_field = .true.
 
   case(E_FIELD_ELECTRIC)
-    if(.not. allocated(vv)) then 
+    if(.not. allocated(vv)) then
       SAFE_ALLOCATE(vv(1:der%mesh%np))
       vv = M_ZERO
       SAFE_ALLOCATE(pot(1:der%mesh%np))
@@ -126,7 +126,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     SAFE_DEALLOCATE_A(pot)
 
   case(E_FIELD_MAGNETIC)
-    if(.not. allocated(aa)) then 
+    if(.not. allocated(aa)) then
       SAFE_ALLOCATE(aa(1:der%mesh%np_part, 1:der%mesh%sb%dim))
       aa = M_ZERO
       SAFE_ALLOCATE(a_prime(1:der%mesh%np_part, 1:der%mesh%sb%dim))
@@ -156,7 +156,7 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
   if(magnetic_field) then
 
     SAFE_ALLOCATE(grad(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:std%dim))
- 
+
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim))
     end do
@@ -204,9 +204,9 @@ subroutine X(vlaser_operator_linear) (laser, der, std, psi, hpsi, ik, gyromagnet
     case (SPINORS)
       SAFE_ALLOCATE(lhpsi(1:der%mesh%np, 1:std%dim))
       lhpsi(1:der%mesh%np, 1) = M_HALF / P_c * (bb(3) * psi(1:der%mesh%np, 1) &
-           + (bb(1) - M_zI * bb(2)) * psi(1:der%mesh%np, 2))
+        + (bb(1) - M_zI * bb(2)) * psi(1:der%mesh%np, 2))
       lhpsi(1:der%mesh%np, 2) = M_HALF / P_c * (-bb(3) * psi(1:der%mesh%np, 2) &
-           + (bb(1) + M_zI * bb(2)) * psi(1:der%mesh%np, 1))
+        + (bb(1) + M_zI * bb(2)) * psi(1:der%mesh%np, 1))
       hpsi(1:der%mesh%np, :) = hpsi(1:der%mesh%np, :) + (gyromagnetic_ratio * M_HALF) * lhpsi(1:der%mesh%np, :)
       SAFE_DEALLOCATE_A(lhpsi)
     end select

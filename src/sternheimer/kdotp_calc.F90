@@ -51,7 +51,7 @@ contains
 
 ! ---------------------------------------------------------
   character(len=100) function kdotp_wfs_tag(dir, dir2) result(str)
-    integer,           intent(in) :: dir 
+    integer,           intent(in) :: dir
     integer, optional, intent(in) :: dir2
 
     PUSH_SUB(kdotp_wfs_tag)
@@ -66,101 +66,101 @@ contains
 ! ---------------------------------------------------------
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
-subroutine zcalc_band_velocity(sys, pert, velocity)
-  type(system_t),      intent(inout) :: sys
-  type(pert_t),        intent(inout) :: pert
-  FLOAT,               intent(out)   :: velocity(:,:,:)
+  subroutine zcalc_band_velocity(sys, pert, velocity)
+    type(system_t),      intent(inout) :: sys
+    type(pert_t),        intent(inout) :: pert
+    FLOAT,               intent(out)   :: velocity(:,:,:)
 
-  integer :: ik, ist, idir
-  CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
+    integer :: ik, ist, idir
+    CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
 #ifdef HAVE_MPI
-  FLOAT, allocatable :: vel_temp(:,:,:)
+    FLOAT, allocatable :: vel_temp(:,:,:)
 #endif
 
-  PUSH_SUB(zkdotp_calc_band_velocity)
+    PUSH_SUB(zkdotp_calc_band_velocity)
 
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-  SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+    SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
+    SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
-  velocity(:, :, :) = M_ZERO
+    velocity(:, :, :) = M_ZERO
 
-  do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-    do ist = sys%st%st_start, sys%st%st_end
+    do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
+      do ist = sys%st%st_start, sys%st%st_end
 
-      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
-      do idir = 1, sys%gr%sb%periodic_dim
-        call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
-        velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+        do idir = 1, sys%gr%sb%periodic_dim
+          call pert_setup_dir(pert, idir)
+          call zpert_apply(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
+          velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
+        end do
       end do
     end do
-  end do
 
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(pertpsi)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(pertpsi)
 
 #ifdef HAVE_MPI
-  if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
-    SAFE_ALLOCATE(vel_temp(1:sys%gr%sb%periodic_dim, 1:sys%st%nst, 1:sys%st%d%nik))
+    if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
+      SAFE_ALLOCATE(vel_temp(1:sys%gr%sb%periodic_dim, 1:sys%st%nst, 1:sys%st%d%nik))
 
-    call MPI_Allreduce(velocity, vel_temp, sys%gr%sb%periodic_dim * sys%st%nst * sys%st%d%nik, &
-      MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
+      call MPI_Allreduce(velocity, vel_temp, sys%gr%sb%periodic_dim * sys%st%nst * sys%st%d%nik, &
+        MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
 
-    velocity(:,:,:) = vel_temp(:,:,:)
-    SAFE_DEALLOCATE_A(vel_temp)
-  end if
+      velocity(:,:,:) = vel_temp(:,:,:)
+      SAFE_DEALLOCATE_A(vel_temp)
+    end if
 #endif
 
-  POP_SUB(zkdotp_calc_band_velocity)
-end subroutine zcalc_band_velocity
+    POP_SUB(zkdotp_calc_band_velocity)
+  end subroutine zcalc_band_velocity
 
 ! ---------------------------------------------------------
 !> This routine cannot be used with d/dk wavefunctions calculated
 !! by perturbation theory.
 !! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
 !!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
-subroutine zcalc_dipole_periodic(sys, lr, dipole)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(in)    :: lr(:,:)
-  CMPLX,                  intent(out)   :: dipole(:)
+  subroutine zcalc_dipole_periodic(sys, lr, dipole)
+    type(system_t), target, intent(inout) :: sys
+    type(lr_t),             intent(in)    :: lr(:,:)
+    CMPLX,                  intent(out)   :: dipole(:)
 
-  integer idir, ist, ik, idim
-  type(mesh_t), pointer :: mesh
-  CMPLX :: term, moment
-  CMPLX, allocatable :: psi(:, :)
-  mesh => sys%gr%mesh
+    integer idir, ist, ik, idim
+    type(mesh_t), pointer :: mesh
+    CMPLX :: term, moment
+    CMPLX, allocatable :: psi(:, :)
+    mesh => sys%gr%mesh
 
-  PUSH_SUB(zcalc_dipole_periodic)
+    PUSH_SUB(zcalc_dipole_periodic)
 
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-  
-  do idir = 1, sys%gr%sb%periodic_dim
-    moment = M_ZERO
+    SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
-    do ik = 1, sys%st%d%nik
-      term = M_ZERO
+    do idir = 1, sys%gr%sb%periodic_dim
+      moment = M_ZERO
 
-      do ist = 1, sys%st%nst
+      do ik = 1, sys%st%d%nik
+        term = M_ZERO
 
-        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
-        do idim = 1, sys%st%d%dim
-          term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
+        do ist = 1, sys%st%nst
+
+          call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+
+          do idim = 1, sys%st%d%dim
+            term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
+          end do
+
         end do
-        
+
+        moment = moment + term*sys%st%d%kweights(ik)*sys%st%smear%el_per_state
       end do
 
-      moment = moment + term*sys%st%d%kweights(ik)*sys%st%smear%el_per_state
+      dipole(idir) = -moment
     end do
 
-    dipole(idir) = -moment
-  end do
+    SAFE_DEALLOCATE_A(psi)
 
-  SAFE_DEALLOCATE_A(psi)
-
-  POP_SUB(zcalc_dipole_periodic)
-end subroutine zcalc_dipole_periodic
+    POP_SUB(zcalc_dipole_periodic)
+  end subroutine zcalc_dipole_periodic
 
 #include "undef.F90"
 #include "real.F90"

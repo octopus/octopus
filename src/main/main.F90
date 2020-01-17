@@ -51,11 +51,11 @@ program octopus
 
   call parser_init()
   default_namespace = namespace_t("")
-  
+
   call messages_init(default_namespace)
 
   call walltimer_init(default_namespace)
-  
+
   !%Variable ReportMemory
   !%Type logical
   !%Default no
@@ -105,7 +105,7 @@ program octopus
   !%Option kdotp 15
   !% Calculation of effective masses by <math>\vec{k} \cdot \vec{p}</math> perturbation theory (experimental).
   !%Option dummy 17
-  !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
+  !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.
   !%Option invert_ks 18
   !% Invert the Kohn-Sham equations (experimental).
   !%Option test 19
@@ -125,12 +125,12 @@ program octopus
   call io_init(default_namespace)
 
   call calc_mode_par_init()
-  
+
   ! now we declare octopus as running
   call messages_switch_status('running')
-  
+
   call profiling_init(default_namespace)
-  
+
   call print_header()
 
 #if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
@@ -139,32 +139,32 @@ program octopus
   call messages_write('will be removed in the next major release of Octopus.', new_line = .true.)
   call messages_warning()
 #endif
-  
+
   ! now we really start
   call run(default_namespace, inp_calc_mode)
-  
+
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
   call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-  
+
   ! run finished successfully
   call messages_switch_status('finished')
   call io_end()
-  
+
   call profiling_end(default_namespace)
-  
+
   call calc_mode_par_end()
 
   call walltimer_end()
-  
+
   call print_date("Calculation ended on ")
   call print_walltime()
 
   call messages_end()
 
   call parser_end()
-  
+
   call global_end()
 
 contains
@@ -174,7 +174,7 @@ contains
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
-    
+
     days  = sec / 86400
     hours = (sec / 3600) - (days * 24)
     min   = (sec / 60) - (days * 1440) - (hours * 60)

@@ -22,10 +22,10 @@ subroutine X(mesh_interpolation_evaluate)(this, values, position, interpolated_v
   R_TYPE,                     intent(in)    :: values(:)
   FLOAT,                      intent(in)    :: position(:)
   R_TYPE,                     intent(out)   :: interpolated_value
-  
+
   FLOAT, allocatable :: positions(:, :)
   R_TYPE :: interpolated_values(1:1)
-  
+
   PUSH_SUB(X(mesh_interpolation_evaluate))
 
   SAFE_ALLOCATE(positions(1:this%mesh%sb%dim, 1:1))
@@ -33,9 +33,9 @@ subroutine X(mesh_interpolation_evaluate)(this, values, position, interpolated_v
   positions(1:this%mesh%sb%dim, 1) = position(1:this%mesh%sb%dim)
   call X(mesh_interpolation_evaluate_vec)(this, 1, values, positions, interpolated_values)
   interpolated_value = interpolated_values(1)
-  
+
   SAFE_DEALLOCATE_A(positions)
-  
+
   POP_SUB(X(mesh_interpolation_evaluate))
 
 end subroutine X(mesh_interpolation_evaluate)
@@ -73,13 +73,13 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
   mesh => this%mesh
 
   ASSERT(ubound(values, dim = 1) == mesh%np_part)
-  
+
   ASSERT(mesh%sb%dim <= 3)
 
   nm = 0
 
   do ipoint = 1, npoints
-    
+
     posrel(1:mesh%sb%dim) = positions(1:mesh%sb%dim, ipoint)/mesh%spacing(1:mesh%sb%dim)
 
     nm(1:mesh%sb%dim) = floor(posrel(1:mesh%sb%dim))
@@ -92,7 +92,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
     npt = 2**mesh%sb%dim
 
     ! get the point indices (this could be done in a loop with bit tricks)
-    
+
     pt(i000) = mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 0 + nm(3))
     pt(i100) = mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 0 + nm(3))
 
@@ -108,20 +108,20 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
       pt(i111) = mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 1 + nm(3))
     end if
 
-     if(mesh%parallel_in_domains) then
+    if(mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-       do ipt = 1, npt
-         pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
-         lvalues(ipt) = CNST(0.0)
-         boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
-         inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
-         if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
+      do ipt = 1, npt
+        pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
+        lvalues(ipt) = CNST(0.0)
+        boundary_point = pt(ipt) > mesh%np + mesh%vp%np_ghost
+        inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
+        if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
       end do
 #endif
     else
       forall(ipt = 1:npt) lvalues(ipt) = values(pt(ipt))
     end if
-    
+
     select case(mesh%sb%dim)
     case(3)
 
@@ -135,14 +135,14 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
       interpolated_values(ipoint) = c0*(CNST(1.0) - xd(3)) + c1*xd(3)
 
     case(2)
-      
+
       ! bilinear interpolation: http://en.wikipedia.org/wiki/Bilinear_interpolation
       c0 = lvalues(i000)*(CNST(1.0) - xd(1)) + lvalues(i100)*xd(1)
       c1 = lvalues(i010)*(CNST(1.0) - xd(1)) + lvalues(i110)*xd(1)
       interpolated_values(ipoint) = c0*(CNST(1.0) - xd(2)) + c1*xd(2)
 
     case(1)
-      
+
       ! linear interpolation
       interpolated_values(ipoint) = lvalues(i000)*(CNST(1.0) - xd(1)) + lvalues(i100)*xd(1)
 
@@ -157,7 +157,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
   end do
 
   call comm_allreduce(mesh%mpi_grp%comm, interpolated_values, npoints)
-  
+
   POP_SUB(X(mesh_interpolation_evaluate))
 
 end subroutine X(mesh_interpolation_evaluate_vec)
@@ -193,11 +193,11 @@ subroutine X(mesh_interpolation_test)(mesh)
     call MPI_Bcast(coeff, mesh%sb%dim, R_MPITYPE, 0, mesh%mpi_grp%comm, mpi_err)
 #endif
   end if
-  
+
   do ip = 1, mesh%np_part
     ff(ip) = sum(coeff(1:mesh%sb%dim)*mesh%x(ip, 1:mesh%sb%dim))
   end do
- 
+
   ! generate the points
   if(mesh%mpi_grp%rank == 0) then
     do itest = 1, ntest_points
@@ -226,10 +226,10 @@ subroutine X(mesh_interpolation_test)(mesh)
 
   ! test the scalar routine
   do itest = 1, ntest_points
-    
+
     calculated = sum(coeff(1:mesh%sb%dim)*xx(1:mesh%sb%dim, itest))
     call mesh_interpolation_evaluate(interp, ff, xx(:, itest), interpolated)
-    
+
     call messages_write('Random point')
 #ifdef R_TREAL
     call messages_write(' real')
@@ -250,7 +250,7 @@ subroutine X(mesh_interpolation_test)(mesh)
   do itest = 1, ntest_points
 
     calculated = sum(coeff(1:mesh%sb%dim)*xx(1:mesh%sb%dim, itest))
-    
+
     call messages_write('Random point')
 #ifdef R_TREAL
     call messages_write(' real')
@@ -263,9 +263,9 @@ subroutine X(mesh_interpolation_test)(mesh)
     call messages_info()
 
   end do
-  
+
   call mesh_interpolation_end(interp)
-  
+
 
   SAFE_DEALLOCATE_A(ff)
 

@@ -31,7 +31,7 @@ module spline_filter_oct_m
 
   public ::               &
     spline_filter_ft,     &
-    spline_filter_bessel, &  
+    spline_filter_bessel, &
     spline_filter_mask,   &
     spline_filter_mask_init
 
@@ -75,7 +75,7 @@ contains
     POP_SUB(spline_filter_ft)
   end subroutine spline_filter_ft
 
-  
+
   !----------------------------------------------------------------------------
   subroutine spline_filter_bessel(spl, l, qmax, alpha, beta_fs, rcut, beta_rs)
     type(spline_t), intent(inout) :: spl
@@ -111,7 +111,7 @@ contains
     do i = 1, mask_n
       read(iunit, *) mask_x(i), mask_y(i)
     end do
-    
+
     call io_close(iunit)
 
     POP_SUB(spline_filter_mask_init)

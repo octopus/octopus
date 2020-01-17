@@ -47,13 +47,13 @@ module poisson_fft_oct_m
     poisson_fft_solve
 
   integer, public, parameter ::                &
-       POISSON_FFT_KERNEL_NONE      = -1,      &
-       POISSON_FFT_KERNEL_SPH       =  0,      &
-       POISSON_FFT_KERNEL_CYL       =  1,      &
-       POISSON_FFT_KERNEL_PLA       =  2,      &
-       POISSON_FFT_KERNEL_NOCUT     =  3,      &
-       POISSON_FFT_KERNEL_CORRECTED =  4,      &
-       POISSON_FFT_KERNEL_HOCKNEY   =  5
+    POISSON_FFT_KERNEL_NONE      = -1,      &
+    POISSON_FFT_KERNEL_SPH       =  0,      &
+    POISSON_FFT_KERNEL_CYL       =  1,      &
+    POISSON_FFT_KERNEL_PLA       =  2,      &
+    POISSON_FFT_KERNEL_NOCUT     =  3,      &
+    POISSON_FFT_KERNEL_CORRECTED =  4,      &
+    POISSON_FFT_KERNEL_HOCKNEY   =  5
 
   type poisson_fft_t
     ! Components are public by default
@@ -225,10 +225,10 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-         call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
 
-         !HH not very elegant
-         if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
+          !HH not very elegant
+          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -255,7 +255,7 @@ contains
   !> Kernel for Hockneys algorithm that solves the poisson equation
   !! in a small box while respecting the periodicity of a larger box
   !! A. Damle, L. Lin, L. Ying, JCTC, 2015
-  !! DOI: 10.1021/ct500985f, supplementary info  
+  !! DOI: 10.1021/ct500985f, supplementary info
   subroutine poisson_fft_build_3d_3d_hockney(this, namespace, mesh, cube, fullcube)
     type(poisson_fft_t), intent(inout) :: this
     type(namespace_t),   intent(in)    :: namespace
@@ -291,16 +291,16 @@ contains
 
     db(1:3) = fullcube%rs_n_global(1:3)
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
-    
+
     do ix = 1, nfs(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, nfs(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
         do iz = 1, nfs(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
-          
+
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
-          
+
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
           else
@@ -309,11 +309,11 @@ contains
         end do
       end do
     end do
-    
+
     forall(iz=1:nfs(3), iy=1:nfs(2), ix=1:nfs(1))
       fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
     end forall
-    
+
     ! get periodic Coulomb potential in real space
     call dfft_backward(fullcube%fft,fft_Coulb_FS,fft_Coulb_RS)
 
@@ -346,7 +346,7 @@ contains
     call dfft_forward(cube%fft,fft_Coulb_small_RS,fft_Coulb_small_FS)
     !dummy copy for type conversion
     fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)) = &
-                                                 TOFLOAT( fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
+      TOFLOAT( fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
 
 
     call dfourier_space_op_init(this%coulb, cube, fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
@@ -584,8 +584,8 @@ contains
 
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then
-             modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-             r_c = default_r_c*M_TWO
+            modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
+            r_c = default_r_c*M_TWO
           end if
 
           if(abs(modg2) > M_EPSILON) then
@@ -666,9 +666,9 @@ contains
         ixx(1) = pad_feq(ix, db(1), .true.)
         vec = sqrt( (temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
         if (vec > M_ZERO) then
-           fft_coulb_fs(ix, iy, 1) = (M_TWO * M_PI / vec) * spline_eval(besselintf, vec*r_c)
+          fft_coulb_fs(ix, iy, 1) = (M_TWO * M_PI / vec) * spline_eval(besselintf, vec*r_c)
         else
-           fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI * r_c
+          fft_coulb_fs(ix, iy, 1) = M_TWO * M_PI * r_c
         end if
       end do
     end do

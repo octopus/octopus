@@ -55,16 +55,16 @@ module poisson_multigrid_oct_m
     FLOAT ::                    &
       threshold,                &
       relax_factor
-     
+
     integer ::                  &
       maxcycles,                &
       presteps,                 &
       poststeps,                &
       restriction_method,       &
       relaxation_method
-     
-     type(poisson_corr_t) :: corrector
-     
+
+    type(poisson_corr_t) :: corrector
+
   end type mg_solver_t
 
 contains
@@ -126,7 +126,7 @@ contains
     !%End
     call parse_variable(namespace, 'PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
-       call messages_input_error('PoissonSolverMGRestrictionMethod')
+      call messages_input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
 
     !%Variable PoissonSolverMGRelaxationMethod
@@ -202,7 +202,7 @@ contains
     SAFE_ALLOCATE(res(1:der%mesh%np))
     SAFE_ALLOCATE(cor(1:der%mesh%np_part))
     SAFE_ALLOCATE(err(1:der%mesh%np))
-    
+
     call correct_rho(this%corrector, der, rho, res, vh_correction)
     call lalg_scal(der%mesh%np, -M_FOUR*M_PI, res)
 
@@ -247,11 +247,11 @@ contains
     type(derivatives_t),         intent(in)    :: der
     FLOAT,                       intent(inout) :: pot(:)
     FLOAT,                       intent(in)    :: rho(:)
-    
+
     integer :: ip, iter
     real(8) :: resnorm
     real(8), allocatable :: res(:), cres(:), cor(:), ccor(:)
-    
+
     PUSH_SUB(poisson_multigrid_cycle)
 
     SAFE_ALLOCATE(res(1:der%mesh%np_part))
@@ -260,14 +260,14 @@ contains
       SAFE_ALLOCATE(cor(1:der%mesh%np_part))
       SAFE_ALLOCATE(cres(1:der%coarser%mesh%np_part))
       SAFE_ALLOCATE(ccor(1:der%coarser%mesh%np_part))
-     
+
       call multigrid_relax(this, der%mesh, der, pot, rho, this%presteps)
-      
+
       call dderivatives_lapl(der, pot, res)
       forall (ip = 1:der%mesh%np) res(ip) = rho(ip) - res(ip)
-      
+
       call dmultigrid_fine2coarse(der%to_coarser, der, der%coarser%mesh, res, cres, this%restriction_method)
-      
+
       ccor = M_ZERO
       call poisson_multigrid_cycle(this, der%coarser, ccor, cres)
 
@@ -282,7 +282,7 @@ contains
 
       call multigrid_relax(this, der%mesh, der, pot, rho, this%poststeps)
 
-    else    
+    else
 
       do iter = 1, this%maxcycles
         call multigrid_relax(this, der%mesh, der, pot, rho, this%presteps + this%poststeps)
@@ -357,7 +357,7 @@ contains
 
       do istep = 1, steps
         call dderivatives_lapl(der, pot, lpot)
-        pot(1:mesh%np) = pot(1:mesh%np) - this%relax_factor/ldiag(1:mesh%np)*(lpot(1:mesh%np) - rho(1:mesh%np)) 
+        pot(1:mesh%np) = pot(1:mesh%np) - this%relax_factor/ldiag(1:mesh%np)*(lpot(1:mesh%np) - rho(1:mesh%np))
       end do
 
       SAFE_DEALLOCATE_A(ldiag)

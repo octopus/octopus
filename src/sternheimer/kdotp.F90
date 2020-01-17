@@ -49,14 +49,14 @@ module kdotp_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  
+
   implicit none
 
   private
 
   public :: &
-       kdotp_lr_run,       &
-       int2str      
+    kdotp_lr_run,       &
+    int2str
 
   type kdotp_t
     private
@@ -64,15 +64,15 @@ module kdotp_oct_m
     type(pert_t) :: perturbation2
 
     FLOAT, pointer :: eff_mass_inv(:,:,:,:)  !< inverse effective-mass tensor
-                                             !! (idir1, idir2, ist, ik)
+    !! (idir1, idir2, ist, ik)
     FLOAT, pointer :: velocity(:,:,:) !< group velocity vector (idir, ist, ik)
 
     type(lr_t), pointer :: lr(:,:) !< linear response for (sys%gr%sb%periodic_dim,1)
-                                   !! second index is dummy; should only be 1
-                                   !! for compatibility with em_resp routines
+    !! second index is dummy; should only be 1
+    !! for compatibility with em_resp routines
 
-    type(lr_t), pointer :: lr2(:,:,:) !< second-order response for 
-                                      !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
+    type(lr_t), pointer :: lr2(:,:,:) !< second-order response for
+    !! (sys%gr%sb%periodic_dim,sys%gr%sb%periodic_dim,1)
 
     logical :: ok                   !< is converged?
     integer :: occ_solution_method  !< how to get occupied components of response
@@ -95,7 +95,7 @@ contains
     character(len=100)   :: str_tmp
     real(8)              :: errornorm
     type(restart_t)      :: restart_load, restart_dump
-	
+
     type(pert_t)            :: pert2  ! for the second direction in second-order kdotp
 
     PUSH_SUB(kdotp_lr_run)
@@ -109,14 +109,14 @@ contains
     pdim = sys%gr%sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then
-       message(1) = "k.p perturbation cannot be used for a finite system."
-       call messages_fatal(1)
+      message(1) = "k.p perturbation cannot be used for a finite system."
+      call messages_fatal(1)
     end if
 
     SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
     SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
-    kdotp_vars%velocity(:,:,:) = 0 
+    kdotp_vars%eff_mass_inv(:,:,:,:) = 0
+    kdotp_vars%velocity(:,:,:) = 0
 
     call pert_init(kdotp_vars%perturbation, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
@@ -156,7 +156,7 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
     call system_h_setup(sys)
-    
+
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
     else
@@ -205,7 +205,7 @@ contains
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
         if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
-          
+
         if(ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
           call messages_warning(1)
@@ -219,7 +219,7 @@ contains
               call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             end if
             call restart_close_dir(restart_load)
-          
+
             if(ierr /= 0) then
               message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(str_tmp, 1))//"'."
               call messages_warning(1)
@@ -237,7 +237,7 @@ contains
     ! solve the Sternheimer equation
     do idir = 1, pdim
       write(message(1), '(3a)') 'Info: Calculating response for the ', index2axis(idir), &
-                                '-direction.' 
+        '-direction.'
       call messages_info(1)
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
@@ -255,10 +255,10 @@ contains
           call zkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       end if
 
-      kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
+      kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)
 
       errornorm = M_ZERO
-      if(states_are_real(sys%st)) then 
+      if(states_are_real(sys%st)) then
         call doutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
           units_out%force)
 
@@ -281,9 +281,9 @@ contains
         ! by equality of mixed partial derivatives, kdotp_vars%lr2(idir, idir2) = kdotp_vars%lr2(idir2, idir)
         do idir2 = idir, pdim
           write(message(1), '(3a)') 'Info: Calculating second-order response in the ', index2axis(idir2), &
-            '-direction.' 
+            '-direction.'
           call messages_info(1)
-		  
+
           call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
@@ -412,7 +412,7 @@ contains
       !%Description
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses. It is not correct for degenerate states.
-      !%End      
+      !%End
       call messages_obsolete_variable(sys%namespace, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
       call parse_variable(sys%namespace, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
@@ -424,12 +424,12 @@ contains
       !% If true, calculates second-order response of wavefunctions as well as first-order response.
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
-      !%End      
+      !%End
       call parse_variable(sys%namespace, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 
-   end subroutine parse_input
+    end subroutine parse_input
 
     ! ---------------------------------------------------------
     subroutine info()
@@ -450,7 +450,7 @@ contains
       call messages_info(1)
 
       call messages_print_stress(stdout)
-      
+
       POP_SUB(kdotp_lr_run.info)
 
     end subroutine info
@@ -526,8 +526,8 @@ contains
       write(iunit,'(a, i10)')    '# spin    index = ', ispin
       write(iunit,'(a, i10)')    '# k-point index = ', ik2
       write(iunit,'(a, 99f12.8)') '# k-point coordinates = ', kpoints_get_point(gr%sb%kpoints, ik2)
-      if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"      
-      
+      if (.not. kdotp_vars%ok) write(iunit, '(a)') "# WARNING: not converged"
+
       write(iunit,'(a)')
       write(iunit,'(a)') '# Inverse effective-mass tensors'
       do ist = 1, st%nst
@@ -537,7 +537,7 @@ contains
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
         call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
       end do
-      
+
       write(iunit,'(a)')
       write(iunit,'(a)') '# Effective-mass tensors'
       do ist = 1, st%nst
@@ -572,29 +572,29 @@ contains
       ik2 = states_elec_dim_get_kpoint_index(st%d, ik)
 
       tmp = int2str(ik2)
-      write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin 
+      write(message(1), '(3a, i1)') 'k-point ', trim(tmp), ', spin ', ispin
       call messages_info(1)
 
       ist = 1
       do while (ist <= st%nst)
-      ! test for degeneracies
-         write(message(1),'(a)') '===='
-         tmp = int2str(ist)
-         write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-         call messages_info(2)
+        ! test for degeneracies
+        write(message(1),'(a)') '===='
+        tmp = int2str(ist)
+        write(message(2),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+          units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
+        call messages_info(2)
 
-         ist2 = ist + 1
-         do while (ist2 <= st%nst .and. &
-           abs(st%eigenval(min(ist2, st%nst), ik) - st%eigenval(ist, ik)) < threshold)
-           tmp = int2str(ist2)
-           write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
-             units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
-           call messages_info(1)
-           ist2 = ist2 + 1
-         end do
+        ist2 = ist + 1
+        do while (ist2 <= st%nst .and. &
+          abs(st%eigenval(min(ist2, st%nst), ik) - st%eigenval(ist, ik)) < threshold)
+          tmp = int2str(ist2)
+          write(message(1),'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
+            units_from_atomic(units_out%energy, st%eigenval(ist2, ik)), ' ', units_abbrev(units_out%energy)
+          call messages_info(1)
+          ist2 = ist2 + 1
+        end do
 
-         ist = ist2
+        ist = ist2
       end do
 
       write(message(1),'()')
@@ -610,12 +610,12 @@ contains
   ! ---------------------------------------------------------
   character(len=12) pure function int2str(ii) result(str)
     integer, intent(in) :: ii
-    
+
     write(str, '(i11)') ii
     str = trim(adjustl(str))
 
   end function int2str
-            
+
 end module kdotp_oct_m
 
 !! Local Variables:

@@ -51,8 +51,8 @@ subroutine X(oct_exchange_operator)(this, namespace, mesh, hpsi, ist, ik)
       forall(ip = 1:mesh%np)
         hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * this%oct_st%occ(ist, ik) * &
           psi2(ip, 1) * (this%oct_pot(ip, ik2) + this%oct_fxc(ip, ik, ik2)*this%oct_rho(ip, ik2))
-       end forall
-     end do
+      end forall
+    end do
 
   case(SPINORS)
     call messages_not_implemented("Function oct_exchange_operator for spinors", &

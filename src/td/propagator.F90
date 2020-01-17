@@ -79,8 +79,8 @@ contains
     !this%method
     !call exponential_nullify(this%te)
     call potential_interpolation_nullify(this%vksold)
-    this%vmagnus => null() 
-    !this%scf_propagation_steps 
+    this%vmagnus => null()
+    !this%scf_propagation_steps
     !this%first
 
     nullify(this%tdsk)
@@ -95,7 +95,7 @@ contains
     type(propagator_t), intent(in)    :: tri
 
     PUSH_SUB(propagator_copy)
-    
+
     call propagator_nullify(tro)
     tro%method = tri%method
 
@@ -140,11 +140,11 @@ contains
     !> whether there is an associated "field"
     !! that must be propagated (currently ions
     !! or a gauge field).
-    logical,             intent(in)    :: have_fields 
+    logical,             intent(in)    :: have_fields
     logical,             intent(in)    :: family_is_mgga_with_exc
 
     PUSH_SUB(propagator_init)
-    
+
     call propagator_nullify(tr)
 
     !%Variable TDPropagator
@@ -174,7 +174,7 @@ contains
     !% self-consistency check, except for the first two iterations, where obviously
     !% the extrapolation is not reliable.
     !%
-    !% The proliferation of methods is certainly excessive. The reason for it is that 
+    !% The proliferation of methods is certainly excessive. The reason for it is that
     !% the propagation algorithm is currently a topic of active development. We
     !% hope that in the future the optimal schemes are clearly identified. In the
     !% mean time, if you do not feel like testing, use the default choices and
@@ -221,13 +221,13 @@ contains
     !%Option crank_nicolson 5
     !% Classical Crank-Nicolson propagator.
     !% <math>
-    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}  
+    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}
     !% </math>
     !%Option crank_nicholson_sparskit 6
     !%Option crank_nicolson_sparskit 6
     !% Classical Crank-Nicolson propagator. Requires the SPARSKIT library.
     !% <math>
-    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}  
+    !%  (1 + i\delta t H_{n+1/2} / 2) \psi_{n+1} = (1 - i\delta t H_{n+1/2} / 2) \psi_{n}
     !% </math>
     !%Option magnus 7
     !% Magnus Expansion (M4).
@@ -330,15 +330,15 @@ contains
 
     if(have_fields) then
       if(tr%method /= PROP_ETRS .and.    &
-         tr%method /= PROP_AETRS .and. &
-         tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
-         tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
-         tr%method /= PROP_CRANK_NICOLSON .and. &
-         tr%method /= PROP_RUNGE_KUTTA4 .and. &
-         tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
-         tr%method /= PROP_RUNGE_KUTTA2 .and. &
-         tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
-        message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
+        tr%method /= PROP_AETRS .and. &
+        tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
+        tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
+        tr%method /= PROP_CRANK_NICOLSON .and. &
+        tr%method /= PROP_RUNGE_KUTTA4 .and. &
+        tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
+        tr%method /= PROP_RUNGE_KUTTA2 .and. &
+        tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
+        message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators."
         call messages_fatal(1, namespace=namespace)
       end if
     end if
@@ -363,7 +363,7 @@ contains
     !% should be performed self-consistently.  In practice, for most
     !% purposes this is not necessary, except perhaps in the first
     !% iterations. This variable holds the number of propagation steps
-    !% for which the propagation is done self-consistently. 
+    !% for which the propagation is done self-consistently.
     !%
     !% The special value <tt>all_steps</tt> forces self-consistency to
     !% be imposed on all propagation steps. A value of 0 means that
@@ -395,9 +395,9 @@ contains
     !% should be performed self-consistently.  In practice, for most
     !% purposes this is not necessary, except perhaps in the first
     !% iterations. This variable holds the number of propagation steps
-    !% for which the propagation is done self-consistently. 
+    !% for which the propagation is done self-consistently.
     !%
-    !% The self consistency has to be measured against some accuracy 
+    !% The self consistency has to be measured against some accuracy
     !% threshold. This variable controls the value of that threshold.
     !%End
     call parse_variable(namespace, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
@@ -456,9 +456,9 @@ contains
     case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
       call sparskit_solver_end(tr%tdsk)
       SAFE_DEALLOCATE_P(tr%tdsk)
-      
+
     end select
-    
+
     call exponential_end(tr%te)       ! clean propagator method
 
     call tr%propagation_ops_elec%end()
@@ -478,10 +478,10 @@ contains
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-              hm%vhxc, vtau = hm%vtau)   
+        hm%vhxc, vtau = hm%vtau)
     else
       call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc)
+        hm%vhxc)
     end if
 
     POP_SUB(propagator_run_zero_iter)
@@ -521,10 +521,10 @@ contains
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, vtau = hm%vtau)
+        hm%vhxc, vtau = hm%vtau)
     else
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc)
+        hm%vhxc)
     end if
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
@@ -534,7 +534,7 @@ contains
     end if
 
     if(present(scsteps)) scsteps = 1
-   
+
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
@@ -672,7 +672,7 @@ contains
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt, namespace)
     end if
 
-    !TODO: we should update the occupation matrices here 
+    !TODO: we should update the occupation matrices here
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_not_implemented("DFT+U with propagator_dt_bo", namespace=namespace)
     end if
@@ -687,7 +687,7 @@ contains
 
     call ion_dynamics_propagate_vel(ions, geo)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)
-     geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate_vel(hm%ep%gfield, dt)

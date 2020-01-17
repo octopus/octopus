@@ -86,7 +86,7 @@ contains
   ! ---------------------------------------------------------
   subroutine unit_system_init(namespace)
     type(namespace_t), intent(in) :: namespace
-    
+
     integer :: cc, cinp, cout, xyz_units
 
     PUSH_SUB(unit_system_init)
@@ -119,7 +119,7 @@ contains
     !%Option picosecond      41341.3737896
     !%Option c               137.035999139
     !%End
-    
+
     !%Variable UnitsOutput
     !%Type integer
     !%Default atomic
@@ -164,7 +164,7 @@ contains
     call messages_obsolete_variable(namespace, 'UnitsInput')
 
     cinp = UNITS_ATOMIC
-    
+
     call parse_variable(namespace, 'UnitsOutput', UNITS_ATOMIC, cc)
     if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
     cout = cc

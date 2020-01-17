@@ -20,7 +20,7 @@
 module hardware_oct_m
 
   implicit none
-  
+
   private
   public ::             &
     hardware,           &
@@ -42,7 +42,7 @@ module hardware_oct_m
     integer :: dblock_size
     integer :: zblock_size
   end type hardware_t
-  
+
   type(hardware_t) :: hardware
 
 contains

@@ -184,7 +184,7 @@ module loct_math_oct_m
     end subroutine oct_ylm
     module procedure oct_ylm4
   end interface loct_ylm
-  
+
   ! ---------------------------------------------------------
   !> Functions to generate combinations
   interface loct_combination_init
@@ -271,11 +271,11 @@ module loct_math_oct_m
   end interface loct_fft_optimize
 
 contains
-  
+
   subroutine loct_get_combination(c, comb)
     use iso_c_binding
     type(c_ptr),      intent(in)  :: c
-    integer,          intent(out) :: comb(0:) !< Assume C-style array indices (i.e. start from 0) 
+    integer,          intent(out) :: comb(0:) !< Assume C-style array indices (i.e. start from 0)
 
     call oct_get_combination(c, comb(0))
   end subroutine loct_get_combination

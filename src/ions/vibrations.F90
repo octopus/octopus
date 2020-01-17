@@ -50,7 +50,7 @@ module vibrations_oct_m
     vibrations_get_dir,               &
     vibrations_output,                &
     vibrations_get_suffix
-  
+
   type vibrations_t
     private
     integer,        public :: num_modes
@@ -148,7 +148,7 @@ contains
     PUSH_SUB(vibrations_symmetrize_dyn_matrix)
 
     ! FIXME: enforce acoustic sum rule.
-    
+
     maxdiff = M_ZERO
     do imat = 1, this%num_modes
       do jmat = imat + 1, this%num_modes
@@ -179,14 +179,14 @@ contains
 
     do iatom = 1, this%natoms
       do idir = 1, this%ndim
-        
+
         imat = vibrations_get_index(this, iatom, idir)
 
         do jatom = 1, this%natoms
           do jdir = 1, this%ndim
-            
+
             jmat = vibrations_get_index(this, jatom, jdir)
-            
+
             this%dyn_matrix(jmat, imat) = &
               this%dyn_matrix(jmat, imat) * vibrations_norm_factor(this, geo, iatom, jatom)
 
@@ -230,7 +230,7 @@ contains
     do jmat = 1, this%num_modes
       jatom = vibrations_get_atom(this, jmat)
       jdir  = vibrations_get_dir (this, jmat)
-    
+
       write(iunit, '(2(i8, i6), e25.12)') &
         jatom, jdir, iatom, idir, units_from_atomic(this%unit_dynmat, this%dyn_matrix(jmat, imat))
     end do
@@ -260,13 +260,13 @@ contains
   ! ---------------------------------------------------------
   subroutine vibrations_diag_dyn_matrix(this)
     type(vibrations_t), intent(inout) :: this
-    
+
     integer :: imode
 
     PUSH_SUB(vibrations_diag_dyn_matrix)
 
     this%normal_mode = M_ZERO
-    
+
     this%normal_mode = this%dyn_matrix
     call lalg_eigensolve(this%num_modes, this%normal_mode, this%freq)
 
@@ -310,7 +310,7 @@ contains
     type(vibrations_t), intent(in) :: this
     integer,            intent(in) :: index
 
-    vibrations_get_atom = 1 + (index - 1)/ this%ndim 
+    vibrations_get_atom = 1 + (index - 1)/ this%ndim
   end function vibrations_get_atom
 
 
@@ -326,7 +326,7 @@ contains
   ! ---------------------------------------------------------
   subroutine vibrations_output(this)
     type(vibrations_t), intent(in) :: this
-    
+
     integer :: iunit, imat, jmat
 
     if(.not. mpi_grp_is_root(mpi_world)) return

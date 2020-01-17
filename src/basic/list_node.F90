@@ -25,7 +25,7 @@ module list_node_oct_m
 
   private
   public :: list_node_t, &
-            list_node
+    list_node
 
   type :: list_node_t
     private
@@ -104,8 +104,8 @@ contains
     if (associated(this%value)) then
       deallocate(this%value)
     end if
-    
+
     POP_SUB(finalize)
   end subroutine finalize
-  
+
 end module list_node_oct_m

@@ -29,12 +29,12 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   logical :: i_am_root, in_line
   integer :: root_(1:P_STRATEGY_MAX)
   R_TYPE, pointer :: ff_global(:)
-  
+
   PUSH_SUB(X(restart_write_mesh_function))
 
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
-  ASSERT(restart%has_mesh)  
+  ASSERT(restart%has_mesh)
 
   root_(1:P_STRATEGY_MAX) = 0
   if (present(root)) then
@@ -45,12 +45,12 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
       root_ = restart%mc%who_am_i
     end where
   end if
-    
+
   ierr = 0
   i_am_root = all(root_ == restart%mc%who_am_i)
   in_line = (root_(P_STRATEGY_STATES)  == restart%mc%who_am_i(P_STRATEGY_STATES)  .and. &
-             root_(P_STRATEGY_KPOINTS) == restart%mc%who_am_i(P_STRATEGY_KPOINTS) .and. &
-             root_(P_STRATEGY_OTHER)   == restart%mc%who_am_i(P_STRATEGY_OTHER)  )
+    root_(P_STRATEGY_KPOINTS) == restart%mc%who_am_i(P_STRATEGY_KPOINTS) .and. &
+    root_(P_STRATEGY_OTHER)   == restart%mc%who_am_i(P_STRATEGY_OTHER)  )
 
   if (i_am_root) then
     if (mesh%parallel_in_domains) then
@@ -69,7 +69,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
     end if
 #endif
   end if
-  
+
   if (i_am_root) then
     call X(io_function_output_global)(restart%format, restart%pwd, filename, restart%namespace, &
       mesh, ff_global, unit_one, ierr)
@@ -86,7 +86,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
       call messages_warning(1)
     end if
   end if
-  
+
   if (mesh%parallel_in_domains .and. in_line) then
 #ifdef HAVE_MPI
     ! I have to broadcast the error code  end if
@@ -95,7 +95,7 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
     call MPI_Barrier(mesh%vp%comm, mpi_err)
 #endif
   end if
-    
+
   POP_SUB(X(restart_write_mesh_function))
 end subroutine X(restart_write_mesh_function)
 
@@ -115,7 +115,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   type(batch_t) :: ffb
   type(profile_t), save :: prof_comm
   character(len=MAX_PATH_LEN) :: full_filename
-  
+
   PUSH_SUB(X(restart_read_mesh_function))
 
   ASSERT(.not. restart%skip)
@@ -124,11 +124,11 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   nullify(read_ff)
   full_filename = trim(restart%pwd)//'/'//trim(filename)//'.obf'
-  
-  if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
+
+  if (restart_has_map(restart) .and. mesh%parallel_in_domains) then
     ! for the moment we do not do this directly
     call X(io_function_input) (full_filename, restart%namespace, mesh, ff(1:mesh%np), ierr, &
-                               map = restart%map)
+      map = restart%map)
 
     POP_SUB(X(restart_read_mesh_function))
     return
@@ -185,7 +185,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     call ffb%add_state(ff)
     call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = .true.)
     call ffb%end()
-    
+
     call profiling_out(prof_comm)
   end if
 
@@ -194,7 +194,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     do ip = 1, min(np, ubound(restart%map, dim = 1))
       if (restart%map(ip) > 0) ff(restart%map(ip)) = read_ff(ip)
     end do
-    
+
     SAFE_DEALLOCATE_P(read_ff)
   end if
 
@@ -219,7 +219,7 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr, root)
 
   character(len=MAX_PATH_LEN) :: full_filename
   integer :: root_(1:P_STRATEGY_MAX)
-    
+
   PUSH_SUB(X(restart_write_binary1))
 
   ASSERT(.not. restart%skip)
@@ -236,7 +236,7 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr, root)
       root_ = restart%mc%who_am_i
     end where
   end if
-  
+
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
@@ -285,7 +285,7 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr, root)
       root_ = restart%mc%who_am_i
     end where
   end if
-  
+
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
@@ -314,7 +314,7 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr, root)
   R_TYPE,            intent(in)  :: ff(:,:,:)
   integer,           intent(out) :: ierr
   integer, optional, intent(in)  :: root(:) !< which process is going to write the data
-  
+
   character(len=MAX_PATH_LEN) :: full_filename
   integer :: root_(1:P_STRATEGY_MAX)
 
@@ -334,7 +334,7 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr, root)
       root_ = restart%mc%who_am_i
     end where
   end if
-  
+
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
@@ -383,7 +383,7 @@ subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr, root)
       root_ = restart%mc%who_am_i
     end where
   end if
-  
+
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)

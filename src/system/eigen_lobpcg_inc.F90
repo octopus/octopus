@@ -15,7 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-  
+
 !> Implementation of the locally optimal block preconditioned conjugate-
 !! gradients algorithm.
 
@@ -34,7 +34,7 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
   integer,                  intent(inout) :: converged
   FLOAT,                    intent(out)   :: diff(:) !< (1:st%nst)
   integer,                  intent(in)    :: block_size
-  
+
   integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs, ist
   integer            :: n_matvec, conv, maxiter, iblock
   R_TYPE, allocatable :: psi(:, :, :), psi_constr(:, :, :)
@@ -42,34 +42,34 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
   integer            :: outcount
   FLOAT, allocatable :: ldiff(:)
 #endif
-  
+
   PUSH_SUB(X(eigensolver_lobpcg))
-  
+
   bs = block_size
-  
+
   maxiter = niter
   niter   = 0
-  
+
   diff(1:st%nst) = M_ZERO
-  
+
   iblock = 0
-  
+
   if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
     call loct_progress_bar(st%lnst*(ik - 1), st%lnst*st%d%kpt%nlocal)
   end if
-  
+
   ! Iterate over all blocks.
   do ib = st%st_start, st%st_end, bs
     iblock    = iblock+1
     psi_start = ib
     psi_end   = ib+bs-1
-    
+
     if(psi_end > st%st_end) then
       psi_end = st%st_end
     end if
     constr_start = st%st_start
     constr_end   = ib-1
-    
+
     n_matvec = maxiter
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, psi_start:psi_end))
@@ -77,7 +77,7 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
     do ist = psi_start, psi_end
       call states_elec_get_state(st, gr%mesh, ist, ik, psi(:, :, ist))
     end do
-    
+
     if(constr_end >= constr_start) then
 
       SAFE_ALLOCATE(psi_constr(1:gr%mesh%np_part, 1:st%d%dim, constr_start:constr_end))
@@ -85,12 +85,12 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
       do ist = constr_start, constr_end
         call states_elec_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
       end do
-    
+
       call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
         ik, pre, tol, n_matvec, conv, diff, constr = psi_constr)
 
       SAFE_DEALLOCATE_A(psi_constr)
-      
+
     else
       call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
@@ -101,15 +101,15 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
     end do
 
     SAFE_DEALLOCATE_A(psi)
-    
+
     niter     = niter + n_matvec
-    converged = converged + conv  
-    
+    converged = converged + conv
+
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) + psi_end, st%lnst*st%d%kpt%nlocal)
     end if
   end do
-  
+
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
     SAFE_ALLOCATE(ldiff(1:st%lnst))
@@ -118,7 +118,7 @@ subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converg
     SAFE_DEALLOCATE_A(ldiff)
   end if
 #endif
-  
+
   POP_SUB(X(eigensolver_lobpcg))
 end subroutine X(eigensolver_lobpcg)
 
@@ -192,7 +192,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   R_TYPE, allocatable, target :: ritz_vec(:, :)   !< Ritz-vectors.
   type(wfs_elec_t) :: psib, hpsib
   logical :: there_are_constraints
-  
+
   PUSH_SUB(X(lobpcg))
 
   if(constr_end >= constr_start) then
@@ -313,7 +313,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   call wfs_elec_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:), ik)
 
   call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
-  
+
   call psib%end()
   call hpsib%end()
 
@@ -397,7 +397,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
       call wfs_elec_init(psib, st%d%dim, lnuc, ik)
       call wfs_elec_init(hpsib, st%d%dim, lnuc, ik)
     end if
-    
+
     do i = 1, lnuc
       ist = luc(i)
       call psib%add_state(ist, res(:, :, ist))
@@ -412,7 +412,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     call psib%end()
     call hpsib%end()
-      
+
     ! Orthonormalize conjugate directions in all but the first iteration.
     ! Since h_dir also has to be modified (to avoid a full calculation of
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
@@ -614,8 +614,8 @@ contains
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-     
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
+
+      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
         res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
       end forall
     end do
@@ -723,7 +723,7 @@ contains
     R_TYPE,  intent(inout) :: vs(:, :, vs_start:) !< (gr%mesh%np_part, st%d%dim, vs_start:vs_end)
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
-    
+
     R_TYPE              :: det
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     type(profile_t), save :: prof
@@ -800,11 +800,11 @@ subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2, symm
   integer,             intent(in)  :: xpsi1(:)
   integer,             intent(in)  :: xpsi2(:)
   logical, optional,   intent(in)  :: symm
-  
+
   PUSH_SUB(X(blockt_mul))
-  
+
   call states_elec_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1 = xpsi1, xpsi2 = xpsi2, symm = symm)
-  
+
   POP_SUB(X(blockt_mul))
 end subroutine X(blockt_mul)
 

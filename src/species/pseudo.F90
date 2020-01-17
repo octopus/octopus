@@ -58,7 +58,7 @@ module pseudo_oct_m
     pseudo_has_total_angular_momentum,   &
     pseudo_projector_2j,                 &
     pseudo_wavefunction_2j
-  
+
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
     PSEUDO_TYPE_ULTRASOFT         = 30,       &
@@ -97,29 +97,29 @@ module pseudo_oct_m
   integer, parameter, public ::                       &
     PSEUDO_CORRELATION_UNKNOWN               = -2,    &
     PSEUDO_CORRELATION_ANY                   = -1
-  
+
   type pseudo_t
     private
     integer(8) :: dummy
   end type pseudo_t
 
   interface
-    
+
     ! -------------------------------------------------
-    
+
     integer function pseudo_detect_format(filename)
       import :: pseudo_t
       implicit none
-      
+
       character(len=*), intent(in)    :: filename
     end function pseudo_detect_format
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_init(pseudo, filename, fmt, ierr)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(out)   :: pseudo
       character(len=*), intent(in)    :: filename
       integer,          intent(in)    :: fmt
@@ -127,7 +127,7 @@ module pseudo_oct_m
     end subroutine pseudo_init
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_end(pseudo)
       import :: pseudo_t
       implicit none
@@ -136,25 +136,25 @@ module pseudo_oct_m
     end subroutine pseudo_end
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_type(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_type
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_format(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_format
 
     ! -------------------------------------------------
-    
+
     real(8) function pseudo_valence_charge(pseudo)
       import :: pseudo_t
       implicit none
@@ -167,43 +167,43 @@ module pseudo_oct_m
     real(8) function pseudo_mesh_spacing(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mesh_spacing
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_mesh_size(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mesh_size
 
     ! -------------------------------------------------
-    
+
     real(8) function pseudo_mass(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_mass
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_lmax(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_lmax
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_llocal(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_llocal
 
@@ -212,7 +212,7 @@ module pseudo_oct_m
     integer function pseudo_nchannels(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nchannels
 
@@ -221,7 +221,7 @@ module pseudo_oct_m
     integer function pseudo_nprojectors(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nprojectors
 
@@ -230,17 +230,17 @@ module pseudo_oct_m
     subroutine pseudo_grid(pseudo, grid)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: grid
     end subroutine pseudo_grid
-    
+
     ! -------------------------------------------------
 
     subroutine pseudo_grid_weights(pseudo, weight)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: weight
     end subroutine pseudo_grid_weights
@@ -250,17 +250,17 @@ module pseudo_oct_m
     subroutine pseudo_local_potential(pseudo, local_potential)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: local_potential
     end subroutine pseudo_local_potential
-    
+
     ! -------------------------------------------------
-    
+
     subroutine pseudo_projector(pseudo, l, ic, projector)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
@@ -268,11 +268,11 @@ module pseudo_oct_m
     end subroutine pseudo_projector
 
     ! -------------------------------------------------
-    
+
     real(8) function pseudo_dij(pseudo, l, ic, jc)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
@@ -280,62 +280,62 @@ module pseudo_oct_m
     end function pseudo_dij
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_radial_potential(pseudo, l, radial_potential)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       real(8),          intent(inout) :: radial_potential
     end subroutine pseudo_radial_potential
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_radial_function(pseudo, l, radial_function)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       real(8),          intent(out)   :: radial_function
     end subroutine pseudo_radial_function
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_nlcc_density(pseudo, nlcc_density)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: nlcc_density
     end subroutine pseudo_nlcc_density
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_density(pseudo, density)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: density
     end subroutine pseudo_density
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_nwavefunctions(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nwavefunctions
 
     ! -------------------------------------------------
-    
+
     subroutine pseudo_wavefunction(pseudo, index, n, l, occ, wf)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: index
       integer,          intent(out)   :: n
@@ -349,7 +349,7 @@ module pseudo_oct_m
     integer function pseudo_exchange(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_exchange
 
@@ -358,106 +358,106 @@ module pseudo_oct_m
     integer function pseudo_correlation(pseudo)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_correlation
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_projector_2j(pseudo, l, ic)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
     end function pseudo_projector_2j
 
     ! -------------------------------------------------
-    
+
     integer function pseudo_wavefunction_2j(pseudo, ii)
       import :: pseudo_t
       implicit none
-      
+
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: ii
     end function pseudo_wavefunction_2j
-    
+
   end interface
-  
+
 contains
 
   ! -------------------------------------------------
-  
+
   logical function pseudo_has_nlcc(pseudo)
     type(pseudo_t),   intent(in)      :: pseudo
-    
+
     interface
       integer function pseudo_has_nlcc_low(pseudo)
         import :: pseudo_t
         implicit none
-        
+
         type(pseudo_t),   intent(in)      :: pseudo
       end function pseudo_has_nlcc_low
     end interface
 
     pseudo_has_nlcc = (pseudo_has_nlcc_low(pseudo) /= 0)
-    
+
   end function pseudo_has_nlcc
 
   ! -------------------------------------------------
-  
+
   logical function pseudo_has_density(pseudo)
     type(pseudo_t),   intent(in)      :: pseudo
-    
+
     interface
       integer function pseudo_has_density_low(pseudo)
         import :: pseudo_t
         implicit none
-        
+
         type(pseudo_t),   intent(in)      :: pseudo
       end function pseudo_has_density_low
     end interface
 
     pseudo_has_density = (pseudo_has_density_low(pseudo) /= 0)
-    
+
   end function pseudo_has_density
-    ! -------------------------------------------------
-  
+  ! -------------------------------------------------
+
   logical function pseudo_has_total_angular_momentum(pseudo)
     type(pseudo_t),   intent(in)      :: pseudo
-    
+
     interface
       integer function pseudo_has_total_angular_momentum_low(pseudo)
         import :: pseudo_t
         implicit none
-        
+
         type(pseudo_t),   intent(in)      :: pseudo
       end function pseudo_has_total_angular_momentum_low
     end interface
 
     pseudo_has_total_angular_momentum = (pseudo_has_total_angular_momentum_low(pseudo) /= 0)
-    
+
   end function pseudo_has_total_angular_momentum
 
   ! -------------------------------------------------
-  
+
   logical function pseudo_has_radial_function(pseudo, l)
     type(pseudo_t),   intent(in)      :: pseudo
     integer,          intent(in)      :: l
-    
+
     interface
       integer function pseudo_has_radial_function_low(pseudo, l)
         import :: pseudo_t
         implicit none
-        
+
         type(pseudo_t),   intent(in)      :: pseudo
         integer,          intent(in)      :: l
       end function pseudo_has_radial_function_low
     end interface
-    
+
     pseudo_has_radial_function = (pseudo_has_radial_function_low(pseudo, l) /= 0)
-    
+
   end function pseudo_has_radial_function
 
 end module pseudo_oct_m

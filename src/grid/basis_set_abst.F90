@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-!> Abstract class for basis sets. In our context, basis sets include meshes, atomic orbitals, plane waves, 
+!> Abstract class for basis sets. In our context, basis sets include meshes, atomic orbitals, plane waves,
 !! possibly wavelets, etc. For this reason, the abstract class is very minimalistic, and only contains
 !! essential quantities and functions
 
@@ -30,7 +30,7 @@ module basis_set_abst_oct_m
   use profiling_oct_m
 
   implicit none
-    
+
   private
   public :: basis_set_abst_t
 

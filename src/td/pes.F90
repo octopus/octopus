@@ -36,7 +36,7 @@ module pes_oct_m
   use simul_box_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
-    
+
   implicit none
 
   private
@@ -61,7 +61,7 @@ module pes_oct_m
 
     logical, public :: calc_flux
     type(pes_flux_t) :: flux
-    
+
   end type pes_t
 
   integer, parameter ::     &
@@ -129,7 +129,7 @@ contains
     integer :: photoelectron_flags
 
     PUSH_SUB(pes_init)
-    
+
     call pes_nullify(pes)
 
     !%Variable PhotoElectronSpectrum
@@ -144,16 +144,16 @@ contains
     !%Option none 0
     !% The photoelectron spectrum is not calculated. This is the default.
     !%Option pes_spm 2
-    !% Store the wavefunctions at specific points in order to 
-    !% calculate the photoelectron spectrum at a point far in the box as proposed in 
+    !% Store the wavefunctions at specific points in order to
+    !% calculate the photoelectron spectrum at a point far in the box as proposed in
     !% A. Pohl, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. Lett.</i> <b>84</b>, 5090 (2000).
     !%Option pes_mask 4
     !% Calculate the photo-electron spectrum using the mask method.
     !% U. De Giovannini, D. Varsano, M. A. L. Marques, H. Appel, E. K. U. Gross, and A. Rubio,
     !% <i>Phys. Rev. A</i> <b>85</b>, 062515 (2012).
     !%Option pes_flux 8
-    !% Calculate the photo-electron spectrum using the t-surff technique, <i>i.e.</i>, 
-    !% spectra are computed from the electron flux through a surface close to the absorbing 
+    !% Calculate the photo-electron spectrum using the t-surff technique, <i>i.e.</i>,
+    !% spectra are computed from the electron flux through a surface close to the absorbing
     !% boundaries of the box. (Experimental.)
     !% L. Tao and A. Scrinzi, <i>New Journal of Physics</i> <b>14</b>, 013021 (2012).
     !%End
@@ -162,27 +162,27 @@ contains
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call messages_input_error('PhotoElectronSpectrum')
     end if
-    
+
     pes%calc_spm  = bitand(photoelectron_flags, PHOTOELECTRON_SPM) /= 0
     pes%calc_mask = bitand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
     pes%calc_flux = bitand(photoelectron_flags, PHOTOELECTRON_FLUX) /= 0
 
     !Header Photoelectron info
-    if(pes%calc_spm .or. pes%calc_mask .or. pes%calc_flux) then 
+    if(pes%calc_spm .or. pes%calc_mask .or. pes%calc_flux) then
       write(str, '(a,i5)') 'Photoelectron'
       call messages_print_stress(stdout, trim(str), namespace=namespace)
-    end if 
+    end if
 
-    
+
     if(pes%calc_spm)  call pes_spm_init(pes%spm, namespace, mesh, st, save_iter)
     if(pes%calc_mask) call pes_mask_init(pes%mask, namespace, mesh, sb, st, hm, max_iter,dt)
     if(pes%calc_flux) call pes_flux_init(pes%flux, namespace, mesh, st, hm, save_iter, max_iter)
 
 
     !Footer Photoelectron info
-    if(pes%calc_spm .or. pes%calc_mask .or. pes%calc_flux) then 
+    if(pes%calc_spm .or. pes%calc_mask .or. pes%calc_flux) then
       call messages_print_stress(stdout, namespace=namespace)
-    end if 
+    end if
 
     POP_SUB(pes_init)
   end subroutine pes_init
@@ -237,7 +237,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     PUSH_SUB(pes_output)
-    
+
     if(pes%calc_spm) call pes_spm_output(pes%spm, mesh, st, namespace, iter, dt)
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)

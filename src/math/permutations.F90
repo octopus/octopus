@@ -30,19 +30,19 @@ module permutations_oct_m
   private
 
   public :: permutations_init, &
-            permutations_write, &
-            permutations_copy, &
-            permutations_nullify, &
-            permutations_end, &
-            permutations_t
+    permutations_write, &
+    permutations_copy, &
+    permutations_nullify, &
+    permutations_end, &
+    permutations_t
 
   type permutations_t
-   private
-   integer,          public :: npermutations
-   integer                  :: nn, npairs
-   integer, pointer, public :: allpermutations(:,:)
-   integer, pointer, public :: permsign(:)
-  end type permutations_t 
+    private
+    integer,          public :: npermutations
+    integer                  :: nn, npairs
+    integer, pointer, public :: allpermutations(:,:)
+    integer, pointer, public :: permsign(:)
+  end type permutations_t
 
 contains
 
@@ -64,7 +64,7 @@ contains
       this%allpermutations(i1, 1) = i1
     end do
     this%permsign(1) = 1
-   
+
     iperm = 1
     do order = 2, nn
       do oldperm = 1, factorial(order-1)
@@ -74,7 +74,7 @@ contains
           this%allpermutations(newpos,         iperm) = order
           this%allpermutations(newpos+1:order, iperm) = this%allpermutations(newpos:order-1, oldperm)
           this%allpermutations(order+1:nn,     iperm) = this%allpermutations(order+1:nn, oldperm)
- 
+
           this%permsign(iperm) = this%permsign(oldperm) * (-1)**(order-newpos)
         end do
       end do
@@ -89,13 +89,13 @@ contains
     integer :: iperm
 
     PUSH_SUB(permutations_write)
-    
+
     do iperm = 1, this%npermutations
       write (message(1), '(a,I7,a,I7,a,10I7)') 'permutation ', iperm, &
-              ' sign ', this%permsign(iperm), '= ', this%allpermutations(:,iperm)
+        ' sign ', this%permsign(iperm), '= ', this%allpermutations(:,iperm)
       call messages_info(1)
     end do
-    
+
     POP_SUB(permutations_write)
   end subroutine permutations_write
 

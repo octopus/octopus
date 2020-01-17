@@ -107,16 +107,16 @@ contains
 
     ! first move the ions to time t
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
-               time, ionic_scale*dt, move_ions = move_ions)
+      time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
-    
+
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
-    
+
     ! propagate dt/2 with H(time - dt)
     call propagation_ops_elec_fuse_density_exp_apply(tr%te, namespace, st, gr, hm, CNST(0.5)*dt)
 
@@ -179,7 +179,7 @@ contains
 
     ! first move the ions to time t
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
-                time, ionic_scale*dt, move_ions = move_ions)
+      time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 
@@ -234,8 +234,8 @@ contains
 
     end do
 
-    if(hm%lda_u_level /= DFT_U_NONE) then 
-      call lda_u_write_U(hm%lda_u, stdout) 
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call lda_u_write_U(hm%lda_u, stdout)
       call lda_u_write_V(hm%lda_u, stdout)
     end if
 
@@ -283,7 +283,7 @@ contains
 
     ! move the ions to time t
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
-              geo, time, ionic_scale*dt, move_ions = move_ions)
+      geo, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
@@ -325,7 +325,7 @@ contains
     PUSH_SUB(td_caetrs)
 
     SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-    if (family_is_mgga_with_exc(hm%xc)) then 
+    if (family_is_mgga_with_exc(hm%xc)) then
       SAFE_ALLOCATE(vtauold(1:gr%mesh%np, 1:st%d%nspin))
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
       call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold, vtauold)
@@ -334,30 +334,30 @@ contains
       call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold)
     endif
 
-    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt) 
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time - dt)
 
     call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
-           calc_current = .false.)
+      calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
     call propagation_ops_elec_exp_apply(tr%te, namespace, st, gr%mesh, hm, M_HALF*dt)
 
     call v_ks_calc_finish(ks, hm, namespace)
 
-    if (family_is_mgga_with_exc(hm%xc)) then 
+    if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-         tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+        tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-         tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
+        tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
       forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
         vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
         vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
-      end forall      
+      end forall
     else
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-         tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+        tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
       forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
         vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
@@ -382,7 +382,7 @@ contains
 
     ! move the ions to time t
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, &
-              geo, time, ionic_scale*dt, move_ions = move_ions)
+      geo, time, ionic_scale*dt, move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, dt, time)
 

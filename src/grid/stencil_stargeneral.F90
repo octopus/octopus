@@ -37,39 +37,39 @@ module stencil_stargeneral_oct_m
 
 
 contains
-  
+
   ! ---------------------------------------------------------
   subroutine stencil_stargeneral_get_arms(this, sb)
-    type(stencil_t),     intent(inout) :: this 
+    type(stencil_t),     intent(inout) :: this
     type(simul_box_t),      intent(in) :: sb
-    
+
     integer :: dim
     FLOAT   :: vec1(1:3), vec2(1:3), theta(3)
     integer :: arm(1:3), order(27)
     integer :: ii, jj, kk
     FLOAT   :: norm, min_norm(3), norms(27)
-    
-    PUSH_SUB(stencil_stargeneral_get_arms)  
 
-    dim = sb%dim    
-       
+    PUSH_SUB(stencil_stargeneral_get_arms)
+
+    dim = sb%dim
+
     vec1(:) = M_ZERO
     vec2(:) = M_ZERO
-    
+
     this%stargeneral%narms = 0
 
-    if (dim == 1 ) then 
-      !we are done 
-      POP_SUB(stencil_stargeneral_get_arms)      
-      return 
-    end if   
-    
+    if (dim == 1 ) then
+      !we are done
+      POP_SUB(stencil_stargeneral_get_arms)
+      return
+    end if
+
     if(dim == 2) then
       vec1(1:dim)=sb%rlattice_primitive(1:dim, 1)
       vec2(1:dim)=sb%rlattice_primitive(1:dim, 2)
       !get the angle between the primitive vectors
       theta(1) = acos(dot_product(vec1(1:dim),vec2(1:dim)))
-    
+
 
       if (theta(1) < M_PI*M_HALF) then
         this%stargeneral%narms = this%stargeneral%narms + 1
@@ -81,12 +81,12 @@ contains
         this%stargeneral%arms(this%stargeneral%narms, 1:dim) = arm(1:dim)
       end if
       !if theta == pi/2 we do not need additional arms
-    
+
       ! NB: you have supposed the axis of the 2D system is along z.
-      !we are done 
-      POP_SUB(stencil_stargeneral_get_arms)      
-      return 
-    end if   
+      !we are done
+      POP_SUB(stencil_stargeneral_get_arms)
+      return
+    end if
 
     ! dim>2
 
@@ -112,7 +112,7 @@ contains
       POP_SUB(stencil_stargeneral_get_arms)
       return
     end if
-    
+
 
     !We find the three closest neighbours, to define the diretion of the arms
     min_norm = M_HUGE
@@ -130,8 +130,8 @@ contains
           if (abs(theta(3) - M_PI*M_HALF) <= CNST(1e-8) .and. jj == 0) cycle
 
           vec1(1:3) =   ii*sb%rlattice_primitive(1:3, 1) &
-                      + jj*sb%rlattice_primitive(1:3, 2) &
-                      + kk*sb%rlattice_primitive(1:3, 3)
+            + jj*sb%rlattice_primitive(1:3, 2) &
+            + kk*sb%rlattice_primitive(1:3, 3)
           norm = sum(vec1(1:3)**2)
 
           if (norm < min_norm(1)) then
@@ -142,7 +142,7 @@ contains
               end if
               this%stargeneral%arms(2, 1:3) = this%stargeneral%arms(1, 1:3)
               min_norm(2) = min_norm(1)
-            end if            
+            end if
             min_norm(1) = norm
             this%stargeneral%arms(1, 1:3) = (/ii, jj, kk/)
             cycle
@@ -178,13 +178,13 @@ contains
       end do
     end do
 
-    POP_SUB(stencil_stargeneral_get_arms)      
+    POP_SUB(stencil_stargeneral_get_arms)
   end subroutine stencil_stargeneral_get_arms
 
 
   ! ---------------------------------------------------------
   integer function stencil_stargeneral_size_lapl(this, dim, order) result(n)
-    type(stencil_t),     intent(inout) :: this 
+    type(stencil_t),     intent(inout) :: this
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
@@ -193,9 +193,9 @@ contains
     !normal star
     n = 2*dim*order + 1
 
-    ! star general 
-    n = n + 2 * order * this%stargeneral%narms 
-    
+    ! star general
+    n = n + 2 * order * this%stargeneral%narms
+
 
     POP_SUB(stencil_stargeneral_size_lapl)
   end function stencil_stargeneral_size_lapl
@@ -260,22 +260,22 @@ contains
           this%points(i, n) = j
         end do
       end do
-      
+
       do j = -order, order
         if (j == 0) cycle
-        do i = 1, this%stargeneral%narms 
+        do i = 1, this%stargeneral%narms
           n = n + 1
           this%points(1:2, n) = this%stargeneral%arms(i, 1:2)*j
-        end do 
+        end do
       end do
-      
+
     case(3)
       got_center = .false.
-      
+
       n = 0
       do i = 1, dim
         do j = -order, order
-          
+
           ! count center only once
           if (j == 0) then
             if (got_center) then
@@ -292,10 +292,10 @@ contains
 
       do j = -order, order
         if (j == 0) cycle
-        do i = 1, this%stargeneral%narms 
+        do i = 1, this%stargeneral%narms
           n = n + 1
           this%points(1:3, n) = this%stargeneral%arms(i, 1:3)*j
-        end do 
+        end do
       end do
 
     end select
@@ -341,16 +341,16 @@ contains
       end do
 
       do j = 1, 2*order
-        do i = 1, this%stargeneral%narms 
+        do i = 1, this%stargeneral%narms
           n = n + 1
-          if (sum(this%stargeneral%arms(i,1:dim))==0 )then          
-            pol(1:2, n) = (/j,1/)          
-          else  
-            pol(1:2, n) = (/1,j/)          
-          end if  
+          if (sum(this%stargeneral%arms(i,1:dim))==0 )then
+            pol(1:2, n) = (/j,1/)
+          else
+            pol(1:2, n) = (/1,j/)
+          end if
         end do
       end do
-      
+
     case(3)
       n = 1
       pol(:,:) = 0
@@ -361,7 +361,7 @@ contains
         end do
       end do
 
-      do i = 1, this%stargeneral%narms 
+      do i = 1, this%stargeneral%narms
 
         if (this%stargeneral%arms(i, 1) == 0) then
           ! sum(this%stargeneral%arms(i, 1:dim)) == 0 just checks whether we have a -1 in the arm vector or not
@@ -430,13 +430,13 @@ contains
 !         n = n + 1
 !         pol(1:3, n) = (/0,j,1/)
 !       end do
-      
+
 !       !HEX
 !       do j = 1, 2*order
 !         n = n + 1
 !         pol(1:3, n) = (/j, 1, 0/)
 !       end do
-      
+
 
     end select
 

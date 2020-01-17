@@ -60,16 +60,16 @@ contains
 
     integer, parameter :: im=6075, ia=106, ic=1283
     integer :: ii
-    
+
     PUSH_SUB(quickrnd_array)
 
     do ii = 1, nn
       iseed = mod(iseed*ia + ic, im)
       rnd(ii) = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
     end do
-    
+
     POP_SUB(quickrnd_array)
-    
+
   end subroutine dquickrnd_array
 
   ! ---------------------------------------------------------
@@ -81,7 +81,7 @@ contains
 
     integer, parameter :: im=6075, ia=106, ic=1283
     integer :: ii
-    
+
     PUSH_SUB(quickrnd_array)
 
     do ii = 1, nn
@@ -91,9 +91,9 @@ contains
       rnd(ii) = rnd(ii) + M_ZI*real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
       rnd(ii) = rnd(ii)/sqrt(CNST(2.0))
     end do
-    
+
     POP_SUB(quickrnd_array)
-    
+
   end subroutine zquickrnd_array
 
   ! ---------------------------------------------------------
@@ -104,18 +104,18 @@ contains
 
     integer, parameter :: im=6075, ia=106, ic=1283
     integer :: ii
-    
+
     PUSH_SUB(shiftseed)
 
     do ii = 1, n
-      iseed = mod(iseed*ia + ic, im) 
-    end do    
+      iseed = mod(iseed*ia + ic, im)
+    end do
 
     POP_SUB(shiftseed)
 
   end subroutine shiftseed
- 
- 
+
+
 end module quickrnd_oct_m
 
 !! Local Variables:

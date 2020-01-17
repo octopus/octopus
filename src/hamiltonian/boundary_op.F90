@@ -48,7 +48,7 @@ module boundary_op_oct_m
     type(cube_function_t)   :: cf        !< The mask-function on the cube
     logical                 :: ab_user_def
     FLOAT, pointer          :: ab_ufn(:)
-  end type bc_t    
+  end type bc_t
 
   integer, public, parameter :: &
     NOT_ABSORBING       = 0, &
@@ -83,7 +83,7 @@ contains
     PUSH_SUB(bc_init)
 
     this%ab_user_def = .false.
-    
+
     !%Variable AbsorbingBoundaries
     !%Type flag
     !%Default not_absorbing
@@ -128,20 +128,20 @@ contains
       !%Type block
       !%Section Time-Dependent::Absorbing Boundaries
       !%Description
-      !% Set the shape of the absorbing boundaries. Here you can set the inner 
+      !% Set the shape of the absorbing boundaries. Here you can set the inner
       !% and outer bounds by setting the block as follows:
       !%
       !% <tt>%ABShape
       !% <br>&nbsp;&nbsp; inner | outer | "user-defined"
       !% <br>%</tt>
       !%
-      !% The optional 3rd column is a user-defined expression for the absorbing 
-      !% boundaries. For example, <math>r</math> creates a spherical absorbing zone for 
-      !% coordinates with <math>{\tt inner} < r < {\tt outer}</math>, and <math>z</math> creates an 
-      !% absorbing plane. 
-      !% Note, values <tt>outer</tt> larger than the box size may lead in these cases to 
+      !% The optional 3rd column is a user-defined expression for the absorbing
+      !% boundaries. For example, <math>r</math> creates a spherical absorbing zone for
+      !% coordinates with <math>{\tt inner} < r < {\tt outer}</math>, and <math>z</math> creates an
+      !% absorbing plane.
+      !% Note, values <tt>outer</tt> larger than the box size may lead in these cases to
       !% unexpected reflection behaviours.
-      !% If no expression is given, the absorbing zone follows the edges of the 
+      !% If no expression is given, the absorbing zone follows the edges of the
       !% box (not valid for user-defined box).
       !%End
 
@@ -149,7 +149,7 @@ contains
       if(parse_block(namespace, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
-      
+
         if (mesh%sb%box_shape == SPHERE) then
           bounds(1)=mesh%sb%rsize/M_TWO
           bounds(2)=mesh%sb%rsize
@@ -162,18 +162,18 @@ contains
         end if
       else
         cols_abshape_block = parse_block_cols(blk, 0)
-      
+
         select case(cols_abshape_block)
         case(2)
           call parse_block_float(blk, 0, 0, bounds(1), units_inp%length)
           call parse_block_float(blk, 0, 1, bounds(2), units_inp%length)
           if (mesh%sb%box_shape == SPHERE) then
-            if(bounds(2) > mesh%sb%rsize)  bounds(2) = mesh%sb%rsize 
+            if(bounds(2) > mesh%sb%rsize)  bounds(2) = mesh%sb%rsize
             message(1) = "Info: using spherical absorbing boundaries."
           else if (mesh%sb%box_shape == PARALLELEPIPED) then
-            if(bounds(2) > mesh%sb%lsize(1))  bounds(2) = mesh%sb%lsize(1) 
+            if(bounds(2) > mesh%sb%lsize(1))  bounds(2) = mesh%sb%lsize(1)
             message(1) = "Info: using cubic absorbing boundaries."
-          end if    
+          end if
           call messages_info(1)
         case(3)
           this%ab_user_def = .true.
@@ -191,7 +191,7 @@ contains
             this%ab_ufn(ip) = ufn_re
           end do
           message(1) = "Input: using user-defined function from expression:"
-          write(message(2),'(a,a)') '   F(x,y,z) = ', trim(user_def_expr) 
+          write(message(2),'(a,a)') '   F(x,y,z) = ', trim(user_def_expr)
           call messages_info(2)
         case default
           message(1) = "Input: ABShape block must have at least 2 columns."
@@ -200,31 +200,31 @@ contains
 
         call parse_block_end(blk)
       end if
-      
+
       !%Variable ABWidth
       !%Type float
       !%Section Time-Dependent::Absorbing Boundaries
       !%Description
-      !% Specifies the boundary width. For a finer control over the absorbing boundary 
-      !% shape use ABShape. 
+      !% Specifies the boundary width. For a finer control over the absorbing boundary
+      !% shape use ABShape.
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
       abwidth = bounds(2)-bounds(1)
       call parse_variable(namespace, 'ABWidth', abwidth, abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
-      
-      write(message(1),'(a,es10.3,3a)') & 
+
+      write(message(1),'(a,es10.3,3a)') &
         "  Lower bound = ", units_from_atomic(units_inp%length, bounds(1) ),&
         ' [', trim(units_abbrev(units_inp%length)), ']'
-      write(message(2),'(a,es10.3,3a)') & 
+      write(message(2),'(a,es10.3,3a)') &
         "  Upper bound = ", units_from_atomic(units_inp%length, bounds(2) ),&
         ' [', trim(units_abbrev(units_inp%length)), ']'
       call messages_info(2)
-      
+
       ! generate boundary function
       SAFE_ALLOCATE(mf(1:mesh%np))
       call bc_generate_mf(this, mesh, geo, bounds, mf)
-      
+
       ! mask or cap
       SAFE_ALLOCATE(this%mf(1:mesh%np))
 
@@ -233,9 +233,9 @@ contains
       else if(this%abtype == IMAGINARY_ABSORBING) then
         this%mf(:) = abheight * mf(:)
       end if
-      
+
       if(debug%info) call bc_write_info(this, mesh, namespace)
-      
+
       SAFE_DEALLOCATE_A(mf)
     end if
 
@@ -293,7 +293,7 @@ contains
 
     PUSH_SUB(bc_generate_mf)
 
-    ! generate the boundaries on the mesh 
+    ! generate the boundaries on the mesh
 
     mf = M_ZERO
 
@@ -303,7 +303,7 @@ contains
     do ip = 1, mesh%np
       xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
       rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
- 
+
       if(this%ab_user_def) then
         dd = this%ab_ufn(ip) - bounds(1)
         if(dd > M_ZERO) then
@@ -313,35 +313,35 @@ contains
             mf(ip) = M_ONE
           end if
         end if
- 
+
       else ! this%ab_user_def == .false.
- 
+
         if(mesh%sb%box_shape == SPHERE) then
-        
-          dd = rr -  bounds(1) 
-          if(dd > M_ZERO ) then 
+
+          dd = rr -  bounds(1)
+          if(dd > M_ZERO ) then
             if (dd  <  width) then
               mf(ip) = sin(dd * M_PI / (M_TWO * (width) ))**2
-            else 
+            else
               mf(ip) = M_ONE
             end if
           end if
- 
+
         else if (mesh%sb%box_shape == PARALLELEPIPED) then
 
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv(:) = abs(xx(:)) -  bounds(1) 
+          ddv(:) = abs(xx(:)) -  bounds(1)
           do dir=1, mesh%sb%dim
-            if(ddv(dir) > M_ZERO ) then 
+            if(ddv(dir) > M_ZERO ) then
               if (ddv(dir)  <  width) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width) ))**2
-              else 
+              else
                 tmp(dir) = M_ZERO
               end if
-            end if        
-          mf(ip) = mf(ip) * tmp(dir)
+            end if
+            mf(ip) = mf(ip) * tmp(dir)
           end do
           mf(ip) = M_ONE - mf(ip)
 
@@ -354,7 +354,7 @@ contains
       end if
     end do
 
-    if(this%ab_user_def) then 
+    if(this%ab_user_def) then
       SAFE_DEALLOCATE_P(this%ab_ufn)
     end if
 

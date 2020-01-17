@@ -59,7 +59,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
   ASSERT(arrayb%status() == subarrayb%status())
   call arrayb%check_compatibility_with(subarrayb)
-    
+
   select case(arrayb%status())
   case(BATCH_DEVICE_PACKED)
 
@@ -70,7 +70,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call accel_write_buffer(blength_buff, this%nblocks, this%blength)
     call accel_write_buffer(offsets_buff, this%nblocks, this%offsets)
     call accel_write_buffer(dest_buff, this%nblocks, this%dest)
-    
+
     call accel_set_kernel_arg(kernel_subarray_gather, 0, blength_buff)
     call accel_set_kernel_arg(kernel_subarray_gather, 1, offsets_buff)
     call accel_set_kernel_arg(kernel_subarray_gather, 2, dest_buff)
@@ -85,11 +85,11 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
       (/subarrayb%pack%size_real(1), bsize, this%nblocks/), (/subarrayb%pack%size_real(1), bsize, 1/))
 
     call accel_finish()
-    
+
     call accel_release_buffer(blength_buff)
     call accel_release_buffer(offsets_buff)
     call accel_release_buffer(dest_buff)
-    
+
   case(BATCH_PACKED)
     do iblock = 1, this%nblocks
       forall(ii = 1:this%blength(iblock))
@@ -98,7 +98,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
         end forall
       end forall
     end do
-    
+
   case(BATCH_NOT_PACKED)
     !$omp parallel do private(iblock, ii)
     do ist = 1, arrayb%nst_linear
@@ -109,7 +109,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
         end forall
       end do
     end do
-    
+
   end select
 
   ! Avoid warning: 'aa' is used uninitialized; it is just to define which type

@@ -116,7 +116,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     end do
 
     call states_elec_rotate(st, namespace, mesh, c, ik)
-    
+
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
       if (hamiltonian_elec_apply_packed(hm)) then

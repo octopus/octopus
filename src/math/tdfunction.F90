@@ -43,35 +43,35 @@ module tdfunction_oct_m
 
   private
   public :: tdf_t,                       &
-            tdf_init,                    &
-            tdf_init_cw,                 &
-            tdf_init_gaussian,           &
-            tdf_init_cosinoidal,         &
-            tdf_init_trapezoidal,        &
-            tdf_init_fromfile,           &
-            tdf_init_fromexpr,           &
-            tdf_init_numerical,          &
-            tdf_set_numerical,           &
-            tdf_set_random,              &
-            tdf_to_numerical,            &
-            tdf,                         &
-            tdf_dot_product,             &
-            tdf_diff,                    &
-            tdf_scalar_multiply,         &
-            tdf_cosine_multiply,         &
-            tdf_numerical_to_fourier,    &
-            tdf_fourier_to_numerical,    &
-            tdf_numerical_to_zerofourier,&
-            tdf_zerofourier_to_numerical,&
-            tdf_fourier_grid,            &
-            tdf_write,                   &
-            tdf_niter,                   &
-            tdf_nfreqs,                  &
-            tdf_dt,                      &
-            tdf_copy,                    &
-            tdf_read,                    &
-            tdf_is_empty,                &
-            tdf_end
+    tdf_init,                    &
+    tdf_init_cw,                 &
+    tdf_init_gaussian,           &
+    tdf_init_cosinoidal,         &
+    tdf_init_trapezoidal,        &
+    tdf_init_fromfile,           &
+    tdf_init_fromexpr,           &
+    tdf_init_numerical,          &
+    tdf_set_numerical,           &
+    tdf_set_random,              &
+    tdf_to_numerical,            &
+    tdf,                         &
+    tdf_dot_product,             &
+    tdf_diff,                    &
+    tdf_scalar_multiply,         &
+    tdf_cosine_multiply,         &
+    tdf_numerical_to_fourier,    &
+    tdf_fourier_to_numerical,    &
+    tdf_numerical_to_zerofourier,&
+    tdf_zerofourier_to_numerical,&
+    tdf_fourier_grid,            &
+    tdf_write,                   &
+    tdf_niter,                   &
+    tdf_nfreqs,                  &
+    tdf_dt,                      &
+    tdf_copy,                    &
+    tdf_read,                    &
+    tdf_is_empty,                &
+    tdf_end
 
 
   integer, public, parameter ::  &
@@ -109,7 +109,7 @@ module tdfunction_oct_m
 
   interface tdf_set_numerical
     module procedure tdf_set_numericalr, &
-                     tdf_set_numericalr1
+      tdf_set_numericalr1
   end interface tdf_set_numerical
 
   interface tdf
@@ -147,7 +147,7 @@ contains
     !%Option tdf_cw 10002
     !%
     !% <tt>%TDFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | tdf_cw | amplitude 
+    !% <br>&nbsp;&nbsp; "function-name" | tdf_cw | amplitude
     !% <br>%</tt>
     !%
     !% The function is just a constant of value <tt>amplitude</tt>: <math> f(t) </math> = amplitude
@@ -157,12 +157,12 @@ contains
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_gaussian | amplitude | tau0 | t0
     !% <br>%</tt>
-    !% 
+    !%
     !% The function is a Gaussian, <math> f(t) = F_0 \exp( - (t-t_0)^2/(2\tau_0^2) ) </math>,
     !% where <math>F_0</math> = amplitude.
     !%
     !%Option tdf_cosinoidal 10004
-    !% 
+    !%
     !% <tt>%TDFunctions
     !% <br>&nbsp;&nbsp; "function-name" | tdf_cosinoidal | amplitude | tau0 | t0
     !% <br>%</tt>
@@ -199,7 +199,7 @@ contains
     !% <br>&nbsp;&nbsp; "function-name" | tdf_from_expr | "expression"
     !% <br>%</tt>
     !%
-    !% The temporal shape of the field is given as an expression (e.g., <tt>cos(2.0*t)</tt>. The 
+    !% The temporal shape of the field is given as an expression (e.g., <tt>cos(2.0*t)</tt>. The
     !% letter <i>t</i> means time, obviously. The expression is used to construct the function <i>f</i>
     !% that defines the field.
     !%End
@@ -219,36 +219,36 @@ contains
 
         a0 = M_ZERO; tau0 = M_ZERO; t0 = M_ZERO; tau1 = M_ZERO
         select case(function_type)
-          case(TDF_CW)
-            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
-            call tdf_init_cw(f, a0, M_ZERO)
-          case(TDF_GAUSSIAN)
-            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
-            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
-            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
-            call tdf_init_gaussian(f, a0, M_ZERO, t0, tau0)
-          case(TDF_COSINOIDAL)
-            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
-            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
-            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
-            call tdf_init_cosinoidal(f, a0, M_ZERO, t0, tau0)
-          case(TDF_TRAPEZOIDAL)
-            call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
-            call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
-            call parse_block_float(blk, i-1, 4, t0, units_inp%time)
-            call parse_block_float(blk, i-1, 5, tau1, units_inp%time)
-            call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
-          case(TDF_FROM_FILE)
-            call parse_block_string(blk, i-1, 2, filename)
-            call tdf_init_fromfile(f, trim(filename), namespace, ierr)
-          case(TDF_FROM_EXPR)
-            call parse_block_string(blk, i-1, 2, function_expression)
-            call tdf_init_fromexpr(f, trim(function_expression))
-          case default
-            ierr = -2
-            call parse_block_end(blk)
-            POP_SUB(tdf_read)
-            return
+        case(TDF_CW)
+          call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+          call tdf_init_cw(f, a0, M_ZERO)
+        case(TDF_GAUSSIAN)
+          call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+          call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+          call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+          call tdf_init_gaussian(f, a0, M_ZERO, t0, tau0)
+        case(TDF_COSINOIDAL)
+          call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+          call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+          call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+          call tdf_init_cosinoidal(f, a0, M_ZERO, t0, tau0)
+        case(TDF_TRAPEZOIDAL)
+          call parse_block_float(blk, i-1, 2, a0, units_inp%energy/units_inp%length)
+          call parse_block_float(blk, i-1, 3, tau0, units_inp%time)
+          call parse_block_float(blk, i-1, 4, t0, units_inp%time)
+          call parse_block_float(blk, i-1, 5, tau1, units_inp%time)
+          call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
+        case(TDF_FROM_FILE)
+          call parse_block_string(blk, i-1, 2, filename)
+          call tdf_init_fromfile(f, trim(filename), namespace, ierr)
+        case(TDF_FROM_EXPR)
+          call parse_block_string(blk, i-1, 2, function_expression)
+          call tdf_init_fromexpr(f, trim(function_expression))
+        case default
+          ierr = -2
+          call parse_block_end(blk)
+          POP_SUB(tdf_read)
+          return
         end select
 
         ierr = 0
@@ -405,7 +405,7 @@ contains
     f%expression = trim(expression)
     nullify(f%val)
     nullify(f%valww)
-    
+
     POP_SUB(tdf_init_fromexpr)
   end subroutine tdf_init_fromexpr
   !------------------------------------------------------------
@@ -505,11 +505,11 @@ contains
 
     if(present(rep)) then
       select case(rep)
-        case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
-          SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-          f%valww = M_ZERO
-          SAFE_DEALLOCATE_P(f%val)
-          f%mode = rep
+      case(TDF_FOURIER_SERIES,TDF_ZERO_FOURIER)
+        SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
+        f%valww = M_ZERO
+        SAFE_DEALLOCATE_P(f%val)
+        f%mode = rep
       end select
     end if
 
@@ -533,7 +533,7 @@ contains
     case(TDF_FOURIER_SERIES, TDF_ZERO_FOURIER)
       df = M_TWO * M_PI / (f%final_time-f%init_time)
       do i = 1, f%nfreqs
-         wgrid(i) = (i-1)*df
+        wgrid(i) = (i-1)*df
       end do
     case default
       message(1) = "Illegal mode in tdf_fourier_grid."
@@ -678,10 +678,10 @@ contains
     end select
 
   end subroutine tdf_set_numericalr1
-  !------------------------------------------------------------ 
+  !------------------------------------------------------------
 
 
-  !------------------------------------------------------------ 
+  !------------------------------------------------------------
   subroutine tdf_set_random(f, fdotf)
     type(tdf_t),     intent(inout) :: f
     FLOAT, optional, intent(in)    :: fdotf
@@ -736,7 +736,7 @@ contains
     SAFE_DEALLOCATE_A(e)
     POP_SUB(tdf_set_random)
   end subroutine tdf_set_random
-  !------------------------------------------------------------ 
+  !------------------------------------------------------------
 
 
   !------------------------------------------------------------
@@ -794,7 +794,7 @@ contains
     case(TDF_ZERO_FOURIER)
       y = f%valww(i+1)
     end select
-    
+
   end function tdfi
   !------------------------------------------------------------
 
@@ -920,12 +920,12 @@ contains
     call tdf_end(fout)
     call tdf_init(fout)
 
-    fout%t0     = fin%t0  
+    fout%t0     = fin%t0
     fout%tau0   = fin%tau0
     fout%tau1   = fin%tau1
-    fout%dt     = fin%dt 
+    fout%dt     = fin%dt
     fout%a0     = fin%a0
-    fout%omega0 = fin%omega0 
+    fout%omega0 = fin%omega0
     fout%niter  = fin%niter
     fout%final_time = fin%final_time
     fout%init_time  = fin%init_time
@@ -952,7 +952,7 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_scalar_multiply(alpha, f) 
+  subroutine tdf_scalar_multiply(alpha, f)
     FLOAT,       intent(in)    :: alpha
     type(tdf_t), intent(inout) :: f
 
@@ -975,7 +975,7 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_cosine_multiply(omega, f) 
+  subroutine tdf_cosine_multiply(omega, f)
     FLOAT,       intent(in)    :: omega
     type(tdf_t), intent(inout) :: f
 
@@ -1072,7 +1072,7 @@ contains
     case(TDF_NUMERICAL)
       ! We assume that the grid is the same for both functions.
       ! We will apply Simpson`s rule. However, note that this rule is only valid if there is an even
-      ! number of orbitals. So if there is an odd number, we will apply a correction term (that will 
+      ! number of orbitals. So if there is an odd number, we will apply a correction term (that will
       ! reduce the error order from 4 to 2, similar to the simple trapezoidal rule).
       fg = M_ZERO
       do i = 1, f%niter/2
@@ -1083,7 +1083,7 @@ contains
       if(mod(f%niter, 2).eq.1) then
         fg = fg + M_HALF * (f%val(f%niter)*g%val(f%niter) + f%val(f%niter+1) * g%val(f%niter+1)) * f%dt
       end if
-      
+
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
     case(TDF_ZERO_FOURIER)

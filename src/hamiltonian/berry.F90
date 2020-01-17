@@ -102,7 +102,7 @@ contains
     gvector(:) = 0
     gvector(dir) = 1
     call berry_phase_matrix(st, mesh, noccst, ik, ik, gvector, matrix)
-      
+
     if(noccst > 0) then
       det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
     else
@@ -158,16 +158,16 @@ contains
         call states_elec_get_state(st, mesh, ist2, ik2, psi2)
         matrix(ist, ist2) = M_Z0
         do idim = 1, st%d%dim ! spinor components
-            
+
           forall(ip = 1:mesh%np)
             tmp(ip) = conjg(psi(ip, idim))*phase(ip)*psi2(ip, idim)
           end forall
-          
+
           matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
         end do
       end do !ist2
     end do !ist
-      
+
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(phase)
     SAFE_DEALLOCATE_A(psi)
@@ -176,13 +176,13 @@ contains
     POP_SUB(berry_phase_matrix)
   end subroutine berry_phase_matrix
 
- 
+
   ! ---------------------------------------------------------
   !> local potential for electric enthalpy of uniform field in single-point Berry phase
   !!
   !! P Umari et al., Phys Rev Lett 95, 207602 (2005) eqs (3), (7)
   !! \f[
-  !! E * (e L / 2 \pi) Im e^{i 2 \pi r / L} / z  
+  !! E * (e L / 2 \pi) Im e^{i 2 \pi r / L} / z
   !! \f]
   subroutine berry_potential(st, namespace, mesh, E_field, pot)
     type(states_elec_t), intent(in)  :: st

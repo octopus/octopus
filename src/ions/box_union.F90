@@ -38,7 +38,7 @@ module box_union_oct_m
 
   type box_union_t
     private
-    
+
     !> TODO: make this a linked list, so that boxes can be added and removed efficiently on-the-fly
     integer              :: n_boxes
     type(box_t), pointer :: boxes(:)
@@ -62,7 +62,7 @@ contains
     do  ibox = 1,n_boxes
       call box_copy(union%boxes(ibox), boxes(ibox))
     end do
-    
+
     POP_SUB(box_union_init)
   end subroutine box_union_init
 
@@ -99,15 +99,15 @@ contains
     SAFE_ALLOCATE(inside2(1:npoints))
 
     inside = .false.
-      do ibox = 1, union%n_boxes
-        call box_inside_vec(union%boxes(ibox), npoints, points, inside2)
-        inside = inside .or. inside2
-      end do
+    do ibox = 1, union%n_boxes
+      call box_inside_vec(union%boxes(ibox), npoints, points, inside2)
+      inside = inside .or. inside2
+    end do
 
     SAFE_DEALLOCATE_A(inside2)
 
   end subroutine box_union_inside_vec
-  
+
   !--------------------------------------------------------------
   !> Checks if a point are inside the union box.
   logical function box_union_inside(union, point) result(inside)
@@ -129,11 +129,11 @@ contains
   !> Returns number of boxes inside domain
   pure integer function box_union_get_nboxes(union) result(nbox)
     type(box_union_t),  intent(in)  :: union
-    
+
     ! no push_sub because this function is called very frequently
-    
+
     nbox = union%n_boxes
-    
+
   end function box_union_get_nboxes
 
   !--------------------------------------------------------------
@@ -142,11 +142,11 @@ contains
     type(box_union_t),  intent(in)  :: union
     integer,            intent(in)  :: ibox
     FLOAT, dimension(MAX_DIM)       :: x
-    
+
     ! no push_sub because this function is called very frequently
-    
+
     x = box_get_center(union%boxes(ibox))
-    
+
   end function box_union_get_center
 end module box_union_oct_m
 

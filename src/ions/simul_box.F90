@@ -101,7 +101,7 @@ module simul_box_oct_m
     type(symmetries_t) :: symm
     !> 1->sphere, 2->cylinder, 3->sphere around each atom,
     !! 4->parallelepiped (orthonormal, up to now).
-    integer  :: box_shape   
+    integer  :: box_shape
 
     FLOAT :: rsize          !< the radius of the sphere or of the cylinder
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
@@ -123,7 +123,7 @@ module simul_box_oct_m
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
-    
+
     type(kpoints_t) :: kpoints                   !< the k-points
 
     integer :: dim
@@ -425,7 +425,7 @@ contains
 
       sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
-         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+        sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
 
         !%Variable Lsize
         !%Type block
@@ -451,7 +451,7 @@ contains
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block(namespace, 'Lsize', blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(namespace, 'LatticeVectors')) &
-              call messages_input_error('Lsize')
+            call messages_input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
             if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
@@ -503,7 +503,7 @@ contains
 
           sb%filename = trim(conf%share) // '/' // trim(sb%filename)
           inquire(file=trim(sb%filename), exist=found)
-          
+
           if(.not. found) call messages_fatal(1, namespace=namespace)
         end if
 
@@ -519,7 +519,7 @@ contains
         do idir = 1, 2
           box_npts = sb%image_size(idir)
           if((idir >  sb%periodic_dim .and. even(sb%image_size(idir))) .or. &
-             (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
+            (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
             box_npts = box_npts + 1
             sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
           end if
@@ -565,7 +565,7 @@ contains
       end select
 
       call messages_obsolete_variable(namespace, 'BoxOffset')
-      
+
       POP_SUB(simul_box_init.read_box)
     end subroutine read_box
 
@@ -636,7 +636,7 @@ contains
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
-    FLOAT, parameter :: tol_angle = CNST(1.0e-6)  
+    FLOAT, parameter :: tol_angle = CNST(1.0e-6)
 
     PUSH_SUB(simul_box_build_lattice)
 
@@ -644,15 +644,15 @@ contains
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
       sb%nonorthogonal = .false.
     else
-      
-      
+
+
       !%Variable LatticeParameters
       !%Type block
       !%Default 1 | 1 | 1
       !%Section Mesh::Simulation Box
       !%Description
-      !% The lattice parameters (a, b, c). 
-      !% This option is incompatible with Lsize and either one of the 
+      !% The lattice parameters (a, b, c).
+      !% This option is incompatible with Lsize and either one of the
       !% two must be specified in the input file for periodic systems.
       !% A second optional line can be used tu define the angles between the lattice vectors
       !%End
@@ -682,7 +682,7 @@ contains
           message(1) = 'LatticeParameters is incompatible with Lsize'
           call messages_print_var_info(stdout, "LatticeParameters")
           call messages_fatal(1, namespace=namespace)
-        end if 
+        end if
 
       end if
 
@@ -690,7 +690,7 @@ contains
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-                 (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
+          (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
 
           cosang=cos(M_PI*angles(1)/CNST(180.0));
           a2=M_TWO/M_THREE*(M_ONE-cosang);
@@ -714,7 +714,7 @@ contains
           sb%rlattice_primitive(3,2) = M_ZERO
           sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
           sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
-                                         /sb%rlattice_primitive(2,2) 
+            /sb%rlattice_primitive(2,2)
           sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
         end if
 
@@ -730,7 +730,7 @@ contains
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
         end if
-      else  
+      else
         !%Variable LatticeVectors
         !%Type block
         !%Default simple cubic
@@ -748,7 +748,7 @@ contains
         sb%nonorthogonal = .false.
         forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
-        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
+        if (parse_block(namespace, 'LatticeVectors', blk) == 0) then
           do idim = 1, sb%dim
             do jdim = 1, sb%dim
               call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))
@@ -774,7 +774,7 @@ contains
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end forall
     end do
-    
+
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
@@ -830,7 +830,7 @@ contains
       end if
 
       if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace) ) then
-        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
+        write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box."
         if (sb%periodic_dim /= sb%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because simul_box_in_box is too strict with atoms close to
@@ -849,7 +849,7 @@ contains
   end subroutine simul_box_atoms_in_box
 
   ! --------------------------------------------------------
-  
+
   subroutine simul_box_periodic_atom_in_box(sb, geo, ratom)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(in)    :: geo
@@ -863,7 +863,7 @@ contains
     if (simul_box_is_periodic(sb)) then
       if(.not. geo%reduced_coordinates) then
         !convert the position to reduced coordinates
-         xx(1:pd) = matmul(ratom(1:pd), sb%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
+        xx(1:pd) = matmul(ratom(1:pd), sb%klattice(1:pd, 1:pd))/(M_TWO*M_PI)
       else
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
@@ -883,7 +883,7 @@ contains
       ratom(1:pd) = matmul(sb%rlattice(1:pd, 1:pd), xx(1:pd))
 
     end if
-    
+
 
   end subroutine simul_box_periodic_atom_in_box
 
@@ -904,17 +904,17 @@ contains
 
     select case(dim)
     case(3)
-      cross(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3)) 
+      cross(1:3) = dcross_product(rv(1:3, 2), rv(1:3, 3))
       volume = dot_product(rv(1:3, 1), cross(1:3))
 
       kv(1:3, 1) = dcross_product(rv(:, 2), rv(:, 3))/volume
       kv(1:3, 2) = dcross_product(rv(:, 3), rv(:, 1))/volume
-      kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume    
+      kv(1:3, 3) = dcross_product(rv(:, 1), rv(:, 2))/volume
     case(2)
       rv3(1:3, 1:3) = M_ZERO
       rv3(1:2, 1:2) = rv(1:2, 1:2)
       rv3(3, 3) = M_ONE
-      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2)) 
+      cross(1:3) = dcross_product(rv3(1:3, 1), rv3(1:3, 2))
       volume = dot_product(rv3(1:3, 3), cross(1:3))
 
       kv(1:3, 1) = dcross_product(rv3(:, 2), rv3(:, 3))/volume
@@ -933,7 +933,7 @@ contains
       end do
     end select
 
-    if ( volume < M_ZERO ) then 
+    if ( volume < M_ZERO ) then
       message(1) = "Your lattice vectors form a left-handed system."
       call messages_fatal(1, namespace=namespace)
     end if
@@ -943,7 +943,7 @@ contains
 
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
-    type(simul_box_t), intent(inout) :: sb    
+    type(simul_box_t), intent(inout) :: sb
 
     PUSH_SUB(simul_box_end)
 
@@ -1002,7 +1002,7 @@ contains
     end if
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      do ispec = 1, geo%nspecies     
+      do ispec = 1, geo%nspecies
         write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
           units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
         call messages_info(1, iunit)
@@ -1033,7 +1033,7 @@ contains
       write(message(2),'(a,3a,a)') '  Lattice Vectors [', trim(units_abbrev(units_out%length)), ']'
       do idir = 1, sb%dim
         write(message(2+idir),'(9f12.6)') (units_from_atomic(units_out%length, sb%rlattice(idir2, idir)), &
-          idir2 = 1, sb%dim) 
+          idir2 = 1, sb%dim)
       end do
       call messages_info(2+sb%dim, iunit)
 
@@ -1145,8 +1145,8 @@ contains
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
     xx = M_ZERO
-    
-    !convert from Cartesian to reduced lattice coord 
+
+    !convert from Cartesian to reduced lattice coord
     if(npoints == 1) then
       xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     else
@@ -1220,7 +1220,7 @@ contains
       SAFE_DEALLOCATE_A(nlist)
       SAFE_DEALLOCATE_P(list)
 
-    case(PARALLELEPIPED, HYPERCUBE) 
+    case(PARALLELEPIPED, HYPERCUBE)
       llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
@@ -1339,7 +1339,7 @@ contains
         end if
         do idir = 1, sb%dim
           write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
-               sb%rlattice_primitive(1:sb%dim, idir)
+            sb%rlattice_primitive(1:sb%dim, idir)
         end do
       end if
 
@@ -1425,7 +1425,7 @@ contains
             read(lines(2), *) str, sb%user_def
           end if
         end select
- 
+
         sb%mr_flag = .false.
         call iopar_read(mpi_grp, iunit, lines, 2, err)
         if (err /= 0) then
@@ -1616,7 +1616,7 @@ contains
   end function simul_box_min_distance
 
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine simul_box_symmetry_check(this, geo, kpoints, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
@@ -1648,7 +1648,7 @@ contains
         else
           ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
         end if
-     
+
         call simul_box_periodic_atom_in_box(this, geo, ratom)
 
         ! find iatom_symm

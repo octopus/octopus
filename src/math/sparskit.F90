@@ -46,14 +46,14 @@ module sparskit_oct_m
 
   public ::                      &
     sparskit_solver_t
-  
+
   public ::                      &
     sparskit_solver_init,        &
     dsparskit_solver_run,        &
     zsparskit_solver_run,        &
     sparskit_solver_end,         &
     sparskit_solver_copy
-  
+
   type sparskit_solver_t
     private
     logical :: is_complex           !< whether set up for complex (otherwise real)
@@ -129,7 +129,7 @@ contains
     !%Section Math::SPARSKIT
     !%Description
     !% Some of the SPARSKIT solvers are Krylov subspace methods.
-    !% This variable determines what size the solver will use 
+    !% This variable determines what size the solver will use
     !% for the subspace.
     !%End
     call parse_variable(namespace, 'SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
@@ -146,7 +146,7 @@ contains
     !% will be performed by the (iterative) linear solver.
     !%End
     call parse_variable(namespace, 'SPARSKITMaxIter', 5000, sk%maxiter)
-    
+
     !%Variable SPARSKITIterOut
     !%Type integer
     !%Default -1
@@ -162,19 +162,19 @@ contains
     !%Default 1e-8
     !%Section Math::SPARSKIT
     !%Description
-    !% Some SPARSKIT solvers use a relative tolerance as a stopping criterion 
-    !% for the iterative solution process. This variable can be used to 
+    !% Some SPARSKIT solvers use a relative tolerance as a stopping criterion
+    !% for the iterative solution process. This variable can be used to
     !% specify the tolerance.
     !%End
     call parse_variable(namespace, 'SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
-    
+
     !%Variable SPARSKITAbsTolerance
     !%Type float
     !%Default 1e-10
     !%Section Math::SPARSKIT
     !%Description
-    !% Some SPARSKIT solvers use an absolute tolerance as a stopping criterion 
-    !% for the iterative solution process. This variable can be used to 
+    !% Some SPARSKIT solvers use an absolute tolerance as a stopping criterion
+    !% for the iterative solution process. This variable can be used to
     !% specify the tolerance.
     !%End
     call parse_variable(namespace, 'SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
@@ -196,12 +196,12 @@ contains
     end if
 
     ! initialize workspace size
-    workspace_size = 0 
+    workspace_size = 0
 
     ! Krylov subspace size
     m = sk%krylov_size
     if (mod(m, 2) /= 0) m = m + 1
-    
+
     select case(sk%solver_type)
     case(SK_CG)
       message(1) = 'Info: SPARSKIT solver type: Conjugate Gradient Method'
@@ -277,13 +277,13 @@ contains
   ! ---------------------------------------------------------
   subroutine sparskit_solver_end(sk)
     type(sparskit_solver_t), intent(inout) :: sk
-    
+
     PUSH_SUB(sparskit_solver_end)
-    
+
     SAFE_DEALLOCATE_A(sk%sk_b)
     SAFE_DEALLOCATE_A(sk%sk_y)
     SAFE_DEALLOCATE_A(sk%sk_work)
-    
+
     POP_SUB(sparskit_solver_end)
   end subroutine sparskit_solver_end
 
@@ -293,7 +293,7 @@ contains
     type(sparskit_solver_t), intent(out) :: sko
 
     PUSH_SUB(sparskit_solver_end)
-    
+
     sko%is_complex      = ski%is_complex
     sko%size            = ski%size
     sko%solver_type     = ski%solver_type
@@ -314,7 +314,7 @@ contains
 
     POP_SUB(sparskit_solver_end)
   end subroutine sparskit_solver_copy
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "sparskit_inc.F90"

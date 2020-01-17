@@ -28,7 +28,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
-  
+
   call profiling_in(prof_update, "GHOST_UPDATE")
 
   PUSH_SUB(X(vec_ghost_update))
@@ -40,8 +40,8 @@ subroutine X(vec_ghost_update)(vp, v_local)
 #ifdef HAVE_MPI
   call mpi_debug_in(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send(1), vp%ghost_scounts(1), vp%ghost_sdispls(1), R_MPITYPE, &
-       v_local(vp%np_local+1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
-       vp%comm, mpi_err)
+    v_local(vp%np_local+1), vp%ghost_rcounts(1), vp%ghost_rdispls(1), R_MPITYPE, &
+    vp%comm, mpi_err)
   call mpi_debug_out(vp%comm, C_MPI_ALLTOALLV)
 #endif
 
@@ -89,13 +89,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
     do ipart = 1, vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
-      
+
       handle%nnb = handle%nnb + 1
       tag = 0
       pos = 1 + vp%ghost_rdispls(ipart)*v_local%pack%size(1) + offset
 #ifdef HAVE_MPI
       call MPI_Irecv(handle%X(recv_buffer)(pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
-           ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
+        ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
 
@@ -103,13 +103,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     !In this case, data from different vectors is contiguous. So we can use one message per partition.
     do ipart = 1, vp%npart
       if(vp%ghost_rcounts(ipart) == 0) cycle
-      
+
       handle%nnb = handle%nnb + 1
       tag = 0
       pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
       call MPI_Irecv(v_local%pack%X(psi)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
-           ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
+        ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
 
@@ -117,13 +117,13 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     do ii = 1, v_local%nst_linear
       do ipart = 1, vp%npart
         if(vp%ghost_rcounts(ipart) == 0) cycle
-        
+
         handle%nnb = handle%nnb + 1
         tag = ii
         pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
         call MPI_Irecv(v_local%states_linear(ii)%X(psi)(pos), vp%ghost_rcounts(ipart), R_MPITYPE, ipart - 1, tag, &
-        vp%comm, handle%requests(handle%nnb), mpi_err)
+          vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
     end do
@@ -183,7 +183,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
         tag = ii
 #ifdef HAVE_MPI
         call MPI_Isend(handle%ghost_send%states_linear(ii)%X(psi)(vp%ghost_sendpos(ipart)), &
-             vp%ghost_scounts(ipart), R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
+          vp%ghost_scounts(ipart), R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
       end do
     end do
@@ -203,7 +203,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 
   call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
   PUSH_SUB(X(ghost_update_batch_finish))
-  
+
   ASSERT(handle%nnb > 0)
 
 #ifdef HAVE_MPI
@@ -248,7 +248,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
 
   PUSH_SUB(X(boundaries_set_batch))
   call profiling_in(set_bc_prof, 'SET_BC')
-  
+
   ASSERT(ffb%type() == R_TYPE_VAL)
   ! phase correction not implemented for OpenCL
   if(present(phase_correction)) then
@@ -264,7 +264,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
     bndry_start = boundaries%mesh%np + 1
     bndry_end   = boundaries%mesh%np_part
   end if
-    
+
   if(boundaries%mesh%sb%periodic_dim < boundaries%mesh%sb%dim) call zero_boundaries()
   if(boundaries%mesh%sb%mr_flag) call multiresolution()
   if(boundaries%mesh%sb%periodic_dim > 0)     call periodic()
@@ -322,10 +322,10 @@ contains
 
 #ifndef SINGLE_PRECISION
     SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
-    
+
     do ist = 1, ffb%nst_linear
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
-      
+
       do ip = bndry_start, bndry_end
         ix = boundaries%mesh%idx%lxyz(ip, 1)
         iy = boundaries%mesh%idx%lxyz(ip, 2)
@@ -364,7 +364,7 @@ contains
 #else
     ASSERT(.false.)
 #endif
-    
+
     POP_SUB(X(boundaries_set_batch).multiresolution)
   end subroutine multiresolution
 
@@ -475,7 +475,7 @@ contains
         recvbuffer, recv_count, recv_disp, R_MPITYPE, boundaries%mesh%vp%comm, mpi_err)
       call mpi_debug_out(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
 #endif
-      
+
       call profiling_count_transfers(sum(boundaries%nsend(1:npart) + boundaries%nrecv(1:npart))*ffb%nst_linear, &
         R_TOTYPE(M_ONE))
 
@@ -573,7 +573,7 @@ contains
         call accel_release_buffer(buff_recv)
       end select
 
-      SAFE_DEALLOCATE_A(recvbuffer)        
+      SAFE_DEALLOCATE_A(recvbuffer)
 
       call profiling_out(set_bc_postcomm_prof)
 

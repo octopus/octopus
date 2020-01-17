@@ -145,12 +145,12 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
-  
+
   end type output_t
 
   integer(8), parameter, public ::              &
     OPTION__OUTPUT__J_FLOW          =     32768
-  
+
 contains
 
   subroutine output_init(outp, namespace, sb, st, nst, ks, states_are_real)
@@ -186,7 +186,7 @@ contains
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
     !% Example: <tt>density + potential</tt>
     !%Option potential  bit(0)
-    !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for 
+    !% Outputs Kohn-Sham potential, separated by parts. File names are <tt>v0</tt> for
     !% the local part of the ionic potential, <tt>vc</tt> for the classical potential (if it exists),
     !% <tt>vh</tt> for the Hartree potential, <tt>vks</tt> for the local part of the Kohn-Sham potential, and
     !% <tt>vxc-</tt> for the exchange-correlation potentials. For <tt>vks</tt> and <tt>vxc</tt>,
@@ -198,7 +198,7 @@ contains
     !% by the variable <tt>OutputWfsNumber</tt> -- see below. The output file is called
     !% <tt>wf-</tt>, or <tt>lr_wf-</tt> in linear response.
     !%Option wfs_sqmod bit(3)
-    !% Outputs modulus squared of the wavefunctions. 
+    !% Outputs modulus squared of the wavefunctions.
     !% The output file is called <tt>sqm-wf-</tt>. For linear response, the filename is <tt>sqm_lr_wf-</tt>.
     !%Option geometry bit(4)
     !% Outputs file containing the coordinates of the atoms treated within quantum mechanics.
@@ -236,14 +236,14 @@ contains
     !%Option kinetic_energy_density bit(14)
     !% Outputs kinetic-energy density, defined as:
     !%
-    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
+    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma}
     !%  \left| \vec{\nabla} \phi_{i\sigma}(\vec{r}) \right|^2\,. </math>
     !%
     !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
     !% or if you are using spinors. For spin-unpolarized calculations, you
-    !% get the total kinetic-energy density. The previous expression assumes full 
+    !% get the total kinetic-energy density. The previous expression assumes full
     !% or null occupations. If fractional occupation numbers, each term in the sum
-    !% is weighted by the occupation. Also, if we are working with an infinite 
+    !% is weighted by the occupation. Also, if we are working with an infinite
     !% system, all <i>k</i>-points are summed up, with their corresponding weights. The
     !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
@@ -255,22 +255,22 @@ contains
     !% Outputs transition-potential approximation (TPA) matrix elements, using <math>\vec{q}</math>-vector specified
     !% by <tt>MomentumTransfer</tt>.
     !%Option forces bit(18)
-    !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
+    !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as
     !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%Option wfs_fourier bit(19)
     !% (Experimental) Outputs wavefunctions in Fourier space. This is
     !% only implemented for the ETSF file format output. The file will
-    !% be called <tt>wfs-pw-etsf.nc</tt>.  
+    !% be called <tt>wfs-pw-etsf.nc</tt>.
     !%Option xc_density bit(20)
     !% Outputs the XC density, which is the charge density that
     !% generates the XC potential. (This is <math>-1/4\pi</math> times
     !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
     !%Option PES_wfs bit(21)
-    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
+    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>
     !% plus the orbital number.
     !%Option PES_density bit(22)
     !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
-    !% spin-polarized calculation is performed. 
+    !% spin-polarized calculation is performed.
     !%Option PES bit(23)
     !% Outputs the time-dependent photoelectron spectrum.
     !%Option BerkeleyGW bit(24)
@@ -305,11 +305,11 @@ contains
 
     ! cannot calculate the ELF in 1D
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-       if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
-         write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call messages_warning(1, namespace=namespace)
-       end if
+      if(sb%dim /= 2 .and. sb%dim /= 3) then
+        outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
+        write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
+        call messages_warning(1, namespace=namespace)
+      end if
     end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
@@ -331,7 +331,7 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
     if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
-    
+
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
@@ -399,7 +399,7 @@ contains
       !% <br>%</tt>
       !%
       !%End
-        
+
       select case(sb%dim)
       case(3)
 
@@ -481,7 +481,7 @@ contains
     !%Default none
     !%Section Output
     !%Description
-    !% Specifies what to print, related to LDA+U. 
+    !% Specifies what to print, related to LDA+U.
     !% The output files are written at the end of the run into the output directory for the
     !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
     !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
@@ -496,16 +496,16 @@ contains
     !%Option occ_matrices  bit(0)
     !% Outputs the occupation matrices of LDA+U
     !%Option effectiveU bit(1)
-    !% Outputs the value of the effectiveU for each atoms 
+    !% Outputs the value of the effectiveU for each atoms
     !%Option magnetization bit(2)
-    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% Outputs file containing structure and magnetization of the localized subspace
     !% on the atoms as a vector associated with each atom, which can be visualized.
-    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+    !% For the moment, it only works if a +U is added on one type of orbital per atom.
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
     !%Option kanamoriU bit(4)
     !% Outputs the Kanamori interaction parameters U, U`, and J.
-    !% These parameters are not determined self-consistently, but are taken from the 
+    !% These parameters are not determined self-consistently, but are taken from the
     !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
     call parse_variable(namespace, 'OutputLDA_U', 0_8, outp%what_lda_u)
@@ -536,10 +536,10 @@ contains
     !%Default no
     !%Section Output
     !%Description
-    !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
+    !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes,
     !% output will be written after every <tt>OutputInterval</tt> iterations.
     !%End
-    call parse_variable(namespace, 'OutputDuringSCF', .false., outp%duringscf) 
+    call parse_variable(namespace, 'OutputDuringSCF', .false., outp%duringscf)
 
     !%Variable RestartWriteInterval
     !%Type integer
@@ -583,7 +583,7 @@ contains
     !%Option current_kpt  bit(0)
     !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
     !%Option density_kpt bit(1)
-    !% Outputs the electronic density resolved in momentum space. 
+    !% Outputs the electronic density resolved in momentum space.
     !%End
     call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
 
@@ -592,7 +592,7 @@ contains
     end if
 
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-     call v_ks_calculate_current(ks, .true.) 
+      call v_ks_calculate_current(ks, .true.)
     end if
 
     !%Variable OutputIterDir
@@ -638,7 +638,7 @@ contains
     type(output_t), intent(inout) :: outp
 
     PUSH_SUB(output_end)
-    
+
     POP_SUB(output_end)
 
   end subroutine output_end
@@ -657,7 +657,7 @@ contains
     integer :: idir, ierr
     character(len=80) :: fname
     type(profile_t), save :: prof
-    
+
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
@@ -674,14 +674,14 @@ contains
           units_out%length, ierr, geo = geo)
       end do
     end if
-    
+
     call output_states(outp, namespace, dir, st, gr, geo, hm)
     call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
     call output_current_flow(outp, namespace, dir, gr, st)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
@@ -690,7 +690,7 @@ contains
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
-      end if     
+      end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
@@ -712,7 +712,7 @@ contains
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
       call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
     end if
-    
+
     call output_energy_density(outp, namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
@@ -753,7 +753,7 @@ contains
     type(mpi_grp_t) :: mpi_grp
 
     PUSH_SUB(output_localization_funct)
-    
+
     mpi_grp = st%dom_st_kpt_mpi_grp
 
     ! if SPIN_POLARIZED, the ELF contains one extra channel: the total ELF
@@ -767,7 +767,7 @@ contains
       ASSERT(gr%mesh%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
-      
+
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
@@ -854,7 +854,7 @@ contains
 
   end subroutine output_localization_funct
 
-  
+
   ! ---------------------------------------------------------
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_elec_t),    intent(inout) :: st
@@ -923,7 +923,7 @@ contains
     FLOAT, allocatable :: ec_density(:)
 
     PUSH_SUB(output_energy_density)
-   
+
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
       fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
@@ -955,7 +955,7 @@ contains
 
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      
+
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
@@ -970,11 +970,11 @@ contains
       end select
       SAFE_DEALLOCATE_A(energy_density)
     end if
- 
+
     POP_SUB(output_energy_density)
   end subroutine output_energy_density
 
-  
+
   ! ---------------------------------------------------------
   subroutine output_berkeleygw_init(nst, namespace, bgw, periodic_dim)
     integer,            intent(in)  :: nst
@@ -987,14 +987,14 @@ contains
     type(block_t) :: blk
 
     PUSH_SUB(output_berkeleygw_init)
-  
+
     call messages_experimental("BerkeleyGW output")
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
     call messages_fatal(1, namespace=namespace)
 #endif
-  
+
     !%Variable BerkeleyGW_NumberBands
     !%Type integer
     !%Default all states
@@ -1025,7 +1025,7 @@ contains
       message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
       call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
-    
+
     !%Variable BerkeleyGW_Vxc_diag_nmax
     !%Type integer
     !%Default nst
@@ -1055,7 +1055,7 @@ contains
     !% If < 1, off-diagonals will be skipped.
     !%End
     call parse_variable(namespace, 'BerkeleyGW_Vxc_offdiag_nmin', 1, bgw%vxc_offdiag_nmin)
-    
+
     if(bgw%vxc_offdiag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
       call messages_fatal(1, only_root_writes = .true., namespace=namespace)
@@ -1090,7 +1090,7 @@ contains
     !!% they will be output as complex.
     !!%End
     !call parse_variable(namespace, 'BerkeleyGW_Complex', .false., bgw%complex)
-    
+
     bgw%complex = .true.
     ! real output not implemented, so currently this is always true
 
@@ -1102,7 +1102,7 @@ contains
     !% Filename for the wavefunctions.
     !%End
     call parse_variable(namespace, 'BerkeleyGW_WFN_filename', 'WFN', bgw%wfn_filename)
-  
+
     !%Variable BerkeleyGW_CalcExchange
     !%Type logical
     !%Default false
@@ -1355,7 +1355,7 @@ contains
     call cube_function_free_fs(cube, cf)
     call zcube_function_free_rs(cube, cf)
     call cube_end(cube)
-    
+
     if(states_are_real(st)) then
       SAFE_DEALLOCATE_P(dpsi)
     else
@@ -1380,21 +1380,21 @@ contains
 
 #ifdef HAVE_BERKELEYGW
   contains
-    
+
     subroutine bgw_setup_header()
       PUSH_SUB(output_berkeleygw.bgw_setup_header)
 
       adot(1:3, 1:3) = matmul(gr%sb%rlattice(1:3, 1:3), gr%sb%rlattice(1:3, 1:3))
       bdot(1:3, 1:3) = matmul(gr%sb%klattice(1:3, 1:3), gr%sb%klattice(1:3, 1:3))
       recvol = (M_TWO * M_PI)**3 / gr%sb%rcell_volume
-      
+
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%sb%symm)
         mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%sb%symm%ops(itran))
         tnp(:, itran) = symm_op_translation_vector_red(gr%sb%symm%ops(itran))
       end do
       ! some further work on conventions of mtrx and tnp is required!
-      
+
       SAFE_ALLOCATE(ifmin(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
       SAFE_ALLOCATE(ifmax(1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
       SAFE_ALLOCATE(energies(1:st%nst, 1:gr%sb%kpoints%reduced%npoints, 1:st%d%nspin))
@@ -1428,7 +1428,7 @@ contains
         call fourier_shell_end(shell_wfn)
       end do
       ngkmax = maxval(ngk)
-      
+
       SAFE_ALLOCATE(atyp(1:geo%natoms))
       SAFE_ALLOCATE(apos(1:3, 1:geo%natoms))
       do iatom = 1, geo%natoms
@@ -1449,7 +1449,7 @@ contains
     subroutine bgw_write_header(sheader, iunit)
       character(len=3), intent(inout) :: sheader
       integer,          intent(in)    :: iunit
-      
+
       PUSH_SUB(output_berkeleygw.bgw_write_header)
 
       call write_binary_header(iunit, sheader, 2, st%d%nspin, shell_density%ngvectors, &
@@ -1470,7 +1470,7 @@ contains
 
   end subroutine output_berkeleygw
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, geo, has_phase)
     type(output_t),      intent(in) :: outp
     character(len=*),    intent(in) :: dir
@@ -1493,7 +1493,7 @@ contains
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+      .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1521,21 +1521,21 @@ contains
             end if
             if(has_phase) then
               if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-               call zio_function_output(outp%how, dir, fname, namespace, mesh, &
+                call zio_function_output(outp%how, dir, fname, namespace, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
-               tmp = M_Z0
-               call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
-               call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
+                tmp = M_Z0
+                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
+                call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
               if(this%basisfromstates) then
                 if (states_are_real(st)) then
                   call dio_function_output(outp%how, dir, fname, namespace, mesh, &
-                      os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                    os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 else
                   call zio_function_output(outp%how, dir, fname, namespace, mesh, &
-                      os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                    os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 end if
               else
                 if (states_are_real(st)) then
@@ -1555,7 +1555,7 @@ contains
     end do
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+      .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(dtmp)
     end if
@@ -1571,8 +1571,8 @@ contains
     output_needs_current = .false.
 
     if( bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 &
-     .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
-     .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0 &
+      .or. bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
       if(.not. states_are_real) then
         output_needs_current = .true.
       else
@@ -1580,8 +1580,8 @@ contains
         call messages_warning(1)
       end if
     end if
- 
-    
+
+
   end function
 
   ! ---------------------------------------------------------

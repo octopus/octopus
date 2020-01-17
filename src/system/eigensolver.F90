@@ -102,16 +102,16 @@ module eigensolver_oct_m
 
 
   integer, public, parameter :: &
-       RS_PLAN    = 11,         &
-       RS_CG      =  5,         &
-       RS_CG_NEW  =  6,         &
-       RS_EVO     =  9,         &
-       RS_LOBPCG  =  8,         &
-       RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12,         &
-       RS_FEAST   = 13,         &
-       RS_PSD     = 14
-  
+    RS_PLAN    = 11,         &
+    RS_CG      =  5,         &
+    RS_CG_NEW  =  6,         &
+    RS_EVO     =  9,         &
+    RS_LOBPCG  =  8,         &
+    RS_RMMDIIS = 10,         &
+    RS_ARPACK  = 12,         &
+    RS_FEAST   = 13,         &
+    RS_PSD     = 14
+
 contains
 
   ! ---------------------------------------------------------
@@ -153,8 +153,8 @@ contains
     !% conjugate-gradient algorithm. Ref: A. Knyazev, Toward the
     !% Optimal Preconditioned Eigensolver: Locally Optimal Block
     !% Preconditioned Conjugate Gradient Method, <i>SIAM Journal on
-    !% Scientific Computing</i>, 23(2):517-541, 2001.  
-    !%Option rmmdiis 10 
+    !% Scientific Computing</i>, 23(2):517-541, 2001.
+    !%Option rmmdiis 10
     !% Residual minimization scheme, direct inversion in the
     !% iterative subspace eigensolver, based on the implementation of
     !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
@@ -274,9 +274,9 @@ contains
       !%End
       call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
-      
+
       call exponential_init(eigens%exponential_operator, namespace)
-      
+
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
@@ -312,10 +312,10 @@ contains
     call messages_obsolete_variable(namespace, 'EigensolverFinalTolerance', 'EigensolverTolerance')
     call messages_obsolete_variable(namespace, 'EigensolverFinalToleranceIteration')
 
-    ! this is an internal option that makes the solver use the 
+    ! this is an internal option that makes the solver use the
     ! folded operator (H-shift)^2 to converge first eigenvalues around
-    ! the values of shift 
-    ! c.f. L. W. Wang and A. Zunger 
+    ! the values of shift
+    ! c.f. L. W. Wang and A. Zunger
     ! JCP 100, 2394 (1994); doi: http://dx.doi.org/10.1063/1.466486
     eigens%folded_spectrum = .false.
 
@@ -447,8 +447,8 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
     logical,        optional, intent(out)   :: conv
-    integer,        optional, intent(in)    :: nstconv !< Number of states considered for 
-                                                   !< the convergence criteria
+    integer,        optional, intent(in)    :: nstconv !< Number of states considered for
+    !< the convergence criteria
 
     integer :: maxiter, ik, ist, nstconv_
 #ifdef HAVE_MPI
@@ -463,7 +463,7 @@ contains
     PUSH_SUB(eigensolver_run)
 
     if(present(conv)) conv = .false.
-    if(present(nstconv)) then 
+    if(present(nstconv)) then
       nstconv_ = nstconv
     else
       nstconv_ = st%nst
@@ -476,13 +476,13 @@ contains
     end if
 
     ik_loop: do ik = st%d%kpt%start, st%d%kpt%end
-     if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
+      if(eigens%skip_finite_weight_kpoints.and. st%d%kweights(ik) > M_ZERO) cycle
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
         if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type == RS_PSD &
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
-          
+
           if (states_are_real(st)) then
             call dsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           else
@@ -527,25 +527,25 @@ contains
             call dsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
-        
+
       else
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
           call zeigensolver_cg2_new(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-           if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
-               ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-               eigens%additional_terms, eigens%energy_change_threshold, &
-               shift=eigens%spectrum_shift)
-             
-           else
-             call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
-               ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-               eigens%additional_terms, eigens%energy_change_threshold)
-             
-           end if
+          if(eigens%folded_spectrum) then
+            call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
+              ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+              eigens%additional_terms, eigens%energy_change_threshold, &
+              shift=eigens%spectrum_shift)
+
+          else
+            call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
+              ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+              eigens%additional_terms, eigens%energy_change_threshold)
+
+          end if
         case(RS_PLAN)
           call zeigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
@@ -572,7 +572,7 @@ contains
             call zsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
-        
+
       end if
 
       if(st%calc_eigenval .and. .not. eigens%folded_spectrum) then
@@ -586,7 +586,7 @@ contains
           end if
         end do
       end if
-      
+
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
 

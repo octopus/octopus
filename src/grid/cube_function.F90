@@ -69,7 +69,7 @@ module cube_function_oct_m
   end type cube_function_t
 
   type(profile_t), save :: prof_m2c, prof_c2m
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -94,16 +94,16 @@ contains
           iy = jj + cube%rs_istart(2) - 1
           iz = kk + cube%rs_istart(3) - 1
           if ( (ix == 1 .or. ix == cube%rs_n_global(1) ) .or. &
-               ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
-               ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
-                 iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
+            ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
+            ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
+            iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
             tmp_x = tmp_x + cf%dRS(ii, jj, kk)
           end if
         end do
       end do
     end do
 
-    
+
     if (cube%parallel_in_domains) then
 #ifdef HAVE_MPI
       call MPI_Allreduce(tmp_x, x, 1, MPI_FLOAT, MPI_SUM, cube%mpi_grp%comm, mpi_err)
@@ -113,8 +113,8 @@ contains
     end if
 
     npoints = 2*(cube%rs_n_global(1)-2)**2 + 4*(cube%rs_n_global(1)-2) + &
-              2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
-              2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
+      2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
+      2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
     x = x/npoints
 
     POP_SUB(cube_function_surface_average)
@@ -124,7 +124,7 @@ contains
   !> Nullifies the real space and Fourier space grids
   subroutine cube_function_null(cf)
     type(cube_function_t), intent(out) :: cf
-    
+
     PUSH_SUB(cube_function_null)
 
     nullify(cf%zRS)
@@ -133,7 +133,7 @@ contains
     cf%in_device_memory = .false.
     cf%forced_alloc = .false.
 
-    POP_SUB(cube_function_null) 
+    POP_SUB(cube_function_null)
   end subroutine cube_function_null
 
 

@@ -26,7 +26,7 @@ module io_binary_oct_m
   use mpi_oct_m
   use profiling_oct_m
 
-  implicit none 
+  implicit none
 
   private
 
@@ -47,7 +47,7 @@ module io_binary_oct_m
     module procedure zwrite_binary4, dwrite_binary4, iwrite_binary4
     module procedure zwrite_binary5, dwrite_binary5, iwrite_binary5
   end interface io_binary_write
-  
+
   interface io_binary_write_parallel
     module procedure dwrite_parallel, zwrite_parallel, iwrite_parallel
   end interface io_binary_write_parallel
@@ -69,7 +69,7 @@ module io_binary_oct_m
       integer,             intent(out)   :: np        !< Number of points of the mesh, written in the header
       integer,             intent(out)   :: type      !< Type of number
       integer,             intent(out)   :: file_size !< The actual size of the file
-      integer,             intent(out)   :: ierr      
+      integer,             intent(out)   :: ierr
       integer,             intent(inout) :: iio
       character(len=*),    intent(in)    :: fname
     end subroutine get_info_binary
@@ -79,8 +79,8 @@ module io_binary_oct_m
     subroutine write_header(np_global, type, ierr, iio, fname)
       integer,             intent(in)    :: np_global
       integer,             intent(in)    :: type
-      integer,             intent(out)   :: ierr 
-      integer,             intent(inout) :: iio     
+      integer,             intent(out)   :: ierr
+      integer,             intent(inout) :: iio
       character(len=*),    intent(in)    :: fname
     end subroutine write_header
   end interface
@@ -112,7 +112,7 @@ contains
 
 #ifdef HAVE_MPI2
     offset = (xlocal-1)*sizeof_ff+64
-    
+
     if(is_write) then
       amode = IOR(MPI_MODE_WRONLY,MPI_MODE_APPEND)
     else
@@ -172,7 +172,7 @@ contains
     iio = 0
     call get_info_binary(read_np, number_type, file_size, ierr, iio, fname)
     call io_incr_counters(iio)
- 
+
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
       if (debug%info) then
@@ -237,7 +237,7 @@ contains
     integer,             intent(out)   :: ierr
 
     integer :: type, iio
-    
+
     PUSH_SUB(io_binary_get_info)
 
     iio = 0
@@ -246,14 +246,14 @@ contains
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info
-  
+
   ! ------------------------------------------------------
   integer pure function logical_to_integer(flag) result(iflag)
     logical, intent(in) :: flag
     iflag = 0
     if(flag) iflag = 1
   end function logical_to_integer
-  
+
 
 #include "complex.F90"
 #include "io_binary_f_inc.F90"

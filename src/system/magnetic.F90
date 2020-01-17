@@ -115,26 +115,26 @@ contains
     type(geometry_t),    intent(in) :: geo
     type(boundaries_t),  intent(in) :: boundaries
     FLOAT,               intent(in) :: lmm_r
-    
+
     integer :: ia
     FLOAT :: mm(max(mesh%sb%dim, 3))
     FLOAT, allocatable :: lmm(:,:)
-    
+
     PUSH_SUB(write_magnetic_moments)
-    
+
     call magnetic_moment(mesh, st, st%rho, mm)
     SAFE_ALLOCATE(lmm(1:max(mesh%sb%dim, 3), 1:geo%natoms))
     call magnetic_local_moments(mesh, st, geo, boundaries, st%rho, lmm_r, lmm)
-    
+
     if(mpi_grp_is_root(mpi_world)) then
-      
+
       write(iunit, '(a)') 'Total Magnetic Moment:'
       if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
         write(iunit, '(a,f10.6)') ' mz = ', mm(3)
       else if(st%d%ispin == SPINORS) then ! non-collinear
         write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ', mm(1),'my = ', mm(2),'mz = ', mm(3)
       end if
-      
+
       write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
         trim(units_abbrev(units_out%length)),'] = ', units_from_atomic(units_out%length, lmm_r), '):'
       if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
@@ -148,11 +148,11 @@ contains
           write(iunit,'(i4,a10,9f15.6)') ia, trim(species_label(geo%atom(ia)%species)), lmm(:, ia)
         end do
       end if
-      
+
     end if
-    
+
     SAFE_DEALLOCATE_A(lmm)
-    
+
     POP_SUB(write_magnetic_moments)
   end subroutine write_magnetic_moments
 
@@ -175,23 +175,23 @@ contains
     PUSH_SUB(magnetic_local_moments)
 
     SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
-    
+
     call magnetic_density(mesh, st, rho, md)
     lmm = M_ZERO
     do ia = 1, geo%natoms
       call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
 
-      if(boundaries%spiral) then 
+      if(boundaries%spiral) then
         SAFE_ALLOCATE(phase_spiral(1:sphere%np))
         do is = 1, sphere%np
           phase_spiral(is) = exp(+M_zI*sum((sphere%x(is,1:mesh%sb%dim)-mesh%x(sphere%map(is),1:mesh%sb%dim)) &
-                                       *boundaries%spiral_q(1:mesh%sb%dim)))
+            *boundaries%spiral_q(1:mesh%sb%dim)))
         end do
 
         if(mesh%sb%dim>= 3) then
           lmm(1,ia) = M_ZERO
           lmm(2,ia) = M_ZERO
- 
+
           do is = 1, sphere%np
             !There is a factor of 1/2 in phase_spiral
             cosqr = real(phase_spiral(is), REAL_PRECISION)
@@ -212,14 +212,14 @@ contains
           lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir), reduce = .false.)
         end do
       end if
-      
-      call submesh_end(sphere) 
+
+      call submesh_end(sphere)
     end do
 
     if(mesh%parallel_in_domains) then
       call comm_allreduce(mesh%mpi_grp%comm, lmm)
-    end if 
-    
+    end if
+
     SAFE_DEALLOCATE_A(md)
 
     POP_SUB(magnetic_local_moments)
@@ -263,7 +263,7 @@ contains
     do ip = 1, 6
       trans_mag(ip) = zmf_integrate(mesh, tmp(:,ip))
     end do
-     
+
 
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(tmp)
@@ -327,7 +327,7 @@ contains
     if(st%d%nspin > 1) then
       do idir = 1, der%mesh%sb%dim
         jj(:, idir, 1) = jj(:, idir, 1) + jj(:, idir, 2)
-      end do 
+      end do
     end if
 
     a_ind = M_ZERO

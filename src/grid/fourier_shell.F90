@@ -27,22 +27,22 @@ module fourier_shell_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  
+
   implicit none
 
   private
   public ::                           &
-       fourier_shell_t,               &
-       fourier_shell_cutoff,          &
-       fourier_shell_init,            &
-       fourier_shell_end
+    fourier_shell_t,               &
+    fourier_shell_cutoff,          &
+    fourier_shell_init,            &
+    fourier_shell_end
 
   type fourier_shell_t
     ! Components are public by default
     integer          :: ngvectors
     FLOAT            :: ekin_cutoff
     integer, pointer :: coords(:, :)
-    integer, pointer :: red_gvec(:, :)   
+    integer, pointer :: red_gvec(:, :)
   end type fourier_shell_t
 
 contains
@@ -128,7 +128,7 @@ contains
     do ig = 1, this%ngvectors
       map(ig) = ig
     end do
-    
+
     call sort(modg2(1:this%ngvectors), map)
 
     do ig = 1, this%ngvectors
@@ -136,7 +136,7 @@ contains
       this%coords(1:3, ig) = ucoords(1:3, imap)
       this%red_gvec(1:3, ig) = ured_gvec(1:3, imap)
     end do
-    
+
     SAFE_DEALLOCATE_A(ucoords)
     SAFE_DEALLOCATE_A(ured_gvec)
     SAFE_DEALLOCATE_A(modg2)
@@ -146,10 +146,10 @@ contains
   end subroutine fourier_shell_init
 
   ! -----------------------------------------------------
-  
+
   subroutine fourier_shell_end(this)
     type(fourier_shell_t), intent(inout) :: this
-    
+
     PUSH_SUB(fourier_shell_end)
 
     SAFE_DEALLOCATE_P(this%coords)

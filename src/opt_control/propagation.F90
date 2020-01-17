@@ -63,15 +63,15 @@ module propagation_oct_m
   private
 
   public :: propagation_mod_init, &
-            propagate_forward,    &
-            propagate_backward,   &
-            fwd_step,             &
-            bwd_step,             &
-            bwd_step_2,           &
-            oct_prop_t,           &
-            oct_prop_init,        &
-            oct_prop_check,       &
-            oct_prop_end
+    propagate_forward,    &
+    propagate_backward,   &
+    fwd_step,             &
+    bwd_step,             &
+    bwd_step_2,           &
+    oct_prop_t,           &
+    oct_prop_init,        &
+    oct_prop_check,       &
+    oct_prop_end
 
 
   type oct_prop_t
@@ -85,7 +85,7 @@ module propagation_oct_m
   end type oct_prop_t
 
 
-  !> Module variables 
+  !> Module variables
   integer :: niter_
   integer :: number_checkpoints_
   FLOAT   :: eta_
@@ -185,15 +185,15 @@ contains
 
     if(target_type(tg) == oct_tg_hhgnew) &
       call target_init_propagation(tg)
-    
+
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
-       SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:gr%mesh%sb%dim))
-       vel_target_ = .true.
-       do iatom=1, sys%geo%natoms
-          sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
-          sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
-          x_initial(iatom, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-       end do
+      SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:gr%mesh%sb%dim))
+      vel_target_ = .true.
+      do iatom=1, sys%geo%natoms
+        sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
+        sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
+        x_initial(iatom, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+      end do
     end if
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%namespace, sys%gr, sys%geo)
@@ -238,11 +238,11 @@ contains
       ! only write in final run
       if(write_iter_) then
         call td_write_iter(write_handler, sys%namespace, sys%outp, gr, psi, sys%hm, sys%geo, sys%hm%ep%kick, td%dt, istep)
-        ii = ii + 1 
+        ii = ii + 1
         if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
           if(istep == td%max_iter) sys%outp%output_interval = ii - 1
           ii = istep
-          call td_write_data(write_handler) 
+          call td_write_data(write_handler)
         end if
       end if
 
@@ -255,10 +255,10 @@ contains
     call messages_info(1)
 
     if(vel_target_) then
-       do iatom=1, sys%geo%natoms
-          sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim) = x_initial(iatom, 1:gr%mesh%sb%dim)
-       end do
-       SAFE_DEALLOCATE_A(x_initial)
+      do iatom=1, sys%geo%natoms
+        sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim) = x_initial(iatom, 1:gr%mesh%sb%dim)
+      end do
+      SAFE_DEALLOCATE_A(x_initial)
     end if
 
     call opt_control_set_classical(sys%geo, qcpsi)
@@ -285,7 +285,7 @@ contains
     type(states_elec_t), pointer :: psi
 
     PUSH_SUB(propagate_backward)
-    
+
     message(1) = "Info: Backward propagation."
     call messages_info(1)
 
@@ -304,7 +304,7 @@ contains
       message(1) = "Unable to write OCT states restart."
       call messages_warning(1)
     end if
-    
+
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
@@ -331,7 +331,7 @@ contains
   !! Performs a forward propagation on the state psi and on the
   !! Lagrange-multiplier state chi. It also updates the control
   !! function par,  according to the following scheme:
-  !! 
+  !!
   !! |chi> --> U[par_chi](T, 0)|chi>
   !! par = par[|psi>, |chi>]
   !! |psi> --> U[par](T, 0)|psi>
@@ -380,8 +380,8 @@ contains
     call propagator_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(tg) == oct_targetmode_td .or. &
-                           (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. &
-                            .not.sys%ks%frozen_hxc ) )
+      (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. &
+      .not.sys%ks%frozen_hxc ) )
     if(aux_fwd_propagation) then
       call states_elec_copy(psi2, psi)
       call controlfunction_copy(par_prev, par)
@@ -423,7 +423,7 @@ contains
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
-      call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
+      call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, i, td%max_iter)
 
       call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
       if (ierr /= 0) then
@@ -438,7 +438,7 @@ contains
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
 
     if( target_mode(tg) == oct_targetmode_td .or. &
-        (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
+      (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.sys%ks%frozen_hxc) ) ) then
       call states_elec_end(psi2)
       call controlfunction_end(par_prev)
     end if
@@ -463,7 +463,7 @@ contains
   !! par_chi = par_chi[|psi>, |chi>]
   !! |chi> --> U[par_chi](0, T)|chi>
   !! --------------------------------------------------------
-  subroutine bwd_step(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
+  subroutine bwd_step(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi)
     type(system_t),            intent(inout) :: sys
     type(td_t),                intent(inout) :: td
     type(target_t),            intent(inout) :: tg
@@ -557,12 +557,12 @@ contains
   !!
   !! |psi> --> U[par](0, T)|psi>
   !! |chi> --> U[par](0, T)|chi>
-  !! 
+  !!
   !! It also calculates during the propagation, a new "output" field:
   !!
   !! par_chi = par_chi[|psi>, |chi>]
   !! --------------------------------------------------------
-  subroutine bwd_step_2(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
+  subroutine bwd_step_2(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi)
     type(system_t),                    intent(inout) :: sys
     type(td_t),                        intent(inout) :: td
     type(target_t),                    intent(inout) :: tg
@@ -916,7 +916,7 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:chi%d%dim))
     SAFE_ALLOCATE(zoppsi(1:gr%mesh%np_part, 1:chi%d%dim))
-    
+
     do j = 1, no_parameters
 
       dl(j) = M_z0
@@ -924,7 +924,7 @@ contains
         do p = 1, psi%nst
 
           call states_elec_get_state(psi, gr%mesh, p, ik, zpsi)
-          
+
           zoppsi = M_z0
           if(associated(hm%ep%a_static)) then
             call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
@@ -952,7 +952,7 @@ contains
 
             call states_elec_get_state(chi, gr%mesh, p, ik, zpsi)
             dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, zpsi, zoppsi)
-            
+
           end do
         end do
 
@@ -963,7 +963,7 @@ contains
 
     SAFE_DEALLOCATE_A(zpsi)
     SAFE_DEALLOCATE_A(zoppsi)
-    
+
     POP_SUB(calculate_g)
   end subroutine calculate_g
   ! ---------------------------------------------------------
@@ -1008,7 +1008,7 @@ contains
     q => opt_control_point_q(qcchi)
 
     no_parameters = controlfunction_number(cp)
-    
+
     SAFE_ALLOCATE(dl(1:no_parameters))
     SAFE_ALLOCATE(dq(1:no_parameters))
     SAFE_ALLOCATE( d(1:no_parameters))
@@ -1021,17 +1021,17 @@ contains
 
       call states_elec_get_state(psi, gr%mesh, 1, 1, zpsi)
       call states_elec_get_state(chi, gr%mesh, 1, 1, zchi)
-      
+
       d1 = zmf_dotp(gr%mesh, psi%d%dim, zpsi, zchi)
       forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
 
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(zchi)
-      
+
     elseif(gradients_) then
       forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))
     else
-      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
+      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j)
     end if
 
     ! This is for the classical target.
@@ -1068,7 +1068,7 @@ contains
     character(len=*),  intent(in)    :: dirname
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
-    
+
     integer :: j, ierr
 
     PUSH_SUB(oct_prop_init)
@@ -1128,31 +1128,31 @@ contains
     PUSH_SUB(oct_prop_check)
 
     do j = 1, prop%number_checkpoints + 2
-     if(prop%iter(j)  ==  iter) then
-       call states_elec_copy(stored_st, psi)
-       write(dirname,'(a, i4.4)') trim(prop%dirname), j
-       call restart_open_dir(prop%restart_load, dirname, ierr)
-       if (ierr == 0) call states_elec_load(prop%restart_load, namespace, stored_st, gr, ierr, verbose=.false.)
-       if (ierr /= 0) then
-         message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
-         call messages_fatal(1)
-       end if
-       call restart_close_dir(prop%restart_load)
-       prev_overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, stored_st)
-       overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, psi)
-       if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
+      if(prop%iter(j)  ==  iter) then
+        call states_elec_copy(stored_st, psi)
+        write(dirname,'(a, i4.4)') trim(prop%dirname), j
+        call restart_open_dir(prop%restart_load, dirname, ierr)
+        if (ierr == 0) call states_elec_load(prop%restart_load, namespace, stored_st, gr, ierr, verbose=.false.)
+        if (ierr /= 0) then
+          message(1) = "Unable to read wavefunctions from '"//trim(dirname)//"'."
+          call messages_fatal(1)
+        end if
+        call restart_close_dir(prop%restart_load)
+        prev_overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, stored_st)
+        overlap = zstates_elec_mpdotp(namespace, gr%mesh, stored_st, psi)
+        if( abs(overlap - prev_overlap) > WARNING_THRESHOLD ) then
           write(message(1), '(a,es13.4)') &
             "Forward-backward propagation produced an error of", abs(overlap-prev_overlap)
           write(message(2), '(a,i8)') "Iter = ", iter
           call messages_warning(2)
-       end if
-       ! Restore state only if the number of checkpoints is larger than zero.
-       if(prop%number_checkpoints > 0) then
-         call states_elec_end(psi)
-         call states_elec_copy(psi, stored_st)
-       end if
-       call states_elec_end(stored_st)
-     end if
+        end if
+        ! Restore state only if the number of checkpoints is larger than zero.
+        if(prop%number_checkpoints > 0) then
+          call states_elec_end(psi)
+          call states_elec_copy(psi, stored_st)
+        end if
+        call states_elec_end(stored_st)
+      end if
     end do
     POP_SUB(oct_prop_check)
   end subroutine oct_prop_check

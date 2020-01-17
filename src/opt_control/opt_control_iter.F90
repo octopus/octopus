@@ -33,16 +33,16 @@ module opt_control_iter_oct_m
 
   private
   public :: oct_iterator_t,           &
-            oct_iterator_init,        &
-            oct_iterator_end,         &
-            iteration_manager,        &
-            iteration_manager_direct, &
-            oct_iterator_bestpar,     &
-            oct_iterator_current,     &
-            oct_iterator_maxiter,     &
-            oct_iterator_tolerance,   &
-            iteration_manager_main,   &
-            velocities_write
+    oct_iterator_init,        &
+    oct_iterator_end,         &
+    iteration_manager,        &
+    iteration_manager_direct, &
+    oct_iterator_bestpar,     &
+    oct_iterator_current,     &
+    oct_iterator_maxiter,     &
+    oct_iterator_tolerance,   &
+    iteration_manager_main,   &
+    velocities_write
 
 
   type oct_iterator_t
@@ -80,7 +80,7 @@ contains
     !% Define the convergence threshold. It computes the difference between the "input"
     !% field in the iterative procedure, and the "output" field. If this difference is
     !% less than <tt>OCTEps</tt> the iteration is stopped. This difference is defined as:
-    !% 
+    !%
     !% <math>
     !% D[\varepsilon^{in},\varepsilon^{out}] = \int_0^T dt \left| \varepsilon^{in}(t)-\varepsilon^{out}(t)\right|^2
     !% </math>
@@ -90,7 +90,7 @@ contains
     !%
     !% Whenever this condition is satisfied, it means that we have reached a solution point
     !% of the QOCT equations, <i>i.e.</i> a critical point of the QOCT functional (not
-    !% necessarily a maximum, and not necessarily the global maximum). 
+    !% necessarily a maximum, and not necessarily the global maximum).
     !%End
     call parse_variable(namespace, 'OCTEps', CNST(1.0e-6), iterator%eps)
     if(iterator%eps < M_ZERO) iterator%eps = tiny(CNST(1.0))
@@ -115,7 +115,7 @@ contains
     !%Type logical
     !%Section Calculation Modes::Optimal Control
     !%Default true
-    !%Description 
+    !%Description
     !% Writes to disk the laser pulse data during the OCT algorithm at intermediate steps.
     !% These are files called <tt>opt_control/laser.xxxx</tt>, where <tt>xxxx</tt> is the iteration number.
     !%End
@@ -134,15 +134,15 @@ contains
 
     iterator%convergence_iunit = io_open(OCT_DIR//'convergence', namespace, action='write')
 
-    write(iterator%convergence_iunit, '(91(''#''))') 
+    write(iterator%convergence_iunit, '(91(''#''))')
     write(iterator%convergence_iunit, '(5(a))') '# iteration', '  J[Psi,chi,epsilon]', &
-                                                '            J_1[Psi]', &
-                                                '        J_2[epsilon]', &
-                                                '               Delta'
-    write(iterator%convergence_iunit, '(91(''#''))') 
+      '            J_1[Psi]', &
+      '        J_2[epsilon]', &
+      '               Delta'
+    write(iterator%convergence_iunit, '(91(''#''))')
 
     if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
-       iterator%velocities_iunit = io_open(OCT_DIR//'velocities', namespace, action='write')
+      iterator%velocities_iunit = io_open(OCT_DIR//'velocities', namespace, action='write')
     end if
 
     POP_SUB(oct_iterator_init)
@@ -154,18 +154,18 @@ contains
   subroutine oct_iterator_end(iterator, namespace)
     type(oct_iterator_t), intent(inout) :: iterator
     type(namespace_t),    intent(in)    :: namespace
-    
+
     PUSH_SUB(oct_iterator_end)
 
     call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par, namespace)
 
     call controlfunction_end(iterator%best_par)
     SAFE_DEALLOCATE_P(iterator%best_par)
-    write(iterator%convergence_iunit, '(91("#"))') 
+    write(iterator%convergence_iunit, '(91("#"))')
     call io_close(iterator%convergence_iunit)
 
     if(parse_is_defined(namespace, 'OCTVelocityTarget')) then
-       call io_close(iterator%velocities_iunit)
+      call io_close(iterator%velocities_iunit)
     end if
 
     POP_SUB(oct_iterator_end)
@@ -194,7 +194,7 @@ contains
     j2 = controlfunction_j2(par)
     jfunctional = j1 + j2
     delta = controlfunction_diff(par, par_prev)
-    
+
     if(iterator%ctr_iter  ==  iterator%ctr_iter_max) then
       message(1) = "Info: Maximum number of iterations reached."
       call messages_info(1)
@@ -202,8 +202,8 @@ contains
     end if
 
     if( (iterator%eps > M_ZERO) .and. &
-        (delta < iterator%eps) .and. &
-        (iterator%ctr_iter > 0 ) ) then
+      (delta < iterator%eps) .and. &
+      (iterator%ctr_iter > 0 ) ) then
       message(1) = "Info: Convergence threshold reached."
       call messages_info(1)
       stoploop = .true.
@@ -230,7 +230,7 @@ contains
     if(bestj1) then
       iterator%bestJ1          = j1
       iterator%bestJ1_J        = jfunctional
-      iterator%bestJ1_fluence  = fluence       
+      iterator%bestJ1_fluence  = fluence
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
@@ -294,7 +294,7 @@ contains
     if(j1 > iterator%bestJ1) then
       iterator%bestJ1          = j1
       iterator%bestJ1_J        = j
-      iterator%bestJ1_fluence  = fluence       
+      iterator%bestJ1_fluence  = fluence
       iterator%bestJ1_ctr_iter = iterator%ctr_iter
       call controlfunction_end(iterator%best_par)
       call controlfunction_copy(iterator%best_par, par)
@@ -306,7 +306,7 @@ contains
       iterator%ctr_iter, j, j1, j2, delta
 
     if(parse_is_defined(sys%namespace, 'OCTVelocityTarget')) then
-       call velocities_write(iterator, sys)
+      call velocities_write(iterator, sys)
     end if
 
     iterator%ctr_iter = iterator%ctr_iter + 1
@@ -325,7 +325,7 @@ contains
     PUSH_SUB(iteration_manager_main)
 
     iterator%ctr_iter_main = iterator%ctr_iter_main + 1
-    write(iterator%convergence_iunit, '("### MAIN ITERATION")') 
+    write(iterator%convergence_iunit, '("### MAIN ITERATION")')
     write(iterator%convergence_iunit, '(a2,i9,4f20.8)')                &
       '##', iterator%ctr_iter_main, j, j1, j2, delta
     write(iterator%convergence_iunit, '("###")')
@@ -407,27 +407,27 @@ contains
 
     ! write header of the velocities output file
     if(iterator%ctr_iter == 0) then
-       write(iterator%velocities_iunit,'(100("#"))')
-       write(iterator%velocities_iunit,'("#  iter")',advance='no')
-       do i=1, n_atoms
-          write(atoms_str,'(i2.2)') i
-          do j=1, dim
-             write(dim_str,'(i1)') j
-             temp_str = "v[" // atoms_str // "," // dim_str // "]"
-             write(iterator%velocities_iunit,'(a16)',advance='no') trim(temp_str)
-          end do
-       end do
-       write(iterator%velocities_iunit,'("")')
-       write(iterator%velocities_iunit,'(100("#"))')
+      write(iterator%velocities_iunit,'(100("#"))')
+      write(iterator%velocities_iunit,'("#  iter")',advance='no')
+      do i=1, n_atoms
+        write(atoms_str,'(i2.2)') i
+        do j=1, dim
+          write(dim_str,'(i1)') j
+          temp_str = "v[" // atoms_str // "," // dim_str // "]"
+          write(iterator%velocities_iunit,'(a16)',advance='no') trim(temp_str)
+        end do
+      end do
+      write(iterator%velocities_iunit,'("")')
+      write(iterator%velocities_iunit,'(100("#"))')
     end if
-    
+
     ! write data
     write(iterator%velocities_iunit,'(i7)',advance='no') iterator%ctr_iter
     do i=1, n_atoms
-       do j=1, dim
-          write(iterator%velocities_iunit,'(4(" "),(f12.10))',advance='no') &
-               sys%geo%atom(i)%v(j)
-       end do
+      do j=1, dim
+        write(iterator%velocities_iunit,'(4(" "),(f12.10))',advance='no') &
+          sys%geo%atom(i)%v(j)
+      end do
     end do
     write(iterator%velocities_iunit,'("")')
 

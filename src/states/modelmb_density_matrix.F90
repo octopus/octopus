@@ -43,11 +43,11 @@ module modelmb_density_matrix_oct_m
   private
 
   public :: zmodelmb_density_matrix_write, &
-            dmodelmb_density_matrix_write, &
-            modelmb_density_matrix_init, &
-            modelmb_density_matrix_end, &
-            modelmb_density_matrix_nullify, &
-            modelmb_denmat_t
+    dmodelmb_density_matrix_write, &
+    modelmb_density_matrix_init, &
+    modelmb_density_matrix_end, &
+    modelmb_density_matrix_nullify, &
+    modelmb_denmat_t
 
   type modelmb_denmat_t
     private
@@ -98,29 +98,29 @@ contains
     !% without any density matrix output.
     !%
     !%End
-   
+
     call messages_obsolete_variable(namespace, 'DensityMatrixtoCalc', 'DensitytoCalc')
     call messages_obsolete_variable(namespace, 'DensitiestoCalc', 'DensitytoCalc')
 
     if(parse_block(namespace, 'DensitytoCalc', blk) /= 0) then
-     message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
-     call messages_fatal(1, namespace=namespace)
+      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
+      call messages_fatal(1, namespace=namespace)
     end if
-   
+
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 3 ) then
       call messages_input_error("DensitytoCalc")
     end if
     denmat%ndensmat_to_calculate=parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
-        denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
+      denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
       call messages_input_error("DensitytoCalc")
     end if
 
     SAFE_ALLOCATE(denmat%labels(1:denmat%ndensmat_to_calculate))
     SAFE_ALLOCATE(denmat%particle_kept(1:denmat%ndensmat_to_calculate))
     SAFE_ALLOCATE(denmat%nnatorb_prt(1:denmat%ndensmat_to_calculate))
-   
+
     do ipart=1,denmat%ndensmat_to_calculate
       call parse_block_string(blk, ipart-1, 0, denmat%labels(ipart))
       call parse_block_integer(blk, ipart-1, 1, denmat%particle_kept(ipart))

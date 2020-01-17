@@ -68,7 +68,7 @@ contains
     FLOAT, optional,     intent(in) :: error(:,:) !< (nst, st%d%nik)
     integer, optional,   intent(in) :: st_start
     logical, optional,   intent(in) :: compact
-    
+
     integer :: ik, ikk, ist, ns, is, idir, st_start_, iflat, iqn, homo_index, not_printed
     logical :: print_eigenval
     FLOAT :: kpoint(1:MAX_DIM), max_error
@@ -84,7 +84,7 @@ contains
       POP_SUB(states_elec_write_eigenvalues)
       return
     end if
-    
+
     st_start_ = 1
     if(present(st_start)) st_start_ = st_start
     ASSERT(nst <= st%nst)
@@ -99,7 +99,7 @@ contains
 
       ns = 1
       if(st%d%nspin == 2) ns = 2
-      
+
       message(1) = 'Eigenvalues [' // trim(units_abbrev(units_out%energy)) // ']'
       call messages_info(1, iunit)
 
@@ -160,18 +160,18 @@ contains
 
       SAFE_ALLOCATE(flat_eigenval(1:st%d%nik*nst))
       SAFE_ALLOCATE(flat_indices(1:2, 1:st%d%nik*nst))
-      
+
       iflat = 1
       do iqn = 1, st%d%nik
         do ist = 1, nst
-          
+
           flat_eigenval(iflat) = st%eigenval(ist, iqn)
-          flat_indices(1:2, iflat) = (/iqn, ist/)          
+          flat_indices(1:2, iflat) = (/iqn, ist/)
 
           iflat = iflat + 1
         end do
       end do
-    
+
       call sort(flat_eigenval, flat_indices(:, :))
 
       homo_index = st%d%nik*nst
@@ -183,7 +183,7 @@ contains
           exit
         end if
       end do
-      
+
       tmp_str(1) = '#  State'
 
       if(sb%periodic_dim > 0) tmp_str(1) = trim(tmp_str(1))//'  KPoint'
@@ -197,7 +197,7 @@ contains
       if(st%d%ispin  ==  SPINORS) then
         tmp_str(1) = trim(tmp_str(1))//'      <Sx>     <Sy>     <Sz>'
       end if
-      
+
       if(present(error)) tmp_str(1) = trim(tmp_str(1))//'    Error'
 
       call messages_write(tmp_str(1))
@@ -216,7 +216,7 @@ contains
         print_eigenval = print_eigenval .or. abs(iflat - homo_index) <= print_range
 
         if(print_eigenval) then
-          
+
           if(not_printed > 0) then
             call messages_write('')
             call messages_new_line()
@@ -261,8 +261,8 @@ contains
           if(st%d%ispin  ==  SPINORS) then
             write(tmp_str(1), '(2a,3f9.4)') trim(tmp_str(1)), ' ', st%spin(1:3, ist, iqn)
           end if
-          
-          if(present(error)) then 
+
+          if(present(error)) then
             write(tmp_str(1), '(2a,es7.1,a)') trim(tmp_str(1)), '   (', error(ist, iqn), ')'
           end if
 
@@ -270,17 +270,17 @@ contains
           call messages_info(iunit = iunit)
 
         else
-          
+
           not_printed = not_printed + 1
 
           if(present(error)) then
             max_error = max(max_error, error(ist, iqn))
           end if
-          
+
         end if
-        
+
       end do
-      
+
       if(nst*st%d%nik > 1) call print_dos()
 
       SAFE_DEALLOCATE_A(flat_indices)
@@ -295,7 +295,7 @@ contains
     end if
 
     POP_SUB(states_elec_write_eigenvalues)
-    
+
   contains
 
     subroutine print_dos()
@@ -305,7 +305,7 @@ contains
       FLOAT :: dhistogram(1:ndiv)
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
-      
+
       PUSH_SUB(states_elec_write_eigenvalues.print_dos)
 
       emin = flat_eigenval(1)
@@ -316,7 +316,7 @@ contains
         POP_SUB(states_elec_write_eigenvalues.print_dos)
         return
       end if
-      
+
       ife = nint((st%smear%e_fermi - emin)/de) + 1
 
       histogram = 0
@@ -340,7 +340,7 @@ contains
       call messages_write('Density of states:')
       call messages_new_line()
       call messages_info()
-      
+
       !print histogram
       do iline = height, 1, -1
         do ien = 1, ndiv
@@ -361,7 +361,7 @@ contains
 
       POP_SUB(states_elec_write_eigenvalues.print_dos)
     end subroutine print_dos
- 
+
   end subroutine states_elec_write_eigenvalues
 
   ! ---------------------------------------------------------
@@ -369,7 +369,7 @@ contains
     integer,             intent(in) :: iunit
     type(states_elec_t), intent(in) :: st
     type(simul_box_t),   intent(in) :: sb
-    
+
     integer :: ik, ikk, ist
 
     FLOAT :: homo, lumo, egdir, egindir
@@ -378,18 +378,18 @@ contains
     PUSH_SUB(states_elec_write_gaps)
 
     if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
-     .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+      .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then
       POP_SUB(states_elec_write_gaps)
       return
     end if
 
     homo = -M_HUGE
     homok = -1
-    lumo =  M_HUGE 
+    lumo =  M_HUGE
     lumok = -1
     egdir = M_HUGE
     egdirk = -1
-    
+
     !TODO: This definition depends on the type of smearing
     do ik = 1, st%d%nik
       if(abs(st%d%kweights(ik)) < M_EPSILON) cycle
@@ -407,7 +407,7 @@ contains
         if(st%occ(ist,ik) > M_EPSILON .and. st%occ(ist+1,ik) <= M_EPSILON &
           .and. (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))< egdir) then
           egdir = (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))
-          egdirk = ik 
+          egdirk = ik
         end if
       end do
     end do
@@ -419,9 +419,9 @@ contains
       call messages_info(1, iunit)
     else
       write(message(1),'(a,i5,a,f7.4,a)') 'Direct gap at ik=', egdirk, ' of ', &
-              units_from_atomic(units_out%energy, egdir),  ' ' // trim(units_abbrev(units_out%energy))
+        units_from_atomic(units_out%energy, egdir),  ' ' // trim(units_abbrev(units_out%energy))
       write(message(2),'(a,i5,a,i5,a,f7.4,a)') 'Indirect gap between ik=', homok, ' and ik=', lumok, &
-            ' of ', units_from_atomic(units_out%energy, egindir),  ' ' // trim(units_abbrev(units_out%energy))
+        ' of ', units_from_atomic(units_out%energy, egindir),  ' ' // trim(units_abbrev(units_out%energy))
       call messages_info(2, iunit)
     end if
 
@@ -529,23 +529,23 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
 
-      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), namespace, action='write')    
+      iunit = io_open(trim(dir)//'/'//trim('tpa_xas'), namespace, action='write')
 
       ! header
       if(use_qvector) then
         write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum-transfer vector : (', &
           (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%mesh%sb%dim),')'
         select case(gr%mesh%sb%dim)
-          case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
-          case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
-          case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
+        case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
+        case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
+        case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
         end select
         call messages_info(2,iunit)
       else
         select case(gr%mesh%sb%dim)
-          case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
-          case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
-          case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
+        case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
+        case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
+        case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
         end select
         call messages_info(1,iunit)
       end if
@@ -595,7 +595,7 @@ contains
 
           if(use_qvector) then
             write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength, &
-                                                   units_from_atomic(unit_one/units_out%energy, dsf)
+              units_from_atomic(unit_one/units_out%energy, dsf)
           else
             write(message(1), '(1x,6(es15.8,1x))') units_from_atomic(units_out%energy, transition_energy), osc(:), osc_strength
           end if
@@ -624,9 +624,9 @@ contains
     if (use_qvector) then
       SAFE_DEALLOCATE_A(qvector)
     end if
-  
+
     POP_SUB(states_elec_write_tpa)
- 
+
   end subroutine states_elec_write_tpa
 
 
@@ -659,7 +659,7 @@ contains
     type(orbitalset_t) :: os
 
 
-    PUSH_SUB(states_elec_write_bandstructure)   
+    PUSH_SUB(states_elec_write_bandstructure)
 
     ! shortcuts
     ns = 1
@@ -670,7 +670,7 @@ contains
     !%Default false
     !%Section Output
     !%Description
-    !% Determines if projections of wavefunctions on the atomic orbitals 
+    !% Determines if projections of wavefunctions on the atomic orbitals
     !% are computed or not for obtaining the orbital resolved band-structure.
     !%End
     call parse_variable(namespace, 'BandStructureComputeProjections', .false., projection)
@@ -685,7 +685,7 @@ contains
         else
           write(filename, '(a)') 'bandstructure'
         end if
-        iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')    
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), namespace, action='write')
 
         ! write header
         write(iunit(is),'(a)',advance='no') '# coord. '
@@ -694,12 +694,12 @@ contains
         end do
         if(.not.projection) then
           write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
-        else 
-         write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
-         do ia = 1, geo%natoms
+        else
+          write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
+          do ia = 1, geo%natoms
             work = orbitalset_utils_count(geo, ia)
             do norb = 1, work
-             work2 = orbitalset_utils_count(geo, ia, norb)
+              work2 = orbitalset_utils_count(geo, ia, norb)
               write(iunit(is),'(a, i3.3,a,i1.1,a)',advance='no') 'w(at=',ia,',os=',norb,') '
             end do
           end do
@@ -707,12 +707,12 @@ contains
         end if
       end do
     end if
- 
+
     npath = SIZE(sb%kpoints%coord_along_path)*ns
 
 
     !We need to compute the projections of each wavefunctions on the localized basis
-    if(projection) then    
+    if(projection) then
 
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -727,7 +727,7 @@ contains
 
       SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms))
       weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms) = M_ZERO
- 
+
       do ia = 1, geo%natoms
 
         !We first count how many orbital set we have
@@ -740,7 +740,7 @@ contains
           !We count the orbitals
           work2 = 0
           do iorb = 1, species_niwfs(geo%atom(ia)%species)
-           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
             call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
             if(ii == norb) then
               os%ll = ll
@@ -760,7 +760,7 @@ contains
             ! We obtain the orbital
             if(states_are_real(st)) then
               call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, iorb, os%radius, os%ndim)
+                os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
                 norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))**2
@@ -771,7 +771,7 @@ contains
               end do
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, iorb, os%radius, os%ndim)
+                os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
                 norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))**2
@@ -796,7 +796,7 @@ contains
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
             call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
-                              vec_pot, vec_pot_var)
+              vec_pot, vec_pot_var)
           end if
 
           if(states_are_real(st)) then
@@ -806,104 +806,104 @@ contains
           end if
 
           do ist = st%st_start, st%st_end
-           do ik = st%d%kpt%start, st%d%kpt%end
-            if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
-            if(states_are_real(st)) then
-              call states_elec_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
-              do iorb = 1, os%norbs
-                do idim = 1, st%d%dim
-                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
+            do ik = st%d%kpt%start, st%d%kpt%end
+              if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
+              if(states_are_real(st)) then
+                call states_elec_get_state(st, mesh, ist, ik, dpsi )
+                call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
+                do iorb = 1, os%norbs
+                  do idim = 1, st%d%dim
+                    weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
+                  end do
                 end do
-              end do
-            else
-              call states_elec_get_state(st, mesh, ist, ik, zpsi )
-              if(associated(phase)) then
-                ! Apply the phase that contains both the k-point and vector-potential terms.
-                call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
+              else
+                call states_elec_get_state(st, mesh, ist, ik, zpsi )
+                if(associated(phase)) then
+                  ! Apply the phase that contains both the k-point and vector-potential terms.
+                  call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
+                end if
+                call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
+                  zdot(1:st%d%dim,1:os%norbs))
+                do iorb = 1, os%norbs
+                  do idim = 1, st%d%dim
+                    weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(zdot(idim,iorb))**2
+                  end do
+                end do
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
-                                 zdot(1:st%d%dim,1:os%norbs))
-              do iorb = 1, os%norbs
-                do idim = 1, st%d%dim
-                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(zdot(idim,iorb))**2
-                end do
-              end do
-            end if
+            end do
           end do
-         end do
 
-         SAFE_DEALLOCATE_A(ddot)
-         SAFE_DEALLOCATE_A(zdot)
+          SAFE_DEALLOCATE_A(ddot)
+          SAFE_DEALLOCATE_A(zdot)
 
-         call orbitalset_end(os)
-       end do !norb
+          call orbitalset_end(os)
+        end do !norb
 
-       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
-       end if
-     end do !ia
-
-    SAFE_DEALLOCATE_A(dpsi)
-    SAFE_DEALLOCATE_A(zpsi)
-
-  end if  !projection
-
-  if(mpi_grp_is_root(mpi_world)) then
-    ! output bands
-    do ik = st%d%nik-npath+1, st%d%nik, ns
-      do is = 0, ns - 1
-        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
-                                                   absolute_coordinates=.false.)
-        write(iunit(is),'(1x)',advance='no')
-        if(st%d%nik > npath) then
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is) &
-                                              -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
-        else
-          write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
-                                               states_elec_dim_get_kpoint_index(st%d, ik + is))
+        if(st%parallel_in_states .or. st%d%kpt%parallel) then
+          call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
         end if
-        do idir = 1, sb%dim
-          write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
-        end do
-        do ist = 1, nst
-          write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
-        end do
-        if(projection) then
-          do ia = 1, geo%natoms
-            work = orbitalset_utils_count(geo, ia)
-            do norb = 1, work
-              work2 = orbitalset_utils_count(geo, ia, norb)              
-              do iorb = 1, work2
-                do ist = 1, nst
-                  write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)
+      end do !ia
+
+      SAFE_DEALLOCATE_A(dpsi)
+      SAFE_DEALLOCATE_A(zpsi)
+
+    end if  !projection
+
+    if(mpi_grp_is_root(mpi_world)) then
+      ! output bands
+      do ik = st%d%nik-npath+1, st%d%nik, ns
+        do is = 0, ns - 1
+          red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik + is), &
+            absolute_coordinates=.false.)
+          write(iunit(is),'(1x)',advance='no')
+          if(st%d%nik > npath) then
+            write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
+              states_elec_dim_get_kpoint_index(st%d, ik + is) &
+              -states_elec_dim_get_kpoint_index(st%d, st%d%nik -npath))
+          else
+            write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, &
+              states_elec_dim_get_kpoint_index(st%d, ik + is))
+          end if
+          do idir = 1, sb%dim
+            write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
+          end do
+          do ist = 1, nst
+            write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+          end do
+          if(projection) then
+            do ia = 1, geo%natoms
+              work = orbitalset_utils_count(geo, ia)
+              do norb = 1, work
+                work2 = orbitalset_utils_count(geo, ia, norb)
+                do iorb = 1, work2
+                  do ist = 1, nst
+                    write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)
+                  end do
                 end do
               end do
             end do
-          end do
-        end if
+          end if
+        end do
+
+        do is = 0, ns-1
+          write(iunit(is), '(a)')
+        end do
       end do
 
       do is = 0, ns-1
-        write(iunit(is), '(a)')
+        call io_close(iunit(is))
       end do
-    end do
+    end if
 
-    do is = 0, ns-1
-      call io_close(iunit(is))
-    end do
-  end if
+    if(projection) then
+      SAFE_DEALLOCATE_A(weight)
+    end if
 
-  if(projection) then
-     SAFE_DEALLOCATE_A(weight)
-  end if
-
-  SAFE_DEALLOCATE_A(iunit)
+    SAFE_DEALLOCATE_A(iunit)
 
 
-  POP_SUB(states_elec_write_bandstructure)
-    
+    POP_SUB(states_elec_write_bandstructure)
+
   end subroutine states_elec_write_bandstructure
 
 end module states_elec_io_oct_m

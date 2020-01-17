@@ -98,14 +98,14 @@ contains
       write(message(2), '(a)') "Stress might not be correct."
       call messages_warning(2, namespace=namespace)
     end if
-  
+
     stress(:,:) = M_ZERO
 
     call calculate_density()
     call fourier_space_init(hm%psolver_fine)
     call density_rs2fs(hm%psolver_fine)
-    
-    ! Stress from kinetic energy of electrons    
+
+    ! Stress from kinetic energy of electrons
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
 
     ! Stress from Hartree energy
@@ -116,17 +116,17 @@ contains
 
     ! Stress from pseudopotentials
     call stress_from_pseudo(gr, hm, st, geo, stress, stress_ps)
-    
+
     ! Stress from Ewald summation
     call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
-    
+
 
     ! Stress from kinetic energy of ion
     ! Stress from ion-field interaction
 
-    ! Sign changed to fit conventional definition    
+    ! Sign changed to fit conventional definition
     stress = - stress
-    
+
     gr%sb%stress_tensor(1:3,1:3) = stress(1:3,1:3)
 
     SAFE_DEALLOCATE_A(FourPi_G2)
@@ -144,7 +144,7 @@ contains
   contains
     subroutine calculate_density()
       integer :: ip
-!      FLOAT                         :: amaldi_factor 
+!      FLOAT                         :: amaldi_factor
 
       PUSH_SUB(stress.calculate_density)
 
@@ -154,28 +154,28 @@ contains
       nullify(rho_total)
 
       if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
-         total_density_alloc = .true.
-         
-         SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
-         
-         forall(ip = 1:gr%fine%mesh%np)
-            rho_total(ip) = sum(rho(ip, 1:hm%d%spin_channels))
-         end forall
-         
-         ! remove non-local core corrections
-         if(associated(st%rho_core)) then
-            forall(ip = 1:gr%fine%mesh%np)
-               rho_total(ip) = rho_total(ip) - st%rho_core(ip)
-            end forall
-         end if
+        total_density_alloc = .true.
+
+        SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
+
+        forall(ip = 1:gr%fine%mesh%np)
+          rho_total(ip) = sum(rho(ip, 1:hm%d%spin_channels))
+        end forall
+
+        ! remove non-local core corrections
+        if(associated(st%rho_core)) then
+          forall(ip = 1:gr%fine%mesh%np)
+            rho_total(ip) = rho_total(ip) - st%rho_core(ip)
+          end forall
+        end if
       else
-         total_density_alloc = .false.
-         rho_total => rho(:, 1)
+        total_density_alloc = .false.
+        rho_total => rho(:, 1)
       end if
 
       POP_SUB(stress.calculate_density)
     end subroutine calculate_density
-    ! -------------------------------------------------------  
+    ! -------------------------------------------------------
 
     ! ---------------------------------------------------------
     subroutine density_rs2fs(this)
@@ -186,76 +186,76 @@ contains
       integer :: ii, jj, kk, iit, jjt, kkt
       FLOAT :: gx, xx(3)
       CMPLX :: zphase
-      
+
       cube => this%cube
       coulb => this%fft_solver%coulb
 
       call cube_function_null(cf)
       call dcube_function_alloc_RS(cube, cf, in_device = (this%fft_solver%kernel /= POISSON_FFT_KERNEL_CORRECTED))
-      
-      
+
+
       ! put the density in the cube
       if (cube%parallel_in_domains) then
-         call dmesh_to_cube_parallel(this%der%mesh, rho_total, cube, cf, this%mesh_cube_map)
+        call dmesh_to_cube_parallel(this%der%mesh, rho_total, cube, cf, this%mesh_cube_map)
       else
-         if(this%der%mesh%parallel_in_domains) then
-            call dmesh_to_cube(this%der%mesh, rho_total, cube, cf, local = .true.)
-         else
-            call dmesh_to_cube(this%der%mesh, rho_total, cube, cf)
-         end if
+        if(this%der%mesh%parallel_in_domains) then
+          call dmesh_to_cube(this%der%mesh, rho_total, cube, cf, local = .true.)
+        else
+          call dmesh_to_cube(this%der%mesh, rho_total, cube, cf)
+        end if
       end if
-      
+
       ASSERT(associated(cube%fft))
       ASSERT(cube%fft%library /= FFTLIB_NONE)
-      
+
       SAFE_ALLOCATE(rho_total_fs(1:cube%rs_n_global(1),1:cube%rs_n_global(2),1:cube%rs_n_global(3)))
-      
+
       call cube_function_alloc_fs(cube, cf)
-      
+
       call dcube_function_rs2fs(cube, cf)
       cf%fs = cf%fs/dble(cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)) !Normalize
 
       select case(cube%fft%library)
       case(FFTLIB_PFFT)
 ! Not implemented yet
-         write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
-         call messages_fatal(1, namespace=namespace)
+        write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
+        call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
-         if(associated(cube%Lrs))then
-            xx(1:3) = cube%Lrs(1,1:3)
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
-         else
-            xx(1:3) = -dble(cube%rs_n_global(1:3)/2 )/dble(cube%rs_n_global(1:3))
-            xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
-         end if
-         do kk = 1, cube%fs_n(3)
-            kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
-            kkt = mod(kkt+cube%rs_n_global(3),cube%rs_n_global(3)) +1
-            do jj = 1, cube%fs_n(2)
-               jjt = - pad_feq(jj , cube%rs_n_global(2), .true.)
-               jjt = mod(jjt+cube%rs_n_global(2),cube%rs_n_global(2)) + 1
-               do ii = 1, cube%fs_n(1)
-                  iit = - pad_feq(ii , cube%rs_n_global(1), .true.)
-                  iit = mod(iit+cube%rs_n_global(1),cube%rs_n_global(1)) + 1
-                  
-                  gx =  sum(xx(1:3)*Gvec(ii, jj, kk, 1:3) )
-                  zphase = TOCMPLX(cos(gx), sin(gx)) 
-                  rho_total_fs(ii,jj,kk) = conjg(cf%fs(ii, jj, kk))*zphase
-                  rho_total_fs(iit,jjt,kkt) = cf%fs(ii, jj, kk)*conjg(zphase)
-               end do
+        if(associated(cube%Lrs))then
+          xx(1:3) = cube%Lrs(1,1:3)
+          xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+        else
+          xx(1:3) = -dble(cube%rs_n_global(1:3)/2 )/dble(cube%rs_n_global(1:3))
+          xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
+        end if
+        do kk = 1, cube%fs_n(3)
+          kkt = - pad_feq(kk, cube%rs_n_global(3), .true.)
+          kkt = mod(kkt+cube%rs_n_global(3),cube%rs_n_global(3)) +1
+          do jj = 1, cube%fs_n(2)
+            jjt = - pad_feq(jj , cube%rs_n_global(2), .true.)
+            jjt = mod(jjt+cube%rs_n_global(2),cube%rs_n_global(2)) + 1
+            do ii = 1, cube%fs_n(1)
+              iit = - pad_feq(ii , cube%rs_n_global(1), .true.)
+              iit = mod(iit+cube%rs_n_global(1),cube%rs_n_global(1)) + 1
+
+              gx =  sum(xx(1:3)*Gvec(ii, jj, kk, 1:3) )
+              zphase = TOCMPLX(cos(gx), sin(gx))
+              rho_total_fs(ii,jj,kk) = conjg(cf%fs(ii, jj, kk))*zphase
+              rho_total_fs(iit,jjt,kkt) = cf%fs(ii, jj, kk)*conjg(zphase)
             end do
-         end do
+          end do
+        end do
       case(FFTLIB_ACCEL)
 ! Not implemented yet
-         write(message(1),'(a)') 'Internal error: ACCEL library is not applicable for stress calculation.'
-         call messages_fatal(1, namespace=namespace)
+        write(message(1),'(a)') 'Internal error: ACCEL library is not applicable for stress calculation.'
+        call messages_fatal(1, namespace=namespace)
       case default
-         ASSERT(.false.)
-       end select
+        ASSERT(.false.)
+      end select
 
-       call cube_function_free_fs(cube, cf)
-       call dcube_function_free_rs(cube, cf)
-    
+      call cube_function_free_fs(cube, cf)
+      call dcube_function_free_rs(cube, cf)
+
     end subroutine density_rs2fs
 
     ! -------------------------------------------------------
@@ -277,52 +277,52 @@ contains
       SAFE_ALLOCATE(FourPi_G2(1:db(1),1:db(2),1:db(3)))
       SAFE_ALLOCATE(Gvec(1:db(1),1:db(2),1:db(3),3))
       SAFE_ALLOCATE(Gvec_G(1:db(1),1:db(2),1:db(3),3))
-      
-      
-      
+
+
+
       if(cube%fft%library == FFTLIB_PFFT) then
 !Not implemented yet
-         
+
       else if(cube%fft%library == FFTLIB_FFTW) then
 
-         temp(1:3) = M_TWO*M_PI/(db(1:3)*gr%fine%der%mesh%spacing(1:3))
+        temp(1:3) = M_TWO*M_PI/(db(1:3)*gr%fine%der%mesh%spacing(1:3))
 
-         do ix = 1, cube%rs_n_global(1)
-            ixx(1) = pad_feq(ix, db(1), .true.)
-            do iy = 1, cube%rs_n_global(2)
-               ixx(2) = pad_feq(iy, db(2), .true.)
-               do iz = 1, cube%rs_n_global(3)
-                  ixx(3) = pad_feq(iz, db(3), .true.)
+        do ix = 1, cube%rs_n_global(1)
+          ixx(1) = pad_feq(ix, db(1), .true.)
+          do iy = 1, cube%rs_n_global(2)
+            ixx(2) = pad_feq(iy, db(2), .true.)
+            do iz = 1, cube%rs_n_global(3)
+              ixx(3) = pad_feq(iz, db(3), .true.)
 
-                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
+              call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
 
-                  !HH not very elegant
-                  if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
+              !HH not very elegant
+              if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 
-                  if(abs(modg2) > M_EPSILON) then
-                     FourPi_G2(ix,iy,iz) = 4d0*M_PI/modg2
-                     Gvec_G(ix, iy, iz, 1) = gg(1)/sqrt(modg2)
-                     Gvec_G(ix, iy, iz, 2) = gg(2)/sqrt(modg2)
-                     Gvec_G(ix, iy, iz, 3) = gg(3)/sqrt(modg2)
-                  else
-                     FourPi_G2(ix,iy,iz) = M_ZERO
-                     Gvec_G(ix, iy, iz, 1) = M_ZERO
-                     Gvec_G(ix, iy, iz, 2) = M_ZERO
-                     Gvec_G(ix, iy, iz, 3) = M_ZERO
-                  end if
+              if(abs(modg2) > M_EPSILON) then
+                FourPi_G2(ix,iy,iz) = 4d0*M_PI/modg2
+                Gvec_G(ix, iy, iz, 1) = gg(1)/sqrt(modg2)
+                Gvec_G(ix, iy, iz, 2) = gg(2)/sqrt(modg2)
+                Gvec_G(ix, iy, iz, 3) = gg(3)/sqrt(modg2)
+              else
+                FourPi_G2(ix,iy,iz) = M_ZERO
+                Gvec_G(ix, iy, iz, 1) = M_ZERO
+                Gvec_G(ix, iy, iz, 2) = M_ZERO
+                Gvec_G(ix, iy, iz, 3) = M_ZERO
+              end if
 
-                  Gvec(ix, iy, iz, 1) = gg(1)
-                  Gvec(ix, iy, iz, 2) = gg(2)
-                  Gvec(ix, iy, iz, 3) = gg(3)
+              Gvec(ix, iy, iz, 1) = gg(1)
+              Gvec(ix, iy, iz, 2) = gg(2)
+              Gvec(ix, iy, iz, 3) = gg(3)
 
-               end do
             end do
-         end do
+          end do
+        end do
 
       else if(cube%fft%library == FFTLIB_ACCEL) then
 !Not implemented yet
       end if
-      
+
     end subroutine fourier_space_init
   end subroutine stress_calculate
 
@@ -339,66 +339,66 @@ contains
     type(profile_t), save :: prof
     logical, parameter :: hamiltonian_elec_current = .false.
 
-    call profiling_in(prof, "STRESS_FROM_KEE")    
+    call profiling_in(prof, "STRESS_FROM_KEE")
     PUSH_SUB(stress_from_kinetic_energy_electron)
 
-    stress_l(:,:) = M_ZERO    
+    stress_l(:,:) = M_ZERO
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    
+
 
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
-       do ist = st%st_start, st%st_end
-          
-          call states_elec_get_state(st, der%mesh, ist, ik, psi)
-          
-          do idim = 1, st%d%dim
-             call boundaries_set(der%boundaries, psi(:, idim))
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      do ist = st%st_start, st%st_end
+
+        call states_elec_get_state(st, der%mesh, ist, ik, psi)
+
+        do idim = 1, st%d%dim
+          call boundaries_set(der%boundaries, psi(:, idim))
+        end do
+
+        if(associated(hm%hm_base%phase)) then
+          call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)
+        end if
+
+        do idim = 1, st%d%dim
+          call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+        end do
+
+
+        do idir = 1, der%mesh%sb%dim
+          do jdir = 1, der%mesh%sb%dim
+
+            do idim = 1, st%d%dim
+              stress_l(idir,jdir) = stress_l(idir,jdir) + &
+                st%d%kweights(ik)*st%occ(ist, ik) &
+                *dmf_integrate(der%mesh, real(conjg(gpsi(:, idir, idim))*gpsi(:, jdir, idim)))
+            end do
           end do
-          
-          if(associated(hm%hm_base%phase)) then 
-            call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
-          end if
-          
-          do idim = 1, st%d%dim
-             call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-          end do
-          
-          
-          do idir = 1, der%mesh%sb%dim
-             do jdir = 1, der%mesh%sb%dim
-                
-                do idim = 1, st%d%dim
-                   stress_l(idir,jdir) = stress_l(idir,jdir) + &
-                        st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(gpsi(:, idir, idim))*gpsi(:, jdir, idim)))
-                end do
-             end do
-          end do
-       end do
-       
+        end do
+      end do
+
     end do
-    
+
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l) 
+      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_l)
     end if
 
     stress_l = stress_l/der%mesh%sb%rcell_volume
     stress_KE = stress_l
     stress = stress + stress_l
-    
 
-    SAFE_DEALLOCATE_A(psi)    
+
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gpsi)
-    
+
     call profiling_out(prof)
     POP_SUB(stress_from_kinetic_energy_electron)
   end subroutine stress_from_kinetic_energy_electron
-  
+
 ! -------------------------------------------------------
   subroutine stress_from_Hartree(st, hm, stress, stress_Hartree)
     type(states_elec_t),  intent(inout) :: st
@@ -412,47 +412,47 @@ contains
     type(profile_t), save :: prof
 
     cube => hm%psolver_fine%cube
-    
-    call profiling_in(prof, "STRESS_FROM_HARTREE")    
+
+    call profiling_in(prof, "STRESS_FROM_HARTREE")
     PUSH_SUB(stress_from_Hartree)
 
     stress_l(:,:) = M_ZERO
 
     do idir = 1,3
-       do jdir = 1,3
-          ss=M_ZERO
-          !$omp parallel do private(ii, jj, kk) reduction(+:ss)
-          do kk = 1, cube%rs_n_global(3)
-             do jj = 1, cube%rs_n_global(2)
-                do ii = 1, cube%rs_n_global(1)
-                   ss = ss + abs(rho_total_fs(ii,jj,kk))**2 &
-                        *2d0*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir) &
-                        *FourPi_G2(ii, jj, kk)
-                end do
-             end do
+      do jdir = 1,3
+        ss=M_ZERO
+        !$omp parallel do private(ii, jj, kk) reduction(+:ss)
+        do kk = 1, cube%rs_n_global(3)
+          do jj = 1, cube%rs_n_global(2)
+            do ii = 1, cube%rs_n_global(1)
+              ss = ss + abs(rho_total_fs(ii,jj,kk))**2 &
+                *2d0*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir) &
+                *FourPi_G2(ii, jj, kk)
+            end do
           end do
-          !$omp end parallel do
-          stress_l(idir,jdir) = - ss 
-       end do
+        end do
+        !$omp end parallel do
+        stress_l(idir,jdir) = - ss
+      end do
     end do
 
     ss=M_ZERO
     !$omp parallel do private(ii, jj, kk) reduction(+:ss)
     do kk = 1, cube%rs_n_global(3)
-       do jj = 1, cube%rs_n_global(2)
-          do ii = 1, cube%rs_n_global(1)
-             ss = ss + abs(rho_total_fs(ii, jj, kk))**2*FourPi_G2 (ii, jj, kk)
-          end do
-       end do
+      do jj = 1, cube%rs_n_global(2)
+        do ii = 1, cube%rs_n_global(1)
+          ss = ss + abs(rho_total_fs(ii, jj, kk))**2*FourPi_G2 (ii, jj, kk)
+        end do
+      end do
     end do
     !$omp end parallel do
 
     do idir = 1,3
-       stress_l(idir,idir) = stress_l(idir,idir) + ss
+      stress_l(idir,idir) = stress_l(idir,idir) + ss
     end do
     stress_l = 0.5d0 * stress_l
 
-    
+
     stress_Hartree =  stress_l
     stress = stress + stress_l
 
@@ -473,19 +473,19 @@ contains
     integer :: ii
     type(profile_t), save :: prof
 
-    call profiling_in(prof, "STRESS_FROM_XC")    
+    call profiling_in(prof, "STRESS_FROM_XC")
     PUSH_SUB(stress_from_xc)
 
     stress_l = M_ZERO
     do ii = 1,3
-       stress_l(ii,ii) = - hm%energy%exchange - hm%energy%correlation &
-            + hm%energy%intnvxc
+      stress_l(ii,ii) = - hm%energy%exchange - hm%energy%correlation &
+        + hm%energy%intnvxc
     end do
     stress_l = stress_l/der%mesh%sb%rcell_volume
-    
+
     stress_xc(:,:) = stress_l(:,:)
     stress(:,:) = stress(:,:) + stress_l(:,:)
-    
+
     call profiling_out(prof)
     POP_SUB(stress_from_xc)
   end subroutine stress_from_xc
@@ -511,11 +511,11 @@ contains
     integer :: ii,jj,kk
     type(profile_t), save :: prof
 
-    call profiling_in(prof, "STRESS_FROM_PSEUDO")    
+    call profiling_in(prof, "STRESS_FROM_PSEUDO")
     PUSH_SUB(stress_from_pseudo)
 
     stress_l = M_ZERO
-    
+
     cube => hm%psolver_fine%cube
     der => gr%der
 
@@ -532,56 +532,56 @@ contains
 ! calculate stress from non-local pseudopotentials
     stress_t_NL = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-       ispin = states_elec_dim_get_spin_index(st%d, ik)
-       do ist = st%st_start, st%st_end
-          
-          call states_elec_get_state(st, der%mesh, ist, ik, psi)
-          
-          do idim = 1, st%d%dim
-             call boundaries_set(der%boundaries, psi(:, idim))
-          end do
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      do ist = st%st_start, st%st_end
 
-          if(associated(hm%hm_base%phase)) then 
-            call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+        call states_elec_get_state(st, der%mesh, ist, ik, psi)
+
+        do idim = 1, st%d%dim
+          call boundaries_set(der%boundaries, psi(:, idim))
+        end do
+
+        if(associated(hm%hm_base%phase)) then
+          call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+        end if
+
+        do idim = 1, st%d%dim
+          call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+        end do
+
+
+
+        rppsi = M_ZERO
+        do iatom = 1, geo%natoms
+          if(species_is_ps(geo%atom(iatom)%species)) then
+            call zr_project_psi(hm%ep%proj(iatom), der%mesh, st%d%dim, ik, psi, rppsi)
           end if
-          
-          do idim = 1, st%d%dim
-             call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+        end do
+
+        do idir = 1,3
+          do jdir = 1,3
+            do idim = 1, st%d%dim
+
+              stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
+                +2d0*st%d%kweights(ik)*st%occ(ist, ik) &
+                *dmf_integrate(der%mesh, real(conjg(gpsi(1:der%mesh%np,idir,idim))*rppsi(1:der%mesh%np,jdir,idim)))
+
+              if(idir /= jdir)cycle
+
+              stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
+                +st%d%kweights(ik)*st%occ(ist, ik) &
+                *dmf_integrate(der%mesh, real(conjg(psi(1:der%mesh%np,idim))*rppsi(1:der%mesh%np,4,idim)))
+
+            end do
           end do
-
-
-
-          rppsi = M_ZERO
-          do iatom = 1, geo%natoms
-             if(species_is_ps(geo%atom(iatom)%species)) then
-                call zr_project_psi(hm%ep%proj(iatom), der%mesh, st%d%dim, ik, psi, rppsi)
-             end if
-          end do
-
-          do idir = 1,3
-             do jdir = 1,3
-                do idim = 1, st%d%dim
-
-                   stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
-                        +2d0*st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(gpsi(1:der%mesh%np,idir,idim))*rppsi(1:der%mesh%np,jdir,idim)))
-
-                   if(idir /= jdir)cycle
-
-                   stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
-                        +st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(psi(1:der%mesh%np,idim))*rppsi(1:der%mesh%np,4,idim))) 
-
-                end do
-             end do
-          end do
-       end do
+        end do
+      end do
     end do
 
-    
+
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-       call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, stress_t_NL)
     end if
 
 
@@ -595,22 +595,22 @@ contains
     call dderivatives_grad(der, rho_t, grho_t, set_bc = .false.)
 
     vloc = M_ZERO
-    rvloc = M_ZERO    
+    rvloc = M_ZERO
     do iatom = 1, geo%natoms
-       call epot_local_pseudopotential_SR(hm%ep, gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
+      call epot_local_pseudopotential_SR(hm%ep, gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
     end do
 
     energy_ps_SR = dmf_dotp(gr%mesh, vloc, rho_total(:))
     do idir = 1,3
-       stress_t_SR(idir,idir) = energy_ps_SR
+      stress_t_SR(idir,idir) = energy_ps_SR
     end do
-    
+
     do idir = 1,3
-       do jdir =1,3
-          
-          stress_t_SR(idir, jdir) = stress_t_SR(idir, jdir) &
-               +dmf_dotp(gr%mesh, rvloc(:, jdir), grho_t(:, idir))
-       end do
+      do jdir =1,3
+
+        stress_t_SR(idir, jdir) = stress_t_SR(idir, jdir) &
+          +dmf_dotp(gr%mesh, rvloc(:, jdir), grho_t(:, idir))
+      end do
     end do
 
     stress_t_SR = stress_t_SR/der%mesh%sb%rcell_volume
@@ -619,50 +619,50 @@ contains
     stress_t_LR = M_ZERO
 
 
- ! We assume this value is applied for range-separation for all the species
-    sigma_erf = CNST(0.625) 
+    ! We assume this value is applied for range-separation for all the species
+    sigma_erf = CNST(0.625)
     alpha = M_ONE/(sqrt(M_TWO)*sigma_erf)
 
     do kk = 1, cube%rs_n_global(3)
-       do jj = 1, cube%rs_n_global(2)
-          do ii = 1, cube%rs_n_global(1)
-             
-             zphase = M_Z0
-             do iatom = 1, geo%natoms
-                gx = sum(Gvec(ii, jj, kk, 1:3)*geo%atom(iatom)%x(1:3))
-                zphase = zphase + species_zval(geo%atom(iatom)%species) &
-                     *TOCMPLX(cos(gx), sin(gx)) 
-             end do
-             g2 = sum(Gvec(ii, jj, kk, 1:3)**2)
-             zfact =  sigma_erf**2*FourPi_G2(ii,jj,kk) &
-                  *exp(-M_HALF*sigma_erf**2*g2)/(M_HALF*sigma_erf**2) &
-                  *(M_HALF*sigma_erf**2*g2 + M_ONE) &
-                  *rho_total_fs(ii,jj,kk)*conjg(zphase)
-             
-             do idir =1,3
-                do jdir =1,3
-                   stress_t_LR(idir, jdir) = stress_t_LR(idir, jdir) &
-                        + real(zfact)*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir)
-                end do
-             end do
-             
-             do idir =1,3
-                stress_t_LR(idir, idir) = stress_t_LR(idir, idir) &
-                     - FourPi_G2(ii,jj,kk)*exp(-M_HALF*sigma_erf**2*g2) &
-                     *real(rho_total_fs(ii,jj,kk)*conjg(zphase))
-             end do
+      do jj = 1, cube%rs_n_global(2)
+        do ii = 1, cube%rs_n_global(1)
 
+          zphase = M_Z0
+          do iatom = 1, geo%natoms
+            gx = sum(Gvec(ii, jj, kk, 1:3)*geo%atom(iatom)%x(1:3))
+            zphase = zphase + species_zval(geo%atom(iatom)%species) &
+              *TOCMPLX(cos(gx), sin(gx))
           end do
-       end do
+          g2 = sum(Gvec(ii, jj, kk, 1:3)**2)
+          zfact =  sigma_erf**2*FourPi_G2(ii,jj,kk) &
+            *exp(-M_HALF*sigma_erf**2*g2)/(M_HALF*sigma_erf**2) &
+            *(M_HALF*sigma_erf**2*g2 + M_ONE) &
+            *rho_total_fs(ii,jj,kk)*conjg(zphase)
+
+          do idir =1,3
+            do jdir =1,3
+              stress_t_LR(idir, jdir) = stress_t_LR(idir, jdir) &
+                + real(zfact)*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir)
+            end do
+          end do
+
+          do idir =1,3
+            stress_t_LR(idir, idir) = stress_t_LR(idir, idir) &
+              - FourPi_G2(ii,jj,kk)*exp(-M_HALF*sigma_erf**2*g2) &
+              *real(rho_total_fs(ii,jj,kk)*conjg(zphase))
+          end do
+
+        end do
+      end do
     end do
 
     stress_t_LR = stress_t_LR/der%mesh%sb%rcell_volume
 
-    
+
     stress_ps = stress_t_SR + stress_t_LR + stress_t_NL
 
 !!! NOTE!! This part is moved to Ewald contoributoin
-!! Contribition from G=0 component of the long-range part        
+!! Contribition from G=0 component of the long-range part
 !    charge = M_ZERO
 !    do iatom = 1, geo%natoms
 !       zi = species_zval(geo%atom(iatom)%species)
@@ -673,15 +673,15 @@ contains
 !       stress_ps(idir,idir) = stress_ps(idir,idir) &
 !            + 2d0*M_PI*sigma_erf**2*charge**2 /der%mesh%sb%rcell_volume**2
 !    end do
-    
+
     stress = stress + stress_ps
 
-    
+
     call profiling_out(prof)
-    POP_SUB(stress_from_pseudo)      
-      
+    POP_SUB(stress_from_pseudo)
+
   end subroutine stress_from_pseudo
-      
+
   ! -------------------------------------------------------
   subroutine epot_local_pseudopotential_SR(ep, der, dgrid, geo, iatom, vpsl, rvpsl)
     type(epot_t),             intent(inout) :: ep
@@ -691,41 +691,41 @@ contains
     integer,                  intent(in)    :: iatom
     FLOAT,                    intent(inout) :: vpsl(:)
     FLOAT,                    intent(inout) :: rvpsl(:,:)
-      
+
     integer :: ip
     FLOAT :: radius
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    
+
     PUSH_SUB(epot_local_pseudopotential_sr)
     call profiling_in(prof, "EPOT_LOCAL_PSEUDOPOTENTIAL_SR")
 
     !the localized part
-      
+
     if(species_is_ps(geo%atom(iatom)%species)) then
-         
-       radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
-         
-       call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
-       SAFE_ALLOCATE(vl(1:sphere%np))
-       
-       call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
-         
-       ! Cannot be written (correctly) as a vector expression since for periodic systems,
-       ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
-       do ip = 1, sphere%np
-          vpsl(sphere%map(ip)) = vpsl(sphere%map(ip)) + vl(ip)
-          rvpsl(sphere%map(ip) ,1) = rvpsl(sphere%map(ip), 1) + sphere%x(ip, 1) * vl(ip)
-          rvpsl(sphere%map(ip) ,2) = rvpsl(sphere%map(ip), 2) + sphere%x(ip, 2) * vl(ip)
-          rvpsl(sphere%map(ip) ,3) = rvpsl(sphere%map(ip), 3) + sphere%x(ip, 3) * vl(ip)
-       end do
-       
-       SAFE_DEALLOCATE_A(vl)
-       call submesh_end(sphere)
+
+      radius = double_grid_get_rmax(dgrid, geo%atom(iatom)%species, der%mesh) + der%mesh%spacing(1)
+
+      call submesh_init(sphere, der%mesh%sb, der%mesh, geo%atom(iatom)%x, radius)
+      SAFE_ALLOCATE(vl(1:sphere%np))
+
+      call double_grid_apply_local(dgrid, geo%atom(iatom)%species, der%mesh, sphere, geo%atom(iatom)%x, vl)
+
+      ! Cannot be written (correctly) as a vector expression since for periodic systems,
+      ! there can be values ip, jp such that sphere%map(ip) == sphere%map(jp).
+      do ip = 1, sphere%np
+        vpsl(sphere%map(ip)) = vpsl(sphere%map(ip)) + vl(ip)
+        rvpsl(sphere%map(ip) ,1) = rvpsl(sphere%map(ip), 1) + sphere%x(ip, 1) * vl(ip)
+        rvpsl(sphere%map(ip) ,2) = rvpsl(sphere%map(ip), 2) + sphere%x(ip, 2) * vl(ip)
+        rvpsl(sphere%map(ip) ,3) = rvpsl(sphere%map(ip), 3) + sphere%x(ip, 3) * vl(ip)
+      end do
+
+      SAFE_DEALLOCATE_A(vl)
+      call submesh_end(sphere)
 
     end if
-    
+
     call profiling_out(prof)
     POP_SUB(epot_local_pseudopotential_sr)
   end subroutine epot_local_pseudopotential_SR
@@ -776,7 +776,7 @@ contains
     FLOAT :: sigma_erf
     type(profile_t), save :: prof
 
-    call profiling_in(prof, "STRESS_FROM_EWALD")    
+    call profiling_in(prof, "STRESS_FROM_EWALD")
     PUSH_SUB(stress_from_Ewald_sum)
 
 
@@ -787,53 +787,53 @@ contains
     stress_l = M_ZERO
 ! the short-range part is calculated directly
     do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
-       zi = species_zval(geo%atom(iatom)%species)
+      if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
+      zi = species_zval(geo%atom(iatom)%species)
 
-       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
-      
-       do icopy = 1, periodic_copy_num(pc)
-          xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
-        
-          do jatom = 1,  geo%natoms
-             zj = species_zval(geo%atom(jatom)%species)
-             rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
-          
+      call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)
+
+      do icopy = 1, periodic_copy_num(pc)
+        xi(1:sb%dim) = periodic_copy_position(pc, sb, icopy)
+
+        do jatom = 1,  geo%natoms
+          zj = species_zval(geo%atom(jatom)%species)
+          rr = sqrt( sum( (xi(1:sb%dim) - geo%atom(jatom)%x(1:sb%dim))**2 ) )
+
           if(rr < CNST(1e-5)) cycle
-          
+
           erfc = M_ONE - loct_erf(alpha*rr)
           Hp = -M_TWO/sqrt(M_PI)*exp(-(alpha*rr)**2) - erfc/(alpha*rr)
           factor = M_HALF*zj*zi*alpha*Hp
           do idir = 1,3
-             do jdir =1,3
-                stress_l(idir, jdir) = stress_l(idir, jdir) &
-                     -factor&
-                     *(xi(idir) - geo%atom(jatom)%x(idir)) &
-                     *(xi(jdir) - geo%atom(jatom)%x(jdir))/(rr**2)
-                     
-             end do
+            do jdir =1,3
+              stress_l(idir, jdir) = stress_l(idir, jdir) &
+                -factor&
+                *(xi(idir) - geo%atom(jatom)%x(idir)) &
+                *(xi(jdir) - geo%atom(jatom)%x(jdir))/(rr**2)
+
+            end do
           end do
 
         end do
 
       end do
-      
+
       call periodic_copy_end(pc)
     end do
 
     if(geo%atoms_dist%parallel) then
-       call comm_allreduce(geo%atoms_dist%mpi_grp%comm, stress_l)
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, stress_l)
     end if
 
 ! And the long-range part, using an Ewald sum
     charge = M_ZERO
     charge_sq = M_ZERO
     do iatom = 1, geo%natoms
-       zi = species_zval(geo%atom(iatom)%species)
-       charge = charge + zi
-       charge_sq = charge_sq + zi**2
+      zi = species_zval(geo%atom(iatom)%species)
+      charge = charge + zi
+      charge_sq = charge_sq + zi**2
     end do
-    
+
 ! get a converged value for the cutoff in g
     rcut = huge(rcut)
     do idim = 1, sb%dim
@@ -841,53 +841,53 @@ contains
     end do
 
     rcut = sqrt(rcut)
-    
-    isph = ceiling(CNST(9.5)*alpha/rcut)
-    
-    do ix = -isph, isph
-       do iy = -isph, isph
-          do iz = -isph, isph
-          
-             ss = ix**2 + iy**2 + iz**2
-          
-             if(ss == 0 .or. ss > isph**2) cycle
 
-             gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
-             gg2 = sum(gg(1:sb%dim)**2)
+    isph = ceiling(CNST(9.5)*alpha/rcut)
+
+    do ix = -isph, isph
+      do iy = -isph, isph
+        do iz = -isph, isph
+
+          ss = ix**2 + iy**2 + iz**2
+
+          if(ss == 0 .or. ss > isph**2) cycle
+
+          gg(1:sb%dim) = ix*sb%klattice(1:sb%dim, 1) + iy*sb%klattice(1:sb%dim, 2) + iz*sb%klattice(1:sb%dim, 3)
+          gg2 = sum(gg(1:sb%dim)**2)
 
           ! g=0 must be removed from the sum
-             if(gg2 < M_EPSILON) cycle
-          
-             gx = -CNST(0.25)*gg2/alpha**2
-             
-             if(gx < CNST(-36.0)) cycle
+          if(gg2 < M_EPSILON) cycle
 
-             factor = M_TWO*M_PI*exp(gx)/(sb%rcell_volume*gg2)
+          gx = -CNST(0.25)*gg2/alpha**2
 
-             if(factor < epsilon(factor)) cycle
+          if(gx < CNST(-36.0)) cycle
 
-             sumatoms = M_Z0
+          factor = M_TWO*M_PI*exp(gx)/(sb%rcell_volume*gg2)
 
-             do iatom = 1, geo%natoms
-                gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
-                aa = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
-                sumatoms = sumatoms + aa
-             end do
+          if(factor < epsilon(factor)) cycle
 
-             factor = factor*abs(sumatoms)**2
-             
-             do idir = 1,3
-                do jdir =1,3
-                   
-                   stress_l(idir, jdir) = stress_l(idir, jdir) &
-                        - M_TWO*factor*gg(idir)*gg(jdir)/gg2*(CNST(0.25)*gg2/alpha**2+M_ONE)
-                   
-                end do
-                stress_l(idir, idir) = stress_l(idir, idir) + factor
-             end do
+          sumatoms = M_Z0
 
+          do iatom = 1, geo%natoms
+            gx = sum(gg(1:sb%dim)*geo%atom(iatom)%x(1:sb%dim))
+            aa = species_zval(geo%atom(iatom)%species)*TOCMPLX(cos(gx), sin(gx))
+            sumatoms = sumatoms + aa
           end do
-       end do
+
+          factor = factor*abs(sumatoms)**2
+
+          do idir = 1,3
+            do jdir =1,3
+
+              stress_l(idir, jdir) = stress_l(idir, jdir) &
+                - M_TWO*factor*gg(idir)*gg(jdir)/gg2*(CNST(0.25)*gg2/alpha**2+M_ONE)
+
+            end do
+            stress_l(idir, idir) = stress_l(idir, idir) + factor
+          end do
+
+        end do
+      end do
     end do
 
 
@@ -897,11 +897,11 @@ contains
     stress_l(3, 3) = stress_l(3, 3) - factor
 
 
-! Contribition from G=0 component of the long-range part    
+! Contribition from G=0 component of the long-range part
     sigma_erf = CNST(0.625)
     do idir = 1,3
-       stress_l(idir,idir) = stress_l(idir,idir) &
-            + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%rcell_volume
+      stress_l(idir,idir) = stress_l(idir,idir) &
+        + M_TWO*M_PI*sigma_erf**2*charge**2 /sb%rcell_volume
     end do
 
     stress_l = stress_l/sb%rcell_volume
@@ -909,17 +909,17 @@ contains
     stress_Ewald = stress_l
     stress = stress + stress_l
 
-    
+
     call profiling_out(prof)
     POP_SUB(stress_from_Ewald_sum)
-    
+
   end subroutine stress_from_Ewald_sum
   ! -------------------------------------------------------
   ! -------------------------------------------------------
   ! -------------------------------------------------------
-  
 
-  
+
+
 end module stress_oct_m
 
 !! Local Variables:

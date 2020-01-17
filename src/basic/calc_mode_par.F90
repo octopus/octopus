@@ -33,15 +33,15 @@ module calc_mode_par_oct_m
 
   private
   public ::                             &
-       calc_mode_par_t,                     &
-       calc_mode_par_init,                  &
-       calc_mode_par_end,                   &
-       calc_mode_par_set_parallelization,   &
-       calc_mode_par_unset_parallelization, &
-       calc_mode_par_parallel_mask,         &
-       calc_mode_par_default_parallel_mask, &
-       calc_mode_par_set_scalapack_compat,  &
-       calc_mode_par_scalapack_compat
+    calc_mode_par_t,                     &
+    calc_mode_par_init,                  &
+    calc_mode_par_end,                   &
+    calc_mode_par_set_parallelization,   &
+    calc_mode_par_unset_parallelization, &
+    calc_mode_par_parallel_mask,         &
+    calc_mode_par_default_parallel_mask, &
+    calc_mode_par_set_scalapack_compat,  &
+    calc_mode_par_scalapack_compat
 
   type calc_mode_par_t
     private
@@ -53,7 +53,7 @@ module calc_mode_par_oct_m
   type(calc_mode_par_t) :: this
 
 contains
-    
+
   ! ----------------------------------------------------------
   !> Set domains and kpoints as possible parallelization strategies.
   !> Set domains as default parallelization strategy.
@@ -64,30 +64,30 @@ contains
     this%par_mask = 0
     this%par_mask = ibset(this%par_mask, P_STRATEGY_DOMAINS - 1)
     this%par_mask = ibset(this%par_mask, P_STRATEGY_KPOINTS - 1)
-    
+
     this%def_par_mask = 0
     this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
     this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_KPOINTS - 1)
-    
+
     this%scalapack_compat = .false.
   end subroutine calc_mode_par_init
 
   ! -----------------------------------------------------
-  
+
   subroutine calc_mode_par_end()
-    
+
   end subroutine calc_mode_par_end
-  
+
   ! -----------------------------------------------------
   !> Add a parallelization strategy to the list of possible ones.
   !> Make it default also if default = .true.
   subroutine calc_mode_par_set_parallelization(par, default)
     integer, intent(in) :: par
     logical, intent(in) :: default
-    
+
     this%par_mask = ibset(this%par_mask, par - 1)
     if(default) this%def_par_mask = ibset(this%def_par_mask, par - 1)
-    
+
   end subroutine calc_mode_par_set_parallelization
 
   ! -----------------------------------------------------
@@ -95,49 +95,49 @@ contains
   !> It will also be removed from the default.
   subroutine calc_mode_par_unset_parallelization(par)
     integer, intent(in) :: par
-    
+
     this%par_mask = ibclr(this%par_mask, par - 1)
     this%def_par_mask = ibclr(this%def_par_mask, par - 1)
-    
+
   end subroutine calc_mode_par_unset_parallelization
-  
+
   ! -----------------------------------------------------
-  
+
   !> Defines that the current run mode requires division of states
   !! and domains to be compatible with scalapack.
   subroutine calc_mode_par_set_scalapack_compat()
     this%scalapack_compat = .true.
   end subroutine calc_mode_par_set_scalapack_compat
-  
-  ! ----------------------------------------------------- 
-  
+
+  ! -----------------------------------------------------
+
   !> Whether the current run mode requires divisions compatible with
   !! scalapack.
   logical pure function calc_mode_par_scalapack_compat() result(compat)
     compat = this%scalapack_compat
   end function calc_mode_par_scalapack_compat
-  
+
   ! -----------------------------------------------------
-  
+
   integer function calc_mode_par_parallel_mask() result(par_mask)
     PUSH_SUB(calc_mode_par_parallel_mask)
-    
+
     par_mask = this%par_mask
-    
+
     POP_SUB(calc_mode_par_parallel_mask)
   end function calc_mode_par_parallel_mask
-  
+
   ! -----------------------------------------------------
   !> This function returns the default modes used for a calculation,
   !! that might be different from the modes available.
   integer function calc_mode_par_default_parallel_mask() result(par_mask)
     PUSH_SUB(calc_mode_par_default_parallel_mask)
-    
+
     par_mask = this%def_par_mask
-    
+
     POP_SUB(calc_mode_par_default_parallel_mask)
   end function calc_mode_par_default_parallel_mask
-  
+
 end module calc_mode_par_oct_m
 
 !! Local Variables:

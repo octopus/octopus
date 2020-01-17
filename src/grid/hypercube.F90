@@ -22,20 +22,20 @@ module hypercube_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
-  
+
   implicit none
 
   private
 
   public ::                           &
-       hypercube_t,                   &
-       hypercube_init,                &
-       hypercube_nullify,             &
-       hypercube_end,                 &
-       hypercube_i_to_x,              &
-       hypercube_x_to_i,              &
-       hypercube_number_inner_points, &
-       hypercube_number_total_points
+    hypercube_t,                   &
+    hypercube_init,                &
+    hypercube_nullify,             &
+    hypercube_end,                 &
+    hypercube_i_to_x,              &
+    hypercube_x_to_i,              &
+    hypercube_number_inner_points, &
+    hypercube_number_total_points
 
   type hypercube_t
     private
@@ -59,7 +59,7 @@ contains
     SAFE_ALLOCATE(npoints(1:ndim))
 
     forall (ii = 1:ndim) npoints(ii) = nr(2,ii) - nr(1,ii) + 1
-    
+
     !number of points in each box
     this%boxdim = 1
 
@@ -69,7 +69,7 @@ contains
     end do
 
     !all other boxes are boundary points
-    
+
     do ii=2, ndim+1
       do jj=1, ii-2
         this%boxdim(ii)=this%boxdim(ii)*(npoints(jj)-2*enlarge)
@@ -136,7 +136,7 @@ contains
       tempcoord(ii) = coord(ii)
       tempcoord(ii) = tempcoord(ii) + enlarge - nr(1,ii)
       tempcoord(ii) = mod(tempcoord(ii), npoints(ii))
-      tempcoord(ii) = tempcoord(ii) + nr(1,ii)  
+      tempcoord(ii) = tempcoord(ii) + nr(1,ii)
     end do
 
     !determine which box we are in
@@ -144,8 +144,8 @@ contains
     do ii = 1, ndim
       if(tempcoord(ii) < border(ii)) then
         boxnumb = ii + 1
-        exit 
-      end if 
+        exit
+      end if
     end do
 
     !transform coordinates
@@ -172,7 +172,7 @@ contains
         icoord = icoord*npoints(jj)
         icoord = icoord + (tempcoord(jj) - lowerb(jj))
       end do
-      icoord = icoord + 1    
+      icoord = icoord + 1
       if(icoord > this%boxdim(boxnumb) .or. icoord < 1) then
         message(1) = "hypercube box point outside box"
         call messages_fatal(1)
@@ -204,7 +204,7 @@ contains
     jj = 0
 
     do ii = 1, ndim
-      jj = jj + this%boxdim(ii)  
+      jj = jj + this%boxdim(ii)
       if(icoord > jj) then
         boxnumb = ii + 1
       end if
@@ -264,7 +264,7 @@ contains
   ! ---------------------------------------------------------
   pure integer function hypercube_number_inner_points(this) result(number)
     type(hypercube_t), intent(in)  :: this
-    
+
     number = this%boxdim(1)
   end function hypercube_number_inner_points
 
@@ -272,10 +272,10 @@ contains
   ! ---------------------------------------------------------
   pure integer function hypercube_number_total_points(this) result(number)
     type(hypercube_t), intent(in)  :: this
-    
+
     number = sum(this%boxdim)
   end function hypercube_number_total_points
-  
+
 end module hypercube_oct_m
 
 !! Local Variables:

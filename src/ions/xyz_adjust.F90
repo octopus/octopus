@@ -80,13 +80,13 @@ contains
       !%Variable MainAxis
       !%Type block
       !%Section Utilities::oct-center-geom
-      !%Description 
+      !%Description
       !% A vector of reals defining the axis to which the molecule
       !% should be aligned. If not present, the default value will
       !% be the x-axis. For example in 3D:
       !% <tt>
       !% <br>%MainAxis
-      !% <br> 1 | 0 | 0 
+      !% <br> 1 | 0 | 0
       !% <br>%</tt>
       !%End
 

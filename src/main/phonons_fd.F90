@@ -67,7 +67,7 @@ contains
       message(2) = "Set KPointsUseSymmetries = no and SymmetrizeDensity = no, for gs run and this run."
       call messages_fatal(2)
     end if
-    
+
     call init_()
 
     ! load wavefunctions
@@ -91,9 +91,9 @@ contains
     !%Default 0.01 a.u.
     !%Section Linear Response::Vibrational Modes
     !%Description
-    !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes, 
-    !% ResponseMethod = finite_differences</tt>), 
-    !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
+    !% When calculating phonon properties by finite differences (<tt>CalculationMode = vib_modes,
+    !% ResponseMethod = finite_differences</tt>),
+    !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the
     !% dynamical matrix.
     !%End
     call parse_variable(sys%namespace, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
@@ -102,7 +102,7 @@ contains
     call get_dyn_matrix(sys%gr, sys%namespace, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
 
     call vibrations_output(vib)
-    
+
     call vibrations_end(vib)
 
     call end_()
@@ -159,7 +159,7 @@ contains
     forces0 = M_ZERO
 
     ! FIXME: why displace in + and -? Could just do + and take difference from undisplaced.
-    
+
     do iatom = 1, geo%natoms
       do alpha = 1, mesh%sb%dim
         imat = vibrations_get_index(vib, iatom, alpha)

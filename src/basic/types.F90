@@ -19,9 +19,9 @@
 #include "global.h"
 
 module types_oct_m
-  
+
   implicit none
-  
+
   private
 
   public ::            &
@@ -51,12 +51,12 @@ module types_oct_m
   end interface operator(/=)
 
   integer :: sizes(6) = (/8, 16, 4, 1, 4, 8/)
-  
+
 contains
-  
+
   integer pure function types_get_size(this) result(size)
     type(type_t), intent(in) :: this
-    
+
     size = sizes(this%itype)
   end function types_get_size
 
@@ -65,17 +65,17 @@ contains
   logical pure function types_equal(ta, tb) result(equal)
     type(type_t), intent(in) :: ta
     type(type_t), intent(in) :: tb
-    
+
     equal = ta%itype == tb%itype
 
   end function types_equal
-  
+
   ! -----------------------------------------------------
 
   logical pure function types_not_equal(ta, tb) result(equal)
     type(type_t), intent(in) :: ta
     type(type_t), intent(in) :: tb
-    
+
     equal = ta%itype /= tb%itype
 
   end function types_not_equal
@@ -84,7 +84,7 @@ contains
 
   logical pure function type_is_complex(this) result(is_complex)
     type(type_t), intent(in) :: this
-    
+
     is_complex = this == TYPE_CMPLX
 
   end function type_is_complex

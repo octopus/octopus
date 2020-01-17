@@ -13,7 +13,7 @@
 !! You should have received a copy of the GNU General Public License
 !! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !!
-  
+
 #include <global.h>
 
 module compressed_sensing_oct_m
@@ -26,13 +26,13 @@ module compressed_sensing_oct_m
   implicit none
 
   private
-  
+
   ! these values are copied from td/spectrum.f90
   integer, parameter ::            &
     SPECTRUM_TRANSFORM_LAPLACE = 1,  &
     SPECTRUM_TRANSFORM_SIN     = 2,  &
     SPECTRUM_TRANSFORM_COS     = 3
-  
+
   public ::                                        &
     compressed_sensing_t,                          &
     compressed_sensing_init,                       &
@@ -52,7 +52,7 @@ module compressed_sensing_oct_m
   end type compressed_sensing_t
 
 contains
-  
+
   subroutine compressed_sensing_init(this, transform_type, ntime, dtime, stime, nfreq, dfreq, sfreq, noise)
     type(compressed_sensing_t),  intent(out) :: this
     integer,                     intent(in)  :: transform_type
@@ -66,30 +66,30 @@ contains
 
     integer :: itime, ifreq, type
     FLOAT   :: time, freq
-    
+
     PUSH_SUB(compressed_sensing_init)
-    
+
     this%sigma = noise
-    
+
     this%ntime = ntime
     this%dtime = dtime
     this%stime = stime
     this%nfreq = nfreq
     this%dfreq = dfreq
     this%sfreq = sfreq
-    
+
     if(transform_type == SPECTRUM_TRANSFORM_LAPLACE) then
-      
+
       call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, EXPLICIT_MATRIX)
-      
+
       do ifreq = 1, this%nfreq
         freq = (ifreq - 1)*this%dfreq + this%sfreq
-        
+
         do itime = 1, this%ntime
           time = (itime - 1)*this%dtime + this%stime
           this%fourier_matrix%matrix(itime, ifreq) = exp(-freq*time)
         end do
-          
+
       end do
 
     else
@@ -100,12 +100,12 @@ contains
       case(SPECTRUM_TRANSFORM_COS)
         type = COS_MATRIX
       end select
-      
+
       call bpdn_matrix_init(this%fourier_matrix, this%ntime, this%nfreq, type)
       call bpdn_matrix_set_delta(this%fourier_matrix, this%dtime, this%dfreq)
-      
+
     end if
-    
+
     POP_SUB(compressed_sensing_init)
   end subroutine compressed_sensing_init
 
@@ -120,7 +120,7 @@ contains
 
     POP_SUB(compressed_sensing_end)
   end subroutine compressed_sensing_end
-  
+
   ! -------------------------------------------------------------------
 
   subroutine compressed_sensing_spectral_analysis(this, time_function, freq_function)
@@ -131,7 +131,7 @@ contains
     integer :: ierr
     FLOAT, allocatable :: tf_normalized(:)
     FLOAT :: nrm
-    
+
     PUSH_SUB(compressed_sensing_spectral_analysis)
 
     SAFE_ALLOCATE(tf_normalized(1:this%ntime))
@@ -158,7 +158,7 @@ contains
       call messages_warning(1)
     end if
 
-    POP_SUB(compressed_sensing_spectral_analysis)    
+    POP_SUB(compressed_sensing_spectral_analysis)
   end subroutine compressed_sensing_spectral_analysis
 
 end module compressed_sensing_oct_m

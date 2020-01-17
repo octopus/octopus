@@ -60,7 +60,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
     do ist = sys%st%st_start, sys%st%st_end
 
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-      
+
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
@@ -77,7 +77,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
           end if
 
           proj_dl_psi(1:mesh%np, 1:sys%hm%d%dim) = lr(1, idir2)%X(dl_psi)(1:mesh%np, 1:sys%hm%d%dim, ist, ik)
-          
+
           ! project out components of other states in degenerate subspace
           do ist2 = 1, sys%st%nst
 !              alternate direct method
@@ -130,7 +130,7 @@ subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres
   POP_SUB(X(calc_eff_mass_inv))
 
 end subroutine X(calc_eff_mass_inv)
-  
+
 
 ! ---------------------------------------------------------
 !> add projection onto occupied states, by sum over states
@@ -158,32 +158,32 @@ subroutine X(kdotp_add_occ)(sys, pert, kdotp_lr, degen_thres)
     do ist = 1, sys%st%nst
 
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
-      
+
       call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi1, pertpsi)
-      
+
       do ist2 = ist + 1, sys%st%nst
 
         call states_elec_get_state(sys%st, sys%gr%mesh, ist2, ik, psi2)
-        
+
         ! avoid dividing by zero below; these contributions are arbitrary anyway
         if (abs(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik)) < degen_thres) cycle
 
         ! the unoccupied subspace was handled by the Sternheimer equation
         if(sys%st%occ(ist2, ik) < M_HALF) cycle
-        
+
         mtxel = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi2, pertpsi(:, :))
 
         do idim = 1, sys%st%d%dim
           do ip = 1, sys%gr%mesh%np
             kdotp_lr%X(dl_psi)(ip, idim, ist, ik) = kdotp_lr%X(dl_psi)(ip, idim, ist, ik) + &
               psi2(ip, idim)*mtxel/(sys%st%eigenval(ist, ik) - sys%st%eigenval(ist2, ik))
-            
+
             ! note: there is a minus sign here, because the perturbation is an anti-Hermitian operator
             kdotp_lr%X(dl_psi)(ip, idim, ist2, ik) = kdotp_lr%X(dl_psi)(ip, idim, ist2, ik) + &
               psi1(ip, idim)*R_CONJ(-mtxel)/(sys%st%eigenval(ist2, ik) - sys%st%eigenval(ist, ik))
           end do
         end do
-        
+
       end do
     end do
   end do
@@ -217,21 +217,21 @@ subroutine X(kdotp_add_diagonal)(sys, em_pert, kdotp_lr)
       do ist = 1, sys%st%nst
 
         call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
+
         call X(pert_apply)(em_pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi, ppsi)
-        
+
         expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, ppsi)
-        
+
         kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) = &
           kdotp_lr(idir)%X(dl_psi)(1:sys%gr%mesh%np, 1:sys%st%d%dim, ist, ik) + expectation*psi(1:sys%gr%mesh%np, 1:sys%st%d%dim)
-        
+
       end do
     end do
   end do
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(ppsi)
-  
+
   POP_SUB(X(kdotp_add_diagonal))
 end subroutine X(kdotp_add_diagonal)
 

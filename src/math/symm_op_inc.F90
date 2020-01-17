@@ -21,10 +21,10 @@ pure function X(symm_op_apply_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
   R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
   R_TYPE                        :: bb(1:this%dim)
-  
+
   bb(1:this%dim) = matmul(real(this%rot_red(1:this%dim, 1:this%dim), REAL_PRECISION),&
-                       aa(1:this%dim)) + this%trans_red(1:this%dim)
- 
+    aa(1:this%dim)) + this%trans_red(1:this%dim)
+
 end function X(symm_op_apply_red)
 
 ! -------------------------------------------------------------------------------
@@ -32,10 +32,10 @@ pure function X(symm_op_apply_inv_red)(this, aa) result(bb)
   type(symm_op_t),  intent(in)  :: this
   R_TYPE,           intent(in)  :: aa(:) !< (this%dim)
   R_TYPE                        :: bb(1:this%dim)
-  
+
   bb(1:this%dim) = aa(1:this%dim) - this%trans_red(1:this%dim)
   bb(1:this%dim) = matmul(real(this%rot_red_inv(1:this%dim, 1:this%dim), REAL_PRECISION), &
-                        bb(1:this%dim))
+    bb(1:this%dim))
 
 end function X(symm_op_apply_inv_red)
 
@@ -57,7 +57,7 @@ pure function X(symm_op_apply_cart)(this, aa) result(bb)
   R_TYPE                        :: bb(1:this%dim)
 
   bb(1:this%dim) = matmul(this%rot_cart(1:this%dim, 1:this%dim), aa(1:this%dim)) &
-                            + this%trans_cart(1:this%dim)
+    + this%trans_cart(1:this%dim)
 
 end function X(symm_op_apply_cart)
 

@@ -25,7 +25,7 @@ module physics_op_oct_m
   use messages_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  
+
   implicit none
 
   private
@@ -36,7 +36,7 @@ module physics_op_oct_m
     zphysics_op_L2
 
 contains
-  
+
 #include "undef.F90"
 #include "real.F90"
 #include "physics_op_inc.F90"

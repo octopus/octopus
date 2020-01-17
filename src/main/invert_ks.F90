@@ -36,7 +36,7 @@ module invert_ks_oct_m
   use states_elec_restart_oct_m
   use system_oct_m
   use xc_ks_inversion_oct_m
-  
+
   implicit none
 
   private
@@ -53,7 +53,7 @@ contains
     FLOAT   :: diffdensity
     FLOAT, allocatable :: target_rho(:,:), rho(:)
     type(restart_t) :: restart
-      
+
     PUSH_SUB(invert_ks_run)
 
     ! initialize KS inversion module
@@ -65,9 +65,9 @@ contains
     nspin   = sys%st%d%nspin
 
     ! read target density
-    SAFE_ALLOCATE(target_rho(1:np, 1:nspin)) 
-    SAFE_ALLOCATE(rho(1:np)) 
-       
+    SAFE_ALLOCATE(target_rho(1:np, 1:nspin))
+    SAFE_ALLOCATE(rho(1:np))
+
     call read_target_rho()
 
     sys%hm%energy%intnvxc = M_ZERO
@@ -77,12 +77,12 @@ contains
     sys%hm%vxc = M_ZERO
 
     ! calculate total density
-    
+
     rho = M_ZERO
     do ii = 1, nspin
       rho(:) = rho(:) + target_rho(:,ii)
     end do
-    
+
     ! calculate the Hartree potential
     call dpoisson_solve(sys%hm%psolver, sys%hm%vhartree, rho)
 
@@ -93,31 +93,31 @@ contains
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
-    
+
     write(message(1),'(a)') "Calculating KS potential"
     call messages_info(1)
-       
+
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
-     
+
       call invertks_2part(target_rho, nspin, sys%hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, &
-             sys%ks%ks_inversion%asymp)
-     
+        sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%namespace, &
+        sys%ks%ks_inversion%asymp)
+
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
-          sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
+        sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s
         call invertks_iter(target_rho, sys%namespace, nspin, sys%hm, sys%gr, &
-             sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
-             sys%ks%ks_inversion%method)
+          sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
+          sys%ks%ks_inversion%method)
       end if
     end if
 
     ! output quality of KS inversion
-    
+
     call hamiltonian_elec_update(sys%hm, sys%gr%mesh, sys%namespace)
-    
+
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%namespace, sys%gr, sys%ks%ks_inversion%aux_st, sys%hm, 1)
-    
+
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
 
     diffdensity = M_ZERO
@@ -129,10 +129,10 @@ contains
       end do
     end do
     write (message(1),'(a,F16.6)') 'Achieved difference in densities wrt target:', &
-        diffdensity
+      diffdensity
     call messages_info(1)
 
-    ! output for all cases    
+    ! output for all cases
     call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
@@ -147,12 +147,12 @@ contains
 
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)
-    
+
     POP_SUB(invert_ks_run)
-    
+
   contains
 
-  ! ---------------------------------------------------------
+    ! ---------------------------------------------------------
     subroutine read_target_rho()
       character(len=256) :: filename
       integer :: pass, iunit, ierr, ii, npoints
@@ -163,13 +163,13 @@ contains
       PUSH_SUB(invert_ks_run.read_target_rho)
 
       ! FIXME: just use restart/gs/density*.obf file rather than needing to set this and use a different format.
-      
+
       !%Variable InvertKSTargetDensity
       !%Type string
       !%Default <tt>target_density.dat</tt>
       !%Section Calculation Modes::Invert KS
       !%Description
-      !% Name of the file that contains the density used as the target in the 
+      !% Name of the file that contains the density used as the target in the
       !% inversion of the KS equations.
       !%End
       call parse_variable(sys%namespace, 'InvertKSTargetDensity', "target_density.dat", filename)
@@ -203,9 +203,9 @@ contains
 
       do ii = 1, nspin
         call dmf_interpolate_points(ndim, npoints, xx, ff(:,ii), &
-             np, sys%gr%mesh%x, target_rho(:, ii))
+          np, sys%gr%mesh%x, target_rho(:, ii))
       end do
- 
+
       ! we now renormalize the density (necessary if we have a charged system)
       rr = M_ZERO
       do ii = 1, sys%st%d%spin_channels
@@ -225,7 +225,7 @@ contains
 
   end subroutine invert_ks_run
 
-  
+
 end module invert_ks_oct_m
 
 !! Local Variables:

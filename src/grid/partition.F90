@@ -17,7 +17,7 @@
 !!
 
 #include "global.h"
- 
+
 module partition_oct_m
   use global_oct_m
   use io_oct_m
@@ -35,7 +35,7 @@ module partition_oct_m
     partition_t,                    &
     partition_init,                 &
     partition_end,                  &
-    partition_set,                  & 
+    partition_set,                  &
     partition_dump,                 &
     partition_load,                 &
     partition_get_local_size,       &
@@ -47,24 +47,24 @@ module partition_oct_m
     partition_get_local
 
 
-  !> The partition is an array that contains the mapping between some global index 
+  !> The partition is an array that contains the mapping between some global index
   !! and a process, such that point ip will be stored in process partition%part(ip).
   !!
-  !! In this module this array is distributed among the processes, such that each process 
-  !! only stores a portion of the full array. Because each process needs to know in a 
-  !! straighforward way (i.e. without having to perform any kind of communication or 
+  !! In this module this array is distributed among the processes, such that each process
+  !! only stores a portion of the full array. Because each process needs to know in a
+  !! straighforward way (i.e. without having to perform any kind of communication or
   !! lengthy operations) which process stores the partition corresponding to any giving
   !! point, the distribution of the points is done in the following way:
-  !! 
-  !!  i) the first mod(partition%np_global, partition%npart) processes store partition%nppp+1 
+  !!
+  !!  i) the first mod(partition%np_global, partition%npart) processes store partition%nppp+1
   !!     points, with partition%nppp = partition%np_global/partition%npart
   !!  ii) the remaining processes store partition%nppp points
   !!
   !! Note 1: this module can be a bit confusing as they are in fact two partitions. One is the
   !! partition of some array (in the case of Octopus, this is typically the mesh functions),
-  !! which is the main information stored in the partition_t object, and then there is the 
+  !! which is the main information stored in the partition_t object, and then there is the
   !! partition of the partition itself, as this is also distributed.
-  !! 
+  !!
   !! Note 2: in principle, the mpi group used by the processes for the partition distribution
   !! does not need to be the same as the mpi group of the processes the partition refers to.
   type partition_t
@@ -76,7 +76,7 @@ module partition_oct_m
     integer ::         npart     !< The number of partitions.
     integer ::         remainder !< The remainder of the division of np_global by npart
     integer ::         nppp      !< Number of points per process. The first partition%remainder processes
-                                 !! have nppp+1 points, while the other ones have nppp points
+    !! have nppp+1 points, while the other ones have nppp points
 
     !> The following components are process-dependent:
     integer :: np_local          !< The number of points of the partition stored in this process.
@@ -102,7 +102,7 @@ contains
     partition%np_global = np_global
     partition%npart = mpi_grp%size
     partition%remainder = mod(partition%np_global, partition%npart)
-    partition%nppp = partition%np_global/partition%npart   
+    partition%nppp = partition%np_global/partition%npart
 
     !Processor dependent
     if (mpi_grp%rank + 1 <= partition%remainder) then
@@ -157,10 +157,10 @@ contains
     integer :: ipart
     integer, allocatable :: scounts(:), sdispls(:)
 #else
-    integer, allocatable :: part_global(:)    
+    integer, allocatable :: part_global(:)
 #endif
     character(len=MAX_PATH_LEN) :: full_filename
-    
+
     PUSH_SUB(partition_dump)
 
     ierr = 0
@@ -170,14 +170,14 @@ contains
     ! Calculate displacements for writing
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(sdispls(1:partition%npart))
-    
+
     scounts(1:partition%remainder) = partition%nppp + 1
     scounts(partition%remainder + 1:partition%npart) = partition%nppp
     sdispls(1) = 0
     do ipart = 2, partition%npart
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
-    
+
     ! Write the header (root only) and wait
     if (mpi_grp_is_root(partition%mpi_grp)) then
       call iwrite_header(full_filename, partition%np_global, err)
@@ -187,15 +187,15 @@ contains
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
 
     ASSERT(all(partition%part(:) > 0))
-    
+
     ! Each process writes a portion of the partition
     if (ierr == 0) then
-      call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE) 
+      call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
       ! Only one rank per partition group should write the partition restart information
       ! Otherwise, more than once is trying to be written data
       if (mod(mpi_world%rank, mpi_world%size/partition%mpi_grp%size) == 0) then
         call io_binary_write_parallel(full_filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
-             partition%np_local, partition%part, err)
+          partition%np_local, partition%part, err)
         call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_WRITE)
         if (err /= 0) ierr = ierr + 2
       end if
@@ -211,7 +211,7 @@ contains
       SAFE_ALLOCATE(part_global(1:1))
     end if
     call partition_get_global(partition, part_global, 0)
-    
+
     !Only the global root process writes. Otherwise, at least two
     !processes might be writing to the same file, the same data
     if (mpi_world%rank == 0) then
@@ -244,16 +244,16 @@ contains
     integer, allocatable :: part_global(:)
 #endif
     character(len=MAX_PATH_LEN) :: full_filename
-    
+
     PUSH_SUB(partition_load)
-    
+
     ierr = 0
     full_filename = trim(dir)//'/'//trim(filename)
-    
+
     ! This is a writing to avoid an optimization of gfortran with -O3
     write(message(1),'(a,i8)') "Info: number of points in the partition (in root process) =", size(partition%part)
     call messages_info(1)
-    
+
     ! Check if the file exists and has the proper size (only world root)
     if (mpi_world%rank == 0) then
       call io_binary_get_info(full_filename, np, file_size, err)
@@ -294,11 +294,11 @@ contains
 #ifdef HAVE_MPI2
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_FILE_READ)
     call io_binary_read_parallel(full_filename, partition%mpi_grp%comm, sdispls(partition%mpi_grp%rank+1)+1, &
-         partition%np_local, partition%part, err)
+      partition%np_local, partition%part, err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_FILE_READ)
     if (err /= 0) ierr = ierr + 4
 #else
-     ! The global partition is only read by the root node
+    ! The global partition is only read by the root node
     if (partition%mpi_grp%rank == 0) then
       SAFE_ALLOCATE(part_global(1:partition%np_global))
       call io_binary_read(full_filename, partition%np_global, part_global, err)
@@ -323,8 +323,8 @@ contains
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_SCATTERV)
       call MPI_Scatterv(part_global(1), scounts(1), sdispls(1), MPI_INTEGER, &
-                        partition%part(1), partition%np_local, MPI_INTEGER,  &
-                        0, partition%mpi_grp%comm, mpi_err)
+        partition%part(1), partition%np_local, MPI_INTEGER,  &
+        0, partition%mpi_grp%comm, mpi_err)
       call mpi_debug_out(partition%mpi_grp%comm, C_MPI_SCATTERV)
 #endif
     end if
@@ -350,7 +350,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine partition_get_local_size(partition, istart, np_local)
-    type(partition_t), intent(in)  :: partition    
+    type(partition_t), intent(in)  :: partition
     integer,           intent(out) :: istart   !< The number of points of the partition stored in this process.
     integer,           intent(out) :: np_local !< The position of the first point stored in this process.
 
@@ -391,16 +391,16 @@ contains
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_GATHERV)
       call MPI_Gatherv(partition%part(1), partition%np_local, MPI_INTEGER, &
-           part_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
-           root, partition%mpi_grp%comm, mpi_err)
-      call mpi_debug_out(partition%mpi_grp%comm, C_MPI_GATHERV)      
+        part_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
+        root, partition%mpi_grp%comm, mpi_err)
+      call mpi_debug_out(partition%mpi_grp%comm, C_MPI_GATHERV)
 #endif
     else
 #ifdef HAVE_MPI
       call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLGATHERV)
       call MPI_Allgatherv(partition%part(1), partition%np_local, MPI_INTEGER, &
-           part_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
-           partition%mpi_grp%comm, mpi_err)
+        part_global(1), rcounts(1), rdispls(1), MPI_INTEGER, &
+        partition%mpi_grp%comm, mpi_err)
       call mpi_debug_out(partition%mpi_grp%comm, C_MPI_GATHERV)
 #endif
     end if
@@ -462,8 +462,8 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALL)
     call MPI_Alltoall(scounts(1), 1, MPI_INTEGER, &
-                      rcounts(1), 1, MPI_INTEGER, &
-                      partition%mpi_grp%comm, mpi_err)
+      rcounts(1), 1, MPI_INTEGER, &
+      partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALL)
 #endif
 
@@ -509,11 +509,11 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
-                       rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
-                       partition%mpi_grp%comm, mpi_err)
+      rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
+      partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
-   
+
     !We get the partition number from the global index. This will be send back.
     do ip = 1, rnp
       if (rbuffer(ip) == 0) cycle
@@ -522,12 +522,12 @@ contains
 #ifdef HAVE_MPI
     !Barrier to ensure that a deadlock is not possible
     call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    
+
     !Now we send the information backwards
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
-                       sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
-                       partition%mpi_grp%comm, mpi_err)
+      sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
+      partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
 
@@ -554,7 +554,7 @@ contains
   subroutine partition_get_np_local(partition, np_local_vec)
     type(partition_t),    intent(in)  :: partition       !< Current partition
     integer, pointer,     intent(inout) :: np_local_vec(:) !< Vector of local points (np_local)
-    
+
     integer, pointer :: np_local_vec_tmp(:)
     integer :: ip
 
@@ -574,7 +574,7 @@ contains
     ! Collect all the local points
 #ifdef HAVE_MPI
     call MPI_Allreduce(np_local_vec_tmp, np_local_vec, partition%npart, &
-         MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
+      MPI_INTEGER, MPI_SUM, partition%mpi_grp%comm, mpi_err)
 #endif
     SAFE_DEALLOCATE_P(np_local_vec_tmp)
 
@@ -588,7 +588,7 @@ contains
     type(partition_t), intent(in) :: partition
     npart = partition%npart
   end function partition_get_npart
-  
+
   !---------------------------------------------------------
   !> Returns the partition of the local point
   pure integer function partition_get_part(partition, local_point) result(part)
@@ -596,7 +596,7 @@ contains
     integer,           intent(in) :: local_point
     part = partition%part(local_point)
   end function partition_get_part
-  
+
   !---------------------------------------------------------
   !> Calculates the local vector of all partitions in parallel.
   !! Local vector stores the global point indices that each partition
@@ -608,13 +608,13 @@ contains
 
     integer :: ip, ipart, istart
     integer, allocatable :: sdispls(:), scounts(:), rcounts(:), rdispls(:), sbuffer(:)
-    
+
     PUSH_SUB(partition_get_local)
-    
+
     SAFE_ALLOCATE(sdispls(1:partition%npart))
     SAFE_ALLOCATE(scounts(1:partition%npart))
     SAFE_ALLOCATE(rcounts(1:partition%npart))
-    
+
     ! Calculate the starting point of the running process
     scounts(1:partition%remainder) = partition%nppp + 1
     scounts(partition%remainder + 1:partition%npart) = partition%nppp
@@ -623,7 +623,7 @@ contains
       sdispls(ipart) = sdispls(ipart-1) + scounts(ipart-1)
     end do
     istart = sdispls(partition%mpi_grp%rank + 1)
-    
+
     scounts = 0
     ! Count and store the local points for each partition
     do ip = 1, partition%np_local
@@ -646,13 +646,13 @@ contains
       scounts(ipart) = scounts(ipart) + 1
       sbuffer(sdispls(ipart) + scounts(ipart)) = ip + istart
     end do
-        
+
     ! Tell each process how many points we will need from it
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALL)
     call MPI_Alltoall(scounts(1), 1, MPI_INTEGER, &
-                      rcounts(1), 1, MPI_INTEGER, &
-                      partition%mpi_grp%comm, mpi_err)
+      rcounts(1), 1, MPI_INTEGER, &
+      partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALL)
 #endif
 
@@ -670,11 +670,11 @@ contains
 #ifdef HAVE_MPI
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(sbuffer, scounts(1), sdispls(1), MPI_INTEGER, &
-                       rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
-                       partition%mpi_grp%comm, mpi_err)
+      rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &
+      partition%mpi_grp%comm, mpi_err)
     call mpi_debug_out(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
 #endif
-  
+
     SAFE_DEALLOCATE_A(sdispls)
     SAFE_DEALLOCATE_A(scounts)
     SAFE_DEALLOCATE_A(sbuffer)

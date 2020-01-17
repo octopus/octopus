@@ -71,7 +71,7 @@ module poisson_cutoff_oct_m
     module procedure poisson_cutoff_intcoslog4
   end interface poisson_cutoff_intcoslog
 
-  
+
 contains
 
 
@@ -145,7 +145,7 @@ contains
 
   end function poisson_cutoff_3d_1d_finite4
   ! ---------------------------------------------------------
-  
+
 
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_3D_0D(x, r) result(cutoff)

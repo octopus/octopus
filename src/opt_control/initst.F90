@@ -49,7 +49,7 @@ module initst_oct_m
     oct_is_groundstate      = 1,      &
     oct_is_excited          = 2,      &
     oct_is_gstransformation = 3,      &
-    oct_is_userdefined      = 4         
+    oct_is_userdefined      = 4
 
 
 contains
@@ -61,7 +61,7 @@ contains
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
-                         no_states, istype, freeze_orbitals
+      no_states, istype, freeze_orbitals
     type(block_t)     :: blk
     FLOAT             :: xx(MAX_DIM), rr, psi_re, psi_im
     type(restart_t) :: restart
@@ -94,10 +94,10 @@ contains
     !% Start in a user-defined state.
     !%End
     call parse_variable(sys%namespace, 'OCTInitialState', oct_is_groundstate, istype)
-    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')
 
     select case(istype)
-    case(oct_is_groundstate) 
+    case(oct_is_groundstate)
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
       call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
@@ -108,13 +108,13 @@ contains
       end if
       call restart_end(restart)
 
-    case(oct_is_excited)  
+    case(oct_is_excited)
       message(1) = 'Using an excited state as the starting state for an '
       message(2) = 'optimal-control run is not possible yet.'
       message(3) = 'Try using "OCTInitialState = oct_is_transformation" instead.'
       call messages_fatal(3)
 
-    case(oct_is_gstransformation)   
+    case(oct_is_gstransformation)
       message(1) =  'Info: Using superposition of states for initial state.'
       call messages_info(1)
 
@@ -127,7 +127,7 @@ contains
       !% <tt>OCTInitialTransformStates</tt> block, in order to specify which linear
       !% combination of the states present in <tt>restart/gs</tt> is used to
       !% create the initial state.
-      !% 
+      !%
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
 
@@ -142,14 +142,14 @@ contains
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)
       end if
-      
+
       call transform_states(psi, sys%namespace, restart, sys%gr, prefix = "OCTInitial")
       call restart_end(restart)
 
-    case(oct_is_userdefined) 
+    case(oct_is_userdefined)
       message(1) =  'Info: Building user-defined initial state.'
       call messages_info(1)
-      
+
       !%Variable OCTInitialUserdefined
       !%Type block
       !%Section Calculation Modes::Optimal Control
@@ -160,12 +160,12 @@ contains
       !% <tt>%OCTInitialUserdefined
       !% <br>&nbsp;&nbsp; 1 | 1 | 1 |  "exp(-r^2)*exp(-i*0.2*x)"
       !% <br>%</tt>
-      !%  
+      !%
       !%End
       if(parse_block(sys%namespace, 'OCTInitialUserdefined', blk) == 0) then
 
         SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np, 1:psi%d%dim))
-        
+
         no_states = parse_block_n(blk)
         do ib = 1, no_states
           call parse_block_integer(blk, ib - 1, 0, idim)
@@ -175,22 +175,22 @@ contains
           ! read formula strings and convert to C strings
           do id = 1, psi%d%dim
             do is = 1, psi%nst
-              do ik = 1, psi%d%nik   
-                
+              do ik = 1, psi%d%nik
+
                 ! does the block entry match and is this node responsible?
                 if(.not. (id  ==  idim .and. is  ==  inst .and. ik  ==  inik    &
                   .and. psi%st_start  <=  is .and. psi%st_end >= is) ) cycle
-                
+
                 ! parse formula string
                 call parse_block_string(                            &
                   blk, ib - 1, 3, psi%user_def_states(id, is, ik))
                 ! convert to C string
                 call conv_to_C_string(psi%user_def_states(id, is, ik))
-                
+
                 do ip = 1, sys%gr%mesh%np
                   xx = sys%gr%mesh%x(ip, :)
                   rr = sqrt(sum(xx(:)**2))
-                  
+
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
@@ -215,7 +215,7 @@ contains
         message(1) = '"OCTInitialUserdefined" has to be specified as block.'
         call messages_fatal(1)
       end if
-      
+
     case default
       write(message(1),'(a)') "No valid initial state defined."
       write(message(2),'(a)') "Choosing the ground state."
@@ -247,7 +247,7 @@ contains
       call density_calc(psi, sys%gr, psi%rho)
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     end if
-    
+
     POP_SUB(initial_state_init)
   end subroutine initial_state_init
 

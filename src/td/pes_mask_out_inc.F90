@@ -18,60 +18,60 @@
 
 
 
-! This needed in order to flip the sign of each Kpoit and 
-! still preserve an array ordering on the kpoint mesh 
-! such that the lowest index touple is associated with the smaller 
+! This needed in order to flip the sign of each Kpoit and
+! still preserve an array ordering on the kpoint mesh
+! such that the lowest index touple is associated with the smaller
 ! (negative) kpoint value.
 subroutine flip_sign_Lkpt_idx( dim, nk, idx)
-   integer, intent(out) :: idx(:,:)
-   integer, intent(in)  :: dim, nk(:)
+  integer, intent(out) :: idx(:,:)
+  integer, intent(in)  :: dim, nk(:)
 
-   integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
-   integer :: idir, ii
+  integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
+  integer :: idir, ii
 
-   PUSH_SUB(flip_sign_Lkpt_idx)
-   
-   
-   idx(:,:) = 1
-   do idir = 1, dim
-     ! fill it with the range 1:nk
-     do ii = 1, nk(idir)
-       idx_tmp(ii,idir) = ii
-     end do
-    
-     
-     do ii = 1, nk(idir)
-       idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
-     end do
-     
+  PUSH_SUB(flip_sign_Lkpt_idx)
+
+
+  idx(:,:) = 1
+  do idir = 1, dim
+    ! fill it with the range 1:nk
+    do ii = 1, nk(idir)
+      idx_tmp(ii,idir) = ii
+    end do
+
+
+    do ii = 1, nk(idir)
+      idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1
+    end do
+
 !          do ii=1, nk(idir)
 !            print *,idir, ii, "idx = ", idx(ii,idir),"idx_tmp =", idx_tmp(ii,idir),mod(nk(idir),2)
 !          end do
-   end do
-   
-   
-   POP_SUB(flip_sign_Lkpt_idx)      
+  end do
+
+
+  POP_SUB(flip_sign_Lkpt_idx)
 end subroutine flip_sign_Lkpt_idx
 
-!< Generate the momentum-space mesh (p) and the arrays mapping the 
+!< Generate the momentum-space mesh (p) and the arrays mapping the
 !< the mask and the kpoint meshes in p.
 subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
+  type(kpoints_t),   intent(inout) :: kpoints
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the mask-mesh
-  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the mask-mesh points  
+  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the mask-mesh points
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
-                                                        !< in the final mesh in momentum space "p" combining the 
-  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
+  !< in the final mesh in momentum space "p" combining the
+  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates
 
-  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path 
-                                                        !< mask-mesh with kpoints. 
-  integer,  dimension(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3), intent(inout) :: Lp  
-                                                        !< maps a mask-mesh triplet of indices together with a kpoint 
-                                                        !< index into a triplet on the combined momentum space mesh.
+  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path
+  !< mask-mesh with kpoints.
+  integer,  dimension(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3), intent(inout) :: Lp
+  !< maps a mask-mesh triplet of indices together with a kpoint
+  !< index into a triplet on the combined momentum space mesh.
 
-   
+
 
 
   integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
@@ -85,40 +85,40 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
 
 
   PUSH_SUB(pes_mask_pmesh)
-        
-        
+
+
   nkpt = krng(2) - krng(1) + 1
 
   SAFE_ALLOCATE(Lkpt(krng(1):krng(2),1:3))
-      
-  nk(:) = 1  
+
+  nk(:) = 1
   nk(1:dim) = kpoints%nik_axis(1:dim)
 
   Lkpt(:,:) = 1
   kpt(:) = M_ZERO
-      
-  zero_thr = M_EPSILON    
-      
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
-    ! supporting paths only along the kx and ky directions in 
+
+  zero_thr = M_EPSILON
+
+  if ( kpoints_have_zero_weight_path(kpoints)) then
+    ! supporting paths only along the kx and ky directions in
     ! reciprocal space
-    kpth_dir = -1 
+    kpth_dir = -1
     if (size(pmesh, 1) > ll(1)) kpth_dir = 1
     if (size(pmesh, 2) > ll(2)) kpth_dir = 2
     ASSERT (kpth_dir /= -1 )
-    
-    nk(:) = 1  
+
+    nk(:) = 1
     nk(kpth_dir) = nkpt
     do ik = 1 , nkpt
       Lkpt(krng(1)+ik-1,kpth_dir) = ik
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1)
     end do
-        
-  else  
-    
+
+  else
+
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-           kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  &
-           Lkpt(:,1:dim))
+      kpoints%full%shifts(1:dim,1:kpoints%full%nshifts), kpoints%full%red_point,  &
+      Lkpt(:,1:dim))
 
 !       do ik = 1, kpoints_number(kpoints)
 !         kpt(1:sb%dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
@@ -130,7 +130,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
 
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:))
-  
+
   if (debug%info) then
     print *,"reordered"
     do ik = krng(1),krng(2)
@@ -142,9 +142,9 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
     print *,"ll(:)", ll(:)
     print *,"----"
   end if
-  
+
   ! We want the results to be sorted on a cube i,j,k
-  ! with the first triplet associated with the smallest positions 
+  ! with the first triplet associated with the smallest positions
   SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
   SAFE_ALLOCATE(idx_inv(1:maxval(ll(:)), 1:3))
   SAFE_ALLOCATE(LG_(1:maxval(ll(:)), 1:3))
@@ -152,29 +152,29 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   idx_inv(:,:)=1
   do idir = 1, dim
     LG_(:,idir) = LG(:,idir)
-    call sort(LG_(1:ll(idir), idir), idx(1:ll(idir), idir)) 
+    call sort(LG_(1:ll(idir), idir), idx(1:ll(idir), idir))
     idx_inv(:,idir) = idx(:,idir)
     call sort(idx(1:ll(idir),idir),idx_inv(1:ll(idir),idir))
-  end do  
-  
+  end do
+
   if(debug%info) then
     do idir=1, dim
-      print *, "*** direction =", idir  
+      print *, "*** direction =", idir
       do j1 = 1, ll(idir)
         print *,j1, "LG = ",LG(j1,idir),"LG_ = ",LG_(j1,idir), "idx = ", idx(j1,idir), "idx_inv = ", idx_inv(j1,idir)
       end do
-      print *, "*** *** ***"  
+      print *, "*** *** ***"
     end do
   end if
 
-  pmesh(:, :, :, :) = M_HUGE      
-  pmesh(:, :, :, dim+1) = M_ZERO   
-  Lp(:,:,:,:,:) = 0   
+  pmesh(:, :, :, :) = M_HUGE
+  pmesh(:, :, :, dim+1) = M_ZERO
+  Lp(:,:,:,:,:) = 0
   err = -1
-  
+
   ! Generate the p-space mesh and populate Lp.
-  ! The grid is filled combining G-points and K-points according to the following sketch: 
-  ! 
+  ! The grid is filled combining G-points and K-points according to the following sketch:
+  !
   !          x        x        x
   !
   !       o  o  o
@@ -182,35 +182,35 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   !       o  o  o
   !
   !       (G = x and Kpt = o)
-  ! 
-  ! The grid represents the final momentum p = G + Kpt. 
-  ! The lower left corner correspond to the minimum value of p and the lowest 
-  ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
+  !
+  ! The grid represents the final momentum p = G + Kpt.
+  ! The lower left corner correspond to the minimum value of p and the lowest
+  ! index-touple value (ip1,ip2,ip3) = (1,1,1).
   do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
-    do j1 = 1, ll(1) 
-      do j2 = 1, ll(2) 
-        do j3 = 1, ll(3) 
+    kpt(1:dim) = kpoints_get_point(kpoints, ik)
+    do j1 = 1, ll(1)
+      do j2 = 1, ll(2)
+        do j3 = 1, ll(3)
 
           GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
-          
+
           ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1)
           ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2)
           ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
-          
+
           Lp(idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,1:3) =  (/ip1,ip2,ip3/)
-          
-          ! The final momentum corresponds to p = G - K. 
-          ! This is due to the convention for the sign of the Bloch phase associated to 
-          ! each kpoint subspace in hamilonian_update wich is exp(-i K*r) instead of the 
-          ! most commonly used (in textbooks) exp(i K*r). 
-          ! Thus in order to solve the propagation equations only for the periodic part 
-          ! of each KS orbital u_K(r) I nees to project on plane waves with <p|=<G-K|. 
-          ! Note: in order to preserve the correct ordering of the final mesh in p 
+
+          ! The final momentum corresponds to p = G - K.
+          ! This is due to the convention for the sign of the Bloch phase associated to
+          ! each kpoint subspace in hamilonian_update wich is exp(-i K*r) instead of the
+          ! most commonly used (in textbooks) exp(i K*r).
+          ! Thus in order to solve the propagation equations only for the periodic part
+          ! of each KS orbital u_K(r) I nees to project on plane waves with <p|=<G-K|.
+          ! Note: in order to preserve the correct ordering of the final mesh in p
           ! we remap each kpoint grid-index with ikidx(:,1:3).
           pmesh(ip1, ip2, ip3, 1:dim) = GG(1:dim) - kpt(1:dim)
-          pmesh(ip1, ip2, ip3, dim+1) = pmesh(ip1, ip2, ip3, dim+1) + 1 
-          
+          pmesh(ip1, ip2, ip3, dim+1) = pmesh(ip1, ip2, ip3, dim+1) + 1
+
 !               print *,idx_inv(j1,1),idx_inv(j2,2),idx_inv(j3,3),ik,"  Lp(i1,i2,i3,ik,1:dim) = ",  (/ip1,ip2,ip3/)
 !               print *, "pmesh = ",pmesh(ip1, ip2, ip3, :) !,"  GG = ",  GG (1:dim), "  kpt = ", kpt(1:dim)
 
@@ -218,56 +218,56 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
 
           ! Sanity checks
           if (sum(pmesh(ip1, ip2, ip3, 1:dim)**2)<=zero_thr) then
-            err = err + 1 
-            !Find the indices identifying the center of the coordinates 
+            err = err + 1
+            !Find the indices identifying the center of the coordinates
             idxZero(1:3) = (/ip1,ip2,ip3/)
           end if
-          
+
           if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
-            err = -2 
+            err = -2
           end if
 
 
-        end do 
-      end do 
+        end do
+      end do
 !           print *,idx_inv(j1,1),ik,"  Lp(i1,ll(2),ll(3),ik,1) = ", ip1, "pmesh = ",pmesh(ip1, ip2, ip3, 1)
 
-    end do 
+    end do
   end do
-  
+
 !       do ip1 = 1, ll(1) * nk(1)
 !         print *,ip1, "Pmesh", pmesh(ip1, 1, 1, 1)
 !       end do
 
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
-  ! With a path we just need to get the correct the zero index on the in-plane direction  
-  ! perpendicular to the path since is along this direction that we are going 
-  ! to slice with pes_mask_output_full_mapM_cut. Since on this direction we only 
-  ! have G points I simply need to look for the zero index of the G-grid.
-  ! Note that the G-grid must always include the (0,0,0) point. 
-    do j1 = 1, ll(1) 
-      do j2 = 1, ll(2) 
-        do j3 = 1, ll(3) 
+  if ( kpoints_have_zero_weight_path(kpoints)) then
+    ! With a path we just need to get the correct the zero index on the in-plane direction
+    ! perpendicular to the path since is along this direction that we are going
+    ! to slice with pes_mask_output_full_mapM_cut. Since on this direction we only
+    ! have G points I simply need to look for the zero index of the G-grid.
+    ! Note that the G-grid must always include the (0,0,0) point.
+    do j1 = 1, ll(1)
+      do j2 = 1, ll(2)
+        do j3 = 1, ll(3)
 
           GG(1:3)= (/LG_(j1,1),LG_(j2,2),LG_(j3,3)/)
           if (sum(GG(1:3)**2)<=M_EPSILON) idxZero(1:3) = (/j1,j2,j3/)
-        
+
         end do
       end do
     end do
-    
-  else   
-    
+
+  else
+
     if (err == -1) then
       call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
       call messages_fatal(namespace=namespace)
-    end if 
+    end if
 
     if (err > 1) then
       call messages_write('Illformed momentum-space mesh: more than one point with p = 0 coordinate.')
       call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
       call messages_warning(namespace=namespace)
-    end if 
+    end if
 
   end if
 
@@ -279,18 +279,18 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   if (err == -2) then
     call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
     call messages_fatal(namespace=namespace)
-  end if 
-  
- 
- 
+  end if
+
+
+
 
   SAFE_DEALLOCATE_A(Lkpt)
   SAFE_DEALLOCATE_A(idx)
   SAFE_DEALLOCATE_A(idx_inv)
-  SAFE_DEALLOCATE_A(ikidx)      
+  SAFE_DEALLOCATE_A(ikidx)
   SAFE_DEALLOCATE_A(LG_)
-  
-  
+
+
   POP_SUB(pes_mask_pmesh)
 end subroutine pes_mask_pmesh
 
@@ -301,15 +301,15 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
   type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesK(:,:,:,:)
-  integer,           intent(in)  :: krng(:) 
+  integer,           intent(in)  :: krng(:)
   integer,  dimension(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3), intent(in) :: Lp
-  integer, optional, intent(in)  :: istin 
-  
+  integer, optional, intent(in)  :: istin
+
   integer :: ik, ist, idim, itot, nkpt, ispin
   integer :: i1, i2, i3, ip(1:3)
   integer :: idone, ntodo
   CMPLX   :: psiG1(1:ll(1),1:ll(2),1:ll(3)), psiG2(1:ll(1),1:ll(2),1:ll(3))
-  FLOAT   :: weight 
+  FLOAT   :: weight
   integer :: istart, iend, nst
 
   PUSH_SUB(pes_mask_map_from_states)
@@ -325,14 +325,14 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
 
   nkpt =  krng(2)-krng(1)+1
 !       ntodo = st%d%kpt%nglobal * st%nst * st%d%dim
-  ntodo = nkpt * nst 
-  idone = 0 
+  ntodo = nkpt * nst
+  idone = 0
   call loct_progress_bar(-1, ntodo)
-  
+
   pesK = M_ZERO
   do ik = krng(1), krng(2)
     ispin = states_elec_dim_get_spin_index(st%d, ik)
-    
+
     do ist = istart, iend
 
       if (st%d%kweights(ik) < M_EPSILON) then
@@ -341,25 +341,25 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
       else
         weight = st%occ(ist, ik) * st%d%kweights(ik)
       end if
-      
-      if(st%d%ispin /= SPINORS) then 
+
+      if(st%d%ispin /= SPINORS) then
 
         do idim = 1, st%d%dim
           itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
           call pes_mask_map_from_state(restart, itot, ll, psiG1)
-        
+
           do i1=1, ll(1)
             do i2=1, ll(2)
               do i3=1, ll(3)
-                ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-              
-                  pesK(ip(1),ip(2),ip(3), ispin) = pesK(ip(1),ip(2),ip(3), ispin) &
-                                                 + abs(psiG1(i1,i2,i3))**2 * weight 
-                
+                ip(1:3) = Lp(i1, i2, i3, ik, 1:3)
+
+                pesK(ip(1),ip(2),ip(3), ispin) = pesK(ip(1),ip(2),ip(3), ispin) &
+                  + abs(psiG1(i1,i2,i3))**2 * weight
+
               end do
             end do
           end do
-                
+
         end do
       else ! SPINORS
         idim = 1
@@ -368,33 +368,33 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
         idim = 2
         itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
         call pes_mask_map_from_state(restart, itot, ll, psiG2)
-            
+
         do i1=1, ll(1)
           do i2=1, ll(2)
             do i3=1, ll(3)
-              ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-            
-                pesK(ip(1),ip(2),ip(3), 1) = pesK(ip(1),ip(2),ip(3), 1) &
-                                               + abs(psiG1(i1,i2,i3))**2 * weight 
+              ip(1:3) = Lp(i1, i2, i3, ik, 1:3)
 
-                pesK(ip(1),ip(2),ip(3), 2) = pesK(ip(1),ip(2),ip(3), 2) &
-                                               + abs(psiG2(i1,i2,i3))**2 * weight
+              pesK(ip(1),ip(2),ip(3), 1) = pesK(ip(1),ip(2),ip(3), 1) &
+                + abs(psiG1(i1,i2,i3))**2 * weight
 
-                pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
-                                               + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
-                                               
-                pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
-                                               + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
+              pesK(ip(1),ip(2),ip(3), 2) = pesK(ip(1),ip(2),ip(3), 2) &
+                + abs(psiG2(i1,i2,i3))**2 * weight
+
+              pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
+                + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
+
+              pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
+                + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
             end do
           end do
         end do
-          
-          
+
+
       end if
-      
-      idone = idone +1 
+
+      idone = idone +1
       call loct_progress_bar(idone, ntodo)
-      
+
     end do
   end do
 
@@ -411,19 +411,19 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
   character(len=80) :: filename
-  integer ::  np, err, iunit 
+  integer ::  np, err, iunit
   character(len=128) :: lines(2)
 
   PUSH_SUB(pes_mask_map_from_state)
 
   psiG = M_Z0
   np = product(ll(:))
-  
+
   write(filename,'(a,i10.10)') 'pes_', idx
 
   call zrestart_read_binary(restart, filename, np, psiG(:,:,:), err)
 
-  POP_SUB(pes_mask_map_from_state)  
+  POP_SUB(pes_mask_map_from_state)
 end subroutine pes_mask_map_from_state
 
 
@@ -445,27 +445,27 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   type(unit_t) :: fn_unit
 
   CMPLX, allocatable :: PsiAB(:,:,:,:), psi(:)
-  FLOAT,allocatable :: RhoAB(:,:) 
+  FLOAT,allocatable :: RhoAB(:,:)
   type(cube_function_t) :: cf
-  type(mesh_t):: mesh   
-  
+  type(mesh_t):: mesh
+
   type(wfs_elec_t)        :: psib
   type(density_calc_t) :: dens_calc
 
   PUSH_SUB(pes_mask_output_states)
-  
+
   mesh= gr%mesh
 
   SAFE_ALLOCATE(PsiAB(1:mesh%np_part, 1:st%d%dim,1:st%nst,1:st%d%nik))
   SAFE_ALLOCATE(RhoAB(1:mesh%np_part, 1:st%d%nspin))
   SAFE_ALLOCATE(psi(1:mesh%np_part))
 
-  call cube_function_null(cf)    
+  call cube_function_null(cf)
   call zcube_function_alloc_RS(mask%cube, cf, force_alloc = .true.)
 
   RhoAB= M_ZERO
-  
-  !Calculate the pes density \Psi_A + \Psi_B on the simulation Box  
+
+  !Calculate the pes density \Psi_A + \Psi_B on the simulation Box
   call density_calc_init(dens_calc, st, gr, RhoAB)
 
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -476,26 +476,26 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
         call pes_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
 
-        call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
+        call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))
 
         call states_elec_get_state(st, gr%mesh, idim, ist, ik, psi)
 
-        if (mask%mode /= PES_MASK_MODE_PASSIVE) then 
+        if (mask%mode /= PES_MASK_MODE_PASSIVE) then
           PsiAB(:, idim, ist, ik) = PsiAB(:, idim, ist, ik) + psi(:)
         end if
-        
+
       end do
     end do
-     
+
     call wfs_elec_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik), ik)
     call density_calc_accumulate(dens_calc, psib)
     call psib%end()
 
   end do
-  
+
   call density_calc_end(dens_calc)
 
-  ! THE OUTPUT 
+  ! THE OUTPUT
   if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     do is = 1, st%d%nspin
@@ -514,28 +514,28 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do idim = 1, st%d%dim
-            if(st%d%nik > 1) then
-              if(st%d%dim > 1) then
-                write(fname, '(a,i3.3,a,i4.4,a,i1)') 'pes_wf-k', ik, '-st', ist, '-sd', idim
-              else
-                write(fname, '(a,i3.3,a,i4.4)')      'pes_wf-k', ik, '-st', ist
-              end if
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do idim = 1, st%d%dim
+          if(st%d%nik > 1) then
+            if(st%d%dim > 1) then
+              write(fname, '(a,i3.3,a,i4.4,a,i1)') 'pes_wf-k', ik, '-st', ist, '-sd', idim
             else
-              if(st%d%dim > 1) then
-                write(fname, '(a,i4.4,a,i1)')        'pes_wf-st', ist, '-sd', idim
-              else
-                write(fname, '(a,i4.4)')             'pes_wf-st', ist
-              end if
+              write(fname, '(a,i3.3,a,i4.4)')      'pes_wf-k', ik, '-st', ist
             end if
-              
-            call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, &
-              PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
+          else
+            if(st%d%dim > 1) then
+              write(fname, '(a,i4.4,a,i1)')        'pes_wf-st', ist, '-sd', idim
+            else
+              write(fname, '(a,i4.4)')             'pes_wf-st', ist
+            end if
+          end if
 
-          end do
+          call zio_function_output(outp%how, dir, fname, namespace, gr%mesh, &
+            PsiAB(1:, idim, ist, ik), fn_unit, ierr, geo = geo)
+
         end do
- !       end if
+      end do
+      !       end if
     end do
   end if
 
@@ -553,13 +553,13 @@ end subroutine pes_mask_output_states
 !
 !> Calculates the momentum-resolved photoelectron probability
 !!\f[
-!!            P(k) = \sum_i |\Psi_{B,i}(k)|^2 
+!!            P(k) = \sum_i |\Psi_{B,i}(k)|^2
 !!\f]
 ! ---------------------------------------------------------
 subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
   type(pes_mask_t),    intent(in)  :: mask
   type(states_elec_t), intent(in)  :: st
-  integer,             intent(in)  :: ik  
+  integer,             intent(in)  :: ik
   FLOAT, target,       intent(out) :: pesK(:,:,:)
   CMPLX, optional,     intent(in)  :: wfAk(:,:,:,:,:,:)
 
@@ -574,7 +574,7 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
   if (mask%cube%parallel_in_domains) then
     SAFE_ALLOCATE(pesKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3)))
     pesKloc = M_ZERO
-  else 
+  else
     pesKloc => pesK
   end if
 
@@ -590,7 +590,7 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
           else
             pesKloc(kx, ky, kz) = pesKloc(kx, ky, kz) + st%occ(ist, ik) * sum(abs(mask%k(kx, ky, kz, :, ist, ik)  )**2)
           end if
-      
+
         end do
       end do
     end do
@@ -606,50 +606,50 @@ subroutine pes_mask_fullmap(mask, st, ik, pesK, wfAk)
     call comm_allreduce(st%mpi_grp%comm, pesKloc)
   end if
 
-  
+
   if (mask%cube%parallel_in_domains) then
 
     call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
-    
+
 !     if(mask%pw_map_how .eq. PW_MAP_PFFT) then
-!       call dcube_function_allgather(mask%cube, pesK, pesKloc, & 
+!       call dcube_function_allgather(mask%cube, pesK, pesKloc, &
 !                                     order = (/2,3,1/))
-! 
+!
 !     else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
-!       
-!       
+!
+!
 ! !       pesK(mask%fs_istart(1):mask%fs_istart(1)+mask%ll(1)-1, &
 ! !            mask%fs_istart(2):mask%fs_istart(2)+mask%ll(2)-1, &
 ! !            mask%fs_istart(3):mask%fs_istart(3)+mask%ll(3)-1) = &
 ! !         pesKloc(1:mask%ll(1),1:mask%ll(2),1:mask%ll(3))
-! !       
+! !
 ! !       write(file, '(i3.3)') mpi_world%rank
 ! !       file = "fullmap_"//trim(file)
 ! !       print *,"write file: ",file
 ! !       call pes_mask_dump_full_mapM(pesK, file, mask%Lk)
-! 
-! 
-!       
+!
+!
+!
 !       call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
 ! !                                     order = (/1,3,2/))
 ! !     else
 ! !       call dcube_function_allgather(mask%cube, pesK, pesKloc)
-!       
+!
 !     end if
-    
+
 !     call dcube_function_allgather(mask%cube, pesK, pesKloc, gatherfs = .true.)
 
-    SAFE_DEALLOCATE_P(pesKloc) 
+    SAFE_DEALLOCATE_P(pesKloc)
   end if
 
-  ! This is needed in order to normalize the Fourier integral 
-  ! since along the periodi dimensions the discrete Fourier transform is 
+  ! This is needed in order to normalize the Fourier integral
+  ! since along the periodi dimensions the discrete Fourier transform is
   ! exact we need to renormalize only along the non periodic ones
   scale = M_ONE
   do idim= mask%mesh%sb%periodic_dim + 1, mask%mesh%sb%dim
     scale = scale *( mask%spacing(idim)/sqrt(M_TWO*M_PI))**2
   end do
-  pesK = pesK *scale 
+  pesK = pesK *scale
 
   POP_SUB(pes_mask_fullmap)
 end subroutine pes_mask_fullmap
@@ -669,8 +669,8 @@ subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, inte
   integer,           intent(in)    :: dim
   FLOAT, pointer,    intent(inout) :: cube_f(:)
   type(qshep_t),     intent(out)   :: interp
-  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)  
-  
+  FLOAT, optional,   intent(in)    :: pmesh(:,:,:,:)
+
   integer :: np, ii, ix, iy, iz
   FLOAT   :: KK(3)
   FLOAT, allocatable ::  kx(:),ky(:),kz(:)
@@ -679,16 +679,16 @@ subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, inte
 
 
   call messages_write("Initializing Qshep interpolator. Be patient it may take a while... ")
-  call messages_info()  
-  
-  np = ll(1)*ll(2)*ll(3)  
+  call messages_info()
+
+  np = ll(1)*ll(2)*ll(3)
 
   !check dim
   if (dim  <  2 .or. dim > 3) then
-    message(1) = "This interpolator works only for 2 <= dim <= 3." 
+    message(1) = "This interpolator works only for 2 <= dim <= 3."
     call messages_fatal(1, namespace=namespace)
   end if
-  
+
   SAFE_ALLOCATE(cube_f(1:np))
 
   SAFE_ALLOCATE(kx(1:np))
@@ -714,12 +714,12 @@ subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, inte
           kz(ii) = pmesh(ix,iy,iz,3)
 
           ii = ii +1
-        end do 
+        end do
       end do
-    end do 
-    
+    end do
+
   else
-    
+
     do ix = 1, ll(1)
       KK(1) = Lk(ix, 1)
       do iy = 1, ll(2)
@@ -734,27 +734,27 @@ subroutine pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, inte
           kz(ii) = KK(3)
 
           ii = ii +1
-        end do 
+        end do
       end do
-    end do 
-  end if  
+    end do
+  end if
 
 
   select case(dim)
-    case (2)
-      call qshep_init(interp, np, cube_f, kx, ky) 
-    case (3)
-      call qshep_init(interp, np, cube_f, kx, ky, kz) 
+  case (2)
+    call qshep_init(interp, np, cube_f, kx, ky)
+  case (3)
+    call qshep_init(interp, np, cube_f, kx, ky, kz)
   end select
- 
-  SAFE_DEALLOCATE_A(kx)    
-  SAFE_DEALLOCATE_A(ky)    
-  SAFE_DEALLOCATE_A(kz)    
- 
+
+  SAFE_DEALLOCATE_A(kx)
+  SAFE_DEALLOCATE_A(ky)
+  SAFE_DEALLOCATE_A(kz)
+
   call messages_write("done")
   call messages_new_line()
   call messages_info()
-  
+
 
   POP_SUB(pes_mask_interpolator_init)
 end subroutine pes_mask_interpolator_init
@@ -767,11 +767,11 @@ subroutine pes_mask_interpolator_end(cube_f, interp)
   type(qshep_t),  intent(inout) :: interp
 
   PUSH_SUB(pes_mask_interpolator_end)
-  
+
   call qshep_end(interp)
-  
+
   SAFE_DEALLOCATE_P(cube_f)
-  
+
   POP_SUB(pes_mask_interpolator_end)
 end subroutine pes_mask_interpolator_end
 
@@ -783,18 +783,18 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   FLOAT,             intent(in) :: Lk(:,:)
-  integer,           intent(in) :: ll(:)  
+  integer,           intent(in) :: ll(:)
   integer,           intent(in) :: how
-  type(simul_box_t), intent(in) :: sb 
-  FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
-  
+  type(simul_box_t), intent(in) :: sb
+  FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)
+
   integer :: iunit
   integer :: ierr
   character(len=512) :: filename
   type(cube_t) :: cube
   type(cube_function_t) :: cf
   integer :: ii
-  FLOAT :: dk(3)  
+  FLOAT :: dk(3)
 
   PUSH_SUB(pes_mask_output_full_mapM)
 
@@ -802,8 +802,8 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
   call cube_function_null(cf)
   call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
   cf%dRS = pesK
-  
-  
+
+
   if (.not. present(pmesh) ) then
     ! Ignore Lk and use pmesh
     dk(:) = M_ZERO
@@ -812,46 +812,46 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
       dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
     end do
   end if
-  
-#if defined(HAVE_NETCDF)  
-  
+
+#if defined(HAVE_NETCDF)
+
   if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
     filename = trim(file)//".ncdf"
     write(message(1), '(a)') 'Writing netcdf format file: '
     call messages_info(1)
-  
-    call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , & 
-          .false., sqrt(units_out%energy)**sb%dim)
+
+    call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , &
+      .false., sqrt(units_out%energy)**sb%dim)
 
   end if
 
 #endif
-  
+
   if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
     filename = trim(file)//".vtk"
     write(message(1), '(a)') 'Writing vtk format file: '
     call messages_info(1)
-    
-    if (present(pmesh)) then          
-      call dvtk_out_cf_structured(filename, namespace, 'PES_mapM', ierr, cf, cube,& 
+
+    if (present(pmesh)) then
+      call dvtk_out_cf_structured(filename, namespace, 'PES_mapM', ierr, cf, cube,&
         sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
-    else 
-      call dvtk_out_cf(filename, namespace, 'PES_mapM', ierr, cf, cube, dk(:),& 
+    else
+      call dvtk_out_cf(filename, namespace, 'PES_mapM', ierr, cf, cube, dk(:),&
         sqrt(units_out%energy)**sb%dim)
-    end if        
-      
+    end if
+
 !   else
 !     write(message(1), '(a)') 'Writing ASCII format file: '
 !     call messages_info(1)
 !     call out_ascii()
   end if
-  
+
   call cube_end(cube)
   call dcube_function_free_RS(cube, cf)
 
   POP_SUB(pes_mask_output_full_mapM)
-  
-contains  
+
+contains
 
 ! ---------------------------------------------------------
 ! Just dump the matrix in ascii form x,y,z, val. As the output
@@ -870,7 +870,7 @@ contains
 
     ll = 1
     do ii = 1, 3
-      ll(ii) = size(pesK,ii) 
+      ll(ii) = size(pesK,ii)
     end do
 
     do ix = 1, ll(1)
@@ -879,22 +879,22 @@ contains
         KK(2) = Lk(iy,2)
         do iz = 1, ll(3)
           KK(3) = Lk(iz,3)
- 
-            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
-                    units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                    units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                    units_from_atomic(sqrt(units_out%energy), KK(3)),&
-                    pesK(ix,iy,iz) 
- 
-          end do  
-        end do      
-      end do
 
-      call io_close(iunit)
-  
-      POP_SUB(pes_mask_output_full_mapM.out_ascii)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12)') &
+            units_from_atomic(sqrt(units_out%energy), KK(1)),&
+            units_from_atomic(sqrt(units_out%energy), KK(2)),&
+            units_from_atomic(sqrt(units_out%energy), KK(3)),&
+            pesK(ix,iy,iz)
+
+        end do
+      end do
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(pes_mask_output_full_mapM.out_ascii)
   end subroutine out_ascii
-  
+
 end subroutine pes_mask_output_full_mapM
 
 
@@ -929,104 +929,104 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
   type(qshep_t) :: interp
 
   PUSH_SUB(pes_mask_output_full_mapM_cut)
-  
+
   iunit = io_open(file, namespace, action='write')
 
 
-  
+
   ASSERT(size(pesK, 1) == ll(1))
 
   if (.not. present(pmesh)) then
     ASSERT(present(Lk))
-    
+
     SAFE_ALLOCATE(idx(1:maxval(ll(:)), 1:3))
     SAFE_ALLOCATE(Lk_(1:maxval(ll(:)), 1:3))
 
     Dk(:) = M_ZERO
     Dk(1:dim) = abs(Lk(2,1:dim)-Lk(1,1:dim))
-  
+
     do ii = 1, 3
       Lk_(:,ii) = Lk(:,ii)
       call sort(Lk_(1:ll(ii), ii), idx(1:ll(ii), ii)) !We need to sort the k-vectors in order to dump in gnuplot format
-    end do  
+    end do
   end if
-  
+
   aligned_axis = sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON  .or. &
-                 sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
-                 sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON  
-  
+    sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
+    sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON
+
   if (present(pos)) then
-    icut(1:3) = pos(1:3) 
+    icut(1:3) = pos(1:3)
   else
     icut(1:3) = ll(1:3)/2 + 1
   end if
-  
+
   if (aligned_axis .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
-    
+
     select case (dir)
-      case (1)
-        ldir(:) =(/2,3/)
-      case (2)
-        ldir(:) =(/1,3/)
-      case (3)
-        ldir(:) =(/1,2/)
-        
+    case (1)
+      ldir(:) =(/2,3/)
+    case (2)
+      ldir(:) =(/1,3/)
+    case (3)
+      ldir(:) =(/1,2/)
+
     end select
-    
-    
+
+
     if (present(pmesh)) then
       do ix = 1, ll(ldir(1))
         do iy = 1, ll(ldir(2))
-      
+
           select case (dir)
-            case (1)
-              temp = pesK(icut(dir), ix, iy)    
-              KK(1) = pmesh(icut(dir), ix, iy, ldir(1))
-              KK(2) = pmesh(icut(dir), ix, iy, ldir(2))
-            case (2)
-              temp = pesK(ix, icut(dir), iy)    
-              KK(1) = pmesh(ix, icut(dir), iy, ldir(1))
-              KK(2) = pmesh(ix, icut(dir), iy, ldir(2))
-            case (3)
-              temp = pesK(ix, iy, icut(dir))        
-              KK(1) = pmesh(ix, iy, icut(dir), ldir(1))
-              KK(2) = pmesh(ix, iy, icut(dir), ldir(2))
+          case (1)
+            temp = pesK(icut(dir), ix, iy)
+            KK(1) = pmesh(icut(dir), ix, iy, ldir(1))
+            KK(2) = pmesh(icut(dir), ix, iy, ldir(2))
+          case (2)
+            temp = pesK(ix, icut(dir), iy)
+            KK(1) = pmesh(ix, icut(dir), iy, ldir(1))
+            KK(2) = pmesh(ix, icut(dir), iy, ldir(2))
+          case (3)
+            temp = pesK(ix, iy, icut(dir))
+            KK(1) = pmesh(ix, iy, icut(dir), ldir(1))
+            KK(2) = pmesh(ix, iy, icut(dir), ldir(2))
           end select
-        
+
           write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                  temp
+            units_from_atomic(sqrt(units_out%energy), KK(1)),&
+            units_from_atomic(sqrt(units_out%energy), KK(2)),&
+            temp
         end do
-        write(iunit, *)  
+        write(iunit, *)
       end do
 
-    else 
+    else
       do ix = 1, ll(ldir(1))
         KK(1) = Lk_(ix, ldir(1))
         do iy = 1, ll(ldir(2))
           KK(2) = Lk_(iy, ldir(2))
-      
+
           select case (dir)
-            case (1)
-              temp = pesK(idx(icut(dir), 1), idx(ix, 2), idx(iy, 3))    
-            case (2)
-              temp = pesK(idx(ix, 1), idx(icut(dir), 2), idx(iy, 3))    
-            case (3)
-              temp = pesK(idx(ix, 1), idx(iy, 2), idx(icut(dir), 3))        
+          case (1)
+            temp = pesK(idx(icut(dir), 1), idx(ix, 2), idx(iy, 3))
+          case (2)
+            temp = pesK(idx(ix, 1), idx(icut(dir), 2), idx(iy, 3))
+          case (3)
+            temp = pesK(idx(ix, 1), idx(iy, 2), idx(icut(dir), 3))
           end select
-        
+
           write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                  units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                  units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                  temp
+            units_from_atomic(sqrt(units_out%energy), KK(1)),&
+            units_from_atomic(sqrt(units_out%energy), KK(2)),&
+            temp
         end do
-        write(iunit, *)  
+        write(iunit, *)
       end do
     end if
-    
-  else 
-    ! We set the z-axis along the pol vector 
+
+  else
+    ! We set the z-axis along the pol vector
     call generate_rotation_matrix(rotation, (/M_ZERO, M_ZERO, M_ONE/), pol )
 
     if(debug%info) then
@@ -1039,108 +1039,108 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
     call pes_mask_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
 
     ntodo = product(ll(1:2))
-    idone = 0 
+    idone = 0
     call loct_progress_bar(-1, ntodo)
 
     do ix = 1, ll(1)
-     do iy = 1, ll(2)
+      do iy = 1, ll(2)
 
-       !cut 
-       select case (dir)
-         case (1)
-           KK(1) = M_ZERO 
-           if (present(pmesh)) then
-             KK(2) = pmesh(ix, 1, 1, 1)
-             KK(3) = pmesh(1, iy, 1, 2)
-           else       
-             KK(2) = Lk_(ix, 1)
-             KK(3) = Lk_(iy, 2)
-           end if
-         case (2)
-           KK(2) = M_ZERO
-           if(present(pmesh)) then
-             KK(1) = pmesh(ix,  1, 1, 1)
-             KK(3) = pmesh(1,  iy, 1, 2)
-           else
-             KK(1) = Lk_(ix, 1)
-             KK(3) = Lk_(iy, 2)
-           end if
- 
-         case (3)
-           KK(3) = M_ZERO
-           if(present(pmesh)) then
-             KK(1) = pmesh(ix,  1, 1, 1)
-             KK(2) = pmesh(1,  iy, 1, 2)
-           else 
-             KK(1) = Lk_(ix, 1)
-             KK(2) = Lk_(iy, 2)
-           end if
+        !cut
+        select case (dir)
+        case (1)
+          KK(1) = M_ZERO
+          if (present(pmesh)) then
+            KK(2) = pmesh(ix, 1, 1, 1)
+            KK(3) = pmesh(1, iy, 1, 2)
+          else
+            KK(2) = Lk_(ix, 1)
+            KK(3) = Lk_(iy, 2)
+          end if
+        case (2)
+          KK(2) = M_ZERO
+          if(present(pmesh)) then
+            KK(1) = pmesh(ix,  1, 1, 1)
+            KK(3) = pmesh(1,  iy, 1, 2)
+          else
+            KK(1) = Lk_(ix, 1)
+            KK(3) = Lk_(iy, 2)
+          end if
 
-       end select
+        case (3)
+          KK(3) = M_ZERO
+          if(present(pmesh)) then
+            KK(1) = pmesh(ix,  1, 1, 1)
+            KK(2) = pmesh(1,  iy, 1, 2)
+          else
+            KK(1) = Lk_(ix, 1)
+            KK(2) = Lk_(iy, 2)
+          end if
 
-       temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
+        end select
 
-       select case (integrate)
-         case (INTEGRATE_PHI)
-           temp = M_ZERO
-           K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
+        temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
 
-           Nphi = 360
-           Dphi = M_TWO * M_PI/Nphi
+        select case (integrate)
+        case (INTEGRATE_PHI)
+          temp = M_ZERO
+          K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
 
-           do iph = 0, Nphi
-             phi = iph * Dphi
-             theta = atan2(sqrt(KK(1)**2+KK(2)**2),KK(3))
+          Nphi = 360
+          Dphi = M_TWO * M_PI/Nphi
 
-             KKK(1) = K *sin(theta)*cos(phi) 
-             KKK(2) = K *sin(theta)*sin(phi)
-             KKK(3) = K *cos(theta)
-        
-             temp = temp + &
-                           abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-           end do
-           temp = temp * Dphi     
-           
-         case (INTEGRATE_KX)
-           temp = M_ZERO
-           do ii =1, ll(1)
-              KKK(:) = KK(:) + (/Lk(ii,1), M_ZERO, M_ZERO/)
-              temp = temp + &
-                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-           end do
-           temp = temp * Dk(1)  
-         
-         case (INTEGRATE_KY)
-           temp = M_ZERO
-           do ii =1, ll(2)
-              KKK(:) = KK(:) + (/M_ZERO, Lk(ii,2), M_ZERO/)
-              temp = temp + &
-                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-           end do
-           temp = temp * Dk(2)  
-         
-         case (INTEGRATE_KZ)
-           temp = M_ZERO
-           do ii =1, ll(3)
-              KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii,3)/)
-              temp = temp + &
-                            abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-           end do
-           temp = temp * Dk(3)  
+          do iph = 0, Nphi
+            phi = iph * Dphi
+            theta = atan2(sqrt(KK(1)**2+KK(2)**2),KK(3))
 
-       end select
-   
-       write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-               units_from_atomic(sqrt(units_out%energy), KK(1)),&
-               units_from_atomic(sqrt(units_out%energy), KK( 2)),&
-               temp
+            KKK(1) = K *sin(theta)*cos(phi)
+            KKK(2) = K *sin(theta)*sin(phi)
+            KKK(3) = K *cos(theta)
 
-  
-       idone = idone +1 
-       call loct_progress_bar(idone, ntodo)
-       
-     end do
-     write(iunit, *)  
+            temp = temp + &
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+          end do
+          temp = temp * Dphi
+
+        case (INTEGRATE_KX)
+          temp = M_ZERO
+          do ii =1, ll(1)
+            KKK(:) = KK(:) + (/Lk(ii,1), M_ZERO, M_ZERO/)
+            temp = temp + &
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+          end do
+          temp = temp * Dk(1)
+
+        case (INTEGRATE_KY)
+          temp = M_ZERO
+          do ii =1, ll(2)
+            KKK(:) = KK(:) + (/M_ZERO, Lk(ii,2), M_ZERO/)
+            temp = temp + &
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+          end do
+          temp = temp * Dk(2)
+
+        case (INTEGRATE_KZ)
+          temp = M_ZERO
+          do ii =1, ll(3)
+            KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii,3)/)
+            temp = temp + &
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+          end do
+          temp = temp * Dk(3)
+
+        end select
+
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+          units_from_atomic(sqrt(units_out%energy), KK(1)),&
+          units_from_atomic(sqrt(units_out%energy), KK( 2)),&
+          temp
+
+
+        idone = idone +1
+        call loct_progress_bar(idone, ntodo)
+
+      end do
+      write(iunit, *)
     end do
 
     write(stdout, '(1x)')
@@ -1149,10 +1149,10 @@ subroutine pes_mask_output_full_mapM_cut(pesK, file, namespace, ll, dim, pol, di
   end if
 
   call io_close(iunit)
-  
-  SAFE_DEALLOCATE_A(idx) 
-  SAFE_DEALLOCATE_A(Lk_) 
-  
+
+  SAFE_DEALLOCATE_A(idx)
+  SAFE_DEALLOCATE_A(Lk_)
+
   POP_SUB(pes_mask_output_full_mapM_cut)
 end subroutine pes_mask_output_full_mapM_cut
 
@@ -1166,7 +1166,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   integer,           intent(in) :: dim
   FLOAT,             intent(in) :: Emax
   FLOAT,             intent(in) :: Estep
-  FLOAT,             intent(in) :: dir(:) 
+  FLOAT,             intent(in) :: dir(:)
 
   FLOAT ::  KK(3)
 
@@ -1174,7 +1174,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT  :: step
   FLOAT, allocatable ::  pesM(:,:)
 
-  ! needed for interpolation in 2D and 3D 
+  ! needed for interpolation in 2D and 3D
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
@@ -1188,16 +1188,16 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
 
   PUSH_SUB(pes_mask_output_ar_polar_M)
 
-  ! we do the calculation assuming the polarization along the x-axis 
+  ! we do the calculation assuming the polarization along the x-axis
   vref = M_ZERO
   vref(1) = M_ONE
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
-  
+
   step= Estep
   nn  = int(Emax/step)
 
-  Nth = 300 
+  Nth = 300
   Dtheta = M_PI/Nth
 
   Nphi = 360
@@ -1207,8 +1207,8 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   pesM = M_ZERO
 
 
-  !in 1D we do not interpolate 
-  if (  (dim  ==  1) ) then 
+  !in 1D we do not interpolate
+  if (  (dim  ==  1) ) then
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1, namespace=namespace)
 
@@ -1219,28 +1219,28 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
     select case(dim)
     case(2)
 
-  
+
 
 
     case(3)
 
       do ith = 1, Nth
-        theta = (ith - 1) * Dtheta 
+        theta = (ith - 1) * Dtheta
         do ie = 1, nn
           EE = (ie -1) * step
 
           do iph = 0, Nphi
             phi = iph * Dphi
 
-            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi)
             KK(3) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
             KK(1) = sqrt(M_TWO*EE)*cos(theta)
-            
-            !sometimes the interpolator gives negative values therefore the abs()  
+
+            !sometimes the interpolator gives negative values therefore the abs()
             pesM(ith,ie) = pesM(ith,ie) + &
-                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
           end do
-          pesM(ith,ie) = pesM(ith,ie) * sqrt(M_TWO*EE)     
+          pesM(ith,ie) = pesM(ith,ie) * sqrt(M_TWO*EE)
 
         end do
       end do
@@ -1286,7 +1286,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   integer,           intent(in) :: dim
   FLOAT,             intent(in) :: Emax
   FLOAT,             intent(in) :: Estep
-  FLOAT,             intent(in) :: dir(:) 
+  FLOAT,             intent(in) :: dir(:)
 
   integer :: ix, iy
   FLOAT ::  KK(3)
@@ -1295,7 +1295,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT  :: step, eGrid(3)
   FLOAT, allocatable ::  pesM(:,:)
 
-  ! needed for interpolation in 2D and 3D 
+  ! needed for interpolation in 2D and 3D
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
@@ -1308,17 +1308,17 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
 
   PUSH_SUB(pes_mask_output_ar_plane_M)
 
-  ! we do the calculation assuming the polarization along the x-axis 
+  ! we do the calculation assuming the polarization along the x-axis
   vref = M_ZERO
   vref(1) = M_ONE
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
-  
+
   step= Estep
   nn  = int(Emax/step)
 
   nx = 2*nn
-  ny = nn  
+  ny = nn
 
 
   Nphi = 360
@@ -1328,8 +1328,8 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   pesM = M_ZERO
 
 
-  !in 1D we do not interpolate 
-  if (  (dim  ==  1) ) then 
+  !in 1D we do not interpolate
+  if (  (dim  ==  1) ) then
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1, namespace=namespace)
 
@@ -1341,13 +1341,13 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
     case(2)
 
       do ix = 1, nx
-        Ex = (ix -nx/2 -1)*step 
+        Ex = (ix -nx/2 -1)*step
         do iy = 1, ny
           Ey = (iy-1)*step
           EE =sqrt(Ex**2 + Ey**2)
           theta = atan2(Ey,Ex)
 
-          KK(1) = sqrt(2*EE)*cos(theta) 
+          KK(1) = sqrt(2*EE)*cos(theta)
           KK(2) = sqrt(2*EE)*sin(theta)
 
           pesM(ix,iy) = pesM(ix,iy) + qshep_interpolate(interp, cube_f, KK(1:2))
@@ -1359,7 +1359,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
     case(3)
 
       do ix = 1, nx
-        Ex = (ix -nx/2 -1)*step 
+        Ex = (ix -nx/2 -1)*step
         do iy = 1, ny
           Ey = (iy-1)*step
           EE =sqrt(Ex**2 + Ey**2)
@@ -1368,15 +1368,15 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
             phi = iph * Dphi
             theta = atan2(Ey,Ex)
 
-            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(2) = sqrt(M_TWO*EE)*sin(theta)*cos(phi)
             KK(3) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
             KK(1) = sqrt(M_TWO*EE)*cos(theta)
-            
-            !sometimes the interpolator gives negative values therefore the abs()  
+
+            !sometimes the interpolator gives negative values therefore the abs()
             pesM(ix,iy) = pesM(ix,iy) + &
-                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
           end do
-          pesM(ix,iy) = pesM(ix,iy) * sqrt(M_TWO*EE)     
+          pesM(ix,iy) = pesM(ix,iy) * sqrt(M_TWO*EE)
 
         end do
       end do
@@ -1393,10 +1393,10 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   eGrid(1)= M_ZERO
   eGrid(2)= Emax
   eGrid(3)= step
-  
+
   phiBounds(1) = M_ZERO
   phiBounds(2) = M_TWO * M_PI
-  
+
   call pes_mask_write_2D_map(file, namespace, pesM, 1, eGrid, eGrid, dir, phiBounds)
 
   SAFE_DEALLOCATE_A(pesM)
@@ -1418,7 +1418,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   FLOAT,             intent(in) :: Emin
   FLOAT,             intent(in) :: Emax
   FLOAT,             intent(in) :: Estep
-  FLOAT,             intent(in) :: dir(:) 
+  FLOAT,             intent(in) :: dir(:)
 
   FLOAT ::  KK(3)
 
@@ -1426,7 +1426,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   FLOAT  :: step
   FLOAT, allocatable ::  pesM(:,:)
 
-  ! needed for interpolation in 2D and 3D 
+  ! needed for interpolation in 2D and 3D
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
@@ -1440,16 +1440,16 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
 
   PUSH_SUB(pes_mask_output_ar_spherical_cut_M)
 
-  ! by default the polarization is along the z-axis 
+  ! by default the polarization is along the z-axis
   vref = M_ZERO
   vref(3) = M_ONE
   !the rotation matrix from the x-axis to the actual polarization direction
   call generate_rotation_matrix(rotation, vref, dir)
-  
+
   step= Estep
   nn  = int(abs(Emax-Emin)/step)
 
-  Nth = 300 
+  Nth = 300
   Dtheta = M_PI/Nth
 
   Nphi = 360
@@ -1459,8 +1459,8 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   pesM = M_ZERO
 
 
-  !in 1D we do not interpolate 
-  if (  (dim  ==  1) ) then 
+  !in 1D we do not interpolate
+  if (  (dim  ==  1) ) then
     message(1)="Impossible to obtain angle-dependent quantities in 1D."
     call messages_fatal(1, namespace=namespace)
 
@@ -1470,7 +1470,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
 
     select case(dim)
     case(2)
-  
+
 
 
     case(3)
@@ -1479,20 +1479,20 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
         phi = (iph - 1) * Dphi
 
         do ith = 1, Nth
-          theta = (ith - 1) * Dtheta 
+          theta = (ith - 1) * Dtheta
 
           do ie = 0, nn
             EE = Emin + ie * step
 
-            KK(1) = sqrt(M_TWO*EE)*sin(theta)*cos(phi) 
+            KK(1) = sqrt(M_TWO*EE)*sin(theta)*cos(phi)
             KK(2) = sqrt(M_TWO*EE)*sin(theta)*sin(phi)
             KK(3) = sqrt(M_TWO*EE)*cos(theta)
-            
-            !sometimes the interpolator gives negative values therefore the abs()  
+
+            !sometimes the interpolator gives negative values therefore the abs()
             pesM(iph,ith) = pesM(iph,ith) + &
-                          abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
+              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) ))
           end do
-          pesM(iph,ith) = pesM(iph,ith) * sqrt(M_TWO*EE)     
+          pesM(iph,ith) = pesM(iph,ith) * sqrt(M_TWO*EE)
 
         end do
       end do
@@ -1529,7 +1529,7 @@ end subroutine pes_mask_output_ar_spherical_cut_M
 
 
 ! ========================================================================
-!>  Common interface to write 2D maps in gnuplot with header files for 
+!>  Common interface to write 2D maps in gnuplot with header files for
 !!  different objects. The modes are:
 !!
 !!  - 1 Angle- and energy-resolved on cartesian coordinates
@@ -1546,7 +1546,7 @@ subroutine pes_mask_write_2D_map(file, namespace, pesM, mode, xGrid, yGrid, vv, 
   FLOAT,             intent(in) :: xGrid(:)   !< max min and step for the x axis
   FLOAT,             intent(in) :: yGrid(:)   !< max min and step for the y axis
   FLOAT,             intent(in) :: vv(:)      !< for mode=1,2 indicate the Zenith axis for mode 3 the cutting plane
-  FLOAT, optional,   intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region    
+  FLOAT, optional,   intent(in) :: intSpan(:) !< for integrated quantities indicate the integral region
 
   integer :: nx,ny, iunit, ix,iy
 
@@ -1558,118 +1558,118 @@ subroutine pes_mask_write_2D_map(file, namespace, pesM, mode, xGrid, yGrid, vv, 
   iunit = io_open(file, namespace, action='write')
 
   select case (mode)
-    case(1)
-      !!Angle Energy Cartesian
-        write(iunit, '(a)') '##################################################'
+  case(1)
+    !!Angle Energy Cartesian
+    write(iunit, '(a)') '##################################################'
 
-        write(iunit, '(a)') '#'        
-        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
-                                              "#"," Zenith axis: ","(",&
-                                              vv(1),", ",vv(2),", ",vv(3),")"
-        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
-                                              "#"," Integrated in phi: ","(",&
-                                              intSpan(1),", ",intSpan(2),")"
-        write(iunit, '(a)') '#'        
+    write(iunit, '(a)') '#'
+    write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+      "#"," Zenith axis: ","(",&
+      vv(1),", ",vv(2),", ",vv(3),")"
+    write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
+      "#"," Integrated in phi: ","(",&
+      intSpan(1),", ",intSpan(2),")"
+    write(iunit, '(a)') '#'
 
 
-        write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("E*cos(th)", 19),&
-                                              str_center("E*sin(th)", 19),&
-                                              str_center("P(E)", 19)
-        write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-          '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
-               str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
-               str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-        write(iunit, '(a)') '##################################################'
-    case (2)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("E*cos(th)", 19),&
+      str_center("E*sin(th)", 19),&
+      str_center("P(E)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
+      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
+      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
+  case (2)
     !!Angle Energy polar
-      write(iunit, '(a)') '##################################################'
+    write(iunit, '(a)') '##################################################'
 
-      write(iunit, '(a)') '#'        
-      write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
-                                            "#"," Zenith axis: ","(",&
-                                            vv(1),", ",vv(2),", ",vv(3),")"
-      write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
-                                            "#"," Integrated in phi: ","(",&
-                                            intSpan(1),", ",intSpan(2),")"
-      write(iunit, '(a)') '#'        
-      
-      
-      write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Theta", 19),&
-                                            str_center("E", 19),&
-                                            str_center("P(E)", 19)
-      write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-        '#', str_center('[rad]', 19), &
-             str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), & 
-             str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-      write(iunit, '(a)') '##################################################'
+    write(iunit, '(a)') '#'
+    write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+      "#"," Zenith axis: ","(",&
+      vv(1),", ",vv(2),", ",vv(3),")"
+    write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a1)')&
+      "#"," Integrated in phi: ","(",&
+      intSpan(1),", ",intSpan(2),")"
+    write(iunit, '(a)') '#'
 
-    case (3)
+
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Theta", 19),&
+      str_center("E", 19),&
+      str_center("P(E)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('[rad]', 19), &
+      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19), &
+      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
+
+  case (3)
     !!Velocity map
-      write(iunit, '(a)') '##################################################'
-      write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("p1", 19),&
-                                            str_center("p2", 19),&
-                                            str_center("P(p)", 19)
-      write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-        '#', str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), & 
-             str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), & 
-             str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-      write(iunit, '(a)') '##################################################'
+    write(iunit, '(a)') '##################################################'
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("p1", 19),&
+      str_center("p2", 19),&
+      str_center("P(p)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), &
+      str_center('[sqrt('//trim(units_abbrev(units_out%energy)) // ')]', 19), &
+      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
 
-      case (4)
-      !!Spherical Cut
-        write(iunit, '(a)') '##################################################'
+  case (4)
+    !!Spherical Cut
+    write(iunit, '(a)') '##################################################'
 
-        write(iunit, '(a)') '#'        
-        write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
-                                              "#"," Zenith axis: ","(",&
-                                              vv(1),", ",vv(2),", ",vv(3),")"
-        write(iunit, '(a1,a20,a1,es19.12,a2,es19.12,a1,a19)')&
-                                              "#"," Integrated in E: ","(",&
-                                              intSpan(1),", ",intSpan(2),")",&
-                      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19)
-        write(iunit, '(a)') '#'        
-      
-      
-        write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Phi", 19),&
-                                              str_center("Theta", 19),&
-                                              str_center("P(Phi,Theta)", 19)
-        write(iunit, '(a1,a19,2x,a19,2x,a19)') &
-          '#', str_center('[rad]', 19), &
-               str_center('[rad]', 19), & 
-               str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
-        write(iunit, '(a)') '##################################################'
+    write(iunit, '(a)') '#'
+    write(iunit, '(a1,a20,a1,f10.2,a2,f10.2,a2,f10.2,a1)')&
+      "#"," Zenith axis: ","(",&
+      vv(1),", ",vv(2),", ",vv(3),")"
+    write(iunit, '(a1,a20,a1,es19.12,a2,es19.12,a1,a19)')&
+      "#"," Integrated in E: ","(",&
+      intSpan(1),", ",intSpan(2),")",&
+      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 19)
+    write(iunit, '(a)') '#'
 
-    
+
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') '#', str_center("Phi", 19),&
+      str_center("Theta", 19),&
+      str_center("P(Phi,Theta)", 19)
+    write(iunit, '(a1,a19,2x,a19,2x,a19)') &
+      '#', str_center('[rad]', 19), &
+      str_center('[rad]', 19), &
+      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 19)
+    write(iunit, '(a)') '##################################################'
+
+
   end select
 
   do ix = 1, nx
     do iy = 1, ny
 
       select case (mode)
-        case (1)
-          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                  units_from_atomic(units_out%energy, (ix -nx/2 - 1) * xGrid(3) + xGrid(1) ),&
-                  units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
-        case(2)
-          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
-                  (ix - 1) * xGrid(3) + xGrid(1), &
-                  units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
-        case(3)
-          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
-                  (ix - 1) * xGrid(3) + xGrid(1), &
-                  (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
+      case (1)
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+          units_from_atomic(units_out%energy, (ix -nx/2 - 1) * xGrid(3) + xGrid(1) ),&
+          units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
+      case(2)
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+          (ix - 1) * xGrid(3) + xGrid(1), &
+          units_from_atomic(units_out%energy, (iy - 1) * yGrid(3) + yGrid(1) ), pesM(ix,iy)
+      case(3)
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+          (ix - 1) * xGrid(3) + xGrid(1), &
+          (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
 
-        case(4)
-          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &   
-                  (ix - 1) * xGrid(3) + xGrid(1), &
-                  (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
-    
+      case(4)
+        write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+          (ix - 1) * xGrid(3) + xGrid(1), &
+          (iy - 1) * yGrid(3) + yGrid(1), pesM(ix,iy)
+
       end select
 
     end do
-    write(iunit,*) 
+    write(iunit,*)
   end do
-  
+
   call io_close(iunit)
 
 
@@ -1698,7 +1698,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
   FLOAT  :: step
   FLOAT, allocatable :: npoints(:), pes(:)
 
-  ! needed for interpolation in 2D and 3D 
+  ! needed for interpolation in 2D and 3D
   FLOAT, pointer :: cube_f(:)
   type(qshep_t) :: interp
 
@@ -1724,8 +1724,8 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
   SAFE_ALLOCATE(npoints(1:nn))
   npoints = M_ZERO
 
-  !in 1D we do not interpolate 
-  if ( (.not. interpolate) .or.  (dim  ==  1) ) then 
+  !in 1D we do not interpolate
+  if ( (.not. interpolate) .or.  (dim  ==  1) ) then
 
     do ix = 1,ll(1)
       KK(1) = Lk(ix, 1)
@@ -1756,7 +1756,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
       if(pes(ii)/= M_ZERO)then
         EE = (ii-1)*step
         !Multiply for the correct Jacobian factor
-        pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2) 
+        pes(ii) = pes(ii)*sqrt(M_TWO*EE)**(dim - 2)
         pes(ii) = pes(ii) / npoints(ii)
       end if
     end do
@@ -1774,7 +1774,7 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
         EE = (ii-1)*step
         do ith = 0, Ntheta
           theta = ith*Dtheta
-          KK(1) = sqrt(2*EE)*cos(theta) 
+          KK(1) = sqrt(2*EE)*cos(theta)
           KK(2) = sqrt(2*EE)*sin(theta)
           pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:2))
         end do
@@ -1791,14 +1791,14 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
           do iph = 0, Nphi
             phi = iph * Dphi
 
-            KK(2) = sqrt(M_TWO*EE)*sin(phi)*cos(theta) 
+            KK(2) = sqrt(M_TWO*EE)*sin(phi)*cos(theta)
             KK(3) = sqrt(M_TWO*EE)*sin(phi)*sin(theta)
             KK(1) = sqrt(M_TWO*EE)*cos(phi)
 
             pes(ii) = pes(ii) + qshep_interpolate(interp, cube_f, KK(1:3))
           end do
         end do
-        pes(ii) = pes(ii) * sqrt(M_TWO*EE)    
+        pes(ii) = pes(ii) * sqrt(M_TWO*EE)
       end do
 
       pes = pes * Dtheta * Dphi
@@ -1810,9 +1810,9 @@ subroutine pes_mask_output_power_totalM(pesK, file, namespace, Lk, ll, dim, Emax
   end if
 
 
-  if (interpolate) then 
+  if (interpolate) then
     call pes_mask_write_power_total(file, namespace, step, pes)
-  else 
+  else
     call pes_mask_write_power_total(file, namespace, step, pes, npoints)
   end if
 
@@ -1848,7 +1848,7 @@ subroutine pes_mask_write_power_total(file, namespace, step, pes, npoints)
     '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
     str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
   write(iunit, '(a)') '##################################################'
- 
+
 
   do ii = 1, nn
     if(present(npoints)) then
@@ -1859,7 +1859,7 @@ subroutine pes_mask_write_power_total(file, namespace, step, pes, npoints)
       write(iunit, '(es19.12,2x,es19.12)')  units_from_atomic(units_out%energy, (ii - 1) * step), pes(ii)
     end if
   end do
-  
+
   call io_close(iunit)
 
 
@@ -1867,10 +1867,10 @@ subroutine pes_mask_write_power_total(file, namespace, step, pes, npoints)
 end subroutine pes_mask_write_power_total
 
 
-  
+
 ! ---------------------------------------------------------
 !
-!> This routine is the main routine dedicated to the output 
+!> This routine is the main routine dedicated to the output
 !! of PES data
 !
 ! ---------------------------------------------------------
@@ -1896,17 +1896,17 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
 
   PUSH_SUB(pes_mask_output)
   call profiling_in(prof, "PESMASK_out")
-  
+
   !Output info for easy post-process
   if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", namespace)
- 
+
 
   !Photoelectron wavefunction and density in real space
   if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0 ) then
     write(dir, '(a,i7.7)') "td.", iter  ! name of directory
     call  pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   end if
-  
+
   if (simul_box_is_periodic(mesh%sb)) then
     ! For periodic systems the results must be obtained using
     ! the oct-photoelectron-spectrum routine
@@ -1916,23 +1916,23 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   end if
 
   !Write the output in the td.00iter directories
-  dir = file 
+  dir = file
   if(bitand(outp%what, OPTION__OUTPUT__PES) /= 0 ) then
     write(dir, '(a,i7.7,a)') "td.", iter,"/PESM"  ! name of directory
   end if
 
- !The contribution of \Psi_A(x,t2) to the PES 
-  if(mask%add_psia) then 
+  !The contribution of \Psi_A(x,t2) to the PES
+  if(mask%add_psia) then
     st1 = st%st_start
     st2 = st%st_end
     k1 = st%d%kpt%start
     k2 = st%d%kpt%end
     SAFE_ALLOCATE(wfAk(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3),1:st%d%dim,st1:st2,k1:k2))
     wfAk = M_z0
-  
-    call cube_function_null(cf1)    
-    call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
-    call cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
+
+    call cube_function_null(cf1)
+    call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.)
+    call cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.)
 
     SAFE_ALLOCATE(psi(1:mesh%np_part))
 
@@ -1952,33 +1952,33 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
 
     call zcube_function_free_RS(mask%cube, cf1)
     call  cube_function_free_FS(mask%cube, cf1)
-  end if 
+  end if
 
   !Create the full momentum-resolved PES matrix
   pesK = M_ZERO
-  ! This loop over kpoints should not be reached since for periodic systems 
+  ! This loop over kpoints should not be reached since for periodic systems
   ! this part is skipped. I keep this here for the moment just for the debug purposes.
   do ik = st%d%kpt%start, st%d%kpt%end
 
-    if(mask%add_psia) then 
+    if(mask%add_psia) then
       call pes_mask_fullmap(mask, st, ik, pesK, wfAk)
-    else 
+    else
       call pes_mask_fullmap(mask, st, ik, pesK)
     end if
-    
+
     ! only the root node of the domain and state parallelization group writes the output
-    if(mpi_grp_is_root(st%dom_st_mpi_grp)) then 
-      ! Output the full matrix in binary format for subsequent post-processing 
+    if(mpi_grp_is_root(st%dom_st_mpi_grp)) then
+      ! Output the full matrix in binary format for subsequent post-processing
       if(st%d%nik == 1) then
-      write(fn, '(a,a)') trim(dir), '_map.obf'
-      call io_binary_write(io_workpath(fn, namespace), &
-        mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
-                           
-         
-      ! Total power spectrum 
-      write(fn, '(a,a)') trim(dir), '_power.sum'
-      call pes_mask_output_power_totalM(pesK,fn, namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, & 
-                                       mask%energyMax, mask%energyStep, .false.)
+        write(fn, '(a,a)') trim(dir), '_map.obf'
+        call io_binary_write(io_workpath(fn, namespace), &
+          mask%fs_n_global(1)*mask%fs_n_global(2)*mask%fs_n_global(3), pesK, ierr)
+
+
+        ! Total power spectrum
+        write(fn, '(a,a)') trim(dir), '_power.sum'
+        call pes_mask_output_power_totalM(pesK,fn, namespace, mask%Lk, mask%ll, mask%mesh%sb%dim, &
+          mask%energyMax, mask%energyStep, .false.)
       end if
 
       ! Output the p resolved PES on plane pz=0
@@ -1990,16 +1990,16 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
       pol = (/M_ZERO, M_ZERO, M_ONE/)
       call pes_mask_output_full_mapM_cut(pesK, fn, namespace, mask%ll, mask%mesh%sb%dim, &
         pol = pol, dir = 3, integrate = INTEGRATE_NONE, Lk = mask%Lk)
-                                     
+
     end if
   end do
 
-  if(mask%add_psia) then 
+  if(mask%add_psia) then
     SAFE_DEALLOCATE_A(wfAk)
   end if
 
   call profiling_out(prof)
-  
+
   POP_SUB(pes_mask_output)
 end subroutine pes_mask_output
 
@@ -2009,7 +2009,7 @@ end subroutine pes_mask_output
 subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
   character(len=*),  intent(in)  :: dir
   type(namespace_t), intent(in)  :: namespace
-  integer,           intent(out) :: dim  
+  integer,           intent(out) :: dim
   FLOAT,             intent(out) :: Emax
   FLOAT,             intent(out) :: Estep
   integer,           intent(out) :: ll(:)
@@ -2035,7 +2035,7 @@ subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
   read(iunit,'(a10,2x,es19.12)') dummy, RR(2)
   read(iunit, *) dummy, Emax
   read(iunit, *) dummy, Estep
-  read(iunit, *) 
+  read(iunit, *)
 
   read(iunit, '(4x,i18)',  advance='no', iostat = ierr) ll(1)
   idim=2
@@ -2043,8 +2043,8 @@ subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
     read(iunit, '(2x,i18)',  advance='no', iostat = ierr) ll(idim)
     idim=idim+1
   end do
-  read(iunit, *) 
-   
+  read(iunit, *)
+
   SAFE_ALLOCATE(Lk(1:maxval(ll(:)), 1:3))
   Lk = M_ZERO
 
@@ -2053,10 +2053,10 @@ subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
       read(iunit, '(2x,es19.12)', advance='no') Lk(ii, idim)
     end do
     read(iunit, *)
-  end do 
-  
+  end do
 
-  call io_close(iunit)       
+
+  call io_close(iunit)
 
   POP_SUB(pes_mask_read_info)
 end subroutine pes_mask_read_info
@@ -2090,18 +2090,18 @@ subroutine pes_mask_write_info(mask, dir, namespace)
   write(iunit, '(a)', advance='no') 'nK'
   do idim = 1, mask%mesh%sb%dim
     write(iunit, '(2x,i18)', advance='no') mask%ll(idim)
-  end do 
+  end do
   write(iunit, '(1x)')
-     
+
   do ii=1, maxval(mask%ll(:))
     do idim = 1, mask%mesh%sb%dim
       write(iunit, '(2x,es19.12)', advance='no')  mask%Lk(ii, idim)
     end do
     write(iunit, '(1x)')
-  end do 
+  end do
 
 
-  call io_close(iunit)       
+  call io_close(iunit)
 
   POP_SUB(pes_mask_write_info)
 end subroutine pes_mask_write_info
@@ -2121,7 +2121,7 @@ subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
   integer :: itot, ik, ist, idim, ll(3), np, iunit, err, err2
   CMPLX, pointer :: gwf(:,:,:)
   type(profile_t), save :: prof
-   
+
   PUSH_SUB(pes_mask_dump)
 
   ierr = 0
@@ -2141,7 +2141,7 @@ subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
   call restart_close(restart, iunit)
 
   ll(1:3) = mask%fs_n_global(1:3)
-  np = ll(1)*ll(2)*ll(3) 
+  np = ll(1)*ll(2)*ll(3)
 
   err2 = 0
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -2158,25 +2158,25 @@ subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
         path = trim(restart_dir(restart))//'/pes_'//trim(filename)//'.obf'
 
         if (mask%cube%parallel_in_domains) then
-          SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3))) 
+          SAFE_ALLOCATE(gwf(1:ll(1),1:ll(2),1:ll(3)))
           !call zcube_function_allgather(mask%cube, gwf, wf, transpose = .true.)
           call zcube_function_allgather(mask%cube, gwf, mask%k(:,:,:, idim, ist, ik), gatherfs = .true.)
-          
+
           !if(mask%pw_map_how .eq. PW_MAP_PFFT) then
           !  call zcube_function_allgather(mask%cube, gwf, wf, order = (/2,3,1/))
-          ! 
+          !
           !else if(mask%pw_map_how .eq. PW_MAP_PNFFT) then
           !  call zcube_function_allgather(mask%cube, gwf, wf, order = (/2,3,1/))
-          !                                      
+          !
           !end if
-          
+
         else
           gwf => mask%k(:,:,:, idim, ist, ik)
         end if
-        
+
         !we need to check both cube and mesh mpi_grp to make sure only the root node writes the
-        !output and preserve state parallelization 
-        if (mpi_grp_is_root(mask%cube%mpi_grp) .and. mpi_grp_is_root(mask%mesh%mpi_grp)) then 
+        !output and preserve state parallelization
+        if (mpi_grp_is_root(mask%cube%mpi_grp) .and. mpi_grp_is_root(mask%mesh%mpi_grp)) then
           call io_binary_write(path, np, gwf(:,:,:), err)
           if (err /= 0) then
             err2 = err2 + 1
@@ -2237,7 +2237,7 @@ subroutine pes_mask_load(mask, namespace, restart, st, ierr)
   SAFE_ALLOCATE(rr(1:2))
   iunit = restart_open(restart, 'pes_mask')
   call restart_read(restart, iunit, lines, 2, err)
-  if (err /= 0) then    
+  if (err /= 0) then
     ierr = ierr + 1
   else
     read(lines(1),'(a10,2x,es19.12)') dummy, rr(1)
@@ -2247,7 +2247,7 @@ subroutine pes_mask_load(mask, namespace, restart, st, ierr)
 
 
   ll(1:3) = mask%ll(1:3)
-  np =ll(1)*ll(2)*ll(3) 
+  np =ll(1)*ll(2)*ll(3)
 
   err2 = 0
   do ik = st%d%kpt%start, st%d%kpt%end
@@ -2300,16 +2300,16 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
   PUSH_SUB(pes_mask_restart_map)
 
   SAFE_ALLOCATE(M_old(1:mask%ll(1), 1:mask%ll(2), 1:mask%ll(3)))
-  call cube_function_null(cf1)    
-  call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.) 
-  call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.) 
-  call cube_function_null(cf2)    
+  call cube_function_null(cf1)
+  call zcube_function_alloc_RS(mask%cube, cf1, force_alloc = .true.)
+  call  cube_function_alloc_FS(mask%cube, cf1, force_alloc = .true.)
+  call cube_function_null(cf2)
   call zcube_function_alloc_RS(mask%cube, cf2, force_alloc = .true.)
 
   SAFE_ALLOCATE(psi(1:mask%mesh%np))
 
   call pes_mask_generate_mask_function(mask, namespace, mask%mesh, mask%shape, RR, M_old)
-  
+
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
@@ -2317,11 +2317,11 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
         call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
         call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
         call pes_mask_mesh_to_cube(mask, psi, cf2)
-        cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
+        cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space
         cf1%zRs = cf2%zRs* mask%cM%zRs !modify the orbital in A
         call pes_mask_cube_to_mesh(mask, cf1, psi)
         call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
-        cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
+        cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B
         call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do

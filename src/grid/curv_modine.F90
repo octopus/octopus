@@ -19,7 +19,7 @@
 #include "global.h"
 
 !> This module implements the curvilinear coordinates given in
-!! N. A. Modine, G. Zumbach, and E. Kaxiras, Phys. Rev. B 55, 10289-10301 (1997) 
+!! N. A. Modine, G. Zumbach, and E. Kaxiras, Phys. Rev. B 55, 10289-10301 (1997)
 !!
 !! The local refinement was changed for a simple exponential.
 !! I believe that the recipe given by the authors is too complicated
@@ -351,7 +351,7 @@ contains
         rr = (chi-chibar(i))/(cv%L(i)-chibar(i))
 
         chi2(i)  = chi2(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * rr**qq *   &
-           (qq + M_ONE - (qq - M_ONE)*rr)
+          (qq + M_ONE - (qq - M_ONE)*rr)
 
         if(present(Jac)) then
           Jac(i) = Jac(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * rr**(qq-1)/(cv%L(i)-chibar(i)) *   &
@@ -424,8 +424,8 @@ contains
         Jac(idim, idim) = Jac(idim, idim) - cv%Jlocal(iatom) * dd
         do idim2 = 1, sb%dim
           Jac(idim, idim2) = Jac(idim, idim2) + &
-             cv%Jlocal(iatom)*(chi2(idim) - cv%csi(idim, iatom))*(chi2(idim2)-cv%csi(idim2, iatom)) * &
-             M_TWO/(M_TWO*cv%Jrange(iatom)**2) * dd
+            cv%Jlocal(iatom)*(chi2(idim) - cv%csi(idim, iatom))*(chi2(idim2)-cv%csi(idim2, iatom)) * &
+            M_TWO/(M_TWO*cv%Jrange(iatom)**2) * dd
         end do
       end do
     end do
@@ -449,7 +449,7 @@ contains
     ff(:) = ff(:) - x_p(:)
 
     POP_SUB(getf)
-  end subroutine getf 
+  end subroutine getf
 
 
   ! ---------------------------------------------------------

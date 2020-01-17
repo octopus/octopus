@@ -93,7 +93,7 @@ module pes_flux_oct_m
     FLOAT            :: radius
 
     integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
-                                                       !< = mesh%mpi_grp%size (M_SPHERICAL)
+    !< = mesh%mpi_grp%size (M_SPHERICAL)
     integer          :: max_iter                       !< td%max_iter
     integer          :: save_iter                      !< sys%outp%restart_write_interval
     integer          :: itstep                         !< 1 <= itstep <= tdsteps
@@ -108,14 +108,14 @@ module pes_flux_oct_m
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
     integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
-                                                       !< mesh. Used when working with semi-periodic systems 
-    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
+    !< mesh. Used when working with semi-periodic systems
+    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
     logical          :: avoid_ab
     type(mesh_interpolation_t) :: interp
-      
-    logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
+
+    logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh
     logical          :: arpes_grid
 
     integer          :: dim                            !< dimensions
@@ -193,14 +193,14 @@ contains
     !% Constructs a sphere with radius <tt>PES_Flux_Radius</tt>. Points on the sphere
     !% are interpolated by trilinear interpolation (default for 3D).
     !%Option pln 3
-    !% This option is for periodic systems. 
-    !% Constructs planes perpendicular to the non-periodic dimension 
+    !% This option is for periodic systems.
+    !% Constructs planes perpendicular to the non-periodic dimension
     !% symmetrically placed at positive and negative values of <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = M_SPHERICAL
     if(mdim <= 2) default_shape = M_CUBIC
     if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
-    
+
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Shape')
@@ -234,7 +234,7 @@ contains
     !%Default 1
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% Maximum order of the spherical harmonic to be integrated on an equidistant spherical 
+    !% Maximum order of the spherical harmonic to be integrated on an equidistant spherical
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
     if(this%shape == M_SPHERICAL) then
@@ -284,12 +284,12 @@ contains
 
       else if (simul_box_is_periodic(mesh%sb)) then
         ! the cube sides along the periodic directions are out of the simulation box
-        border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
+        border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
         call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
         ! Snap the plane to the closest grid point
-        border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
-        
+        border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim)
+
       else
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
@@ -392,7 +392,7 @@ contains
       this%nsrfcpnts_start = 1
       this%nsrfcpnts_end   = this%nsrfcpnts
     end if
-      
+
     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
       do isp = 1, this%nsrfcpnts
         write(223,*) isp, this%rcoords(:, isp), this%srfcnrml(:,isp)
@@ -422,7 +422,7 @@ contains
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
     ! -----------------------------------------------------------------
-    ! Options for time integration 
+    ! Options for time integration
     ! -----------------------------------------------------------------
     this%max_iter  = max_iter
     this%save_iter = save_iter
@@ -446,11 +446,11 @@ contains
     !%Description
     !% Use memory to tabulate Volkov plane-wave components on the surface.
     !% This option speeds up calculations by precomputing plane-wave phases
-    !% on the suface. 
+    !% on the suface.
     !% By default true when <tt>PES_Flux_Shape = cub</tt>.
     !%End
     call parse_variable(namespace, 'PES_Flux_UseMemory', .true., this%usememory)
-    call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
+    call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
@@ -500,7 +500,7 @@ contains
 
     call messages_write('Info: Total number of surface points = ')
     call messages_write(this%nsrfcpnts)
-    call messages_info() 
+    call messages_info()
 
     call messages_write('Info: Total number of momentum points =  ')
     call messages_write(this%nkpnts)
@@ -551,24 +551,24 @@ contains
     type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
     integer,             intent(in)    :: comm
-    logical, optional,   intent(in)    :: post !< only fill the data needed for postprocessing  
+    logical, optional,   intent(in)    :: post !< only fill the data needed for postprocessing
 
     integer           :: mdim, pdim
-    integer           :: kptst, kptend  
+    integer           :: kptst, kptend
     integer           :: isp, ikp, ikpt, ibz1, ibz2
     integer           :: il, ll, mm, idim
     integer           :: ikk, ith, iph, iomk
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk
-      
-    FLOAT             :: Emin, Emax, DE , kvec(1:3) 
+
+    FLOAT             :: Emin, Emax, DE , kvec(1:3)
     integer           :: NBZ(1:2), nkp_out, nkmin, nkmax
-    
+
     integer             :: ig
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
     FLOAT               :: dk(1:3)
-      
-    PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
+
+    PUSH_SUB(pes_flux_reciprocal_mesh_gen)
 
     kptst  = st%d%kpt%start
     kptend = st%d%kpt%end
@@ -578,7 +578,7 @@ contains
     this%dim  = mdim
     this%pdim = pdim
 
-    
+
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
       ! -----------------------------------------------------------------
       ! Setting up k-mesh
@@ -631,8 +631,8 @@ contains
       case(1)
         this%nstepsthetak = 0
         this%nstepsphik   = 2
-        this%nstepsomegak = this%nstepsphik        
-        
+        this%nstepsomegak = this%nstepsphik
+
       case(2)
         this%nstepsthetak = 0
         this%nstepsomegak = this%nstepsphik
@@ -652,83 +652,83 @@ contains
       this%nk     = nint(kmax/this%dk)
       this%nkpnts = this%nstepsomegak * this%nk
 
-      this%ll(1)      = this%nk  
+      this%ll(1)      = this%nk
       this%ll(2)      = this%nstepsphik
       this%ll(3)      = this%nstepsthetak - 1
       this%ll(mdim+1:3) = 1
 
-    else 
-      ! PLANES 
+    else
+      ! PLANES
 
       !%Variable PES_Flux_Gpoint_Upsample
       !%Type integer
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% Increase resolution in momentum by adding Gpoints in between adjacent
-      !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at 
-      !% G is added to the momentum grid. 
+      !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at
+      !% G is added to the momentum grid.
       !%End
       call parse_variable(namespace, 'PES_Flux_Gpoint_Upsample', 1, this%ngpt)
       call messages_print_var_value(stdout, "PES_Flux_Gpoint_Upsample", this%ngpt)
-      
+
       SAFE_ALLOCATE(gpoints(1:mdim,1:this%ngpt))
-      SAFE_ALLOCATE(gpoints_reduced(1:mdim,1:this%ngpt)) 
-      
+      SAFE_ALLOCATE(gpoints_reduced(1:mdim,1:this%ngpt))
+
       gpoints(:,:) = M_ZERO
       gpoints_reduced(:,:) = M_ZERO
-      
+
       dk(1:mdim) = M_ONE/(sb%kpoints%nik_axis(1:mdim) * this%ngpt)
       do ig =2, this%ngpt
         gpoints_reduced(1:pdim, ig) = gpoints_reduced(1:pdim, ig-1) + dk(1:pdim)
         call kpoints_to_absolute(sb%klattice, gpoints_reduced(1:pdim, ig), gpoints(1:pdim, ig), pdim)
         print *, ig," gpoints_reduced(1:pdim, ig) =", gpoints_reduced(1:pdim, ig)
         print *, ig," gpoints(1:pdim, ig) =", gpoints(1:pdim, ig)
-      end do 
-      
-      
+      end do
+
+
       !%Variable PES_Flux_ARPES_grid
       !%Type logical
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% Use a curvilinear momentum space grid that compensates the transformation 
+      !% Use a curvilinear momentum space grid that compensates the transformation
       !% used to obtain ARPES. With this choice ARPES data is laid out on a Cartesian
       !% regular grid.
       !% By default true when <tt>PES_Flux_Shape = pln</tt>.
       !%End
       call parse_variable(namespace, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
-      call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
-      
-      
+      call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)
+
+
       !%Variable PES_Flux_EnergyGrid
       !%Type block
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
+      !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to
       !% be used. Only for <tt> PES_Flux_Shape = pln</tt>.
       !% <tt><br>%PES_Flux_EnergyGrid
       !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
       !% <br>%</tt>
       !%End
-      
+
       Emin = 0
-      Emax = 10 
+      Emax = 10
       De   = CNST(0.1)
-    
+
       if(parse_block(namespace, 'PES_Flux_EnergyGrid', blk) == 0) then
 
         call parse_block_float(blk, 0, 0, Emin)
         call parse_block_float(blk, 0, 1, Emax)
         call parse_block_float(blk, 0, 2, DE)
-        
+
         Emin = units_to_atomic(units_inp%energy, Emin)
         Emax = units_to_atomic(units_inp%energy, Emax)
         DE   = units_to_atomic(units_inp%energy, DE)
-        
+
         call parse_block_end(blk)
-        
-      end if 
-      
-      call messages_write("Energy grid (Emin, Emax, DE) [") 
+
+      end if
+
+      call messages_write("Energy grid (Emin, Emax, DE) [")
       call messages_write(trim(units_abbrev(units_out%energy)))
       call messages_write("]:  (")
       call messages_write(Emin,fmt = '(f8.3)')
@@ -738,45 +738,45 @@ contains
       call messages_write(DE, fmt = '(e9.2)')
       call messages_write(")")
       call messages_info()
-            
-      
+
+
       if (this%arpes_grid) then
-  
+
         nkmax = floor(Emax/DE)
         nkmin = floor(Emin/DE)
 
-      else 
-      
+      else
+
         kmax = sqrt(M_TWO*Emax)
         kmin = sqrt(M_TWO*Emin)
         this%dk = sqrt(M_TWO*DE)
 
         nkmax = floor(kmax/this%dk)
         nkmin = floor(kmin/this%dk)
-        
+
       end if
-    
+
       this%nk = abs(nkmax - nkmin) + 1
-    
+
       !%Variable PES_Flux_BZones
       !%Type block
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
       !% The block <tt>PES_Flux_BZones</tt> specifies the number of Brillouin
-      !% zones along each periodic dimensions. This value will be used 
+      !% zones along each periodic dimensions. This value will be used
       !% to generate the mesh in reciprocal space.
       !%
       !% <tt><br>%PES_Flux_EnergyGrid
-      !% <br>&nbsp;&nbsp; NBZx | NBZy  
+      !% <br>&nbsp;&nbsp; NBZx | NBZy
       !% <br>%</tt>
       !%
       !% The option can also be specified with the same value for each direction
-      !% as <tt>PES_Flux_BZones = NBZ</tt>. 
+      !% as <tt>PES_Flux_BZones = NBZ</tt>.
       !% By default <tt>PES_Flux_BZones = 2</tt>; this means that we will have,
-      !% on top of the 1st zone, two additional zones at positive and negative 
-      !% reciprocal lattice translation for each periodic dimension. 
+      !% on top of the 1st zone, two additional zones at positive and negative
+      !% reciprocal lattice translation for each periodic dimension.
       !%End
-    
+
       NBZ(:) = 1
       if (.not. kpoints_have_zero_weight_path(sb%kpoints)) NBZ(1:pdim) = 2
       if(parse_block(namespace, 'PES_Flux_BZones', blk) == 0) then
@@ -792,8 +792,8 @@ contains
 
       end if
 
-      ! If we are using a path in reciprocal space 
-      ! we do not need to replicate the BZ in directions 
+      ! If we are using a path in reciprocal space
+      ! we do not need to replicate the BZ in directions
       ! perpendicular to the path
       if (kpoints_have_zero_weight_path(sb%kpoints) .and. any(NBZ(:)> 1) ) then
         call messages_write("Using a path in reciprocal space with PES_Flux_BZones > 1.")
@@ -802,40 +802,40 @@ contains
         call messages_warning(namespace=namespace)
 !         call get_kpath_perp_direction(sb%kpoints, idim)
 !         if (idim > 0 ) NBZ(idim) = 1
-      end if 
+      end if
 
       ! This information is needed for postprocessing the data
       this%ll(:)   = 1
       this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
-      this%ll(mdim)   = this%nk 
-      
+      this%ll(mdim)   = this%nk
+
 
       call messages_write("Number of Brillouin zones = ")
       do idim = 1 , pdim
         call messages_write( this%ll(idim) )
-        if (.not. idim == pdim) call messages_write(" x ")        
-      end do 
+        if (.not. idim == pdim) call messages_write(" x ")
+      end do
       call messages_info()
-            
+
       ! Total number of points
       this%nkpnts = product(this%ll(1:mdim))*this%ngpt
-      
-      
 
-    end if    
 
-  
+
+    end if
+
+
     this%parallel_in_momentum = .false.
 
     ! Create the grid
     select case (this%shape)
 
     case (M_SPHERICAL)
-      if(optional_default(post, .false.)) then 
+      if(optional_default(post, .false.)) then
         POP_SUB(pes_flux_reciprocal_mesh_gen)
-        return 
+        return
       end if
-    
+
       ! we split the k-mesh in radial & angular part
       call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
       if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
@@ -890,7 +890,7 @@ contains
           kact = ikk * this%dk
           do ll = 0, this%lmax
             this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
-                                M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+              M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
           end do
           this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
         end do
@@ -928,13 +928,13 @@ contains
         ikp = 0
         do ikk = 1, this%nk
           do ith = 0, this%nstepsthetak
-            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
+            if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
               phik = iph * M_TWO * M_PI / this%nstepsphik
               kact = ikk * this%dk
-                            this%kcoords_cub(1, ikp, kptst:kptend) = kact * cos(phik) * sin(thetak)
-                            this%kcoords_cub(2, ikp, kptst:kptend) = kact * sin(phik) * sin(thetak)
+              this%kcoords_cub(1, ikp, kptst:kptend) = kact * cos(phik) * sin(thetak)
+              this%kcoords_cub(2, ikp, kptst:kptend) = kact * sin(phik) * sin(thetak)
               if(mdim == 3) this%kcoords_cub(3, ikp, kptst:kptend) = kact * cos(thetak)
               if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
             end do
@@ -944,37 +944,37 @@ contains
 
     case (M_PLANES)
 
-  !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
+      !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 
-      this%nkpnts_start = 1 
+      this%nkpnts_start = 1
       this%nkpnts_end   = this%nkpnts
-  
+
 
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
 
 
-      nkp_out = 0 
+      nkp_out = 0
       do ikpt = kptst, kptend
         ikp = 0
         do ikk = nkmin, nkmax
-      
+
           ! loop over periodic directions
           select case (pdim)
-            case (1)
-            do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
+          case (1)
+            do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
               do ig = 1, this%ngpt
-                kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)               
+                kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)
                 call fill_non_periodic_dimension(this)
-              end do      
+              end do
             end do
 
-            case (2)
-            
-            do ibz2 = -(NBZ(2)-1), (NBZ(2)-1) 
-              do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
+          case (2)
+
+            do ibz2 = -(NBZ(2)-1), (NBZ(2)-1)
+              do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
                 do ig = 1, this%ngpt
                   kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
-                            + gpoints(1:2,ig) 
+                    + gpoints(1:2,ig)
                   call fill_non_periodic_dimension(this)
                 end do
               end do
@@ -982,12 +982,12 @@ contains
 
           end select
 
-      
+
         end do
       end do
-  
+
       if (debug%info .and. mpi_grp_is_root(mpi_world)) then
-        ! this does not work for parallel in kpoint 
+        ! this does not work for parallel in kpoint
         ! you need to gather kcoords_pln
         write(229,*) "#   ikpt (kpoint index),   ikp (momentum index),   this%kcoords_pln(1:mdim, ikp, ikpt)"
         do ikpt = kptst, kptend
@@ -1004,28 +1004,28 @@ contains
       call messages_write(this%nkpnts*kpoints_number(sb%kpoints))
       call messages_write("]")
       call messages_info()
-      
+
       SAFE_DEALLOCATE_A(gpoints)
       SAFE_DEALLOCATE_A(gpoints_reduced)
 
     end select
-    
+
     POP_SUB(pes_flux_reciprocal_mesh_gen)
-    
-  contains 
-    
+
+  contains
+
     ! Fill the non-periodic direction
     subroutine fill_non_periodic_dimension(this)
       type(pes_flux_t),   intent(inout) :: this
-        
+
       integer :: sign
       FLOAT   :: kpar(1:pdim), kpoint(1:3), val
 
       ikp = ikp + 1
-      
-      sign = 1         
-      if (ikk /= 0) sign= ikk/abs(ikk)        
-      
+
+      sign = 1
+      if (ikk /= 0) sign= ikk/abs(ikk)
+
       if (this%arpes_grid) then
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
         kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
@@ -1038,16 +1038,16 @@ contains
 !           kvec(mdim) = M_HUGE ! set to infinity
           nkp_out = nkp_out + 1
         end if
-      else         
-        kvec(mdim) = ikk * this%dk 
+      else
+        kvec(mdim) = ikk * this%dk
       end if
-      
+
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-      
+
     end subroutine fill_non_periodic_dimension
-                   
-          
-    
+
+
+
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
@@ -1077,7 +1077,7 @@ contains
         call messages_write("Debug: Calculating pes_flux")
         call messages_info()
       end if
-      
+
       stst   = st%st_start
       stend  = st%st_end
       kptst  = st%d%kpt%start
@@ -1160,7 +1160,7 @@ contains
         end if
 
         ! clean up fields
-         this%wf  = M_z0
+        this%wf  = M_z0
         this%gwf  = M_z0
         this%veca = M_ZERO
         this%itstep = 0
@@ -1190,13 +1190,13 @@ contains
     FLOAT              :: vec, kpoint(1:3)
 
     type(profile_t), save :: prof_init
-      
+
     PUSH_SUB(pes_flux_integrate_cub)
 
-    ! this routine is parallelized over surface points since the number of 
+    ! this routine is parallelized over surface points since the number of
     ! states is in most cases less than the number of surface points
 
-    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB') 
+    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB')
 
     if (debug%info) then
       call messages_write("Debug: calculating pes_flux surface integral")
@@ -1234,7 +1234,7 @@ contains
     conjgphase_cub(:, 0,:) = this%conjgphase_prev_cub(:,:)
 
     do ik = kptst, kptend
-      
+
       kpoint(:) = M_ZERO
       if(simul_box_is_periodic(mesh%sb)) then
         kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
@@ -1242,11 +1242,11 @@ contains
 
       ! integrate over time
       do itstep = 1, this%itstep
-        
+
         do ikp = ikp_start, ikp_end
           vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
-          conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) & 
-                                            * exp(M_zI * vec * dt / M_TWO)
+          conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) &
+            * exp(M_zI * vec * dt / M_TWO)
         end do
         if (this%parallel_in_momentum) call comm_allreduce(mesh%mpi_grp%comm, conjgphase_cub(:,itstep,ik))
       end do
@@ -1265,12 +1265,12 @@ contains
         Jk_cub = M_z0
 
         do ik = kptst, kptend
-  
+
           kpoint(:) = M_ZERO
           if(simul_box_is_periodic(mesh%sb)) then
             kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
           end if
-          
+
 
           if(.not. this%usememory) then
             k_dot_aux(:) = M_ZERO
@@ -1288,8 +1288,8 @@ contains
                 Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
                   Jk_cub(ist, isdim, ik, 1:this%nkpnts) + conjgphase_cub(1:this%nkpnts, itstep, ik) * &
                   (this%wf(ist, isdim, ik, isp, itstep) * &
-                   (M_TWO * (this%veca(idir, itstep) / P_c + kpoint(idir)) - this%kcoords_cub(idir, 1:this%nkpnts, ik)) + &
-                    this%gwf(ist, isdim, ik, isp, itstep, idir) * M_zI)
+                  (M_TWO * (this%veca(idir, itstep) / P_c + kpoint(idir)) - this%kcoords_cub(idir, 1:this%nkpnts, ik)) + &
+                  this%gwf(ist, isdim, ik, isp, itstep, idir) * M_zI)
               end do
 
               ! Add the phase contribute at the surface point isp
@@ -1303,10 +1303,10 @@ contains
 
             end do ! spin-dimension loop
           end do ! states loop
-          
-        end do ! kpoint loop 
+
+        end do ! kpoint loop
         spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * this%srfcnrml(idir, isp) / M_TWO
-        
+
       end do ! dimension loop
     end do ! surface point loop
 
@@ -1343,7 +1343,7 @@ contains
     integer            :: stst, stend, kptst, kptend, sdim
     integer            :: ist, ik, isdim, imdim
     integer            :: itstep, lmax
-    integer            :: ll, mm 
+    integer            :: ll, mm
     CMPLX, allocatable :: s1_node(:,:,:,:,:,:), s1_act(:,:,:)
     CMPLX, allocatable :: s2_node(:,:,:,:,:), s2_act(:,:)
     CMPLX, allocatable :: integ11_t(:,:), integ12_t(:,:,:)
@@ -1394,7 +1394,7 @@ contains
 
             s2_act = M_z0
 
-            do ll = 0, lmax 
+            do ll = 0, lmax
               do mm = -ll, ll
                 do imdim = 1, 3
                   ! surface integrals
@@ -1503,7 +1503,7 @@ contains
               spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) = &
                 spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) + &
                 phase_act(ikk_start:ikk_end,:) * (integ12_t(ikk_start:ikk_end,:, imdim) * &
-                 (M_TWO * this%veca(imdim, itstep)  / P_c - this%kcoords_sph(imdim, ikk_start:ikk_end,:)))
+                (M_TWO * this%veca(imdim, itstep)  / P_c - this%kcoords_sph(imdim, ikk_start:ikk_end,:)))
             end do
             spctramp_sph(ist, isdim, ik, ikk_start:ikk_end, :) = &
               spctramp_sph(ist, isdim, ik, ikk_start:ikk_end,:) + &
@@ -1576,7 +1576,7 @@ contains
       else
         ip_global = ip_local
       end if
-      
+
       nsurfaces = 0
 
       xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
@@ -1601,7 +1601,7 @@ contains
             which_surface(ip_global) = int(sign(M_ONE, xx(imdim))) * imdim  ! +-x=+-1, +-y=+-2, +-z=+-3
           end if
         end do
-        
+
         ! check whether the point is close to one border only (not an edge)
         if(nsurfaces == 1) then
           this%nsrfcpnts = this%nsrfcpnts + 1
@@ -1656,7 +1656,7 @@ contains
     type(mesh_t),     intent(in)    :: mesh
     integer,          intent(inout) :: nstepsthetar, nstepsphir
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
-    
+
     integer :: mdim
     integer :: isp, ith, iph
     FLOAT   :: thetar, phir
@@ -1696,7 +1696,7 @@ contains
       do iph = 0, nstepsphir - 1     ! 2*pi is the same than zero
         isp = isp + 1
         phir = iph * M_TWO * M_PI / nstepsphir
-                      this%srfcnrml(1, isp) = cos(phir) * sin(thetar)
+        this%srfcnrml(1, isp) = cos(phir) * sin(thetar)
         if(mdim >= 2) this%srfcnrml(2, isp) = sin(phir) * sin(thetar)
         if(mdim == 3) this%srfcnrml(3, isp) = cos(thetar)
         this%rcoords(1:mdim, isp) = this%radius * this%srfcnrml(1:mdim, isp)

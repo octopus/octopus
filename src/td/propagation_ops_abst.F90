@@ -52,7 +52,7 @@ module propagation_ops_abst_oct_m
       class(propagation_ops_abst_t), intent(inout) :: wo
     end subroutine propagation_ops_end
 
-  end interface 
+  end interface
 
 contains
 

@@ -22,35 +22,35 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero,
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)            
-  FLOAT,             intent(in)    :: LG(:,:)           
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out)   :: idxZero(:)                
-  integer,           intent(in)    :: krng(:)             
-  integer,  pointer, intent(inout) :: Lp(:,:,:,:,:) 
-  FLOAT,  optional,  intent(out)   :: Ekin(:,:,:)  
-  
+  type(kpoints_t),   intent(inout) :: kpoints
+  integer,           intent(in)    :: ll(:)
+  FLOAT,             intent(in)    :: LG(:,:)
+  FLOAT,             intent(out)   :: pmesh(:,:,:,:)
+  integer,           intent(out)   :: idxZero(:)
+  integer,           intent(in)    :: krng(:)
+  integer,  pointer, intent(inout) :: Lp(:,:,:,:,:)
+  FLOAT,  optional,  intent(out)   :: Ekin(:,:,:)
+
 
   PUSH_SUB(pes_flux_pmesh)
 
 
   select case (this%shape)
-  
+
   case (M_SPHERICAL)
     call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
-  
+
   case (M_CUBIC)
-  ! not implemented
+    ! not implemented
 
   case (M_PLANES)
     call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
-  
+
   end select
-  
 
 
-  POP_SUB(pes_flux_pmesh)  
+
+  POP_SUB(pes_flux_pmesh)
 end subroutine pes_flux_pmesh
 
 
@@ -61,22 +61,22 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
   type(states_elec_t), intent(in) :: st
   integer,             intent(in) :: ll(:)
   FLOAT, target,       intent(out) :: pesP(:,:,:,:)
-  integer,             intent(in)  :: krng(:) 
-  integer,  pointer,   intent(in) :: Lp(:,:,:,:,:)  
-  integer, optional,   intent(in)  :: istin 
+  integer,             intent(in)  :: krng(:)
+  integer,  pointer,   intent(in) :: Lp(:,:,:,:,:)
+  integer, optional,   intent(in)  :: istin
 
   PUSH_SUB(pes_flux_map_from_states)
 
   select case (this%shape)
-  
+
   case (M_SPHERICAL)
     call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
-  
+
   case (M_CUBIC)
 
   case (M_PLANES)
     call pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
-  
+
   end select
 
   POP_SUB(pes_flux_map_from_states)
@@ -87,38 +87,38 @@ end subroutine pes_flux_map_from_states
 ! PLANES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-! This needed in order to flip the sign of each Kpoit and 
-! still preserve an array ordering on the kpoint mesh 
-! such that the lowest index touple is associated with the smaller 
+! This needed in order to flip the sign of each Kpoit and
+! still preserve an array ordering on the kpoint mesh
+! such that the lowest index touple is associated with the smaller
 ! (negative) kpoint value.
 subroutine flip_sign_Lkpt_idx( dim, nk, idx, do_nothing)
-   integer, intent(out) :: idx(:,:)
-   integer, intent(in)  :: dim, nk(:)
-   logical, intent(in)  :: do_nothing
+  integer, intent(out) :: idx(:,:)
+  integer, intent(in)  :: dim, nk(:)
+  logical, intent(in)  :: do_nothing
 
-   integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
-   integer :: idir, ii
+  integer :: idx_tmp(1:maxval(nk(1:3)), 1:3)
+  integer :: idir, ii
 
-   PUSH_SUB(flip_sign_Lkpt_idx)
-   
-   idx(:,:) = 1
-   do idir = 1, dim
-     ! fill it with the range 1:nk
-     do ii = 1, nk(idir)
-       idx_tmp(ii,idir) = ii
-     end do
-     
-     if (do_nothing) then
-       idx(1:nk(idir),idir)  = idx_tmp(1:nk(idir),idir)
-     else 
-       do ii = 1, nk(idir)
-         idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
-       end do
-     end if
-     
-   end do
-   
-   POP_SUB(flip_sign_Lkpt_idx)      
+  PUSH_SUB(flip_sign_Lkpt_idx)
+
+  idx(:,:) = 1
+  do idir = 1, dim
+    ! fill it with the range 1:nk
+    do ii = 1, nk(idir)
+      idx_tmp(ii,idir) = ii
+    end do
+
+    if (do_nothing) then
+      idx(1:nk(idir),idir)  = idx_tmp(1:nk(idir),idir)
+    else
+      do ii = 1, nk(idir)
+        idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1
+      end do
+    end if
+
+  end do
+
+  POP_SUB(flip_sign_Lkpt_idx)
 end subroutine flip_sign_Lkpt_idx
 
 ! ---------------------------------------------------------
@@ -129,35 +129,35 @@ integer pure function flatten_indices(i1,i2,i3,igpt, ll, ngpt) result(ii)
   integer, intent(in) :: igpt
   integer, intent(in) :: ll(:)
   integer, intent(in) :: ngpt
-  
-  ii = (i3-1)*ll(1)*ll(2)*ngpt + (i2-1)*ll(1)*ngpt + (i1-1)*ngpt + igpt 
-  
+
+  ii = (i3-1)*ll(1)*ll(2)*ngpt + (i2-1)*ll(1)*ngpt + (i1-1)*ngpt + igpt
+
 end function flatten_indices
 
 
 
-!< Generate the momentum-space mesh (p) and the arrays mapping the 
+!< Generate the momentum-space mesh (p) and the arrays mapping the
 !< the mask and the kpoint meshes in p.
 subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
+  type(kpoints_t),   intent(inout) :: kpoints
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
-  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints  
+  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
-                                                        !< in the final mesh in momentum space "p" combining the 
-  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
+  !< in the final mesh in momentum space "p" combining the
+  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates
 
-  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path 
-                                                        !< mask-mesh with kpoints. 
+  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path
+  !< mask-mesh with kpoints.
   integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       !< Allocated inside this subroutine
-                                                        !< maps a mask-mesh triplet of indices together with a kpoint 
-                                                        !< index into a triplet on the combined momentum space mesh.
+  !< maps a mask-mesh triplet of indices together with a kpoint
+  !< index into a triplet on the combined momentum space mesh.
 
   FLOAT,  optional,  intent(out) :: Ekin(:,:,:)         !< The total kinetic energy associated with the momentum p
-                                                        !< this is needed when using a kpoint path 
-   
+  !< this is needed when using a kpoint path
+
 
 
   integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
@@ -168,62 +168,62 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
 
   integer :: nkpt, kpth_dir, ig, igpt
   FLOAT :: zero_thr
-  
+
   logical :: use_zweight_path
 
 
   PUSH_SUB(pes_flux_pmesh_pln)
-        
-        
+
+
   SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3))
-        
-        
+
+
   nkpt = krng(2) - krng(1) + 1
 
   SAFE_ALLOCATE(Lkpt(krng(1):krng(2),1:3))
-      
-  nk(:) = 1  
+
+  nk(:) = 1
   nk(1:dim) = kpoints%nik_axis(1:dim)
 
   Lkpt(:,:) = 1
   kpt(:) = M_ZERO
-      
-  zero_thr = M_EPSILON    
 
-  use_zweight_path = (krng(1)>1) ! a dirty way to check whether we want to use the path or not 
-      
-  if ( kpoints_have_zero_weight_path(kpoints) .and. use_zweight_path) then     
-    ! supporting paths only along the kx and ky directions in 
+  zero_thr = M_EPSILON
+
+  use_zweight_path = (krng(1)>1) ! a dirty way to check whether we want to use the path or not
+
+  if ( kpoints_have_zero_weight_path(kpoints) .and. use_zweight_path) then
+    ! supporting paths only along the kx and ky directions in
     ! reciprocal space
-    
+
     kpth_dir = 1
-    
-    nk(:) = 1  
+
+    nk(:) = 1
     nk(kpth_dir) = nkpt
     do ik = 1 , nkpt
       Lkpt(krng(1)+ik-1,kpth_dir) = ik
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1)
     end do
-        
-        
-  else  
-    
+
+
+  else
+
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
-            Lkpt(:,1:dim))
+      kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
+      Lkpt(:,1:dim))
 
 
   end if
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
-  
-  
+
+
   if (debug%info) then
     print *,"reordered"
     do ik = krng(1),krng(2)
       kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
       print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),&
-                "] -- kpt= ",kpt(1:dim)
+        "] -- kpt= ",kpt(1:dim)
     end do
 
     print *,"----"
@@ -232,14 +232,14 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   end if
 
 
-  pmesh(:, :, :, :) = M_HUGE      
-  pmesh(:, :, :, dim+1) = M_ZERO   
-  Lp(:,:,:,:,:) = 0   
+  pmesh(:, :, :, :) = M_HUGE
+  pmesh(:, :, :, dim+1) = M_ZERO
+  Lp(:,:,:,:,:) = 0
   err = -1
-  
+
   ! Generate the p-space mesh and populate Lp.
-  ! The grid is filled combining G-points and K-points according to the following sketch: 
-  ! 
+  ! The grid is filled combining G-points and K-points according to the following sketch:
+  !
   !          x        x        x
   !
   !       o  o  o
@@ -247,37 +247,37 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   !       o  o  o
   !
   !       (G = x and Kpt = o)
-  ! 
-  ! The grid represents the final momentum p =  Kpt -G. 
-  ! The lower left corner correspond to the minimum value of p and the lowest 
-  ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
+  !
+  ! The grid represents the final momentum p =  Kpt -G.
+  ! The lower left corner correspond to the minimum value of p and the lowest
+  ! index-touple value (ip1,ip2,ip3) = (1,1,1).
   do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
-    do j1 = 1, ll(1) 
-      do j2 = 1, ll(2) 
-        do j3 = 1, ll(3) 
+    kpt(1:dim) = kpoints_get_point(kpoints, ik)
+    do j1 = 1, ll(1)
+      do j2 = 1, ll(2)
+        do j3 = 1, ll(3)
           do igpt = 1, this%ngpt
-          
-            GG(:) = M_ZERO 
-            ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
+
+            GG(:) = M_ZERO
+            ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt)
 
             GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
-          
+
             ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1)
             ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2)
             ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
-          
+
             Lp(j1,j2,j3,ik,1:3) =  (/ip1,ip2,ip3/)
-          
-            ! The final momentum corresponds to p = K-G. 
+
+            ! The final momentum corresponds to p = K-G.
             ! I have to subtract G only along the periodic dimensions
             pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
             pmesh(ip1, ip2, ip3, dim)         = GG(dim)
-            pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
-          
-          
+            pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1
+
+
             if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
-                                                     * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
+              * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
 
             if (debug%info) then
               print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
@@ -285,38 +285,38 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
 
             ! Sanity checks
             if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2)<=zero_thr) then
-              err = err + 1 
-              !Find the indices identifying the center of the coordinates 
+              err = err + 1
+              !Find the indices identifying the center of the coordinates
               idxZero(1:3) = (/ip1,ip2,ip3/)
             end if
-          
+
             if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
               write(message(1),'(a)')'This condition should never happen something bad is going on.'
               call messages_fatal(1, namespace=namespace)
-              err = -2 
+              err = -2
             end if
-      
+
           end do
 
-        end do 
-      end do 
-    end do 
-    
+        end do
+      end do
+    end do
+
   end do
-  
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
-  ! With a path we just need to get the correct the zero index on the in-plane direction  
-  ! perpendicular to the path since is along this direction that we are going 
-  ! to slice with pes_flux_output_full_mapM_cut. Since on this direction we only 
-  ! have G points I simply need to look for the zero index of the G-grid.
-  ! Note that the G-grid must always include the (0,0,0) point. 
+
+  if ( kpoints_have_zero_weight_path(kpoints)) then
+    ! With a path we just need to get the correct the zero index on the in-plane direction
+    ! perpendicular to the path since is along this direction that we are going
+    ! to slice with pes_flux_output_full_mapM_cut. Since on this direction we only
+    ! have G points I simply need to look for the zero index of the G-grid.
+    ! Note that the G-grid must always include the (0,0,0) point.
     do ik = krng(1),krng(2)
-      do j1 = 1, ll(1) 
-        do j2 = 1, ll(2) 
-          do j3 = 1, ll(3) 
+      do j1 = 1, ll(1)
+        do j2 = 1, ll(2)
+          do j3 = 1, ll(3)
             do igpt = 1, this%ngpt
-              
-              ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
+
+              ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt)
               GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
               if (sum(GG(1:dim-1)**2)<=M_EPSILON) idxZero(1:3) = (/j1,j2,j3/)
             end do
@@ -324,20 +324,20 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
         end do
       end do
     end do
-    
-  else   
-    
+
+  else
+
     if (err == -1) then
       call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
       call messages_fatal(namespace=namespace)
-    end if 
+    end if
 
     if (err > 1) then
       call messages_write('More than one point with p = 0 coordinate.')
       call messages_new_line()
       call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
       call messages_warning(namespace=namespace)
-    end if 
+    end if
 
   end if
 
@@ -348,14 +348,14 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   if (err == -2) then
     call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
     call messages_fatal(namespace=namespace)
-  end if 
-  
- 
+  end if
+
+
 
   SAFE_DEALLOCATE_A(Lkpt)
-  SAFE_DEALLOCATE_A(ikidx)      
+  SAFE_DEALLOCATE_A(ikidx)
 
-  
+
   POP_SUB(pes_flux_pmesh_pln)
 end subroutine pes_flux_pmesh_pln
 
@@ -369,15 +369,15 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesP(:,:,:,:)
-  integer,           intent(in)  :: krng(:) 
+  integer,           intent(in)  :: krng(:)
   integer,  dimension(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3), intent(in) :: Lp
-  integer, optional, intent(in)  :: istin 
-  
+  integer, optional, intent(in)  :: istin
+
   integer :: ik, ist, idim, itot, nkpt, ispin
   integer :: i1, i2, i3, ip(1:3)
   integer :: idone, ntodo
   CMPLX   :: psiG1(1:this%nkpnts), psiG2(1:this%nkpnts)
-  FLOAT   :: weight 
+  FLOAT   :: weight
   integer :: istart, iend, nst, ig, igpt
 
   PUSH_SUB(pes_flux_map_from_states_elec_pln)
@@ -392,14 +392,14 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   end if
 
   nkpt =  krng(2)-krng(1)+1
-  ntodo = nkpt * nst 
-  idone = 0 
+  ntodo = nkpt * nst
+  idone = 0
   call loct_progress_bar(-1, ntodo)
-  
+
   pesP = M_ZERO
   do ik = krng(1), krng(2)
     ispin = states_elec_dim_get_spin_index(st%d, ik)
-    
+
     do ist = istart, iend
 
       if (st%d%kweights(ik) < M_EPSILON) then
@@ -409,29 +409,29 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
       else
         weight = M_ONE * st%d%kweights(ik)
       end if
-      
-      if(st%d%ispin /= SPINORS) then 
+
+      if(st%d%ispin /= SPINORS) then
 
         do idim = 1, st%d%dim
           itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
-        
-        
+
+
           do i1=1, ll(1)
             do i2=1, ll(2)
               do i3=1, ll(3)
                 do igpt = 1, this%ngpt
-                  ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-                  ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-              
-                    pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
-                                                   + abs(psiG1(ig))**2 * weight 
-                
+                  ip(1:3) = Lp(i1, i2, i3, ik, 1:3)
+                  ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt)
+
+                  pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
+                    + abs(psiG1(ig))**2 * weight
+
                 end do
               end do
             end do
           end do
-                
+
         end do
       else ! SPINORS
         idim = 1
@@ -440,36 +440,36 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
         idim = 2
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG2)
-            
+
         do i1=1, ll(1)
           do i2=1, ll(2)
             do i3=1, ll(3)
               do igpt = 1, this%ngpt
-                ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-                ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-            
-                  pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
-                                                 + abs(psiG1(ig))**2 * weight 
+                ip(1:3) = Lp(i1, i2, i3, ik, 1:3)
+                ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt)
 
-                  pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
-                                                 + abs(psiG2(ig))**2 * weight
+                pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
+                  + abs(psiG1(ig))**2 * weight
 
-                  pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                                 + real(psiG1(ig)*conjg(psiG2(ig)), REAL_PRECISION) * weight
-                                               
-                  pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
-                                                 + aimag(psiG1(ig)*conjg(psiG2(ig))) * weight
+                pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
+                  + abs(psiG2(ig))**2 * weight
+
+                pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+                  + real(psiG1(ig)*conjg(psiG2(ig)), REAL_PRECISION) * weight
+
+                pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
+                  + aimag(psiG1(ig)*conjg(psiG2(ig))) * weight
               end do
             end do
           end do
         end do
-          
-          
+
+
       end if
-      
-      idone = idone +1 
+
+      idone = idone +1
       call loct_progress_bar(idone, ntodo)
-      
+
     end do
   end do
 
@@ -487,20 +487,20 @@ subroutine pes_flux_map_from_state_1(restart, idx, np, psiG)
   CMPLX, target,    intent(out) :: psiG(:)
 
   character(len=80) :: filename, path
-  integer ::  err, iunit 
+  integer ::  err, iunit
   character(len=128) :: lines(2)
 
   PUSH_SUB(pes_flux_map_from_state_1)
 
   psiG = M_Z0
-  
+
   write(filename,'(i10.10)') idx
 
   path = "pesflux1."//trim(filename)
-  
+
   call zrestart_read_binary(restart, path, np, psiG(:), err)
 
-  POP_SUB(pes_flux_map_from_state_1)  
+  POP_SUB(pes_flux_map_from_state_1)
 end subroutine pes_flux_map_from_state_1
 
 
@@ -513,75 +513,75 @@ end subroutine pes_flux_map_from_state_1
 subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   type(pes_flux_t),  intent(in)    :: this
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)             
-  FLOAT,             intent(in)    :: LG(:,:)           
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out) :: idxZero(:)             
-  integer,           intent(in)  :: krng(:)                                                                     
-  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       
-                                                       
-                                                        
+  type(kpoints_t),   intent(inout) :: kpoints
+  integer,           intent(in)    :: ll(:)
+  FLOAT,             intent(in)    :: LG(:,:)
+  FLOAT,             intent(out)   :: pmesh(:,:,:,:)
+  integer,           intent(out) :: idxZero(:)
+  integer,           intent(in)  :: krng(:)
+  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)
+
+
 
   integer            :: iomk
   integer            :: ikk, ith, iph, iphi
   FLOAT              :: phik, thetak, kact, kvec(1:3)
-  
+
   integer            :: ip1, ip2, ip3
-  
+
 
   PUSH_SUB(pes_flux_pmesh_sph)
-                                   
-  SAFE_ALLOCATE(Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3))                                 
 
-  idxZero(1:3) =(/0,0,0/) 
-  
-  
-  do ikk = 1, this%nk 
+  SAFE_ALLOCATE(Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3))
+
+  idxZero(1:3) =(/0,0,0/)
+
+
+  do ikk = 1, this%nk
     kact = ikk * this%dk
     iomk = 0
 
     do ith = 0, this%nstepsthetak
-      thetak = ith * M_PI / this%nstepsthetak 
-      
+      thetak = ith * M_PI / this%nstepsthetak
+
       do iph = 0, this%nstepsphik - 1
         iomk = iomk + 1
-        
+
         phik = iph * M_TWO * M_PI / this%nstepsphik
 
-        if(ith == 0 .or. ith == this%nstepsthetak) then 
+        if(ith == 0 .or. ith == this%nstepsthetak) then
           ! Mark singular points on the sphere with -1 index
-          Lp(ikk, iomk, 1, :, 1) = -1           
+          Lp(ikk, iomk, 1, :, 1) = -1
           exit
         end if
 
 
         ip1 = ikk
         ip2 = iph+1
-        ip3 = ith 
+        ip3 = ith
 
-        Lp(ikk, iomk, 1, :, 1) = ip1  
+        Lp(ikk, iomk, 1, :, 1) = ip1
         Lp(ikk, iomk, 1, :, 2) = ip2
         Lp(ikk, iomk, 1, :, 3) = ip3
-        
+
         kvec(1) = cos(phik) * sin(thetak)
         kvec(2) = sin(phik) * sin(thetak)
         kvec(3) = cos(thetak)
-        
+
         kvec(:) = kvec(:) * kact
-         
-        
+
+
         pmesh(ip1, ip2, ip3, 1:3) = kvec(1:3)
-        
-        
+
+
       end do
 
     end do
   end do
-  
-                                                      
+
+
   POP_SUB(pes_flux_pmesh_sph)
-  
+
 end subroutine pes_flux_pmesh_sph
 
 
@@ -592,18 +592,18 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
   type(states_elec_t),intent(in) :: st
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesP(:,:,:,:)
-  integer,           intent(in)  :: krng(:) 
+  integer,           intent(in)  :: krng(:)
   integer,  dimension(1:this%nk,1:this%nstepsomegak,1,krng(1):krng(2),1:3), intent(in) :: Lp
-  integer, optional, intent(in)  :: istin 
+  integer, optional, intent(in)  :: istin
 
   integer :: ik, ist, idim, itot, nkpt, ispin
   integer :: i1, i2, i3, ip(1:3)
   integer :: idone, ntodo
   CMPLX   :: psiG1(1:this%nk, 1:this%nstepsomegak)
   CMPLX   :: psiG2(1:this%nk, 1:this%nstepsomegak)
-  FLOAT   :: weight 
+  FLOAT   :: weight
   integer :: istart, iend, nst, ig
-  
+
   PUSH_SUB(pes_flux_map_from_states_elec_sph)
 
   istart = 1
@@ -616,14 +616,14 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
   end if
 
   nkpt =  krng(2)-krng(1)+1
-  ntodo = nkpt * nst 
-  idone = 0 
+  ntodo = nkpt * nst
+  idone = 0
   call loct_progress_bar(-1, ntodo)
-  
+
   pesP = M_ZERO
   do ik = krng(1), krng(2)
     ispin = states_elec_dim_get_spin_index(st%d, ik)
-    
+
     do ist = istart, iend
 
       if (st%d%kweights(ik) < M_EPSILON) then
@@ -632,24 +632,24 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
       else
         weight = M_ONE * st%d%kweights(ik)
       end if
-      
-      if(st%d%ispin /= SPINORS) then 
+
+      if(st%d%ispin /= SPINORS) then
 
         do idim = 1, st%d%dim
           itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
-        
+
           do i1=1, this%nk
             do i2=1, this%nstepsomegak
-              
-                ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
-                if (ip(1) < 0) cycle
-              
-                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
-                                               + abs(psiG1(i1,i2))**2 * weight 
+
+              ip(1:3) = Lp(i1, i2, 1, ik, 1:3)
+              if (ip(1) < 0) cycle
+
+              pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
+                + abs(psiG1(i1,i2))**2 * weight
             end do
           end do
-                
+
         end do
       else ! SPINORS
         idim = 1
@@ -658,33 +658,33 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
         idim = 2
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG2)
-            
+
         do i1=1, this%nk
           do i2=1, this%nstepsomegak
-            
-              ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
-              if (ip(1) < 0) cycle
-            
-              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
-                                             + abs(psiG1(i1,i2))**2 * weight 
 
-              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
-                                             + abs(psiG2(i1,i2))**2 * weight
+            ip(1:3) = Lp(i1, i2, 1, ik, 1:3)
+            if (ip(1) < 0) cycle
 
-              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                             + real(psiG1(i1,i2)*conjg(psiG2(i1,i2)), REAL_PRECISION) * weight
-                                             
-              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                               + aimag(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight
+            pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
+              + abs(psiG1(i1,i2))**2 * weight
+
+            pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
+              + abs(psiG2(i1,i2))**2 * weight
+
+            pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+              + real(psiG1(i1,i2)*conjg(psiG2(i1,i2)), REAL_PRECISION) * weight
+
+            pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+              + aimag(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight
           end do
         end do
-          
-          
+
+
       end if
-      
-      idone = idone +1 
+
+      idone = idone +1
       call loct_progress_bar(idone, ntodo)
-      
+
     end do
   end do
 
@@ -692,7 +692,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
 
 
   POP_SUB(pes_flux_map_from_states_elec_sph)
-  
+
 end subroutine pes_flux_map_from_states_elec_sph
 
 
@@ -704,21 +704,21 @@ subroutine pes_flux_map_from_state_2(restart, idx, np, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:)
 
   character(len=80) :: filename, path
-  integer ::  err, iunit 
+  integer ::  err, iunit
   character(len=128) :: lines(2)
 
   PUSH_SUB(pes_flux_map_from_state_2)
 
   psiG = M_Z0
-  
+
   write(filename,'(i10.10)') idx
 
   path = "pesflux1."//trim(filename)
-  
-  
+
+
   call zrestart_read_binary(restart, path, np, psiG(:,:), err)
 
-  POP_SUB(pes_flux_map_from_state_2)  
+  POP_SUB(pes_flux_map_from_state_2)
 end subroutine pes_flux_map_from_state_2
 
 
@@ -729,25 +729,25 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
-  integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  integer,           intent(in) :: ll(:)
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)
   FLOAT,             intent(in) :: Ekin(:,:,:)
 
 
   PUSH_SUB(pes_flux_out_energy)
 
   select case (this%shape)
-  
+
   case (M_SPHERICAL)
     call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces", namespace=namespace)
-  ! not needed
-  
+    ! not needed
+
   case (M_CUBIC)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
 
   case (M_PLANES)
     call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)
-  
+
   end select
 
 
@@ -760,35 +760,35 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
   FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
-  integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  integer,           intent(in) :: ll(:)
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)
   FLOAT,             intent(in) :: Ekin(:,:,:)
-  
+
   integer :: iunit, ip, ie
   FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
-  
-  
+
+
   PUSH_SUB(pes_flux_out_energy_pln)
 
-  
+
   iunit = io_open(file, namespace, action='write')
   write(iunit, '(a)') '##################################################'
   write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-                                    str_center("E", 18),  str_center("P[E]", 18)
+    str_center("E", 18),  str_center("P[E]", 18)
 
   write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-                                    str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
-                                    str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
+    str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
+    str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
   write(iunit, '(a)') '##################################################'
-  
 
-  do ie = 1, ll(3) 
+
+  do ie = 1, ll(3)
     write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
-                                    units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
-                                    sum(arpes(:,:,ie))
-  end do      
-  
-  
+      units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
+      sum(arpes(:,:,ie))
+  end do
+
+
   call io_close(iunit)
 
 
@@ -824,7 +824,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
-  
+
   ! M_PLANES debug
   integer            :: itot
   character(len=80)  :: filename
@@ -853,7 +853,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   case (M_PLANES)
     POP_SUB(pes_flux_output)
     return
-    
+
   end select
 
   ! calculate spectra & total distribution
@@ -865,11 +865,11 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
         select case (this%shape)
         case (M_SPHERICAL)
 
-          do ikk = 1, this%nk 
+          do ikk = 1, this%nk
             iomk = 0
 
             do ith = 0, this%nstepsthetak
-              thetak = ith * M_PI / this%nstepsthetak 
+              thetak = ith * M_PI / this%nstepsthetak
 
               if(ith == 0 .or. ith == this%nstepsthetak) then
                 weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
@@ -902,9 +902,9 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
               ikk = ikk + 1
               spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                 (abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO + &
-                 abs(this%spctramp_cub(ist, isdim, ik, this%nkpnts + 1 - ikp))**M_TWO) * dt**M_TWO * weight
+                abs(this%spctramp_cub(ist, isdim, ik, this%nkpnts + 1 - ikp))**M_TWO) * dt**M_TWO * weight
             end do
-     
+
           case(2)
             weight = M_TWO * M_PI / this%nstepsphik
 
@@ -916,25 +916,25 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
                   abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
               end do
             end do
-     
+
           case(3)
             ikp  = 0
             do ikk = 1, this%nk
               do ith = 0, this%nstepsthetak
-                thetak = ith * M_PI / this%nstepsthetak 
-     
+                thetak = ith * M_PI / this%nstepsthetak
+
                 if(ith == 0 .or. ith == this%nstepsthetak) then
                   weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
                 else
                   weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
                     * M_TWO * M_PI / this%nstepsphik
                 end if
-     
+
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
                   spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                     abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
-     
+
                   if(ith == 0 .or. ith == this%nstepsthetak) exit
                 end do
               end do
@@ -964,7 +964,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   end if
 
   ! -----------------------------------------------------------------
-  ! OUTPUT 
+  ! OUTPUT
   ! -----------------------------------------------------------------
   if(mpi_grp_is_root(mpi_world)) then
     if (this%shape /= M_PLANES) then
@@ -972,17 +972,17 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
       iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
       write(iunitone, '(a19)') '# E, total spectrum'
     end if
-    
+
     select case (this%shape)
     case (M_SPHERICAL)
 
       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
-      do ikk = 1, this%nk 
+      do ikk = 1, this%nk
         kact = ikk * this%dk
         iomk = 0
 
         do ith = 0, this%nstepsthetak
-          thetak = ith * M_PI / this%nstepsthetak 
+          thetak = ith * M_PI / this%nstepsthetak
 
           do iph = 0, this%nstepsphik - 1
             iomk = iomk + 1
@@ -1033,7 +1033,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
           kact = this%kcoords_cub(1, this%nk + ikk, 1)
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
             kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
-          
+
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do isdim = 1, st%d%dim
@@ -1049,7 +1049,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
         ikp = 0
         do ikk = 1, this%nk
           kact = ikk * this%dk
-          
+
           do iph = 0, this%nstepsphik - 1
             ikp = ikp + 1
             if(iph == 0) ikp_save = ikp
@@ -1062,7 +1062,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
 
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
             kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
-          
+
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do isdim = 1, st%d%dim
@@ -1081,7 +1081,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
           spctrsum = M_ZERO
 
           do ith = 0, this%nstepsthetak
-            thetak = ith * M_PI / this%nstepsthetak 
+            thetak = ith * M_PI / this%nstepsthetak
 
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
@@ -1118,47 +1118,47 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
           write(iunitone, '(1x)', advance='yes')
         end do
       end select
-    
+
     case (M_PLANES)
-    
+
       do ik = kptst, kptend
         do ist = stst, stend
           do isdim = 1, sdim
             itot = ist + (ik-1) * st%nst +  (isdim-1) * st%nst * st%d%kpt%nglobal
             write(filename,'(i10.10)') itot
-            
+
             iunitone = io_open('td.general/'//'PES_flux.distribution_'//trim(filename)//'.out', &
               namespace, action='write', position='rewind')
             write(iunitone, '(a29)') '# gx, gy, gz distribution'
-            
+
             do ikp = 1, this%nkpnts
-              
+
               select case(mdim)
               case (2)
                 write(iunitone,'(3(1x,e18.10E3))') this%kcoords_cub(1, ikp, ik), &
-                                                   this%kcoords_cub(2, ikp, ik), &
-                                 abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
+                  this%kcoords_cub(2, ikp, ik), &
+                  abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
               case (3)
                 write(iunitone,'(4(1x,e18.10E3))') this%kcoords_cub(1, ikp, ik), &
-                                                   this%kcoords_cub(2, ikp, ik), &
-                                                   this%kcoords_cub(3, ikp, ik), &
-                                 abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
+                  this%kcoords_cub(2, ikp, ik), &
+                  this%kcoords_cub(3, ikp, ik), &
+                  abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
               end select
-             
+
             end do
-            
+
             call io_close(iunitone)
-          end do      
+          end do
         end do
       end do
-      
+
     end select
-    
+
     if (this%shape /= M_PLANES) then
       call io_close(iunittwo)
       call io_close(iunitone)
     end if
-    
+
   end if
 
   SAFE_DEALLOCATE_A(spctrsum)
@@ -1191,8 +1191,8 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   character(len=128) :: filename
 
   CMPLX, pointer    :: psi1(:), psi2(:,:)
-  
-  
+
+
   PUSH_SUB(pes_flux_dump)
 
 
@@ -1216,7 +1216,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             psi2(:, :) = this%spctramp_sph(ist, idim, ik, :, :)
             call zrestart_write_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err, root = root)
             SAFE_DEALLOCATE_P(psi2)
-            
+
           else
             SAFE_ALLOCATE(psi1(1:this%nkpnts))
             psi1(:) = this%spctramp_cub(ist, idim, ik, :)
@@ -1224,8 +1224,8 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             SAFE_DEALLOCATE_P(psi1)
 
           end if
-        else 
-          err = 0  
+        else
+          err = 0
         end if
 
         if (err /= 0) ierr = ierr + 1
@@ -1251,14 +1251,14 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
       end if
       if (err /= 0) ierr = ierr + 1
     end do
-  
+
   end if
 
 
 
   if(this%shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
-  else 
+  else
     if (this%shape /= M_PLANES) &
       call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
@@ -1269,10 +1269,10 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
     call messages_info(1)
   end if
 
-  #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      if(mpi_err /= 0) ierr = ierr + 3
-  #endif
+#ifdef HAVE_MPI
+  call MPI_Barrier(mpi_world%comm, mpi_err)
+  if(mpi_err /= 0) ierr = ierr + 3
+#endif
 
 
   POP_SUB(pes_flux_dump)
@@ -1306,7 +1306,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
     call messages_info(1)
   end if
 
-  
+
   ierr = 0
   itot = 1
   do ik = 1, st%d%nik
@@ -1320,7 +1320,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
             call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
             this%spctramp_sph(ist, idim, ik, :, :) = psi2(:, :)
             SAFE_DEALLOCATE_P(psi2)
-          
+
           else
             SAFE_ALLOCATE(psi1(1:this%nkpnts))
             call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
@@ -1329,10 +1329,10 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
 
           end if
         else
-          err = 0  
+          err = 0
         end if
-        
-        if (err /= 0) ierr = ierr + 1        
+
+        if (err /= 0) ierr = ierr + 1
         itot = itot + 1
       end do
     end do
@@ -1341,8 +1341,8 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
 
   if(this%shape == M_PLANES) then
     do ik = 1, st%d%nik
-      write(filename,'(a,i5.5)') "pesflux4-kpt", ik      
-    
+      write(filename,'(a,i5.5)') "pesflux4-kpt", ik
+
       if (st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
         SAFE_ALLOCATE(psi1(this%nkpnts))
         call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
@@ -1364,16 +1364,16 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
       call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
- 
+
   if(debug%info) then
     message(1) = "Debug: Reading pes_flux restart done."
     call messages_info(1)
   end if
-  
-  #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      if(mpi_err /= 0) ierr = ierr + 3
-  #endif
+
+#ifdef HAVE_MPI
+  call MPI_Barrier(mpi_world%comm, mpi_err)
+  if(mpi_err /= 0) ierr = ierr + 3
+#endif
 
   POP_SUB(pes_flux_load)
 end subroutine pes_flux_load

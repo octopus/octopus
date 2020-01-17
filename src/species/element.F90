@@ -19,7 +19,7 @@
 #include "global.h"
 
 module element_oct_m
-  
+
   implicit none
 
   private
@@ -38,19 +38,19 @@ module element_oct_m
   end type element_t
 
   interface
-    
+
     ! -------------------------------------------------
-    
+
     subroutine element_init(self, symbol)
       import :: element_t
       implicit none
-      
+
       type(element_t),  intent(out)   :: self
       character(len=*), intent(in)    :: symbol
     end subroutine element_init
 
     ! -------------------------------------------------
-    
+
     subroutine element_end(self)
       import :: element_t
       implicit none
@@ -63,7 +63,7 @@ module element_oct_m
     real(8) function element_mass(self)
       import :: element_t
       implicit none
-      
+
       type(element_t),   intent(in)    :: self
     end function element_mass
 
@@ -72,21 +72,21 @@ module element_oct_m
     real(8) function element_vdw_radius(self)
       import :: element_t
       implicit none
-      
+
       type(element_t),   intent(in)    :: self
     end function element_vdw_radius
-    
+
     ! ------------------------------------
 
     integer function element_atomic_number(self)
       import :: element_t
       implicit none
-      
+
       type(element_t),   intent(in)    :: self
     end function element_atomic_number
 
   end interface
-  
+
 
 contains
 
@@ -97,11 +97,11 @@ contains
       integer function element_valid_low(self)
         import :: element_t
         implicit none
-        
+
         type(element_t),   intent(in)    :: self
       end function element_valid_low
     end interface
-    
+
     valid = element_valid_low(self) /= 0
   end function element_valid
 

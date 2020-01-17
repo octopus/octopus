@@ -53,7 +53,7 @@ program dielectric_function
   FLOAT :: start_time
   character(len=MAX_PATH_LEN) :: ref_filename
   type(namespace_t) :: default_namespace
-  
+
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -75,20 +75,20 @@ program dielectric_function
   call space_init(space, default_namespace)
   call geometry_init(geo, default_namespace, space)
   call simul_box_init(sb, default_namespace, geo, space)
-    
+
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
   if(parse_block(default_namespace, 'GaugeVectorField', blk) == 0) then
-    
+
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
     end do
-    
+
     call parse_block_end(blk)
 
   else
-    
-    if(in_file < 0) then 
+
+    if(in_file < 0) then
       message(1) = "Cannot find the GaugeVectorField in the input file"
       call messages_fatal(1)
     end if
@@ -105,7 +105,7 @@ program dielectric_function
   call parse_variable(default_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
   in_file = io_open('td.general/gauge_field', default_namespace, action='read', status='old', die=.false.)
-  if(in_file < 0) then 
+  if(in_file < 0) then
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field', default_namespace))//"'"
     call messages_fatal(1)
   end if
@@ -118,7 +118,7 @@ program dielectric_function
     !%Default "."
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% In case of delayed kick, the calculation of the transient absorption requires 
+    !% In case of delayed kick, the calculation of the transient absorption requires
     !% to substract a reference calculation, containing the gauge-field without the kick
     !% This reference must be computed using GaugeFieldPropagate=yes and to have
     !% TDOutput = gauge_field.
@@ -139,20 +139,20 @@ program dielectric_function
       message(1) = "The reference calculation does not contain enought time steps"
       call messages_fatal(1)
     end if
- 
+
     if(dt_ref /= dt) then
       message(1) = "The time step of the reference calculation is different from the current calculation"
       call messages_fatal(1)
     end if
 
   end if
-  
+
   time_steps = time_steps + 1
 
   SAFE_ALLOCATE(vecpot(1:time_steps, space%dim*3))
-  
+
   call io_skip_header(in_file)
-  
+
   do ii = 1, time_steps
     read(in_file, *) jj, tt, (vecpot(ii, kk), kk = 1, space%dim*3)
   end do
@@ -243,7 +243,7 @@ program dielectric_function
         fullmat(jdir, idir) = fullmat(idir, jdir)
       end do
     end do
-    
+
     dielectric(1:space%dim, kk) = fullmat(1:space%dim, 1)
 
     chi(1:space%dim, kk) = (dielectric(1:space%dim, kk) - vecpot0(1:space%dim)/n0)*sb%rcell_volume/(M_FOUR*M_PI)
@@ -258,20 +258,20 @@ program dielectric_function
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
-         real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
-         real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
-         real(invdielectric(3, kk), REAL_PRECISION), aimag(invdielectric(3, kk))
+      real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
+      real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
+      real(invdielectric(3, kk), REAL_PRECISION), aimag(invdielectric(3, kk))
   end do
   call io_close(out_file)
- 
+
   out_file = io_open('td.general/dielectric_function', default_namespace, action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
-         real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
-         real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
-         real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
+      real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
+      real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
+      real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
   end do
   call io_close(out_file)
 
@@ -295,7 +295,7 @@ program dielectric_function
   SAFE_DEALLOCATE_A(vecpot0)
   SAFE_DEALLOCATE_A(ftreal)
   SAFE_DEALLOCATE_A(ftimag)
-    
+
   call simul_box_end(sb)
   call geometry_end(geo)
   call space_end(space)

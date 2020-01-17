@@ -532,7 +532,7 @@ contains
 
 
       if(parse_is_defined(namespace, 'TDMomentumTransfer') &
-            .and. parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
+        .and. parse_is_defined(namespace, 'TDMultipleMomentumTransfer')) then
         message(1) = "TDMomentumTransfer and TDMultipleMomentumTransfer cannot be defined at the same time."
         call messages_fatal(1, namespace=namespace)
       end if
@@ -589,7 +589,7 @@ contains
                   if(iop == symmetries_identity_index(sb%symm)) cycle
                   if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector(:,iq), CNST(1e-5))) then
                     message(1) = "The TDMultipleMomentumTransfer breaks (at least) one " &
-                                      // "of the symmetries used to reduce the k-points."
+                      // "of the symmetries used to reduce the k-points."
                     message(2) = "Set SymmetryBreakDir accordingly."
                     call messages_fatal(2, namespace=namespace)
                   end if
@@ -767,7 +767,7 @@ contains
     if(present(iunit)) then
       write(iunit, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
       write(iunit, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-       ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
+      ! if this were to be read by humans, we would want units_from_atomic(units_out%length**(-1))
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
         write(iunit,'(a15,1x,a)')     '# User defined:', trim(kick%user_defined_function)
       elseif(kick%n_multipoles > 0) then
@@ -880,19 +880,19 @@ contains
     if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
 
       select case (kick%qkick_mode)
-        case (QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
-        case (QKICKMODE_SIN)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(1:3, iq), ')'
-        case (QKICKMODE_SIN + QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
-        case (QKICKMODE_EXP)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(1:3, iq), ')'
-        case (QKICKMODE_BESSEL)
-          write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
-            kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
-        case default
-           write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
+      case (QKICKMODE_COS)
+        write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
+      case (QKICKMODE_SIN)
+        write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(1:3, iq), ')'
+      case (QKICKMODE_SIN + QKICKMODE_COS)
+        write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(1:3, iq), ')'
+      case (QKICKMODE_EXP)
+        write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(1:3, iq), ')'
+      case (QKICKMODE_BESSEL)
+        write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
+          kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
+      case default
+        write(message(1), '(a,3F9.6,a)') 'Info: Unknown field type!'
       end select
       call messages_info(1)
 
@@ -900,17 +900,17 @@ contains
       do ip = 1, np
         call mesh_r(mesh, ip, rr, coords = xx)
         select case (kick%qkick_mode)
-          case (QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:, iq) * xx(:)))
-          case (QKICKMODE_SIN)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
-          case (QKICKMODE_SIN+QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
-          case (QKICKMODE_EXP)
-            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:, iq) * xx(:)))
-          case (QKICKMODE_BESSEL)
-            call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
-              kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
+        case (QKICKMODE_COS)
+          kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:, iq) * xx(:)))
+        case (QKICKMODE_SIN)
+          kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+        case (QKICKMODE_SIN+QKICKMODE_COS)
+          kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+        case (QKICKMODE_EXP)
+          kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:, iq) * xx(:)))
+        case (QKICKMODE_BESSEL)
+          call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
+          kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm
         end select
       end do
 
@@ -920,9 +920,9 @@ contains
         kick_function = M_z0
         do ip = 1, np
           call mesh_r(mesh, ip, rr, coords = xx)
-            rkick = M_ZERO; ikick = M_ZERO
+          rkick = M_ZERO; ikick = M_ZERO
           call parse_expression(rkick, ikick, mesh%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
-            kick_function(ip) = rkick
+          kick_function(ip) = rkick
         end do
 
       elseif(kick%n_multipoles > 0) then
@@ -932,7 +932,7 @@ contains
           do ip = 1, np
             call mesh_r(mesh, ip, rr, coords = xx)
             call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
-              kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
+            kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
           end do
         end do
       else
@@ -1062,7 +1062,7 @@ contains
             case (KICK_DENSITY_MODE)
               forall(idim = 1:st%d%dim, ip = 1:mesh%np)
                 psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-               end forall
+              end forall
 
             case (KICK_SPIN_MODE)
               ispin = states_elec_dim_get_spin_index(st%d, iqn)
@@ -1130,11 +1130,11 @@ contains
                 ! =cos(q.r) (                  )  + sin(q.r)(                     )
                 !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     )
                 psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
-                                  * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
-                       + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
+                  * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
+                  + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
                 psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
-                                  * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
-                       + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
+                  * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
+                  + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
 
               end do
 
@@ -1145,24 +1145,24 @@ contains
 
         else ! Multi-q kick
 
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
-           call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
+          call kpoints_to_absolute(mesh%sb%klattice, (/M_ONE,M_ZERO,M_ZERO/), Gvec(1:3, 1), 3)
+          call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ONE,M_ZERO/), Gvec(1:3, 2), 3)
+          call kpoints_to_absolute(mesh%sb%klattice, (/M_ZERO,M_ZERO,M_ONE/), Gvec(1:3, 3), 3)
 
-           kick_function = M_ONE
-           do ip = 1, mesh%np
-             call mesh_r(mesh, ip, rr, coords = xx)
-             do iq = 1, 3
-               if(kick%nqmult(iq) == 0) cycle
-               if(abs(sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))) <= M_EPSILON) cycle
+          kick_function = M_ONE
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, coords = xx)
+            do iq = 1, 3
+              if(kick%nqmult(iq) == 0) cycle
+              if(abs(sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))) <= M_EPSILON) cycle
 
-               kick_function(ip) = kick_function(ip)*sin(M_HALF*(2*kick%nqmult(iq)+1) &
-                     *sum(Gvec(1:3, iq) * xx(1:3)))/sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))
-             end do
-             kick_function(ip) = kick_function(ip)*kick%delta_strength
-           end do
+              kick_function(ip) = kick_function(ip)*sin(M_HALF*(2*kick%nqmult(iq)+1) &
+                *sum(Gvec(1:3, iq) * xx(1:3)))/sin(M_HALF*sum(Gvec(1:3, iq) * xx(1:3)))
+            end do
+            kick_function(ip) = kick_function(ip)*kick%delta_strength
+          end do
 
-           do iqn = st%d%kpt%start, st%d%kpt%end, ns
+          do iqn = st%d%kpt%start, st%d%kpt%end, ns
             do ist = st%st_start, st%st_end
 
               call states_elec_get_state(st, mesh, ist, iqn, psi)
@@ -1177,11 +1177,11 @@ contains
                 !   (-sin(F)(u_y (u_x+iu_y)/(1+u_z)+iu_z)   cos(F) - in_x sin(F)                 )
 
                 psi(ip, 1) = (cos(kick_function(ip))+M_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(1) &
-                        +sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
-                        -M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
+                  +sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
+                  -M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))-M_zI*kick%easy_axis(3))*cc(2)
                 psi(ip, 2) =-sin(kick_function(ip))*(kick%easy_axis(2)*(kick%easy_axis(1) &
-                        +M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
-                        + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2)
+                  +M_zI*kick%easy_axis(2))/(1+kick%easy_axis(3))+M_zI*kick%easy_axis(3))*cc(1) &
+                  + (cos(kick_function(ip))-m_zI*kick%easy_axis(1)*sin(kick_function(ip)))*cc(2)
 
               end do
 
@@ -1202,9 +1202,9 @@ contains
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
-                 kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
-                 P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
-                 species_mass(geo%atom(iatom)%species)
+              kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
+              P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
+              species_mass(geo%atom(iatom)%species)
           end do
         end if
       end if

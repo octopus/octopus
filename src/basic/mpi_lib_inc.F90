@@ -34,7 +34,7 @@ subroutine X(lmpi_gen_allgatherv)(incount, in, outcount, out, mpi_grp)
 
   PUSH_SUB(X(lmpi_gen_allgatherv))
   call profiling_in(prof_allgatherv, 'LMPI_GEN_ALLGATHERV')
-  
+
   SAFE_ALLOCATE( rdispls(1:mpi_grp%size))
   SAFE_ALLOCATE( recvbuf(1:mpi_grp%size))
   SAFE_ALLOCATE(recvcnts(1:mpi_grp%size))

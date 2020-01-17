@@ -224,8 +224,8 @@ module splines_oct_m
     spline_print,    & ! [13]
     spline_der,      &
     spline_der2,     &
-    spline_div,      & 
-    spline_mult,     & 
+    spline_div,      &
+    spline_mult,     &
     spline_force_pos, &
     spline_range_min, &
     spline_range_max, &
@@ -307,7 +307,7 @@ module splines_oct_m
 
       real(8),     intent(in) :: x
       type(c_ptr), intent(in) :: spl
-      type(c_ptr), intent(in) :: acc      
+      type(c_ptr), intent(in) :: acc
     end function oct_spline_eval
 
     pure subroutine oct_spline_eval_array(nn, xf, spl, acc)
@@ -316,7 +316,7 @@ module splines_oct_m
       integer,     intent(in)    :: nn
       real(8),     intent(inout) :: xf
       type(c_ptr), intent(in) :: spl
-      type(c_ptr), intent(in) :: acc  
+      type(c_ptr), intent(in) :: acc
     end subroutine oct_spline_eval_array
 
     pure subroutine oct_spline_eval_array4(nn, xf, spl, acc)
@@ -325,7 +325,7 @@ module splines_oct_m
       integer,     intent(in)    :: nn
       real(4),     intent(inout) :: xf
       type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
+      type(c_ptr), intent(in)    :: acc
     end subroutine oct_spline_eval_array4
 
     pure subroutine oct_spline_eval_arrayz(nn, xf, spl, acc)
@@ -334,7 +334,7 @@ module splines_oct_m
       integer,     intent(in)    :: nn
       complex(8),  intent(inout) :: xf
       type(c_ptr), intent(in) :: spl
-      type(c_ptr), intent(in) :: acc  
+      type(c_ptr), intent(in) :: acc
     end subroutine oct_spline_eval_arrayz
 
     pure subroutine oct_spline_eval_arrayc(nn, xf, spl, acc)
@@ -343,7 +343,7 @@ module splines_oct_m
       integer,     intent(in)    :: nn
       complex(4),  intent(inout) :: xf
       type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
+      type(c_ptr), intent(in)    :: acc
     end subroutine oct_spline_eval_arrayc
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
@@ -538,7 +538,7 @@ contains
     type(spline_t), intent(inout) :: spl
 
     !No PUSH SUB, called too often
-    
+
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
     call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
@@ -720,7 +720,7 @@ contains
   real(8) function spline_dotp(spl1, spl2) result (res)
     type(spline_t), intent(in) :: spl1
     type(spline_t), intent(in) :: spl2
-    
+
     type(spline_t) :: aux
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
@@ -871,7 +871,7 @@ contains
       call spline_init(aux)
       call spline_fit(npoints, x, y2, aux)
       yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ_full(aux%spl, aux%acc)
-      
+
       call spline_end(aux)
     end do
 
@@ -913,12 +913,12 @@ contains
       end if
 
       !To avoid underflows
-      exp_arg = -beta*(x(i)/cutoff - CNST(1.0))**2 
+      exp_arg = -beta*(x(i)/cutoff - CNST(1.0))**2
       if( exp_arg > CNST(-100)) then
         y(i) = y(i) * exp(exp_arg)
       else
         y(i) = M_ZERO
-      end if 
+      end if
     end do
     call spline_fit(npoints, x, y, spl)
 
@@ -948,7 +948,7 @@ contains
     call oct_spline_x(spla%spl, spla%acc, x(1))
     call oct_spline_y(spla%spl, spla%acc, y(1))
     call oct_spline_end(spla%spl, spla%acc)
-  
+
     ASSERT(splb%x_limit(2) >= splb%x_limit(1))
 
     do i = npoints, 1, -1
@@ -956,7 +956,7 @@ contains
       aa = spline_eval(splb, x(i))
       y(i) = y(i)/aa
     end do
-    
+
     call spline_fit(npoints, x, y, spla)
 
     SAFE_DEALLOCATE_A(x)
@@ -965,9 +965,9 @@ contains
     POP_SUB(spline_div)
   end subroutine spline_div
 
-    !------------------------------------------------------------
-    !Force all the values of the spline to be positive
-    !------------------------------------------------------------
+  !------------------------------------------------------------
+  !Force all the values of the spline to be positive
+  !------------------------------------------------------------
   subroutine spline_force_pos(spl)
     type(spline_t),   intent(inout) :: spl
 
@@ -1017,7 +1017,7 @@ contains
     call oct_spline_x(spla%spl, spla%acc, x(1))
     call oct_spline_y(spla%spl, spla%acc, y(1))
     call oct_spline_end(spla%spl, spla%acc)
-  
+
     ASSERT(splb%x_limit(2) >= splb%x_limit(1))
 
     do i = npoints, 1, -1
@@ -1028,7 +1028,7 @@ contains
       end if
       y(i) = y(i)*aa
     end do
-    
+
     call spline_fit(npoints, x, y, spla)
 
     SAFE_DEALLOCATE_A(x)
@@ -1204,7 +1204,7 @@ contains
     POP_SUB(spline_print_2)
   end subroutine spline_print_2
 
- 
+
   !------------------------------------------------------------
   FLOAT function spline_cutoff_radius(spl, threshold) result(r)
     type(spline_t), intent(in) :: spl
@@ -1212,7 +1212,7 @@ contains
 
     integer :: ii, jj
     FLOAT, parameter :: dx = CNST(0.01)
-    
+
     ! No PUSH SUB, called too often.
 
     ASSERT(spl%x_limit(2) >= spl%x_limit(1))
@@ -1250,7 +1250,7 @@ contains
     range = this%x_limit(2)
 
   end function spline_range_max
-    
+
 end module splines_oct_m
 
 !! Local Variables:

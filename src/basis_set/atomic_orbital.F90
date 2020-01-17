@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean 
+!! Copyright (C) 2016 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -31,20 +31,20 @@ module atomic_orbital_oct_m
   use species_oct_m
   use splines_oct_m
   use submesh_oct_m
- 
+
   implicit none
 
   private
 
   public ::                                  &
-           atomic_orbital_get_radius,        &
-           datomic_orbital_get_submesh,      &
-           zatomic_orbital_get_submesh,      &
-           datomic_orbital_get_submesh_safe, &
-           zatomic_orbital_get_submesh_safe, &
-           dget_atomic_orbital,              &
-           zget_atomic_orbital,              &
-           l_notation
+    atomic_orbital_get_radius,        &
+    datomic_orbital_get_submesh,      &
+    zatomic_orbital_get_submesh,      &
+    datomic_orbital_get_submesh_safe, &
+    zatomic_orbital_get_submesh_safe, &
+    dget_atomic_orbital,              &
+    zget_atomic_orbital,              &
+    l_notation
 
   character(len=1), parameter :: &
     l_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
@@ -75,21 +75,21 @@ contains
       radius = species_get_iwf_radius(spec, ii, ispin)
 
       if(truncation == OPTION__AOTRUNCATION__AO_BOX) then
-        ! if the orbital is larger than the size of the box, we restrict it to this size, 
+        ! if the orbital is larger than the size of the box, we restrict it to this size,
         ! otherwise the orbital will overlap more than one time with the simulation box.
         ! This would induces phase problem if the complete mesh is used instead of the sphere
         radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
       else
-        !If asked, we truncate the orbital to the radius on the projector spheres 
+        !If asked, we truncate the orbital to the radius on the projector spheres
         !of the NL part of the pseudopotential.
         !This is a way to garanty no overlap between orbitals of different atoms.
         if(species_is_ps(spec)) &
           radius = min(radius,species_get_ps_radius(spec))
-        end if
-
       end if
-      ! make sure that if the spacing is too large, the orbitals fit in a few points at least
-      radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
+
+    end if
+    ! make sure that if the spacing is too large, the orbitals fit in a few points at least
+    radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
     POP_SUB(atomic_orbital_get_radius)
   end function atomic_orbital_get_radius

@@ -39,14 +39,14 @@ module boundaries_oct_m
   use unit_system_oct_m
 
   implicit none
-  
+
   private
 
   type boundaries_t
     private
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
-    integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
+    integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc
     integer, pointer :: per_send(:, :)
     integer, pointer :: per_recv(:, :)
     integer, pointer :: nsend(:)
@@ -102,7 +102,7 @@ module boundaries_oct_m
   type(profile_t), save :: set_bc_comm_prof
   type(profile_t), save :: set_bc_precomm_prof
   type(profile_t), save :: set_bc_postcomm_prof
-    
+
   interface boundaries_set
     module procedure boundaries_set_batch
     module procedure dboundaries_set_single
@@ -110,7 +110,7 @@ module boundaries_oct_m
   end interface boundaries_set
 
 contains
-  
+
   ! ---------------------------------------------------------
   elemental subroutine boundaries_nullify(this)
     type(boundaries_t), intent(out) :: this
@@ -160,25 +160,25 @@ contains
       !%Section Mesh
       !%Description
       !% (Experimental) If set to yes, Octopus will apply spin-spiral boundary conditions.
-      !% The momentum of the spin spiral is defined by the variable 
-      !% <tt>TDMomentumTransfer</tt> 
+      !% The momentum of the spin spiral is defined by the variable
+      !% <tt>TDMomentumTransfer</tt>
       !%End
       call parse_variable(namespace, 'SpiralBoundaryCondition', .false., this%spiralBC)
       if(this%spiralBC) then
         if(parse_is_defined(namespace, 'TDMomentumTransfer')) then
           if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
             do idir = 1, MAX_DIM
-             call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))
-             this%spiral_q(idir) = units_to_atomic(unit_one / units_inp%length, this%spiral_q(idir))
+              call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))
+              this%spiral_q(idir) = units_to_atomic(unit_one / units_inp%length, this%spiral_q(idir))
             end do
             call messages_experimental("SpiralBoundaryCondition")
-          else 
+          else
             message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
             call messages_fatal(1, namespace=namespace)
           end if
         else
-         message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
-         call messages_fatal(1, namespace=namespace) 
+          message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -205,17 +205,17 @@ contains
         !translate back to a local point
         if(mesh%parallel_in_domains) ip_inner = vec_global2local(mesh%vp, ip_inner, mesh%vp%partno)
 #endif
-        
+
         ! If the point is the periodic of another point, is not zero
         ! (this might happen in the parallel case) and is inside the
-        ! grid then we have to copy it from the grid points.  
+        ! grid then we have to copy it from the grid points.
         !
         ! If the point index is larger than mesh%np then it is the
         ! periodic copy of a point that is zero, so we don`t count it
         ! as it will be initialized to zero anyway. For different
         ! mixed boundary conditions the last check should be removed.
         !
-        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then 
+        if(ip /= ip_inner .and. ip_inner /= 0 .and. ip_inner <= mesh%np) then
           this%nper = this%nper + 1
 #ifdef HAVE_MPI
         else if(mesh%parallel_in_domains .and. ip /= ip_inner) then
@@ -246,7 +246,7 @@ contains
 #endif
 
         ip_inner = mesh_periodic_point(mesh, ip_global, ip)
-        
+
         !translate to local (and keep a copy of the global)
 #ifdef HAVE_MPI
         if(mesh%parallel_in_domains) then
@@ -267,7 +267,7 @@ contains
             if(ipart == mesh%vp%partno) cycle
 
             ip_inner = vec_global2local(mesh%vp, ip_inner_global, ipart)
-            
+
             if(ip_inner /= 0) then
               if(ip_inner <= mesh%vp%np_local_vec(ipart)) then
                 ! count the points to receive from each node
@@ -278,11 +278,11 @@ contains
                 recv_rem_points(this%nrecv(ipart), ipart) = ip_inner
 
                 ASSERT(mesh%vp%rank /= ipart - 1) ! if we are here, the point must be in another node
-              
+
                 exit
               end if
             end if
-            
+
           end do
 #endif
         end if
@@ -299,7 +299,7 @@ contains
         ! Now we communicate to each node the points they will have to
         ! send us. Probably this could be done without communication,
         ! but this way it seems simpler to implement.
-        
+
         ! We send the number of points we expect to receive.
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno) cycle
@@ -326,7 +326,7 @@ contains
         do ipart = 1, mesh%vp%npart
           if(ipart == mesh%vp%partno .or. this%nsend(ipart) == 0) cycle
           call MPI_Recv(this%per_send(1, ipart), this%nsend(ipart), MPI_INTEGER, &
-               ipart - 1, 1, mesh%vp%comm, status, mpi_err)
+            ipart - 1, 1, mesh%vp%comm, status, mpi_err)
         end do
 
         ! we no longer need this
@@ -334,7 +334,7 @@ contains
 
         call MPI_Buffer_detach(send_buffer(1), bsize, mpi_err)
         SAFE_DEALLOCATE_A(send_buffer)
-        
+
       end if
 #endif
 
@@ -363,18 +363,18 @@ contains
   end subroutine boundaries_init
 
   ! ---------------------------------------------------------
-  
+
   subroutine boundaries_end(this)
     type(boundaries_t),  intent(inout) :: this
 
     PUSH_SUB(boundaries_end)
 
     if(simul_box_is_periodic(this%mesh%sb)) then
-      if(this%mesh%parallel_in_domains) then    
-        
+      if(this%mesh%parallel_in_domains) then
+
         ASSERT(associated(this%nsend))
         ASSERT(associated(this%nrecv))
-        
+
         SAFE_DEALLOCATE_P(this%per_send)
         SAFE_DEALLOCATE_P(this%per_recv)
         SAFE_DEALLOCATE_P(this%nsend)
@@ -404,17 +404,17 @@ contains
     CMPLX, optional,    intent(in)    :: phase_correction(:)
 
     PUSH_SUB(boundaries_set_batch)
-    
-    if(ffb%type() == TYPE_FLOAT) then 
+
+    if(ffb%type() == TYPE_FLOAT) then
       call dboundaries_set_batch(this, ffb, phase_correction)
-    else if(ffb%type() == TYPE_CMPLX) then 
+    else if(ffb%type() == TYPE_CMPLX) then
       call zboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)
-     end if
-     
-     POP_SUB(boundaries_set_batch)
-   end subroutine boundaries_set_batch
+    end if
+
+    POP_SUB(boundaries_set_batch)
+  end subroutine boundaries_set_batch
 
 #include "undef.F90"
 #include "complex.F90"

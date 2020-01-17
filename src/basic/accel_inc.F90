@@ -21,7 +21,7 @@ subroutine X(accel_write_buffer_0)(this, data)
   R_TYPE,                          intent(in)    :: data
 
   R_TYPE, allocatable :: data_vec(:)
-  
+
   PUSH_SUB(X(accel_write_buffer_0))
 
   SAFE_ALLOCATE(data_vec(1:1))
@@ -29,9 +29,9 @@ subroutine X(accel_write_buffer_0)(this, data)
   data_vec(1:1) = data
 
   call X(accel_write_buffer_1)(this, 1, data_vec)
-  
+
   SAFE_DEALLOCATE_A(data_vec)
-  
+
   POP_SUB(X(accel_write_buffer_0))
 end subroutine X(accel_write_buffer_0)
 
@@ -59,7 +59,7 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
   if(fsize > 0) then
-    
+
 #ifdef HAVE_OPENCL
     call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -67,12 +67,12 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_htod(this%mem, data(1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1))
     call accel_finish()
 
   end if
-  
+
   call profiling_out(prof_write)
   POP_SUB(X(accel_write_buffer_1))
 
@@ -102,7 +102,7 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
   if(fsize > 0) then
-    
+
 #ifdef HAVE_OPENCL
     call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -110,12 +110,12 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_htod(this%mem, data(1, 1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1, 1))
     call accel_finish()
-    
+
   end if
-    
+
   call profiling_out(prof_write)
   POP_SUB(X(accel_write_buffer_2))
 
@@ -145,7 +145,7 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
   if(fsize > 0) then
-  
+
 #ifdef HAVE_OPENCL
     call clEnqueueWriteBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
@@ -153,12 +153,12 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1, 1, 1))
     call accel_finish()
 
   end if
-  
+
   call profiling_out(prof_write)
   POP_SUB(X(accel_write_buffer_3))
 
@@ -188,7 +188,7 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
   if(fsize > 0) then
-    
+
 #ifdef HAVE_OPENCL
     call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
@@ -196,12 +196,12 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_dtoh(this%mem, data(1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1))
     call accel_finish()
 
   end if
-    
+
   call profiling_out(prof_read)
   POP_SUB(X(accel_read_buffer_1))
 
@@ -219,7 +219,7 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
-  
+
   PUSH_SUB(X(accel_read_buffer_2))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
@@ -231,7 +231,7 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
   if(fsize > 0) then
-    
+
 #ifdef HAVE_OPENCL
     call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
@@ -239,15 +239,15 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_dtoh(this%mem, data(1, 1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1, 1))
     call accel_finish()
 
   end if
-  
+
   call profiling_out(prof_read)
   POP_SUB(X(accel_read_buffer_2))
-  
+
 end subroutine X(accel_read_buffer_2)
 
 ! ---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
-  
+
   PUSH_SUB(X(accel_read_buffer_3))
   call profiling_in(prof_read, "CL_READ_BUFFER")
 
@@ -274,7 +274,7 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
   if(present(offset)) offset_ = offset*R_SIZEOF
 
   if(fsize > 0) then
-    
+
 #ifdef HAVE_OPENCL
     call clEnqueueReadBuffer(accel%command_queue, this%mem, cl_bool(.true.), offset_, fsize, data(1, 1, 1), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
@@ -282,15 +282,15 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
 #ifdef HAVE_CUDA
     call cuda_memcpy_dtoh(this%mem, data(1, 1, 1), fsize, offset_)
 #endif
-    
+
     call profiling_count_transfers(size, data(1, 1, 1))
     call accel_finish()
 
   end if
-  
+
   call profiling_out(prof_read)
   POP_SUB(X(accel_read_buffer_3))
-  
+
 end subroutine X(accel_read_buffer_3)
 
 ! ---------------------------------------------------------------------------
@@ -299,8 +299,8 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
   type(accel_kernel_t), intent(inout) :: kernel
   integer,              intent(in)    :: narg
   R_TYPE,               intent(in)    :: data
- 
-#ifdef HAVE_OPENCL 
+
+#ifdef HAVE_OPENCL
   integer :: ierr
 #endif
 
@@ -308,12 +308,12 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
 #ifdef HAVE_CUDA
   call cuda_kernel_set_arg_value(kernel%arguments, data, narg, types_get_size(R_TYPE_VAL))
 #endif
-  
+
 #ifdef HAVE_OPENCL
   call clSetKernelArg(kernel%kernel, narg, data, ierr)
   if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "set_kernel_arg_data")
 #endif
-  
+
 end subroutine X(accel_set_kernel_arg_data)
 
 ! ---------------------------------------------------------------------------

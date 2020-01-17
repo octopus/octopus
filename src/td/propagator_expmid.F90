@@ -41,7 +41,7 @@ module propagator_expmid_oct_m
     exponential_midpoint
 
 contains
-  
+
   ! ---------------------------------------------------------
   !> Exponential midpoint
   subroutine exponential_midpoint(hm, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
@@ -74,7 +74,7 @@ contains
 
     !move the ions to time 'time - dt/2'
     call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, st, namespace, ions, geo, &
-            time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
+      time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
     call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, namespace, hm, M_HALF*dt, time, save_gf = .true.)
 
@@ -96,4 +96,4 @@ end module propagator_expmid_oct_m
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
-!! End: 
+!! End:

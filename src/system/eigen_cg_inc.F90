@@ -105,7 +105,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
-  
+
   if(hm%theory_level == RDMFT) then
     SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(lam_sym(1:st%nst))
@@ -138,7 +138,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
     gg1   = R_TOTYPE(M_ZERO)
-    
+
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
@@ -152,7 +152,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! h_psi = (H-shift)^2 psi
       do idim = 1, st%d%dim
         h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
-                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+          + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
       end do
     end if
 
@@ -251,7 +251,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         if(debug%info) then
           write(message(1), '(a,i4,a,i4,a,i4,a,es13.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
-               ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
+            ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
           call messages_info(1)
         end if
         exit
@@ -290,7 +290,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
         end do
-        
+
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
@@ -303,7 +303,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! h_psi = (H-shift)^2 psi
         do idim = 1, st%d%dim
           h_cg(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_cg(1:gr%mesh%np, idim) &
-                                 + shift(ist,ik)**2*cg(1:gr%mesh%np, idim)
+            + shift(ist,ik)**2*cg(1:gr%mesh%np, idim)
         end do
       end if
 
@@ -412,8 +412,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       if(debug%info .and. first_delta_e > M_ZERO) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,es12.5,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
-             ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', &
-             abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
+          ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', &
+          abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
         call messages_info(1)
       end if
 

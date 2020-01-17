@@ -19,10 +19,10 @@
 #include "global.h"
 
 module string_oct_m
-  
+
   use iso_c_binding
   use loct_oct_m
-  
+
   implicit none
 
   private
@@ -32,7 +32,7 @@ module string_oct_m
     str_trim,        &
     str_center,      &
     print_C_string,  &
-    conv_to_C_string 
+    conv_to_C_string
 
 contains
 
@@ -65,7 +65,7 @@ contains
     character(len=*), intent(inout) :: str
 
     character(64) :: tmp_str
-    
+
     if (index(str, '/', .true.) /= len_trim(str)) then
       tmp_str = str
       write(str,'(a,a1)') trim(tmp_str), '/'
@@ -154,11 +154,11 @@ contains
   !> converts to c string
   subroutine conv_to_C_string(str)
     character(len=*), intent(out) :: str
-    
+
     integer :: j
 
     j = len(trim(str))
-    str(j+1:j+1) = achar(0) 
+    str(j+1:j+1) = achar(0)
   end subroutine conv_to_C_string
 
 

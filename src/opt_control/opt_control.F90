@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-!> This module contains the main procedure ("opt_control_run") that is 
+!> This module contains the main procedure ("opt_control_run") that is
 !! used when optimal control runs are requested.
 module opt_control_oct_m
   use boundary_op_oct_m
@@ -59,11 +59,11 @@ module opt_control_oct_m
 
   private
   public :: opt_control_run,                  &
-            opt_control_cg_calc,              &
-            opt_control_cg_write_info,        &
-            opt_control_direct_calc,          &
-            opt_control_direct_message_info,  &
-            opt_control_function_forward
+    opt_control_cg_calc,              &
+    opt_control_cg_write_info,        &
+    opt_control_direct_calc,          &
+    opt_control_direct_message_info,  &
+    opt_control_function_forward
 
 
   !> Module variables
@@ -72,7 +72,7 @@ module opt_control_oct_m
   type(oct_iterator_t), save :: iterator
   type(target_t), save       :: oct_target
   type(opt_control_state_t), save :: initial_st
-  
+
 
   !> For the direct, nlopt, and cg schemes:
   type(controlfunction_t), save :: par_
@@ -116,8 +116,8 @@ contains
     call controlfunction_mod_init(sys%hm%ep, sys%namespace, td%dt, td%max_iter, oct%mode_fixed_fluence)
     call controlfunction_init(par, sys%namespace, td%dt, td%max_iter)
     call controlfunction_set(par, sys%hm%ep)
-      ! This prints the initial control parameters, exactly as described in the inp file,
-      ! that is, without applying any envelope or filter.
+    ! This prints the initial control parameters, exactly as described in the inp file,
+    ! that is, without applying any envelope or filter.
     call controlfunction_write(OCT_DIR//'initial_laser_inp', par, sys%namespace)
     call controlfunction_prepare_initial(par)
     call controlfunction_to_h(par, sys%hm%ep)
@@ -161,50 +161,50 @@ contains
 
     ! mode switcher; here is where the real run is made.
     select case(oct%algorithm)
-      case(OPTION__OCTSCHEME__OCT_ZBR98)
-        message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
-        call messages_info(1)
-        call scheme_zbr98()
-      case(OPTION__OCTSCHEME__OCT_WG05)
-        message(1) = "Info: Starting OCT iteration using scheme: WG05"
-        call messages_info(1)
-        call scheme_wg05()
-      case(OPTION__OCTSCHEME__OCT_ZR98)
-        message(1) = "Info: Starting OCT iteration using scheme: ZR98"
-        call messages_info(1)
-        call scheme_mt03()
-      case(OPTION__OCTSCHEME__OCT_MT03)
-        message(1) = "Info: Starting OCT iteration using scheme: MT03"
-        call messages_info(1)
-        call scheme_mt03()
-      case(OPTION__OCTSCHEME__OCT_KROTOV)
-        message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
-        call messages_info(1)
-        call scheme_mt03()
-      case(OPTION__OCTSCHEME__OCT_STRAIGHT_ITERATION)
-        message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
-        call messages_info(1)
-        call scheme_straight_iteration()
-      case(OPTION__OCTSCHEME__OCT_CG)
-        message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
-        call messages_info(1)
-        call scheme_cg()
-      case(OPTION__OCTSCHEME__OCT_BFGS)
-        message(1) = "Info: Starting OCT iterations using scheme: BFGS"
-        call messages_info(1)
-        call scheme_cg()
-      case(OPTION__OCTSCHEME__OCT_DIRECT)
-        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
-        call messages_info(1)
-        call scheme_direct()
-      case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
-        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - BOBYQA)"
-        call messages_info(1)
-        call scheme_nlopt()
-      case(OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
-        message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - LBFGS)"
-        call messages_info(1)
-        call scheme_nlopt()
+    case(OPTION__OCTSCHEME__OCT_ZBR98)
+      message(1) = "Info: Starting OCT iteration using scheme: ZBR98"
+      call messages_info(1)
+      call scheme_zbr98()
+    case(OPTION__OCTSCHEME__OCT_WG05)
+      message(1) = "Info: Starting OCT iteration using scheme: WG05"
+      call messages_info(1)
+      call scheme_wg05()
+    case(OPTION__OCTSCHEME__OCT_ZR98)
+      message(1) = "Info: Starting OCT iteration using scheme: ZR98"
+      call messages_info(1)
+      call scheme_mt03()
+    case(OPTION__OCTSCHEME__OCT_MT03)
+      message(1) = "Info: Starting OCT iteration using scheme: MT03"
+      call messages_info(1)
+      call scheme_mt03()
+    case(OPTION__OCTSCHEME__OCT_KROTOV)
+      message(1) = "Info: Starting OCT iteration using scheme: KROTOV"
+      call messages_info(1)
+      call scheme_mt03()
+    case(OPTION__OCTSCHEME__OCT_STRAIGHT_ITERATION)
+      message(1) = "Info: Starting OCT iterations using scheme: STRAIGHT ITERATION"
+      call messages_info(1)
+      call scheme_straight_iteration()
+    case(OPTION__OCTSCHEME__OCT_CG)
+      message(1) = "Info: Starting OCT iterations using scheme: CONJUGATE GRADIENTS"
+      call messages_info(1)
+      call scheme_cg()
+    case(OPTION__OCTSCHEME__OCT_BFGS)
+      message(1) = "Info: Starting OCT iterations using scheme: BFGS"
+      call messages_info(1)
+      call scheme_cg()
+    case(OPTION__OCTSCHEME__OCT_DIRECT)
+      message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NELDER-MEAD)"
+      call messages_info(1)
+      call scheme_direct()
+    case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA)
+      message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - BOBYQA)"
+      call messages_info(1)
+      call scheme_nlopt()
+    case(OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
+      message(1) = "Info: Starting OCT iterations using scheme: DIRECT OPTIMIZATION (NLOPT - LBFGS)"
+      call messages_info(1)
+      call scheme_nlopt()
     case default
       call messages_input_error('OCTScheme')
     end select
@@ -220,7 +220,7 @@ contains
     call opt_control_state_end(initial_st)
     call target_end(oct_target, oct)
     call controlfunction_mod_close()
-   
+
     POP_SUB(opt_control_run)
 
   contains
@@ -325,7 +325,7 @@ contains
         call oct_prop_end(prop_chi)
         call oct_prop_end(prop_psi)
         POP_SUB(opt_control_run.scheme_zbr98)
-        return        
+        return
       end if
 
       call controlfunction_copy(par_new, par)
@@ -504,7 +504,7 @@ contains
       call propagate_forward(sys, td, par, oct_target, qcpsi)
       f = - target_j1(oct_target, sys%namespace, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
       call opt_control_state_end(qcpsi)
-      call iteration_manager_direct(-f, par, iterator, sys)      
+      call iteration_manager_direct(-f, par, iterator, sys)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
         POP_SUB(opt_control_run.scheme_cg)
@@ -541,9 +541,9 @@ contains
       call minimize_multidim_nlopt(ierr, method, dim, x, step, toldr, maxiter, opt_control_nlopt_func, minimum, &
         xl, xu)
       if(ierr < 1 .or. ierr > 4) then
-         message(1) = "The nlopt minimization procedure did not find convergence, or found an error"
-         write(message(2),'(a,i5)') "Error code =", ierr
-         call messages_info(2)
+        message(1) = "The nlopt minimization procedure did not find convergence, or found an error"
+        write(message(2),'(a,i5)') "Error code =", ierr
+        call messages_info(2)
       end if
 
       call controlfunction_end(par_)
@@ -642,7 +642,7 @@ contains
   ! ---------------------------------------------------------
 
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine f_striter(sys, td, par, j1)
     type(system_t), intent(inout)                 :: sys
     type(td_t), intent(inout)                     :: td
@@ -676,7 +676,7 @@ contains
     call opt_control_state_copy(qcchi, qcpsi)
     call target_chi(oct_target, sys%namespace, sys%gr, qcpsi, qcchi, sys%geo)
 
-    ! Backward propagation, while at the same time finding the output field, 
+    ! Backward propagation, while at the same time finding the output field,
     ! which is placed at par_chi
     call bwd_step_2(sys, td, oct_target, par, par_chi, qcchi, prop_chi, prop_psi)
     !if(oct%mode_fixed_fluence) call controlfunction_set_fluence(par_chi)

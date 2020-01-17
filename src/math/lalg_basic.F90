@@ -43,7 +43,7 @@ module lalg_basic_oct_m
   ! ------------------------------------------------------------------
   ! BLAS level I
   ! ------------------------------------------------------------------
-  
+
   !> swap two vectors
   interface lalg_swap
     module procedure swap_1_1
@@ -109,7 +109,7 @@ module lalg_basic_oct_m
     module procedure axpy_6_3
     module procedure axpy_6_4
   end interface lalg_axpy
-  
+
   !> Copies a vector x, to a vector y
   interface lalg_copy
     module procedure copy_1_1
@@ -137,11 +137,11 @@ module lalg_basic_oct_m
     module procedure nrm2_3
     module procedure nrm2_4
   end interface lalg_nrm2
-  
+
   ! ------------------------------------------------------------------
   ! BLAS level II
   ! ------------------------------------------------------------------
-    
+
   !> Matrix-vector multiplication plus vector.
   interface lalg_symv
     module procedure symv_1_1
@@ -168,7 +168,7 @@ module lalg_basic_oct_m
   ! ------------------------------------------------------------------
   ! BLAS level III
   ! ------------------------------------------------------------------
-  
+
   !> Matrix-matrix multiplication plus matrix.
   interface lalg_gemm
     module procedure gemm_1_1
@@ -192,7 +192,7 @@ module lalg_basic_oct_m
     module procedure gemmt_2_3
     module procedure gemmt_2_4
   end interface lalg_gemmt
-  
+
   !> The following matrix multiplications all expect upper triangular matrices for a.
   !! For real matrices, \f$A = A^T\f$, for complex matrices \f$A = A^H\f$.
   interface lalg_symm

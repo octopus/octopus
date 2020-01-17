@@ -75,7 +75,7 @@ contains
     integer,                 optional, intent(in)  :: procdim(:)
 
 #ifdef HAVE_SCALAPACK
-    
+
     integer, parameter :: maxdims = 2
     integer :: dims(1:2), topo, coords(1:2), ix, iy, id, xy(2)
     logical :: periods(1:2)
@@ -104,7 +104,7 @@ contains
     end if
 
     call blacs_pinfo(this%iam, this%nprocs)
-    
+
     ! The process ID from ScaLAPACK is not always the
     ! same as MPI, so we need to construct a map.
     SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
@@ -117,9 +117,9 @@ contains
     coords = 0
 
     call MPI_Cart_get(comm, maxdims, dims, periods, coords, mpi_err)
-    
+
     SAFE_ALLOCATE(this%usermap(1:dims(1), 1:dims(2)))
-    
+
     do ix = 1, dims(1)
       xy(1) = ix - 1
       do iy = 1, dims(2)
@@ -149,11 +149,11 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(procmap)
-    
+
     POP_SUB(blacs_proc_grid_init)
 #endif
   end subroutine blacs_proc_grid_init
-  
+
   ! ----------------------------------------------------
 
   subroutine blacs_proc_grid_end(this)
@@ -179,17 +179,17 @@ contains
     type(blacs_proc_grid_t), intent(out) :: cout
 
 #ifdef HAVE_SCALAPACK
-    
+
     PUSH_SUB(blacs_proc_grid_copy)
 
-    cout%context = cin%context 
+    cout%context = cin%context
     cout%nprocs  = cin%nprocs
     cout%nprow   = cin%nprow
     cout%npcol   = cin%npcol
-    cout%iam     = cin%iam 
+    cout%iam     = cin%iam
     cout%myrow   = cin%myrow
     cout%mycol   = cin%mycol
-    
+
     if(cout%context /= -1) then
       ! we have to create a new context
       call blacs_get(-1, what = 0, val = cout%context)
@@ -197,7 +197,7 @@ contains
       cout%usermap = cin%usermap
       call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
     end if
-    
+
     POP_SUB(blacs_proc_grid_copy)
 #endif
   end subroutine blacs_proc_grid_copy
@@ -209,7 +209,7 @@ contains
 
     blacs_proc_grid_null = this%context == -1
   end function blacs_proc_grid_null
-  
+
 end module blacs_proc_grid_oct_m
 
 

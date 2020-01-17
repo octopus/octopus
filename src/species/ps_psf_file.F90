@@ -56,7 +56,7 @@ module ps_psf_file_oct_m
     FLOAT, pointer     :: rho_val(:)
     FLOAT, pointer     :: vso(:,:)
   end type ps_psf_file_t
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -127,7 +127,7 @@ contains
         message(2) = 'Pseudopotential should be ordered by increasing l'
         call messages_warning(2, namespace=namespace)
       end if
-      
+
       psf%vps(2:, ndown) = psf%vps(2:, ndown) / psf%rofi(2:)
       psf%vps(1,  ndown) = first_point_extrapolate(psf%rofi, psf%vps(:, ndown))
     end do

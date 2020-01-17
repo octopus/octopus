@@ -150,7 +150,7 @@ contains
 
     case default
       ASSERT(.false.)
-      
+
     end select
 
     call profiling_out(prof)
@@ -160,101 +160,101 @@ contains
 
 ! --------------------------------------------------------------
 
-subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
-  class(batch_t),      intent(in)    :: this
-  integer,             intent(in)    :: sp  
-  integer,             intent(in)    :: ep
-  type(accel_mem_t),   intent(inout) :: psi
-  integer,             intent(in)    :: ldpsi
+  subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
+    class(batch_t),      intent(in)    :: this
+    integer,             intent(in)    :: sp
+    integer,             intent(in)    :: ep
+    type(accel_mem_t),   intent(inout) :: psi
+    integer,             intent(in)    :: ldpsi
 
-  integer :: tsize, offset
-  type(accel_kernel_t), save :: kernel
+    integer :: tsize, offset
+    type(accel_kernel_t), save :: kernel
 
-  PUSH_SUB(batch_get_points_cl)
-  call profiling_in(get_points_prof, "GET_POINTS")
+    PUSH_SUB(batch_get_points_cl)
+    call profiling_in(get_points_prof, "GET_POINTS")
 
-  select case(this%status())
-  case(BATCH_NOT_PACKED, BATCH_PACKED)
-    call messages_not_implemented('batch_get_points_cl for non-CL batches')
+    select case(this%status())
+    case(BATCH_NOT_PACKED, BATCH_PACKED)
+      call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_DEVICE_PACKED)
+    case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
-    offset = this%linear_to_ist(1) - 1
+      tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
+      offset = this%linear_to_ist(1) - 1
 
-    call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
+      call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
-    call accel_set_kernel_arg(kernel, 0, sp)
-    call accel_set_kernel_arg(kernel, 1, ep)
-    call accel_set_kernel_arg(kernel, 2, offset*tsize)
-    call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
-    call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
-    call accel_set_kernel_arg(kernel, 5, this%pack%size_real(1))
-    call accel_set_kernel_arg(kernel, 6, psi)
-    call accel_set_kernel_arg(kernel, 7, ldpsi*tsize)
+      call accel_set_kernel_arg(kernel, 0, sp)
+      call accel_set_kernel_arg(kernel, 1, ep)
+      call accel_set_kernel_arg(kernel, 2, offset*tsize)
+      call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+      call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
+      call accel_set_kernel_arg(kernel, 5, this%pack%size_real(1))
+      call accel_set_kernel_arg(kernel, 6, psi)
+      call accel_set_kernel_arg(kernel, 7, ldpsi*tsize)
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
+      call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
 
-  end select
+    end select
 
-  call profiling_out(get_points_prof)
+    call profiling_out(get_points_prof)
 
-  POP_SUB(batch_get_points_cl)
-end subroutine batch_get_points_cl
+    POP_SUB(batch_get_points_cl)
+  end subroutine batch_get_points_cl
 
 ! --------------------------------------------------------------
 
-subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
-  class(batch_t),      intent(inout) :: this
-  integer,             intent(in)    :: sp  
-  integer,             intent(in)    :: ep
-  type(accel_mem_t),   intent(in)    :: psi
-  integer,             intent(in)    :: ldpsi
+  subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
+    class(batch_t),      intent(inout) :: this
+    integer,             intent(in)    :: sp
+    integer,             intent(in)    :: ep
+    type(accel_mem_t),   intent(in)    :: psi
+    integer,             intent(in)    :: ldpsi
 
-  integer :: tsize, offset
-  type(accel_kernel_t), save :: kernel
+    integer :: tsize, offset
+    type(accel_kernel_t), save :: kernel
 
-  PUSH_SUB(batch_set_points_cl)
-  call profiling_in(set_points_prof, "SET_POINTS")
+    PUSH_SUB(batch_set_points_cl)
+    call profiling_in(set_points_prof, "SET_POINTS")
 
-  select case(this%status())
-  case(BATCH_NOT_PACKED, BATCH_PACKED)
-    call messages_not_implemented('batch_get_points_cl for non-CL batches')
+    select case(this%status())
+    case(BATCH_NOT_PACKED, BATCH_PACKED)
+      call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_DEVICE_PACKED)
+    case(BATCH_DEVICE_PACKED)
 
-    tsize = types_get_size(this%type())&
-      /types_get_size(TYPE_FLOAT)
-    offset = this%linear_to_ist(1) - 1
+      tsize = types_get_size(this%type())&
+        /types_get_size(TYPE_FLOAT)
+      offset = this%linear_to_ist(1) - 1
 
-    call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
-    
-    call accel_set_kernel_arg(kernel, 0, sp)
-    call accel_set_kernel_arg(kernel, 1, ep)
-    call accel_set_kernel_arg(kernel, 2, offset*tsize)
-    call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
-    call accel_set_kernel_arg(kernel, 4, psi)
-    call accel_set_kernel_arg(kernel, 5, ldpsi*tsize)
-    call accel_set_kernel_arg(kernel, 6, this%pack%buffer)
-    call accel_set_kernel_arg(kernel, 7, this%pack%size_real(1))
+      call accel_kernel_start_call(kernel, 'points.cl', 'set_points')
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
+      call accel_set_kernel_arg(kernel, 0, sp)
+      call accel_set_kernel_arg(kernel, 1, ep)
+      call accel_set_kernel_arg(kernel, 2, offset*tsize)
+      call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
+      call accel_set_kernel_arg(kernel, 4, psi)
+      call accel_set_kernel_arg(kernel, 5, ldpsi*tsize)
+      call accel_set_kernel_arg(kernel, 6, this%pack%buffer)
+      call accel_set_kernel_arg(kernel, 7, this%pack%size_real(1))
 
-  end select
+      call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
 
-  call profiling_out(set_points_prof)
+    end select
 
-  POP_SUB(batch_set_points_cl)
-end subroutine batch_set_points_cl
+    call profiling_out(set_points_prof)
+
+    POP_SUB(batch_set_points_cl)
+  end subroutine batch_set_points_cl
 
 ! -------------------------
 
-integer pure function batch_points_block_size(this) result(block_size)
-  class(batch_t),       intent(in)    :: this
-  
-  block_size = 61440
+  integer pure function batch_points_block_size(this) result(block_size)
+    class(batch_t),       intent(in)    :: this
 
-end function batch_points_block_size
+    block_size = 61440
+
+  end function batch_points_block_size
 
 #include "real.F90"
 #include "batch_ops_inc.F90"

@@ -30,7 +30,7 @@ module pes_out_oct_m
   use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
-#endif    
+#endif
   use profiling_oct_m
   use qshep_oct_m
   use simul_box_oct_m
@@ -39,7 +39,7 @@ module pes_out_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use vtk_oct_m
-    
+
   implicit none
 
   private
@@ -68,17 +68,17 @@ contains
     character(len=*),  intent(in) :: file
     type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: Lk(:,:)
-    integer,           intent(in) :: ll(:)  
+    integer,           intent(in) :: ll(:)
     integer(8),        intent(in) :: how
-    type(simul_box_t), intent(in) :: sb 
-    FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
-  
+    type(simul_box_t), intent(in) :: sb
+    FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)
+
     integer :: ierr
     character(len=512) :: filename
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     integer :: ii
-    FLOAT :: dk(3)  
+    FLOAT :: dk(3)
 
     PUSH_SUB(pes_out_velocity_map)
 
@@ -86,8 +86,8 @@ contains
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
     cf%dRS = pesK
-  
-  
+
+
     if (.not. present(pmesh) ) then
       ! Ignore Lk and use pmesh
       dk(:) = M_ZERO
@@ -96,40 +96,40 @@ contains
         dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
       end do
     end if
-  
-#if defined(HAVE_NETCDF)  
-  
+
+#if defined(HAVE_NETCDF)
+
     if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       filename = trim(file)//".ncdf"
       write(message(1), '(a)') 'Writing netcdf format file: '
       call messages_info(1)
-  
-      call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , & 
-            .false., sqrt(units_out%energy)**sb%dim)
+
+      call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , &
+        .false., sqrt(units_out%energy)**sb%dim)
 
     end if
 
 #endif
-  
+
     if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
       filename = trim(file)//".vtk"
       write(message(1), '(a)') 'Writing vtk format file: '
       call messages_info(1)
-    
-      if (present(pmesh)) then          
-        call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,& 
+
+      if (present(pmesh)) then
+        call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,&
           sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
-      else 
-        call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),& 
+      else
+        call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),&
           sqrt(units_out%energy)**sb%dim)
-      end if        
+      end if
     end if
-  
+
     call cube_end(cube)
     call dcube_function_free_RS(cube, cf)
 
     POP_SUB(pes_out_velocity_map)
-    
+
   end subroutine pes_out_velocity_map
 
 
@@ -142,70 +142,70 @@ contains
     integer,           intent(in) :: ll(:)
     FLOAT,             intent(in) :: pmesh(:,:,:,:)
     FLOAT,             intent(in) :: Ekin(:,:,:)
-    
+
     integer :: iunit, ip, ie
     FLOAT   :: dp, length, pp(1:2), pdiff(1:2)
-    
+
     PUSH_SUB(pes_out_arpes_cut)
-    
+
     iunit = io_open(file, namespace, action='write')
     write(iunit, '(a)') '##################################################'
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
-                                      str_center("Ppath", 18), &
-                                      str_center("px", 18), str_center("py", 18), &
-                                      str_center("E", 18),  str_center("P[Ppath,E]", 18)
+      str_center("Ppath", 18), &
+      str_center("px", 18), str_center("py", 18), &
+      str_center("E", 18),  str_center("P[Ppath,E]", 18)
 
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
-                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &    
-                                      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
-                                      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
+      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+      str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18), &
+      str_center('[1/' //trim(units_abbrev(units_out%energy))//']', 18)
     write(iunit, '(a)') '##################################################'
-    
-    
+
+
     length = M_ZERO
     pdiff(:) = M_ZERO
-    
+
     do ip = 1, ll(1)
       pp(1:2) = pmesh(ip,1,1,1:2)
       if (ip > 1) pdiff = pp(1:2) - pmesh(ip-1,1,1,1:2)
       dp = sqrt(sum(pdiff(1:2)**2))
-      length = length + dp 
+      length = length + dp
 
       select case (dim)
-        case (2)
-          do ie = 1, ll(2) 
-            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
-                                            units_from_atomic(unit_one/units_out%length, length),&
-                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
-                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
-                                            units_from_atomic(units_out%energy, Ekin(ip,ie,1)), &
-                                            arpes(ip,ie,1)
-          end do      
+      case (2)
+        do ie = 1, ll(2)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+            units_from_atomic(unit_one/units_out%length, length),&
+            units_from_atomic(unit_one/units_out%length, pp(1)), &
+            units_from_atomic(unit_one/units_out%length, pp(2)), &
+            units_from_atomic(units_out%energy, Ekin(ip,ie,1)), &
+            arpes(ip,ie,1)
+        end do
 
-        case(3)
-          do ie = 1, ll(3)
-            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
-                                            units_from_atomic(unit_one/units_out%length, length),&
-                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
-                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
-                                            units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
-                                            arpes(ip,1,ie)
-          end do
-          
+      case(3)
+        do ie = 1, ll(3)
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+            units_from_atomic(unit_one/units_out%length, length),&
+            units_from_atomic(unit_one/units_out%length, pp(1)), &
+            units_from_atomic(unit_one/units_out%length, pp(2)), &
+            units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
+            arpes(ip,1,ie)
+        end do
+
       end select
-      
+
 
       write(iunit, *)
-      
-       
+
+
     end do
-    
-    
+
+
     call io_close(iunit)
-    
-    POP_SUB(pes_out_arpes_cut)    
+
+    POP_SUB(pes_out_arpes_cut)
   end subroutine pes_out_arpes_cut
 
 
@@ -229,10 +229,10 @@ contains
     FLOAT, allocatable   :: Lk_(:,:)
     FLOAT                :: rotation(1:dim,1:dim)
     logical              :: aligned_axis
-  ! integration
+    ! integration
     FLOAT                :: K, KKK(3), theta, phi, Dphi, Dk(3)
     integer              :: iph, Nphi
-  ! progress
+    ! progress
     integer              :: idone, ntodo
 
     FLOAT, pointer :: cube_f(:)
@@ -262,8 +262,8 @@ contains
     end if
 
     aligned_axis = sum((pol-(/0 ,0 ,1/))**2)  <= M_EPSILON  .or. &
-                   sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
-                   sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON
+      sum((pol-(/0 ,1 ,0/))**2)  <= M_EPSILON  .or. &
+      sum((pol-(/1 ,0 ,0/))**2)  <= M_EPSILON
 
     if (present(pos)) then
       icut(1:3) = pos(1:3)
@@ -274,12 +274,12 @@ contains
     if (aligned_axis .and. integrate == INTEGRATE_NONE) then !no need to rotate and interpolate
 
       select case (dir)
-        case (1)
-          ldir(:) =(/2,3/)
-        case (2)
-          ldir(:) =(/1,3/)
-        case (3)
-          ldir(:) =(/1,2/)
+      case (1)
+        ldir(:) =(/2,3/)
+      case (2)
+        ldir(:) =(/1,3/)
+      case (3)
+        ldir(:) =(/1,2/)
 
       end select
 
@@ -289,24 +289,24 @@ contains
           do iy = 1, ll(ldir(2))
 
             select case (dir)
-              case (1)
-                temp = pesK(icut(dir), ix, iy)
-                KK(1) = pmesh(icut(dir), ix, iy, ldir(1))
-                KK(2) = pmesh(icut(dir), ix, iy, ldir(2))
-              case (2)
-                temp = pesK(ix, icut(dir), iy)
-                KK(1) = pmesh(ix, icut(dir), iy, ldir(1))
-                KK(2) = pmesh(ix, icut(dir), iy, ldir(2))
-              case (3)
-                temp = pesK(ix, iy, icut(dir))
-                KK(1) = pmesh(ix, iy, icut(dir), ldir(1))
-                KK(2) = pmesh(ix, iy, icut(dir), ldir(2))
+            case (1)
+              temp = pesK(icut(dir), ix, iy)
+              KK(1) = pmesh(icut(dir), ix, iy, ldir(1))
+              KK(2) = pmesh(icut(dir), ix, iy, ldir(2))
+            case (2)
+              temp = pesK(ix, icut(dir), iy)
+              KK(1) = pmesh(ix, icut(dir), iy, ldir(1))
+              KK(2) = pmesh(ix, icut(dir), iy, ldir(2))
+            case (3)
+              temp = pesK(ix, iy, icut(dir))
+              KK(1) = pmesh(ix, iy, icut(dir), ldir(1))
+              KK(2) = pmesh(ix, iy, icut(dir), ldir(2))
             end select
 
             write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                    units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                    units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                    temp
+              units_from_atomic(sqrt(units_out%energy), KK(1)),&
+              units_from_atomic(sqrt(units_out%energy), KK(2)),&
+              temp
           end do
           write(iunit, *)
         end do
@@ -318,18 +318,18 @@ contains
             KK(2) = Lk_(iy, ldir(2))
 
             select case (dir)
-              case (1)
-                temp = pesK(idx(icut(dir), 1), idx(ix, 2), idx(iy, 3))
-              case (2)
-                temp = pesK(idx(ix, 1), idx(icut(dir), 2), idx(iy, 3))
-              case (3)
-                temp = pesK(idx(ix, 1), idx(iy, 2), idx(icut(dir), 3))
+            case (1)
+              temp = pesK(idx(icut(dir), 1), idx(ix, 2), idx(iy, 3))
+            case (2)
+              temp = pesK(idx(ix, 1), idx(icut(dir), 2), idx(iy, 3))
+            case (3)
+              temp = pesK(idx(ix, 1), idx(iy, 2), idx(icut(dir), 3))
             end select
 
             write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                    units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                    units_from_atomic(sqrt(units_out%energy), KK(2)),&
-                    temp
+              units_from_atomic(sqrt(units_out%energy), KK(1)),&
+              units_from_atomic(sqrt(units_out%energy), KK(2)),&
+              temp
           end do
           write(iunit, *)
         end do
@@ -353,104 +353,104 @@ contains
       call loct_progress_bar(-1, ntodo)
 
       do ix = 1, ll(1)
-       do iy = 1, ll(2)
+        do iy = 1, ll(2)
 
-         !cut
-         select case (dir)
-           case (1)
-             KK(1) = M_ZERO
-             if (present(pmesh)) then
-               KK(2) = pmesh(ix, 1, 1, 1)
-               KK(3) = pmesh(1, iy, 1, 2)
-             else
-               KK(2) = Lk_(ix, 1)
-               KK(3) = Lk_(iy, 2)
-             end if
-           case (2)
-             KK(2) = M_ZERO
-             if(present(pmesh)) then
-               KK(1) = pmesh(ix,  1, 1, 1)
-               KK(3) = pmesh(1,  iy, 1, 2)
-             else
-               KK(1) = Lk_(ix, 1)
-               KK(3) = Lk_(iy, 2)
-             end if
+          !cut
+          select case (dir)
+          case (1)
+            KK(1) = M_ZERO
+            if (present(pmesh)) then
+              KK(2) = pmesh(ix, 1, 1, 1)
+              KK(3) = pmesh(1, iy, 1, 2)
+            else
+              KK(2) = Lk_(ix, 1)
+              KK(3) = Lk_(iy, 2)
+            end if
+          case (2)
+            KK(2) = M_ZERO
+            if(present(pmesh)) then
+              KK(1) = pmesh(ix,  1, 1, 1)
+              KK(3) = pmesh(1,  iy, 1, 2)
+            else
+              KK(1) = Lk_(ix, 1)
+              KK(3) = Lk_(iy, 2)
+            end if
 
-           case (3)
-             KK(3) = M_ZERO
-             if(present(pmesh)) then
-               KK(1) = pmesh(ix,  1, 1, 1)
-               KK(2) = pmesh(1,  iy, 1, 2)
-             else
-               KK(1) = Lk_(ix, 1)
-               KK(2) = Lk_(iy, 2)
-             end if
+          case (3)
+            KK(3) = M_ZERO
+            if(present(pmesh)) then
+              KK(1) = pmesh(ix,  1, 1, 1)
+              KK(2) = pmesh(1,  iy, 1, 2)
+            else
+              KK(1) = Lk_(ix, 1)
+              KK(2) = Lk_(iy, 2)
+            end if
 
-         end select
+          end select
 
-         temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
+          temp = qshep_interpolate(interp, cube_f, matmul(rotation,KK(1:3)) )
 
-         select case (integrate)
-           case (INTEGRATE_PHI)
-             temp = M_ZERO
-             K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
+          select case (integrate)
+          case (INTEGRATE_PHI)
+            temp = M_ZERO
+            K = sqrt(KK(1)**2 + KK(2)**2 + KK(3)**2)
 
-             Nphi = 360
-             Dphi = M_TWO * M_PI/Nphi
+            Nphi = 360
+            Dphi = M_TWO * M_PI/Nphi
 
-             do iph = 0, Nphi
-               phi = iph * Dphi
-               theta = atan2(sqrt(KK(1)**2+KK(2)**2),KK(3))
+            do iph = 0, Nphi
+              phi = iph * Dphi
+              theta = atan2(sqrt(KK(1)**2+KK(2)**2),KK(3))
 
-               KKK(1) = K *sin(theta)*cos(phi)
-               KKK(2) = K *sin(theta)*sin(phi)
-               KKK(3) = K *cos(theta)
+              KKK(1) = K *sin(theta)*cos(phi)
+              KKK(2) = K *sin(theta)*sin(phi)
+              KKK(3) = K *cos(theta)
 
-               temp = temp + &
-                             abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-             end do
-             temp = temp * Dphi
+              temp = temp + &
+                abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+            end do
+            temp = temp * Dphi
 
-           case (INTEGRATE_KX)
-             temp = M_ZERO
-             do ii =1, ll(1)
-                KKK(:) = KK(:) + (/Lk(ii,1), M_ZERO, M_ZERO/)
-                temp = temp + &
-                              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-             end do
-             temp = temp * Dk(1)
+          case (INTEGRATE_KX)
+            temp = M_ZERO
+            do ii =1, ll(1)
+              KKK(:) = KK(:) + (/Lk(ii,1), M_ZERO, M_ZERO/)
+              temp = temp + &
+                abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+            end do
+            temp = temp * Dk(1)
 
-           case (INTEGRATE_KY)
-             temp = M_ZERO
-             do ii =1, ll(2)
-                KKK(:) = KK(:) + (/M_ZERO, Lk(ii,2), M_ZERO/)
-                temp = temp + &
-                              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-             end do
-             temp = temp * Dk(2)
+          case (INTEGRATE_KY)
+            temp = M_ZERO
+            do ii =1, ll(2)
+              KKK(:) = KK(:) + (/M_ZERO, Lk(ii,2), M_ZERO/)
+              temp = temp + &
+                abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+            end do
+            temp = temp * Dk(2)
 
-           case (INTEGRATE_KZ)
-             temp = M_ZERO
-             do ii =1, ll(3)
-                KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii,3)/)
-                temp = temp + &
-                              abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
-             end do
-             temp = temp * Dk(3)
+          case (INTEGRATE_KZ)
+            temp = M_ZERO
+            do ii =1, ll(3)
+              KKK(:) = KK(:) + (/M_ZERO, M_ZERO, Lk(ii,3)/)
+              temp = temp + &
+                abs(qshep_interpolate(interp, cube_f, matmul(rotation,KKK(1:3)) ))
+            end do
+            temp = temp * Dk(3)
 
-         end select
+          end select
 
-         write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
-                 units_from_atomic(sqrt(units_out%energy), KK(1)),&
-                 units_from_atomic(sqrt(units_out%energy), KK( 2)),&
-                 temp
+          write(iunit, '(es19.12,2x,es19.12,2x,es19.12)') &
+            units_from_atomic(sqrt(units_out%energy), KK(1)),&
+            units_from_atomic(sqrt(units_out%energy), KK( 2)),&
+            temp
 
 
-         idone = idone +1
-         call loct_progress_bar(idone, ntodo)
+          idone = idone +1
+          call loct_progress_bar(idone, ntodo)
 
-       end do
-       write(iunit, *)
+        end do
+        write(iunit, *)
       end do
 
       write(stdout, '(1x)')
@@ -553,10 +553,10 @@ contains
 
 
     select case(dim)
-      case (2)
-        call qshep_init(interp, np, cube_f, kx, ky)
-      case (3)
-        call qshep_init(interp, np, cube_f, kx, ky, kz)
+    case (2)
+      call qshep_init(interp, np, cube_f, kx, ky)
+    case (3)
+      call qshep_init(interp, np, cube_f, kx, ky, kz)
     end select
 
     SAFE_DEALLOCATE_A(kx)

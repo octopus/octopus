@@ -171,7 +171,7 @@ contains
     do i = 1, mgrid%n_levels
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
-      
+
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
 
       call derivatives_nullify(mgrid%level(i)%der)
@@ -184,23 +184,23 @@ contains
       call derivatives_build(mgrid%level(i)%der, namespace, mgrid%level(i)%mesh)
 
       call mesh_write_info(mgrid%level(i)%mesh, stdout)
-      
+
       mgrid%level(i)%der%finer => mgrid%level(i - 1)%der
       mgrid%level(i - 1)%der%coarser => mgrid%level(i)%der
       mgrid%level(i)%der%to_finer => mgrid%level(i)%tt
       mgrid%level(i - 1)%der%to_coarser => mgrid%level(i)%tt
     end do
-    
+
     SAFE_ALLOCATE(mgrid%sp(0:mgrid%n_levels))
     SAFE_ALLOCATE(mgrid%ep(0:mgrid%n_levels))
     SAFE_ALLOCATE(mgrid%ep_part(0:mgrid%n_levels))
 
     mgrid%tp = 0
-    do i = 0, mgrid%n_levels    
+    do i = 0, mgrid%n_levels
       mgrid%sp(i) = 1 + mgrid%tp
       mgrid%ep(i) = mgrid%tp + mgrid%level(i)%mesh%np
       mgrid%tp = mgrid%tp + mgrid%level(i)%mesh%np_part
-      mgrid%ep_part(i) = mgrid%tp      
+      mgrid%ep_part(i) = mgrid%tp
     end do
 
     POP_SUB(multigrid_init)
@@ -254,9 +254,9 @@ contains
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
 #endif
       mod2 = mod(fine%idx%lxyz(ig, :), 2)
-      
+
       pt = sum(abs(mod2(1:3)))
-      
+
       select case(pt)
       case(0)
         tt%n_fine1 = tt%n_fine1 + 1
@@ -272,7 +272,7 @@ contains
         tt%fine_i(i) = 8
       end select
     end do
-    
+
     ASSERT(tt%n_fine1 + tt%n_fine2 + tt%n_fine4 + tt%n_fine8 == tt%n_fine)
 
     SAFE_ALLOCATE(tt%to_fine1(1:1, 1:tt%n_fine1))
@@ -297,19 +297,19 @@ contains
       case(0)
         i1 = i1 + 1
         tt%to_fine1(1, i1) = coarse%idx%lxyz_inv(x(1), x(2), x(3))
-        
+
       case(1)
         i2 = i2 + 1
         tt%to_fine2(1, i2) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
         tt%to_fine2(2, i2) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
-        
+
       case(2)
         i4 = i4 + 1
         tt%to_fine4(1, i4) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
         tt%to_fine4(2, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
         tt%to_fine4(3, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
         tt%to_fine4(4, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
-        
+
       case(3)
         i8 = i8 + 1
         tt%to_fine8(1, i8) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
@@ -320,9 +320,9 @@ contains
         tt%to_fine8(6, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
         tt%to_fine8(7, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
         tt%to_fine8(8, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
-        
+
       end select
-      
+
     end do
 
     ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
@@ -384,7 +384,7 @@ contains
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
-    
+
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
 
     POP_SUB(multigrid_mesh_half)
@@ -410,9 +410,9 @@ contains
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)
     mesh_out%idx%nr(:,:) = mesh_in%idx%nr(:,:)*2
     mesh_out%idx%ll(:)   = mesh_out%idx%nr(2, :) - mesh_out%idx%nr(1, :) + 1
-    
+
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
-    
+
     call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
 
     POP_SUB(multigrid_mesh_double)
@@ -463,7 +463,7 @@ contains
     next_der => base_der%coarser
 
     number = 0
-    do 
+    do
       number = number + 1
       next_der => next_der%coarser
       if(.not. associated(next_der)) exit

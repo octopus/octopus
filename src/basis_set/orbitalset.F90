@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean 
+!! Copyright (C) 2016 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -44,20 +44,20 @@ module orbitalset_oct_m
   private
 
   public ::                             &
-       orbitalset_t,                   &
-       orbitalset_nullify,             &
-       orbitalset_init,                &
-       orbitalset_end,                 &
-       orbitalset_update_phase,        &
-       dorbitalset_get_coefficients,   &
-       zorbitalset_get_coefficients,   &
-       dorbitalset_get_coeff_batch,    &
-       zorbitalset_get_coeff_batch,    &
-       dorbitalset_add_to_batch,       &
-       zorbitalset_add_to_batch,       &
-       dorbitalset_add_to_psi,         &
-       zorbitalset_add_to_psi,         &
-       orbitalset_set_jln
+    orbitalset_t,                   &
+    orbitalset_nullify,             &
+    orbitalset_init,                &
+    orbitalset_end,                 &
+    orbitalset_update_phase,        &
+    dorbitalset_get_coefficients,   &
+    zorbitalset_get_coefficients,   &
+    dorbitalset_get_coeff_batch,    &
+    zorbitalset_get_coeff_batch,    &
+    dorbitalset_add_to_batch,       &
+    zorbitalset_add_to_batch,       &
+    dorbitalset_add_to_psi,         &
+    zorbitalset_add_to_psi,         &
+    orbitalset_set_jln
 
   type orbitalset_t
     ! Components are public by default
@@ -65,22 +65,22 @@ module orbitalset_oct_m
     FLOAT               :: jj
     integer             :: norbs
     integer             :: ndim
-    integer             :: iatom 
+    integer             :: iatom
     type(submesh_t)     :: sphere             !> The submesh of the orbital
-    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase 
-                                              !> if the sphere cross the border of the box
+    CMPLX, pointer      :: phase(:,:)         !> Correction to the global phase
+    !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
     FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
     integer             :: nneighbors         !> Number of neighbouring atoms on which the intersite
-                                              !> interaction is considered
+    !> interaction is considered
     FLOAT, allocatable  :: V_ij(:,:)          !> The list of intersite interaction parameters
     FLOAT, allocatable  :: coulomb_IIJJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
     integer, allocatable:: map_os(:)
     CMPLX, allocatable  :: phase_shift(:,:)
 
     FLOAT               :: radius
-    type(species_t), pointer :: spec          
+    type(species_t), pointer :: spec
 
     FLOAT, pointer      :: dorb(:,:,:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:,:,:) !> The orbital, if complex, on the submesh
@@ -94,83 +94,83 @@ module orbitalset_oct_m
 
 contains
 
- subroutine orbitalset_nullify(this)
-  type(orbitalset_t),             intent(inout) :: this
+  subroutine orbitalset_nullify(this)
+    type(orbitalset_t),             intent(inout) :: this
 
-  PUSH_SUB(orbitalset_nullify)
+    PUSH_SUB(orbitalset_nullify)
 
-  nullify(this%phase)
-  nullify(this%spec)
-  nullify(this%dorb)
-  nullify(this%zorb)
-  nullify(this%eorb_submesh)
-  nullify(this%eorb_mesh)
+    nullify(this%phase)
+    nullify(this%spec)
+    nullify(this%dorb)
+    nullify(this%zorb)
+    nullify(this%eorb_submesh)
+    nullify(this%eorb_mesh)
 
-  call submesh_null(this%sphere)
-  call orbitalset_init(this)
+    call submesh_null(this%sphere)
+    call orbitalset_init(this)
 
-  POP_SUB(orbitalset_nullify)
+    POP_SUB(orbitalset_nullify)
 
- end subroutine orbitalset_nullify
+  end subroutine orbitalset_nullify
 
- subroutine orbitalset_init(this)
-  type(orbitalset_t),             intent(inout) :: this
+  subroutine orbitalset_init(this)
+    type(orbitalset_t),             intent(inout) :: this
 
-  PUSH_SUB(orbitalset_init)
+    PUSH_SUB(orbitalset_init)
 
-  this%iatom = -1
-  this%nneighbors = 0
-  this%nn = 0
-  this%ll = 0
-  this%jj = M_ONE
-  this%ii = 0
-  this%iatom = 0
-  this%ndim = 1
- 
-  this%Ueff = M_ZERO
-  this%Ubar = M_ZERO
-  this%Jbar = M_ZERO
-  this%alpha = M_ZERO
-  this%radius = M_ZERO
+    this%iatom = -1
+    this%nneighbors = 0
+    this%nn = 0
+    this%ll = 0
+    this%jj = M_ONE
+    this%ii = 0
+    this%iatom = 0
+    this%ndim = 1
 
-  POP_SUB(orbitalset_init)
- end subroutine orbitalset_init
+    this%Ueff = M_ZERO
+    this%Ubar = M_ZERO
+    this%Jbar = M_ZERO
+    this%alpha = M_ZERO
+    this%radius = M_ZERO
+
+    POP_SUB(orbitalset_init)
+  end subroutine orbitalset_init
 
 
- subroutine orbitalset_end(this)
-   type(orbitalset_t), intent(inout) :: this
+  subroutine orbitalset_end(this)
+    type(orbitalset_t), intent(inout) :: this
 
-   PUSH_SUB(orbitalset_end)  
+    PUSH_SUB(orbitalset_end)
 
-   SAFE_DEALLOCATE_P(this%phase)
-   SAFE_DEALLOCATE_P(this%dorb)
-   SAFE_DEALLOCATE_P(this%zorb)
-   SAFE_DEALLOCATE_P(this%eorb_submesh)
-   SAFE_DEALLOCATE_P(this%eorb_mesh)
-   nullify(this%spec)
-   call submesh_end(this%sphere)
+    SAFE_DEALLOCATE_P(this%phase)
+    SAFE_DEALLOCATE_P(this%dorb)
+    SAFE_DEALLOCATE_P(this%zorb)
+    SAFE_DEALLOCATE_P(this%eorb_submesh)
+    SAFE_DEALLOCATE_P(this%eorb_mesh)
+    nullify(this%spec)
+    call submesh_end(this%sphere)
 
-   SAFE_DEALLOCATE_A(this%V_ij)
-   SAFE_DEALLOCATE_A(this%coulomb_IIJJ)
-   SAFE_DEALLOCATE_A(this%map_os)
-   SAFE_DEALLOCATE_A(this%phase_shift)
-   
-   POP_SUB(orbitalset_end)
- end subroutine orbitalset_end
+    SAFE_DEALLOCATE_A(this%V_ij)
+    SAFE_DEALLOCATE_A(this%coulomb_IIJJ)
+    SAFE_DEALLOCATE_A(this%map_os)
+    SAFE_DEALLOCATE_A(this%phase_shift)
 
- subroutine orbitalset_set_jln(this, jj, ll, nn)
-   type(orbitalset_t), intent(inout) :: this
-   FLOAT,              intent(in)    :: jj
-   integer,            intent(in)    :: ll, nn
+    POP_SUB(orbitalset_end)
+  end subroutine orbitalset_end
 
-   PUSH_SUB(orbitalset_set_jln)
+  subroutine orbitalset_set_jln(this, jj, ll, nn)
+    type(orbitalset_t), intent(inout) :: this
+    FLOAT,              intent(in)    :: jj
+    integer,            intent(in)    :: ll, nn
 
-   this%jj = jj
-   this%ll = ll
-   this%nn = nn
+    PUSH_SUB(orbitalset_set_jln)
 
-   POP_SUB(orbitalset_set_jln)
- end subroutine orbitalset_set_jln
+    this%jj = jj
+    this%ll = ll
+    this%nn = nn
+
+    POP_SUB(orbitalset_set_jln)
+  end subroutine orbitalset_set_jln
 
 
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
@@ -232,11 +232,11 @@ contains
           do im = 1, os%norbs
             do is = 1, ns
               os%eorb_mesh(os%sphere%map(is),im,idim,iq) = os%eorb_mesh(os%sphere%map(is),im,idim,iq) &
-                                                        + os%zorb(is,idim,im)*os%phase(is, iq)
+                + os%zorb(is,idim,im)*os%phase(is, iq)
             end do
           end do
         end do
-      else !In the case of the isolated system, we still use the submesh 
+      else !In the case of the isolated system, we still use the submesh
         do im = 1, os%norbs
           do idim = 1, os%ndim
             forall(is=1:ns)
@@ -248,13 +248,13 @@ contains
 
 
       if(os%nneighbors > 0) then
-        do inn = 1, os%nneighbors       
+        do inn = 1, os%nneighbors
           dx(1:ndim) = os%V_ij(inn,1:ndim)
           kr = sum(kpoint(1:ndim)*dx(1:ndim))
           if(present(vec_pot)) then
             if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
           end if
-    
+
           !At the moment the uniform vector potential is in vec_pot_var
           if(present(vec_pot_var)) then
             if(allocated(vec_pot_var))  kr = kr + sum(vec_pot_var(1:ndim, 1)*dx(1:ndim))

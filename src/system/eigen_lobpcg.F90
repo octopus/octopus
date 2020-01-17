@@ -50,8 +50,8 @@ module eigen_lobpcg_oct_m
     C_PROFILING_LOBPCG_ESOLVE, &
     C_PROFILING_LOBPCG_CHOL,   &
     C_PROFILING_LOBPCG_INV
-  
-  contains
+
+contains
 
 #include "real.F90"
 #include "eigen_lobpcg_inc.F90"

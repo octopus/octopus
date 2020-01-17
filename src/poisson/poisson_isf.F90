@@ -34,14 +34,14 @@ module poisson_isf_oct_m
   use sgfft_oct_m
 
   implicit none
-  
+
   private
-  
+
   public ::               &
     poisson_isf_t,        &
     isf_cnf_t,    &
     poisson_isf_init,     &
-    poisson_isf_solve,    & 
+    poisson_isf_solve,    &
     poisson_isf_end
 
   ! Indices for the cnf array
@@ -66,7 +66,7 @@ module poisson_isf_oct_m
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
 
-  integer, parameter :: order_scaling_function = 8 
+  integer, parameter :: order_scaling_function = 8
 
 
 contains
@@ -78,7 +78,7 @@ contains
     type(mesh_t),              intent(in)    :: mesh
     type(cube_t),              intent(inout) :: cube
     integer,                   intent(in)    :: all_nodes_comm
-    logical, optional,         intent(in)    :: init_world 
+    logical, optional,         intent(in)    :: init_world
 
     integer :: n1, n2, n3
     integer :: i_cnf
@@ -202,7 +202,7 @@ contains
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm, &
           this%cnf(i_cnf)%kernel)
       else
-      	nullify(this%cnf(i_cnf)%kernel)
+        nullify(this%cnf(i_cnf)%kernel)
         cycle
       end if
     end do
@@ -222,7 +222,7 @@ contains
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
-    
+
     PUSH_SUB(poisson_isf_solve)
 
     call cube_function_null(rho_cf)
@@ -270,7 +270,7 @@ contains
           this%cnf(i_cnf)%mpi_grp%rank, this%cnf(i_cnf)%mpi_grp%size, this%cnf(i_cnf)%mpi_grp%comm)
       end if
       ! we need to be sure that the root of every domain-partition has a copy of the potential
-      ! for the moment we broadcast to all nodes, but this is more than what we really need 
+      ! for the moment we broadcast to all nodes, but this is more than what we really need
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
         call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
@@ -281,9 +281,9 @@ contains
     if(mesh%parallel_in_domains) then
       call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
     else
-       call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      call dcube_to_mesh(cube, rho_cf, mesh, pot)
     end if
-    
+
     call dcube_function_free_RS(cube, rho_cf)
 
     POP_SUB(poisson_isf_solve)
@@ -323,23 +323,23 @@ contains
   !!    Solver of Poisson equation applying a kernel
   !!
   !! SYNOPSIS
-  !!    Poisson solver applying a kernel and 
+  !!    Poisson solver applying a kernel and
   !!    using Fourier transform for the convolution.
   !!    rhopot : input  -> the density
   !!             output -> the Hartree potential + pot_ion
   !!    The potential pot_ion is ADDED in the array rhopot.
   !!    Calculate also the Hartree potential
   !!
-  !!    Replaces the charge density contained in rhopot 
+  !!    Replaces the charge density contained in rhopot
   !!    by the Hartree stored as well in rhopot.
-  !!    If xc_on is true, it also adds the XC potential and 
+  !!    If xc_on is true, it also adds the XC potential and
   !!    ionic potential pot_ion
   !!
   !!    We double the size of the mesh except in one dimension
   !!    in order to use the property of the density to be real.
   !! WARNING
   !!    For the use of FFT routine
-  !!        inzee=1: first part of Z is data (output) array, 
+  !!        inzee=1: first part of Z is data (output) array,
   !!                 second part work array
   !!        inzee=2: first part of Z is work array, second part data array
   !!                 real(F(i1,i2,i3))=Z(1,i1,i2,i3,inzee)
@@ -376,7 +376,7 @@ contains
     integer :: inzee, i_sign
 
     PUSH_SUB(psolver_kernel)
-    
+
     !Dimension of the FFT
     call calculate_dimensions(n01, n02, n03, n1, n2, n3)
 
@@ -456,7 +456,7 @@ contains
     integer :: si1,si2,si3
 
     PUSH_SUB(kernel_application)
-    
+
     n1h = n1/2
     n2h = n2/2
     n3h = n3/2
@@ -475,7 +475,7 @@ contains
 
     !--------------------------------------------!
     !--- Starting reconstruction half -> full ---!
-    !--------------------------------------------!   
+    !--------------------------------------------!
 
     !-------------Case i3 = 1
     i3=1
@@ -497,7 +497,7 @@ contains
     rfe=.5d0*(a+c)
     ife=.5d0*(b-d)
     rfo=.5d0*(a-c)
-    ifo=.5d0*(b+d) 
+    ifo=.5d0*(b+d)
     cp=cos_array(i1)
     sp=sin_array(i1)
     rk=rfe+cp*ifo-sp*rfo
@@ -520,7 +520,7 @@ contains
       rfe=.5d0*(a+c)
       ife=.5d0*(b-d)
       rfo=.5d0*(a-c)
-      ifo=.5d0*(b+d) 
+      ifo=.5d0*(b+d)
       cp=cos_array(i1)
       sp=sin_array(i1)
       rk=rfe+cp*ifo-sp*rfo
@@ -544,7 +544,7 @@ contains
     rfe=.5d0*(a+c)
     ife=.5d0*(b-d)
     rfo=.5d0*(a-c)
-    ifo=.5d0*(b+d) 
+    ifo=.5d0*(b+d)
     cp=cos_array(i1)
     sp=sin_array(i1)
     rk=rfe+cp*ifo-sp*rfo
@@ -572,7 +572,7 @@ contains
       rfe=.5d0*(a+c)
       ife=.5d0*(b-d)
       rfo=.5d0*(a-c)
-      ifo=.5d0*(b+d) 
+      ifo=.5d0*(b+d)
       cp=cos_array(i1)
       sp=sin_array(i1)
       rk=rfe+cp*ifo-sp*rfo
@@ -595,7 +595,7 @@ contains
         rfe=.5d0*(a+c)
         ife=.5d0*(b-d)
         rfo=.5d0*(a-c)
-        ifo=.5d0*(b+d) 
+        ifo=.5d0*(b+d)
         cp=cos_array(i1)
         sp=sin_array(i1)
         rk=rfe+cp*ifo-sp*rfo
@@ -619,7 +619,7 @@ contains
       rfe=.5d0*(a+c)
       ife=.5d0*(b-d)
       rfo=.5d0*(a-c)
-      ifo=.5d0*(b+d) 
+      ifo=.5d0*(b+d)
       cp=cos_array(i1)
       sp=sin_array(i1)
       rk=rfe+cp*ifo-sp*rfo
@@ -653,7 +653,7 @@ contains
       rfe=.5d0*(a+c)
       ife=.5d0*(b-d)
       rfo=.5d0*(a-c)
-      ifo=.5d0*(b+d) 
+      ifo=.5d0*(b+d)
       cp=cos_array(i1)
       sp=sin_array(i1)
       rk=rfe+cp*ifo-sp*rfo
@@ -676,7 +676,7 @@ contains
         rfe=.5d0*(a+c)
         ife=.5d0*(b-d)
         rfo=.5d0*(a-c)
-        ifo=.5d0*(b+d) 
+        ifo=.5d0*(b+d)
         cp=cos_array(i1)
         sp=sin_array(i1)
         rk=rfe+cp*ifo-sp*rfo
@@ -700,7 +700,7 @@ contains
       rfe=.5d0*(a+c)
       ife=.5d0*(b-d)
       rfo=.5d0*(a-c)
-      ifo=.5d0*(b+d) 
+      ifo=.5d0*(b+d)
       cp=cos_array(i1)
       sp=sin_array(i1)
       rk=rfe+cp*ifo-sp*rfo
@@ -711,7 +711,7 @@ contains
 
       zarray(1,i1,i2,i3,ouzee) = rk2
       zarray(2,i1,i2,i3,ouzee) = ik2
-      !-------------END case i2 = 1      
+      !-------------END case i2 = 1
 
       !case i2 >=2
       do i2=2,n2
@@ -728,7 +728,7 @@ contains
         rfe=.5d0*(a+c)
         ife=.5d0*(b-d)
         rfo=.5d0*(a-c)
-        ifo=.5d0*(b+d) 
+        ifo=.5d0*(b+d)
         cp=cos_array(i1)
         sp=sin_array(i1)
         rk=rfe+cp*ifo-sp*rfo
@@ -751,7 +751,7 @@ contains
           rfe=.5d0*(a+c)
           ife=.5d0*(b-d)
           rfo=.5d0*(a-c)
-          ifo=.5d0*(b+d) 
+          ifo=.5d0*(b+d)
           cp=cos_array(i1)
           sp=sin_array(i1)
           rk=rfe+cp*ifo-sp*rfo
@@ -775,7 +775,7 @@ contains
         rfe=.5d0*(a+c)
         ife=.5d0*(b-d)
         rfo=.5d0*(a-c)
-        ifo=.5d0*(b+d) 
+        ifo=.5d0*(b+d)
         cp=cos_array(i1)
         sp=sin_array(i1)
         rk=rfe+cp*ifo-sp*rfo
@@ -793,7 +793,7 @@ contains
 
     !--------------------------------------------!
     !--- Starting reconstruction full -> half ---!
-    !--------------------------------------------!   
+    !--------------------------------------------!
 
     !case i3=1
     i3=1
@@ -814,7 +814,7 @@ contains
       ie=(b+d)
       ro=(a-c)*cp-(b-d)*sp
       io=(a-c)*sp+(b-d)*cp
-      rhk=re-io 
+      rhk=re-io
       ihk=ie+ro
 
       zarray(1,i1,i2,i3,inzee)=rhk
@@ -836,7 +836,7 @@ contains
         ie=(b+d)
         ro=(a-c)*cp-(b-d)*sp
         io=(a-c)*sp+(b-d)*cp
-        rhk=re-io 
+        rhk=re-io
         ihk=ie+ro
 
         zarray(1,i1,i2,i3,inzee)=rhk
@@ -864,7 +864,7 @@ contains
         ie=(b+d)
         ro=(a-c)*cp-(b-d)*sp
         io=(a-c)*sp+(b-d)*cp
-        rhk=re-io 
+        rhk=re-io
         ihk=ie+ro
 
         zarray(1,i1,i2,i3,inzee)=rhk
@@ -886,7 +886,7 @@ contains
           ie=(b+d)
           ro=(a-c)*cp-(b-d)*sp
           io=(a-c)*sp+(b-d)*cp
-          rhk=re-io 
+          rhk=re-io
           ihk=ie+ro
 
           zarray(1,i1,i2,i3,inzee)=rhk
@@ -952,17 +952,17 @@ contains
     integer :: ind
 
     integer ::  a1,a2,a3
-    if (i1 /= 1) then 
+    if (i1 /= 1) then
       a1=nd1+1-i1
     else
       a1=i1
     end if
-    if (i2 /= 1) then 
+    if (i2 /= 1) then
       a2=nd2+1-i2
     else
       a2=i2
     end if
-    if (i3 /= 1) then 
+    if (i3 /= 1) then
       a3=nd3+1-i3
     else
       a3=i3
@@ -970,7 +970,7 @@ contains
     ind=a1+nd1*(a2-1)+nd1*nd2*(a3-1)
   end subroutine symm_ind
   !!***
-  
+
   !!****h* BigDFT/zarray_in
   !! NAME
   !!   zarray_in
@@ -988,7 +988,7 @@ contains
     integer :: i1,i2,i3,n01h,nd1hm,nd3hm,nd2hm
 
     PUSH_SUB(zarray_in)
-    
+
     !Half the size of n01
     n01h=n01/2
     nd1hm=(nd1-1)/2
@@ -1039,11 +1039,11 @@ contains
     integer, intent(in)    :: n01,n02,n03,nd1,nd2,nd3
     real(8), intent(out)   :: rhopot(n01,n02,n03)
     real(8), intent(in)    :: zarray(2*nd1,nd2,nd3)  ! Convert zarray(2,nd1,nd2,nd3) -> zarray(2*nd1,nd2,nd3) to use i1=1,n01
-                                                     ! instead of i1=1,n1h + special case for modulo(n01,2)
+    ! instead of i1=1,n1h + special case for modulo(n01,2)
     real(8), intent(in)    :: factor
-    
+
     integer :: i1,i2,i3
-    
+
     PUSH_SUB(zarray_out)
 
     do i3=1,n03
@@ -1063,11 +1063,11 @@ contains
   !!   build_kernel
   !!
   !! FUNCTION
-  !!    Build the kernel of a gaussian function 
+  !!    Build the kernel of a gaussian function
   !!    for interpolating scaling functions.
   !!
   !! SYNOPSIS
-  !!    Build the kernel (karrayout) of a gaussian function 
+  !!    Build the kernel (karrayout) of a gaussian function
   !!    for interpolating scaling functions
   !!    $$ K(j) = \int \int \phi(x) g(x`-x) \delta(x`- j) dx dx` $$
   !!
@@ -1118,7 +1118,7 @@ contains
     integer :: i01,i02,i03,inkee,n1h,n2h,n3h,nd1h
 
     PUSH_SUB(build_kernel)
-    
+
     !Number of integration points : 2*itype_scf*n_points
     n_scf=2*itype_scf*n_points
     !Dimensions of Kernel
@@ -1160,7 +1160,7 @@ contains
 
     !Initialisation of the gaussian (Beylkin)
     call gequad(N_GAUSS,p_gauss,w_gauss,ur_gauss,dr_gauss,acc_gauss)
-    !In order to have a range from a_range=sqrt(a1*a1+a2*a2+a3*a3) 
+    !In order to have a range from a_range=sqrt(a1*a1+a2*a2+a3*a3)
     !(biggest length in the cube)
     !We divide the p_gauss by a_range**2 and a_gauss by a_range
     a_range = sqrt(a1*a1+a2*a2+a3*a3)
@@ -1218,7 +1218,7 @@ contains
           i02 = i2-1
           do i1=1,n01
             i01 = i1-1
-            karrayout(i1,i2,i3) = karrayout(i1,i2,i3) + w_gauss(i_gauss)* & 
+            karrayout(i1,i2,i3) = karrayout(i1,i2,i3) + w_gauss(i_gauss)* &
               kernel_scf(i01)*kernel_scf(i02)*kernel_scf(i03)
           end do
         end do
@@ -1248,7 +1248,7 @@ contains
   end subroutine Build_Kernel
   !!***
 
-  
+
   !!****h* BigDFT/calculate_dimensions
   !! NAME
   !!   calculate_dimensions
@@ -1365,7 +1365,7 @@ contains
   end subroutine karrayhalf_in
   !!***
 
-  
+
   !!****h* BigDFT/kernel_recon
   !! NAME
   !!   kernel_recon
@@ -1414,7 +1414,7 @@ contains
           rfe=0.5d0*(a+c)
           ife=0.5d0*(b-d)
           rfo=0.5d0*(a-c)
-          ifo=0.5d0*(b+d) 
+          ifo=0.5d0*(b+d)
           cp=cos_array(i1)
           sp=sin_array(i1)
           rk=rfe+cp*ifo-sp*rfo
@@ -1422,12 +1422,12 @@ contains
           !For big dimension 1.d-9 otherwise 1.d-10
           !Remove the test
           !if(abs(ik) >= 1.d-10) then
-          !   print *,"non real kernel FFT",i1,i2,i3,ik  
+          !   print *,"non real kernel FFT",i1,i2,i3,ik
           !   stop
           !end if
           !Build the intermediate FFT convolution (full)
           !call norm_ind(nd1,nd2,nd3,i1,i2,i3,indA)
-          karray(i1,i2,i3)=rk 
+          karray(i1,i2,i3)=rk
         end do
       end do
     end do
@@ -1463,7 +1463,7 @@ contains
   !!    nd1,nd2,nd3 fourier dimensions for which the kernel FFT is injective,
   !!                formally 1/8 of the fourier grid. Here the dimension nd3 is
   !!                enlarged to be a multiple of nproc
-  !!                
+  !!
   !! WARNING
   !!    The dimension m2 and m3 correspond to n03 and n02 respectively
   !!    this is needed since the convolution routine manage arrays of dimension
@@ -1483,7 +1483,7 @@ contains
     integer :: l1,l2,l3
 
     PUSH_SUB(par_calculate_dimensions)
-    
+
     !dimensions of the density in the real space, inverted for convenience
 
     m1=n01
@@ -1596,11 +1596,11 @@ contains
     real(8), intent(in), dimension(nd1,nd2,nd3/nproc) :: kernelLOC
     real(8), intent(inout), dimension(n01,n02,n03) :: rhopot
     integer, intent(in) :: comm
-    
+
     integer :: m1,m2,m3,n1,n2,n3,md1,md2,md3
 
     PUSH_SUB(par_psolver_kernel)
-    
+
     call par_calculate_dimensions(n01, n02, n03, m1, m2, m3, n1, n2, n3, md1, md2, md3, nd1, nd2, nd3, nproc)
     call pconvxc_off(m1, m2, m3, n1, n2, n3, nd1, nd2, nd3, md1, md2, md3, iproc, nproc, rhopot, kernelLOC, hgrid, comm)
 
@@ -1734,7 +1734,7 @@ contains
     integer :: j1,j2,j3,jp2
 
     PUSH_SUB(enterdensity)
-    
+
     !Body
     do jp2=0,md2/nproc-1
       j2=iproc*(md2/nproc)+jp2
@@ -1765,7 +1765,7 @@ contains
   end subroutine enterdensity
   !!***
 
-  
+
   !!****h* BigDFT/par_build_kernel
   !! NAME
   !!   par_build_kernel
@@ -1801,7 +1801,7 @@ contains
     real(8), intent(in)    :: hgrid
     real(8), intent(out)   :: karrayoutLOC(1:n1k, 1:n2k, 1:n3k/nproc)
     integer, intent(in)    :: comm
- 
+
     !Do not touch !!!!
     integer, parameter :: N_GAUSS = 89
     !Better if higher (1024 points are enough 10^{-14}: 2*itype_scf*n_points)
@@ -1826,7 +1826,7 @@ contains
     integer :: i01,i02,i03,n1h,n2h,n3h
 
     PUSH_SUB(par_build_kernel)
-    
+
     !Number of integration points : 2*itype_scf*n_points
     n_scf=2*itype_scf*n_points
     !Set karray
@@ -2057,13 +2057,13 @@ contains
     ur_gauss = 1.0_8
     dr_gauss = 1.0e-08_8
     acc_gauss = 1.0e-08_8
-    
+
     iunit = io_open(trim(conf%share)//'/gequad.data', namespace_t(""), action = 'read', status = 'old', die = .true.)
 
     do i = 1, n_gauss
       read(iunit, *) idx, p_gauss(i), w_gauss(i)
     end do
-    
+
     call io_close(iunit)
 
     POP_SUB(gequad)

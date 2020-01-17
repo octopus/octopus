@@ -49,10 +49,10 @@ module accel_oct_m
   use profiling_oct_m
   use unit_system_oct_m
 
-  implicit none 
+  implicit none
 
   private
-  
+
   public ::                       &
     accel_context_t,              &
     accel_device_t,               &
@@ -86,7 +86,7 @@ module accel_oct_m
     accel_get_device_pointer,     &
     accel_set_stream,             &
     accel_synchronize_all_streams
-  
+
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
     ACCEL_MEM_READ_ONLY  = CL_MEM_READ_ONLY,    &
@@ -253,7 +253,7 @@ module accel_oct_m
   integer(8) :: allocated_mem
   type(accel_kernel_t), pointer :: head
   type(alloc_cache_t) :: memcache
-  
+
 contains
 
   pure logical function accel_is_enabled() result(enabled)
@@ -269,7 +269,7 @@ contains
   subroutine accel_init(base_grp, namespace)
     type(mpi_grp_t),     intent(inout) :: base_grp
     type(namespace_t),   intent(in)    :: namespace
-    
+
     logical  :: disable, default, run_benchmark
     integer  :: idevice, iplatform
 #ifdef HAVE_OPENCL
@@ -288,7 +288,7 @@ contains
 
     buffer_alloc_count = 0
 
-    !%Variable DisableAccel    
+    !%Variable DisableAccel
     !%Type logical
     !%Default yes
     !%Section Execution::Accel
@@ -305,7 +305,7 @@ contains
 #endif
     call parse_variable(namespace, 'DisableAccel', default, disable)
     accel%enabled = .not. disable
-    
+
 #ifndef HAVE_ACCEL
     if(accel%enabled) then
       message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
@@ -341,7 +341,7 @@ contains
     call parse_variable(namespace, 'AccelPlatform', 0, iplatform)
 
     call messages_obsolete_variable(namespace, 'OpenCLPlatform', 'AccelPlatform')
-    
+
     !%Variable AccelDevice
     !%Type integer
     !%Default gpu
@@ -366,7 +366,7 @@ contains
     call parse_variable(namespace, 'AccelDevice', OPENCL_GPU, idevice)
 
     call messages_obsolete_variable(namespace, 'OpenCLDevice', 'AccelDevice')
-    
+
     if(idevice < OPENCL_DEFAULT) then
       call messages_write('Invalid AccelDevice')
       call messages_fatal()
@@ -388,7 +388,7 @@ contains
 
     call cublas_init(accel%cublas_handle, accel%cuda_stream)
 #endif
-    
+
 #ifdef HAVE_OPENCL
     call profiling_in(prof_init, 'CL_INIT')
 
@@ -429,7 +429,7 @@ contains
 
     if(iplatform >= nplatforms .or. iplatform < 0) then
       call messages_write('Requested CL platform does not exist')
-      if(iplatform > 0) then 
+      if(iplatform > 0) then
         call messages_write('(platform = ')
         call messages_write(iplatform)
         call messages_write(').')
@@ -551,7 +551,7 @@ contains
 #endif
 
     ! Get some device information that we will need later
-    
+
     ! total memory
 #ifdef HAVE_OPENCL
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
@@ -565,12 +565,12 @@ contains
     call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
     call cuda_device_get_warpsize(accel%device%cuda_device, accel%warp_size)
 #endif
-      
+
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! initialize the cache used to speed up allocations
     call alloc_cache_init(memcache, nint(CNST(0.25)*accel%global_memory_size, 8))
-    
+
     ! now initialize the kernels
     call accel_kernel_global_init()
 
@@ -607,7 +607,7 @@ contains
     call parse_variable(namespace, 'AccelBenchmark', .false., run_benchmark)
 
     call messages_obsolete_variable(namespace, 'OpenCLBenchmark', 'AccelBenchmark')
-    
+
     if(run_benchmark) then
       call opencl_check_bandwidth()
     end if
@@ -680,7 +680,7 @@ contains
 #endif
       integer :: major, minor
       character(len=256) :: val_str
-      
+
       PUSH_SUB(accel_init.device_info)
 
       call messages_new_line()
@@ -717,7 +717,7 @@ contains
       call messages_write('      Device vendor          : '//trim(val_str))
       call messages_new_line()
 #endif
-      
+
 #ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_NAME, val_str, cl_status)
 #endif
@@ -726,7 +726,7 @@ contains
 #endif
       call messages_write('      Device name            : '//trim(val_str))
       call messages_new_line()
-      
+
 #ifdef HAVE_CUDA
       call cuda_device_capability(accel%device%cuda_device, major, minor)
 #endif
@@ -748,7 +748,7 @@ contains
 #endif
       call messages_new_line()
 
-      
+
 #ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_COMPUTE_UNITS, val, cl_status)
       call messages_write('      Compute units          :')
@@ -769,8 +769,8 @@ contains
       call messages_write('      Local/shared memory    :')
       call messages_write(accel%local_memory_size, units = unit_kilobytes)
       call messages_new_line()
-      
-    
+
+
 #ifdef HAVE_OPENCL
       call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, val, cl_status)
       call messages_write('      Max alloc size         :')
@@ -791,7 +791,7 @@ contains
       call messages_write('      Max. group/block size  :')
       call messages_write(accel%max_workgroup_size)
       call messages_new_line()
-      
+
 
 #ifdef HAVE_OPENCL
       call messages_write('      Extension cl_khr_fp64  :')
@@ -802,7 +802,7 @@ contains
       call messages_write(f90_cl_device_has_extension(accel%device%cl_device, "cl_amd_fp64"))
       call messages_new_line()
 #endif
-      
+
       call messages_info()
 
 
@@ -838,7 +838,7 @@ contains
 
     if(accel_is_enabled()) then
 
-      do 
+      do
         call alloc_cache_get(memcache, ALLOC_CACHE_ANY_SIZE, found, tmp%mem)
         if(.not. found) exit
 
@@ -872,7 +872,7 @@ contains
 
       call messages_print_stress(stdout)
     end if
-    
+
     call accel_kernel_global_end()
 
 #ifdef HAVE_CLBLAS
@@ -895,7 +895,7 @@ contains
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
       call clReleaseContext(accel%context%cl_context, cl_status)
 #endif
-      
+
       if(buffer_alloc_count /= 0) then
         call messages_write('Accel:')
         call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
@@ -919,7 +919,7 @@ contains
     this%size = 0
     this%flags = 0
     this%allocated = .false.
-    
+
   end subroutine accel_mem_nullify
 
   ! ------------------------------------------
@@ -928,19 +928,19 @@ contains
     integer,        intent(in) :: nn
 
     integer :: modnn, bsize
-    
+
     psize = nn
 
     if(accel_is_enabled()) then
 
       bsize = accel_max_workgroup_size()
-      
+
       psize = nn
       modnn = mod(nn, bsize)
       if(modnn /= 0) psize = psize + bsize - modnn
 
     end if
-    
+
   end function accel_padded_size
 
   ! ------------------------------------------
@@ -975,7 +975,7 @@ contains
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
     this%allocated = .true.
-    
+
     if(fsize > 0) then
 
       call alloc_cache_get(memcache, fsize, found, this%mem)
@@ -989,15 +989,15 @@ contains
         call cuda_mem_alloc(this%mem, fsize)
 #endif
       end if
-      
+
       INCR(buffer_alloc_count, 1)
       INCR(allocated_mem, fsize)
 
     end if
-      
+
     POP_SUB(accel_create_buffer_8)
   end subroutine accel_create_buffer_8
-  
+
   ! ------------------------------------------
 
   subroutine accel_release_buffer(this)
@@ -1014,8 +1014,8 @@ contains
     if(this%size > 0) then
 
       fsize = int(this%size, 8)*types_get_size(this%type)
-      
-      call alloc_cache_put(memcache, fsize, this%mem, put) 
+
+      call alloc_cache_put(memcache, fsize, this%mem, put)
 
       if(.not. put) then
 #ifdef HAVE_OPENCL
@@ -1026,28 +1026,28 @@ contains
         call cuda_mem_free(this%mem)
 #endif
       end if
-      
+
       INCR(buffer_alloc_count, -1)
       INCR(allocated_mem, fsize)
 
     end if
-    
+
     this%size = 0
     this%flags = 0
 
     this%allocated = .false.
-    
+
     POP_SUB(accel_release_buffer)
   end subroutine accel_release_buffer
-    
+
   ! ------------------------------------------
-  
+
   logical pure function accel_buffer_is_allocated(this) result(allocated)
     type(accel_mem_t), intent(in) :: this
 
     allocated = this%allocated
   end function accel_buffer_is_allocated
-    
+
   ! ------------------------------------------
 
   integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
@@ -1072,10 +1072,10 @@ contains
 #endif
 
     ! no push_sub, called too frequently
-    
+
 #ifdef HAVE_OPENCL
     call clFinish(accel%command_queue, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish')
 #endif
 #ifdef HAVE_CUDA
     call cuda_context_synchronize()
@@ -1094,7 +1094,7 @@ contains
 #endif
 
     ASSERT(accel_buffer_is_allocated(buffer))
-    
+
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
@@ -1104,9 +1104,9 @@ contains
 #ifdef HAVE_CUDA
     call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%mem, narg)
 #endif
-   
+
   end subroutine accel_set_kernel_arg_buffer
-  
+
   ! ------------------------------------------
 
   subroutine accel_set_kernel_arg_local(kernel, narg, type, size)
@@ -1122,7 +1122,7 @@ contains
 
     PUSH_SUB(accel_set_kernel_arg_local)
 
-    
+
     size_in_bytes = int(size, 8)*types_get_size(type)
 
     if(size_in_bytes > accel%local_memory_size) then
@@ -1165,7 +1165,7 @@ contains
     ! cuda needs all dimensions
     gsizes = 1
     lsizes = 1
-    
+
     dim = ubound(globalsizes, dim = 1)
 
     ASSERT(dim == ubound(localsizes, dim = 1))
@@ -1190,12 +1190,12 @@ contains
 
     ASSERT(gsizes(1) < 2_8**31 - 1_8)
     ASSERT(all(gsizes(2:3) <= 65535_8))
-    
+
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%cuda_shared_mem, kernel%arguments)
 
-    kernel%cuda_shared_mem = 0    
+    kernel%cuda_shared_mem = 0
 #endif
-    
+
   end subroutine accel_kernel_run
 
   ! -----------------------------------------------
@@ -1237,7 +1237,7 @@ contains
     character(len = 1000) :: string
     character(len = 256) :: share_string
     integer :: ierr, ierrlog, iunit, irec, newlen
-    
+
     PUSH_SUB(opencl_build_program)
 
     string = '#include "'//trim(filename)//'"'
@@ -1296,11 +1296,11 @@ contains
     ! CL_PROGRAM_BUILD_LOG seems to have a useless '\n' in it
     newlen = scan(string, achar(010), back = .true.) - 1
     if(newlen >= 0) string = string(1:newlen)
-    
+
     if(len(trim(string)) > 0) write(stderr, '(a)') trim(string)
 
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clBuildProgram")
-    
+
     POP_SUB(opencl_build_program)
   end subroutine opencl_build_program
 #endif
@@ -1352,7 +1352,7 @@ contains
 
     PUSH_SUB(opencl_create_kernel)
     call profiling_in(prof, "CL_BUILD_KERNEL", exclude = .true.)
-    
+
 #ifdef HAVE_OPENCL
     kernel = clCreateKernel(prog, name, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateKernel")
@@ -1362,7 +1362,7 @@ contains
     POP_SUB(opencl_create_kernel)
   end subroutine opencl_create_kernel
 #endif
-  
+
   ! ------------------------------------------------
 
   subroutine opencl_print_error(ierr, name)
@@ -1428,7 +1428,7 @@ contains
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
     end select
 #endif
-    
+
     message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
@@ -1498,61 +1498,61 @@ contains
     PUSH_SUB(clfft_print_error)
 #ifdef HAVE_CLFFT
     select case(ierr)
-    case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE' 
-    case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL' 
-    case(CLFFT_INVALID_BUFFER_SIZE);               errcode = 'CLFFT_INVALID_BUFFER_SIZE' 
-    case(CLFFT_INVALID_GL_OBJECT);                 errcode = 'CLFFT_INVALID_GL_OBJECT' 
-    case(CLFFT_INVALID_OPERATION);                 errcode = 'CLFFT_INVALID_OPERATION' 
-    case(CLFFT_INVALID_EVENT);                     errcode = 'CLFFT_INVALID_EVENT' 
-    case(CLFFT_INVALID_EVENT_WAIT_LIST);           errcode = 'CLFFT_INVALID_EVENT_WAIT_LIST' 
-    case(CLFFT_INVALID_GLOBAL_OFFSET);             errcode = 'CLFFT_INVALID_GLOBAL_OFFSET' 
-    case(CLFFT_INVALID_WORK_ITEM_SIZE);            errcode = 'CLFFT_INVALID_WORK_ITEM_SIZE' 
-    case(CLFFT_INVALID_WORK_GROUP_SIZE);           errcode = 'CLFFT_INVALID_WORK_GROUP_SIZE' 
-    case(CLFFT_INVALID_WORK_DIMENSION);            errcode = 'CLFFT_INVALID_WORK_DIMENSION' 
-    case(CLFFT_INVALID_KERNEL_ARGS);               errcode = 'CLFFT_INVALID_KERNEL_ARGS' 
-    case(CLFFT_INVALID_ARG_SIZE);                  errcode = 'CLFFT_INVALID_ARG_SIZE' 
-    case(CLFFT_INVALID_ARG_VALUE);                 errcode = 'CLFFT_INVALID_ARG_VALUE' 
-    case(CLFFT_INVALID_ARG_INDEX);                 errcode = 'CLFFT_INVALID_ARG_INDEX' 
-    case(CLFFT_INVALID_KERNEL);                    errcode = 'CLFFT_INVALID_KERNEL' 
-    case(CLFFT_INVALID_KERNEL_DEFINITION);         errcode = 'CLFFT_INVALID_KERNEL_DEFINITION' 
-    case(CLFFT_INVALID_KERNEL_NAME);               errcode = 'CLFFT_INVALID_KERNEL_NAME' 
-    case(CLFFT_INVALID_PROGRAM_EXECUTABLE);        errcode = 'CLFFT_INVALID_PROGRAM_EXECUTABLE' 
-    case(CLFFT_INVALID_PROGRAM);                   errcode = 'CLFFT_INVALID_PROGRAM' 
-    case(CLFFT_INVALID_BUILD_OPTIONS);             errcode = 'CLFFT_INVALID_BUILD_OPTIONS' 
-    case(CLFFT_INVALID_BINARY);                    errcode = 'CLFFT_INVALID_BINARY' 
-    case(CLFFT_INVALID_SAMPLER);                   errcode = 'CLFFT_INVALID_SAMPLER' 
-    case(CLFFT_INVALID_IMAGE_SIZE);                errcode = 'CLFFT_INVALID_IMAGE_SIZE' 
-    case(CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR);   errcode = 'CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR' 
-    case(CLFFT_INVALID_MEM_OBJECT);                errcode = 'CLFFT_INVALID_MEM_OBJECT' 
-    case(CLFFT_INVALID_HOST_PTR);                  errcode = 'CLFFT_INVALID_HOST_PTR' 
-    case(CLFFT_INVALID_COMMAND_QUEUE);             errcode = 'CLFFT_INVALID_COMMAND_QUEUE' 
-    case(CLFFT_INVALID_QUEUE_PROPERTIES);          errcode = 'CLFFT_INVALID_QUEUE_PROPERTIES' 
-    case(CLFFT_INVALID_CONTEXT);                   errcode = 'CLFFT_INVALID_CONTEXT' 
-    case(CLFFT_INVALID_DEVICE);                    errcode = 'CLFFT_INVALID_DEVICE' 
-    case(CLFFT_INVALID_PLATFORM);                  errcode = 'CLFFT_INVALID_PLATFORM' 
-    case(CLFFT_INVALID_DEVICE_TYPE);               errcode = 'CLFFT_INVALID_DEVICE_TYPE' 
-    case(CLFFT_INVALID_VALUE);                     errcode = 'CLFFT_INVALID_VALUE' 
-    case(CLFFT_MAP_FAILURE);                       errcode = 'CLFFT_MAP_FAILURE' 
-    case(CLFFT_BUILD_PROGRAM_FAILURE);             errcode = 'CLFFT_BUILD_PROGRAM_FAILURE' 
-    case(CLFFT_IMAGE_FORMAT_NOT_SUPPORTED);        errcode = 'CLFFT_IMAGE_FORMAT_NOT_SUPPORTED' 
-    case(CLFFT_IMAGE_FORMAT_MISMATCH);             errcode = 'CLFFT_IMAGE_FORMAT_MISMATCH' 
-    case(CLFFT_MEM_COPY_OVERLAP);                  errcode = 'CLFFT_MEM_COPY_OVERLAP' 
-    case(CLFFT_PROFILING_INFO_NOT_AVAILABLE);      errcode = 'CLFFT_PROFILING_INFO_NOT_AVAILABLE' 
-    case(CLFFT_OUT_OF_HOST_MEMORY);                errcode = 'CLFFT_OUT_OF_HOST_MEMORY' 
-    case(CLFFT_OUT_OF_RESOURCES);                  errcode = 'CLFFT_OUT_OF_RESOURCES' 
-    case(CLFFT_MEM_OBJECT_ALLOCATION_FAILURE);     errcode = 'CLFFT_MEM_OBJECT_ALLOCATION_FAILURE' 
-    case(CLFFT_COMPILER_NOT_AVAILABLE);            errcode = 'CLFFT_COMPILER_NOT_AVAILABLE' 
-    case(CLFFT_DEVICE_NOT_AVAILABLE);              errcode = 'CLFFT_DEVICE_NOT_AVAILABLE' 
-    case(CLFFT_DEVICE_NOT_FOUND);                  errcode = 'CLFFT_DEVICE_NOT_FOUND' 
-    case(CLFFT_SUCCESS);                           errcode = 'CLFFT_SUCCESS' 
-    case(CLFFT_BUGCHECK);                          errcode = 'CLFFT_BUGCHECK' 
-    case(CLFFT_NOTIMPLEMENTED);                    errcode = 'CLFFT_NOTIMPLEMENTED' 
-    case(CLFFT_FILE_NOT_FOUND);                    errcode = 'CLFFT_FILE_NOT_FOUND' 
-    case(CLFFT_FILE_CREATE_FAILURE);               errcode = 'CLFFT_FILE_CREATE_FAILURE' 
-    case(CLFFT_VERSION_MISMATCH);                  errcode = 'CLFFT_VERSION_MISMATCH' 
+    case(CLFFT_INVALID_GLOBAL_WORK_SIZE);          errcode = 'CLFFT_INVALID_GLOBAL_WORK_SIZE'
+    case(CLFFT_INVALID_MIP_LEVEL);                 errcode = 'CLFFT_INVALID_MIP_LEVEL'
+    case(CLFFT_INVALID_BUFFER_SIZE);               errcode = 'CLFFT_INVALID_BUFFER_SIZE'
+    case(CLFFT_INVALID_GL_OBJECT);                 errcode = 'CLFFT_INVALID_GL_OBJECT'
+    case(CLFFT_INVALID_OPERATION);                 errcode = 'CLFFT_INVALID_OPERATION'
+    case(CLFFT_INVALID_EVENT);                     errcode = 'CLFFT_INVALID_EVENT'
+    case(CLFFT_INVALID_EVENT_WAIT_LIST);           errcode = 'CLFFT_INVALID_EVENT_WAIT_LIST'
+    case(CLFFT_INVALID_GLOBAL_OFFSET);             errcode = 'CLFFT_INVALID_GLOBAL_OFFSET'
+    case(CLFFT_INVALID_WORK_ITEM_SIZE);            errcode = 'CLFFT_INVALID_WORK_ITEM_SIZE'
+    case(CLFFT_INVALID_WORK_GROUP_SIZE);           errcode = 'CLFFT_INVALID_WORK_GROUP_SIZE'
+    case(CLFFT_INVALID_WORK_DIMENSION);            errcode = 'CLFFT_INVALID_WORK_DIMENSION'
+    case(CLFFT_INVALID_KERNEL_ARGS);               errcode = 'CLFFT_INVALID_KERNEL_ARGS'
+    case(CLFFT_INVALID_ARG_SIZE);                  errcode = 'CLFFT_INVALID_ARG_SIZE'
+    case(CLFFT_INVALID_ARG_VALUE);                 errcode = 'CLFFT_INVALID_ARG_VALUE'
+    case(CLFFT_INVALID_ARG_INDEX);                 errcode = 'CLFFT_INVALID_ARG_INDEX'
+    case(CLFFT_INVALID_KERNEL);                    errcode = 'CLFFT_INVALID_KERNEL'
+    case(CLFFT_INVALID_KERNEL_DEFINITION);         errcode = 'CLFFT_INVALID_KERNEL_DEFINITION'
+    case(CLFFT_INVALID_KERNEL_NAME);               errcode = 'CLFFT_INVALID_KERNEL_NAME'
+    case(CLFFT_INVALID_PROGRAM_EXECUTABLE);        errcode = 'CLFFT_INVALID_PROGRAM_EXECUTABLE'
+    case(CLFFT_INVALID_PROGRAM);                   errcode = 'CLFFT_INVALID_PROGRAM'
+    case(CLFFT_INVALID_BUILD_OPTIONS);             errcode = 'CLFFT_INVALID_BUILD_OPTIONS'
+    case(CLFFT_INVALID_BINARY);                    errcode = 'CLFFT_INVALID_BINARY'
+    case(CLFFT_INVALID_SAMPLER);                   errcode = 'CLFFT_INVALID_SAMPLER'
+    case(CLFFT_INVALID_IMAGE_SIZE);                errcode = 'CLFFT_INVALID_IMAGE_SIZE'
+    case(CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR);   errcode = 'CLFFT_INVALID_IMAGE_FORMAT_DESCRIPTOR'
+    case(CLFFT_INVALID_MEM_OBJECT);                errcode = 'CLFFT_INVALID_MEM_OBJECT'
+    case(CLFFT_INVALID_HOST_PTR);                  errcode = 'CLFFT_INVALID_HOST_PTR'
+    case(CLFFT_INVALID_COMMAND_QUEUE);             errcode = 'CLFFT_INVALID_COMMAND_QUEUE'
+    case(CLFFT_INVALID_QUEUE_PROPERTIES);          errcode = 'CLFFT_INVALID_QUEUE_PROPERTIES'
+    case(CLFFT_INVALID_CONTEXT);                   errcode = 'CLFFT_INVALID_CONTEXT'
+    case(CLFFT_INVALID_DEVICE);                    errcode = 'CLFFT_INVALID_DEVICE'
+    case(CLFFT_INVALID_PLATFORM);                  errcode = 'CLFFT_INVALID_PLATFORM'
+    case(CLFFT_INVALID_DEVICE_TYPE);               errcode = 'CLFFT_INVALID_DEVICE_TYPE'
+    case(CLFFT_INVALID_VALUE);                     errcode = 'CLFFT_INVALID_VALUE'
+    case(CLFFT_MAP_FAILURE);                       errcode = 'CLFFT_MAP_FAILURE'
+    case(CLFFT_BUILD_PROGRAM_FAILURE);             errcode = 'CLFFT_BUILD_PROGRAM_FAILURE'
+    case(CLFFT_IMAGE_FORMAT_NOT_SUPPORTED);        errcode = 'CLFFT_IMAGE_FORMAT_NOT_SUPPORTED'
+    case(CLFFT_IMAGE_FORMAT_MISMATCH);             errcode = 'CLFFT_IMAGE_FORMAT_MISMATCH'
+    case(CLFFT_MEM_COPY_OVERLAP);                  errcode = 'CLFFT_MEM_COPY_OVERLAP'
+    case(CLFFT_PROFILING_INFO_NOT_AVAILABLE);      errcode = 'CLFFT_PROFILING_INFO_NOT_AVAILABLE'
+    case(CLFFT_OUT_OF_HOST_MEMORY);                errcode = 'CLFFT_OUT_OF_HOST_MEMORY'
+    case(CLFFT_OUT_OF_RESOURCES);                  errcode = 'CLFFT_OUT_OF_RESOURCES'
+    case(CLFFT_MEM_OBJECT_ALLOCATION_FAILURE);     errcode = 'CLFFT_MEM_OBJECT_ALLOCATION_FAILURE'
+    case(CLFFT_COMPILER_NOT_AVAILABLE);            errcode = 'CLFFT_COMPILER_NOT_AVAILABLE'
+    case(CLFFT_DEVICE_NOT_AVAILABLE);              errcode = 'CLFFT_DEVICE_NOT_AVAILABLE'
+    case(CLFFT_DEVICE_NOT_FOUND);                  errcode = 'CLFFT_DEVICE_NOT_FOUND'
+    case(CLFFT_SUCCESS);                           errcode = 'CLFFT_SUCCESS'
+    case(CLFFT_BUGCHECK);                          errcode = 'CLFFT_BUGCHECK'
+    case(CLFFT_NOTIMPLEMENTED);                    errcode = 'CLFFT_NOTIMPLEMENTED'
+    case(CLFFT_FILE_NOT_FOUND);                    errcode = 'CLFFT_FILE_NOT_FOUND'
+    case(CLFFT_FILE_CREATE_FAILURE);               errcode = 'CLFFT_FILE_CREATE_FAILURE'
+    case(CLFFT_VERSION_MISMATCH);                  errcode = 'CLFFT_VERSION_MISMATCH'
     case(CLFFT_INVALID_PLAN);                      errcode = 'CLFFT_INVALID_PLAN'
-    case(CLFFT_DEVICE_NO_DOUBLE);                  errcode = 'CLFFT_DEVICE_NO_DOUBLE' 
-    case(CLFFT_ENDSTATUS);                         errcode = 'CLFFT_ENDSTATUS' 
+    case(CLFFT_DEVICE_NO_DOUBLE);                  errcode = 'CLFFT_DEVICE_NO_DOUBLE'
+    case(CLFFT_ENDSTATUS);                         errcode = 'CLFFT_ENDSTATUS'
     case default
       write(errcode, '(i10)') ierr
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
@@ -1578,12 +1578,12 @@ contains
 #ifdef HAVE_OPENCL
     call clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, all_extensions, cl_status)
 #endif
-    
+
     has = index(all_extensions, extension) /= 0
 
   end function f90_cl_device_has_extension
 #endif
-  
+
   ! ---------------------------------------------------------
 
   integer pure function opencl_pad(size, blk) result(pad)
@@ -1615,24 +1615,24 @@ contains
     ASSERT(type == TYPE_CMPLX .or. type == TYPE_FLOAT)
 
     if(nval > 0) then
-      
+
       nval_real = nval*(types_get_size(type)/8)
       offset_real = optional_default(offset, 0)*(types_get_size(type)/8)
-      
+
       ASSERT(nval_real > 0)
-      
+
       call accel_set_kernel_arg(set_zero, 0, nval_real)
       call accel_set_kernel_arg(set_zero, 1, offset_real)
       call accel_set_kernel_arg(set_zero, 2, buffer)
-      
+
       bsize = accel_kernel_workgroup_size(set_zero)
 
-           
+
       call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
       call accel_finish()
 
     end if
-      
+
     POP_SUB(accel_set_buffer_to_zero)
   end subroutine accel_set_buffer_to_zero
 
@@ -1658,7 +1658,7 @@ contains
     call messages_info()
 
     size = 15000
-    do 
+    do
       SAFE_ALLOCATE(data(1:size))
       call accel_create_buffer(buff, ACCEL_MEM_READ_WRITE, TYPE_FLOAT, size)
 
@@ -1698,7 +1698,7 @@ contains
   ! ----------------------------------------------------
 
   logical pure function accel_use_shared_mem() result(use_shared_mem)
-    
+
     use_shared_mem = accel%shared_mem
 
   end function accel_use_shared_mem
@@ -1706,18 +1706,18 @@ contains
   !------------------------------------------------------------
 
   subroutine accel_kernel_global_init()
-    
+
     PUSH_SUB(accel_kernel_global_init)
 
     nullify(head)
 
     call cuda_module_map_init(accel%module_map)
-    
+
     POP_SUB(accel_kernel_global_init)
   end subroutine accel_kernel_global_init
 
   !------------------------------------------------------------
-  
+
   subroutine accel_kernel_global_end()
     type(accel_kernel_t), pointer :: next_head
 
@@ -1733,7 +1733,7 @@ contains
     if(accel_is_enabled()) then
       call cuda_module_map_end(accel%module_map)
     end if
-    
+
     POP_SUB(accel_kernel_global_end)
   end subroutine accel_kernel_global_end
 
@@ -1753,7 +1753,7 @@ contains
     character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
-    
+
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
@@ -1764,13 +1764,13 @@ contains
     if(accel_use_shared_mem()) then
       all_flags = trim(all_flags)//' -DSHARED_MEM'
     end if
-    
+
     if(present(flags)) then
       all_flags = trim(all_flags)//' '//trim(flags)
     end if
-    
+
     call cuda_build_program(accel%module_map, this%cuda_module, accel%device%cuda_device, trim(file_name), trim(all_flags))
-    
+
     call cuda_create_kernel(this%cuda_kernel, this%cuda_module, trim(kernel_name))
     call cuda_alloc_arg_array(this%arguments)
 
@@ -1786,7 +1786,7 @@ contains
     this%initialized = .true.
 
     call profiling_out(prof)
-    
+
     POP_SUB(accel_kernel_build)
   end subroutine accel_kernel_build
 
@@ -1798,21 +1798,21 @@ contains
     integer :: ierr
 #endif
 
-      PUSH_SUB(accel_kernel_end)
+    PUSH_SUB(accel_kernel_end)
 
 #ifdef HAVE_CUDA
-      call cuda_free_arg_array(this%arguments)
-      call cuda_release_kernel(this%cuda_kernel)
-      ! modules are not released here, since they are not associated to a kernel
+    call cuda_free_arg_array(this%arguments)
+    call cuda_release_kernel(this%cuda_kernel)
+    ! modules are not released here, since they are not associated to a kernel
 #endif
-      
-#ifdef HAVE_OPENCL
-      call clReleaseKernel(this%kernel, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
-#endif
-      this%initialized = .false.
 
-      POP_SUB(accel_kernel_end)
+#ifdef HAVE_OPENCL
+    call clReleaseKernel(this%kernel, ierr)
+    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "release_kernel")
+#endif
+    this%initialized = .false.
+
+    POP_SUB(accel_kernel_end)
   end subroutine accel_kernel_end
 
   !------------------------------------------------------------
@@ -1839,15 +1839,15 @@ contains
   integer(8) pure function accel_global_memory_size() result(size)
 
     size = accel%global_memory_size
-    
+
   end function accel_global_memory_size
 
   !--------------------------------------------------------------
-  
+
   integer(8) pure function accel_local_memory_size() result(size)
 
     size = accel%local_memory_size
-    
+
   end function accel_local_memory_size
 
   !--------------------------------------------------------------

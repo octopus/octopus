@@ -119,7 +119,7 @@ contains
     POP_SUB(curvilinear_init)
   end subroutine curvilinear_init
 
-  ! -------------------------------------------------------------- 
+  ! --------------------------------------------------------------
   subroutine curvilinear_copy(this_out, this_in)
     type(curvilinear_t), intent(inout) :: this_out
     type(curvilinear_t), intent(in)    :: this_in
@@ -224,7 +224,7 @@ contains
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       Jac(1:sb%dim, 1:sb%dim) = sb%rlattice_primitive(1:sb%dim, 1:sb%dim)
-      jdet = lalg_determinant(sb%dim, Jac, invert = .false.)      
+      jdet = lalg_determinant(sb%dim, Jac, invert = .false.)
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, cv%gygi, x, dummy, Jac)
       jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
