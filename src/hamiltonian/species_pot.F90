@@ -949,6 +949,7 @@ contains
           end do
         end do
 
+        call periodic_copy_end(pp)
 
       case(SPECIES_FROM_FILE)
 
