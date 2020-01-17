@@ -22,12 +22,13 @@
 module simul_box_oct_m
   use atom_oct_m
   use iso_c_binding
+  use gdlib_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use loct_oct_m
+!  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -509,13 +510,13 @@ contains
           if(.not. found) call messages_fatal(1, namespace=namespace)
         end if
 
-        sb%image = loct_gdimage_create_from(sb%filename)
+        sb%image = gdlib_image_create_from(sb%filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
           call messages_fatal(1, namespace=namespace)
         end if
-        sb%image_size(1) = loct_gdImage_SX(sb%image)
-        sb%image_size(2) = loct_gdImage_SY(sb%image)
+        sb%image_size(1) = gdlib_image_sx(sb%image)
+        sb%image_size(2) = gdlib_image_sy(sb%image)
 
         ! adjust Lsize if necessary to ensure that one grid point = one pixel
         do idir = 1, 2
@@ -974,7 +975,7 @@ contains
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
-      call loct_gdImageDestroy(sb%image)
+      call gdlib_imagedestroy(sb%image)
 #endif
 
     POP_SUB(simul_box_end)
@@ -1259,7 +1260,7 @@ contains
       do ip = 1, npoints
         ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
         iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+        call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
 #endif

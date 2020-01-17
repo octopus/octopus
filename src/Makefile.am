@@ -49,6 +49,7 @@ basic_f_srcs =                                 \
 	basic/cuda.F90                         \
 	basic/debug.F90                        \
 	basic/distributed.F90                  \
+	basic/gdlib.F90                        \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
 	basic/iihash.F90                       \
@@ -90,7 +91,7 @@ basic_c_srcs =                                 \
 	basic/io_csv.c                         \
 	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
-	basic/oct_gdlib_f.c                    \
+	basic/gdlib_f.c                        \
 	basic/recipes.c                        \
 	basic/signals.c                        \
 	basic/sort_low.cc                      \
