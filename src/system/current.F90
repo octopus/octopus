@@ -408,6 +408,9 @@ contains
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
             ! this should now take non-orthogonal axis into account, but needs more testing
+            do idir = 1, der%mesh%sb%dim
+              call epsib%copy_to(commpsib(idir))
+            end do
             call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)

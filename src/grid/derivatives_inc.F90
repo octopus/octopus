@@ -465,15 +465,11 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   call messages_info(1)
 
   ! test Gradient
+  SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
   blocksize = min_blocksize
   do
     call batch_init(ffb, 1, blocksize)
     call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
-    SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
-    do idir = 1, this%mesh%sb%dim
-      call batch_init(gradffb(idir), 1, blocksize)
-      call gradffb(idir)%X(allocate)(1, blocksize, this%mesh%np)
-    end do
 
     do ist = 1, blocksize
       do ip = 1,this%mesh%np_part
@@ -483,10 +479,11 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
     if(packstates) then
       call ffb%do_pack()
-      do idir = 1, this%mesh%sb%dim
-        call gradffb(idir)%do_pack(copy=.false.)
-      end do
     end if
+
+    do idir = 1, this%mesh%sb%dim
+      call ffb%copy_to(gradffb(idir))
+    end do
 
     if(repetitions > 1) then
       call X(derivatives_batch_grad)(this, ffb, gradffb, set_bc=.false.)
@@ -527,11 +524,11 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     do idir = 1, this%mesh%sb%dim
       call gradffb(idir)%end()
     end do
-    SAFE_DEALLOCATE_A(gradffb)
 
     blocksize = 2*blocksize
     if(blocksize > max_blocksize) exit
   end do
+  SAFE_DEALLOCATE_A(gradffb)
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 
@@ -596,7 +593,6 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
   ASSERT(size(opffb) == der%mesh%sb%dim)
 
   do idir = 1, der%mesh%sb%dim
-    call ffb%copy_to(opffb(idir))
     call X(derivatives_batch_perform)(der%grad(idir), der, ffb, opffb(idir), &
       ghost_update=ghost_update_, set_bc=set_bc_)
     set_bc_       = .false. ! there is no need to update again
