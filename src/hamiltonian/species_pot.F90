@@ -919,7 +919,9 @@ contains
       select case(species_type(species))
 
       case(SPECIES_SOFT_COULOMB)
-        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+        !Assuming that we want to take the contribution from all replica that contributes up to 0.001
+        ! to the center of the cell, we arrive to a range of 1000 a.u.. 
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(1000.0) / species_zval(species))
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
           x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
@@ -932,7 +934,7 @@ contains
         call periodic_copy_end(pp)
 
       case(SPECIES_USDEF)
-
+        !TODO: we should control the value of 10 by a variable. 
         call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
