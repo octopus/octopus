@@ -45,7 +45,8 @@ module cuda_oct_m
     cuda_device_name,                   &
     cuda_device_capability,             &
     cuda_driver_version,                &
-    cuda_set_stream
+    cuda_set_stream,                    &
+    cuda_deref
 
   interface
 

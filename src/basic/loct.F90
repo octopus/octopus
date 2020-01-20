@@ -48,15 +48,6 @@ module loct_oct_m
     loct_get_memory_usage,   &
     loct_exit_failure
 
-#if defined(HAVE_GDLIB)
-  public ::                    &
-    loct_gdimage_create_from,  &
-    loct_gdimage_sx,           &
-    loct_gdimage_sy,           &
-    loct_gdimage_get_pixel_rgb, &
-    loct_gdimagedestroy
-#endif
-
   ! ---------------------------------------------------------
   !> System information (time, memory, sysname)
 
@@ -216,55 +207,6 @@ module loct_oct_m
       integer,          intent(out) :: l !< array
     end subroutine oct_wfs_list
   end interface loct_wfs_list
-
-  ! ---------------------------------------------------------
-  !> GD library
-#if defined(HAVE_GDLIB)
-  interface loct_gdimage_create_from
-    function oct_gdimage_create_from(filename)
-      use iso_c_binding
-      implicit none
-      type(c_ptr) :: oct_gdimage_create_from
-      character(len=*), intent(in) :: filename
-    end function oct_gdimage_create_from
-  end interface loct_gdimage_create_from
-
-  interface loct_gdimage_sx
-    function oct_gdimage_sx(im)
-      use iso_c_binding
-      implicit none
-      integer :: oct_gdimage_sx
-      type(c_ptr), intent(in) :: im
-    end function oct_gdimage_sx
-  end interface loct_gdimage_sx
-
-  interface loct_gdimage_sy
-    function oct_gdimage_sy(im)
-      use iso_c_binding
-      implicit none
-      integer :: oct_gdimage_sy
-      type(c_ptr), intent(in) :: im
-    end function oct_gdimage_sy
-  end interface loct_gdimage_sy
-
-  interface loct_gdimage_get_pixel_rgb
-    subroutine oct_gdimage_get_pixel_rgb(im, x, y, r, g, b)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(in)  :: im
-      integer,     intent(in)  :: x, y
-      integer,     intent(out) :: r, g, b
-    end subroutine oct_gdimage_get_pixel_rgb
-  end interface loct_gdimage_get_pixel_rgb
-
-  interface loct_gdimagedestroy
-    subroutine oct_gdimagedestroy(im)
-      use iso_c_binding
-      implicit none
-      type(c_ptr), intent(inout) :: im
-    end subroutine oct_gdimagedestroy
-  end interface loct_gdimagedestroy
-#endif
 
  interface loct_get_memory_usage
    integer(SIZEOF_VOIDP) function oct_get_memory_usage()
