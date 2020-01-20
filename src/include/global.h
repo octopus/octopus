@@ -84,6 +84,8 @@
 
 #  define SAFE_ALLOCATE_TYPE(type, x) allocate(type::x)
 
+#  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds) allocate(type::x bounds)
+
 #  define SAFE_DEALLOCATE_P(x) \
   if(associated(x)) then; CARDINAL \
     deallocate(x);        CARDINAL \
@@ -109,6 +111,19 @@
 
 #  define SAFE_ALLOCATE_TYPE(type, x)			\
   allocate( ACARDINAL type::x, ACARDINAL stat=global_alloc_err); CARDINAL \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
+  global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
+    call profiling_memory_allocate(ACARDINAL TOSTRING(x), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
+  if(global_alloc_err.ne.0) ACARDINAL \
+    call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
+  CARDINAL
+
+! Some versions of GCC have a bug in the sizeof() function such that the compiler crashes with a ICE
+! when passing a class instance to the function and explicit array bounds are given.
+! The workaround is not to pass the bounds to sizeof. Otherwise we could just use SAFE_ALLOCATE_TYPE.
+#  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds)			\
+  allocate( ACARDINAL type::x bounds, ACARDINAL stat=global_alloc_err); CARDINAL \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
   global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \

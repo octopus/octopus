@@ -186,7 +186,7 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    SAFE_ALLOCATE_TYPE(wfs_elec_t, psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psi2, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
