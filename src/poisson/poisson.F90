@@ -958,6 +958,8 @@ contains
 
     this%kernel = POISSON_FFT_KERNEL_NONE
 
+    nullify(sm%cube_map%map)
+
     select case(this%method)
     case(POISSON_DIRECT_SUM)
       !Nothing to be done
