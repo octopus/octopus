@@ -641,9 +641,8 @@ contains
   end subroutine poisson_init
 
   !-----------------------------------------------------------------
-  subroutine poisson_end(this, sm)
+  subroutine poisson_end(this)
     type(poisson_t), intent(inout) :: this
-    type(submesh_t), optional, intent(inout) :: sm
 
     logical :: has_cube
 
@@ -693,10 +692,6 @@ contains
         call mesh_cube_parallel_map_end(this%mesh_cube_map)
       end if
       call cube_end(this%cube)
-
-      if(present(sm)) then
-        call submesh_end_cube_map(sm)
-      end if
     end if
 
     POP_SUB(poisson_end)

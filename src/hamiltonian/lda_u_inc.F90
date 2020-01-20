@@ -1139,8 +1139,8 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
         end do !kst
       end do !jst
     end do !ist
-    call poisson_end(os%poisson, os%sphere)
-
+    call poisson_end(os%poisson)
+    call submesh_end_cube_map(os%sphere)
     call submesh_end_global(os%sphere)
   end do !iorb
 
