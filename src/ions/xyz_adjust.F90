@@ -22,8 +22,9 @@ module xyz_adjust_oct_m
   use global_oct_m
   use geometry_oct_m
   use lalg_adv_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -39,8 +40,9 @@ module xyz_adjust_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_adjust_it(geo, rotate)
+  subroutine xyz_adjust_it(geo, namespace, rotate)
     type(geometry_t),           intent(inout) :: geo
+    type(namespace_t),          intent(in)    :: namespace
     logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
@@ -61,7 +63,7 @@ contains
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
-      if(parse_block('MainAxis', blk)==0) then
+      if(parse_block(namespace, 'MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         end do
@@ -110,11 +112,11 @@ contains
       else
         default = NONE
       end if
-      call parse_variable('AxisType', default, axis_type)
+      call parse_variable(namespace, 'AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then
-        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions")
+        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions", namespace=namespace)
       end if
 
       select case(axis_type)
@@ -138,14 +140,14 @@ contains
         call axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
       write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
 
-      if(axis_type /= NONE) call geometry_rotate(geo, x1, x2, to)
+      if(axis_type /= NONE) call geometry_rotate(geo, namespace, x1, x2, to)
 
     end if
 
@@ -323,11 +325,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_rotate(geo, from, from2, to)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,            intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,            intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+  subroutine geometry_rotate(geo, namespace, from, from2, to)
+    type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
 
     integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
@@ -337,7 +340,7 @@ contains
     PUSH_SUB(geometry_rotate)
 
     if(geo%space%dim /= 3) &
-      call messages_not_implemented("geometry_rotate in other than 3 dimensions")
+      call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
 
     ! initialize matrices
     m1 = M_ZERO

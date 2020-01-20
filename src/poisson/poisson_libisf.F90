@@ -27,6 +27,7 @@ module poisson_libisf_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
 
@@ -48,6 +49,7 @@ module poisson_libisf_oct_m
     poisson_libisf_get_dims
 
   type poisson_libisf_t
+    private
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
 #ifdef HAVE_LIBISF
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
@@ -74,7 +76,7 @@ module poisson_libisf_oct_m
     !!                gradient, needed for XC part, and for the White-Bird correction, which
     !!                may lead up to 8 planes more on each side. Due to this fact, the information
     !!                between the processors may overlap.
-    character(len = 1) :: datacode = "G" 
+    character(len = 1), public :: datacode = "G" 
 
     integer :: isf_order           !< order of the interpolating scaling functions used in the decomposition 
     integer :: localnscatterarr(5)
@@ -85,8 +87,9 @@ module poisson_libisf_oct_m
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube)
+  subroutine poisson_libisf_init(this, namespace, mesh, cube)
     type(poisson_libisf_t), intent(out)   :: this
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
 
@@ -114,7 +117,7 @@ contains
     !% If "no", entire input and output vector is saved in all the MPI processes.
     !% If k-points parallelization is used, "no" must be selected.
     !%End
-    call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
+    call parse_variable(namespace, 'PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
       this%datacode = "D"
     else 
@@ -133,8 +136,6 @@ contains
   !-----------------------------------------------------------------
   subroutine poisson_libisf_end(this)
     type(poisson_libisf_t), intent(inout) :: this
-
-    character(len=*), parameter :: subname='Poisson_Solver'
 
     PUSH_SUB(poisson_libisf_end)
 

@@ -33,6 +33,7 @@ module nl_operator_oct_m
 #ifdef HAVE_OPENMP
   use multicomm_oct_m
 #endif
+  use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -55,16 +56,10 @@ module nl_operator_oct_m
     nl_operator_build,          &
     dnl_operator_operate,       &
     znl_operator_operate,       &
-    snl_operator_operate,           &
-    cnl_operator_operate,           &
     dnl_operator_operate_batch, &
     znl_operator_operate_batch, &
-    snl_operator_operate_batch,     &
-    cnl_operator_operate_batch,     &
     dnl_operator_operate_diag,  &
     znl_operator_operate_diag,  &
-    snl_operator_operate_diag,      &
-    cnl_operator_operate_diag,      &    
     nl_operator_end,            &
     nl_operator_skewadjoint,    &
     nl_operator_selfadjoint,    &
@@ -82,23 +77,24 @@ module nl_operator_oct_m
   end type nl_operator_index_t
 
   type nl_operator_t
-    type(stencil_t)       :: stencil
-    type(mesh_t), pointer :: mesh      !< pointer to the underlying mesh
-    integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
-    integer               :: np        !< number of points in mesh
+    private
+    type(stencil_t),  public :: stencil
+    type(mesh_t), pointer    :: mesh      !< pointer to the underlying mesh
+    integer, pointer         :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
+    integer,          public :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
-    integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
-    FLOAT,   pointer  :: w(:,:)        !< weights. Unique on each parallel process.
+    integer, pointer, public :: index(:,:)    !< index of the points. Unique on each parallel process.
+    FLOAT,   pointer, public :: w(:,:)        !< weights. Unique on each parallel process.
 
-    logical               :: const_w   !< are the weights independent of index i
+    logical,          public :: const_w   !< are the weights independent of index i
 
     character(len=40) :: label
 
     !> the compressed index of grid points
-    integer :: nri
-    integer, pointer :: ri(:,:)
-    integer, pointer :: rimap(:)
-    integer, pointer :: rimap_inv(:)
+    integer, public :: nri
+    integer, pointer, public :: ri(:,:)
+    integer, pointer, public :: rimap(:)
+    integer, pointer, public :: rimap_inv(:)
 
     integer                   :: ninner
     integer                   :: nouter
@@ -153,7 +149,9 @@ module nl_operator_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine nl_operator_global_init()
+  subroutine nl_operator_global_init(namespace)
+    type(namespace_t),         intent(in)    :: namespace
+    
     integer :: default
 
     PUSH_SUB(nl_operator_global_init)
@@ -186,10 +184,10 @@ contains
 
     default = OP_VEC
 
-    call parse_variable('OperateDouble', default, dfunction_global)
+    call parse_variable(namespace, 'OperateDouble', default, dfunction_global)
     if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
 
-    call parse_variable('OperateComplex', default, zfunction_global)
+    call parse_variable(namespace, 'OperateComplex', default, zfunction_global)
     if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
 
 
@@ -219,21 +217,21 @@ contains
     !% This version is optimized using vector primitives (if available).
     !%End
     
-    call parse_variable('OperateSingle', OP_FORTRAN, sfunction_global)
+    call parse_variable(namespace, 'OperateSingle', OP_FORTRAN, sfunction_global)
     if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
     
-    call parse_variable('OperateComplexSingle', OP_FORTRAN, cfunction_global)
+    call parse_variable(namespace, 'OperateComplexSingle', OP_FORTRAN, cfunction_global)
     if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
 
     if(accel_is_enabled()) then
 
-      !%Variable OperateOpenCL
+      !%Variable OperateAccel
       !%Type integer
       !%Default map
       !%Section Execution::Optimization
       !%Description
       !% This variable selects the subroutine used to apply non-local
-      !% operators over the grid when OpenCL is used.
+      !% operators over the grid when an accelerator device is used.
       !%Option invmap 1
       !% The standard implementation ported to OpenCL.
       !%Option map 2
@@ -241,7 +239,9 @@ contains
       !%Option nomap 3
       !% (Experimental) This version does not use a map.
       !%End
-      call parse_variable('OperateOpenCL',  OP_MAP, function_opencl)
+      call parse_variable(namespace, 'OperateAccel',  OP_MAP, function_opencl)
+
+      call messages_obsolete_variable(namespace, 'OperateOpenCL', 'OperateAccel')
 
     end if
 
@@ -256,7 +256,7 @@ contains
     !% experimental and has not been thoroughly tested.
     !%End
 
-    call parse_variable('NLOperatorCompactBoundaries', .false., compact_boundaries)
+    call parse_variable(namespace, 'NLOperatorCompactBoundaries', .false., compact_boundaries)
 
     if(compact_boundaries) then
       call messages_experimental('NLOperatorCompactBoundaries')
@@ -1052,14 +1052,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "nl_operator_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "nl_operator_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "nl_operator_inc.F90"  
 
 end module nl_operator_oct_m
 

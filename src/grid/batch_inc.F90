@@ -18,7 +18,7 @@
 
 !--------------------------------------------------------------
 subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
-  type(batch_t),  intent(out)   :: this
+  class(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
@@ -37,15 +37,17 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, psi(:, :, ist))
+    call this%add_state(ist, psi(:, :, ist))
   end do
+
+  this%type_of = R_TYPE_VAL
 
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)
 
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t), intent(inout) :: this
   integer,        intent(in)    :: ist
   R_TYPE, target, intent(in)    :: psi(:, :)
 
@@ -76,8 +78,8 @@ end subroutine X(batch_add_state)
 !--------------------------------------------------------------
 
 subroutine X(batch_add_state_linear)(this, psi)
-  type(batch_t),  intent(inout) :: this
-  R_TYPE, target, intent(in)    :: psi(:)
+  class(batch_t),  intent(inout) :: this
+  R_TYPE,  target, intent(in)    :: psi(:)
 
   PUSH_SUB(X(batch_add_state_linear))
 
@@ -94,24 +96,31 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, mirror)
-  type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: st_start
-  integer,        intent(in)    :: st_end
-  integer,        intent(in)    :: np
-  logical, optional, intent(in) :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
+  class(batch_t),    intent(inout) :: this
+  integer,           intent(in)    :: st_start
+  integer,           intent(in)    :: st_end
+  integer,           intent(in)    :: np
+  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+  logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
-  integer :: ist
+  integer :: ist, nst
 
   PUSH_SUB(X(batch_allocate))
 
-  SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
+  nst = st_end - st_start + 1
+  if(optional_default(special, .false.)) then
+    call c_f_pointer(X(allocate_hardware_aware)(np*this%dim*nst), this%X(psicont), [np,this%dim,nst])
+    this%special_memory = .true.
+  else
+    SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:nst))
+  end if
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
   
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
+    call this%add_state(ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_allocate))
@@ -119,7 +128,7 @@ end subroutine X(batch_allocate)
 
 !--------------------------------------------------------------
 subroutine X(batch_allocate_temporary)(this)
-  type(batch_t),  intent(inout) :: this
+  class(batch_t),  intent(inout) :: this
 
   integer :: ist, idim
 
@@ -127,7 +136,11 @@ subroutine X(batch_allocate_temporary)(this)
 
   ASSERT(.not. associated(this%X(psicont)))
   
-  SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
+  if(this%special_memory) then
+    call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
+  else
+    SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
+  end if
   
   do ist = 1, this%nst
     this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)

@@ -24,6 +24,7 @@ module symmetries_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -47,8 +48,9 @@ module symmetries_oct_m
     symmetries_write_info
 
   type symmetries_t
-    type(symm_op_t), allocatable :: ops(:)
-    integer                  :: nops
+    private
+    type(symm_op_t), allocatable, public :: ops(:)
+    integer, public          :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
     logical                  :: any_non_spherical
@@ -87,8 +89,9 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
+  subroutine symmetries_init(this, namespace, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
@@ -126,7 +129,7 @@ contains
 
     dim4syms = min(3,dim)
 
-    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = (geo%natoms < 100) .or. periodic_dim > 0
     def_sym_comp = def_sym_comp .and. dim == 3
     
     !%Variable SymmetriesCompute
@@ -138,8 +141,9 @@ contains
     !%
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
+    !% For periodic systems, the default is always true, irrespective of the number of atoms.
     !%End
-    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
+    call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
     if(this%symmetries_compute .and. dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')
@@ -223,7 +227,7 @@ contains
       
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
 
         do iatom = 1, geo%natoms
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
@@ -274,7 +278,7 @@ contains
       end do
       if(.not. found_identity) then
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     
       if(is_supercell) then
@@ -298,7 +302,7 @@ contains
 
       this%breakdir(1:3) = M_ZERO
 
-      if(parse_block('SymmetryBreakDir', blk) == 0) then
+      if(parse_block(namespace, 'SymmetryBreakDir', blk) == 0) then
 
         do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
@@ -334,7 +338,7 @@ contains
 
     end if
 
-    call symmetries_write_info(this, dim, periodic_dim, stdout)
+    call symmetries_write_info(this, namespace, dim, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -479,8 +483,9 @@ contains
   end function symmetries_identity_index
 
   ! ---------------------------------------------------------
-  subroutine symmetries_write_info(this, dim, periodic_dim, iunit)
+  subroutine symmetries_write_info(this, namespace, dim, periodic_dim, iunit)
     type(symmetries_t),    intent(in) :: this
+    type(namespace_t),     intent(in) :: namespace
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
@@ -488,18 +493,18 @@ contains
  
     PUSH_SUB(symmetries_write_info)
     
-    call messages_print_stress(iunit, 'Symmetries')
+    call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
     end if
 
     if(.not. this%symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
       POP_SUB(symmetries_write_info)
       return
     end if
@@ -538,7 +543,7 @@ contains
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
       call messages_info(iunit = iunit)
     end if
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(symmetries_write_info)
   end subroutine symmetries_write_info

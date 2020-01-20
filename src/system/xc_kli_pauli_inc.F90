@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_kli_pauli_solve(mesh, st, oep)
-  type(mesh_t),   intent(in)    :: mesh
-  type(states_t), intent(in)    :: st
-  type(xc_oep_t), intent(inout) :: oep
+subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
+  type(mesh_t),        intent(in)    :: mesh
+  type(namespace_t),   intent(in)    :: namespace
+  type(states_elec_t), intent(in) :: st
+  type(xc_oep_t),      intent(inout) :: oep
   !
   integer :: is, ip, ii, jj, ist, eigen_n, it, kssi
   FLOAT, allocatable :: rho(:,:), lambda(:), n(:), t_rho(:,:)
@@ -55,7 +56,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
   do ii = 1,st%d%dim
     do jj = 1,st%d%dim
       do ist = st%st_start,st%st_end
-        call states_get_state(st, mesh, jj, ist, 1, psij)
+        call states_elec_get_state(st, mesh, jj, ist, 1, psij)
         weighted_hf(1:mesh%np,ii,jj) = weighted_hf(1:mesh%np,ii,jj) + &
           oep%socc*st%occ(ist,1)*conjg(psij(1:mesh%np)*oep%zlxc(1:mesh%np,ist,ii)) ! oep%zlxc => (\phi_j)^*u_x^j 
       end do
@@ -109,7 +110,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     vs = vloc ! Slater part
 
     ! iteration criteria
-    call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=50)
+    call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=50)
 
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)
@@ -131,8 +132,8 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
           do ist = 1, eigen_n
             kssi = oep%eigen_index(ist)
 
-            call states_get_state(st, mesh, ii, kssi, 1, psii)
-            call states_get_state(st, mesh, jj, kssi, 1, psij)
+            call states_elec_get_state(st, mesh, ii, kssi, 1, psii)
+            call states_elec_get_state(st, mesh, jj, kssi, 1, psij)
            
             rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(psij(1:mesh%np))*psii(1:mesh%np)
             rho_i(1:mesh%np,jj,ii,ist) = conjg(rho_i(1:mesh%np,ii,jj,ist))

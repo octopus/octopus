@@ -39,8 +39,9 @@
 !!             -4 : function in file is complex, dp. \n
 ! ---------------------------------------------------------
 
-subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
+subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
+  type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -63,7 +64,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(io_function_input_global)(filename, mesh, ff_global, ierr, map)
+      call X(io_function_input_global)(filename, namespace, mesh, ff_global, ierr, map)
     end if
     if(debug%info) call messages_debug_newlines(2)
 
@@ -75,7 +76,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
 
     ! Only scatter, when successfully read the file(s).
     if(ierr <= 0) then
-      call vec_scatter(mesh%vp, mesh%vp%root, ff_global, ff)
+      call vec_scatter(mesh%vp, mesh%vp%root, ff, ff_global)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
@@ -84,7 +85,7 @@ subroutine X(io_function_input)(filename, mesh, ff, ierr, map)
     ASSERT(.false.) 
 #endif
   else
-    call X(io_function_input_global)(filename, mesh, ff, ierr, map)
+    call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   end if
 
   POP_SUB(X(io_function_input))
@@ -93,8 +94,9 @@ end subroutine X(io_function_input)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
+subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   character(len=*),  intent(in)    :: filename
+  type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
@@ -131,12 +133,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 #if defined(HAVE_NETCDF)
   case("ncdf")
     ASSERT(.not. present(map))
-    file = io_workpath(filename)
+    file = io_workpath(filename, namespace)
     status = nf90_open(trim(file), NF90_WRITE, ncid)
     if(status /= NF90_NOERR) then
       ierr = 2
     else
-      call cube_init(cube, mesh%idx%ll, mesh%sb)
+      call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
       call cube_function_null(cf)
       call X(cube_function_alloc_RS)(cube, cf)
 #if defined(R_TCOMPLEX)
@@ -161,12 +163,12 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
     if(present(map)) then
 
-      call io_binary_get_info(io_workpath(filename), np, file_size, ierr)
+      call io_binary_get_info(io_workpath(filename, namespace), np, file_size, ierr)
 
       if (ierr == 0) then
         SAFE_ALLOCATE(read_ff(1:np))
 
-        call io_binary_read(io_workpath(filename), np, read_ff, ierr)
+        call io_binary_read(io_workpath(filename, namespace), np, read_ff, ierr)
         call profiling_count_transfers(np, read_ff(1))
         
         if (ierr == 0) then
@@ -180,7 +182,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
       end if
 
     else
-      call io_binary_read(io_workpath(filename), mesh%np_global, ff, ierr)
+      call io_binary_read(io_workpath(filename, namespace), mesh%np_global, ff, ierr)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
 
@@ -190,26 +192,26 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
       call messages_fatal(1)
     end if 
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS)(cube, cf)
     
-    call io_csv_get_info(filename, dims, ierr)
+    call io_csv_get_info(io_workpath(filename, namespace), dims, ierr)
     
     if (ierr /= 0) then
-      message(1) = "Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(io_workpath(filename, namespace))//""
       call messages_fatal(1)
     end if
     
     SAFE_ALLOCATE(read_ff(1:dims(1)*dims(2)*dims(3)))
 #ifdef R_TREAL
-    call dread_csv(filename, dims(1)*dims(2)*dims(3), read_ff, ierr)
+    call dread_csv(io_workpath(filename, namespace), dims(1)*dims(2)*dims(3), read_ff, ierr)
 #else
     call messages_not_implemented("Reading complex CSV file")
 #endif
 
     if (ierr /= 0) then
-      message(1) = "Could not read file "//trim(filename)//""
+      message(1) = "Could not read file "//trim(io_workpath(filename, namespace))//""
       call messages_fatal(1)
     end if
 
@@ -437,11 +439,12 @@ end subroutine X(io_function_input_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
+subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, vector_dim, unit, ierr, &
   geo, grp, root, is_global, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:, :)
   integer,                    intent(in)  :: vector_dim
@@ -504,7 +507,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
       do ivd = 1, vector_dim
 #ifdef HAVE_MPI        
-        call vec_gather(mesh%vp, root_, ff_global(:, ivd), ff(:, ivd))
+        call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
 #endif
       end do
       
@@ -535,7 +538,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr, geo)
+        call X(io_function_output_global)(how_seq, dir, full_fname, namespace, mesh, &
+          ff_global(:, ivd), unit, ierr, geo)
       end do
     end if
 
@@ -569,7 +573,7 @@ contains
 
     PUSH_SUB(X(io_function_output_vector).out_vtk)
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
 
     SAFE_ALLOCATE(cf(1:vector_dim))
 
@@ -579,11 +583,11 @@ contains
       call X(mesh_to_cube)(mesh, ff_global(:, ivd), cube, cf(ivd))
     end do
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+    filename = trim(dir)//'/'//trim(fname)//".vtk"
 
     forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
 
-    call X(vtk_out_cf_vector)(filename, fname, ierr, cf, vector_dim, cube, dk, unit)
+    call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
 
     do ivd = 1, vector_dim
       call X(cube_function_free_RS)(cube, cf(ivd))
@@ -599,11 +603,12 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vector_dim, unit, & 
-  ierr, grp, root, vector_dim_labels)
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt, ff, vector_dim, &
+    unit, ierr, grp, root, vector_dim_labels)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   type(distributed_t),        intent(in)  :: kpt
   R_TYPE,           target,   intent(in)  :: ff(:, :)
@@ -673,7 +678,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
           write(full_fname, '(2a,i1)') trim(fname), '-', ivd
         end if
         
-        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr)
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, namespace, mesh, &
+          ff_global(:, ivd), unit, ierr)
       end do
     end if
 
@@ -699,10 +705,11 @@ end subroutine X(io_function_output_vector_BZ)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
+subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ierr, geo, grp, root, is_global)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,           target,   intent(in)  :: ff(:)
   type(unit_t),               intent(in)  :: unit
@@ -749,7 +756,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
       !present, but to avoid it we will have to find out all if the
       !processes are members of the domain line where the root of grp
       !lives
-      call vec_gather(mesh%vp, root_, ff_global, ff)
+      call vec_gather(mesh%vp, root_, ff, ff_global)
     else
       ff_global => ff
     end if
@@ -763,7 +770,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
   end if
 
   if(i_am_root) then
-    call X(io_function_output_global)(how, dir, fname, mesh, ff_global, unit, ierr, geo = geo)
+    call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff_global, unit, ierr, geo = geo)
   end if
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
@@ -782,7 +789,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
 
   ! serial mode
   ASSERT(.not. mesh%parallel_in_domains)
-  call X(io_function_output_global)(how, dir, fname, mesh, ff, unit, ierr, geo = geo)
+  call X(io_function_output_global)(how, dir, fname, namespace, mesh, ff, unit, ierr, geo = geo)
 
 #endif
 
@@ -791,9 +798,10 @@ end subroutine X(io_function_output)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, geo)
+subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, unit, ierr, geo)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
   type(unit_t),               intent(in)  :: unit
@@ -808,7 +816,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global))
 
-  call io_mkdir(dir)
+  call io_mkdir(dir, namespace)
 
 ! Define the format
   mformat    = '(99es23.14E3)'
@@ -885,7 +893,7 @@ contains
 
     PUSH_SUB(X(io_function_output_global).out_binary)
 
-    workdir = io_workpath(dir)
+    workdir = io_workpath(dir, namespace)
     call io_binary_write(trim(workdir)//'/'//trim(fname)//'.obf', np_max, ff, ierr)
 
     call profiling_count_transfers(np_max, ff(1))
@@ -904,7 +912,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_axis)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d2)//"=0,"//index2axis(d3)//"=0"
-    iunit = io_open(filename, action='write')
+    iunit = io_open(filename, namespace, action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
     do ip = 1, np_max
@@ -935,7 +943,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_plane)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axis(d1)//"=0"
-    iunit = io_open(filename, action='write')
+    iunit = io_open(filename, namespace, action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d2), index2axis(d3), 'Re', 'Im'
 
@@ -997,7 +1005,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_integrate_plane)
 
     filename = trim(dir)//'/'//trim(fname)//".int_d"//index2axis(d1)//"d"//index2axis(d2)
-    iunit = io_open(filename, action='write')
+    iunit = io_open(filename, namespace, action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axis(d1), 'Re', 'Im'
 
@@ -1074,7 +1082,7 @@ contains
     end select
 
     record_length = (max_d3 - min_d3 + 1)*23  ! 23 because of F23.14 below
-    iunit = io_open(filename, action='write', recl=record_length)
+    iunit = io_open(filename, namespace, action='write', recl=record_length)
 
 
     SAFE_ALLOCATE(out_vec(min_d3:max_d3))
@@ -1139,7 +1147,7 @@ contains
 
     PUSH_SUB(X(io_function_output_global).out_mesh_index)
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", namespace, action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
     xx = mesh_x_global(mesh, 1)
@@ -1176,7 +1184,7 @@ contains
     PUSH_SUB(X(io_function_output_global).out_dx)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1193,7 +1201,7 @@ contains
     write(nitems,*) cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
     nitems=trim(adjustl(nitems))
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", namespace, action='write')
 
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', cube%rs_n_global(1:3)
     write(iunit, '(a,3f12.6)') ' origin', offset(1:3)
@@ -1248,7 +1256,7 @@ contains
     ASSERT(present(geo))
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1261,7 +1269,7 @@ contains
       offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
     end do
 
-    iunit = io_open(trim(dir)//'/'//trim(fname)//".cube", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".cube", namespace, action='write')
 
     write(iunit, '(2a)') 'Generated by octopus ', trim(conf%version)
     write(iunit, '(4a)') 'git: ', trim(conf%git_commit), " build: ",  trim(conf%build_time)
@@ -1341,7 +1349,7 @@ contains
     end if
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
@@ -1357,11 +1365,11 @@ contains
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     do idir = 1, 3
       do idir2 = 1, 3
-        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir, idir2)
+        lattice_vectors(idir2, idir) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
       end do
     end do
     
-    iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname_ext)//".xsf", namespace, action='write')
 
     ASSERT(present(geo))
     call write_xsf_geometry(iunit, geo, mesh)
@@ -1435,12 +1443,12 @@ contains
     PUSH_SUB(X(io_function_output_global).out_netcdf)
 
     ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace)
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf")
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf", namespace)
 
      
     call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
@@ -1469,12 +1477,12 @@ contains
 
     forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
     
-    call cube_init(cube, mesh%idx%ll, mesh%sb, spacing = dk )
+    call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+    filename = trim(dir)//'/'//trim(fname)//".vtk"
    
 
     if(mesh%sb%nonorthogonal) then
@@ -1490,11 +1498,11 @@ contains
         end do
       end do
       
-      call X(vtk_out_cf_structured)(filename, fname, ierr, cf, cube, unit, points)     
+      call X(vtk_out_cf_structured)(filename, namespace, fname, ierr, cf, cube, unit, points)     
       SAFE_DEALLOCATE_A(points) 
     else  
       !Ordinary grid
-      call X(vtk_out_cf)(filename, fname, ierr, cf, cube, dk(:), unit)
+      call X(vtk_out_cf)(filename, namespace, fname, ierr, cf, cube, dk(:), unit)
     end if  
 
     call X(cube_function_free_RS)(cube, cf)
@@ -1507,9 +1515,10 @@ end subroutine X(io_function_output_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ierr)
+subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff, unit, ierr)
   integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
+  type(namespace_t),          intent(in)  :: namespace
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
   type(unit_t),               intent(in)  :: unit
@@ -1522,7 +1531,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global_BZ))
 
-  call io_mkdir(dir)
+  call io_mkdir(dir, namespace)
 
 ! Define the format
   mformat    = '(99es23.14E3)'
@@ -1568,7 +1577,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
     PUSH_SUB(X(io_function_output_global_BZ).out_plane)
 
     filename = trim(dir)//'/'//trim(fname)//"."//index2axisBZ(d1)//"=0"
-    iunit = io_open(filename, action='write')
+    iunit = io_open(filename, namespace, action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
 

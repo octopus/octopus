@@ -29,19 +29,18 @@ module types_oct_m
     types_get_size,    &
     operator(==),      &
     operator(/=),      &
-    type_is_complex,   &
-    type_is_single
+    type_is_complex
 
   type type_t
+    private
     integer :: itype
   end type type_t
 
+  type(type_t), public :: TYPE_NONE         = type_t(0)
   type(type_t), public :: TYPE_FLOAT        = type_t(1)
   type(type_t), public :: TYPE_CMPLX        = type_t(2)
   type(type_t), public :: TYPE_INTEGER      = type_t(3)
   type(type_t), public :: TYPE_BYTE         = type_t(4)
-  type(type_t), public :: TYPE_FLOAT_SINGLE = type_t(5)
-  type(type_t), public :: TYPE_CMPLX_SINGLE = type_t(6)
 
   interface operator(==)
     module procedure types_equal
@@ -86,18 +85,9 @@ contains
   logical pure function type_is_complex(this) result(is_complex)
     type(type_t), intent(in) :: this
     
-    is_complex = this == TYPE_CMPLX .or. this == TYPE_CMPLX_SINGLE
+    is_complex = this == TYPE_CMPLX
 
   end function type_is_complex
-
-  ! -----------------------------------------------------
-
-  logical pure function type_is_single(this) result(is_single)
-    type(type_t), intent(in) :: this
-    
-    is_single = this == TYPE_FLOAT_SINGLE .or. this == TYPE_CMPLX_SINGLE
-
-  end function type_is_single
 
 end module types_oct_m
 

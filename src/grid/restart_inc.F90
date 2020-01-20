@@ -62,12 +62,17 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
 
   if (in_line .and. mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-    call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff_global, ff)
+    if (i_am_root) then
+      call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff, ff_global)
+    else
+      call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff)
+    end if
 #endif
   end if
   
   if (i_am_root) then
-    call X(io_function_output_global)(restart%format, restart%pwd, filename, mesh, ff_global, unit_one, ierr)
+    call X(io_function_output_global)(restart%format, restart%pwd, filename, restart%namespace, &
+      mesh, ff_global, unit_one, ierr)
     ! all restart files are in atomic units
 
     if (mesh%parallel_in_domains) then
@@ -122,7 +127,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   
   if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(io_function_input) (full_filename, mesh, ff(1:mesh%np), ierr, &
+    call X(io_function_input) (full_filename, restart%namespace, mesh, ff(1:mesh%np), ierr, &
                                map = restart%map)
 
     POP_SUB(X(restart_read_mesh_function))
@@ -130,7 +135,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (restart_has_map(restart)) then
-    call io_binary_get_info(io_workpath(full_filename), np, file_size, ierr)
+    call io_binary_get_info(io_workpath(full_filename, restart%namespace), np, file_size, ierr)
 
     if (ierr /= 0) then
       POP_SUB(X(restart_read_mesh_function))
@@ -158,11 +163,12 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   if(mesh%parallel_in_domains) then
     ! Ensure that xlocal has a proper value
     ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
-    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, &
-      np, read_ff, ierr)
+    call io_binary_read_parallel(io_workpath(full_filename, restart%namespace), &
+      mesh%mpi_grp%comm, mesh%vp%xlocal, np, read_ff, ierr)
   else
 #endif
-    call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)
+    call io_binary_read(io_workpath(full_filename, restart%namespace), np, &
+      read_ff, ierr, offset = offset)
 #ifdef HAVE_MPI2
   end if
 #endif
@@ -175,10 +181,10 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
     ff(1:mesh%np) = read_ff(1:mesh%np)
 
-    call batch_init(ffb, 1)
-    call batch_add_state(ffb, ff)
+    call batch_init(ffb, 1, 1)
+    call ffb%add_state(ff)
     call X(mesh_batch_exchange_points)(mesh, ffb, backward_map = .true.)
-    call batch_end(ffb)
+    call ffb%end()
     
     call profiling_out(prof_comm)
   end if
@@ -193,7 +199,8 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (ierr /= 0) then
-    message(1) = "Unable to read mesh function from '"//trim(io_workpath(full_filename))//"'."
+    message(1) = "Unable to read mesh function from '"//&
+      trim(io_workpath(full_filename, restart%namespace))//"'."
     call messages_warning(1)
   end if
 
@@ -218,7 +225,7 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr, root)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   root_(1:P_STRATEGY_MAX) = 0
   if (present(root)) then
@@ -267,7 +274,7 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr, root)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   root_(1:P_STRATEGY_MAX) = 0
   if (present(root)) then
@@ -316,7 +323,7 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr, root)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   root_(1:P_STRATEGY_MAX) = 0
   if (present(root)) then
@@ -365,7 +372,7 @@ subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr, root)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_DUMP)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   root_(1:P_STRATEGY_MAX) = 0
   if (present(root)) then
@@ -412,7 +419,7 @@ subroutine X(restart_read_binary1)(restart, filename, np, ff, ierr)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   call io_binary_read(full_filename, np, ff, ierr)
 
@@ -440,7 +447,7 @@ subroutine X(restart_read_binary2)(restart, filename, np, ff, ierr)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   call io_binary_read(full_filename, np, ff, ierr)
 
@@ -468,7 +475,7 @@ subroutine X(restart_read_binary3)(restart, filename, np, ff, ierr)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   call io_binary_read(full_filename, np, ff, ierr)
 
@@ -495,7 +502,7 @@ subroutine X(restart_read_binary5)(restart, filename, np, ff, ierr)
   ASSERT(.not. restart%skip)
   ASSERT(restart%type == RESTART_TYPE_LOAD)
 
-  full_filename = trim(io_workpath(restart%pwd))//"/"//trim(filename)//".obf"
+  full_filename = trim(io_workpath(restart%pwd, restart%namespace))//"/"//trim(filename)//".obf"
 
   call io_binary_read(full_filename, np, ff, ierr)
 

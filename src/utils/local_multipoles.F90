@@ -27,7 +27,7 @@ program oct_local_multipoles
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -36,6 +36,7 @@ program oct_local_multipoles
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -65,20 +66,22 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(system_t)        :: sys
-  type(hamiltonian_t)   :: hm
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
-
+  type(namespace_t)     :: default_namespace
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
-  call messages_init()
+  call parser_init()
+  default_namespace = namespace_t("")
+  
+  call messages_init(default_namespace)
 
-  call io_init()
-  call profiling_init()
+  call io_init(default_namespace)
+  call profiling_init(default_namespace)
  
   call print_header()
   call messages_print_stress(stdout, "Local Domains mode")
@@ -86,25 +89,22 @@ program oct_local_multipoles
     
   call messages_experimental("oct-local_multipoles utility")
 
-  call unit_system_init()
-  call restart_module_init()
+  call unit_system_init(default_namespace)
+  call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
-  call simul_box_init(sb, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+  call system_init(sys, default_namespace)
+  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   call local_domains()
 
-  call hamiltonian_end(hm)
   call simul_box_end(sb)
   call system_end(sys)
-  call profiling_output()
-  call profiling_end()
+  call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+  call parser_end()
   call global_end()
 
 contains
@@ -139,7 +139,7 @@ contains
     !%Description
     !% The folder name where the density used as input file is.
     !%End
-    call parse_variable('LDFolder', folder_default, folder)
+    call parse_variable(default_namespace, 'LDFolder', folder_default, folder)
 
     ! Check if the folder is finished by an /
     if(index(folder, '/', back = .true.) /= len_trim(folder)) then
@@ -147,7 +147,7 @@ contains
     end if
 
     default_dt = M_ZERO
-    call parse_variable('TDTimeStep', default_dt, dt, unit = units_inp%time)
+    call parse_variable(default_namespace, 'TDTimeStep', default_dt, dt, unit = units_inp%time)
     if (dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
       write(message(2),'(a)') 'Input: TDTimeStep reset to 0. Check input file'
@@ -162,7 +162,7 @@ contains
     !% Input filename. The original filename for the density which is going to be 
     !% fragmented into domains.
     !%End
-    call parse_variable('LDFilename', 'density', basename)
+    call parse_variable(default_namespace, 'LDFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -180,7 +180,7 @@ contains
     !% This variable sets the threshold for the basins calculations. Recommended values: 
     !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes
     !%End
-    call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
+    call parse_variable(default_namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -189,7 +189,7 @@ contains
     !%Description
     !% Controls if the calculation of the local domains is desired at each iteration.
     !%End
-    call parse_variable('LDUpdate', .false., ldupdate)
+    call parse_variable(default_namespace, 'LDUpdate', .false., ldupdate)
 
     !%Variable LDOverWrite                                                                                             
     !%Type logical                                                                                                     
@@ -198,7 +198,7 @@ contains
     !%Description                                                                                                      
     !% Controls whether to over-write existing files.                                                                          
     !%End                                                                                                              
-    call parse_variable('LDOverWrite', .true., ldoverwrite)                       
+    call parse_variable(default_namespace, 'LDOverWrite', .true., ldoverwrite)                       
 
     !%Variable LDRadiiFile
     !%Type string
@@ -208,7 +208,7 @@ contains
     !% Full path for the radii file. If set, def_rsize will be reset to the new values. 
     !% This file should have the same format as share/PP/default.
     !%End
-    call parse_variable('LDRadiiFile', 'default', radiifile)
+    call parse_variable(default_namespace, 'LDRadiiFile', 'default', radiifile)
 
     if(trim(radiifile) /= "default") then
       n_spec_def = max(0, loct_number_of_lines(radiifile))
@@ -217,7 +217,7 @@ contains
       ! get parameters from file
       do ia = 1, sys%geo%nspecies
         read_data = 0
-        iunit = io_open(radiifile, action='read', status='old', die=.false.)
+        iunit = io_open(radiifile, default_namespace, action='read', status='old', die=.false.)
         if(iunit > 0) then
           if(ia == 1) then
             write(message(1),'(a,a)')'Redefining def_rsize from file:', trim(radiifile)
@@ -247,7 +247,7 @@ contains
     !%Description
     !% Restart information will be read from <tt>LDRestartFolder</tt>.
     !%End
-    call parse_variable('LDRestart', .false., ldrestart)
+    call parse_variable(default_namespace, 'LDRestart', .false., ldrestart)
 
     if (ldrestart) then
       write(folder_default,'(a)')'ld.general'
@@ -259,7 +259,7 @@ contains
       !%Description
       !% The folder name where the density used as input file is.
       !%End
-      call parse_variable('LDRestartFolder', folder_default, ldrestart_folder)
+      call parse_variable(default_namespace, 'LDRestartFolder', folder_default, ldrestart_folder)
 
       ! Check if the folder is finished by an /
       if (index(ldrestart_folder, '/', .true.) /= len_trim(ldrestart_folder)) then
@@ -275,7 +275,7 @@ contains
     !%Description
     !% This variable decides if a folder is going to be iterated.
     !%End
-    call parse_variable('LDIterateFolder', .false., iterate)
+    call parse_variable(default_namespace, 'LDIterateFolder', .false., iterate)
 
     !%Variable LDStart
     !%Type integer
@@ -284,7 +284,7 @@ contains
     !%Description
     !% The starting number of the filename or folder.
     !%End
-    call parse_variable('LDStart', 0, l_start)
+    call parse_variable(default_namespace, 'LDStart', 0, l_start)
 
     !%Variable LDEnd
     !%Type integer
@@ -293,7 +293,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_variable('LDEnd', 0, l_end)
+    call parse_variable(default_namespace, 'LDEnd', 0, l_end)
 
     !%Variable LDStep
     !%Type integer
@@ -302,7 +302,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_variable('LDStep', 1, l_step)
+    call parse_variable(default_namespace, 'LDStep', 1, l_step)
 
     message(1) = 'Info: Computing local multipoles'
     message(2) = ''
@@ -315,14 +315,14 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+    call kick_init(kick, default_namespace, sys%gr%mesh%sb, sys%st%d%ispin)
+    call local_write_init(local%writ, default_namespace, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
 
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
-      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+      call restart_init(restart_ld, default_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
       call local_restart(local, restart_ld)
       call restart_end(restart_ld)
@@ -339,7 +339,7 @@ contains
     else 
       restart_folder = folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+    call restart_init(restart, default_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                       dir=trim(restart_folder), mesh = sys%gr%mesh)
 
 !!$    call loct_progress_bar(-1, l_end-l_start)
@@ -375,13 +375,13 @@ contains
 
       ! Look for the mesh points inside local domains
       if(iter == l_start .and. .not.ldrestart) then
-        call local_inside_domain(local, sys%st%rho(:,1))
+        call local_inside_domain(local, default_namespace, sys%st%rho(:,1))
       else
-        if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
+        if (ldupdate) call local_inside_domain(local, default_namespace, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
-                              sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+      call local_write_iter(local%writ, default_namespace, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
+                              sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
@@ -443,7 +443,7 @@ contains
 
     ! First, find out if there is a LocalDomains block.
     local%nd = 0
-    if(parse_block('LocalDomains', blk) == 0) then
+    if(parse_block(default_namespace, 'LocalDomains', blk) == 0) then
       local%nd = parse_block_n(blk)
     end if
 
@@ -457,7 +457,7 @@ contains
 
     block: do id = 1, local%nd
       call parse_block_string(blk, id-1, 0, local%lab(id))
-      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id))
+      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id), default_namespace)
     end do block
     call parse_block_end(blk)
     message(1) = ''
@@ -490,12 +490,13 @@ contains
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(blk, row, dom, shape, clist)
+  subroutine local_read_from_block(blk, row, dom, shape, clist, namespace)
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
     type(box_union_t), intent(inout)     :: dom
     integer,           intent(out)       :: shape
-    character(len=*),   intent(out)      :: clist
+    character(len=*),  intent(out)       :: clist
+    type(namespace_t), intent(in)        :: namespace
     
     integer                     :: dim, ic, idir, nb
     FLOAT                       :: lgst, val, rsize, xsize
@@ -573,14 +574,14 @@ contains
         lsize(idir) =  lgst + rsize
       end do
     end select
-    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
+    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
 
     POP_SUB(local_read_from_block)
 
   end subroutine local_read_from_block
 
   !!---------------------------------------------------------------------------^
-  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
+  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
     type(box_union_t), intent(inout) :: dom
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: shape
@@ -588,7 +589,8 @@ contains
     FLOAT,             intent(in)    :: rsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
-    character(len=*), intent(in)    :: clist
+    character(len=*),  intent(in)    :: clist
+    type(namespace_t), intent(in)    :: namespace
 
     integer                  :: ia, ibox, ic, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
@@ -602,10 +604,10 @@ contains
 
     select case(shape)
       case(SPHERE, CYLINDER) 
-        call box_create(boxes(ibox), shape, dim, lsize, center)
+        call box_create(boxes(ibox), shape, dim, lsize, center, namespace)
       case(PARALLELEPIPED) 
         bshape         = 3
-        call box_create(boxes(ibox), bshape, dim, lsize, center)
+        call box_create(boxes(ibox), bshape, dim, lsize, center, namespace)
       case(MINIMUM) 
         bshape         = SPHERE
         do ia = 1, sys%geo%natoms
@@ -613,7 +615,7 @@ contains
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
             bsize(:) = rsize
             if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(sys%geo%atom(ia)%species)
-            call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
+            call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
             ibox = ibox + 1
           end if
         end do
@@ -623,7 +625,7 @@ contains
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
             bsize(:) = species_def_h(sys%geo%atom(ia)%species)
-            call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
+            call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
             ibox = ibox + 1
           end if
         end do
@@ -703,8 +705,9 @@ contains
     POP_SUB(local_restart)
   end subroutine local_restart
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(lcl, ff)
+  subroutine local_inside_domain(lcl, namespace, ff)
     type(local_domain_t),   intent(inout) :: lcl
+    type(namespace_t),      intent(in)    :: namespace
     FLOAT,                  intent(in)    :: ff(:)
     
     integer(8)          :: how
@@ -732,24 +735,24 @@ contains
         call messages_fatal(1)
       end if                                                                               
 
-      call add_dens_to_ion_x(ff2,sys%geo)
+      call add_dens_to_ion_x(ff2, namespace, sys%geo)
       call basins_init(basins, sys%gr%mesh)
-      call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
+      call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call parse_variable('LDExtraWrite', .false., extra_write)
+      call parse_variable(namespace, 'LDExtraWrite', .false., extra_write)
       call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
 
       if (extra_write) then
-        call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
-        call parse_variable('LDOutputFormat', 0, how)
+        call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
+        call parse_variable(namespace, 'LDOutputFormat', 0, how)
         if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
           call messages_input_error('LDOutputFormat')
         end if
         filename = 'basinsmap'
-        call dio_function_output(how, &
-          trim('local.general'), trim(filename), sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
-        call dio_function_output(how, &
-          trim('local.general'), 'dens_ff2', sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), 'dens_ff2', default_namespace, &
+          sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
         call io_close(iunit)
       end if
       call basins_end(basins)
@@ -771,7 +774,7 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
+    call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
                       mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:lcl%nd+2))
@@ -830,7 +833,7 @@ contains
     !%Description
     !% If set, atomic radii will be used to assign lone pairs to ion. 
     !%End
-    call parse_variable('LDUseAtomicRadii', .false., lduseatomicradii)
+    call parse_variable(default_namespace, 'LDUseAtomicRadii', .false., lduseatomicradii)
 
     SAFE_ALLOCATE(ion_map(1:sys%geo%natoms))
 
@@ -885,13 +888,13 @@ contains
     !% Writes additional information to files, when computing local multipoles. For 
     !% example, it writes coordinates of each local domain.
     !%End
-    call parse_variable('LDExtraWrite', .false., extra_write)
+    call parse_variable(default_namespace, 'LDExtraWrite', .false., extra_write)
 
     SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
     SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
 
     if (extra_write) then
-      call parse_variable('LDOutputFormat', 0, how)
+      call parse_variable(default_namespace, 'LDOutputFormat', 0, how)
       if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
         call messages_input_error('LDOutputFormat')
       end if
@@ -907,13 +910,13 @@ contains
       end do
       
       write(filename,'(a,a,a)')'domain.mesh'
-      call dio_function_output(how, &
-      trim('local.general'), trim(filename), sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+      call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       
       do id = 1, nd
         write(filename,'(a,a,a)')'domain.',trim(lab(id))
-        call dio_function_output(how, &
-        trim('local.general'), trim(filename), sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), default_namespace, &
+          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
       end do
     end if
 
@@ -928,9 +931,10 @@ contains
   end subroutine bader_union_inside
 
   ! ---------------------------------------------------------
-  subroutine add_dens_to_ion_x(ff, geo)
-    FLOAT,              intent(inout)   :: ff(:,:)
-    type(geometry_t),   intent(inout)   :: geo
+  subroutine add_dens_to_ion_x(ff, namespace, geo)
+    FLOAT,              intent(inout) :: ff(:,:)
+    type(namespace_t),  intent(in)    :: namespace
+    type(geometry_t),   intent(inout) :: geo
 
     integer :: ia, is
     FLOAT, allocatable :: ffs(:)
@@ -939,7 +943,7 @@ contains
 
     SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
-      call species_get_density(geo%atom(ia)%species, geo%atom(ia)%x, sys%gr%mesh, ffs)
+      call species_get_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, sys%gr%mesh, ffs)
       do is = 1, sys%st%d%nspin
         ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
       end do

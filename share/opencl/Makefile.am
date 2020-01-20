@@ -27,6 +27,7 @@ dist_opencl_DATA =              \
 	cuda_compat.h           \
 	vpsi.cl                 \
 	set_zero.cl             \
+	set_one.cl              \
 	operate.cl              \
 	axpy.cl                 \
 	projector.cl            \
@@ -35,6 +36,7 @@ dist_opencl_DATA =              \
 	subarray.cl             \
 	density.cl              \
 	phase.cl                \
+	phase_spiral.cl         \
 	mesh_batch.cl           \
 	rotate.cl               \
 	points.cl               \
@@ -43,7 +45,8 @@ dist_opencl_DATA =              \
 	mesh_to_cube.cl         \
 	convert.cl              \
 	boundaries.cl           \
-	forces.cl
+	forces.cl               \
+	mod_sqr.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

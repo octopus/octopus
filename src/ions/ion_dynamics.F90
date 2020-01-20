@@ -25,6 +25,7 @@ module ion_dynamics_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use read_coords_oct_m
   use simul_box_oct_m
@@ -109,8 +110,9 @@ module ion_dynamics_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_init(this, geo)
+  subroutine ion_dynamics_init(this, namespace, geo)
     type(ion_dynamics_t), intent(out)   :: this
+    type(namespace_t),    intent(in)    :: namespace
     type(geometry_t),     intent(inout) :: geo
 
     integer :: i, j, iatom, ierr
@@ -140,7 +142,7 @@ contains
     !% move with a constant velocity given by the initial
     !% conditions. They will not be affected by any forces.
     !%End
-    call parse_variable('IonsConstantVelocity', .false., this%constant_velocity)
+    call parse_variable(namespace, 'IonsConstantVelocity', .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
 
     if(this%constant_velocity) then
@@ -170,7 +172,7 @@ contains
 
     
     ndisp = 0
-    if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
+    if(parse_block(namespace, 'IonsTimeDependentDisplacements', blk) == 0) then
       call messages_experimental("IonsTimeDependentDisplacements")
       ndisp= parse_block_n(blk)
       SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
@@ -182,25 +184,25 @@ contains
         this%td_displacements(iatom)%move = .true.
         
         call parse_block_string(blk, i-1, 1, expression)
-        call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fx, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
         
         call parse_block_string(blk, i-1, 2, expression)
-        call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fy, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
         call parse_block_string(blk, i-1, 3, expression)
-        call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fz, namespace, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
         
       end do
@@ -228,7 +230,7 @@ contains
     !% Nose-Hoover thermostat.
     !%End
     
-    call parse_variable('Thermostat', THERMO_NONE, this%thermostat)
+    call parse_variable(namespace, 'Thermostat', THERMO_NONE, this%thermostat)
     if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
@@ -239,7 +241,7 @@ contains
       if(this%drive_ions) then
         call messages_write('You cannot use a Thermostat and IonsConstantVelocity or IonsTimeDependentDisplacements')
         call messages_write('at the same time.')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
 
       call messages_experimental('Thermostat')
@@ -254,14 +256,14 @@ contains
       !% temperature. The values of the temperature are given in
       !% degrees Kelvin.
       !%End
-      call parse_variable('TemperatureFunction', 'temperature', temp_function_name)
+      call parse_variable(namespace, 'TemperatureFunction', 'temperature', temp_function_name)
 
-      call tdf_read(this%temperature_function, temp_function_name, ierr)
+      call tdf_read(this%temperature_function, namespace, temp_function_name, ierr)
 
       if(ierr /= 0) then
         message(1) = "You have enabled a thermostat but Octopus could not find"
         message(2) = "the '"//trim(temp_function_name)//"' function in the TDFunctions block."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       if(this%thermostat == THERMO_NH) then
@@ -273,9 +275,9 @@ contains
         !% This variable sets the fictitious mass for the Nose-Hoover
         !% thermostat.
         !%End
-        call messages_obsolete_variable('NHMass', 'ThermostatMass')
+        call messages_obsolete_variable(namespace, 'NHMass', 'ThermostatMass')
 
-        call parse_variable('ThermostatMass', CNST(1.0), this%nh(1)%mass)
+        call parse_variable(namespace, 'ThermostatMass', CNST(1.0), this%nh(1)%mass)
         this%nh(2)%mass = this%nh(1)%mass
 
         this%nh(1:2)%pos = M_ZERO
@@ -303,13 +305,13 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(parse_is_defined('RandomVelocityTemp')) then
+    if(parse_is_defined(namespace, 'RandomVelocityTemp')) then
 
       have_velocities = .true.
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call parse_variable('RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
+        call parse_variable(namespace, 'RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
       end if
 
       do i = 1, geo%natoms
@@ -404,14 +406,14 @@ contains
       !%End
 
       call read_coords_init(xyz)
-      call read_coords_read('Velocities', xyz, geo%space)
+      call read_coords_read('Velocities', xyz, geo%space, namespace)
       if(xyz%source /= READ_COORDS_ERR) then
         
         have_velocities = .true.
 
         if(geo%natoms /= xyz%n) then
           write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         ! copy information and adjust units
@@ -438,7 +440,7 @@ contains
     !% propagation run. The default is yes when the ion velocity is
     !% set explicitly or implicitly, otherwise is no.
     !%End
-    call parse_variable('MoveIons', have_velocities, this%move_ions)
+    call parse_variable(namespace, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     if(ion_dynamics_ions_move(this)) then 
@@ -466,8 +468,11 @@ contains
         ! call geometry_end(this%geo_t0)
       end if
       SAFE_DEALLOCATE_P(this%td_displacements)
+      if (any (this%td_displacements(:)%move)) then
+        call geometry_end(this%geo_t0)
+      end if
     end if
-    
+
       
 
 
@@ -476,12 +481,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_propagate(this, sb, geo, time, dt)
+  subroutine ion_dynamics_propagate(this, sb, geo, time, dt, namespace)
     type(ion_dynamics_t), intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
     type(geometry_t),     intent(inout) :: geo
     FLOAT,                intent(in)    :: time
     FLOAT,                intent(in)    :: dt
+    type(namespace_t),    intent(in)    :: namespace
 
     integer :: iatom
     FLOAT   :: DR(1:3)
@@ -505,7 +511,7 @@ contains
           units_from_atomic(unit_kelvin, this%current_temperature), " ", units_abbrev(unit_kelvin), &
           ") at time ", &
           units_from_atomic(units_out%time, time), " ", trim(units_abbrev(units_out%time)), "."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     else
       this%current_temperature = CNST(0.0)
@@ -559,7 +565,7 @@ contains
 
     end if
 
-    call simul_box_atoms_in_box(sb, geo, .false.)
+    call simul_box_atoms_in_box(sb, geo, namespace, .false.)
 
     POP_SUB(ion_dynamics_propagate)
   end subroutine ion_dynamics_propagate

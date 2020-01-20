@@ -27,6 +27,7 @@ module poisson_isf_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use scaling_function_oct_m
@@ -52,6 +53,7 @@ module poisson_isf_oct_m
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
+    private
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
@@ -59,21 +61,24 @@ module poisson_isf_oct_m
   end type isf_cnf_t
 
   type poisson_isf_t
+    private
     integer         :: all_nodes_comm
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
 
   integer, parameter :: order_scaling_function = 8 
 
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, mesh, cube, all_nodes_comm, init_world)
-    type(poisson_isf_t), intent(out)   :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(cube_t),        intent(inout) :: cube
-    integer,             intent(in)    :: all_nodes_comm
-    logical, optional,   intent(in)    :: init_world 
+  subroutine poisson_isf_init(this, namespace, mesh, cube, all_nodes_comm, init_world)
+    type(poisson_isf_t),       intent(out)   :: this
+    type(namespace_t), target, intent(in)    :: namespace
+    type(mesh_t),              intent(in)    :: mesh
+    type(cube_t),              intent(inout) :: cube
+    integer,                   intent(in)    :: all_nodes_comm
+    logical, optional,         intent(in)    :: init_world 
 
     integer :: n1, n2, n3
     integer :: i_cnf
@@ -137,7 +142,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable('PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(namespace, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 
@@ -2053,7 +2058,7 @@ contains
     dr_gauss = 1.0e-08_8
     acc_gauss = 1.0e-08_8
     
-    iunit = io_open(trim(conf%share)//'/gequad.data', action = 'read', status = 'old', die = .true.)
+    iunit = io_open(trim(conf%share)//'/gequad.data', namespace_t(""), action = 'read', status = 'old', die = .true.)
 
     do i = 1, n_gauss
       read(iunit, *) idx, p_gauss(i), w_gauss(i)

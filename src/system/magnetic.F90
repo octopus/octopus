@@ -15,11 +15,12 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: magnetic.F90 15203 2016-03-19 13:15:05Z xavier $
 
 #include "global.h"
 
 module magnetic_oct_m
+  use boundaries_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -30,8 +31,9 @@ module magnetic_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -45,16 +47,17 @@ module magnetic_oct_m
     write_magnetic_moments,    &
     magnetic_local_moments,    &
     calc_physical_current,     &
-    magnetic_induced
+    magnetic_induced,          &
+    magnetic_total_magnetization
 
 contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_density(mesh, st, rho, md)
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:) !< (np, st%d%nspin)
-    FLOAT,          intent(out) :: md(:,:)  !< (np, 3)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    FLOAT,               intent(in)  :: rho(:,:) !< (np, st%d%nspin)
+    FLOAT,               intent(out) :: md(:,:)  !< (np, 3)
 
     PUSH_SUB(magnetic_density)
 
@@ -78,35 +81,40 @@ contains
 
   ! ---------------------------------------------------------
   subroutine magnetic_moment(mesh, st, rho, mm)
-    type(mesh_t),   intent(in)  :: mesh
-    type(states_t), intent(in)  :: st
-    FLOAT,          intent(in)  :: rho(:,:)
-    FLOAT,          intent(out) :: mm(3)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    FLOAT,               intent(in)  :: rho(:,:)
+    FLOAT,               intent(out) :: mm(3)
 
     FLOAT, allocatable :: md(:,:)
 
-    PUSH_SUB(states_magnetic_moment)
+    PUSH_SUB(states_elec_magnetic_moment)
 
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
     call magnetic_density(mesh, st, rho, md)
 
-    mm(1) = dmf_integrate(mesh, md(:, 1))
-    mm(2) = dmf_integrate(mesh, md(:, 2))
-    mm(3) = dmf_integrate(mesh, md(:, 3))
+    mm(1) = dmf_integrate(mesh, md(:, 1), reduce = .false.)
+    mm(2) = dmf_integrate(mesh, md(:, 2), reduce = .false.)
+    mm(3) = dmf_integrate(mesh, md(:, 3), reduce = .false.)
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, mm)
+    end if
 
     SAFE_DEALLOCATE_A(md)
 
-    POP_SUB(states_magnetic_moment)
+    POP_SUB(states_elec_magnetic_moment)
   end subroutine magnetic_moment
 
 
   ! ---------------------------------------------------------
-  subroutine write_magnetic_moments(iunit, mesh, st, geo, lmm_r)
-    integer,          intent(in) :: iunit
-    type(mesh_t),     intent(in) :: mesh
-    type(states_t),   intent(in) :: st
-    type(geometry_t), intent(in) :: geo
-    FLOAT,            intent(in) :: lmm_r
+  subroutine write_magnetic_moments(iunit, mesh, st, geo, boundaries, lmm_r)
+    integer,             intent(in) :: iunit
+    type(mesh_t),        intent(in) :: mesh
+    type(states_elec_t), intent(in) :: st
+    type(geometry_t),    intent(in) :: geo
+    type(boundaries_t),  intent(in) :: boundaries
+    FLOAT,               intent(in) :: lmm_r
     
     integer :: ia
     FLOAT :: mm(max(mesh%sb%dim, 3))
@@ -116,7 +124,7 @@ contains
     
     call magnetic_moment(mesh, st, st%rho, mm)
     SAFE_ALLOCATE(lmm(1:max(mesh%sb%dim, 3), 1:geo%natoms))
-    call magnetic_local_moments(mesh, st, geo, st%rho, lmm_r, lmm)
+    call magnetic_local_moments(mesh, st, geo, boundaries, st%rho, lmm_r, lmm)
     
     if(mpi_grp_is_root(mpi_world)) then
       
@@ -149,17 +157,20 @@ contains
   end subroutine write_magnetic_moments
 
   ! ---------------------------------------------------------
-  subroutine magnetic_local_moments(mesh, st, geo, rho, rr, lmm)
-    type(mesh_t),     intent(in)  :: mesh
-    type(states_t),   intent(in)  :: st
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(in)  :: rho(:,:)
-    FLOAT,            intent(in)  :: rr
-    FLOAT,            intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
+  subroutine magnetic_local_moments(mesh, st, geo, boundaries, rho, rr, lmm)
+    type(mesh_t),         intent(in)  :: mesh
+    type(states_elec_t),  intent(in)  :: st
+    type(geometry_t),     intent(in)  :: geo
+    type(boundaries_t),   intent(in) :: boundaries
+    FLOAT,                intent(in)  :: rho(:,:)
+    FLOAT,                intent(in)  :: rr
+    FLOAT,                intent(out) :: lmm(max(mesh%sb%dim, 3), geo%natoms)
 
-    integer :: ia, idir
+    integer :: ia, idir, is
     FLOAT, allocatable :: md(:, :)
     type(submesh_t) :: sphere
+    FLOAT :: cosqr, sinqr
+    CMPLX, allocatable :: phase_spiral(:)
 
     PUSH_SUB(magnetic_local_moments)
 
@@ -169,31 +180,111 @@ contains
     lmm = M_ZERO
     do ia = 1, geo%natoms
       call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
-      
-      do idir = 1, max(mesh%sb%dim, 3)
-        lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir))
-      end do
+
+      if(boundaries%spiral) then 
+        SAFE_ALLOCATE(phase_spiral(1:sphere%np))
+        do is = 1, sphere%np
+          phase_spiral(is) = exp(+M_zI*sum((sphere%x(is,1:mesh%sb%dim)-mesh%x(sphere%map(is),1:mesh%sb%dim)) &
+                                       *boundaries%spiral_q(1:mesh%sb%dim)))
+        end do
+
+        if(mesh%sb%dim>= 3) then
+          lmm(1,ia) = M_ZERO
+          lmm(2,ia) = M_ZERO
+ 
+          do is = 1, sphere%np
+            !There is a factor of 1/2 in phase_spiral
+            cosqr = real(phase_spiral(is), REAL_PRECISION)
+            sinqr = aimag(phase_spiral(is))
+            lmm(1,ia) = lmm(1,ia)+md(sphere%map(is),1)*cosqr - md(sphere%map(is),2)*sinqr
+            lmm(2,ia) = lmm(2,ia)+md(sphere%map(is),1)*sinqr + md(sphere%map(is),2)*cosqr
+          end do
+          lmm(1,ia) = lmm(1,ia)*mesh%volume_element
+          lmm(2,ia) = lmm(2,ia)*mesh%volume_element
+          lmm(3,ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,3), reduce = .false.)
+        else
+          ASSERT(.not.boundaries%spiral)
+        end if
+
+        SAFE_DEALLOCATE_A(phase_spiral)
+      else
+        do idir = 1, max(mesh%sb%dim, 3)
+          lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir), reduce = .false.)
+        end do
+      end if
       
       call submesh_end(sphere) 
     end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, lmm)
+    end if 
     
     SAFE_DEALLOCATE_A(md)
 
     POP_SUB(magnetic_local_moments)
   end subroutine magnetic_local_moments
 
+  ! ---------------------------------------------------------
+  subroutine magnetic_total_magnetization(mesh, st, boundaries, qq, trans_mag)
+    type(mesh_t),        intent(in)  :: mesh
+    type(states_elec_t), intent(in)  :: st
+    type(boundaries_t),  intent(in)  :: boundaries
+    FLOAT,               intent(in)  :: qq(:)
+    CMPLX,               intent(out) :: trans_mag(6)
+
+    integer :: ip
+    CMPLX, allocatable :: tmp(:,:)
+    FLOAT, allocatable :: md(:, :)
+    FLOAT :: rr, xx(MAX_DIM)
+    CMPLX :: expqr
+    type(profile_t), save :: prof
+
+    PUSH_SUB(magnetic_total_magnetization)
+
+    call profiling_in(prof, "TOTAL_MAGNETIZATION")
+
+    SAFE_ALLOCATE(tmp(1:mesh%np, 1:6))
+    SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
+
+    call magnetic_density(mesh, st, st%rho, md)
+    do ip = 1, mesh%np
+      call mesh_r(mesh, ip, rr, coords=xx)
+      expqr = exp(-M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
+      tmp(ip,1) = expqr*md(ip,1)
+      tmp(ip,2) = expqr*md(ip,2)
+      tmp(ip,3) = expqr*md(ip,3)
+      tmp(ip,4) = conjg(expqr)*md(ip,1)
+      tmp(ip,5) = conjg(expqr)*md(ip,2)
+      tmp(ip,6) = conjg(expqr)*md(ip,3)
+    end do
+
+    !TODO: combine the reductions here
+    do ip = 1, 6
+      trans_mag(ip) = zmf_integrate(mesh, tmp(:,ip))
+    end do
+     
+
+    SAFE_DEALLOCATE_A(md)
+    SAFE_DEALLOCATE_A(tmp)
+
+    call profiling_out(prof)
+
+    POP_SUB(magnetic_total_magnetization)
+  end subroutine magnetic_total_magnetization
+
 
   ! ---------------------------------------------------------
   !TODO: We should remove this routine and use st%current. NTD
   subroutine calc_physical_current(der, st, jj)
     type(derivatives_t),  intent(in)    :: der
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     FLOAT,                intent(out)   :: jj(:,:,:)
 
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -206,9 +297,10 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
+    type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
@@ -229,7 +321,7 @@ contains
     end if
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
+    call states_elec_calc_quantities(der, st, .false., paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then

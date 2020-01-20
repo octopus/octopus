@@ -36,15 +36,17 @@
 !!  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
-  type(derivatives_t), intent(in) :: der
-  type(states_t), target, intent(in) :: st
-  integer,        intent(in)    :: is
-  integer,        intent(in)    :: jdm
-  R_TYPE,         intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
-  FLOAT,          intent(inout) :: ex
-  FLOAT,          intent(in)    :: exx_coef !< amount of EXX (for hybrids)
-  R_TYPE, optional, intent(out) :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
+subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_out)
+  type(namespace_t),           intent(in)    :: namespace
+  type(derivatives_t),         intent(in)    :: der
+  type(poisson_t),             intent(in)    :: psolver
+  type(states_elec_t), target, intent(in)    :: st
+  integer,                     intent(in)    :: is
+  integer,                     intent(in)    :: jdm
+  R_TYPE,                      intent(inout) :: lxc(:, st%st_start:, :) !< (1:der%mesh%np, :st%st_end, nspin)
+  FLOAT,                       intent(inout) :: ex
+  FLOAT,                       intent(in)    :: exx_coef !< amount of EXX (for hybrids)
+  R_TYPE,            optional, intent(out)   :: F_out(:,:,:) !< (1:der%mesh%np, 1:st%nst, 1:st%nst) 
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, isp, idm
   integer, allocatable :: recv_stack(:), send_stack(:)
@@ -59,7 +61,8 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
   call profiling_in(C_PROFILING_XC_EXX, 'XC_EXX')
   PUSH_SUB(X(oep_x))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+  if(der%mesh%sb%kpoints%reduced%npoints > 1) &
+    call messages_not_implemented("exchange operator with k-points", namespace=namespace)
 
   socc = M_ONE / st%smear%el_per_state
   !
@@ -131,7 +134,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
         ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to /= st%mpi_grp%rank)) then
-          call states_get_state(st, der%mesh, jdm, send_stack(ist_s), isp, psi)
+          call states_elec_get_state(st, der%mesh, jdm, send_stack(ist_s), isp, psi)
           call MPI_Isend(psi, der%mesh%np, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
@@ -144,7 +147,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
       ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
-          call states_get_state(st, der%mesh, jdm, send_stack(ist_r), isp, wf_ist)
+          call states_elec_get_state(st, der%mesh, jdm, send_stack(ist_r), isp, wf_ist)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
@@ -171,7 +174,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist).and..not.(st%d%ispin==SPINORS)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
-          call states_get_state(st, der%mesh, jdm, jst, isp, psi)
+          call states_elec_get_state(st, der%mesh, jdm, jst, isp, psi)
           rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np))*psi(1:der%mesh%np)
           F_ij(1:der%mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, F_ij, rho_ij, all_nodes=.false.)
@@ -183,7 +186,7 @@ subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
           end if
 
           ! this quantity has to be added to lxc(1:der%mesh%np, ist)
-          call states_get_state(st, der%mesh, idm, jst, isp, psi)
+          call states_elec_get_state(st, der%mesh, idm, jst, isp, psi)
           send_buffer(1:der%mesh%np) = send_buffer(1:der%mesh%np) + &
             socc*st%occ(jst, isp)*F_ij(1:der%mesh%np)*R_CONJ(psi(1:der%mesh%np))
 

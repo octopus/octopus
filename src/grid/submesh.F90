@@ -20,6 +20,7 @@
   
 module submesh_oct_m
   use batch_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -39,6 +40,8 @@ module submesh_oct_m
     submesh_t,                   &
     submesh_null,                &
     submesh_init,                &
+    submesh_merge,               &
+    submesh_shift_center,        &
     submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
@@ -66,6 +69,7 @@ module submesh_oct_m
     submesh_end
 
   type submesh_t
+    ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
@@ -74,7 +78,6 @@ module submesh_oct_m
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
-    
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
@@ -133,6 +136,8 @@ contains
     
     PUSH_SUB(submesh_init)
     call profiling_in(submesh_init_prof, "SUBMESH_INIT")
+
+    call submesh_null(this)
 
     this%mesh => mesh
 
@@ -287,13 +292,109 @@ contains
         exit
       end if
     end do
-    
+
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(xtmp)
 
     call profiling_out(submesh_init_prof)
     POP_SUB(submesh_init)
   end subroutine submesh_init
+
+  ! --------------------------------------------------------------
+  !This routine takes two submeshes and merge them into a bigger submesh
+  !The grid is centered on the first center
+  subroutine submesh_merge(this, sb, mesh, sm1, sm2, shift)
+    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(simul_box_t),    intent(in)     :: sb
+    type(mesh_t), target, intent(in)     :: mesh
+    type(submesh_t),      intent(in)     :: sm1
+    type(submesh_t),      intent(in)     :: sm2
+    FLOAT, optional,      intent(in)     :: shift(:) !< If present, shifts the center of sm2
+    
+    FLOAT :: r2 
+    integer :: ip, is
+    type(profile_t), save :: prof
+    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM)
+    
+    PUSH_SUB(submesh_merge)
+    call profiling_in(prof, "SUBMESH_MERGE")
+
+    this%mesh => mesh
+
+    this%center(1:sb%dim)  = sm1%center(1:sb%dim)
+    this%radius = sm1%radius
+
+    diff_centers(1:sb%dim) = sm1%center(1:sb%dim)-sm2%center(1:sb%dim)
+    if(present(shift)) diff_centers(1:sb%dim) = diff_centers(1:sb%dim) - shift(1:sb%dim)
+
+    !As we take the union of the two submeshes, we know that we have all the points from the first one included.
+    !The extra points from the second submesh are those which are not included in the first one
+    !At the moment np_part extra points are not included
+    is = sm1%np
+    do ip = 1, sm2%np
+      !sm2%x contains points coordinates defined with respect to sm2%center
+      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim)-diff_centers(1:sb%dim)
+      !If the point is not in sm1, we add it
+      if(sum(xx(1:sb%dim)**2) > sm1%radius**2) is = is + 1
+    end do 
+
+    this%np = is
+    this%np_part = this%np
+
+    SAFE_ALLOCATE(this%map(1:this%np_part))
+    SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
+    this%map(1:sm1%np) = sm1%map(1:sm1%np)
+    this%x(1:sm1%np, 0:sb%dim) = sm1%x(1:sm1%np, 0:sb%dim)
+
+    !iterate again to fill the tables
+    is = sm1%np
+    do ip = 1, sm2%np
+      xx(1:sb%dim) = sm2%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
+      r2 = sum(xx(1:sb%dim)**2)
+      if(r2 > sm1%radius**2) then
+        is = is + 1
+        this%map(is) = sm2%map(ip)
+        this%x(is, 0) = sqrt(r2)
+        this%x(is, 1:sb%dim) = xx(1:sb%dim)
+      end if
+    end do
+
+    call profiling_out(prof)
+    POP_SUB(submesh_merge)
+  end subroutine submesh_merge
+
+  ! --------------------------------------------------------------
+  !This routine shifts the center of a submesh, without changing the grid points
+  subroutine submesh_shift_center(this, sb, newcenter)
+    type(submesh_t),      intent(inout)  :: this 
+    type(simul_box_t),    intent(in)     :: sb
+    FLOAT,                intent(in)     :: newcenter(:)
+    
+    FLOAT :: r2
+    integer :: ip
+    type(profile_t), save :: prof
+    FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM), oldcenter(1:MAX_DIM)
+    
+    PUSH_SUB(submesh_shift_center)
+    call profiling_in(prof, "SUBMESH_SHIFT")
+
+    oldcenter(1:sb%dim) = this%center(1:sb%dim)
+    this%center(1:sb%dim)  = newcenter(1:sb%dim)
+   
+
+    diff_centers(1:sb%dim) = newcenter(1:sb%dim)-oldcenter(1:sb%dim)
+
+    do ip = 1, this%np
+      xx(1:sb%dim) = this%x(ip, 1:sb%dim) - diff_centers(1:sb%dim)
+      r2 = sum(xx(1:sb%dim)**2)
+      this%x(ip, 0) = sqrt(r2)
+      this%x(ip, 1:sb%dim) = xx(1:sb%dim)
+    end do
+
+    call profiling_out(prof)
+    POP_SUB(submesh_shift_center)
+  end subroutine submesh_shift_center
+
 
   ! --------------------------------------------------------------
 
@@ -487,21 +588,21 @@ contains
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
   #endif 
     this%np_global = sum(part_np)
-    !The 0 index correspond to the local index
+
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
     SAFE_ALLOCATE(this%part_v(1:this%np_global))
     SAFE_ALLOCATE(this%global2local(1:this%np_global))
-    this%x_global = M_ZERO
-    this%part_v = 0
-    this%global2local = 0
+    this%x_global(1:this%np_global, 1:this%mesh%sb%dim) = M_ZERO
+    this%part_v(1:this%np_global) = 0
+    this%global2local(1:this%np_global) = 0
 
     ind = 0
     do ipart = 1, this%mesh%vp%npart
       if(ipart == this%mesh%vp%partno) then
         do ip = 1, this%np
           this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
-          this%part_v(ind+ip) = this%mesh%vp%partno
-          this%global2local(ind+ip) = ip
+          this%part_v(ind + ip) = this%mesh%vp%partno
+          this%global2local(ind + ip) = ip
         end do
       end if
       ind = ind + part_np(ipart)

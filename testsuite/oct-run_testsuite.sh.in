@@ -67,20 +67,29 @@ EOF
 function find_tests() {
     groups="$1"
     if [ -n "$groups" ]; then
-	groups_pat=`echo "$groups" | sed 's/ *, */|/g'`
-	groups_pat="^TestGroups *:.*($groups_pat)"
+        groups_pat=`echo "$groups" | sed 's/ *, */|/g'`
+        groups_pat="^TestGroups *:.*($groups_pat)"
     else # No groups given defaults to all tests.
-	groups_pat="."
+        groups_pat="."
     fi
     testfiles=`find $testsuite -name "*.test" | \
 	xargs @EGREP@ "$groups_pat" | \
 	awk -F: '{print $1}' | sort -u`
-    echo "$testfiles"
+    # We now reorder the list so that long tests come first.
+    # This is to optimize the total runtime when running many jobs concurrently.
+    if  [ -n "$testfiles" ]; then
+        for duration in "long-run" "short-run"; do
+            tests=`@EGREP@ "^TestGroups *:.*($duration)" $testfiles| \
+            awk -F: '{print $1}'`
+            echo "$tests"
+        done
+    fi
 }
 
 function queue {
     OCT_QUEUE="$OCT_QUEUE $1 "
     OUTLIST="$OUTLIST $2 "
+    GPULIST="$GPULIST $3 "
     NUM=$(($NUM+1))
 }
 
@@ -104,25 +113,29 @@ function checkqueue {
     while [ $still_waiting = 1 ]; do
         # find first test in queue which has finished
         for (( ijob=1; ijob <= $NUM; ijob++ )); do
-	    testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
+            testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
             test_name=`echo $OUTLIST | cut -f $ijob -d " "`
+            gpuid=`echo $GPULIST | cut -f $ijob -d " "`
 	    #echo "checking $test_name $testpid"
             ps -p $testpid > /dev/null;
 	    # is this pid still running?
             if [ $? -ne 0 ]; then
-	        still_waiting=0;
-	        # remove it from the queue
+                still_waiting=0;
+                # remove it from the queue
                 
                 if [ $NUM -eq 1 ]; then
                     OCT_QUEUE=
-	            OUTLIST=
+                    OUTLIST=
+                    GPULIST=
                 elif [ $ijob -eq 1 ]; then
                     OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
-	            OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
+                    OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f 2- -d " "`
                 else
 	            # cut will not accept 0 as an index
                     OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
-	            OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                    OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                    GPULIST=`  echo $GPULIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
                 fi
                 NUM=$(($NUM-1))
                 break;
@@ -181,6 +194,7 @@ else
 fi
 
 test_index=0
+gpuid=0
 
 if [ "$report" == "yes" ]; then
     if [ -f "$yaml" ]; then
@@ -188,7 +202,12 @@ if [ "$report" == "yes" ]; then
     fi
 fi
 
-export OCT_PARSE_ENV=1
+options=" "`$bin_directory/octopus -c`" "
+if [[ $options =~ " mpi " ]]; then
+    GPUS_PER_JOB=2
+else
+    GPUS_PER_JOB=1
+fi
 
 for y in $tests; do
     total_tests=$((total_tests + 1))
@@ -200,8 +219,6 @@ for y in $tests; do
 	runtest_directory=$bin_directory
     fi
 
-    offset_GPU=$test_index
-
     test_index=$(($test_index + 1))
     echo Starting test $test_index: $test_name
 
@@ -209,29 +226,29 @@ for y in $tests; do
     if [ "$dry_run" == "yes" ]; then
         if [ "$report" == "yes" ]; then
 	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &"
+	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &"
         else
             echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-                $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+                $preserve_opt -D $bin_directory -f $y > ${ybase}.log -G $gpuid 2>&1 &"
         fi 
     fi
     if [ "$report" == "yes" ]; then
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $offset_GPU > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $gpuid > ${ybase}.log 2>&1 &
     else
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y -G $offset_GPU > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -G $gpuid > ${ybase}.log 2>&1 &
     fi
     ppid=$!
-    queue $ppid $test_name
+    queue $ppid $test_name $gpuid
 	
     if [ $NUM -ge $OCT_TEST_NJOBS ]
     then
-	checkqueue
+        checkqueue
+    else
+        gpuid=$(($gpuid+$GPUS_PER_JOB))
     fi
 done
-
-unset OCT_PARSE_ENV
 
 while [ $NUM -ge 1 ]
 do
@@ -243,8 +260,8 @@ if [ $failed_tests -gt 0 ]; then
     
     for l in $failed_logs
     do
-	echo
-	cat $l
+        echo
+        cat $l
     done
 
 fi
@@ -275,11 +292,11 @@ while getopts "hnlp:d:cg:q:r:" opt ; do
         n) dry_run="yes";; 
         l) local_run="yes";;
         p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite;;
-	d) directory="$OPTARG";;
-	c) cleanup="yes";;
-	g) test_groups="$OPTARG";;
-	q) test_groups="$OPTARG"; query="yes";;
-	r) yaml="$OPTARG"; report="yes";;
+        d) directory="$OPTARG";;
+        c) cleanup="yes";;
+        g) test_groups="$OPTARG";;
+        q) test_groups="$OPTARG"; query="yes";;
+        r) yaml="$OPTARG"; report="yes";;
         ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
@@ -319,45 +336,45 @@ if [ -z $OCT_TEST_NJOBS ] ; then
 
     # Mac OSX
     if [ -z $OCT_TEST_NJOBS ]; then
-	nproc=`which sysctl 2> /dev/null`
-	if [ -n $nproc ] && [ -x $nproc ]; then
-	    OCT_TEST_NJOBS=`$nproc -n hw.ncpu`
-	fi
+        nproc=`which sysctl 2> /dev/null`
+        if [ -n $nproc ] && [ -x $nproc ]; then
+            OCT_TEST_NJOBS=`$nproc -n hw.ncpu`
+        fi
     fi
 
     if [ -z $OCT_TEST_NJOBS ] ; then
-	OCT_TEST_NJOBS=1
+        OCT_TEST_NJOBS=1
     else
-	echo "  - Found $OCT_TEST_NJOBS processors that can be used."
+        echo "  - Found $OCT_TEST_NJOBS processors that can be used."
     fi
 
     if [ $OCT_TEST_NJOBS -gt 1 ] && [ -z $EXEC ]; then
 	# execute the commands using nice, to lower the priority and avoid core anxiety
-	nice=`which nice 2> /dev/null`
-	if [ -n $nice ] && [ -x $nice ] ; then
-	    export EXEC=$nice
-	fi
+        nice=`which nice 2> /dev/null`
+        if [ -n $nice ] && [ -x $nice ] ; then
+            export EXEC=$nice
+        fi
     fi
     
     options=" "`$bin_directory/octopus -c`" "
     if [[ $options =~ " mpi " ]]; then
-	OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/4))
-	echo "  - This is an MPI run. Each job can use up to 4 processors."
+        OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/4))
+        echo "  - This is an MPI run. Each job can use up to 4 processors."
     fi
 
     if [[ $options =~ " openmp " ]]; then
-	if [ ! -z $OMP_NUM_THREADS ] ; then
-	    OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/$OMP_NUM_THREADS))
-	    echo "  - This is an OpenMP run. OMP_NUM_THREADS is set to $OMP_NUM_THREADS processors per job."
+        if [ ! -z $OMP_NUM_THREADS ] ; then
+            OCT_TEST_NJOBS=$(($OCT_TEST_NJOBS/$OMP_NUM_THREADS))
+            echo "  - This is an OpenMP run. OMP_NUM_THREADS is set to $OMP_NUM_THREADS processors per job."
         else
-	    echo "  - This is an OpenMP run. Each jobs uses all processors."
-	    OCT_TEST_NJOBS=1
-	fi
+            echo "  - This is an OpenMP run. Each jobs uses all processors."
+            OCT_TEST_NJOBS=1
+        fi
     fi
 
 
     if [ $OCT_TEST_NJOBS -eq 0 ] ; then
-	OCT_TEST_NJOBS=1
+        OCT_TEST_NJOBS=1
     fi
 
     echo

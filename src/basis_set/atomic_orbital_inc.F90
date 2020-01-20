@@ -110,18 +110,18 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
-    call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, tmp)
+    call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, tmp)
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
   #else
-    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
   #endif
   else
     if(jj == ll+M_HALF) then
       mm = orbind - 2 - ll
       if(mm >= -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll+mm+M_ONE)/(M_TWO*ll+M_ONE)) 
         do is=1,sm%np
@@ -131,7 +131,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
         os%X(orb)(1:sm%np,1,orbind) = M_ZERO
       end if
       if(mm < ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, &
                                          os%X(orb)(1:sm%np,2,orbind))
         coeff = sqrt((ll-mm)/(M_TWO*ll+M_ONE))                           
         do is=1,sm%np
@@ -142,14 +142,14 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
       end if
     else
       mm = orbind - ll
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                         os%X(orb)(1:sm%np,2,orbind))
       coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))                           
       do is=1,sm%np
         os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
       end do
       if(mm > -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll-mm+M_ONE)/(M_TWO*ll+M_ONE))      
         do is=1,sm%np
@@ -169,14 +169,13 @@ end subroutine X(get_atomic_orbital)
 
 
   ! ---------------------------------------------------------
-  subroutine X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, pos, phi, derivative)
+  subroutine X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, phi, derivative)
     type(species_t), target, intent(in)  :: species       !< The species.
     type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
     integer,                 intent(in)  :: ii
     integer,                 intent(in)  :: ll
     integer,                 intent(in)  :: mm
     integer,                 intent(in)  :: ispin      !< The spin index.
-    FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
     R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
     logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 
@@ -261,4 +260,86 @@ end subroutine X(get_atomic_orbital)
 
     POP_SUB(X(atomic_orbital_get_submesh))
   end subroutine X(atomic_orbital_get_submesh)
+
+
+  ! ---------------------------------------------------------
+  ! Does the same job as atomic_orbital_get_submesh, but with an extra check that
+  ! all points can be evaluated first.
+  ! In case it cannot, it creates a temporary submesh on which the points can be evaluated,
+  ! call atomic_orbital_get_submesh for this one, and copies back the points on the original one
+  subroutine X(atomic_orbital_get_submesh_safe)(species, submesh, ii, ll, mm, ispin, phi, derivative)
+    type(species_t), target, intent(in)  :: species       !< The species.
+    type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
+    integer,                 intent(in)  :: ii
+    integer,                 intent(in)  :: ll
+    integer,                 intent(in)  :: mm
+    integer,                 intent(in)  :: ispin      !< The spin index.
+    R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
+    logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
+
+    integer :: ip, is
+    logical :: safe
+    integer, allocatable :: map(:)
+    type(submesh_t) :: tmp_sm
+    R_TYPE, allocatable :: phi_tmp(:)
+    FLOAT :: threshold
+    type(ps_t), pointer :: ps
+
+    if(submesh%np == 0) return
+
+    PUSH_SUB(X(atomic_orbital_get_submesh_safe))
+
+    safe = .true.
+    if(species_is_ps(species)) then
+      ps => species_ps(species)
+      threshold = spline_range_max(ps%ur(ii, ispin))
+      if(any(submesh%x(1:submesh%np, 0) > threshold)) safe = .false.
+    end if
+
+    if(safe) then
+ 
+      call X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, phi, derivative)
+
+    else
+      ASSERT(species_is_ps(species))
+      ps => species_ps(species)
+      threshold = spline_range_max(ps%ur(ii, ispin))
+
+      is = 0
+      do ip = 1, submesh%np
+        if(submesh%x(ip, 0) <= threshold) then
+          is = is + 1
+        end if
+      end do
+
+      SAFE_ALLOCATE(map(1:is))
+      call submesh_null(tmp_sm)
+      tmp_sm%mesh => submesh%mesh
+      tmp_sm%np = is
+      tmp_sm%np_part = is
+      SAFE_ALLOCATE(tmp_sm%x(1:tmp_sm%np_part, 0:submesh%mesh%sb%dim))
+      SAFE_ALLOCATE(phi_tmp(1:tmp_sm%np))
+      is = 0
+      do ip = 1, submesh%np
+        if(submesh%x(ip, 0) <= threshold) then
+          is = is + 1
+          map(is) = ip
+          tmp_sm%x(is, 0:submesh%mesh%sb%dim) = submesh%x(ip, 0:submesh%mesh%sb%dim)
+        end if
+      end do
+
+      call X(atomic_orbital_get_submesh)(species, tmp_sm, ii, ll, mm, ispin, phi_tmp, derivative)
+
+      phi = R_TOTYPE(M_ZERO)
+      do ip = 1, tmp_sm%np
+        phi(map(ip)) = phi_tmp(ip)
+      end do
+
+      call submesh_end(tmp_sm)
+      SAFE_DEALLOCATE_A(map)
+
+    end if
+
+    POP_SUB(X(atomic_orbital_get_submesh_safe))
+  end subroutine X(atomic_orbital_get_submesh_safe)
 

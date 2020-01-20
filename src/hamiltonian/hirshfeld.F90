@@ -19,6 +19,7 @@
 #include "global.h"
 
 module hirshfeld_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -26,11 +27,13 @@ module hirshfeld_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_pot_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use species_oct_m
   use splines_oct_m
  
@@ -49,12 +52,12 @@ module hirshfeld_oct_m
   type hirshfeld_t
 
     private
-    type(mesh_t),     pointer     :: mesh
-    type(geometry_t), pointer     :: geo
-    type(states_t),   pointer     :: st
-    FLOAT,            pointer     :: total_density(:)  !< (mesh%np)
-    FLOAT,            pointer     :: free_volume(:)    !< (natoms)
-    FLOAT,            pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
+    type(mesh_t),        pointer     :: mesh
+    type(geometry_t),    pointer     :: geo
+    type(states_elec_t), pointer     :: st
+    FLOAT,               pointer     :: total_density(:)  !< (mesh%np)
+    FLOAT,               pointer     :: free_volume(:)    !< (natoms)
+    FLOAT,               pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
 
   end type hirshfeld_t
 
@@ -62,11 +65,12 @@ module hirshfeld_oct_m
     
 contains
 
-  subroutine hirshfeld_init(this, mesh, geo, st)
-    type(hirshfeld_t),         intent(out)   :: this
-    type(mesh_t),      target, intent(in)    :: mesh
-    type(geometry_t),  target, intent(in)    :: geo
-    type(states_t),    target, intent(in)    :: st
+  subroutine hirshfeld_init(this, namespace, mesh, geo, st)
+    type(hirshfeld_t),           intent(out)   :: this
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),        target, intent(in)    :: mesh
+    type(geometry_t),    target, intent(in)    :: geo
+    type(states_elec_t), target, intent(in)    :: st
     
     integer :: iatom, ip, isp
     FLOAT :: rr, pos(1:MAX_DIM), rmax
@@ -112,7 +116,8 @@ contains
         pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%mesh%sb, icell) 
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos, this%st%d%spin_channels, atom_density)
+        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), namespace, &
+          pos, this%st%d%spin_channels, atom_density)
 
         forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%spin_channels))
       
@@ -122,9 +127,13 @@ contains
         end do
       end do
       call periodic_copy_end(pp)
-      this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density_acc(:))
+      this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density_acc(:), reduce = .false.)
       this%free_vol_r3(iatom,:) = atom_density_acc(:)
     end do
+
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, this%free_volume)
+    end if
 
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_density_acc)
@@ -154,8 +163,9 @@ contains
 
   ! -----------------------------------------------
   
-  subroutine hirshfeld_charge(this, iatom, density, charge, atomic_density)
+  subroutine hirshfeld_charge(this, namespace, iatom, density, charge, atomic_density)
     type(hirshfeld_t),         intent(in)    :: this
+    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
@@ -175,7 +185,7 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%spin_channels))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np, this%st%d%spin_channels))
     
-    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
+    call species_atom_density(this%mesh, namespace, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
 
     charge = M_ZERO
     do is = 1, this%st%d%spin_channels
@@ -280,9 +290,10 @@ contains
 
   ! -----------------------------------------------
   !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-  subroutine hirshfeld_position_derivative(this, der, iatom, jatom, density, dposition)
+  subroutine hirshfeld_position_derivative(this, der, namespace, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
     type(derivatives_t),       intent(in)    :: der
+    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     integer,                   intent(in)    :: jatom
     FLOAT,                     intent(in)    :: density(:, :)
@@ -333,7 +344,7 @@ contains
 
       pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
       atom_derivative(1:this%mesh%np, 1:this%st%d%spin_channels) = M_ZERO
-      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), &
+      call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), namespace, &
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%spin_channels))
 
@@ -352,7 +363,7 @@ contains
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
-          call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+          call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), namespace, &
                                        pos_i, this%st%d%spin_channels, &
                                        atom_density(1:this%mesh%np, 1:this%st%d%spin_channels))
 
@@ -400,8 +411,13 @@ contains
 
     call periodic_copy_end(pp_j)
     do idir = 1, this%mesh%sb%dim
-      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
+      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir), reduce = .false.) &
+                             /this%free_volume(iatom)
     end do
+
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, dposition, dim = this%mesh%sb%dim)
+    end if
 
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_derivative)

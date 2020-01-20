@@ -28,10 +28,11 @@ module constrain_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -55,11 +56,12 @@ contains
   !> transform the density into a density that matches the constrain
   !> Instead of atomic densities used in LCAO, we use the atomic density in the sens of
   !> Hirshfeld
-  subroutine constrain_guess_moment(st, gr, sb, geo)
-    type(states_t),    intent(in)    :: st
-    type(grid_t),      intent(in)    :: gr
-    type(simul_box_t), intent(in)    :: sb
-    type(geometry_t),  intent(in)    :: geo
+  subroutine constrain_guess_moment(st, namespace, gr, sb, geo)
+    type(states_elec_t), intent(in)    :: st
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(simul_box_t),   intent(in)    :: sb
+    type(geometry_t),    intent(in)    :: geo
 
     integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
@@ -75,15 +77,15 @@ contains
 
     parallelized_in_atoms = .false.
 
-    call hirshfeld_init(hirshfeld, gr%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, gr%mesh, geo, st)
 
     if (st%d%spin_channels == 1) then
       gmd_opt = INITRHO_PARAMAGNETIC
     else
-      call parse_variable('GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
+      call parse_variable(namespace, 'GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
       if(gmd_opt == INITRHO_RANDOM) then
         message(1) = "Constrain with random magnetization makes no sens."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -96,7 +98,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call hirshfeld_charge(hirshfeld, ia, st%rho, charge, atom_rho)
+        call hirshfeld_charge(hirshfeld, namespace, ia, st%rho, charge, atom_rho)
 
         rho(1:gr%fine%mesh%np, 1:st%d%spin_channels) = rho(1:gr%fine%mesh%np, 1:st%d%spin_channels) + &
                                                   atom_rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)
@@ -119,7 +121,7 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call hirshfeld_charge(hirshfeld, ia, st%rho, charge, atom_rho)
+        call hirshfeld_charge(hirshfeld, namespace, ia, st%rho, charge, atom_rho)
         rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
       end do
       if(st%d%nspin > st%d%spin_channels) then
@@ -129,14 +131,14 @@ contains
 
     case (INITRHO_USERDEF) ! User-defined
       
-      if(parse_block('AtomsMagnetDirection', blk) < 0) then
+      if(parse_block(namespace, 'AtomsMagnetDirection', blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       if (parse_block_n(blk) /= geo%natoms) then
         message(1) = "AtomsMagnetDirection block has the wrong number of rows."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
@@ -154,7 +156,7 @@ contains
         end if
 
         !Get atomic density
-        call hirshfeld_charge(hirshfeld, ia, st%rho, charge, atom_rho)
+        call hirshfeld_charge(hirshfeld, namespace, ia, st%rho, charge, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%fine%mesh, atom_rho(:, 1))

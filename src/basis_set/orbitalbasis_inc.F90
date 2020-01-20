@@ -113,6 +113,9 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
 
   iorbset = 0
   do ia = 1, geo%natoms
+    if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
+
     hubbardj = species_hubbard_j(geo%atom(ia)%species)
     !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
     hasjdependence = .false.
@@ -355,7 +358,7 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   integer,                   intent(in)       :: nstates
   logical, optional,         intent(in)       :: verbose
 
-  integer :: is, ios, iorb, offset
+  integer :: ios, iorb, offset
   type(orbitalset_t), pointer :: os
   logical :: verbose_
 

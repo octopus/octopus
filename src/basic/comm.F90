@@ -32,12 +32,12 @@ module comm_oct_m
     comm_allreduce
 
   interface comm_allreduce
-    module procedure dcomm_allreduce_0, zcomm_allreduce_0, scomm_allreduce_0, ccomm_allreduce_0, icomm_allreduce_0
-    module procedure dcomm_allreduce_1, zcomm_allreduce_1, scomm_allreduce_1, ccomm_allreduce_1, icomm_allreduce_1
-    module procedure dcomm_allreduce_2, zcomm_allreduce_2, scomm_allreduce_2, ccomm_allreduce_2, icomm_allreduce_2
-    module procedure dcomm_allreduce_3, zcomm_allreduce_3, scomm_allreduce_3, ccomm_allreduce_3, icomm_allreduce_3
-    module procedure dcomm_allreduce_4, zcomm_allreduce_4, scomm_allreduce_4, ccomm_allreduce_4, icomm_allreduce_4
-    module procedure dcomm_allreduce_5, zcomm_allreduce_5, scomm_allreduce_5, ccomm_allreduce_5, icomm_allreduce_5
+    module procedure dcomm_allreduce_0, zcomm_allreduce_0, icomm_allreduce_0
+    module procedure dcomm_allreduce_1, zcomm_allreduce_1, icomm_allreduce_1
+    module procedure dcomm_allreduce_2, zcomm_allreduce_2, icomm_allreduce_2
+    module procedure dcomm_allreduce_3, zcomm_allreduce_3, icomm_allreduce_3
+    module procedure dcomm_allreduce_4, zcomm_allreduce_4, icomm_allreduce_4
+    module procedure dcomm_allreduce_5, zcomm_allreduce_5, icomm_allreduce_5
   end interface
 
 contains
@@ -48,14 +48,6 @@ contains
   
 #include "undef.F90"
 #include "complex.F90"
-#include "comm_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "comm_inc.F90"
-  
-#include "undef.F90"
-#include "complex_single.F90"
 #include "comm_inc.F90"
 
 #include "undef.F90"

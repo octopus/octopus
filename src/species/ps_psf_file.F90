@@ -21,6 +21,7 @@
 module ps_psf_file_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_in_grid_oct_m
 
@@ -35,11 +36,12 @@ module ps_psf_file_oct_m
 
   ! First, the contents of the file.
   type ps_psf_file_t
+    ! Components are public by default
     character(len=2)   :: namatm
     character(len=2)   :: icorr
     character(len=3)   :: irel
     character(len=4)   :: icore
-    character(len=10)  :: method(6)
+    character(len=10), private :: method(6)
     character(len=70)  :: title
 
     integer            :: npotd         ! l = 0 .. npotd-1
@@ -48,7 +50,7 @@ module ps_psf_file_oct_m
     FLOAT              :: a, b
     FLOAT              :: zval          ! valence charge
 
-    FLOAT, pointer     :: rofi(:)
+    FLOAT, pointer, private :: rofi(:)
     FLOAT, pointer     :: vps(:,:)
     FLOAT, pointer     :: chcore(:)
     FLOAT, pointer     :: rho_val(:)
@@ -58,10 +60,11 @@ module ps_psf_file_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_psf_file_read(unit, ascii, psf)
+  subroutine ps_psf_file_read(unit, ascii, psf, namespace)
     integer,             intent(in)    :: unit
     logical,             intent(in)    :: ascii
     type(ps_psf_file_t), intent(inout) :: psf
+    type(namespace_t),   intent(in)    :: namespace
 
     integer  :: ndown, nup, i, l
     character(len=70) :: aux_s
@@ -122,7 +125,7 @@ contains
       if(l /= ndown-1) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
       
       psf%vps(2:, ndown) = psf%vps(2:, ndown) / psf%rofi(2:)
@@ -142,7 +145,7 @@ contains
       if( (l /= nup) .and. (psf%irel == 'rel') ) then
         message(1) = 'Unexpected angular momentum'
         message(2) = 'Pseudopotential should be ordered by increasing l'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
       psf%vso(2:, nup) = psf%vso(2:, nup) / psf%rofi(2:)

@@ -22,6 +22,7 @@
 module box_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -58,12 +59,13 @@ module box_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine box_create(box, shape, dim, sizes, center)
-    type(box_t), intent(out) :: box
-    integer,     intent(in)  :: shape
-    integer,     intent(in)  :: dim
-    FLOAT,       intent(in)  :: sizes(MAX_DIM)
-    FLOAT,       intent(in)  :: center(dim)
+  subroutine box_create(box, shape, dim, sizes, center, namespace)
+    type(box_t),       intent(out) :: box
+    integer,           intent(in)  :: shape
+    integer,           intent(in)  :: dim
+    FLOAT,             intent(in)  :: sizes(MAX_DIM)
+    FLOAT,             intent(in)  :: center(dim)
+    type(namespace_t), intent(in) :: namespace
 
     PUSH_SUB(box_create)
 
@@ -78,7 +80,7 @@ contains
     case (BOX_CYLINDER)
       if (dim == 2) then
         message(1) = "Cannot create a cylinder in 2D. Use sphere if you want a circle."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       box%rsize = sizes(1)
       box%xsize = sizes(2)
@@ -88,7 +90,7 @@ contains
 
     case default
       message(1) = "Unknown box shape in box_create."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
 
     end select
     

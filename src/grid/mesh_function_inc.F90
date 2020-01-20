@@ -19,10 +19,11 @@
 
 ! ---------------------------------------------------------
 !> integrates a function
-R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
+R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
   type(mesh_t), intent(in) :: mesh
   R_TYPE,       intent(in) :: ff(:)  !< (mesh%np)
   logical, optional, intent(in) :: mask(:)
+  logical, optional, intent(in) :: reduce
 
   integer :: ip
 
@@ -33,12 +34,14 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
+    !$omp parallel do reduction(+:dd)
     do ip = 1, mesh%np
       dd = dd + ff(ip)*mesh%vol_pp(ip)
     end do
   else if (present(mask)) then
     dd = sum(ff(1:mesh%np), mask=mask(1:mesh%np))
   else
+    !$omp parallel do reduction(+:dd)
     do ip = 1, mesh%np
       dd = dd + ff(ip)
     end do
@@ -46,7 +49,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   dd = dd*mesh%volume_element
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(C_PROFILING_MF_REDUCE)
@@ -168,11 +171,13 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
 #endif
+      !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
         dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
+      !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
         dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
@@ -305,12 +310,16 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
   integer,      intent(in) :: order
 
   R_TYPE, allocatable :: fxn(:)
+  integer :: ip
 
   PUSH_SUB(X(mf_moment))
 
   SAFE_ALLOCATE(fxn(1:mesh%np))
 
-  fxn(1:mesh%np) = ff(1:mesh%np)*mesh%x(1:mesh%np, idir)**order
+  !$omp parallel do
+  do ip = 1, mesh%np
+    fxn(ip) = ff(ip)*mesh%x(ip, idir)**order
+  end do
   rr = X(mf_integrate)(mesh, fxn)
 
   SAFE_DEALLOCATE_A(fxn)
@@ -431,15 +440,16 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
   PUSH_SUB(X(mf_interpolate_on_plane))
 
   SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  !$omp parallel do
   do ip = 1, mesh%np_part_global
     xglobal(ip, 1:) = mesh_x_global(mesh, ip)
   end do
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
 #else
-  f_global(1:mesh%np_global) = ff(1:mesh%np_global)
+  call lalg_copy(mesh%np_global, ff, f_global)
 #endif
 
   call qshep_init(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2), xglobal(:, 3) )
@@ -479,15 +489,16 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
   PUSH_SUB(X(mf_interpolate_on_line))
 
   SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  !$omp parallel do
   do ip = 1, mesh%np_part_global
     xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
   end do
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
 #if defined HAVE_MPI
-  call vec_gather(mesh%vp, mesh%vp%root, f_global, ff)
+  call vec_gather(mesh%vp, mesh%vp%root, ff, f_global)
 #else
-  f_global(1:mesh%np_global) = ff(1:mesh%np_global)
+  call lalg_copy(mesh%np_global, ff, f_global)
 #endif
 
   call qshep_init(interp, mesh%np_global, f_global, xglobal(:, 1), xglobal(:, 2))
@@ -546,6 +557,7 @@ R_TYPE function X(mf_surface_integral_vector) (mesh, ff, plane) result(dd)
   PUSH_SUB(X(mf_surface_integral_vector))
 
   SAFE_ALLOCATE(fn(1:mesh%np))
+  !$omp parallel do
   do ip = 1, mesh%np
     fn(ip) = sum(ff(ip, 1:mesh%sb%dim) * plane%n(1:mesh%sb%dim))
   end do
@@ -599,6 +611,7 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   PUSH_SUB(X(mf_line_integral_vector))
 
   SAFE_ALLOCATE(fn(1:mesh%np))
+  !$omp parallel do
   do ip = 1, mesh%np
     fn(ip) = sum(ff(ip, 1:mesh%sb%dim) * line%n(1:mesh%sb%dim))
   end do
@@ -668,6 +681,31 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   POP_SUB(X(mf_multipoles))
 end subroutine X(mf_multipoles)
 
+! -----------------------------------------------------------------------------
+!> This routine calculates the dipole of a function ff, for arbitrary dimensions
+subroutine X(mf_dipole) (mesh, ff, dipole, inside)
+  type(mesh_t),      intent(in)  :: mesh
+  R_TYPE,            intent(in)  :: ff(:)
+  R_TYPE,            intent(out) :: dipole(:) !< (mesh%sb%dim)
+  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+
+  integer :: idim
+  R_TYPE, allocatable :: ff2(:)
+
+  PUSH_SUB(X(mf_dipole))
+
+  ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+
+  SAFE_ALLOCATE(ff2(1:mesh%np))
+
+  do idim = 1, mesh%sb%dim
+    ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = inside)
+  end do
+
+  SAFE_DEALLOCATE_A(ff2)
+  POP_SUB(X(mf_dipole))
+end subroutine X(mf_dipole)
 
 !--------------------------------------------------------------
 subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)

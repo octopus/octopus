@@ -316,6 +316,40 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
   
 end subroutine X(accel_set_kernel_arg_data)
 
+! ---------------------------------------------------------------------------
+
+subroutine X(accel_get_device_pointer_1)(host_pointer, device_pointer, dimensions)
+  R_TYPE, pointer, dimension(:), intent(inout) :: host_pointer
+  type(accel_mem_t),             intent(in)    :: device_pointer
+  integer,         dimension(:), intent(in)    :: dimensions
+
+  type(c_ptr) :: tmp_pointer
+
+  PUSH_SUB(X(accel_get_device_pointer_1))
+
+  ! move device pointer to fortran pointer for usage with CUDA-aware MPI
+  call cuda_deref(device_pointer%mem, tmp_pointer)
+  call c_f_pointer(tmp_pointer, host_pointer, dimensions)
+
+  POP_SUB(X(accel_get_device_pointer_1))
+end subroutine X(accel_get_device_pointer_1)
+
+subroutine X(accel_get_device_pointer_2)(host_pointer, device_pointer, dimensions)
+  R_TYPE, pointer, dimension(:,:), intent(inout) :: host_pointer
+  type(accel_mem_t),               intent(in)    :: device_pointer
+  integer,         dimension(:),   intent(in)    :: dimensions
+
+  type(c_ptr) :: tmp_pointer
+
+  PUSH_SUB(X(accel_get_device_pointer_2))
+
+  ! move device pointer to fortran pointer for usage with CUDA-aware MPI
+  call cuda_deref(device_pointer%mem, tmp_pointer)
+  call c_f_pointer(tmp_pointer, host_pointer, dimensions)
+
+  POP_SUB(X(accel_get_device_pointer_2))
+end subroutine X(accel_get_device_pointer_2)
+
 
 !! Local Variables:
 !! mode: f90

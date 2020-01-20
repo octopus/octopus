@@ -27,6 +27,7 @@ module derivatives_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -53,14 +54,13 @@ module derivatives_oct_m
   private
   public ::                             &
     derivatives_t,                      &
+    derivatives_nullify,                &
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
-    sderivatives_test,                  &
-    cderivatives_test,                  &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -77,7 +77,9 @@ module derivatives_oct_m
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
-    zderivatives_curl
+    zderivatives_curl,                  &
+    dderivatives_partial,               &
+    zderivatives_partial
 
 
   integer, parameter ::     &
@@ -97,6 +99,7 @@ module derivatives_oct_m
     NON_BLOCKING = 2 
 
   type derivatives_t
+    ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
     integer               :: dim           !< dimensionality of the space (sb%dim)
@@ -107,16 +110,16 @@ module derivatives_oct_m
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff   
 
-    type(nl_operator_t), pointer :: op(:)  !< op(1:conf%dim) => gradient
-    !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl   !< these are just shortcuts for op
+    type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
+                                                    !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer                      :: comm_method 
+    integer, private             :: comm_method 
 #endif
     type(derivatives_t),    pointer :: finer
     type(derivatives_t),    pointer :: coarser
@@ -143,8 +146,30 @@ module derivatives_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear, order)
+  elemental subroutine derivatives_nullify(this)
+    type(derivatives_t), intent(out) :: this
+
+    call boundaries_nullify(this%boundaries)
+    nullify(this%mesh)
+    this%dim = 0
+    this%order = 0
+    this%stencil_type = 0
+    this%masses = M_ZERO
+    this%lapl_cutoff = M_ZERO
+    nullify(this%op, this%lapl, this%grad)
+    this%n_ghost = 0
+#if defined(HAVE_MPI)
+    this%comm_method = 0
+#endif
+    nullify(this%finer, this%coarser)
+    nullify(this%to_finer, this%to_coarser)
+
+  end subroutine derivatives_nullify
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
+    type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
     integer, optional,           intent(in)  :: order
@@ -184,14 +209,14 @@ contains
     if(use_curvilinear) default_stencil = DER_STARPLUS
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
-    call parse_variable('DerivativesStencil', default_stencil, der%stencil_type)
+    call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_variable('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+      call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -213,7 +238,7 @@ contains
     !% in 2D and 24 in 3D.
     !% </ul>
     !%End
-    call parse_variable('DerivativesOrder', 4, der%order)
+    call parse_variable(namespace, 'DerivativesOrder', 4, der%order)
     ! overwrite order if given as argument
     if(present(order)) then
       der%order = order
@@ -232,13 +257,13 @@ contains
     !% Communication is based on non-blocking point-to-point communication.
     !%End
     
-    call parse_variable('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
+    call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call messages_input_error('ParallelizationOfDerivatives')
     end if
 
-    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init
@@ -382,20 +407,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_update(der, mesh)
+  subroutine derivatives_update(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
     
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
     
-    call derivatives_build(der, mesh)
+    call derivatives_build(der, namespace, mesh)
     
   end subroutine derivatives_update
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, mesh)
+  subroutine derivatives_build(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -408,7 +435,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, mesh)
+    call boundaries_init(der%boundaries, namespace, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
@@ -730,14 +757,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "derivatives_inc.F90"
 
 end module derivatives_oct_m

@@ -15,13 +15,13 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id: submesh_inc.F90 15314 2016-04-30 08:40:18Z xavier $
 
 !Here ff is a function in the submesh 
-R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
+R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
+  logical, optional, intent(in) :: reduce
 
   integer :: is
 
@@ -45,7 +45,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
     res = M_ZERO
   end if
 
-  if(mesh%parallel_in_domains) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
     call comm_allreduce(mesh%vp%comm, res)
     call profiling_out(C_PROFILING_SM_REDUCE)
@@ -55,10 +55,11 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
 end function X(sm_integrate)
 
 !Here ff is a function expressed in mesh
-R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
+R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   type(mesh_t),      intent(in) :: mesh
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
+  logical, optional, intent(in) :: reduce
 
   PUSH_SUB(X(sm_integrate_frommesh))
 
@@ -74,7 +75,11 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
     res = M_ZERO
   end if
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%vp%comm, res)
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call comm_allreduce(mesh%vp%comm, res)
+    call profiling_out(C_PROFILING_SM_REDUCE)
+  end if
 
   POP_SUB(X(sm_integrate_frommesh))
 end function X(sm_integrate_frommesh)
@@ -155,7 +160,7 @@ end subroutine X(submesh_copy_from_mesh)
 ! ---------------------------------------------------------
 subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   type(submesh_t),  intent(in)    :: this
-  type(batch_t),    intent(in)    :: psib
+  class(batch_t),   intent(in)    :: psib
   R_TYPE,           intent(inout) :: spsi(:,:)
 
   integer :: ip, ist, ii, m, ip_map
@@ -164,9 +169,9 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   call profiling_in(prof, "SM_CP_MESH_BATCH")
   PUSH_SUB(X(submesh_copy_from_mesh_batch))
 
-  ASSERT(batch_status(psib)/= BATCH_DEVICE_PACKED)
+  ASSERT(psib%status()/= BATCH_DEVICE_PACKED)
 
-  select case(batch_status(psib))
+  select case(psib%status())
     case(BATCH_NOT_PACKED)
       do ist = 1, psib%nst_linear
         !$omp parallel do
@@ -284,8 +289,8 @@ end function X(dsubmesh_to_mesh_dotp)
 subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(submesh_t),  intent(in)    :: this
   R_TYPE,           intent(in)    :: factor(:, :)
-  type(batch_t),    intent(in)    :: ss
-  type(batch_t),    intent(inout) :: mm
+  class(batch_t),   intent(in)    :: ss
+  class(batch_t),   intent(inout) :: mm
 
   integer :: ist, jst, idim, jdim, is, ii
   type(profile_t), save :: prof
@@ -293,9 +298,9 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   PUSH_SUB(X(submesh_batch_add_matrix))
   call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
 
-  ASSERT(.not. batch_is_packed(ss))
+  ASSERT(.not. ss%is_packed())
   
-  select case(batch_status(mm))
+  select case(mm%status())
   case(BATCH_DEVICE_PACKED)
     ASSERT(.false.)
 
@@ -333,7 +338,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     !$omp parallel do private(ist, idim, jdim, jst, is, ii)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
-        ii = batch_ist_idim_to_linear(mm, (/ist, idim/))
+        ii = mm%ist_idim_to_linear((/ist, idim/))
         
         ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
         jdim = min(idim, ss%dim)
@@ -376,15 +381,17 @@ end subroutine X(submesh_batch_add_matrix)
 !! array factor.
 subroutine X(submesh_batch_add)(this, ss, mm)
   type(submesh_t),  intent(in)    :: this
-  type(batch_t),    intent(in)    :: ss
-  type(batch_t),    intent(inout) :: mm
+  class(batch_t),   intent(in)    :: ss
+  class(batch_t),   intent(inout) :: mm
 
   integer :: ist, idim, jdim, is
 
   PUSH_SUB(X(submesh_batch_add))
 
-  ASSERT(.not. batch_is_packed(ss))
-  ASSERT(.not. batch_is_packed(mm))
+  call ss%check_compatibility_with(mm)
+
+  ASSERT(.not. ss%is_packed())
+  ASSERT(.not. mm%is_packed())
   
   ASSERT(mm%nst == ss%nst)
 
@@ -424,8 +431,8 @@ end subroutine X(submesh_batch_add)
 
 subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   type(submesh_t),   intent(in)    :: this
-  type(batch_t),     intent(in)    :: ss
-  type(batch_t),     intent(in)    :: mm
+  class(batch_t),    intent(in)    :: ss
+  class(batch_t),    intent(in)    :: mm
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 
@@ -434,8 +441,8 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
 
   PUSH_SUB(X(submesh_batch_dotp_matrix))
 
-  ASSERT(.not. batch_is_packed(ss))
-  ASSERT(.not. batch_is_packed(mm))
+  ASSERT(.not. ss%is_packed())
+  ASSERT(.not. mm%is_packed())
 
   if(this%mesh%use_curvilinear) then
 

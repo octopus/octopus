@@ -17,13 +17,12 @@
 !!
 
 !---------------------------------------------------------------------------
-subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
-  type(grid_t),   intent(in)    :: gr
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: iq
-  type(batch_t),  intent(in)    :: psib
-  type(batch_t),  intent(in)    :: grad_psib(:)
-  FLOAT,          intent(inout) :: grad_rho(:, :)
+subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
+  type(grid_t),        intent(in)    :: gr
+  type(states_elec_t), intent(in)    :: st
+  type(wfs_elec_t),    intent(in)    :: psib
+  type(wfs_elec_t),    intent(in)    :: grad_psib(:)
+  FLOAT,               intent(inout) :: grad_rho(:, :)
 
   integer :: ii, ist, idir, ip
   FLOAT :: ff
@@ -35,15 +34,17 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
   PUSH_SUB(X(density_accumulate_grad))
 
-  ASSERT(batch_status(psib) == batch_status(grad_psib(1)))
+  call psib%check_compatibility_with(grad_psib(1))
 
-  select case(batch_status(psib))
+  select case(psib%status())
   case(BATCH_NOT_PACKED)
     do idir = 1, gr%mesh%sb%dim
       do ii = 1, psib%nst_linear
-        ist = batch_linear_to_ist(psib, ii)
+        ist = psib%linear_to_ist(ii)
       
-        ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+        ff = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
+        if(abs(ff) <= M_EPSILON) cycle
+
         do ip = 1, gr%mesh%np
           
           psi = psib%states_linear(ii)%X(psi)(ip)
@@ -57,9 +58,11 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
   case(BATCH_PACKED)
     do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
+      ist = psib%linear_to_ist(ii)
       
-      ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+      ff = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
+      if(abs(ff) <= M_EPSILON) cycle
+
       do idir = 1, gr%mesh%sb%dim
         do ip = 1, gr%mesh%np
           
@@ -79,8 +82,8 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
 
     weights = CNST(0.0)
     do ii = 1, psib%nst_linear
-      ist = batch_linear_to_ist(psib, ii)
-      weights(ii) = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+      ist = psib%linear_to_ist(ii)
+      weights(ii) = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
     end do
 
     call accel_create_buffer(weights_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%pack%size(1))

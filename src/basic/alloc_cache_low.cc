@@ -53,11 +53,11 @@ extern "C" void FC_FUNC(alloc_cache_end, ALLOC_CACHE_END)( alloc_cache ** cache,
 
   assert((*cache)->list.empty());
 
-  delete *cache;
   *hits = (*cache)->hits;
   *misses = (*cache)->misses;
   *vol_hits = (*cache)->vol_hits++;
   *vol_misses = (*cache)->vol_misses++;
+  delete *cache;
 }
 
 extern "C" void FC_FUNC(alloc_cache_put_low, ALLOC_CACHE_PUT_LOW)(alloc_cache ** cache, const fint8 * size, void ** loc, fint * put){

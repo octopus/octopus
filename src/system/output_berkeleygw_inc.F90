@@ -16,17 +16,17 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
-  type(output_bgw_t),     intent(in)    :: bgw
-  character(len=*),       intent(in)    :: dir
-  type(states_t), target, intent(in)    :: st
-  type(grid_t),           intent(in)    :: gr
-  type(hamiltonian_t),    intent(inout) :: hm
-  FLOAT,                  intent(in)    :: vxc(:,:)
+subroutine X(bgw_vxc_dat)(bgw, namespace, dir, st, gr, hm, vxc)
+  type(output_bgw_t),          intent(in)    :: bgw
+  type(namespace_t),           intent(in)    :: namespace
+  character(len=*),            intent(in)    :: dir
+  type(states_elec_t), target, intent(in)    :: st
+  type(grid_t),                intent(in)    :: gr
+  type(hamiltonian_elec_t),    intent(inout) :: hm
+  FLOAT,                       intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
   integer, allocatable :: diag(:), off1(:), off2(:)
-  logical :: set_null
   FLOAT :: kpoint(3)
   R_TYPE, allocatable :: psi(:,:), psi2(:), xpsi(:,:)
   CMPLX, allocatable :: mtxel(:,:), mtxel_x(:,:)
@@ -35,10 +35,10 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
 
 #ifdef HAVE_BERKELEYGW
 
-  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states")
-  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points")
+  if(st%parallel_in_states) call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
+  if(st%d%kpt%parallel) call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
-  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', action='write')
+  if(mpi_grp_is_root(mpi_world)) iunit = io_open(trim(dir) // 'vxc.dat', namespace, action='write')
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1))
 
   ndiag = bgw%vxc_diag_nmax - bgw%vxc_diag_nmin + 1
@@ -60,15 +60,11 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
   end if
   SAFE_ALLOCATE(mtxel(1:ndiag + noffdiag, 1:st%d%nspin))
 
-  set_null = .false.
   
   if(bgw%calc_exchange) then
-    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', action='write')
+    if(mpi_grp_is_root(mpi_world)) iunit_x = io_open(trim(dir) // 'x.dat', namespace, action='write')
     SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1))
-    if(.not. associated(hm%hf_st)) then
-      hm%hf_st => st
-      set_null = .true.
-    end if
+    call exchange_operator_reinit(hm%exxop, st, M_ZERO, M_ONE, M_ZERO)
     SAFE_ALLOCATE(mtxel_x(1:ndiag + noffdiag, 1:st%d%nspin))
   end if
 
@@ -102,25 +98,25 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     do ispin = 1, st%d%nspin
       ikk = ik + ispin - 1
       do idiag = 1, ndiag
-        call states_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
+        call states_elec_get_state(st, gr%mesh, 1, diag(idiag), ikk, psi(:, 1))
         ! multiplying psi*vxc first might be more efficient
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:, :) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, CNST(1.0), psi, xpsi)
+          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         end if
       end do
 
       ! could do only upper or lower triangle here
       do ioff = 1, noffdiag
-        call states_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
-        call states_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
+        call states_elec_get_state(st, gr%mesh, 1, off1(ioff), ikk, psi(:, 1))
+        call states_elec_get_state(st, gr%mesh, 1, off2(ioff), ikk, psi2)
         mtxel(ndiag + ioff, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi2(:) * vxc(:, ispin))
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, CNST(1.0), psi, xpsi)
+          call X(exchange_operator_single)(hm%exxop, namespace, hm%der, hm%d, ist, ikk, psi, xpsi, hm%psolver, .false.)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         end if
       end do
@@ -138,8 +134,8 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
     end if
   end do
 
-  if(set_null) nullify(hm%hf_st)
-  
+  if(bgw%calc_exchange) nullify(hm%exxop%st)
+
   if(mpi_grp_is_root(mpi_world)) call io_close(iunit)
   SAFE_DEALLOCATE_A(diag)
   SAFE_DEALLOCATE_A(psi)
@@ -158,7 +154,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
   POP_SUB(X(bgw_vxc_dat))
@@ -167,12 +163,13 @@ end subroutine X(bgw_vxc_dat)
 
 ! --------------------------------------------------------- 
 !> Calculate 'vmtxel' file of dipole matrix elements for BerkeleyGW BSE
-subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
-  type(output_bgw_t), intent(in) :: bgw
-  character(len=*),   intent(in) :: dir
-  type(states_t),     intent(in) :: st
-  type(grid_t),       intent(in) :: gr
-  integer,            intent(in) :: ifmax(:,:)
+subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
+  type(output_bgw_t),  intent(in) :: bgw
+  type(namespace_t),   intent(in) :: namespace
+  character(len=*),    intent(in) :: dir
+  type(states_elec_t), intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  integer,             intent(in) :: ifmax(:,:)
 
   integer :: iunit, nmat, ik, ikk, ikcvs, is, ic, iv, ip
   R_TYPE, allocatable :: psi(:), rpsi(:)
@@ -195,10 +192,10 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
     do is = 1, st%d%nspin
       ikk = ik + is - 1
       do iv = 1, bgw%vmtxel_nvband
-        call states_get_state(st, gr%mesh, 1, ifmax(ik, is) - iv + 1, ikk, psi(:))
+        call states_elec_get_state(st, gr%mesh, 1, ifmax(ik, is) - iv + 1, ikk, psi(:))
         rpsi(:) = psi(:) * rvec(:)
         do ic = 1, bgw%vmtxel_ncband
-          call states_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
+          call states_elec_get_state(st, gr%mesh, 1, ifmax(ik, is) + ic, ikk, psi(:))
           ikcvs = is + (iv - 1 + (ic - 1 + (ik - 1)*bgw%vmtxel_ncband)*bgw%vmtxel_nvband)*st%d%nspin
           vmtxel(ikcvs) = X(mf_dotp)(gr%mesh, psi(:), rpsi(:))
 !          write(6,*) ikcvs, ikk, is, ifmax(ik, is) - iv + 1, ifmax(ik, is) + ic, vmtxel(ikcvs)
@@ -209,14 +206,14 @@ subroutine X(bgw_vmtxel)(bgw, dir, st, gr, ifmax)
   end do
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel.dat', action='write', form='formatted')
+    iunit = io_open(trim(dir) // 'vmtxel.dat', namespace, action='write', form='formatted')
     write(iunit,*) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit,*) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)
   end if
 
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(dir) // 'vmtxel', action='write', form='unformatted')
+    iunit = io_open(trim(dir) // 'vmtxel', namespace, action='write', form='unformatted')
     write(iunit) st%d%nik/st%d%nspin,bgw%vmtxel_ncband,bgw%vmtxel_nvband,st%d%nspin,1
     write(iunit) (vmtxel(ikcvs),ikcvs=1,nmat)
     call io_close(iunit)

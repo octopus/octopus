@@ -24,10 +24,11 @@
 !! BIT 36 563-578 (1996) doi:10.1007/BF01731934 .
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
-subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converged, ik, diff)
+  type(namespace_t),           intent(in)    :: namespace
   type(grid_t),                intent(in)    :: gr
-  type(states_t),              intent(inout) :: st
-  type(hamiltonian_t),         intent(in)    :: hm
+  type(states_elec_t),         intent(inout) :: st
+  type(hamiltonian_elec_t),    intent(in)    :: hm
   type(preconditioner_t),      intent(in)    :: pre
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
@@ -53,12 +54,13 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
   R_TYPE, allocatable :: ham(:,:)        ! Projection of the Hamiltonian onto Krylov subspace.
   R_TYPE, allocatable :: hevec(:,:)
   R_TYPE, allocatable :: aux(:,:)
-  type(batch_t) :: vvb, avb
+  type(wfs_elec_t) :: vvb, avb
   integer  :: blk, ist, ii, idim, dim, jst, d1, d2, matvec, nconv
   FLOAT :: xx
 
   ! Some hard-coded parameters.
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
+  integer, parameter  :: krylov_half = 7 ! Half the Krylov subspace size (rounded down).
 
   PUSH_SUB(X(eigensolver_plan))
 
@@ -96,7 +98,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
 
   ! First of all, copy the initial estimates.
   do ist = 1, st%nst
-    call states_get_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
+    call states_elec_get_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     eigenval(ist) = st%eigenval(ist, ik)
   end do
 
@@ -118,7 +120,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
     if (d1 <= st%d%block_size) then !start from beginning
       blk = st%d%block_size
     else                   !restart to work on another set of eigen-pairs
-      blk = min(krylov/2, d1)
+      blk = min(krylov_half, d1)
     end if
 
     !copy next set of Ritz vector/initial guesses to vv
@@ -166,9 +168,9 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end if
       end do ortho
 
-      call batch_init(vvb, st%d%dim, blk)
-      call batch_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:))
-      call X(batch_allocate)(vvb, d1 + 1, d1 + blk, gr%mesh%np_part)
+      call wfs_elec_init(vvb, st%d%dim, blk, ik)
+      call wfs_elec_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:), ik)
+      call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk
@@ -177,11 +179,11 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
         end do
       end do
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, vvb, avb, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb)
       INCR(matvec, blk)
 
-      call batch_end(vvb)
-      call batch_end(avb)
+      call vvb%end()
+      call avb%end()
 
       ! Here we calculate the last blk columns of H = V^T A V. We do not need the lower
       ! part of the matrix since it is symmetric (LAPACK routine only needs the upper triangle).
@@ -298,13 +300,13 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       do idim = 1, dim
         call lalg_copy(gr%mesh%np, av(:, idim, d1 + 1), aux(:, idim))
       end do
-      call X(preconditioner_apply)(pre, gr, hm, ik, aux(:,:), vv(:,:, d1+1))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, aux(:,:), vv(:,:, d1+1))
 
     end do inner_loop
   end do outer_loop
 
   do ist = 1, st%nst
-    call states_set_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
+    call states_elec_set_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     st%eigenval(ist, ik) = eigenval(ist)
     diff(ist) = res(ist)
   end do

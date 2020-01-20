@@ -52,6 +52,7 @@ module multicomm_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
 #if defined(HAVE_OPENMP)
   use omp_lib
 #endif
@@ -111,16 +112,17 @@ module multicomm_oct_m
 
   !> Stores all communicators and groups
   type multicomm_t
+    private
     integer          :: n_node           !< Total number of nodes.
 
-    integer          :: par_strategy     !< What kind of parallelization strategy should we use?
+    integer, public  :: par_strategy     !< What kind of parallelization strategy should we use?
 
-    integer, allocatable :: group_sizes(:)   !< Number of processors in each group.
-    integer, allocatable :: who_am_i(:)      !< Rank in the "line"-communicators.
-    integer, allocatable :: group_comm(:)    !< "Line"-communicators I belong to.
-    integer          :: dom_st_comm      !< States-domain plane communicator.
-    integer          :: st_kpt_comm      !< Kpoints-states plane communicator.
-    integer          :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
+    integer, allocatable         :: group_sizes(:)   !< Number of processors in each group.
+    integer, allocatable, public :: who_am_i(:)      !< Rank in the "line"-communicators.
+    integer, allocatable, public :: group_comm(:)    !< "Line"-communicators I belong to.
+    integer, public              :: dom_st_comm      !< States-domain plane communicator.
+    integer, public              :: st_kpt_comm      !< Kpoints-states plane communicator.
+    integer, public              :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
 
     integer          :: nthreads         !< Number of OMP threads
     integer          :: node_type        !< Is this node a P_MASTER or a P_SLAVE?
@@ -128,16 +130,19 @@ module multicomm_oct_m
     
     integer          :: full_comm        !< The base communicator.
     integer          :: full_comm_rank   !< The rank in the base communicator.
-    integer          :: master_comm      !< The communicator without slaves.
+    integer, public  :: master_comm      !< The communicator without slaves.
     integer          :: master_comm_rank !< The rank in the communicator without slaves.
-    integer          :: slave_intercomm  !< the intercomm to communicate with slaves
+    integer, public  :: slave_intercomm  !< the intercomm to communicate with slaves
+
+    logical          :: reorder_ranks    !< do we reorder ranks in a more compact way?
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
   type multicomm_all_pairs_t
-    type(mpi_grp_t)  :: grp            !< Schedule for this group.
-    integer          :: rounds         !< This many comm. rounds.
-    integer, pointer :: schedule(:, :) !< This is the schedule.
+    private
+    type(mpi_grp_t)  :: grp                    !< Schedule for this group.
+    integer          :: rounds                 !< This many comm. rounds.
+    integer, pointer, public :: schedule(:, :) !< This is the schedule.
   end type multicomm_all_pairs_t
 
 contains
@@ -161,8 +166,9 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
+  subroutine multicomm_init(mc, namespace, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
+    type(namespace_t), intent(in)    :: namespace
     type(mpi_grp_t),   intent(inout) :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
@@ -179,8 +185,20 @@ contains
 
     call messages_print_stress(stdout, "Parallelization")
 
-    call messages_obsolete_variable('ParallelizationStrategy')
-    call messages_obsolete_variable('ParallelizationGroupRanks')
+    !%Variable ReorderRanks
+    !%Default no
+    !%Type logical
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls whether the ranks are reorganized to have a more
+    !% compact distribution with respect to domain parallelization which needs
+    !% to communicate most often. Depending on the system, this can improve
+    !% communication speeds.
+    !%End
+    call parse_variable(namespace, 'ReorderRanks', .false., mc%reorder_ranks)
+
+    call messages_obsolete_variable(namespace, 'ParallelizationStrategy')
+    call messages_obsolete_variable(namespace, 'ParallelizationGroupRanks')
     
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO
@@ -209,7 +227,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
+    call parse_variable(namespace, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
 
     !%Variable ParStates
     !%Type integer
@@ -232,7 +250,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
+    call parse_variable(namespace, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
 
     !%Variable ParKPoints
     !%Type integer
@@ -253,7 +271,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
+    call parse_variable(namespace, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
 
     !%Variable ParOther
     !%Type integer
@@ -278,7 +296,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
+    call parse_variable(namespace, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
 
     do ipar = 1, P_STRATEGY_MAX
       if(parse(ipar) == PAR_NO) parse(ipar) = 1
@@ -316,7 +334,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization.
       !%End
-      call parse_variable('ParallelizationNumberSlaves', 0, num_slaves)
+      call parse_variable(namespace, 'ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES
@@ -576,6 +594,9 @@ contains
       integer :: coords(MAX_INDEX)
       integer :: new_comm, new_comm_size
       character(len=6) :: node_type
+      type(mpi_grp_t) :: reorder_grp
+      integer :: base_group, reorder_group, ranks(base_grp%size)
+      integer :: ii, jj, kk, ll, nn, reorder_comm
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -589,6 +610,46 @@ contains
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
+        if(mc%reorder_ranks) then
+          ! first, reorder the ranks
+          ! this is done to get a column-major ordering of the ranks in the
+          ! Cartesian communicator, since they a ordered row-major otherwise
+          call MPI_Comm_group(base_grp%comm, base_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in getting MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now transpose the hypercube => get rank numbers in column-major order
+          nn = 1
+          do ii = 1, mc%group_sizes(1)
+            do jj = 1, mc%group_sizes(2)
+              do kk = 1, mc%group_sizes(3)
+                do ll = 1, mc%group_sizes(4)
+                  ranks(nn) = (ll-1)*mc%group_sizes(3)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (kk-1)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (jj-1)*mc%group_sizes(1) + ii - 1
+                  nn = nn + 1
+                end do
+              end do
+            end do
+          end do
+          call MPI_Group_incl(base_group, base_grp%size, ranks, reorder_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now get the reordered communicator
+          call MPI_Comm_create(base_grp%comm, reorder_group, reorder_comm, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating reordered communicator!"
+            call messages_fatal(1)
+          end if
+          call mpi_grp_init(reorder_grp, reorder_comm)
+          call mpi_grp_copy(base_grp, reorder_grp)
+        else
+          call mpi_grp_copy(reorder_grp, base_grp)
+        end if
+
         ! Multilevel parallelization is organized in a hypercube. We
         ! use an MPI Cartesian topology to generate the communicators
         ! that correspond to each level.
@@ -603,7 +664,7 @@ contains
         periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(reorder_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -980,8 +1041,8 @@ contains
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
 
     integer :: rank
-    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 #ifdef HAVE_OPENMP
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     integer :: nthreads
 #endif
 
@@ -994,12 +1055,15 @@ contains
     SAFE_ALLOCATE(lsize(1:nthreads))
     call multicomm_divide_range(nobjs, nthreads, istart, ifinal, lsize)
     rank   = 1 + omp_get_thread_num()
-#endif
     ini    = istart(rank)
     nobjs_loc = lsize(rank)
     SAFE_DEALLOCATE_A(istart)
     SAFE_DEALLOCATE_A(ifinal)
     SAFE_DEALLOCATE_A(lsize)
+#else
+    ini = 1
+    nobjs_loc = nobjs
+#endif
 
   end subroutine multicomm_divide_range_omp
 

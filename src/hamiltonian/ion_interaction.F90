@@ -26,6 +26,7 @@ module ion_interaction_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -44,6 +45,7 @@ module ion_interaction_oct_m
     ion_interaction_test
 
   type ion_interaction_t
+    ! Components are public by default
     FLOAT                      :: alpha
   end type ion_interaction_t
 
@@ -55,8 +57,9 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this)
+  subroutine ion_interaction_init(this, namespace)
     type(ion_interaction_t), intent(out)   :: this
+    type(namespace_t),       intent(in)    :: namespace
 
     PUSH_SUB(ion_interaction_init)
 
@@ -70,7 +73,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
+    call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -90,10 +93,12 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
+  subroutine ion_interaction_calculate(this, geo, sb, namespace, ignore_external_ions, energy, &
+      force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
+    type(namespace_t),        intent(in)    :: namespace
     logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,                    intent(out)   :: force(:, :)
@@ -146,10 +151,10 @@ contains
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
+          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
+          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x, namespace)
         end do
       end if
       
@@ -517,6 +522,8 @@ contains
 
 ! force
         if(iatom == jatom)cycle
+        if(abs(tmp_erf) < M_EPSILON) cycle
+
         force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
           * tmp_erf
@@ -548,9 +555,17 @@ contains
             dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
             erfc1 = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*erfc1
+            if(abs(erfc1) > M_EPSILON) then
+              factor1 = exp(gg_abs*dz_ij)*erfc1
+            else
+              factor1 = M_ZERO
+            end if
             erfc2 = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*erfc2
+            if(abs(erfc2) > M_EPSILON) then
+              factor2 = exp(-gg_abs*dz_ij)*erfc2
+            else
+              factor2 = M_ZERO
+            end if
 
             if(iatom == jatom) then
               coeff = M_ONE
@@ -576,10 +591,22 @@ contains
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc1 &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
-            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc2 &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
+            factor1 = gg_abs*erfc1 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor1) > M_EPSILON) then
+              factor1 = factor1*exp(gg_abs*dz_ij)
+            else
+              factor1 = M_ZERO
+            end if
+
+            factor2 = gg_abs*erfc2 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor2) > M_EPSILON) then
+              factor2 = factor2*exp(-gg_abs*dz_ij)
+            else
+              factor2 = M_ZERO
+            end if
+             
 
             force(3, iatom) = force(3, iatom) &
               - M_TWO*factor &
@@ -605,8 +632,9 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, sb)
+  subroutine ion_interaction_test(geo, namespace, sb)
     type(geometry_t),         intent(in)    :: geo
+    type(namespace_t),        intent(in)    :: namespace
     type(simul_box_t),        intent(in)    :: sb
 
     type(ion_interaction_t) :: ion_interaction
@@ -617,12 +645,12 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction)
+    call ion_interaction_init(ion_interaction, namespace)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
+    call ion_interaction_calculate(ion_interaction, geo, sb, namespace, .false., energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')
