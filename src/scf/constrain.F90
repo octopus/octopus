@@ -24,6 +24,7 @@ module constrain_oct_m
   use grid_oct_m
   use hirshfeld_oct_m
   use lalg_basic_oct_m
+  use lcao_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -44,11 +45,6 @@ module constrain_oct_m
   private
   public ::             &
     constrain_guess_moment
-
-  integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
-                        INITRHO_FERROMAGNETIC = 2, &
-                        INITRHO_RANDOM        = 3, &
-                        INITRHO_USERDEF       = 77
 
 contains
 

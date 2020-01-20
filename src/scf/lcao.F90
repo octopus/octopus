@@ -120,10 +120,10 @@ module lcao_oct_m
   
   type(profile_t), save :: prof_orbitals
 
-  integer, parameter :: INITRHO_PARAMAGNETIC  = 1, &
-                        INITRHO_FERROMAGNETIC = 2, &
-                        INITRHO_RANDOM        = 3, &
-                        INITRHO_USERDEF       = 77
+  integer, parameter, public :: INITRHO_PARAMAGNETIC  = 1, &
+                                INITRHO_FERROMAGNETIC = 2, &
+                                INITRHO_RANDOM        = 3, &
+                                INITRHO_USERDEF       = 77
 
 contains
 
