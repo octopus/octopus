@@ -553,7 +553,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   type(profile_t), save :: prof_sm2c
 
   PUSH_SUB(X(submesh_to_cube))
-  call profiling_in(prof_sm2c, "MESH_TO_CUBE")
+  call profiling_in(prof_sm2c, "SUBMESH_TO_CUBE")
 
   ASSERT(ubound(mf, dim = 1) == sm%np)
   ASSERT(.not. sm%mesh%parallel_in_domains)
