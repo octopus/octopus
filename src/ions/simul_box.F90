@@ -746,10 +746,13 @@ contains
         end if
       end if
 
-      ! Always need it for periodic systems even if LatticeVectors block is not present.
+      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
       if (.not. parse_is_defined('Lsize') .and. sb%periodic_dim > 0) then
-        sb%lsize(:) = M_ZERO
-        sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
+        do idim = 1, sb%dim
+          if (sb%lsize(idim) == M_ZERO) then
+            sb%lsize(idim) = lparams(idim)*M_HALF
+          end if
+        end do
       end if
 
     end if
