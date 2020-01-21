@@ -625,7 +625,6 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
   ASSERT(size(uvw) == der%dim)
   ASSERT(size(xyz_) == der%dim)
   do idim1 = 1, der%dim
-    ASSERT(uvw(idim1)%status() /= BATCH_DEVICE_PACKED)
     ASSERT(uvw(idim1)%status() == xyz_(idim1)%status())
     ASSERT(uvw(idim1)%status() == uvw(1)%status())
   end do
@@ -668,12 +667,49 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
-    ASSERT(uvw(1)%status() /= BATCH_DEVICE_PACKED)
+    call uvw_to_xyz_opencl()
   end select
 
   SAFE_DEALLOCATE_A(tmp)
 
   POP_SUB(X(batch_vector_uvw_to_xyz))
+
+contains
+  subroutine uvw_to_xyz_opencl
+    integer :: localsize, dim3, dim2
+    type(accel_mem_t) :: matrix_buffer
+
+    PUSH_SUB(uvw_to_xyz_opencl)
+
+    call accel_create_buffer(matrix_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, der%dim**2)
+    call accel_write_buffer(matrix_buffer, der%dim**2, der%mesh%sb%klattice_primitive)
+
+    call accel_set_kernel_arg(kernel_uvw_xyz, 0, der%mesh%np)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 1, matrix_buffer)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 2, uvw(1)%pack%buffer)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 3, log2(uvw(1)%pack%size_real(1)))
+    if(der%dim > 1) then
+      call accel_set_kernel_arg(kernel_uvw_xyz, 4, uvw(2)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 5, log2(uvw(2)%pack%size_real(1)))
+    end if
+    if(der%dim > 2) then
+      call accel_set_kernel_arg(kernel_uvw_xyz, 6, uvw(3)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 7, log2(uvw(3)%pack%size_real(1)))
+    end if
+
+    localsize = accel_kernel_workgroup_size(kernel_uvw_xyz)/uvw(1)%pack%size_real(1)
+
+    dim3 = der%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(der%mesh%np, localsize))
+
+    call accel_kernel_run(kernel_uvw_xyz, (/uvw(1)%pack%size_real(1), dim2, dim3/), &
+      (/uvw(1)%pack%size_real(1), localsize, 1/))
+    call accel_finish()
+
+    call accel_release_buffer(matrix_buffer)
+
+    POP_SUB(uvw_to_xyz_opencl)
+  end subroutine uvw_to_xyz_opencl
 end subroutine X(batch_vector_uvw_to_xyz)
 
 !! Local Variables:

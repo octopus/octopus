@@ -19,11 +19,14 @@
 #include "global.h"
 
 module derivatives_oct_m
+  use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
   use global_oct_m
+  use iso_c_binding
   use lalg_adv_oct_m
   use loct_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -39,6 +42,7 @@ module derivatives_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use transfer_table_oct_m
+  use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
@@ -143,6 +147,8 @@ module derivatives_oct_m
     FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
+  type(accel_kernel_t) :: kernel_uvw_xyz
+
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof
 
 contains
@@ -178,6 +184,7 @@ contains
 
     integer :: idir
     integer :: default_stencil
+    character(len=40) :: flags
 
     PUSH_SUB(derivatives_init)
 
@@ -289,6 +296,9 @@ contains
     nullify(der%finer)
     nullify(der%to_coarser)
     nullify(der%to_finer)
+
+    write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
+    call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
 
     POP_SUB(derivatives_init)
   end subroutine derivatives_init
