@@ -688,13 +688,19 @@ contains
     call accel_set_kernel_arg(kernel_uvw_xyz, 1, matrix_buffer)
     call accel_set_kernel_arg(kernel_uvw_xyz, 2, uvw(1)%pack%buffer)
     call accel_set_kernel_arg(kernel_uvw_xyz, 3, log2(uvw(1)%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_uvw_xyz, 4, xyz_(1)%pack%buffer)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 5, log2(xyz_(1)%pack%size_real(1)))
     if(der%dim > 1) then
-      call accel_set_kernel_arg(kernel_uvw_xyz, 4, uvw(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 5, log2(uvw(2)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 6, uvw(2)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 7, log2(uvw(2)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 8, xyz_(2)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 9, log2(xyz_(2)%pack%size_real(1)))
     end if
     if(der%dim > 2) then
-      call accel_set_kernel_arg(kernel_uvw_xyz, 6, uvw(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 7, log2(uvw(3)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 10, uvw(3)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 11, log2(uvw(3)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 12, xyz_(3)%pack%buffer)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 13, log2(xyz_(3)%pack%size_real(1)))
     end if
 
     localsize = accel_kernel_workgroup_size(kernel_uvw_xyz)/uvw(1)%pack%size_real(1)

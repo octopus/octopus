@@ -28,12 +28,15 @@
 
 __kernel void uvw_to_xyz(const int np,
            __global double const * restrict matrix,
-           __global double * restrict gradu, const int ldgradu
+           __global double * gradu, const int ldgradu,
+           __global double * gradx, const int ldgradx
 #if DIMENSION > 1
-           ,__global double * restrict gradv, const int ldgradv
+           ,__global double * gradv, const int ldgradv
+           ,__global double * grady, const int ldgrady
 #endif
 #if DIMENSION > 2
-           ,__global double * restrict gradw, const int ldgradw
+           ,__global double * gradw, const int ldgradw
+           ,__global double * gradz, const int ldgradz
 #endif
            ){
   int ist = get_global_id(0);
@@ -45,19 +48,19 @@ __kernel void uvw_to_xyz(const int np,
   
   if(ip < np) {
 #if DIMENSION == 1
-    gradu[(ip<<ldgradu) + ist] = matrix[0] * gradu[(ip<<ldgradu) + ist];
+    gradx[(ip<<ldgradx) + ist] = matrix[0] * gradu[(ip<<ldgradu) + ist];
 #elif DIMENSION == 2
     tmp[0] = matrix[0]*gradu[(ip<<ldgradu) + ist] + matrix[2]*gradv[(ip<<ldgradv) + ist];
     tmp[1] = matrix[1]*gradu[(ip<<ldgradu) + ist] + matrix[3]*gradv[(ip<<ldgradv) + ist];
-    gradu[(ip<<ldgradu) + ist] = tmp[0];
-    gradv[(ip<<ldgradv) + ist] = tmp[1];
+    gradx[(ip<<ldgradx) + ist] = tmp[0];
+    grady[(ip<<ldgrady) + ist] = tmp[1];
 #elif DIMENSION == 3
     tmp[0] = matrix[0]*gradu[(ip<<ldgradu) + ist] + matrix[3]*gradv[(ip<<ldgradv) + ist] + matrix[6]*gradw[(ip<<ldgradw) + ist];
     tmp[1] = matrix[1]*gradu[(ip<<ldgradu) + ist] + matrix[4]*gradv[(ip<<ldgradv) + ist] + matrix[7]*gradw[(ip<<ldgradw) + ist];
     tmp[2] = matrix[2]*gradu[(ip<<ldgradu) + ist] + matrix[5]*gradv[(ip<<ldgradv) + ist] + matrix[8]*gradw[(ip<<ldgradw) + ist];
-    gradu[(ip<<ldgradu) + ist] = tmp[0];
-    gradv[(ip<<ldgradv) + ist] = tmp[1];
-    gradw[(ip<<ldgradw) + ist] = tmp[2];
+    gradx[(ip<<ldgradx) + ist] = tmp[0];
+    grady[(ip<<ldgrady) + ist] = tmp[1];
+    gradz[(ip<<ldgradz) + ist] = tmp[2];
 #endif
   }
 }
