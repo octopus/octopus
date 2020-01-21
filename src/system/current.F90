@@ -384,7 +384,7 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
+        .and. hm%lda_u_level == DFT_U_NONE) then
 
         ! we can use the packed version
         
@@ -403,11 +403,7 @@ contains
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
-            !The call to individual derivatives_perfom routines returns the derivatives along
-            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-            !along the Cartesian axis.
-            ASSERT(.not.der%mesh%sb%nonorthogonal)
-            ! this should now take non-orthogonal axis into account, but needs more testing
+            ! this now takes non-orthogonal axis into account
             do idir = 1, der%mesh%sb%dim
               call epsib%copy_to(commpsib(idir))
             end do
