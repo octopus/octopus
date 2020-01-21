@@ -448,6 +448,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
+	hamiltonian/singularity.F90                  \
 	hamiltonian/species_pot.F90                  \
 	hamiltonian/vdw_ts.F90                       \
 	hamiltonian/xc.F90
