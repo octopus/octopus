@@ -547,8 +547,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   type(cube_t),          intent(in)    :: cube
   type(cube_function_t), intent(inout) :: cf
 
-  integer :: ix, iy, iz
-  integer :: im, ii, nn, bsize
+  integer :: ix, iy, iz, im
   R_TYPE, pointer :: gmf(:)
   type(profile_t), save :: prof_sm2c
 
@@ -601,7 +600,7 @@ subroutine X(cube_to_submesh) (cube, cf, sm, mf)
   type(submesh_t),       intent(in)  :: sm
   R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the submesh. 
 
-  integer :: ip, ix, iy, iz
+  integer :: ix, iy, iz
   integer :: im
   R_TYPE, pointer :: gmf(:)
   type(profile_t), save :: prof_c2sm
