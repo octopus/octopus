@@ -28,6 +28,7 @@ dist_share_DATA =                                  \
 	02-derivatives_2d.01.inp                   \
 	03-derivatives_3d.test                     \
 	03-derivatives_3d.01.inp                   \
+	03-derivatives_3d.02-non-orthogonal.inp    \
 	04-hartree_3d_cg.test                      \
 	04-hartree_3d_cg.01-cg_corrected.inp       \
 	05-hartree_3d_fft.test                     \
