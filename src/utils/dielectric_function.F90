@@ -257,10 +257,10 @@ program dielectric_function
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
-    do idir = 1, space%dim-1
+    do idir = 1, space%dim
       write(out_file, '(2e15.6)', advance='no') real(invdielectric(idir, kk), REAL_PRECISION), aimag(invdielectric(idir, kk))
     end do
-    write(out_file, '(2e15.6)', advance='no') real(invdielectric(space%dim, kk), REAL_PRECISION), aimag(invdielectric(space%dim, kk))
+    write(out_file, '()')
   end do
   call io_close(out_file)
  
@@ -268,10 +268,10 @@ program dielectric_function
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
-    do idir = 1, space%dim-1
+    do idir = 1, space%dim
       write(out_file, '(2e15.6)', advance='no') real(dielectric(idir, kk), REAL_PRECISION), aimag(dielectric(idir, kk))
     end do
-    write(out_file, '(2e15.6)', advance='no') real(dielectric(space%dim, kk), REAL_PRECISION), aimag(dielectric(space%dim, kk))
+    write(out_file, '()')
   end do
   call io_close(out_file)
 
@@ -279,10 +279,10 @@ program dielectric_function
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
     write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
-    do idir = 1, space%dim-1
+    do idir = 1, space%dim
       write(out_file, '(2e15.6)', advance='no') real(chi(idir, kk), REAL_PRECISION), aimag(chi(idir, kk))
     end do
-    write(out_file, '(2e15.6)', advance='no') real(chi(space%dim, kk), REAL_PRECISION), aimag(chi(space%dim, kk))
+    write(out_file, '()')
   end do
   call io_close(out_file)
 
