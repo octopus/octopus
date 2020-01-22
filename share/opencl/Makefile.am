@@ -47,7 +47,8 @@ dist_opencl_DATA =              \
 	boundaries.cl           \
 	forces.cl               \
 	mod_sqr.cl              \
-	uvw_to_xyz.cl
+	uvw_to_xyz.cl           \
+	curl.cl
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

@@ -784,6 +784,7 @@ subroutine X(derivatives_batch_curl)(der, ffb, gradb)
   class(batch_t),      intent(in)    :: gradb(:)
 
   integer :: ip, ist, ivec
+  integer :: localsize, dim2, dim3
 
   PUSH_SUB(X(derivatives_batch_curl))
   call profiling_in(curl_batch_prof, "CURL_BATCH")
@@ -820,7 +821,24 @@ subroutine X(derivatives_batch_curl)(der, ffb, gradb)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
-    ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
+    call accel_set_kernel_arg(aX(kernel_, curl), 0, der%mesh%np)
+    call accel_set_kernel_arg(aX(kernel_, curl), 1, ffb%pack%buffer)
+    call accel_set_kernel_arg(aX(kernel_, curl), 2, log2(ffb%pack%size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 3, gradb(1)%pack%buffer)
+    call accel_set_kernel_arg(aX(kernel_, curl), 4, log2(gradb(1)%pack%size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 5, gradb(2)%pack%buffer)
+    call accel_set_kernel_arg(aX(kernel_, curl), 6, log2(gradb(2)%pack%size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 7, gradb(3)%pack%buffer)
+    call accel_set_kernel_arg(aX(kernel_, curl), 8, log2(gradb(3)%pack%size(1)))
+
+    localsize = accel_kernel_workgroup_size(aX(kernel_, curl))/ffb%pack%size(1)
+
+    dim3 = der%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(der%mesh%np, localsize))
+
+    call accel_kernel_run(aX(kernel_, curl), (/ffb%pack%size(1), dim2, dim3/), &
+      (/ffb%pack%size(1), localsize, 1/))
+    call accel_finish()
   end select
 
   call profiling_out(curl_batch_prof)

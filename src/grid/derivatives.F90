@@ -150,7 +150,7 @@ module derivatives_oct_m
     FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
-  type(accel_kernel_t) :: kernel_uvw_xyz
+  type(accel_kernel_t) :: kernel_uvw_xyz, kernel_dcurl, kernel_zcurl
 
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof, curl_batch_prof
 
@@ -303,6 +303,8 @@ contains
     if(accel_is_enabled()) then
       write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
       call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
+      call accel_kernel_build(kernel_dcurl, 'curl.cl', 'dcurl', flags = '-DRTYPE_DOUBLE')
+      call accel_kernel_build(kernel_zcurl, 'curl.cl', 'zcurl', flags = '-DRTYPE_COMPLEX')
     end if
 
     POP_SUB(derivatives_init)
