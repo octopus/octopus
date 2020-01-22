@@ -566,9 +566,13 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
         call ffb%copy_to(gradffb(idir))
       end do
 
-      call X(derivatives_batch_grad)(this, ffb, gradffb, set_bc=.false.)
-
-      call X(derivatives_batch_curl)(this, ffb, gradffb)
+      ! test for one blocksize without precomputed gradient
+      if(blocksize ==9) then
+        call X(derivatives_batch_curl)(this, ffb, set_bc=.false.)
+      else
+        call X(derivatives_batch_grad)(this, ffb, gradffb, set_bc=.false.)
+        call X(derivatives_batch_curl)(this, ffb, gradffb)
+      end if
 
       if(packstates) then
         call ffb%do_unpack()
@@ -778,7 +782,44 @@ contains
 end subroutine X(batch_vector_uvw_to_xyz)
 
 ! ---------------------------------------------------------
-subroutine X(derivatives_batch_curl)(der, ffb, gradb)
+subroutine X(derivatives_batch_curl)(der, ffb, gradb, ghost_update, set_bc)
+  type(derivatives_t),              intent(in)    :: der
+  class(batch_t),                   intent(inout) :: ffb
+  class(batch_t), target, optional, intent(in)    :: gradb(:)
+  logical, optional,   intent(in)    :: ghost_update
+  logical, optional,   intent(in)    :: set_bc
+
+  class(batch_t), pointer :: gradb_(:)
+  integer :: idir
+
+  PUSH_SUB(X(derivatives_batch_curl))
+  call profiling_in(curl_batch_prof, "CURL_BATCH")
+
+  if(present(gradb)) then
+    gradb_ => gradb
+  else
+    allocate(gradb_(1:der%dim), mold=ffb)
+    do idir = 1, der%dim
+      call ffb%copy_to(gradb_(idir))
+    end do
+    call X(derivatives_batch_grad)(der, ffb, gradb_, ghost_update=ghost_update, set_bc=set_bc)
+  end if
+
+  call X(derivatives_batch_curl_from_gradient)(der, ffb, gradb_)
+
+  if(.not.present(gradb)) then
+    do idir = 1, der%dim
+      call gradb_(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb_)
+  end if
+
+  call profiling_out(curl_batch_prof)
+  POP_SUB(X(derivatives_batch_curl))
+end subroutine X(derivatives_batch_curl)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_batch_curl_from_gradient)(der, ffb, gradb)
   type(derivatives_t), intent(in)    :: der
   class(batch_t),      intent(inout) :: ffb
   class(batch_t),      intent(in)    :: gradb(:)
@@ -786,8 +827,7 @@ subroutine X(derivatives_batch_curl)(der, ffb, gradb)
   integer :: ip, ist, ivec
   integer :: localsize, dim2, dim3
 
-  PUSH_SUB(X(derivatives_batch_curl))
-  call profiling_in(curl_batch_prof, "CURL_BATCH")
+  PUSH_SUB(X(derivatives_batch_curl_from_gradient))
 
   ASSERT(der%dim==3)
   ASSERT(size(gradb) == der%dim)
@@ -841,9 +881,8 @@ subroutine X(derivatives_batch_curl)(der, ffb, gradb)
     call accel_finish()
   end select
 
-  call profiling_out(curl_batch_prof)
-  POP_SUB(X(derivatives_batch_curl))
-end subroutine X(derivatives_batch_curl)
+  POP_SUB(X(derivatives_batch_curl_from_gradient))
+end subroutine X(derivatives_batch_curl_from_gradient)
 
 !! Local Variables:
 !! mode: f90
