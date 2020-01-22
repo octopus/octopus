@@ -85,6 +85,8 @@ module derivatives_oct_m
     zderivatives_div,                   &
     dderivatives_curl,                  &
     zderivatives_curl,                  &
+    dderivatives_batch_curl,            &
+    zderivatives_batch_curl,            &
     dderivatives_partial,               &
     zderivatives_partial
 
@@ -150,7 +152,7 @@ module derivatives_oct_m
 
   type(accel_kernel_t) :: kernel_uvw_xyz
 
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof
+  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof, curl_batch_prof
 
 contains
 
