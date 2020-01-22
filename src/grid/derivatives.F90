@@ -297,8 +297,10 @@ contains
     nullify(der%to_coarser)
     nullify(der%to_finer)
 
-    write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
-    call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
+    if(accel_is_enabled()) then
+      write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
+      call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
+    end if
 
     POP_SUB(derivatives_init)
   end subroutine derivatives_init
