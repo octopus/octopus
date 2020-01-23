@@ -19,3 +19,5 @@ FilterPotentials = filter_none
 MixField = density
 
 StatesPack = no
+
+ProfilingMode = prof_io

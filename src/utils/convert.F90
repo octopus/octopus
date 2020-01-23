@@ -376,13 +376,13 @@ contains
       end if
       ! Write the corresponding output
       call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
-           trim(out_name), outp%namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
+           trim(out_name), namespace, mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
       if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &
-             trim(out_name), outp%namespace, mesh, pot, units_out%energy, ierr, geo = geo)
+             trim(out_name), namespace, mesh, pot, units_out%energy, ierr, geo = geo)
       end if
       call loct_progress_bar(ii-c_start, c_end-c_start) 
       ! It does not matter if the current write has failed for the next iteration
@@ -571,7 +571,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
-    call kick_init(kick, namespace, 1, mesh%sb%dim, geo%periodic_dim)
+    call kick_init(kick, namespace, mesh%sb, 1)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)
@@ -683,8 +683,8 @@ contains
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
               c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, min_energy, max_energy, &
               spectrum%energy_step, wdrho_b)
-        call batch_end(tdrho_b)
-        call batch_end(wdrho_b)
+        call tdrho_b%end()
+        call wdrho_b%end()
         do e_point = e_start, e_end
           point_tmp(read_count, e_point) = - wdrho_a(e_point, 1, 1)
         end do
@@ -722,7 +722,7 @@ contains
       do i_energy = e_start, e_end
         write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
         call dio_function_output(outp%how, trim(filename), & 
-           trim('density'), outp%namespace, mesh, point_tmp(:, i_energy), &
+           trim('density'), namespace, mesh, point_tmp(:, i_energy), &
            units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       end do
       call restart_end(restart)
@@ -733,7 +733,7 @@ contains
           write(filename,'(a14,i0.7,a1)')'wd.general/wd.',i_energy,'/'
           call io_binary_read(trim(filename)//'density.obf', mesh%np, read_rff, ierr)
           call dio_function_output(outp%how, trim(filename), & 
-             trim('density'), outp%namespace, mesh, read_rff, &
+             trim('density'), namespace, mesh, read_rff, &
              units_out%length**(-mesh%sb%dim), ierr, geo = geo)
         end do
       end if
@@ -870,7 +870,7 @@ contains
     !TODO: add variable ConvertFunctionType to select the type(density, wfs, potential, ...) 
     !      and units of the conversion.
     units = units_out%length**(-mesh%sb%dim)
-    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), outp%namespace, mesh, & 
+    call dio_function_output(outp%how, trim(out_folder), trim(out_filename), namespace, mesh, & 
       scalar_ff, units, ierr, geo = geo)
 
     SAFE_DEALLOCATE_A(tmp_ff)

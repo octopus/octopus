@@ -92,33 +92,33 @@ program harmonic_spectrum
   select case(mode)
   case(HS_FROM_MULT)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-mult-maxima', default_namespace, spectrum, pol, vec, w0)
+      call spectrum_hs_from_mult(spectrum, default_namespace, 'hs-mult-maxima', pol, vec, w0)
     else
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from multipoles."
         call messages_info(1)
-        call spectrum_hs_ar_from_mult('hs-mult', default_namespace, spectrum, vec)
+        call spectrum_hs_ar_from_mult(spectrum, default_namespace, 'hs-mult', vec)
       else
-        call spectrum_hs_from_mult('hs-mult', default_namespace, spectrum, pol, vec)
+        call spectrum_hs_from_mult(spectrum, default_namespace, 'hs-mult', pol, vec)
       end if
     end if
   case(HS_FROM_ACC)
     if(get_maxima) then
-      call spectrum_hs_from_acc('hs-acc-maxima', default_namespace, spectrum, pol, vec, w0)
+      call spectrum_hs_from_acc(spectrum, default_namespace, 'hs-acc-maxima', pol, vec, w0)
     else
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from acceleration."
         call messages_info(1)
-        call spectrum_hs_ar_from_acc('hs-acc', default_namespace, spectrum, vec)
+        call spectrum_hs_ar_from_acc(spectrum, default_namespace, 'hs-acc', vec)
       else
-       call spectrum_hs_from_acc('hs-acc', default_namespace, spectrum, pol, vec)
+       call spectrum_hs_from_acc(spectrum, default_namespace, 'hs-acc', pol, vec)
       end if
     end if
   case(HS_FROM_CURR)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-curr-maxima', default_namespace, spectrum, pol, vec, w0)
+      call spectrum_hs_from_mult(spectrum, default_namespace, 'hs-curr-maxima', pol, vec, w0)
     else
-      call spectrum_hs_from_current('hs-curr', default_namespace, spectrum, pol, vec)
+      call spectrum_hs_from_current(spectrum, default_namespace, 'hs-curr', pol, vec)
     end if  
   case default
     message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'

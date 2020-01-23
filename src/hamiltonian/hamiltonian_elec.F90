@@ -27,6 +27,7 @@ module hamiltonian_elec_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
+  use exchange_operator_oct_m
   use hamiltonian_elec_base_oct_m
   use epot_oct_m
   use gauge_field_oct_m
@@ -60,6 +61,7 @@ module hamiltonian_elec_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
 
@@ -70,17 +72,14 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_t,                   &
     hamiltonian_elec_init,                &
     hamiltonian_elec_end,                 &
-    hamiltonian_elec_span,                &
-    dhamiltonian_elec_apply,              &
-    zhamiltonian_elec_apply,              &
+    dhamiltonian_elec_apply_single,       &
+    zhamiltonian_elec_apply_single,       &
     dhamiltonian_elec_apply_all,          &
     zhamiltonian_elec_apply_all,          &
     dhamiltonian_elec_apply_batch,        &
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dhamiltonian_elec_apply_magnus,       &
-    zhamiltonian_elec_apply_magnus,       &
     dmagnus,                         &
     zmagnus,                         &
     dvmask,                          &
@@ -91,14 +90,11 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_adjoint,             &
     hamiltonian_elec_not_adjoint,         &
     hamiltonian_elec_epot_generate,       &
+    hamiltonian_elec_needs_current,       &
     hamiltonian_elec_update,              &
     hamiltonian_elec_update2,             &
     hamiltonian_elec_get_time,            &
     hamiltonian_elec_apply_packed,        &
-    dexchange_operator_single,       &
-    zexchange_operator_single,       &
-    dscdm_exchange_operator,         &
-    zscdm_exchange_operator,         &
     zhamiltonian_elec_apply_atom,         &
     hamiltonian_elec_dump_vhxc,           &
     hamiltonian_elec_load_vhxc,           &
@@ -142,17 +138,11 @@ module hamiltonian_elec_oct_m
     !> absorbing boundaries
     logical, private :: adjoint
 
-    !> Spectral range
-    FLOAT :: spectral_middle_point
-    FLOAT :: spectral_half_span
-
     !> Mass of the particle (in most cases, mass = 1, electron mass)
     FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
     FLOAT, private :: mass_scaling(MAX_DIM)
 
-    !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
-    type(states_elec_t), pointer :: hf_st
     !> use the SCDM method to compute the action of the Fock operator
     logical :: scdm_EXX
 
@@ -177,10 +167,16 @@ module hamiltonian_elec_oct_m
 
     logical, private :: time_zero
 
-  contains
-  
-    procedure :: is_hermitian => hamiltonian_elec_hermitian
+    type(exchange_operator_t), public :: exxop
+    type(namespace_t), pointer :: namespace
 
+  contains
+    procedure :: update_span => hamiltonian_elec_span
+    procedure :: dapply => dhamiltonian_elec_apply
+    procedure :: zapply => zhamiltonian_elec_apply
+    procedure :: dmagnus_apply => dhamiltonian_elec_magnus_apply
+    procedure :: zmagnus_apply => zhamiltonian_elec_magnus_apply
+    procedure :: is_hermitian => hamiltonian_elec_hermitian
   end type hamiltonian_elec_t
 
   integer, public, parameter :: &
@@ -202,7 +198,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
-    type(namespace_t),                          intent(in)    :: namespace
+    type(namespace_t),                  target, intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -210,7 +206,7 @@ contains
     type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
 
-    integer :: iline, icol
+    integer :: iline, icol, il
     integer :: ncols
     type(block_t) :: blk
     type(profile_t), save :: prof
@@ -226,6 +222,8 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
+
+    hm%namespace => namespace
 
     !%Variable ParticleMass
     !%Type float
@@ -253,7 +251,7 @@ contains
     if(parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       call messages_experimental('RashbaSpinOrbitCoupling')
     end if
@@ -298,12 +296,12 @@ contains
     !Initialize Poisson solvers
     nullify(hm%psolver)
     SAFE_ALLOCATE(hm%psolver)
-    call poisson_init(hm%psolver, namespace, gr%der, mc)
+    call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
 
     nullify(hm%psolver_fine)
     if (gr%have_fine_mesh) then
       SAFE_ALLOCATE(hm%psolver_fine)
-      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, label = " (fine mesh)")
+      call poisson_init(hm%psolver_fine, namespace, gr%fine%der, mc, st%qtot, label = " (fine mesh)")
     else
       hm%psolver_fine => hm%psolver
     end if
@@ -395,8 +393,6 @@ contains
         call parse_block_end(blk)
     end if
 
-    nullify(hm%hf_st)
-
     hm%inh_term = .false.
     call oct_exchange_remove(hm%oct_exchange)
 
@@ -452,8 +448,8 @@ contains
 
     call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
     if (hm%pcm%run_pcm) then
-      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
-      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh")
+      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
     end if
     
     !%Variable SCDM_EXX
@@ -468,12 +464,12 @@ contains
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
+        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)", namespace=namespace)
       end if
       message(1) = "Info: Using SCDM for exact exchange"
       call messages_info(1)
 
-      call scdm_init(hm%hf_st, namespace, hm%der, hm%psolver%cube, hm%scdm)
+      call scdm_init(hm%scdm, namespace, st, hm%der, hm%psolver%cube)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -481,7 +477,7 @@ contains
       call messages_experimental('Hartree-Fock parallel in states')
 #else
       call messages_write('Hartree-Fock parallel in states required MPI 2')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
 #endif
     end if
 
@@ -500,6 +496,36 @@ contains
 
     call scissor_nullify(hm%scissor)
 
+    !Cam parameters are irrelevant here and are updated later
+    call exchange_operator_nullify(hm%exxop)
+    call exchange_operator_init(hm%exxop, namespace, hm%d, gr%sb, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+
+    if (hm%apply_packed .and. accel_is_enabled()) then
+      ! Check if we can actually apply the hamiltonian packed
+      if (gr%mesh%use_curvilinear) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+        hm%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (.not. simul_box_is_periodic(gr%mesh%sb)) then
+        do il = 1, hm%ep%no_lasers
+          if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
+            hm%apply_packed = .false.
+            call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
+            call messages_warning(namespace=namespace)
+            exit
+          end if
+        end do
+      end if
+    end if
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
 
@@ -509,6 +535,7 @@ contains
     subroutine init_phase
       integer :: ip, ik, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      
 
       PUSH_SUB(hamiltonian_elec_init.init_phase)
 
@@ -517,6 +544,39 @@ contains
         SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
         hm%hm_base%phase_corr = M_ONE
       end if
+
+      if(gr%der%boundaries%spiralBC) then
+        sp = gr%mesh%np
+        if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+
+        ! We decided to allocate the array from 1:np_part-sp as this is less error prone when passing 
+        ! the array to other routines, or in particular creating a C-style pointer from phase_spiral(1,1).
+        ! We will also update phase_corr and possible other similar arrays.
+
+        SAFE_ALLOCATE(hm%hm_base%phase_spiral(1:gr%mesh%np_part-sp, 1:2))
+
+        ! loop over boundary points
+        do ip = sp + 1, gr%mesh%np_part
+          !translate to a global point
+          ip_global = ip
+#ifdef HAVE_MPI
+          if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
+#endif
+          ! get corresponding inner point
+          ip_inner = mesh_periodic_point(gr%mesh, ip_global,ip)
+          x_global = mesh_x_global(gr%mesh, ip_inner)
+          hm%hm_base%phase_spiral(ip-sp, 1) = &
+            exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+          hm%hm_base%phase_spiral(ip-sp, 2) = &
+            exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+        end do
+
+        if(accel_is_enabled()) then
+          call accel_create_buffer(hm%hm_base%buff_phase_spiral, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, (gr%mesh%np_part-sp)*2)
+          call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-sp)*2, hm%hm_base%phase_spiral)
+        endif
+      end if
+      
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -536,7 +596,7 @@ contains
             if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
 #endif
             ! get corresponding inner point
-            ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+            ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
 
             ! compute phase correction from global coordinate (opposite sign!)
             x_global = mesh_x_global(gr%mesh, ip_inner)
@@ -554,7 +614,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, namespace)
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, gr%der%boundaries, namespace )
       end if
 
       POP_SUB(hamiltonian_elec_init.init_phase)
@@ -575,8 +635,13 @@ contains
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
+    if(allocated(hm%hm_base%phase_spiral) .and. accel_is_enabled()) then
+      call accel_release_buffer(hm%hm_base%buff_phase_spiral)
+    end if
+
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase_spiral)
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -608,16 +673,12 @@ contains
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
+    call exchange_operator_end(hm%exxop)
     call lda_u_end(hm%lda_u)
 
-    ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
-    if(associated(hm%hf_st))  then
-      if(hm%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%hf_st)
-      call states_elec_end(hm%hf_st)
-      SAFE_DEALLOCATE_P(hm%hf_st)
-    end if
-
     SAFE_DEALLOCATE_P(hm%energy)
+
+    nullify(hm%namespace)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
     POP_SUB(hamiltonian_elec_end)
@@ -639,8 +700,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_span(hm, delta, emin)
-    type(hamiltonian_elec_t), intent(inout) :: hm
-    FLOAT,               intent(in)    :: delta, emin
+    class(hamiltonian_elec_t), intent(inout) :: hm
+    FLOAT,                     intent(in)    :: delta, emin
 
     PUSH_SUB(hamiltonian_elec_span)
 
@@ -873,10 +934,11 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset
+      integer :: ik, imat, nmat, max_npoints, offset, idim
       integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       logical :: compute_phase_correction
+      integer :: ndim
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
@@ -885,7 +947,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -930,7 +992,7 @@ contains
               if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
               ! get corresponding inner point
-              ip_inner = mesh_periodic_point(mesh, ip_global)
+              ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 
               ! compute phase correction from global coordinate (opposite sign!)
               x_global = mesh_x_global(mesh, ip_inner)
@@ -948,7 +1010,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, namespace, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, this%der%boundaries, namespace, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
       end if
@@ -960,7 +1022,9 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+          ndim = this%d%dim
+          if(this%der%boundaries%spiralBC) ndim = ndim + 1
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:ndim, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
@@ -971,14 +1035,18 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            !$omp parallel do schedule(static)
-            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            ndim = this%d%dim
+            if(this%der%boundaries%spiralBC) ndim = ndim + 1
+            do idim = 1, ndim
+              !$omp parallel do schedule(static)
+              do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+              end do
             end do
 
             if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
               call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do
@@ -1007,7 +1075,22 @@ contains
     call epot_generate(this%ep, namespace, gr, this%geo, st)
     call hamiltonian_elec_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_elec_update(this, gr%mesh, namespace, time)
-   
+
+    ! Check if projectors are still compatible with apply_packed on GPU
+    if (this%apply_packed .and. accel_is_enabled()) then
+      if (this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
+        call messages_warning(namespace=namespace)
+      end if
+
+      if (hamiltonian_elec_base_projector_self_overlap(this%hm_base)) then
+        this%apply_packed = .false.
+        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
+        call messages_warning(namespace=namespace)
+      end if
+    end if
+
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
@@ -1037,68 +1120,10 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical function hamiltonian_elec_apply_packed(this, mesh) result(apply)
+  logical function hamiltonian_elec_apply_packed(this) result(apply)
     type(hamiltonian_elec_t),   intent(in) :: this
-    type(mesh_t),          intent(in) :: mesh
-
-    logical, save :: warning_shown = .false.
 
     apply = this%apply_packed
-    ! comment these out; they are tested in the test suite
-    !if(mesh%use_curvilinear) apply = .false.
-    !if(hamiltonian_elec_base_has_magnetic(this%hm_base)) apply = .false.
-    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    
-    !if(this%family_is_mgga_with_exc)  apply = .false.
-    ! keep these checks; currently no tests for these in the test suite
-
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) then
-      call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
-      call messages_warning()
-      apply = .false.
-    end if
-    
-    if(this%scissor%apply) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as the scissor operator is enabled.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
-    if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-    
-    if(mesh%use_curvilinear .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-    
-    if(hamiltonian_elec_base_projector_self_overlap(this%hm_base) .and. accel_is_enabled()) then
-      if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
-        call messages_warning()
-      end if
-      apply = .false.
-    end if
-
-    warning_shown = .true.
 
   end function hamiltonian_elec_apply_packed
 
@@ -1452,7 +1477,7 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset
+      integer :: ik, imat, nmat, max_npoints, offset, idim
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
@@ -1462,7 +1487,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, this%der%boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -1499,7 +1524,7 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:this%d%dim, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
@@ -1510,14 +1535,16 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            !$omp parallel do schedule(static)
-            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            do idim = 1, this%d%dim
+              !$omp parallel do schedule(static)
+              do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+              end do
             end do
 
             if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
               call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do
@@ -1547,6 +1574,24 @@ contains
    POP_SUB(hamiltonian_elec_set_vhxc)
  end subroutine hamiltonian_elec_set_vhxc
 
+ logical function hamiltonian_elec_needs_current(hm, states_are_real)
+    type(hamiltonian_elec_t), intent(in) :: hm
+    logical,                  intent(in) :: states_are_real
+
+    hamiltonian_elec_needs_current = .false.
+
+    if( hm%self_induced_magnetic ) then
+      if(.not. states_are_real) then
+        hamiltonian_elec_needs_current = .true.
+      else
+        message(1) = 'No current density for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
+    end if
+
+  end function hamiltonian_elec_needs_current
+
+  
 
 #include "undef.F90"
 #include "real.F90"

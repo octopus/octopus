@@ -135,7 +135,8 @@ module profiling_oct_m
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
        PROFILING_MEMORY_FULL = 4, &
-       PROFILING_LIKWID      = 8
+       PROFILING_LIKWID      = 8, &
+       PROFILING_IO          = 16
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
@@ -165,6 +166,8 @@ module profiling_oct_m
     character(len=6)         :: file_number
 
     logical                  :: all_nodes
+
+    logical                  :: output_yaml
   end type profile_vars_t
 
   type(profile_vars_t), target, public :: prof_vars
@@ -212,6 +215,8 @@ contains
     !% log is reported of every allocation and deallocation.
     !%Option likwid 8
     !% Enable instrumentation using LIKWID.
+    !%Option prof_io 16
+    !% Count the number of file open and close.
     !%End
 
     call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
@@ -291,6 +296,16 @@ contains
 #endif
     end if
 
+    !%Variable ProfilingOutputYAML
+    !%Default no
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether the profiling output is additionally
+    !% written to a YAML file.
+    !%End
+    call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
+
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
     POP_SUB(profiling_init)
@@ -302,11 +317,7 @@ contains
 
       PUSH_SUB(profiling_init.get_output_dir)
 
-      prof_vars%file_number = '0000'
-
-      if(mpi_world%size > 1) then
-        write(prof_vars%file_number, '(i6.6)') mpi_world%rank
-      end if
+      write(prof_vars%file_number, '(i6.6)') mpi_world%rank
 
       prof_vars%output_dir = 'profiling'
 
@@ -323,6 +334,10 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer :: ii
     real(8), parameter :: megabyte = 1048576.0_8
+    integer(8) :: io_open_count, io_close_count
+#ifdef HAVE_MPI
+    integer(8) :: io_open_count_red, io_close_count_red
+#endif
 
     if(.not. in_profiling_mode) return
     PUSH_SUB(profiling_end)
@@ -372,6 +387,26 @@ contains
 #ifdef HAVE_LIKWID
       call likwid_markerClose()
 #endif
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_IO) /= 0) then
+      call messages_print_stress(stdout, "IO profiling information")
+      io_open_count = io_get_open_count()
+      io_close_count = io_get_close_count()
+      write(message(1), '(a,i10)') 'Number of file open  = ', io_open_count
+      write(message(2), '(a,i10)') 'Number of file close = ', io_close_count
+#ifdef HAVE_MPI
+      call MPI_Allreduce(io_open_count, io_open_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      call MPI_Allreduce(io_close_count, io_close_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      write(message(3), '(a,i10)') 'Global number of file open  = ', io_open_count_red
+      write(message(4), '(a,i10)') 'Global number of file close = ', io_close_count_red
+      call messages_info(4)
+#else
+      call messages_info(2)
+#endif
+      call messages_print_stress(stdout)
     end if
 
     POP_SUB(profiling_end)
@@ -911,6 +946,36 @@ contains
 
     call io_close(iunit)
 
+    if(prof_vars%output_yaml) then
+      filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number//'.yaml'
+      iunit = io_open(trim(filename), namespace, action='write')
+      if(iunit < 0) then
+        message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
+        call messages_warning(1)
+        POP_SUB(profiling_output)
+        return
+      end if
+      write(iunit, '(2a)') 'schema: [num_calls, total_time, total_throughput, ', &
+       'total_bandwidth, self_time, self_throughput, self_bandwidth]'
+      write(iunit, '(a)') 'data:'
+
+      do ii = 1, prof_vars%last_profile
+        prof =>  prof_vars%profile_list(position(ii))%p
+        if(profile_num_calls(prof) == 0) cycle
+        write(iunit, '(a,a,a,i6,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a)')         &
+             '  ', profile_label(prof), ': [',     &
+             profile_num_calls(prof),        ', ', &
+             profile_total_time(prof),       ', ', &
+             profile_total_throughput(prof), ', ', &
+             profile_total_bandwidth(prof),  ', ', &
+             profile_self_time(prof),        ', ', &
+             profile_self_throughput(prof),  ', ', &
+             profile_self_bandwidth(prof),   ']'
+      end do
+
+      call io_close(iunit)
+    end if
+
     SAFE_DEALLOCATE_A(selftime)
     SAFE_DEALLOCATE_A(position)
     
@@ -1065,6 +1130,7 @@ contains
     end if
 
   end subroutine profiling_memory_deallocate
+
 
 end module profiling_oct_m
 

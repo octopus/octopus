@@ -137,9 +137,8 @@ contains
     integer,           intent(in)    :: nn(3) !> pnfft bandwidths 
     logical, optional, intent(in)    :: optimize
 
-    integer :: ii, jj, idir, my_nn(3)
+    integer :: ii, my_nn(3)
     logical :: optimize_
-    integer :: pnfft_flags
 
     PUSH_SUB(pnfft_init_params)
 
@@ -386,10 +385,10 @@ contains
     type(namespace_t),intent(in)    :: namespace
     FLOAT,            intent(in)    :: X(:,:) !X(i, dim)
 
-    FLOAT   :: len(3), cc(3), eps,temp, lo(3), up(3), lo_g(3), up_g(3)
+    FLOAT   :: len(3), cc(3), eps,temp, lo(3), up(3)
     integer :: ii, idir, i1, i2, i3
     FLOAT, allocatable ::  dX(:,:) 
-    integer :: j,t
+!    integer :: j,t
 
     PUSH_SUB(pnfft_set_sp_nodes)
  
@@ -489,9 +488,11 @@ contains
     type(namespace_t), intent(in) :: namespace 
 
     integer          :: nn, i1, i2, i3 
-    integer          :: npart, ierr
     integer          :: iunit          !< For debug output to files.
     character(len=3) :: filenum
+#ifdef HAVE_MPI
+    integer          :: ierr
+#endif
 
     PUSH_SUB(pnfft_messages_debug)
 

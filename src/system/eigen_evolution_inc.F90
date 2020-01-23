@@ -17,7 +17,8 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, converged, ik, diff, tau)
+  type(namespace_t),                intent(in)    :: namespace
   type(mesh_t),             target, intent(in)    :: mesh
   type(states_elec_t),              intent(inout) :: st
   type(hamiltonian_elec_t), target, intent(inout) :: hm
@@ -32,9 +33,9 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
   integer :: ib, minst, maxst, ist, iter, maxiter, conv, convb, matvec, i
   R_TYPE, allocatable :: c(:, :), zeig(:), res(:)
   FLOAT, allocatable :: eig(:)
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
 #if defined(R_TREAL)
-  type(batch_t) :: zpsib
+  type(wfs_elec_t) :: zpsib
   CMPLX, allocatable :: zpsi(:,:)
   FLOAT, allocatable :: psi(:,:)
 #endif
@@ -70,25 +71,37 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
 #if defined(R_TREAL)
     ! The application of the exponential for the real case is still done one state at a time, as we need
     ! to do a couple of type conversions. To avoid this, we need either a function to convert the
-    ! type of a batch, or to modify the batch_copy_data routine to allow the copy between batches of
+    ! type of a batch, or to modify the batch_copy_data_to routine to allow the copy between batches of
     ! different types.
     do ist = conv + 1, st%nst
-      call batch_init(zpsib, hm%d%dim, 1)
+      call wfs_elec_init(zpsib, hm%d%dim, 1, ik)
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
-      call batch_add_state(zpsib, ist, zpsi)
+      call zpsib%add_state(ist, zpsi)
 
-      call exponential_apply_batch(te, mesh, hm, zpsib, ik, -tau, imag_time = .true.)
+      call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, zpsib)
+      call exponential_apply_batch(te, namespace, mesh, hm, zpsib, -tau, imag_time = .true.)
+      call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, zpsib)
 
       call batch_get_state(zpsib, 1, mesh%np, zpsi)
       psi(1:mesh%np, 1:st%d%dim) = R_TOTYPE(zpsi(1:mesh%np, 1:st%d%dim))
       call states_elec_set_state(st, mesh, ist, ik, psi)
-      call batch_end(zpsib)
+      call zpsib%end()
       matvec = matvec + te%exp_order
     end do
 #else
     do ib = convb + 1, st%group%block_end
-      call exponential_apply_batch(te, mesh, hm, st%group%psib(ib, ik), ik, -tau, imag_time = .true.)
+      if (hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_pack()
+      end if
+
+      call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
+      call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), -tau, imag_time = .true.)
+      call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
       matvec = matvec + te%exp_order*(states_elec_block_max(st, ib) - states_elec_block_min(st, ib) + 1)
+
+      if (hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_unpack()
+      end if
     end do
 #endif
 
@@ -102,25 +115,25 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
       c(1:st%nst, i) = c(1:st%nst, i)/sqrt(eig(i))
     end do
 
-    call states_elec_rotate(mesh, st, c, ik)
+    call states_elec_rotate(st, namespace, mesh, c, ik)
     
     ! Get the eigenvalues and the residues.
     do ib = convb + 1, st%group%block_end
+      if (hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_pack()
+      end if
+
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_pack(st%group%psib(ib, ik))
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
-
-      call X(hamiltonian_elec_apply_batch)(hm, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, st%group%psib(ib, ik), hpsib, zeig(minst:maxst))
       st%eigenval(minst:maxst, ik) = R_REAL(zeig(minst:maxst))
       call batch_axpy(mesh%np, -st%eigenval(minst:maxst, ik), st%group%psib(ib, ik), hpsib)
       call mesh_batch_nrm2(mesh, hpsib, diff(minst:maxst))
-      call batch_end(hpsib)
-
-      if (hamiltonian_elec_apply_packed(hm, mesh)) call batch_unpack(st%group%psib(ib, ik), copy=.false.)
+      call hpsib%end()
 
       if (debug%info) then
         do ist = minst, maxst
@@ -130,6 +143,9 @@ subroutine X(eigensolver_evolution)(mesh, st, hm, te, tol, niter, converged, ik,
         end do
       end if
 
+      if (hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_unpack(copy=.false.)
+      end if
     end do
 
     ! And check for convergence. Note that they must be converged *in order*, so that they can be frozen.

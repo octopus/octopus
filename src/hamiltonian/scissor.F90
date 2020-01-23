@@ -39,6 +39,7 @@ module scissor_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -87,10 +88,10 @@ contains
   ASSERT(.not. this%apply)
   ASSERT(.not. states_are_real(st))
 
-  call messages_print_stress(stdout, "TDScissor")
+  call messages_print_stress(stdout, "TDScissor", namespace=namespace)
 
-  if(this%gs_st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains")
+  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
   this%gap = real(gap)
@@ -103,13 +104,13 @@ contains
   call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
-     call messages_fatal(1)
+     call messages_fatal(1, namespace=namespace)
   end if
 
   call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
   call restart_end(restart_gs)
 
@@ -141,7 +142,7 @@ contains
     SAFE_DEALLOCATE_A(phase)
   end if
 
-  call messages_print_stress(stdout) 
+  call messages_print_stress(stdout, namespace=namespace)
 
   POP_SUB(scissor_init)
  end subroutine scissor_init

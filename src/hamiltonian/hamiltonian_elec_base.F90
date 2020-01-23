@@ -22,6 +22,7 @@ module hamiltonian_elec_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -45,12 +46,13 @@ module hamiltonian_elec_base_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
   private
 
-  public ::                                    &
+  public ::                                         &
     hamiltonian_elec_base_t,                        &
     dhamiltonian_elec_base_local,                   &
     zhamiltonian_elec_base_local,                   &
@@ -75,10 +77,14 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_update,                   &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
+    dhamiltonian_elec_base_phase_spiral,            &
+    zhamiltonian_elec_base_phase_spiral,            &
     dhamiltonian_elec_base_nlocal_force,            &
     zhamiltonian_elec_base_nlocal_force,            &
-    projection_t,                              &
-    hamiltonian_elec_base_projector_self_overlap
+    projection_t,                                   &
+    hamiltonian_elec_base_projector_self_overlap,   &
+    hamiltonian_elec_base_set_phase_corr,           &
+    hamiltonian_elec_base_unset_phase_corr
 
   !> This object stores and applies an electromagnetic potential that
   !! can be represented by different types of potentials.
@@ -102,7 +108,7 @@ module hamiltonian_elec_base_oct_m
     integer,                               public :: total_points
     integer                                       :: max_nprojs
     logical                                       :: projector_mix
-    CMPLX,                    allocatable, public :: projector_phases(:, :, :)
+    CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
     integer,                  allocatable         :: regions(:)
@@ -118,9 +124,12 @@ module hamiltonian_elec_base_oct_m
     type(accel_mem_t)                             :: buff_mix
     CMPLX,                    pointer,     public :: phase(:, :)
     CMPLX,                    allocatable, public :: phase_corr(:,:)
+    CMPLX,                    allocatable, public :: phase_spiral(:,:)
     type(accel_mem_t),                     public :: buff_phase
+    type(accel_mem_t),                     public :: buff_phase_spiral
     integer,                               public :: buff_phase_qn_start
     logical                                       :: projector_self_overlap  !< if .true. some projectors overlap with themselves
+    FLOAT,                    pointer,     public :: spin(:,:,:)
   end type hamiltonian_elec_base_t
 
   type projection_t
@@ -168,6 +177,7 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    nullify(this%spin)
     this%projector_self_overlap = .false.
     
     POP_SUB(hamiltonian_elec_base_init)
@@ -189,6 +199,8 @@ contains
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_elec_base_destroy_proj(this)
+
+    nullify(this%spin)
 
     POP_SUB(hamiltonian_elec_base_end)
   end subroutine hamiltonian_elec_base_end
@@ -789,6 +801,59 @@ contains
     
     projector_self_overlap = this%projector_self_overlap
   end function hamiltonian_elec_base_projector_self_overlap
+
+ ! ----------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_set_phase_corr(hm_base, mesh, psib)
+    type(hamiltonian_elec_base_t), intent(in) :: hm_base
+    type(mesh_t),                  intent(in) :: mesh
+    type(wfs_elec_t),           intent(inout) :: psib
+
+    logical :: phase_correction
+
+    PUSH_SUB(hamiltonian_elec_base_set_phase_corr)
+
+    ! check if we only want a phase correction for the boundary points
+    phase_correction = .false.
+    if(associated(hm_base%phase)) phase_correction = .true.
+    if(accel_is_enabled()) phase_correction = .false.
+
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .false., psib)
+    end if
+
+    POP_SUB(hamiltonian_elec_base_set_phase_corr)
+
+  end subroutine hamiltonian_elec_base_set_phase_corr
+
+ ! ----------------------------------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_unset_phase_corr(hm_base, mesh, psib)
+    type(hamiltonian_elec_base_t), intent(in) :: hm_base
+    type(mesh_t),                  intent(in) :: mesh
+    type(wfs_elec_t),           intent(inout) :: psib
+
+    logical :: phase_correction
+
+    PUSH_SUB(hamiltonian_elec_base_unset_phase_corr)
+
+    ! check if we only want a phase correction for the boundary points
+    phase_correction = .false.
+    if(associated(hm_base%phase)) phase_correction = .true.
+    if(accel_is_enabled()) phase_correction = .false.
+
+    !We apply the phase only to np points, and the phase for the np+1 to np_part points
+    !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call zhamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .true., psib)
+    end if
+
+    POP_SUB(hamiltonian_elec_base_unset_phase_corr)
+
+  end subroutine hamiltonian_elec_base_unset_phase_corr
+
 
 #include "undef.F90"
 #include "real.F90"

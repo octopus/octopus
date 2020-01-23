@@ -275,7 +275,7 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
 
       call messages_experimental("Runge-Kutta 4 propagator")
@@ -292,7 +292,7 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
 
       call messages_experimental("Runge-Kutta 2 propagator")
@@ -308,13 +308,13 @@ contains
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
+      call messages_fatal(3, namespace=namespace)
 #endif
     case(PROP_MAGNUS)
       call messages_experimental("Magnus propagator")
       if (family_is_mgga_with_exc) then
         message(1) = "Magnus propagator with MGGA"
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_QOCT_TDDFT_PROPAGATOR)
@@ -339,7 +339,7 @@ contains
          tr%method /= PROP_RUNGE_KUTTA2 .and. &
          tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
 
@@ -382,7 +382,7 @@ contains
 
       if(tr%method /= PROP_ETRS) then
         call messages_write('TDStepsWithSelfConsistency only works with the ETRS propagator')
-        call messages_fatal()
+        call messages_fatal(namespace=namespace)
       end if
     end if
 
@@ -529,7 +529,9 @@ contains
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
     !i.e. we perform the SCDM procedure and overwrite the states in st
-    if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,hm%scdm)
+    if (hm%scdm_EXX) then
+      call scdm_rotate_states(hm%scdm, namespace, st, gr%mesh)
+    end if
 
     if(present(scsteps)) scsteps = 1
    
@@ -572,13 +574,13 @@ contains
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
-        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
+        call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt, namespace)
         generate = .true.
       end if
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time)
+      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
@@ -586,7 +588,7 @@ contains
     end if
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
-    if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
+    if(update_energy_) call energy_calc_total(namespace, hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
@@ -606,7 +608,7 @@ contains
     end if
 
     !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -660,19 +662,19 @@ contains
     PUSH_SUB(propagator_dt_bo)
 
     ! move the hamiltonian to time t
-    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
+    call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt, namespace)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
+      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt, namespace)
     end if
 
     !TODO: we should update the occupation matrices here 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      call messages_not_implemented("DFT+U with propagator_dt_bo")  
+      call messages_not_implemented("DFT+U with propagator_dt_bo", namespace=namespace)
     end if
 
     call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = iter*dt)
@@ -681,7 +683,7 @@ contains
     call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
-    call energy_calc_total(hm, gr, st, iunit = -1)
+    call energy_calc_total(namespace, hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
     call hamiltonian_elec_epot_generate(hm, namespace, gr, geo, st, time = iter*dt)

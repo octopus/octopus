@@ -20,6 +20,7 @@
 
 module lda_u_oct_m
   use atomic_orbital_oct_m
+  use boundaries_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
@@ -52,7 +53,8 @@ module lda_u_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_system_oct_m
- 
+  use wfs_elec_oct_m
+
   implicit none
 
   private
@@ -78,12 +80,16 @@ module lda_u_oct_m
        zlda_u_update_potential,         &
        lda_u_get_effectiveU,            &
        lda_u_set_effectiveU,            &
+       lda_u_get_effectiveV,            &
+       lda_u_set_effectiveV,            &
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
        zlda_u_force,                    &
        lda_u_write_info,                &
-       compute_ACBNO_U_kanamori
+       compute_ACBNO_U_kanamori,        &
+       dcompute_dftu_energy,            &
+       zcompute_dftu_energy
 
 
   type lda_u_t
@@ -129,9 +135,9 @@ module lda_u_oct_m
 
     type(distributed_t) :: orbs_dist
 
-    integer             :: maxneighbors       
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_IJ(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_IJ(:,:,:,:,:)
+    integer, public     :: maxneighbors       
+    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:)
+    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -182,8 +188,8 @@ contains
   nullify(this%orbsets)
   nullify(this%dn_ij)
   nullify(this%zn_ij)
-  nullify(this%dn_alt_IJ)
-  nullify(this%zn_alt_IJ)
+  nullify(this%dn_alt_ij)
+  nullify(this%zn_alt_ij)
 
   call distributed_nullify(this%orbs_dist, 0)
 
@@ -210,7 +216,7 @@ contains
 
    ASSERT(.not. (level == DFT_U_NONE))
 
-   call messages_print_stress(stdout, "DFT+U")
+   call messages_print_stress(stdout, "DFT+U", namespace=namespace)
    if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
    this%level = level
 
@@ -245,7 +251,7 @@ contains
    call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
    if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
    if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
-     call messages_not_implemented("AMF double couting with spinors.")
+     call messages_not_implemented("AMF double couting with spinors.", namespace=namespace)
    end if
 
    if( this%level == DFT_U_ACBN0 ) then
@@ -295,7 +301,7 @@ contains
      call parse_variable(namespace, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
      call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
      if(this%rot_inv .and. st%d%ispin == SPINORS ) then
-       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.", namespace=namespace)
      end if
 
      !%Variable ACBN0IntersiteInteraction
@@ -316,7 +322,7 @@ contains
        !This is a non local operator. To make this working, one probably needs to apply the 
        ! symmetries to the generalized occupation matrices 
        if(gr%sb%kpoints%use_symmetries) then
-         call messages_not_implemented("Intersite interaction with kpoint symmetries")
+         call messages_not_implemented("Intersite interaction with kpoint symmetries", namespace=namespace)
        end if
  
        !%Variable ACBN0IntersiteCutoff
@@ -329,7 +335,7 @@ contains
        call parse_variable(namespace, 'ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
        if(abs(this%intersite_radius) < M_EPSILON) then
          call messages_write("ACBN0IntersiteCutoff must be greater than 0")
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
      end if
 
@@ -387,7 +393,7 @@ contains
        else
          ASSERT(.not.states_are_real(st))
          write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver)
+         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver, namespace)
        end if
      end if
 
@@ -406,7 +412,7 @@ contains
        this%maxnorbs = parse_block_n(blk) 
        if(this%maxnorbs <1) then
          write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
        end if
        SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
        do is = 1, this%maxnorbs
@@ -415,7 +421,7 @@ contains
        call parse_block_end(blk)
      else
        write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
-       call messages_fatal(1)
+       call messages_fatal(1, namespace=namespace)
      end if
 
      if (states_are_real(st)) then
@@ -443,7 +449,7 @@ contains
 
    end if
 
-   call messages_print_stress(stdout)
+   call messages_print_stress(stdout, namespace=namespace)
 
    POP_SUB(lda_u_init)
  end subroutine lda_u_init
@@ -469,8 +475,8 @@ contains
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
    SAFE_DEALLOCATE_P(this%dn_ij)
    SAFE_DEALLOCATE_P(this%zn_ij)
-   SAFE_DEALLOCATE_P(this%dn_alt_IJ)
-   SAFE_DEALLOCATE_P(this%zn_alt_IJ)
+   SAFE_DEALLOCATE_P(this%dn_alt_ij)
+   SAFE_DEALLOCATE_P(this%zn_alt_ij)
    SAFE_DEALLOCATE_A(this%basisstates)
 
    nullify(this%orbsets)
@@ -535,23 +541,30 @@ contains
       SAFE_DEALLOCATE_P(this%dn_ij)
       SAFE_ALLOCATE(this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
-      SAFE_DEALLOCATE_P(this%dn_alt_IJ)
-      SAFE_ALLOCATE(this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+      SAFE_DEALLOCATE_P(this%dn_alt_ij)
+      SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
     else
       SAFE_DEALLOCATE_P(this%zn_ij)
       SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
-      SAFE_DEALLOCATE_P(this%zn_alt_IJ)
-      SAFE_ALLOCATE(this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+      SAFE_DEALLOCATE_P(this%zn_alt_ij)
+      SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
     end if
   end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
   if(has_phase) then
-    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, namespace)
+    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries, namespace)
+  else
+    !In case there is no phase, we perform the orthogonalization here
+    if(this%basis%orthogonalization) then
+      call dloewdin_orthogonalize(this%basis, st%d%kpt, namespace)
+    else
+      if(debug%info) call dloewdin_info(this%basis, st%d%kpt, namespace)
+    end if  
   end if
 
   POP_SUB(lda_u_update_basis)
@@ -559,23 +572,24 @@ contains
  end subroutine lda_u_update_basis
 
  ! Interface for the X(update_occ_matrices) routines
- subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )
-   type(lda_u_t),             intent(inout) :: this
-   type(mesh_t),              intent(in)    :: mesh 
-   type(states_elec_t),       intent(in)    :: st
-   type(hamiltonian_elec_base_t),  intent(in)    :: hm_base 
-   type(energy_t),            intent(inout) :: energy
+ subroutine lda_u_update_occ_matrices(this, namespace, mesh, st, hm_base, energy )
+   type(lda_u_t),                 intent(inout) :: this
+   type(namespace_t),             intent(in)    :: namespace
+   type(mesh_t),                  intent(in)    :: mesh
+   type(states_elec_t),           intent(in)    :: st
+   type(hamiltonian_elec_base_t), intent(in)    :: hm_base
+   type(energy_t),                intent(inout) :: energy
 
    if(this%level == DFT_U_NONE .or. this%freeze_occ) return
    PUSH_SUB(lda_u_update_occ_matrices)
 
    if (states_are_real(st)) then
-     call dupdate_occ_matrices(this, mesh, st, energy%dft_u)
+     call dupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
    else
      if(associated(hm_base%phase)) then
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u, hm_base%phase)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u, hm_base%phase)
      else
-       call zupdate_occ_matrices(this, mesh, st, energy%dft_u)
+       call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
      end if
    end if
 
@@ -584,15 +598,19 @@ contains
 
 
  !> Build the phase correction to the global phase for all orbitals
- subroutine lda_u_build_phase_correction(this, sb, std, namespace, vec_pot, vec_pot_var)
+ subroutine lda_u_build_phase_correction(this, sb, std, boundaries, namespace, vec_pot, vec_pot_var)
    type(lda_u_t),                 intent(inout) :: this
    type(simul_box_t),             intent(in)    :: sb 
    type(states_elec_dim_t),       intent(in)    :: std
+   type(boundaries_t),            intent(in)    :: boundaries
    type(namespace_t),             intent(in)    :: namespace
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
    integer :: ios
+
+   if(boundaries%spiralBC) call messages_not_implemented("DFT+U with spiral boundary conditions.", &
+                                                            namespace=namespace)
  
    !In this case there is no phase difference, as the basis come from states on the full 
    !grid and not from spherical meshes around the atoms
@@ -677,19 +695,21 @@ contains
 
  end subroutine compute_ACBNO_U_kanamori
 
+  ! ---------------------------------------------------------
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this
 
     this%freeze_occ = .true.
   end subroutine lda_u_freeze_occ
 
+  ! ---------------------------------------------------------
   subroutine lda_u_freeze_u(this)            
     type(lda_u_t),     intent(inout) :: this
 
     this%freeze_u = .true.
   end subroutine lda_u_freeze_u
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine lda_u_set_effectiveU(this, Ueff)
     type(lda_u_t),  intent(inout) :: this
     FLOAT,          intent(in)    :: Ueff(:) !< (this%norbsets)
@@ -721,7 +741,43 @@ contains
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
 
+  ! ---------------------------------------------------------
+  subroutine lda_u_set_effectiveV(this, Veff)
+    type(lda_u_t),  intent(inout) :: this
+    FLOAT,          intent(in)    :: Veff(:)
 
+    integer :: ios, ncount
+
+    PUSH_SUB(lda_u_set_effectiveV)
+
+    ncount = 0
+    do ios = 1, this%norbsets
+      this%orbsets(ios)%V_ij(1:this%orbsets(ios)%nneighbors,0) = Veff(ncount+1:ncount+this%orbsets(ios)%nneighbors)
+      ncount = ncount + this%orbsets(ios)%nneighbors
+    end do
+
+    POP_SUB(lda_u_set_effectiveV)
+  end subroutine lda_u_set_effectiveV
+
+  ! ---------------------------------------------------------
+  subroutine lda_u_get_effectiveV(this, Veff)
+    type(lda_u_t),  intent(in)    :: this
+    FLOAT,          intent(inout) :: Veff(:)
+
+    integer :: ios, ncount
+
+    PUSH_SUB(lda_u_get_effectiveV)
+
+    ncount = 0
+    do ios = 1, this%norbsets
+      Veff(ncount+1:ncount+this%orbsets(ios)%nneighbors) = this%orbsets(ios)%V_ij(1:this%orbsets(ios)%nneighbors,0)
+      ncount = ncount + this%orbsets(ios)%nneighbors
+    end do
+
+    POP_SUB(lda_u_get_effectiveV)
+  end subroutine lda_u_get_effectiveV
+
+  ! ---------------------------------------------------------
   subroutine lda_u_write_info(this, iunit)
     type(lda_u_t),  intent(in)    :: this
     integer,        intent(in)    :: iunit

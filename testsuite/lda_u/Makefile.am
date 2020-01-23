@@ -22,6 +22,7 @@ sharedir = $(pkgdatadir)/testsuite/lda_u
 
 dist_share_DATA =                                \
             01-nio.01-U5-gs.inp                  \
+            01-nio.02-unocc.inp                  \
             01-nio.test                          \
             02-ACBN0.01-nio.inp                  \
             02-ACBN0.02-lif.inp                  \
@@ -44,10 +45,14 @@ dist_share_DATA =                                \
             07-noncollinear.test                 \
 	    08-loewdin.01-Si.inp                 \
 	    08-loewdin.02-intersite.inp          \
+            08-loewdin.03-intersite_domains.inp  \
 	    08-loewdin.test                      \
 	    09-basis_from_states.01-lda.inp      \
 	    09-basis_from_states.02-acbn0.inp    \
 	    09-basis_from_states.fhi             \
-	    09-basis_from_states.test 
+	    09-basis_from_states.test            \
+	    10-intersite.01-Na2.inp              \
+            10-intersite.02-graphite.inp         \
+            10-intersite.test
 
 CLEANFILES = *~ *.bak

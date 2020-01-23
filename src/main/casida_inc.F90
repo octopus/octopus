@@ -319,11 +319,11 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
 
   ! FIXME: need to take into account spinor dimension here, not just 1
   idim = 1
-  ilin = batch_inv_index(st%group%psib(iblock, kk), (/ii, idim/))
-  alin = batch_inv_index(st%group%psib(ablock, kk), (/ia, idim/))
+  ilin = st%group%psib(iblock, kk)%inv_index((/ii, idim/))
+  alin = st%group%psib(ablock, kk)%inv_index((/ia, idim/))
 
-  ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
-  ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
+  ASSERT(.not. st%group%psib(iblock, kk)%is_packed())
+  ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
 
   do ip = 1, mesh%np
     rho(ip) = R_CONJ(st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)(ip))*st%group%psib(ablock, kk)%states_linear(alin)%X(psi)(ip)
@@ -748,7 +748,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
     SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
     kxc = M_ZERO
     ! not spin polarized so far
-    call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
+    call xc_get_kxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, kxc(:, :, :, :))
   end if
   
   message(1) = "Reading vib_modes density for calculating excited-state forces."

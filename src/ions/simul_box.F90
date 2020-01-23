@@ -22,12 +22,13 @@
 module simul_box_oct_m
   use atom_oct_m
   use iso_c_binding
+  use gdlib_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use loct_oct_m
+!  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -121,6 +122,8 @@ module simul_box_oct_m
     FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
+    FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
+    FLOAT :: rmetric            (MAX_DIM,MAX_DIM) !< metric for the real space lattice vectors
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
@@ -159,7 +162,7 @@ contains
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
-    call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
+    call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb, namespace)
 
@@ -169,7 +172,7 @@ contains
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
-    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim)
+    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -221,7 +224,7 @@ contains
         call messages_write('For systems that  are periodic in 1D, interaction between', new_line = .true.)
         call messages_write('ions is assumed to be periodic in 3D. This affects the calculation', new_line = .true.)
         call messages_write('of total energy and forces.')
-        call messages_warning()
+        call messages_warning(namespace=namespace)
       end if
 
       !%Variable MultiResolutionArea
@@ -240,7 +243,7 @@ contains
 
         call messages_experimental('Multi-resolution')
 
-        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3')
+        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3', namespace=namespace)
 
         ! number of areas
         sb%hr_area%num_areas = parse_block_n(blk)
@@ -276,7 +279,7 @@ contains
         !%End
         call messages_obsolete_variable(namespace, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
         call parse_variable(namespace, 'MultiResolutionInterpolationOrder', 5, order)
-        call simul_box_interp_init(sb, order)
+        call simul_box_interp_init(sb, order, namespace)
 
         sb%mr_flag = .true.
       else
@@ -354,7 +357,7 @@ contains
       case(CYLINDER)
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
       end select
@@ -368,7 +371,7 @@ contains
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
         ! FIXME: why not a hypersphere as another option?
         ! Also, hypercube should be unified with parallepiped.
       end if
@@ -396,7 +399,7 @@ contains
         if(geo%reduced_coordinates) then
           message(1) = "The 'minimum' box shape cannot be used if atomic positions"
           message(2) = "are given as reduced coordinates."
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         default=sb%rsize
@@ -468,13 +471,13 @@ contains
           sb%lsize(1:sb%dim) = sb%lsize(1)
         else
           message(1) = "Lsize was not found in input file. Continuing anyway."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
       else
         ! if not a compatible box-shape
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           message(1) = "Ignoring lattice vectors from XSF file."
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
       end if
 
@@ -493,7 +496,7 @@ contains
         call parse_variable(namespace, 'BoxShapeImage', '', sb%filename)
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         ! Find out the file and read it.
@@ -504,16 +507,16 @@ contains
           sb%filename = trim(conf%share) // '/' // trim(sb%filename)
           inquire(file=trim(sb%filename), exist=found)
           
-          if(.not. found) call messages_fatal(1)
+          if(.not. found) call messages_fatal(1, namespace=namespace)
         end if
 
-        sb%image = loct_gdimage_create_from(sb%filename)
+        sb%image = gdlib_image_create_from(sb%filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
-        sb%image_size(1) = loct_gdImage_SX(sb%image)
-        sb%image_size(2) = loct_gdImage_SY(sb%image)
+        sb%image_size(1) = gdlib_image_sx(sb%image)
+        sb%image_size(2) = gdlib_image_sy(sb%image)
 
         ! adjust Lsize if necessary to ensure that one grid point = one pixel
         do idir = 1, 2
@@ -527,7 +530,7 @@ contains
 #else
         message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
         message(2) = "with GD library support."
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
 #endif
       end if
 
@@ -595,9 +598,10 @@ contains
   end subroutine simul_box_lookup_init
 
   ! ------------------------------------------------------------
-  subroutine simul_box_interp_init(this, order)
+  subroutine simul_box_interp_init(this, order, namespace)
     type(simul_box_t), intent(inout) :: this
     integer,           intent(in)    :: order
+    type(namespace_t), intent(in)    :: namespace
     !
     FLOAT, allocatable, dimension(:) :: pos
     integer                          :: ii
@@ -606,7 +610,7 @@ contains
     this%hr_area%interp%order=order
     if(this%hr_area%interp%order<=0) then
       message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     this%hr_area%interp%nn=2*this%hr_area%interp%order
     SAFE_ALLOCATE(pos(1:this%hr_area%interp%nn))
@@ -639,8 +643,13 @@ contains
 
     PUSH_SUB(simul_box_build_lattice)
 
+    sb%alpha = CNST(90.0)
+    sb%beta  = CNST(90.0)
+    sb%gamma = CNST(90.0)
+
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
+      sb%nonorthogonal = .false.
     else
       
       
@@ -667,7 +676,7 @@ contains
           ncols = parse_block_cols(blk, 1)
           if(ncols /= sb%dim) then
             write(message(1),'(a,i3,a,i3)') 'LatticeParameters angle has ', ncols, ' columns but must have ', sb%dim
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
           do idim = 1, sb%dim
             call parse_block_float(blk, 1, idim - 1, angles(idim))
@@ -679,12 +688,16 @@ contains
         if (parse_is_defined(namespace, 'Lsize')) then
           message(1) = 'LatticeParameters is incompatible with Lsize'
           call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if 
 
       end if
 
       if( has_angles ) then
+        sb%alpha = angles(1)
+        sb%beta  = angles(2)
+        sb%gamma = angles(3)
+
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
@@ -719,7 +732,7 @@ contains
         if (parse_is_defined(namespace, 'LatticeVectors')) then
           message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
           call messages_print_var_info(stdout, "LatticeParameters")
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
@@ -773,10 +786,10 @@ contains
       end forall
     end do
     
-    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim)
+    call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
     sb%klattice = sb%klattice * M_TWO*M_PI
 
-    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
+    call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim, namespace)
 
     if(sb%dim == 3) then
       sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
@@ -788,7 +801,13 @@ contains
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-
+    sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
+    if(.not. has_angles) then
+      !We compute the angles from the lattice vectors
+      sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%gamma=acos(sb%rmetric(1,2)/sqrt(sb%rmetric(1,1)*sb%rmetric(2,2)))/M_PI*CNST(180.0)
+    end if
 
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
@@ -804,9 +823,10 @@ contains
   !! happens or a warning is written, depending on the argument
   !! warn_if_not.
   ! ---------------------------------------------------------
-  subroutine simul_box_atoms_in_box(sb, geo, warn_if_not, die_if_not)
+  subroutine simul_box_atoms_in_box(sb, geo, namespace, warn_if_not, die_if_not)
     type(simul_box_t), intent(in)    :: sb
     type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
     logical,           intent(in)    :: warn_if_not
     logical, optional, intent(in)    :: die_if_not
 
@@ -826,14 +846,14 @@ contains
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
-      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x) ) then
+      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace) ) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (sb%periodic_dim /= sb%dim) then
           ! FIXME: This could fail for partial periodicity systems
           ! because simul_box_in_box is too strict with atoms close to
           ! the upper boundary to the cell.
-          if(warn_if_not) call messages_warning(1)
-          if(die_if_not_) call messages_fatal(1)
+          if(warn_if_not) call messages_warning(1, namespace=namespace)
+          if(die_if_not_) call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -885,11 +905,12 @@ contains
   end subroutine simul_box_periodic_atom_in_box
 
   !--------------------------------------------------------------
-  subroutine reciprocal_lattice(rv, kv, volume, dim)
-    FLOAT,   intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,   intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
-    FLOAT,   intent(out) :: volume
-    integer, intent(in)  :: dim
+  subroutine reciprocal_lattice(rv, kv, volume, dim, namespace)
+    FLOAT,             intent(in)  :: rv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,             intent(out) :: kv(:,:) !< (1:MAX_DIM, 1:MAX_DIM)
+    FLOAT,             intent(out) :: volume
+    integer,           intent(in)  :: dim
+    type(namespace_t), intent(in)  :: namespace
 
     integer :: ii
     FLOAT :: cross(1:3), rv3(1:3, 1:3)
@@ -920,7 +941,7 @@ contains
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
       message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
       volume = M_ONE
       do ii = 1, dim
         kv(ii, ii) = M_ONE/rv(ii,ii)
@@ -931,7 +952,7 @@ contains
 
     if ( volume < M_ZERO ) then 
       message(1) = "Your lattice vectors form a left-handed system."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(reciprocal_lattice)
@@ -954,7 +975,7 @@ contains
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
-      call loct_gdImageDestroy(sb%image)
+      call gdlib_imagedestroy(sb%image)
 #endif
 
     POP_SUB(simul_box_end)
@@ -1044,6 +1065,12 @@ contains
           idir2 = 1, sb%dim)
       end do
       call messages_info(1+sb%dim, iunit)
+
+      write(message(1),'(a)') '  Cell angles [degree]'
+      write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
+      write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
+      write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+      call messages_info(4, iunit)
     end if
 
     POP_SUB(simul_box_write_info)
@@ -1096,12 +1123,12 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a mesh point belongs to the actual mesh.
-  logical function simul_box_in_box(sb, geo, yy) result(in_box)
+  logical function simul_box_in_box(sb, geo, yy, namespace) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: yy(:)
+    type(namespace_t),  intent(in) :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
     logical :: in_box2(1)
 
@@ -1109,7 +1136,7 @@ contains
 
     xx(1:sb%dim, 1) = yy(1:sb%dim)
 
-    call simul_box_in_box_vec(sb, geo, 1, xx, in_box2)
+    call simul_box_in_box_vec(sb, geo, 1, xx, in_box2, namespace)
     in_box = in_box2(1)
 
   end function simul_box_in_box
@@ -1117,12 +1144,13 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a group of mesh points belong to the actual mesh.
-  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box)
+  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box, namespace)
     type(simul_box_t),  intent(in)  :: sb
     type(geometry_t),   intent(in)  :: geo
     integer,            intent(in)  :: npoints
     FLOAT,              intent(in)  :: point(:, :)
     logical,            intent(out) :: in_box(:)
+    type(namespace_t),  intent(in)  :: namespace
 
     real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
@@ -1176,7 +1204,7 @@ contains
             write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
               trim(species_label(geo%atom(iatom)%species)), ' is negative or undefined.'
             message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
           radius = max(radius, species_def_rsize(geo%atom(iatom)%species))
         end do
@@ -1232,7 +1260,7 @@ contains
       do ip = 1, npoints
         ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
         iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+        call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
 #endif
@@ -1296,7 +1324,7 @@ contains
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     else
       !Only root writes
       if (mpi_grp_is_root(mpi_grp)) then
@@ -1367,7 +1395,7 @@ contains
     if (iunit <= 0) then
       ierr = ierr + 1
       message(1) = "Unable to open file '"//trim(dir)//"/"//trim(filename)//"'."
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     else
       ! Find the dump tag.
       call iopar_find_line(mpi_grp, iunit, dump_tag, err)
@@ -1554,7 +1582,7 @@ contains
       write(message(2), '(a)') "Please review your input files and the output geometry (in 'static/')."
       write(message(3), '(a, f12.6, 1x, a)') "Minimum distance = ", &
         units_from_atomic(units_out%length, mindist), trim(units_abbrev(units_out%length))
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
 
       ! then write out the geometry, whether asked for or not in Output variable
       call io_mkdir(STATIC_DIR, namespace)
@@ -1563,7 +1591,7 @@ contains
 
     if(simul_box_min_distance(geo, sb, real_atoms_only = .true.) < threshold) then
       message(1) = "It cannot be correct to run with physical atoms so close."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(simul_box_check_atoms_are_too_close)
@@ -1611,11 +1639,12 @@ contains
 
 
     ! ---------------------------------------------------------
-  subroutine simul_box_symmetry_check(this, geo, kpoints, dim)
+  subroutine simul_box_symmetry_check(this, geo, kpoints, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
     type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
+    type(namespace_t),  intent(in) :: namespace
 
     integer :: iop, iatom, iatom_symm
     FLOAT :: ratom(1:MAX_DIM)
@@ -1652,7 +1681,7 @@ contains
         if(iatom_symm > geo%natoms) then
           write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
           write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
       end do

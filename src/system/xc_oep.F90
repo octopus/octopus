@@ -22,6 +22,7 @@
 module xc_oep_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use exchange_operator_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -168,7 +169,7 @@ contains
       if(oep%level == XC_OEP_FULL) then
 
         if(st%d%nspin == SPINORS) &
-          call messages_not_implemented("Full OEP with spinors")
+          call messages_not_implemented("Full OEP with spinors", namespace=namespace)
 
         call messages_experimental("Full OEP")    
         !%Variable OEPMixing
@@ -213,7 +214,7 @@ contains
 
      ! this routine is only prepared for finite systems. (Why not?)
       if(st%d%nik > st%d%ispin) &
-        call messages_not_implemented("OEP for periodic systems")
+        call messages_not_implemented("OEP for periodic systems", namespace=namespace)
     
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, st%d%nspin)
@@ -252,7 +253,7 @@ contains
         call messages_experimental("OEP with spinors")
 
       if(st%d%kpt%parallel) &
-        call messages_not_implemented("OEP parallel in spin/k-points")
+        call messages_not_implemented("OEP parallel in spin/k-points", namespace=namespace)
 
     end if
 

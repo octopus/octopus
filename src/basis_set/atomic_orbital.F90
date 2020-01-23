@@ -14,8 +14,6 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id$
 
 #include "global.h"
 
@@ -38,12 +36,14 @@ module atomic_orbital_oct_m
 
   private
 
-  public ::                             &
-           atomic_orbital_get_radius,   &
-           datomic_orbital_get_submesh, &
-           zatomic_orbital_get_submesh, &
-           dget_atomic_orbital,         &
-           zget_atomic_orbital,         &
+  public ::                                  &
+           atomic_orbital_get_radius,        &
+           datomic_orbital_get_submesh,      &
+           zatomic_orbital_get_submesh,      &
+           datomic_orbital_get_submesh_safe, &
+           zatomic_orbital_get_submesh_safe, &
+           dget_atomic_orbital,              &
+           zget_atomic_orbital,              &
            l_notation
 
   character(len=1), parameter :: &

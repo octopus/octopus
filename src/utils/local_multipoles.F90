@@ -315,7 +315,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, default_namespace, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
+    call kick_init(kick, default_namespace, sys%gr%mesh%sb, sys%st%d%ispin)
     call local_write_init(local%writ, default_namespace, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
@@ -457,7 +457,7 @@ contains
 
     block: do id = 1, local%nd
       call parse_block_string(blk, id-1, 0, local%lab(id))
-      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id))
+      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id), default_namespace)
     end do block
     call parse_block_end(blk)
     message(1) = ''
@@ -490,12 +490,13 @@ contains
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(blk, row, dom, shape, clist)
+  subroutine local_read_from_block(blk, row, dom, shape, clist, namespace)
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
     type(box_union_t), intent(inout)     :: dom
     integer,           intent(out)       :: shape
-    character(len=*),   intent(out)      :: clist
+    character(len=*),  intent(out)       :: clist
+    type(namespace_t), intent(in)        :: namespace
     
     integer                     :: dim, ic, idir, nb
     FLOAT                       :: lgst, val, rsize, xsize
@@ -573,14 +574,14 @@ contains
         lsize(idir) =  lgst + rsize
       end do
     end select
-    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
+    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
 
     POP_SUB(local_read_from_block)
 
   end subroutine local_read_from_block
 
   !!---------------------------------------------------------------------------^
-  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist)
+  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
     type(box_union_t), intent(inout) :: dom
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: shape
@@ -588,7 +589,8 @@ contains
     FLOAT,             intent(in)    :: rsize
     FLOAT,             intent(in)    :: lsize(MAX_DIM)
     integer,           intent(in)    :: nb
-    character(len=*), intent(in)    :: clist
+    character(len=*),  intent(in)    :: clist
+    type(namespace_t), intent(in)    :: namespace
 
     integer                  :: ia, ibox, ic, bshape
     FLOAT                    :: bcenter(dim), bsize(dim)
@@ -602,10 +604,10 @@ contains
 
     select case(shape)
       case(SPHERE, CYLINDER) 
-        call box_create(boxes(ibox), shape, dim, lsize, center)
+        call box_create(boxes(ibox), shape, dim, lsize, center, namespace)
       case(PARALLELEPIPED) 
         bshape         = 3
-        call box_create(boxes(ibox), bshape, dim, lsize, center)
+        call box_create(boxes(ibox), bshape, dim, lsize, center, namespace)
       case(MINIMUM) 
         bshape         = SPHERE
         do ia = 1, sys%geo%natoms
@@ -613,7 +615,7 @@ contains
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
             bsize(:) = rsize
             if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(sys%geo%atom(ia)%species)
-            call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
+            call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
             ibox = ibox + 1
           end if
         end do
@@ -623,7 +625,7 @@ contains
           if(loct_isinstringlist(ia, clist))then
             bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
             bsize(:) = species_def_h(sys%geo%atom(ia)%species)
-            call box_create(boxes(ibox), bshape, dim, bsize, bcenter)
+            call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
             ibox = ibox + 1
           end if
         end do

@@ -60,6 +60,7 @@ module pes_mask_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
   use vtk_oct_m
+  use wfs_elec_oct_m
   
   implicit none
 
@@ -212,13 +213,13 @@ contains
     if(sb%box_shape /= SPHERE .and. .not. simul_box_is_periodic(sb)) then
       message(1) = 'PhotoElectronSpectrum = pes_mask usually requires BoxShape = sphere.'
       message(2) = 'Unless you know what you are doing modify this parameter and rerun.'
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
     end if
 
     if(hm%bc%abtype /= NOT_ABSORBING) then
       message(1) = 'PhotoElectronSpectrum = pes_mask already contains absorbing boundaries.'
       message(2) = 'Set AbsorbingBoundaries = no and rerun.'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
 
@@ -308,35 +309,35 @@ contains
     if (mask%pw_map_how ==  PW_MAP_PFFT .and. (.not. mask%mesh%parallel_in_domains)) then
       message(1)= "Trying to use PESMaskPlaneWaveProjection = pfft_map with no domain parallelization."
       message(2)= "Projection method changed to more efficient fft_map."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       mask%pw_map_how = PW_MAP_FFT
     end if
 
     if (mask%pw_map_how ==  PW_MAP_PNFFT .and. (.not. mask%mesh%parallel_in_domains)) then
       message(1)= "Trying to use PESMaskPlaneWaveProjection = pnfft_map with no domain parallelization."
       message(2)= "Projection method changed to more efficient nfft_map."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       mask%pw_map_how = PW_MAP_NFFT
     end if
     
 #if !defined(HAVE_NFFT) 
     if (mask%pw_map_how ==  PW_MAP_NFFT) then
       message(1) = "PESMaskPlaneWaveProjection = nfft_map requires NFFT but that library was not linked."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end if
 #endif
     
 #if !defined(HAVE_PFFT) 
     if (mask%pw_map_how ==  PW_MAP_PFFT) then
       message(1) = "PESMaskPlaneWaveProjection = pfft_map requires PFFT but that library was not linked."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end if
 #endif
 
 #if !defined(HAVE_PNFFT) 
     if (mask%pw_map_how ==  PW_MAP_PNFFT) then
       message(1) = "PESMaskPlaneWaveProjection = pnfft_map requires PNFFT but that library was not linked."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end if
 #endif
     
@@ -367,7 +368,7 @@ contains
     end if
     if( mask%enlarge(1) < M_ONE ) then
       message(1) = "PESMaskEnlargeFactor must be bigger than one."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end if
  
     call messages_obsolete_variable(namespace, 'PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
@@ -405,13 +406,13 @@ contains
       if (mask%pw_map_how /=  PW_MAP_NFFT .and. mask%pw_map_how /=  PW_MAP_PNFFT) then
         message(1) = "PESMask2PEnlargeFactor requires PESMaskPlaneWaveProjection = nfft_map"
         message(2) = "or pnfft_map in order to run properly." 
-        call messages_warning(2) 
+        call messages_warning(2, namespace=namespace)
       end if        
     end if
     
     if( mask%enlarge_2p(1) < M_ONE ) then
       message(1) = "PESMask2PEnlargeFactor must be bigger than one."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end if
     
     call messages_obsolete_variable(namespace, 'PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
@@ -502,7 +503,7 @@ contains
     case default 
       !Program should die before coming here
       write(message(1),'(a)') "PESMaskPlaneWaveProjection unrecognized option." 
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
       
     end select
     
@@ -663,7 +664,7 @@ contains
     call messages_info(2)
     
     
-    call pes_mask_generate_mask(mask,mesh)
+    call pes_mask_generate_mask(mask, namespace, mesh)
     
     !%Variable PESMaskFilterCutOff 
     !%Type float
@@ -757,7 +758,7 @@ contains
       case default 
         write(message(1),'(a)') 'PESMask should work only with TDExternalFields = vector_potential.'
         write(message(2),'(a)') 'Unless PESMaskMode = passive_mode the results are likely to be wrong. '
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
         
       end select
     end do
@@ -871,15 +872,14 @@ contains
   !>  Generate the mask function on the cubic mesh containing 
   !!  the simulation box
   ! ---------------------------------------------------------
-  subroutine pes_mask_generate_mask(mask,mesh)
-    type(pes_mask_t), intent(inout) :: mask
-    type(mesh_t),     intent(in)    :: mesh
-
-
+  subroutine pes_mask_generate_mask(mask, namespace, mesh)
+    type(pes_mask_t),  intent(inout) :: mask
+    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),      intent(in)    :: mesh
 
     PUSH_SUB(pes_mask_generate_mask)
     
-    call pes_mask_generate_mask_function(mask,mesh, mask%shape, mask%mask_R)
+    call pes_mask_generate_mask_function(mask, namespace, mesh, mask%shape, mask%mask_R)
     
     POP_SUB(pes_mask_generate_mask)
     
@@ -889,12 +889,13 @@ contains
   !>  Generate the mask function on the cubic mesh containing 
   !!  the simulation box
   ! ---------------------------------------------------------
-  subroutine pes_mask_generate_mask_function(mask,mesh, shape, R, mask_sq)
-    type(pes_mask_t), intent(inout) :: mask
-    type(mesh_t),     intent(in)    :: mesh
-    integer,          intent(in)    :: shape
-    FLOAT,            intent(in)    :: R(2)
-    FLOAT, optional,  intent(out)   :: mask_sq(:,:,:)
+  subroutine pes_mask_generate_mask_function(mask, namespace, mesh, shape, R, mask_sq)
+    type(pes_mask_t),  intent(inout) :: mask
+    type(namespace_t), intent(in)    :: namespace
+    type(mesh_t),      intent(in)    :: mesh
+    integer,           intent(in)    :: shape
+    FLOAT,             intent(in)    :: R(2)
+    FLOAT, optional,   intent(out)   :: mask_sq(:,:,:)
 
     integer :: ip, dir
     FLOAT   :: width
@@ -992,19 +993,13 @@ contains
       
     case default
       message(1)="PhotoElectronSpectrum = pes_mask. Unrecognized mask type."
-      call messages_fatal(1) 
+      call messages_fatal(1, namespace=namespace)
     end select
 
 
 
     mask_fn(:) = M_ONE - mask_fn(:)
 
-! This output needs a namespace argument to work from now on. It
-! hasn't been touched for some years now, so I won't adapt it. - SO
-!   Keep this here to debug further mask shapes.    
-!     call dio_function_output(io_function_fill_how("PlaneZ"), &
-!                             ".", "pes_mask",  mesh, real(mask_fn), unit_one, ierr)
-    
 
     call pes_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 
@@ -1299,8 +1294,9 @@ contains
   !            Performs all the dirty work 
   !
   !---------------------------------------------------------
-  subroutine pes_mask_calc(mask, mesh, st, dt, iter)
+  subroutine pes_mask_calc(mask, namespace, mesh, st, dt, iter)
     type(pes_mask_t),    intent(inout) :: mask
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
@@ -1407,7 +1403,7 @@ contains
             case default
               !Program should die before coming here
               write(message(1),'(a)') "PhotoElectroSpectrum = pes_mask. Unrecognized calculation mode." 
-              call messages_fatal(1)
+              call messages_fatal(1, namespace=namespace)
               
             end select
             

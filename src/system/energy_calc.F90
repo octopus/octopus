@@ -34,6 +34,7 @@ module energy_calc_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use pcm_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -42,6 +43,7 @@ module energy_calc_oct_m
   use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -58,7 +60,8 @@ contains
   !> This subroutine calculates the total energy of the system. Basically, it
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
-  subroutine energy_calc_total(hm, gr, st, iunit, full)
+  subroutine energy_calc_total(namespace, hm, gr, st, iunit, full)
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -83,20 +86,20 @@ contains
         tnadd_energy = M_ZERO
         external_energy = M_ZERO
         
-        hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
-        hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern_local = external_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_non_local   = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
-        evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
+        evxctau = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_MGGA)
       else
-        hm%energy%kinetic = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%kinetic = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
          
-        hm%energy%extern_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         
-        hm%energy%extern_non_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%extern_non_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         
-        evxctau = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
+        evxctau = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
@@ -213,7 +216,8 @@ contains
 
   ! --------------------------------------------------------------------
   
-  subroutine energy_calc_eigenvalues(hm, der, st)
+  subroutine energy_calc_eigenvalues(namespace, hm, der, st)
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(derivatives_t),      intent(in)    :: der
     type(states_elec_t),      intent(inout) :: st
@@ -221,9 +225,9 @@ contains
     PUSH_SUB(energy_calc_eigenvalues)
 
     if(states_are_real(st)) then
-      call dcalculate_eigenvalues(hm, der, st)
+      call dcalculate_eigenvalues(namespace, hm, der, st)
     else
-      call zcalculate_eigenvalues(hm, der, st)
+      call zcalculate_eigenvalues(namespace, hm, der, st)
     end if
 
     POP_SUB(energy_calc_eigenvalues)

@@ -218,7 +218,7 @@ contains
       
       call io_mkdir('debug/', namespace)
       iunit = io_open('debug/kpoints', namespace, action = 'write')
-      call kpoints_write_info(sb%kpoints, iunit, absolute_coordinates = .true.)      
+      call kpoints_write_info(sb%kpoints, namespace, iunit, absolute_coordinates = .true.)      
       call io_close(iunit)
 
       POP_SUB(states_elec_choose_kpoints.print_kpoints_debug)

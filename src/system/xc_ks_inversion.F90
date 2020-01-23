@@ -102,7 +102,7 @@ contains
     PUSH_SUB(xc_ks_inversion_init)
 
 !    if(mc%n_node > 1) &
-!      call messages_not_implemented("Kohn-Sham inversion in parallel")
+!      call messages_not_implemented("Kohn-Sham inversion in parallel", namespace=namespace)
 
     call messages_experimental("Kohn-Sham inversion")
     
@@ -127,7 +127,7 @@ contains
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
       call messages_input_error('InvertKSmethod')
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable KSInversionLevel
@@ -168,7 +168,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_elec_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
-      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st)
+      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, geo, mc)
     end if
 
     POP_SUB(xc_ks_inversion_init)
@@ -176,14 +176,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_end(ks_inv)
+  subroutine xc_ks_inversion_end(ks_inv, gr)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
+    type(grid_t),            intent(inout) :: gr
 
     PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
-      call eigensolver_end(ks_inv%eigensolver)
+      call eigensolver_end(ks_inv%eigensolver, gr)
       call hamiltonian_elec_end(ks_inv%aux_hm)
       call states_elec_end(ks_inv%aux_st)
     end if
@@ -236,7 +237,7 @@ contains
 
     if(any(target_rho(:,:) < -M_EPSILON)) then
       write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
     
     do jj = 1, nspin
@@ -319,7 +320,7 @@ contains
     end do
     
     call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+    call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(sqrtrho)
@@ -427,7 +428,7 @@ contains
     call parse_variable(namespace, 'InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable InvertKSMaxIter
@@ -465,7 +466,7 @@ contains
       end if
 
       call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-      call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+      call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
 
       ! Iterative inversion with fixed parameters in Stella Verstraete method
@@ -591,7 +592,7 @@ contains
     !calculate final density
 
     call hamiltonian_elec_update(aux_hm, gr%mesh, namespace)
-    call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
+    call eigensolver_run(eigensolver, namespace, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter

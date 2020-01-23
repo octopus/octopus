@@ -195,10 +195,25 @@ contains
       end if
     end if
 
+    !%Variable PeriodicBoundaryMask
+    !%Type block
+    !%Section Mesh
+    !%Description
+    !% (Experimental) Defines a mask for which periodic boundaries are replaced by zero boundary conditions.
+    !%End
+    if(parse_block(namespace, 'PeriodicBoundaryMask', blk) < 0) then
+      gr%mesh%masked_periodic_boundaries = .false.
+    else
+      gr%mesh%masked_periodic_boundaries = .true.
+      call parse_block_string(blk, 0, 0, gr%mesh%periodic_boundary_mask)
+      call messages_experimental('PeriodicBoundaryMask')
+    end if
+
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, namespace, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
+    call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, namespace, gr%sb)
@@ -217,7 +232,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
 
@@ -240,7 +255,7 @@ contains
       message(1) = "Info: coarse mesh"
       call messages_info(1)
     end if
-    call derivatives_build(gr%der, gr%mesh)
+    call derivatives_build(gr%der, namespace, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -255,8 +270,9 @@ contains
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
-      
+      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
+
+      call derivatives_nullify(gr%fine%der)      
       call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
       call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
@@ -265,7 +281,7 @@ contains
       
       message(1) = "Info: fine mesh"
       call messages_info(1)
-      call derivatives_build(gr%fine%der, gr%fine%mesh)
+      call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
 
       gr%fine%der%coarser => gr%der
       gr%der%finer =>  gr%fine%der

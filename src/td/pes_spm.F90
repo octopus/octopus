@@ -228,7 +228,7 @@ contains
         case default
           message(1) = "Spherical grid not implemented for this box shape."
           message(2) = "Specify sample points with block PES_spm_points."
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
       end if
     end if

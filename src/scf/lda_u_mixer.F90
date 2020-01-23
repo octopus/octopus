@@ -70,7 +70,12 @@ contains
    PUSH_SUB(lda_u_mixer_init_auxmixer)
 
    dim1 = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%level == DFT_U_ACBN0) dim1 = dim1*2
+   if(this%level == DFT_U_ACBN0) then
+     dim1 = dim1*2
+     if(this%intersite) then
+       dim1 = dim1 + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+     end if
+   end if
 
    if(states_are_real(st)) then
      call mixfield_init( smix, mixer%mixfield_occ, dim1, 1, 1, mix_d4(smix), TYPE_FLOAT )
@@ -108,7 +113,12 @@ contains
    mixer%apply = .true.
 
    mixer%occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%level == DFT_U_ACBN0) mixer%occsize = mixer%occsize*2
+   if(this%level == DFT_U_ACBN0) then 
+     mixer%occsize = mixer%occsize*2
+     if(this%intersite) then
+       mixer%occsize = mixer%occsize + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+     end if
+   end if
 
    nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
 

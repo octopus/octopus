@@ -33,6 +33,7 @@ module mesh_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use partition_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
@@ -58,6 +59,7 @@ module mesh_oct_m
     mesh_gcutoff,                  &
     mesh_write_info,               &
     mesh_nearest_point,            &
+    mesh_nearest_point_infos,      &
     mesh_periodic_point,           &
     mesh_global_memory,            &
     mesh_local_memory,             &
@@ -106,6 +108,9 @@ module mesh_oct_m
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
+
+    logical :: masked_periodic_boundaries
+    character(len=256) :: periodic_boundary_mask
   contains
     procedure :: load => mesh_load
     procedure :: dump => mesh_dump
@@ -386,7 +391,54 @@ contains
     ind = imin
     POP_SUB(mesh_nearest_point)
   end function mesh_nearest_point
-  
+
+
+  ! --------------------------------------------------------------
+  subroutine mesh_nearest_point_infos(mesh, pos, dmin_global, rankmin, imin_local, imin_global)
+    type(mesh_t), intent(in)    :: mesh
+    FLOAT,        intent(in)    :: pos(:)
+    FLOAT,        intent(out)   :: dmin_global
+    integer,      intent(out)   :: rankmin
+    integer,      intent(out)   :: imin_local
+    integer,      intent(out)   :: imin_global
+
+    integer              :: ip, ip_global, idim, ipart
+    FLOAT                :: dd, xx(3)
+
+    dmin_global = M_HUGE
+    if (mesh%parallel_in_domains) then
+      do ipart=1, mesh%vp%npart
+        do ip=1, mesh%vp%np_local_vec(ipart)
+          ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
+          do idim = 1, mesh%sb%dim
+            xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
+          end do
+          dd = sqrt(sum((pos(:) - xx(:))**2))
+          if (dd < dmin_global) then
+            imin_local  = ip
+            rankmin     = ipart-1
+            imin_global = ip_global
+            dmin_global = dd
+          end if
+        end do
+      end do
+    else
+      do ip=1, mesh%np
+        do idim = 1, mesh%sb%dim
+          xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
+        end do
+        dd = sqrt(sum((pos(:) - xx(:))**2))
+        if (dd < dmin_global) then
+          imin_local  = ip
+          rankmin     = 0
+          imin_global = ip
+          dmin_global = dd
+        end if
+      end do
+    end if
+ 
+  end subroutine mesh_nearest_point_infos
+
  
   ! --------------------------------------------------------------
   !> mesh_gcutoff returns the "natural" band limitation of the
@@ -422,8 +474,9 @@ contains
       position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
-      message(1) = "Unable to open file '"//io_workpath(trim(dir)//"/"//trim(filename), namespace)//"'."
-      call messages_warning(1)
+      message(1) = "Unable to open file:"
+      message(2) = io_workpath(trim(dir)//"/"//trim(filename), namespace)
+      call messages_warning(2)
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
@@ -721,15 +774,16 @@ contains
   !! the same point is returned. Note that this function returns a
   !! global point number when parallelization in domains is used.
   ! ---------------------------------------------------------  
-  integer function mesh_periodic_point(mesh, ip) result(ipp)
+  integer function mesh_periodic_point(mesh, ip_global, ip_local) result(ipp)
     type(mesh_t), intent(in)    :: mesh
-    integer,      intent(in)    :: ip
+    integer,      intent(in)    :: ip_global, ip_local
     
     integer :: ix(MAX_DIM), nr(2, MAX_DIM), idim
+    FLOAT :: xx(MAX_DIM), rr, ufn_re, ufn_im
     
     ! no push_sub, called too frequently
 
-    ix = mesh%idx%lxyz(ip, :)
+    ix = mesh%idx%lxyz(ip_global, :)
     nr(1, :) = mesh%idx%nr(1, :) + mesh%idx%enlarge(:)
     nr(2, :) = mesh%idx%nr(2, :) - mesh%idx%enlarge(:)
     
@@ -739,6 +793,12 @@ contains
     end do
     
     ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
+
+    if(mesh%masked_periodic_boundaries) then
+      call mesh_r(mesh, ip_local, rr, coords = xx)
+      call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, mesh%periodic_boundary_mask)
+      if(int(ufn_re) == 0) ipp = ip_global ! Nothing will be done
+    end if 
     
   end function mesh_periodic_point
   

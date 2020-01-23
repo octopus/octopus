@@ -130,9 +130,11 @@ contains
 
     if(st%parallel_in_states) then
       if(bitand(this%what, OUTPUT_ME_TWO_BODY) /= 0) &
-        call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.")
+        call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.", &
+        namespace=namespace)
       if(bitand(this%what, OUTPUT_ME_DIPOLE) /= 0) &
-        call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.")
+        call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.", &
+        namespace=namespace)
     end if
 
     if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
@@ -190,14 +192,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm, namespace)
+  subroutine output_me(this, namespace, dir, st, gr, geo, hm)
     type(output_me_t),        intent(in)    :: this
+    type(namespace_t),        intent(in)    :: namespace
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
     type(hamiltonian_elec_t), intent(in)    :: hm
-    type(namespace_t),        intent(in)    :: namespace
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
@@ -284,10 +286,12 @@ contains
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization", &
+        namespace=namespace)
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization", &
+        namespace=namespace)
       if (family_is_mgga_with_exc(hm%xc)) &
-      call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
+      call messages_not_implemented("OutputMatrixElements=one_body with MGGA", namespace=namespace)
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', namespace, action='write')
 
@@ -298,14 +302,14 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
+        call dstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_elec_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
+        call zstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo
@@ -323,8 +327,12 @@ contains
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
+      if(st%parallel_in_states) then
+        call messages_not_implemented("OutputMatrixElements=two_body with states parallelization", namespace=namespace)
+      end if
+      if(st%d%kpt%parallel) then
+        call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization", namespace=namespace)
+      end if
       ! how to do this properly? states_elec_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
       write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
@@ -337,7 +345,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
+          lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -347,10 +356,10 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
         else
-          call zstates_elec_me_two_body(gr, st, hm%psolver, this%st_start, this%st_end, &
+          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint)
         end if
 

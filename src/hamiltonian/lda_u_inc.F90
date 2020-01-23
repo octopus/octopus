@@ -17,15 +17,13 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
-  type(lda_u_t),           intent(in) :: this
-  type(mesh_t),            intent(in) :: mesh
-  integer,                 intent(in) :: ik
-  type(batch_t),           intent(in) :: psib
-  type(batch_t),           intent(inout) :: hpsib
-  type(states_elec_dim_t), intent(in) :: d
-  type(simul_box_t),       intent(in) :: sb
-  logical,                 intent(in) :: has_phase !True if the wavefunction has an associated phase
+subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib)
+  type(lda_u_t),           intent(in)    :: this
+  type(mesh_t),            intent(in)    :: mesh
+  type(wfs_elec_t),        intent(in)    :: psib
+  type(wfs_elec_t),        intent(inout) :: hpsib
+  type(states_elec_dim_t), intent(in)    :: d
+  type(simul_box_t),       intent(in)    :: sb
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
   R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:,:), psi(:,:)
@@ -42,7 +40,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
   SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
-  ispin = states_elec_dim_get_spin_index(d, ik)
+  ispin = states_elec_dim_get_spin_index(d, psib%ik)
   if(d%ispin == UNPOLARIZED) then
     el_per_state = 2
   else
@@ -59,7 +57,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
     call batch_get_state(psib, ibatch, mesh%np, psi)
     do ios = 1, this%norbsets
       os => this%orbsets(ios)
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, &
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, psib%has_phase, this%basisfromstates, &
                                                   dot(1:d%dim,1:os%norbs,ios,ibatch))
     end do
   end do
@@ -70,8 +68,8 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
     !
     os => this%orbsets(ios)
     do ibatch = 1, psib%nst
-      bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
-      bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
+      bind1 = psib%ist_idim_to_linear((/ibatch, 1/))
+      bind2 = psib%ist_idim_to_linear((/ibatch, 2/))
       do im = 1,os%norbs
         ! sum_mp Vmmp <phi mp | psi >
         do imp = 1, os%norbs
@@ -94,17 +92,17 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
       do inn = 1, os%nneighbors
         ios2 = os%map_os(inn) 
 
-        if(has_phase) then
+        if(psib%has_phase) then
 #ifdef R_TCOMPLEX
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%phase_shift(inn, psib%ik)*os%V_ij(inn, 0)/el_per_state
 #endif
         else
-          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+          weight = os%V_ij(inn, 0)/el_per_state
         end if
 
         do ibatch = 1, psib%nst
-          bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
-          bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
+          bind1 = psib%ist_idim_to_linear((/ibatch, 1/))
+          bind2 = psib%ist_idim_to_linear((/ibatch, 2/))
           do im = 1, os%norbs
             do imp = 1, this%orbsets(ios2)%norbs
               if(d%ispin /= SPINORS) then
@@ -131,7 +129,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
   !We add the orbitals properly weighted to hpsi
   do ios = 1, this%norbsets 
     os => this%orbsets(ios)
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced(:,:,ios))
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, this%basisfromstates, reduced(:,:,ios))
   end do
  
   SAFE_DEALLOCATE_A(psi)
@@ -146,12 +144,13 @@ end subroutine X(lda_u_apply)
 ! ---------------------------------------------------------
 !> This routine computes the values of the occupation matrices
 ! ---------------------------------------------------------
-subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
-  type(lda_u_t), intent(inout)         :: this
-  type(mesh_t),     intent(in)         :: mesh
-  type(states_elec_t),  intent(in)     :: st
-  FLOAT, intent(inout)                 :: lda_u_energy
-  CMPLX, pointer, optional             :: phase(:,:) 
+subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase)
+  type(lda_u_t),       intent(inout) :: this
+  type(namespace_t),   intent(in)    :: namespace
+  type(mesh_t),        intent(in)    :: mesh
+  type(states_elec_t), intent(in)    :: st
+  FLOAT,               intent(inout) :: lda_u_energy
+  CMPLX,     optional, pointer       :: phase(:,:) 
 
   integer :: ios, im, ik, ist, ispin, norbs, idim, inn, im2, ios2
   R_TYPE, allocatable :: psi(:,:) 
@@ -383,12 +382,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
-          call X(compute_ACBNO_U)(this, ios)
+          call X(compute_ACBNO_U)(this, ios, namespace)
           if(this%intersite) call X(compute_ACBNO_V)(this, ios)
         else
-          call compute_ACBNO_U_noncollinear(this, ios)
+          call compute_ACBNO_U_noncollinear(this, ios, namespace)
           if(this%intersite) then
-            call messages_not_implemented("Intersite interaction with spinors orbitals.")
+            call messages_not_implemented("Intersite interaction with spinors orbitals.", namespace=namespace)
           end if
         end if
       end do
@@ -537,9 +536,10 @@ end subroutine X(lda_u_update_potential)
 !> This routine computes the effective U following the expression 
 !> given in Agapito et al., Phys. Rev. X 5, 011006 (2015)
 ! ---------------------------------------------------------
-subroutine X(compute_ACBNO_U)(this, ios)
-  type(lda_u_t), intent(inout)    :: this
-  integer,       intent(in)       :: ios
+subroutine X(compute_ACBNO_U)(this, ios, namespace)
+  type(lda_u_t),     intent(inout) :: this
+  integer,           intent(in)    :: ios
+  type(namespace_t), intent(in)    :: namespace
   
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
@@ -665,7 +665,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
         this%orbsets(ios)%Ubar = (numU/denomU)
         write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
         write(message(2),'(a,a)')' to be multiplied by ',  this%coulomb(1,1,1,1,ios)
-        call messages_warning(2) 
+        call messages_warning(2, namespace=namespace)
         this%orbsets(ios)%Ubar = this%orbsets(ios)%Ubar*this%coulomb(1,1,1,1,ios)
       end if
     end if
@@ -1193,7 +1193,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, namespace, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, namespace, der, mc, M_ZERO, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs
@@ -1258,10 +1258,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
- subroutine X(lda_u_commute_r)(this, mesh, d, ik, psi, gpsi, has_phase)
+ subroutine X(lda_u_commute_r)(this, mesh, d, namespace, ik, psi, gpsi, has_phase)
    type(lda_u_t),           intent(in) :: this
    type(mesh_t),            intent(in) :: mesh
    type(states_elec_dim_t), intent(in) :: d
+   type(namespace_t),       intent(in) :: namespace
    R_TYPE,                  intent(in) :: psi(:,:)
    integer,                 intent(in) :: ik
    R_TYPE,               intent(inout) :: gpsi(:, :, :)
@@ -1278,11 +1279,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
    PUSH_SUB(lda_u_commute_r)
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting and commutator [r,V_u]")
+    call messages_not_implemented("AMF double couting and commutator [r,V_u]", namespace=namespace)
    end if
 
    if(this%intersite .and. d%ispin == SPINORS) then
-     call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]")
+     call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]", namespace=namespace)
    end if
 
    if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
@@ -1511,15 +1512,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
              do imp = 1, this%orbsets(ios2)%norbs
                if(has_phase) then
                  reduced(1,im, ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                       *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp, ios2) = reduced(1,imp,ios2) - dot(1, im, ios)*R_CONJ(os%phase_shift(inn, ik)) &
-                       *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                       *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
 
                else
                  reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
-                         *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                 reduced(1,imp,ios2) = reduced(1,imp,ios2) - dot(1, im, ios) &
-                         *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+                         *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
                end if
              end do !imp
            end do !im
@@ -1541,13 +1538,14 @@ end subroutine X(compute_periodic_coulomb_integrals)
    call profiling_out(prof)
  end subroutine X(lda_u_commute_r)
 
- subroutine X(lda_u_force)(this, mesh, st, iq, ndim, psib, grad_psib, force, phase)
+ subroutine X(lda_u_force)(this, namespace, mesh, st, iq, ndim, psib, grad_psib, force, phase)
    type(lda_u_t),             intent(in)    :: this
+   type(namespace_t),         intent(in)    :: namespace
    type(mesh_t),              intent(in)    :: mesh 
    type(states_elec_t),       intent(in)    :: st
    integer,                   intent(in)    :: iq, ndim
-   type(batch_t),             intent(in)    :: psib
-   type(batch_t),             intent(in)    :: grad_psib(:)
+   type(wfs_elec_t),          intent(in)    :: psib
+   type(wfs_elec_t),          intent(in)    :: grad_psib(:)
    FLOAT,                     intent(inout) :: force(:, :)
    logical,                   intent(in)    :: phase
 
@@ -1563,7 +1561,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%basisfromstates) return
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting with forces")
+    call messages_not_implemented("AMF double couting with forces", namespace=namespace)
    end if
 
    PUSH_SUB(X(lda_u_force))
@@ -1571,7 +1569,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    !TODO: Implement
    if(this%intersite) then
      message(1) = "Intersite V forces are not implemented."
-     call messages_warning(1)
+     call messages_warning(1, namespace=namespace)
    end if
 
    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
@@ -1683,7 +1681,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(inout) :: this
     R_TYPE,         intent(in)    :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_set_occupations))
 
@@ -1712,6 +1710,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  this%X(n_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                  ind = ind + 1
+                  this%X(n_alt_ij)(im,imp,ispin,ios,inn) = occ(ind)
+                end do
+              end do
+            end do
+          end do
+        end do
+      end if
     end if
 
     POP_SUB(X(lda_u_set_occupations))
@@ -1722,7 +1738,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     type(lda_u_t),  intent(in) :: this
     R_TYPE,      intent(inout) :: occ(:)
 
-    integer :: ios, ispin, im, imp, ind, norbs
+    integer :: ios, ispin, im, imp, ind, norbs, inn, ios2
 
     PUSH_SUB(X(lda_u_get_occupations))
 
@@ -1751,6 +1767,24 @@ end subroutine X(compute_periodic_coulomb_integrals)
           end do
         end do
       end do
+
+      if(this%intersite) then
+        do ios = 1, this%norbsets
+          do inn = 1, this%orbsets(ios)%nneighbors
+            ios2 = this%orbsets(ios)%map_os(inn)
+            do ispin = 1, this%nspins
+              do im = 1, this%orbsets(ios)%norbs
+                do imp = 1,this%orbsets(ios2)%norbs
+                  ind = ind + 1
+                  occ(ind) = this%X(n_ij)(im,imp,ispin,ios,inn)
+                  ind = ind + 1
+                  occ(ind) = this%X(n_alt_ij)(im,imp,ispin,ios,inn)
+                end do
+              end do
+            end do
+          end do
+        end do 
+      end if
     end if
 
     POP_SUB(X(lda_u_get_occupations))

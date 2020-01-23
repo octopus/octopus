@@ -43,14 +43,16 @@ module xc_functl_oct_m
 
   !> This adds to the constants defined in libxc. But since in that module
   !! the OEP functionals are not included, it is better to put it here.
-  integer, public, parameter :: &
-    XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
-    XC_OEP_X = 901,             &  !< Exact exchange
-    XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
-    XC_VDW_C_VDWDF = 918,       &  !< vdw-df correlation from libvdwxc
-    XC_VDW_C_VDWDF2 = 919,      &  !< vdw-df2 correlation from libvdwxc
-    XC_VDW_C_VDWDFCX = 920,     &  !< vdw-df-cx correlation from libvdwxc
-    XC_RDMFT_XC_M = 601            !< RDMFT Mueller functional
+  integer, public, parameter ::   &
+    XC_KS_INVERSION = 801,        &  !< inversion of Kohn-Sham potential
+    XC_OEP_X = 901,               &  !< Exact exchange
+    XC_HALF_HARTREE = 917,        &  !< half-Hartree exchange for two electrons (supports complex scaling)
+    XC_VDW_C_VDWDF = 918,         &  !< vdw-df correlation from libvdwxc
+    XC_VDW_C_VDWDF2 = 919,        &  !< vdw-df2 correlation from libvdwxc
+    XC_VDW_C_VDWDFCX = 920,       &  !< vdw-df-cx correlation from libvdwxc
+    XC_HYB_GGA_XC_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
+    XC_HYB_GGA_XC_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
+    XC_RDMFT_XC_M = 601              !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
   !! careful not to use a value defined in libxc for another family!
@@ -114,7 +116,6 @@ contains
     FLOAT   :: parameters(2)
 #endif
     logical :: ok, lb94_modified
-    integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
     PUSH_SUB(xc_functl_init_functl)
 
@@ -131,21 +132,32 @@ contains
       ! this also ensures it is actually a functional defined by the linked version of libxc
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
-        if(functl%id == XC_OEP_X) then
+
+        select case(functl%id)
+        case(XC_OEP_X)
           functl%family = XC_FAMILY_OEP
-        else if (functl%id == XC_KS_INVERSION) then
+
+        case(XC_KS_INVERSION)
           functl%family = XC_FAMILY_KS_INVERSION
-        else if(functl%id == XC_HALF_HARTREE) then
+
+        case(XC_HALF_HARTREE)
           call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
+
+        case(XC_VDW_C_VDWDF, XC_VDW_C_VDWDF2, XC_VDW_C_VDWDFCX)
           functl%family = XC_FAMILY_LIBVDWXC
           !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
-        else if (functl%id == XC_RDMFT_XC_M) then
+
+        case(XC_RDMFT_XC_M)
           functl%family = XC_FAMILY_RDMFT
-        else
+
+        case(XC_HYB_GGA_XC_MVORB_HSE06, XC_HYB_GGA_XC_MVORB_PBEH)
+          functl%family = XC_FAMILY_HYB_GGA
+
+        case default
           call messages_input_error('XCFunctional', 'Unknown functional')
-        end if
+
+        end select
       end if
     end if
 
@@ -165,13 +177,25 @@ contains
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
 
-    else if(functl%family  ==  XC_FAMILY_NONE) then
+    else if(functl%family == XC_FAMILY_NONE) then
       functl%type = -1
       functl%flags = 0
 
     else ! handled by libxc
       ! initialize
-      call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+
+      !For the two MVORB functionals, we initialize libxc with the non-MVORB functionals
+      select case(functl%id)
+      case(XC_HYB_GGA_XC_MVORB_HSE06)
+        call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_HSE06, spin_channels)
+
+      case(XC_HYB_GGA_XC_MVORB_PBEH)
+        call XC_F90(func_init)(functl%conf, functl%info, XC_HYB_GGA_XC_PBEH, spin_channels)
+
+      case default
+        call XC_F90(func_init)(functl%conf, functl%info, functl%id, spin_channels)
+      end select
+
       functl%type     = XC_F90(info_kind)(functl%info)
       functl%flags    = XC_F90(info_flags)(functl%info)
 
@@ -179,43 +203,43 @@ contains
       if(bitand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
         message(1) = 'Specified functional does not have total energy available.'
         message(2) = 'Corresponding component of energy will just be left as zero.'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
 
       if(bitand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
         message(1) = 'Specified functional does not have XC potential available.'
         message(2) = 'Cannot run calculations. Choose another XCFunctional.'
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==1.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 1D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_2D) /= 0
       if((ndim /= 2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==2.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 2D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ok = bitand(functl%flags, XC_FLAGS_3D) /= 0
       if((ndim /= 3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if(ndim==3.and.(.not.ok)) then
         message(1) = 'Cannot use the specified functionals in 3D.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
     
@@ -260,7 +284,7 @@ contains
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
       call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable(namespace, 'Interaction1D', INT_SOFT_COULOMB, interact_1d)
+      call parse_variable(namespace, 'Interaction1D', OPTION__INTERACTION1D__INTERACTION_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
       !%Type float
@@ -344,9 +368,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_functl_write_info(functl, iunit)
+  subroutine xc_functl_write_info(functl, iunit, namespace)
     type(xc_functl_t), intent(in) :: functl
     integer,           intent(in) :: iunit
+    type(namespace_t), intent(in) :: namespace
 
     character(len=120) :: s1, s2
     integer :: ii
@@ -392,10 +417,10 @@ contains
       case(XC_EXCHANGE_CORRELATION)
         write(message(1), '(2x,a)') 'Exchange-correlation'
       case(XC_KINETIC)
-        call messages_not_implemented("kinetic-energy functionals")
+        call messages_not_implemented("kinetic-energy functionals", namespace=namespace)
       case default
         write(message(1), '(a,i6,a,i6)') "Unknown functional type ", functl%type, ' for functional ', functl%id
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       call XC_F90(info_name)  (functl%info, s1)

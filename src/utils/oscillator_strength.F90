@@ -655,7 +655,7 @@ contains
     c(order) = M_ONE
   
     ! Get the basic info from the first file
-    call spectrum_mult_info(iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
+    call spectrum_mult_info(namespace, iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
   
     ! Sets the kick operator...
     if(kick%n_multipoles > 0) then
@@ -723,7 +723,7 @@ contains
     q(1) = kick%delta_strength / lambda
   
     do j = 2, nfiles
-      call spectrum_mult_info(iunit(j), nspin, kick, time_steps, dt, units, lmax=lmax)
+      call spectrum_mult_info(namespace, iunit(j), nspin, kick, time_steps, dt, units, lmax=lmax)
       q(j) = kick%delta_strength / lambda
     end do
   
@@ -964,7 +964,7 @@ contains
       call messages_fatal(2)
     end if
   
-    call kick_read(kick, iunit)
+    call kick_read(kick, iunit, namespace)
     read(iunit, '(a)')  line
     read(iunit, '(a)')  line
     call io_skip_header(iunit)

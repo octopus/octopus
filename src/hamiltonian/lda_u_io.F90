@@ -502,8 +502,8 @@ contains
     integer,              intent(out) :: ierr
     integer, optional,    intent(in)  :: iter
 
-    integer :: err, occsize
-    FLOAT, allocatable :: Ueff(:), docc(:)
+    integer :: err, occsize, ios, ncount
+    FLOAT, allocatable :: Ueff(:), docc(:), Veff(:)
     CMPLX, allocatable :: zocc(:)
 
     PUSH_SUB(lda_u_dump)
@@ -521,7 +521,13 @@ contains
     end if
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(this%level == DFT_U_ACBN0) then
+      occsize = occsize*2
+      if(this%intersite) then
+        occsize = occsize + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+      end if
+    end if
+
  
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
@@ -547,6 +553,18 @@ contains
       call drestart_write_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       SAFE_DEALLOCATE_A(Ueff)
       if (err /= 0) ierr = ierr + 1
+
+      if(this%intersite) then
+        ncount = 0  
+        do ios = 1, this%norbsets
+          ncount = ncount + this%orbsets(ios)%nneighbors
+        end do
+        SAFE_ALLOCATE(Veff(1:ncount))
+        call lda_u_get_effectiveV(this, Veff(:))
+        call drestart_write_binary(restart, "lda_u_Veff", ncount, Veff, err)
+        SAFE_DEALLOCATE_A(Veff)
+        if (err /= 0) ierr = ierr + 1 
+      end if
     end if
 
     if (debug%info) then
@@ -559,16 +577,17 @@ contains
 
 
  ! ---------------------------------------------------------
-  subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
+  subroutine lda_u_load(restart, this, st, dftu_energy, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
     type(states_elec_t),  intent(in)    :: st
+    FLOAT,                intent(out)   :: dftu_energy
     integer,              intent(out)   :: ierr
     logical, optional,    intent(in)    :: occ_only
     logical, optional,    intent(in)    :: u_only
 
-    integer :: err, occsize
-    FLOAT, allocatable :: Ueff(:), docc(:)
+    integer :: err, occsize, ncount, ios
+    FLOAT, allocatable :: Ueff(:), docc(:), Veff(:)
     CMPLX, allocatable :: zocc(:)
 
     PUSH_SUB(lda_u_load)
@@ -593,12 +612,30 @@ contains
       if (err /= 0) ierr = ierr + 1
       call lda_u_set_effectiveU(this, Ueff)
       SAFE_DEALLOCATE_A(Ueff)
+
+      if(this%intersite) then
+        ncount = 0
+        do ios = 1, this%norbsets
+          ncount = ncount + this%orbsets(ios)%nneighbors
+        end do
+        SAFE_ALLOCATE(Veff(1:ncount))
+        call drestart_read_binary(restart, "lda_u_Veff", ncount, Veff, err)
+        if (err /= 0) ierr = ierr + 1
+        call lda_u_set_effectiveV(this, Veff)
+        SAFE_DEALLOCATE_A(Veff)
+      end if
     end if
 
 
     if(.not. optional_default(u_only, .false.)) then
       occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-      if(this%level == DFT_U_ACBN0) occsize = occsize*2
+      if(this%level == DFT_U_ACBN0) then
+        occsize = occsize*2
+        if(this%intersite) then
+          occsize = occsize + 2*this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets*this%maxneighbors
+        end if
+      end if
+
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(docc(1:occsize))
@@ -616,8 +653,10 @@ contains
     end if
 
     if (states_are_real(st)) then
+      call dcompute_dftu_energy(this, dftu_energy, st)
       call dlda_u_update_potential(this, st)
     else
+      call zcompute_dftu_energy(this, dftu_energy, st)
       call zlda_u_update_potential(this, st)
     end if
 
@@ -671,10 +710,10 @@ contains
       read(lines(2), '(a)') str
       if (str(2:8) == 'Complex') then
         message(1) = "Cannot read real states from complex wavefunctions."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       else if (str(2:5) /= 'Real') then
         message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
     end if
     ! complex can be restarted from real, so there is no problem.
@@ -728,7 +767,7 @@ contains
 
         if (.not. restart_file_present(idim, ist)) then
           write(message(1), '(a,i3,a)') "Cannot read states ", ist, "from the projection folder"
-          call messages_fatal(1)            
+          call messages_fatal(1, namespace=namespace)
         end if
 
         if (states_are_real(st)) then

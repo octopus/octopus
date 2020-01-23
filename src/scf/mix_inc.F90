@@ -231,7 +231,7 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
   FLOAT, optional,    intent(in) :: dbeta(:, :), dwork(:), dgamma
   CMPLX, optional,    intent(in) :: zbeta(:, :), zwork(:), zgamma
 
-  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
+  FLOAT, parameter :: ww = M_FIVE
   integer :: d1,d2,d3, ipos, i
   R_TYPE  :: gamma
   R_TYPE, allocatable :: f(:, :, :)

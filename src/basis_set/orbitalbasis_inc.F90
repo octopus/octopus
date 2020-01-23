@@ -358,7 +358,7 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   integer,                   intent(in)       :: nstates
   logical, optional,         intent(in)       :: verbose
 
-  integer :: is, ios, iorb, offset
+  integer :: ios, iorb, offset
   type(orbitalset_t), pointer :: os
   logical :: verbose_
 

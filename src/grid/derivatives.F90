@@ -54,14 +54,13 @@ module derivatives_oct_m
   private
   public ::                             &
     derivatives_t,                      &
+    derivatives_nullify,                &
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
-    sderivatives_test,                  &
-    cderivatives_test,                  &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -78,7 +77,9 @@ module derivatives_oct_m
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
-    zderivatives_curl
+    zderivatives_curl,                  &
+    dderivatives_partial,               &
+    zderivatives_partial
 
 
   integer, parameter ::     &
@@ -143,6 +144,27 @@ module derivatives_oct_m
   type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
 
 contains
+
+  ! ---------------------------------------------------------
+  elemental subroutine derivatives_nullify(this)
+    type(derivatives_t), intent(out) :: this
+
+    call boundaries_nullify(this%boundaries)
+    nullify(this%mesh)
+    this%dim = 0
+    this%order = 0
+    this%stencil_type = 0
+    this%masses = M_ZERO
+    this%lapl_cutoff = M_ZERO
+    nullify(this%op, this%lapl, this%grad)
+    this%n_ghost = 0
+#if defined(HAVE_MPI)
+    this%comm_method = 0
+#endif
+    nullify(this%finer, this%coarser)
+    nullify(this%to_finer, this%to_coarser)
+
+  end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
   subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
@@ -385,20 +407,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_update(der, mesh)
+  subroutine derivatives_update(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
     
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
     
-    call derivatives_build(der, mesh)
+    call derivatives_build(der, namespace, mesh)
     
   end subroutine derivatives_update
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, mesh)
+  subroutine derivatives_build(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -411,7 +435,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, mesh)
+    call boundaries_init(der%boundaries, namespace, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
@@ -733,14 +757,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "derivatives_inc.F90"
 
 end module derivatives_oct_m

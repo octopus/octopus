@@ -1,0 +1,30 @@
+CalculationMode = test
+
+TestMode = batch_ops
+TestBatchOps = ops_axpy + ops_scal + ops_nrm2
+TestRepetitions = 5
+
+PeriodicDimensions = 3
+
+aCell = 5
+bCell = 4
+cCell = 8
+
+%Lsize
+ aCell | bCell | cCell
+%
+
+Spacing = 0.5
+
+r_s = 4.0
+N_electrons = 8
+jradius = r_s * (N_electrons)^(1.0/3.0)
+
+%Species
+"jellium" | species_jellium | jellium_radius | jradius | valence | N_electrons
+%
+
+%Coordinates
+"jellium" | 0 | 0 | 0
+%
+

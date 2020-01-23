@@ -133,6 +133,8 @@ module multicomm_oct_m
     integer, public  :: master_comm      !< The communicator without slaves.
     integer          :: master_comm_rank !< The rank in the communicator without slaves.
     integer, public  :: slave_intercomm  !< the intercomm to communicate with slaves
+
+    logical          :: reorder_ranks    !< do we reorder ranks in a more compact way?
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
@@ -182,6 +184,18 @@ contains
     mc%n_node  = n_node
 
     call messages_print_stress(stdout, "Parallelization")
+
+    !%Variable ReorderRanks
+    !%Default no
+    !%Type logical
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls whether the ranks are reorganized to have a more
+    !% compact distribution with respect to domain parallelization which needs
+    !% to communicate most often. Depending on the system, this can improve
+    !% communication speeds.
+    !%End
+    call parse_variable(namespace, 'ReorderRanks', .false., mc%reorder_ranks)
 
     call messages_obsolete_variable(namespace, 'ParallelizationStrategy')
     call messages_obsolete_variable(namespace, 'ParallelizationGroupRanks')
@@ -580,6 +594,9 @@ contains
       integer :: coords(MAX_INDEX)
       integer :: new_comm, new_comm_size
       character(len=6) :: node_type
+      type(mpi_grp_t) :: reorder_grp
+      integer :: base_group, reorder_group, ranks(base_grp%size)
+      integer :: ii, jj, kk, ll, nn, reorder_comm
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -593,6 +610,46 @@ contains
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
+        if(mc%reorder_ranks) then
+          ! first, reorder the ranks
+          ! this is done to get a column-major ordering of the ranks in the
+          ! Cartesian communicator, since they a ordered row-major otherwise
+          call MPI_Comm_group(base_grp%comm, base_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in getting MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now transpose the hypercube => get rank numbers in column-major order
+          nn = 1
+          do ii = 1, mc%group_sizes(1)
+            do jj = 1, mc%group_sizes(2)
+              do kk = 1, mc%group_sizes(3)
+                do ll = 1, mc%group_sizes(4)
+                  ranks(nn) = (ll-1)*mc%group_sizes(3)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (kk-1)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (jj-1)*mc%group_sizes(1) + ii - 1
+                  nn = nn + 1
+                end do
+              end do
+            end do
+          end do
+          call MPI_Group_incl(base_group, base_grp%size, ranks, reorder_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now get the reordered communicator
+          call MPI_Comm_create(base_grp%comm, reorder_group, reorder_comm, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating reordered communicator!"
+            call messages_fatal(1)
+          end if
+          call mpi_grp_init(reorder_grp, reorder_comm)
+          call mpi_grp_copy(base_grp, reorder_grp)
+        else
+          call mpi_grp_copy(reorder_grp, base_grp)
+        end if
+
         ! Multilevel parallelization is organized in a hypercube. We
         ! use an MPI Cartesian topology to generate the communicators
         ! that correspond to each level.
@@ -607,7 +664,7 @@ contains
         periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(reorder_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -984,8 +1041,8 @@ contains
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
 
     integer :: rank
-    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 #ifdef HAVE_OPENMP
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     integer :: nthreads
 #endif
 

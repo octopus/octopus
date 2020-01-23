@@ -41,6 +41,7 @@ module system_oct_m
   use space_oct_m
   use simul_box_oct_m
   use sort_oct_m
+  use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use v_ks_oct_m
@@ -92,7 +93,7 @@ contains
     call geometry_init(sys%geo, sys%namespace, sys%space)
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
-    call sys%st%write_info()
+    call sys%st%write_info(sys%namespace)
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
@@ -106,7 +107,8 @@ contains
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
-    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
+    call v_ks_nullify(sys%ks)
+    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks, states_are_real(sys%st))
     call states_elec_densities_init(sys%st, sys%gr, sys%geo)
     call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
     call elf_init(sys%namespace)
@@ -155,7 +157,7 @@ contains
 
     call multicomm_end(sys%mc)
 
-    call v_ks_end(sys%ks)
+    call v_ks_end(sys%ks, sys%gr)
     
     call output_end(sys%outp)
     
@@ -177,21 +179,24 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, calc_eigenval)
+  subroutine system_h_setup(sys, calc_eigenval, calc_current)
     type(system_t),      intent(inout) :: sys
     logical,   optional, intent(in)    :: calc_eigenval !< default is true
+    logical,   optional, intent(in)    :: calc_current !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik
     FLOAT, allocatable :: copy_occ(:)
     logical :: calc_eigenval_
+    logical :: calc_current_
 
     PUSH_SUB(system_h_setup)
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
-    call states_elec_fermi(sys%st, sys%gr%mesh)
+    calc_current_ = optional_default(calc_current, .true.)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
+    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       message(1) = "Reordering occupations for restart."
@@ -212,8 +217,8 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    call states_elec_fermi(sys%st, sys%gr%mesh) ! occupations
-    call energy_calc_total(sys%hm, sys%gr, sys%st)
+    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+    call energy_calc_total(sys%namespace, sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)
   end subroutine system_h_setup

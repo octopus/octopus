@@ -24,9 +24,11 @@ module states_elec_parallel_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -49,8 +51,9 @@ module states_elec_parallel_oct_m
   
 contains
 
-  subroutine states_elec_parallel_blacs_blocksize(st, mesh, blocksize, total_np)
+  subroutine states_elec_parallel_blacs_blocksize(st, namespace, mesh, blocksize, total_np)
     type(states_elec_t),  intent(in)    :: st
+    type(namespace_t),    intent(in)    :: namespace
     type(mesh_t),         intent(in)    :: mesh
     integer,              intent(out)   :: blocksize(2)
     integer,              intent(out)   :: total_np
@@ -68,7 +71,7 @@ contains
     if(.not. st%scalapack_compatible) then
       message(1) = "Attempt to use ScaLAPACK when processes have not been distributed in compatible layout."
       message(2) = "You need to set ScaLAPACKCompatible = yes in the input file and re-run."
-      call messages_fatal(2, only_root_writes = .true.)
+      call messages_fatal(2, only_root_writes = .true., namespace=namespace)
     end if
     
     if (mesh%parallel_in_domains) then
@@ -108,12 +111,17 @@ contains
 
     ASSERT(associated(this%group%psib))
 
+    if(this%mpi_grp%size == 1) then 
+      POP_SUB(states_elec_parallel_remote_access_start)
+      return
+    end if
+
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
     
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_start(this%mpi_grp, this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           ! create an empty window
@@ -133,6 +141,8 @@ contains
     type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
+
+    if(.not.allocated(this%group%rma_win)) return
     
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
@@ -141,7 +151,7 @@ contains
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_stop(this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
@@ -162,7 +172,7 @@ contains
     type(mesh_t),                intent(in) :: mesh
     integer,                     intent(in) :: ib
     integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     type(profile_t), save :: prof
     
@@ -172,17 +182,22 @@ contains
     
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
+      call profiling_out(prof)
+      POP_SUB(states_elec_parallel_get_block)
+      return
     else
-      SAFE_ALLOCATE(psib)
-      call batch_init(psib, this%d%dim, this%group%block_size(ib))
+      allocate(wfs_elec_t::psib)
+      call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
       end if
-      
-      call batch_pack(psib, copy = .false.)
+
+      ASSERT(allocated(this%group%rma_win))      
+
+      call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
@@ -208,18 +223,17 @@ contains
 
   ! --------------------------------------
 
-  subroutine states_elec_parallel_release_block(this, ib, iqn, psib)
+  subroutine states_elec_parallel_release_block(this, ib, psib)
     type(states_elec_t), target, intent(in) :: this
     integer,                     intent(in) :: ib
-    integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     PUSH_SUB(states_elec_parallel_release_block)
 
-    if(this%group%block_is_local(ib, iqn)) then
+    if(this%group%block_is_local(ib, psib%ik)) then
       nullify(psib)
     else
-      call batch_end(psib)
+      call psib%end()
       SAFE_DEALLOCATE_P(psib)
     end if
     

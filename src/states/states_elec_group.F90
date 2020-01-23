@@ -25,6 +25,7 @@ module states_elec_group_oct_m
   use messages_oct_m
   use profiling_oct_m
   use states_elec_dim_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -38,7 +39,7 @@ module states_elec_group_oct_m
 
   type states_elec_group_t
     ! Components are public by default
-    type(batch_t), pointer   :: psib(:, :)            !< A set of wave-functions blocks
+    type(wfs_elec_t), pointer :: psib(:, :)            !< A set of wave-functions blocks
     integer                  :: nblocks               !< The number of blocks
     integer                  :: block_start           !< The lowest index of local blocks
     integer                  :: block_end             !< The highest index of local blocks
@@ -83,7 +84,7 @@ contains
       do ib = 1, this%nblocks
         do iq = d%kpt%start, d%kpt%end
           if (this%block_is_local(ib, iq)) then
-            call batch_end(this%psib(ib, iq))
+            call this%psib(ib, iq)%end()
           end if
         end do
       end do
@@ -132,7 +133,7 @@ contains
 
       do iqn = qn_start, qn_end
         do ib = group_out%block_start, group_out%block_end
-          call batch_copy(group_in%psib(ib, iqn), group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
+          call group_in%psib(ib, iqn)%copy_to(group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
         end do
       end do
       

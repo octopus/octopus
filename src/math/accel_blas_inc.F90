@@ -242,8 +242,6 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #endif
   (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
   y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
-
-  call accel_finish()
 #endif
 
 #ifdef HAVE_OPENCL
@@ -289,9 +287,8 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
 #ifdef HAVE_CUDA
   call aX(cuda_blas_,nrm2)(handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
     res = res%mem, offres = offres)
-
-  call accel_finish()
 #endif
+
 
 #ifdef HAVE_OPENCL
   call accel_create_buffer(scratch_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, n)
@@ -314,3 +311,63 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
   POP_SUB(X(accel_nrm2))
 end subroutine X(accel_nrm2)
     
+! -----------------------------------------------------------------------------------
+
+subroutine X(accel_gemv)(transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
+  integer,            intent(in)    :: transa
+  integer(8),         intent(in)    :: m
+  integer(8),         intent(in)    :: n
+  R_TYPE,             intent(in)    :: alpha
+  type(accel_mem_t),  intent(in)    :: A
+  integer(8),         intent(in)    :: lda
+  type(accel_mem_t),  intent(in)    :: x
+  integer(8),         intent(in)    :: incx
+  R_TYPE,             intent(in)    :: beta
+  type(accel_mem_t),  intent(inout) :: y
+  integer(8),         intent(in)    :: incy
+
+#ifdef HAVE_CLBLAS
+  integer :: ierr
+#endif
+#ifdef HAVE_CUDA
+  type(accel_mem_t) :: alpha_buffer, beta_buffer
+#endif
+
+  PUSH_SUB(X(accel_gemv))
+
+#ifdef HAVE_CLBLAS
+
+  call aX(clblas,gemvEx)(order = clblasColumnMajor, transA = transa, &
+    M = m, N = n,  &
+    alpha = alpha, A = a%mem, offa = 0, lda = lda, &
+    x = x%mem, offx = 0, incx = incx, &
+    beta = beta, y = y%mem, offy = 0, incy = incy, &
+    CommandQueue = accel%command_queue, status = ierr)
+  if(ierr /= clblasSuccess) call clblas_print_error(ierr, 'clblasXgemmEx')
+  
+#endif
+#ifdef HAVE_CUDA
+
+  call accel_create_buffer(alpha_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, 1)
+  call accel_create_buffer(beta_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, 1)
+
+  call accel_write_buffer(alpha_buffer, alpha)
+  call accel_write_buffer(beta_buffer, beta)
+
+  call aX(cuda_blas_,gemv)(handle = accel%cublas_handle, transa = transa, &
+    m = m, n = n,  &
+    alpha = alpha_buffer%mem, &
+    a = a%mem, lda = lda, &
+    x = x%mem, incx = incx, &
+    beta = beta_buffer%mem, &
+    y = y%mem, incy = incy)
+
+  call accel_finish()
+
+  call accel_release_buffer(alpha_buffer)
+  call accel_release_buffer(beta_buffer)
+
+#endif
+
+  POP_SUB(X(accel_gemv))
+end subroutine X(accel_gemv)

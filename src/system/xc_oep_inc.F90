@@ -28,7 +28,7 @@
 subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
-  type(xc_t),               intent(in)    :: xcs
+  type(xc_t),               intent(inout) :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -74,7 +74,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)
+          call X(oep_x) (namespace, gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
         end do sum_comp
         ex = ex + eig
       end select
@@ -82,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec, hm%exxop)
     end if
     ! calculate uxc_bar for the occupied states
 
@@ -126,7 +126,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         end if
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
-          call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
+          call X(xc_oep_solve)(namespace, gr, hm, st, is, vxc(:,is), oep)
           vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
         end if
         if (is == nspin_) first = .false.
@@ -144,7 +144,8 @@ end subroutine X(xc_OEP_calc)
 
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
+subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
@@ -163,7 +164,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   PUSH_SUB(X(xc_oep_solve))
 
   if(st%parallel_in_states) &
-    call messages_not_implemented("Full OEP parallel in states")
+    call messages_not_implemented("Full OEP parallel in states", namespace=namespace)
 
   SAFE_ALLOCATE(     bb(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(     ss(1:gr%mesh%np))
@@ -220,7 +221,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
       end if
 
-      call X(linear_solver_solve_HXeY)(oep%solver, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
+      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
       if (.not.oep%has_photons) then
@@ -285,7 +286,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   if(ff > oep%scftol%conv_abs_dens) then
     write(message(1), '(a)') "OEP did not converge."
-    call messages_warning(1)
+    call messages_warning(1, namespace=namespace)
 
     ! otherwise the number below will be one too high
     iter = iter - 1

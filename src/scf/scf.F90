@@ -44,7 +44,6 @@ module scf_oct_m
   use mix_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use output_oct_m
@@ -74,18 +73,21 @@ module scf_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oep_oct_m
   
   implicit none
 
   private
-  public ::             &
-    scf_t,              &
-    scf_init,           &
-    scf_mix_clear,      &
-    scf_run,            &
-    scf_end
+  public ::              &
+    scf_t,               &
+    scf_init,            & 
+    scf_mix_clear,       &
+    scf_run,             &
+    scf_end,             &
+    scf_state_info,      &
+    scf_print_mem_use
 
   integer, public, parameter :: &
     VERB_NO      = 0,   &
@@ -380,12 +382,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st)
-
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
+    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
 
     !%Variable SCFinLCAO
     !%Type logical
@@ -494,12 +491,8 @@ contains
     
     PUSH_SUB(scf_end)
 
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      call multigrid_end(scf%gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(scf%gr%mgrid_prec)
-    end if
+    call eigensolver_end(scf%eigens, scf%gr)
 
-    call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
     nullify(scf%mixfield)
@@ -543,7 +536,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv, forced_finish_tmp
+    logical :: finish, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -553,7 +546,10 @@ contains
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    type(batch_t), allocatable :: psioutb(:, :)
+    class(wfs_elec_t), allocatable :: psioutb(:, :)
+#ifdef HAVE_MPI
+    logical :: forced_finish_tmp    
+#endif
 
     PUSH_SUB(scf_run)
 
@@ -628,7 +624,7 @@ contains
       end if
 
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_load(restart_load, hm%lda_u, st, ierr) 
+        call lda_u_load(restart_load, hm%lda_u, st, hm%energy%dft_u, ierr) 
         if (ierr /= 0) then
           message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
           call messages_warning(1)
@@ -658,17 +654,17 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+          call st%group%psib(ib, iqn)%copy_to(psioutb(ib, iqn))
         end do
       end do
       
     end select
 
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
@@ -726,7 +722,7 @@ contains
           ks%frozen_hxc = .true.
           do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, iter)
+            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
 
             call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
@@ -746,13 +742,13 @@ contains
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
         end if
       end if
 
       ! occupations
-      call states_elec_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call states_elec_fermi(st, namespace, gr%mesh)
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
@@ -769,7 +765,7 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
+            call st%group%psib(ib, iqn)%copy_data_to(gr%mesh%np, psioutb(ib, iqn))
           end do
         end do
       end select
@@ -779,7 +775,7 @@ contains
       evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call energy_calc_total(hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
@@ -954,7 +950,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
       end if
 
       ! save information for the next iteration
@@ -987,7 +983,7 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
       call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 
@@ -996,7 +992,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_end(psioutb(ib, iqn))
+          call psioutb(ib, iqn)%end()
         end do
       end do
       
@@ -1022,24 +1018,24 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo) 
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
     
     if(scf%max_iter == 0) then
-      call energy_calc_eigenvalues(hm, gr%der, st)
-      call states_elec_fermi(st, gr%mesh)
+      call energy_calc_eigenvalues(namespace, hm, gr%der, st)
+      call states_elec_fermi(st, namespace, gr%mesh)
       call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
 
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, namespace, gr, geo, st, hm, ks, STATIC_DIR)
+      call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
+          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
@@ -1058,10 +1054,6 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1097,7 +1089,7 @@ contains
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
+          call write_magnetic_moments(stdout, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         end if
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
@@ -1109,15 +1101,7 @@ contains
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
 
-        if(conf%report_memory) then
-          mem = loct_get_memory_usage()/(CNST(1024.0)**2)
-#ifdef HAVE_MPI
-          call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
-          mem = mem_tmp
-#endif
-          write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
-          call messages_info(1)
-        end if
+        call scf_print_mem_use()
 
         call messages_print_stress(stdout)
 
@@ -1162,14 +1146,14 @@ contains
 
         call grid_write_info(gr, geo, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
+          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
 
         ! scf information
         if(finish) then
@@ -1196,11 +1180,11 @@ contains
         iunit = 0
       end if
 
-      call energy_calc_total(hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
+        call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
@@ -1423,6 +1407,45 @@ contains
     end subroutine write_convergence_file
     
   end subroutine scf_run
+
+  ! ---------------------------------------------------------
+  subroutine scf_state_info(st)
+    class(states_abst_t), intent(in) :: st
+
+    PUSH_SUB(scf_state_info)
+
+    if (states_are_real(st)) then
+      call messages_write('Info: SCF using real wavefunctions.')
+    else
+      call messages_write('Info: SCF using complex wavefunctions.')
+    end if
+    call messages_info()
+
+    POP_SUB(scf_state_info)
+
+  end subroutine scf_state_info
+
+  ! ---------------------------------------------------------
+  subroutine scf_print_mem_use()
+    FLOAT :: mem
+#ifdef HAVE_MPI
+    FLOAT :: mem_tmp
+#endif
+
+    PUSH_SUB(scf_print_mem_use)
+
+    if(conf%report_memory) then
+      mem = loct_get_memory_usage()/(CNST(1024.0)**2)
+#ifdef HAVE_MPI
+      call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
+      mem = mem_tmp
+#endif
+      write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
+      call messages_info(1)
+    end if
+
+    POP_SUB(scf_print_mem_use)
+  end subroutine scf_print_mem_use
 
 end module scf_oct_m
 

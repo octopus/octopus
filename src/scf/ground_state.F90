@@ -42,8 +42,8 @@ module ground_state_oct_m
   implicit none
 
   private
-  public ::                 &
-    ground_state_run_init,  &
+  public ::                       &
+    ground_state_run_init,        &
     ground_state_run
 
 contains
@@ -107,35 +107,31 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    if(sys%ks%theory_level /= RDMFT) then
+      call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    end if
 
-    if(fromScratch) then
+    if (fromScratch .and. sys%ks%theory_level /= RDMFT) then
       call lcao_run(sys, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, calc_eigenval = .false.)
+      call system_h_setup(sys, calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
-    if (states_are_real(sys%st)) then
-      call messages_write('Info: SCF using real wavefunctions.')
-    else
-      call messages_write('Info: SCF using complex wavefunctions.')
-    end if
-    call messages_info()
+    call scf_state_info(sys%st)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, fromScratch)
-      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
-        restart_dump)
-      call rdmft_end(rdm)
+      call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc, fromScratch)
+      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, restart_dump)
+      call rdmft_end(rdm, sys%gr)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
@@ -145,12 +141,13 @@ contains
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
           restart_dump=restart_dump)
       end if
+
+      call scf_end(scfv)
     end if
 
-    call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()
 
     ! clean up
     call states_elec_deallocate_wfns(sys%st)

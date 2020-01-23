@@ -24,13 +24,15 @@ dist_share_DATA =                      \
 	01-propagators.test \
 	01-propagators.01-gs.inp \
 	01-propagators.02-expmid.inp \
-	01-propagators.03-etrs.inp \
-	01-propagators.04-aetrs.inp \
-	01-propagators.05-caetrs.inp \
-	01-propagators.06-cn.inp \
-	01-propagators.07-magnus.inp \
-	01-propagators.08-exprk4.inp \
-        01-propagators.09-cfmagnus4.inp \
+	01-propagators.03-etrs_taylor.inp \
+	01-propagators.04-etrs_lanczos.inp \
+	01-propagators.05-etrs_chebyshev.inp \
+	01-propagators.06-aetrs.inp \
+	01-propagators.07-caetrs.inp \
+	01-propagators.08-cn.inp \
+	01-propagators.09-magnus.inp \
+	01-propagators.10-exprk4.inp \
+        01-propagators.11-cfmagnus4.inp \
 	02-propagators.test \
 	02-propagators.01-gs.inp \
 	02-propagators.02-cnsparskit.inp \
@@ -42,8 +44,9 @@ dist_share_DATA =                      \
 	05-time_propagation.01-gs.inp                                 \
 	05-time_propagation.02-td_domains.inp                         \
 	05-time_propagation.03-td_domains_states.inp                  \
-	05-time_propagation.04-td_md.inp                              \
-	05-time_propagation.05-td_fast_md.inp                         \
+	05-time_propagation.04-td_domains_states-reorder_ranks.inp    \
+	05-time_propagation.05-td_md.inp                              \
+	05-time_propagation.06-td_fast_md.inp                         \
 	05-time_propagation.test                                      \
 	06-caetrs.01-gs.inp            \
 	06-caetrs.02-kick.inp          \
@@ -114,6 +117,10 @@ dist_share_DATA =                      \
         19-td_move_ions.03-td_restart.inp \
         20-pcm-local-field-absorption.01-gs.inp        \
         20-pcm-local-field-absorption.02-td_prop_eom.inp   \
-        20-pcm-local-field-absorption.test
+        20-pcm-local-field-absorption.test               \
+	21-scissor.test             \
+	21-scissor.01-gs.inp        \
+	21-scissor.02-td.inp        \
+	21-scissor.03-spectrum.inp
 
 CLEANFILES = *~ *.bak

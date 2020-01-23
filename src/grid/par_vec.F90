@@ -141,14 +141,14 @@ module par_vec_oct_m
                                                     !! Global vector; npart elements.
     integer                 :: np_local             !< How many points has running partition? 
                                                     !! Local value.
-    integer, pointer, private :: xlocal_vec(:)      !< Points of partition r start at
+    integer, pointer        :: xlocal_vec(:)      !< Points of partition r start at
                                                     !! xlocal_vec(r) in local. Global start point
                                                     !! of the local index.  
                                                     !! Global vector; npart elements.
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, pointer, private :: local_vec(:)       !< Partition r has points
+    integer, pointer        :: local_vec(:)       !< Partition r has points
                                                     !! local_vec(xlocal_vec(r):
                                                     !! xlocal_vec(r)+np_local_vec(r)-1). 
                                                     !! Global vector; np_global elements    
@@ -184,24 +184,18 @@ module par_vec_oct_m
   interface vec_scatter
     module procedure dvec_scatter
     module procedure zvec_scatter
-    module procedure svec_scatter
-    module procedure cvec_scatter
     module procedure ivec_scatter
   end interface vec_scatter
 
   interface vec_gather
     module procedure dvec_gather
     module procedure zvec_gather
-    module procedure svec_gather
-    module procedure cvec_gather
     module procedure ivec_gather
   end interface vec_gather
 
   interface vec_allgather
     module procedure dvec_allgather
     module procedure zvec_allgather
-    module procedure svec_allgather
-    module procedure cvec_allgather
     module procedure ivec_allgather
   end interface vec_allgather
   
@@ -918,14 +912,6 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "par_vec_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "par_vec_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
 #include "par_vec_inc.F90"
 
 #include "undef.F90"

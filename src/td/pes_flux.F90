@@ -44,6 +44,7 @@ module pes_flux_oct_m
   use simul_box_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -62,7 +63,8 @@ module pes_flux_oct_m
     pes_flux_dump,             &
     pes_flux_reciprocal_mesh_gen, &
     pes_flux_pmesh,            &
-    pes_flux_map_from_states
+    pes_flux_map_from_states,  &
+    pes_flux_out_energy
 
   type pes_flux_t
     private
@@ -116,6 +118,10 @@ module pes_flux_oct_m
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
     logical          :: arpes_grid
 
+    integer          :: dim                            !< dimensions
+    integer          :: pdim                           !< periodi dimensions
+
+
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -159,12 +165,10 @@ contains
     mdim   = mesh%sb%dim
     pdim   = mesh%sb%periodic_dim
 
-    call messages_experimental("PhotoElectronSpectrum with t-surff")
-
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end do
 
@@ -200,7 +204,7 @@ contains
       call messages_input_error('PES_Flux_Shape')
     if(this%shape == M_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Shape', this%shape)
 
@@ -283,7 +287,6 @@ contains
         call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
         ! Snap the plane to the closest grid point
         border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
         
       else
         select case(mesh%sb%box_shape)
@@ -295,12 +298,13 @@ contains
           call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
           call messages_new_line()
           call messages_write('Specify the location of the parallelepiped with block PES_Flux_Lsize.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end select
         call messages_write('PES_Flux_Lsize not specified. Using default values.')
         call messages_info()
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
       end if
+
+      call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
 
     else
       !%Variable PES_Flux_Radius
@@ -322,7 +326,7 @@ contains
         case default
           message(1) = 'PES_Flux_Radius not specified. No default values available for this box shape.'
           message(2) = 'Specify the radius of the sphere with variable PES_Flux_Radius.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
         message(1) = 'PES_Flux_Radius not specified. Using default values.'
         call messages_info(1)
@@ -471,7 +475,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end,kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do ik = kptst, kptend
@@ -568,6 +572,9 @@ contains
     kptend = st%d%kpt%end
     mdim   = sb%dim
     pdim   = sb%periodic_dim
+
+    this%dim  = mdim
+    this%pdim = pdim
 
     
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
@@ -790,7 +797,7 @@ contains
         call messages_write("Using a path in reciprocal space with PES_Flux_BZones > 1.")
         call messages_new_line()
         call messages_write("This may cause unphysical results if the path crosses the 1st BZ boundary.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
 !         call get_kpath_perp_direction(sb%kpoints, idim)
 !         if (idim > 0 ) NBZ(idim) = 1
       end if 
@@ -1018,7 +1025,7 @@ contains
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
       if (this%arpes_grid) then
-        kpoint = kpoints_get_point(sb%kpoints, ikpt)
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
         kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
         val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
         if (val >= 0) then
@@ -1036,49 +1043,21 @@ contains
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
       
     end subroutine fill_non_periodic_dimension
-         
-          
-    subroutine get_kpath_perp_direction(kpoints, kpth_dir)
-      type(kpoints_t),   intent(in)  :: kpoints 
-      integer,           intent(out) :: kpth_dir
-
-      FLOAT                :: kpt(3)
-      integer              :: ikzero_start
-         
-      ikzero_start = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1   
-      
-      kpth_dir = -1
-         
-      kpt = M_ZERO
-      kpt(1:mdim) = kpoints_get_point(kpoints, ikzero_start+1)-kpoints_get_point(kpoints, ikzero_start)
-      kpt(1:mdim) = kpt(1:mdim)/sqrt(sum(kpt(1:mdim)**2))  
-           
-      
-      if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
-        kpth_dir = 2
-      end if        
-              
-      if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then 
-        kpth_dir = 1
-      end if
-      
-      
-      
-    end subroutine get_kpath_perp_direction
-          
+                   
           
     
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt)
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_elec_t), intent(in)    :: hm
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: dt
+  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
+    type(pes_flux_t),    intent(inout)    :: this
+    type(mesh_t),        intent(in)       :: mesh
+    type(states_elec_t), intent(inout)    :: st
+    type(grid_t),        intent(in)       :: gr
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    integer,             intent(in)       :: iter
+    FLOAT,               intent(in)       :: dt
+    logical,             intent(in)       :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
@@ -1171,7 +1150,7 @@ contains
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
 
-      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter) then
+      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else

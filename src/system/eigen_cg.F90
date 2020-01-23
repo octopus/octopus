@@ -31,6 +31,7 @@ module eigen_cg_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use poisson_oct_m
