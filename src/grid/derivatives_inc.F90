@@ -581,7 +581,7 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
-  integer :: idir,ip
+  integer :: idir
   logical :: set_bc_, ghost_update_
 
   PUSH_SUB(X(derivatives_batch_grad))
