@@ -18,7 +18,8 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
+subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
+  type(namespace_t),        intent(in)    :: namespace
   type(mesh_t),   intent(in)      :: mesh
   type(grid_t),   intent(in)      :: gr
   type(hamiltonian_elec_t), intent(in) :: hm
@@ -66,7 +67,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
     end if
 
     if (.not. first) &
-    call X(xc_oep_pt_phi)(gr, hm, st, is, oep, phi1)
+    call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
   end if
 
   do ist = st%st_start, st%st_end

@@ -121,7 +121,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
-          call X(xc_KLI_solve) (gr%mesh, gr, hm, st, is, oep, first)
+          call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
           vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
         end if
         ! if asked, solve the full OEP equation
@@ -189,7 +189,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       call lr_allocate(oep%pt%lr, st, gr%mesh)
       oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
     end if
-    call X(xc_oep_pt_phi)(gr, hm, st, is, oep, phi1)
+    call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
   end if
 
   ! fix xc potential (needed for Hpsi)

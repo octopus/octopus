@@ -743,7 +743,7 @@ contains
         if (ks%oep%has_photons) then
           if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
             write(fname, '(a)') 'photon_correlator'
-            call dio_function_output(outp%how, dir, trim(fname), outp%namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
               units_out%length, ierr, geo = geo)
           end if
         end if

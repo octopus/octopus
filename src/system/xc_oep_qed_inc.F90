@@ -18,13 +18,14 @@
 !> This file handles the evaluation of the photon-OEP potential,
 !! as described in J. Flick et al. ACS Photonics 2018, 5, 3, 992-1005
 ! ---------------------------------------------------------
-subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
-  type(grid_t),        intent(in)    :: gr
+subroutine X(xc_oep_pt_phi) (namespace, gr, hm, st, is, oep, phi1)
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(states_elec_t),      intent(in)    :: st
-  integer,             intent(in)    :: is
-  type(xc_oep_t),      intent(inout) :: oep
-  R_TYPE,              intent(inout) :: phi1(:,:,:)
+  integer,                  intent(in)    :: is
+  type(xc_oep_t),           intent(inout) :: oep
+  R_TYPE,                   intent(inout) :: phi1(:,:,:)
 
   integer :: ist, kst, iter_used
   FLOAT :: rhs_kkbar, residue, kkopii
@@ -56,7 +57,7 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
 
     call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, rhs, normalize = .false.)
 
-    call X(linear_solver_solve_HXeY)(oep%solver, hm, gr, st, ist, is, oep%pt%lr%X(dl_psi)(:,:, ist, is), rhs, &
+    call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%pt%lr%X(dl_psi)(:,:, ist, is), rhs, &
            R_TOTYPE(-st%eigenval(ist, is)) + R_REAL(oep%pt%omega_array(1)), oep%scftol%final_tol, residue, iter_used)
 
     call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
