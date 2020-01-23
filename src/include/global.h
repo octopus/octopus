@@ -124,7 +124,7 @@
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
   global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
-    call profiling_memory_allocate(ACARDINAL TOSTRING(x ## bounds), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
+    call profiling_memory_allocate(ACARDINAL TOSTRING(x)+TOSTRING(bounds), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
   if(global_alloc_err.ne.0) ACARDINAL \
     call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
   CARDINAL
