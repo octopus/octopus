@@ -1219,8 +1219,8 @@ contains
           if (ks%oep%level == XC_OEP_FULL) then
             if (ks%oep%has_photons) then
               write(iunit, '(a)') 'Pt-Observable:'
-              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_number = ', ks%oep%pt%pt_number
-              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_exchange = ', ks%oep%pt%ex
+              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'photon number = ', ks%oep%pt%pt_number
+              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'photon exchange = ', ks%oep%pt%ex
               write(iunit,'(1x)')
             end if
           end if
