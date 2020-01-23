@@ -76,9 +76,13 @@
 
 
 ! In octopus, one should normally use the SAFE_(DE)ALLOCATE macros below, which emit
-! a helpful error if the the allocation or deallocation fails. The "MY_DEALLOCATE" macro
-! is only used in this file; in the code, one should use SAFE_DEALLOCATE_P for pointers
-! and SAFE_DEALLOCATE_A for arrays.
+! a helpful error if the allocation or deallocation fails. They also take care of
+! calling the memory profiler. The "MY_DEALLOCATE" macro is only used in this file;
+! in the code, one should use SAFE_DEALLOCATE_P for pointers and SAFE_DEALLOCATE_A
+! for arrays.
+! A special version of the SAFE_ALLOCATE macro named SAFE_ALLOCATE_TYPE is also
+! provided to allocate a polymorphic variable. This is necessary because of the
+! special Fortran syntax "type::var".
 #if defined(NDEBUG)
 #  define SAFE_ALLOCATE(x) allocate(x)
 
@@ -117,7 +121,7 @@
   SAFE_ALLOCATE_PROFILE(x)
 
 ! Some versions of GCC have a bug in the sizeof() function such that the compiler crashes with a ICE
-! when passing a class instance to the function and explicit array bounds are given.
+! when passing a polymorphic variable to the function and explicit array bounds are given.
 ! The workaround is not to pass the bounds to sizeof. Otherwise we could just use SAFE_ALLOCATE_TYPE.
 #  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds)			\
   allocate( ACARDINAL type::x bounds, ACARDINAL stat=global_alloc_err); CARDINAL \
