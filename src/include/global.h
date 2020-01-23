@@ -99,8 +99,7 @@
   CARDINAL
 
 #else
-#  define SAFE_ALLOCATE(x)			\
-  allocate( ACARDINAL x, ACARDINAL stat=global_alloc_err); CARDINAL \
+#  define SAFE_ALLOCATE_PROFILE(x)              \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
   global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
@@ -109,15 +108,13 @@
     call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
   CARDINAL
 
+#  define SAFE_ALLOCATE(x)			\
+  allocate( ACARDINAL x, ACARDINAL stat=global_alloc_err); CARDINAL \
+  SAFE_ALLOCATE_PROFILE(x)
+
 #  define SAFE_ALLOCATE_TYPE(type, x)			\
   allocate( ACARDINAL type::x, ACARDINAL stat=global_alloc_err); CARDINAL \
-  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
-  global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
-    call profiling_memory_allocate(ACARDINAL TOSTRING(x), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
-  if(global_alloc_err.ne.0) ACARDINAL \
-    call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
-  CARDINAL
+  SAFE_ALLOCATE_PROFILE(x)
 
 ! Some versions of GCC have a bug in the sizeof() function such that the compiler crashes with a ICE
 ! when passing a class instance to the function and explicit array bounds are given.
