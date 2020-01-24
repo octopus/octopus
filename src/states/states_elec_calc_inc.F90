@@ -1671,7 +1671,8 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase, singularity, exc_k)
+subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
+                                         jindex, kindex, lindex, twoint, phase, singularity, exc_k)
   type(states_elec_t), intent(inout)           :: st
   type(namespace_t),   intent(in)              :: namespace
   type(grid_t),        intent(in)              :: gr
