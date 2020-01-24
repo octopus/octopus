@@ -543,7 +543,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:mesh%np))
 
-  allocate(wfs_elec_t::gradb(1:mesh%sb%dim))
+  SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, gradb, (1:mesh%sb%dim))
 
   call hpsib%copy_to(divb)
   
