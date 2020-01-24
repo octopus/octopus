@@ -1689,7 +1689,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint, ikpoint, jkpoint, ip, idim, ibind
+  integer :: iint, ikpoint, jkpoint, ip, ibind
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:), tmp(:)
   R_TYPE, pointer :: psii(:), psij(:), psil(:)
