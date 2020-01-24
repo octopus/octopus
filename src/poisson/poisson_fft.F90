@@ -782,8 +782,11 @@ contains
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, cube%fs_n_global(1)
-      g = ix*M_PI/mesh%sb%lsize(1) ! note that g is always positive with this definition
-      fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
+      ixx = pad_feq(ix, cube%rs_n_global(1), .true.)
+      g = (ixx+this%qq(1))*M_PI/mesh%sb%lsize(1)
+      if(abs(g) > CNST(1e-6)) then
+        fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*abs(g))
+      end if
     end do
 
     call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)
