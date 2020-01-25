@@ -63,7 +63,7 @@ subroutine X(xc_oep_pt_phi) (namespace, gr, hm, st, is, oep, phi1)
     call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
       oep%pt%lr%X(dl_psi)(:,:, ist, is), normalize = .false.)
 
-    phi1(:, 1:st%d%dim, ist) = oep%pt%lr%X(dl_psi)(:, 1:st%d%dim, ist, is)
+    phi1(1:gr%mesh%np, 1:st%d%dim, ist) = oep%pt%lr%X(dl_psi)(1:gr%mesh%np, 1:st%d%dim, ist, is)
 
     oep%pt%pt_number = oep%pt%pt_number + st%occ(ist, is)*X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
                 phi1(:, 1, ist))
