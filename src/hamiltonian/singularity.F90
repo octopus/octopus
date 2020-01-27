@@ -152,6 +152,7 @@ contains
     FLOAT :: energy
     type(distributed_t) :: dist_kpt
     type(profile_t), save :: prof
+    FLOAT, parameter :: singul_cnst = 7.7955541794415 !The constant is 4*pi*(3/(4*pi))^1/3
  
     PUSH_SUB(singularity_correction)
 
@@ -164,13 +165,11 @@ contains
     kpt_start = st%d%kpt%start
     kpt_end = st%d%kpt%end
 
-#ifdef HAVE_MPI
     if(.not.st%d%kpt%parallel) then
       call distributed_init(dist_kpt, st%d%nik, MPI_COMM_WORLD, "singularity")
       kpt_start = dist_kpt%start
       kpt_end = dist_kpt%end
     end if
- #endif
 
     do ik = kpt_start, kpt_end
       ikpoint = states_elec_dim_get_kpoint_index(st%d, ik)
@@ -197,7 +196,7 @@ contains
 
 
     if(this%coulomb_singularity == SINGULARITY_GENERAL) then 
-      !%Variable HFSingularity_Nk
+      !%Variable HFSingularityNk
       !%Type integer
       !%Default 60
       !%Section Hamiltonian::XC
@@ -206,13 +205,13 @@ contains
       !% of the auxiliary function f(q). See PRB 75, 205126 (2007) for more details. 
       !% Only for HFSingularity=general.
       !%End
-      call parse_variable(namespace, 'HFSingularity_Nk', 60, Nk)
+      call parse_variable(namespace, 'HFSingularityNk', 60, Nk)
       if(abs(Nk/M_THREE-nint(Nk/M_THREE)) > M_EPSILON) then
         message(1) = 'HFSingularity_Nk must be a multiple of 3.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
-      !%Variable HFSingularity_Nsteps
+      !%Variable HFSingularityNsteps
       !%Type integer
       !%Default 7
       !%Section Hamiltonian::XC
@@ -220,7 +219,7 @@ contains
       !% Number of grid refinement steps in the numerical integration of the auxiliary function f(q).
       !% See PRB 75, 205126 (2007) for more details. Only for HFSingularity=general.
       !%End
-      call parse_variable(namespace, 'HFSingularity_Nsteps', 7, Nsteps)
+      call parse_variable(namespace, 'HFSingularityNsteps', 7, Nsteps)
 
       this%FF = M_ZERO
       length = M_ONE
@@ -252,7 +251,7 @@ contains
       !We multiply by 4*pi/((2*pi)^3)
       this%FF = this%FF*CNST(8.0)*M_PI/((M_TWO*M_PI)**3)
       !The remaining part is treated as a spherical BZ
-      this%FF = this%FF + CNST(7.7955541794415)*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume*length
+      this%FF = this%FF + singul_cnst*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume*length
 
     else if(this%coulomb_singularity == SINGULARITY_GYGI) then
       !See Eq. (7) of PRB 34, 4405 (1986)
@@ -262,7 +261,7 @@ contains
     else
       !The constant is 4*pi*(3/(4*pi))^1/3
       !We multiply by 4*pi/(2*pi^3)
-      this%FF = CNST(7.7955541794415)*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
+      this%FF = singul_cnst*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
     end if
 
     if(debug%info) then
@@ -270,11 +269,11 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         energy = energy + this%Fk(ik)*st%d%kweights(ik)
       end do
+
       if(st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
         call comm_allreduce(st%d%kpt%mpi_grp%comm, energy) 
-#endif
       end if
+
       write(message(1), '(a,f12.6,a,a,a)') 'Debug: Singularity energy ', &
               units_from_atomic(units_out%energy, (energy-this%FF)*st%qtot/st%smear%el_per_state), &
               ' [',trim(units_abbrev(units_out%energy)),']'
