@@ -131,7 +131,7 @@ contains
 
     PUSH_SUB(singularity_end)
 
-    this%coulomb_singularity = 0
+    this%coulomb_singularity = -1
     
     POP_SUB(singularity_end)
   end subroutine singularity_end
