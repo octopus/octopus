@@ -159,10 +159,13 @@ contains
         call messages_experimental("Photons = yes")
         call photon_mode_init(oep%pt, namespace, gr)
         if (oep%pt%nmodes > 1) then
-          call messages_not_implemented('Photon OEP for more with more than one photon mode.')
+          call messages_not_implemented('Photon OEP for more than one photon mode.')
         end if
         if (st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
+        end if
+        if (oep%level == XC_OEP_SLATER) then
+          call messages_not_implemented('Slater approximation with photons.')
         end if
       end if
 
