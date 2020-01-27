@@ -152,7 +152,7 @@ contains
     FLOAT :: energy
     type(distributed_t) :: dist_kpt
     type(profile_t), save :: prof
-    FLOAT, parameter :: singul_cnst = 7.7955541794415 !The constant is 4*pi*(3/(4*pi))^1/3
+    FLOAT, parameter :: SINGUL_CNST = 7.7955541794415 !The constant is 4*pi*(3/(4*pi))^1/3
  
     PUSH_SUB(singularity_correction)
 
@@ -166,7 +166,7 @@ contains
     kpt_end = st%d%kpt%end
 
     if(.not.st%d%kpt%parallel) then
-      call distributed_init(dist_kpt, st%d%nik, MPI_COMM_WORLD, "singularity")
+      call distributed_init(dist_kpt, st%d%nik, mpi_world%comm, "singularity")
       kpt_start = dist_kpt%start
       kpt_end = dist_kpt%end
     end if
@@ -251,7 +251,7 @@ contains
       !We multiply by 4*pi/((2*pi)^3)
       this%FF = this%FF*CNST(8.0)*M_PI/((M_TWO*M_PI)**3)
       !The remaining part is treated as a spherical BZ
-      this%FF = this%FF + singul_cnst*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume*length
+      this%FF = this%FF + SINGUL_CNST*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume*length
 
     else if(this%coulomb_singularity == SINGULARITY_GYGI) then
       !See Eq. (7) of PRB 34, 4405 (1986)
@@ -261,7 +261,7 @@ contains
     else
       !The constant is 4*pi*(3/(4*pi))^1/3
       !We multiply by 4*pi/(2*pi^3)
-      this%FF = singul_cnst*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
+      this%FF = SINGUL_CNST*(sb%rcell_volume)**(CNST(2.0/3.0))/M_PI/sb%rcell_volume
     end if
 
     if(debug%info) then
