@@ -319,7 +319,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
-	grid/allocate_hardware_aware.c        \
+	grid/allocate_hardware_aware.cc       \
 	grid/hilbert.c                        \
 	grid/operate.c
 

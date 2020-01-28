@@ -19,11 +19,14 @@
 #include "global.h"
 
 module derivatives_oct_m
+  use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
   use global_oct_m
+  use iso_c_binding
   use lalg_adv_oct_m
   use loct_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -39,6 +42,7 @@ module derivatives_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use transfer_table_oct_m
+  use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
@@ -74,6 +78,8 @@ module derivatives_oct_m
     derivatives_lapl_diag,              &
     dderivatives_grad,                  &
     zderivatives_grad,                  &
+    dderivatives_batch_grad,            &
+    zderivatives_batch_grad,            &
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
@@ -141,7 +147,9 @@ module derivatives_oct_m
     FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
+  type(accel_kernel_t) :: kernel_uvw_xyz
+
+  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof
 
 contains
 
@@ -176,6 +184,7 @@ contains
 
     integer :: idir
     integer :: default_stencil
+    character(len=40) :: flags
 
     PUSH_SUB(derivatives_init)
 
@@ -287,6 +296,11 @@ contains
     nullify(der%finer)
     nullify(der%to_coarser)
     nullify(der%to_finer)
+
+    if(accel_is_enabled()) then
+      write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
+      call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
+    end if
 
     POP_SUB(derivatives_init)
   end subroutine derivatives_init
@@ -750,6 +764,7 @@ contains
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
+
   
 #include "undef.F90"
 #include "real.F90"
