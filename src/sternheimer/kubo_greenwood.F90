@@ -159,8 +159,9 @@ contains
     call smear_find_fermi_energy(sys%st%smear, sys%st%eigenval, sys%st%occ, sys%st%qtot, &
       sys%st%d%nik, sys%st%nst, sys%st%d%kweights)
 
+ !!   write(*,*)"smear", sys%st%smear%dsmear
+    
     e_fermi = sys%st%smear%e_fermi
-
     
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
        
@@ -239,6 +240,17 @@ contains
 
    do ifreq=1,nfreq
       sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))*dfreq/CNST(3.0)
+      !! thermal conductivity 
+      do idir = 1, mesh%sb%dim
+         do jdir = 1, mesh%sb%dim
+            if (abs(real(tensor(idir,jdir,ifreq),REAL_PRECISION)) .lt. CNST(1.0e-10)) then
+               therm_tensor(idir,jdir,ifreq) = therm_tensor(idir,jdir,ifreq) + k22(idir,jdir,ifreq) 
+            else
+               therm_tensor(idir,jdir,ifreq) = therm_tensor(idir,jdir,ifreq) + (k22(idir,jdir,ifreq) - (k12(idir,jdir,ifreq)*k21(idir,jdir,ifreq)/tensor(idir,jdir,ifreq))) 
+            endif
+         enddo
+      enddo
+      
    enddo
    sum_cond2 = sum_cond2 + CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
 
