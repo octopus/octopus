@@ -330,10 +330,8 @@ subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist
 
   PUSH_SUB(X(hamiltonian_elec_apply_single))
   
-  call wfs_elec_init(psib, hm%d%dim, 1, ik)
-  call psib%add_state(ist, psi)
-  call wfs_elec_init(hpsib, hm%d%dim, 1, ik)
-  call hpsib%add_state(ist, hpsi)
+  call wfs_elec_init(psib, hm%d%dim, ist, ist, psi, ik)
+  call wfs_elec_init(hpsib, hm%d%dim, ist, ist, hpsi, ik)
 
   if(present(set_phase)) then
     psib%has_phase = .not. set_phase

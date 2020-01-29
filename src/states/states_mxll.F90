@@ -347,8 +347,7 @@ contains
     call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative
-!    call batch_init(st%rs_state_transb, hm%d%dim, 1)
-!    call st%rs_state_transb%add_state(1, st%rs_state_trans)
+!    call batch_init(st%rs_state_transb, hm%d%dim, 1, 1, st%rs_state_trans)
 !    call st%rs_state_transb%end()
 
     POP_SUB(states_mxll_allocate)
