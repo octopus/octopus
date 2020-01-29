@@ -91,11 +91,6 @@ module batch_oct_m
     type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
   contains
-    procedure :: dbatch_add_state
-    procedure :: zbatch_add_state
-    procedure :: dbatch_add_state_linear
-    procedure :: zbatch_add_state_linear
-    generic   :: add_state => dbatch_add_state, zbatch_add_state, dbatch_add_state_linear, zbatch_add_state_linear
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
