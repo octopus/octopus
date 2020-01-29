@@ -59,8 +59,8 @@ module batch_oct_m
     ! Components are public by default
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT,      allocatable        :: dpsi(:, :)
-    CMPLX,      allocatable        :: zpsi(:, :)
+    FLOAT, contiguous, pointer     :: dpsi(:, :)
+    CMPLX, contiguous, pointer     :: zpsi(:, :)
     type(accel_mem_t)             :: buffer
   end type batch_pack_t
   
@@ -88,8 +88,23 @@ module batch_oct_m
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
-    type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
+
+
+    !> unpacked variables; linear variables are pointers with different shapes
+    FLOAT, pointer, contiguous, public :: dff(:, :, :)
+    CMPLX, pointer, contiguous, public :: zff(:, :, :)
+    FLOAT, pointer, contiguous, public :: dff_linear(:, :)
+    CMPLX, pointer, contiguous, public :: zff_linear(:, :)
+    !> packed variables; only rank-2 arrays due to padding to powers of 2
+    FLOAT, pointer, contiguous, public :: dff_pack(:, :)
+    CMPLX, pointer, contiguous, public :: zff_pack(:, :)
+
+
+    integer, public :: layout !< either BATCH_NOT_PACKED or BATCH_PACKED
+    integer, public :: location !< either BATCH_HOST or BATCH_DEVICE
+    type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
+
   contains
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
@@ -130,7 +145,9 @@ module batch_oct_m
   integer, public, parameter :: &
     BATCH_NOT_PACKED     = 0,   &
     BATCH_PACKED         = 1,   &
-    BATCH_DEVICE_PACKED  = 2
+    BATCH_DEVICE_PACKED  = 2,   &
+    BATCH_HOST           = 3,   &
+    BATCH_DEVICE         = 4
 
   integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
                                                     !! of the buffer used to copy states to the opencl device.
@@ -152,8 +169,16 @@ contains
       if(accel_is_enabled()) then
         call accel_release_buffer(this%pack%buffer)
       else
-        SAFE_DEALLOCATE_A(this%pack%dpsi)
-        SAFE_DEALLOCATE_A(this%pack%zpsi)
+        if(associated(this%dff_pack)) then
+          call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
+        end if
+        if(associated(this%zff_pack)) then
+          call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
+        end if
+        nullify(this%dff_pack)
+        nullify(this%pack%dpsi)
+        nullify(this%zff_pack)
+        nullify(this%pack%zpsi)
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
@@ -162,9 +187,6 @@ contains
     if(this%is_allocated) then
       call this%deallocate()
     end if
-
-    nullify(this%dpsicont)
-    nullify(this%zpsicont)
 
     SAFE_DEALLOCATE_P(this%states)
     SAFE_DEALLOCATE_P(this%states_linear)
@@ -198,17 +220,21 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
-        nullify(this%dpsicont)
+        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
-        nullify(this%zpsicont)
+        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
       end if
     else
-      SAFE_DEALLOCATE_P(this%dpsicont)
-      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%dff)
+      SAFE_DEALLOCATE_P(this%zff)
     end if
+    nullify(this%dff)
+    nullify(this%dff_linear)
+    nullify(this%dpsicont)
+    nullify(this%zff)
+    nullify(this%zff_linear)
+    nullify(this%zpsicont)
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
@@ -234,16 +260,22 @@ contains
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
+        nullify(this%dff)
+        nullify(this%dff_linear)
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
+        nullify(this%zff)
+        nullify(this%zff_linear)
         nullify(this%zpsicont)
       end if
     else
-      SAFE_DEALLOCATE_P(this%dpsicont)
-      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%dff)
+      SAFE_DEALLOCATE_P(this%zff)
+      nullify(this%dff_linear)
+      nullify(this%zff_linear)
 
       nullify(this%dpsicont)
       nullify(this%zpsicont)
@@ -305,6 +337,13 @@ contains
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
+
+    nullify(this%pack%dpsi, this%pack%zpsi)
+
+    nullify(this%dff, this%zff, this%dff_linear, this%zff_linear)
+    nullify(this%dff_pack, this%zff_pack)
+    this%layout = BATCH_NOT_PACKED
+    this%location = BATCH_HOST
 
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
@@ -520,10 +559,14 @@ contains
         call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack%size))
       else
         this%status_of = BATCH_PACKED
+        this%layout = BATCH_PACKED
+        ! always use hardware aware memory here
         if(this%type() == TYPE_FLOAT) then
-          SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+          call c_f_pointer(dallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%dff_pack, this%pack%size)
+          this%pack%dpsi => this%dff_pack
         else if(this%type() == TYPE_CMPLX) then
-          SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+          call c_f_pointer(zallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%zff_pack, this%pack%size)
+          this%pack%zpsi => this%zff_pack
         end if
       end if
       
@@ -561,7 +604,7 @@ contains
           ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
-              this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+              this%dff_pack(ist, ip) = this%dff_linear(ip, ist)
             end forall
           end forall
         end do
@@ -575,7 +618,7 @@ contains
           ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
-              this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
+              this%zff_pack(ist, ip) = this%zff_linear(ip, ist)
             end forall
           end forall
         end do
@@ -624,8 +667,16 @@ contains
         if(accel_is_enabled()) then
           call accel_release_buffer(this%pack%buffer)
         else
-          SAFE_DEALLOCATE_A(this%pack%dpsi)
-          SAFE_DEALLOCATE_A(this%pack%zpsi)
+          if(associated(this%dff_pack)) then
+            call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
+          end if
+          if(associated(this%zff_pack)) then
+            call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
+          end if
+          nullify(this%dff_pack)
+          nullify(this%pack%dpsi)
+          nullify(this%zff_pack)
+          nullify(this%pack%zpsi)
         end if
       end if
       
@@ -675,7 +726,7 @@ contains
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+            this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
           end forall
         end do
         
@@ -688,7 +739,7 @@ contains
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip) 
+            this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
           end forall
         end do
         

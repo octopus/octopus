@@ -202,7 +202,6 @@ contains
 
     case(BATCH_PACKED)
 
-      ASSERT(allocated(fo%pack%X(psi)))
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
