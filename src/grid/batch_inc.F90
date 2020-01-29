@@ -45,6 +45,42 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)
 
+subroutine X(batch_init_contiguous_2d)(this, dim, st_start, st_end, psi)
+  class(batch_t),  intent(out)   :: this
+  integer,        intent(in)    :: dim
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
+  R_TYPE, target, contiguous, intent(in)    :: psi(:, :)
+
+  R_TYPE, pointer :: psip(:, :, :)
+
+  PUSH_SUB(X(batch_init_contiguous_2d))
+
+  ASSERT(st_end == st_start .or. dim == 1)
+
+  psip(1:ubound(psi, dim=1), 1:dim, st_start:st_end) => psi(:, :)
+
+  !print*,"Batch init 2d contiguous: dim =", dim, ", st_start=", st_start, ", st_end=", st_end
+  print*,"Batch init 2d contiguous: lbound(psip) =", lbound(psip), ", ubound(psip)=", ubound(psip)
+
+  call X(batch_init_contiguous)(this, dim, st_start, st_end, psip)
+
+  POP_SUB(X(batch_init_contiguous_2d))
+end subroutine X(batch_init_contiguous_2d)
+
+subroutine X(batch_init_single)(this, psi)
+  class(batch_t),             intent(out)   :: this
+  R_TYPE, target, contiguous, intent(in)    :: psi(:)
+
+  R_TYPE, pointer :: psip(:, :, :)
+  PUSH_SUB(X(batch_init_single))
+
+  psip(1:ubound(psi, dim=1), 1:1, 1:1) => psi(:)
+  call X(batch_init_contiguous)(this, 1, 1, 1, psip)
+
+  POP_SUB(X(batch_init_single))
+end subroutine X(batch_init_single)
+
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
   class(batch_t), intent(inout) :: this

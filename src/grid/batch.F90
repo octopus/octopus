@@ -126,6 +126,10 @@ module batch_oct_m
     module procedure  batch_init_empty
     module procedure dbatch_init_contiguous
     module procedure zbatch_init_contiguous
+    module procedure dbatch_init_contiguous_2d
+    module procedure zbatch_init_contiguous_2d
+    module procedure dbatch_init_single
+    module procedure zbatch_init_single
   end interface batch_init
 
   integer, public, parameter :: &
