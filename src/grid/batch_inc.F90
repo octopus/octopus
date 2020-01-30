@@ -147,8 +147,6 @@ end subroutine X(batch_allocate)
 subroutine X(batch_allocate_temporary)(this)
   class(batch_t),  intent(inout) :: this
 
-  integer :: ist, idim
-
   PUSH_SUB(X(batch_allocate_temporary))
 
   ASSERT(.not. associated(this%X(psicont)))

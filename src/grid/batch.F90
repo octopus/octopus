@@ -181,8 +181,6 @@ contains
   subroutine batch_deallocate(this)
     class(batch_t),  intent(inout) :: this
     
-    integer :: ii
-    
     PUSH_SUB(batch_deallocate)
 
     this%is_allocated = .false.
@@ -214,8 +212,6 @@ contains
 
   subroutine batch_deallocate_temporary(this)
     type(batch_t),  intent(inout) :: this
-    
-    integer :: ii
     
     PUSH_SUB(batch_deallocate_temporary)
 
@@ -266,8 +262,6 @@ contains
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     
-    integer :: ist
-
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
@@ -303,9 +297,6 @@ contains
   logical function batch_is_ok(this) result(ok)
     class(batch_t), intent(in)   :: this
 
-    integer :: ist
-    logical :: all_assoc(1:2)
-    
     ! no push_sub, called too frequently
     
     ok = this%nst_linear >= 1
@@ -379,7 +370,7 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
-    integer :: ii, np
+    integer :: np
 
     PUSH_SUB(batch_copy_to)
 
