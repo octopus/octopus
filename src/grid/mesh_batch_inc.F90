@@ -54,16 +54,16 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   
   select case(aa%status())
   case(BATCH_NOT_PACKED)
-    use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+    use_blas = associated(aa%X(ff)) .and. associated(bb%X(ff)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
     if(use_blas) then
       call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
-      ldaa = size(aa%X(psicont), dim = 1)
-      ldbb = size(bb%X(psicont), dim = 1)
+      ldaa = size(aa%X(ff), dim = 1)
+      ldbb = size(bb%X(ff), dim = 1)
 
       call lalg_gemmt(aa%nst, bb%nst, mesh%np, R_TOTYPE(mesh%volume_element), &
-        aa%X(psicont), bb%X(psicont), R_TOTYPE(M_ZERO), dd)
+        aa%X(ff), bb%X(ff), R_TOTYPE(M_ZERO), dd)
 
     else
 
@@ -229,7 +229,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
 
-  use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear)
+  use_blas = associated(aa%X(ff)) .and. (.not. mesh%use_curvilinear)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:aa%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.
@@ -240,13 +240,13 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   if(use_blas) then
     call profiling_in(profgemm, "BATCH_HERK")
 
-    lda = size(aa%X(psicont), dim = 1)*aa%dim
+    lda = size(aa%X(ff), dim = 1)*aa%dim
 
-    call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 1, 1), &
+    call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(ff)(1, 1, 1), &
       lda, M_ZERO, dd(1, 1), ubound(dd, dim = 1))
 
     if(aa%dim == 2) then
-      call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 2, 1), &
+      call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(ff)(1, 2, 1), &
         lda, M_ONE, dd(1, 1), ubound(dd, dim = 1))
     end if
 

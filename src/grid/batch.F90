@@ -65,9 +65,6 @@ module batch_oct_m
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
 
-    !> If the memory is contiguous, we can perform some operations faster.
-    FLOAT,                 pointer, public :: dpsicont(:, :, :)
-    CMPLX,                 pointer, public :: zpsicont(:, :, :)
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
@@ -188,10 +185,10 @@ contains
     this%current = 1
     
     if(this%special_memory) then
-      if(associated(this%dpsicont)) then
+      if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
       end if
-      if(associated(this%zpsicont)) then
+      if(associated(this%zff)) then
         call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
       end if
     else
@@ -200,10 +197,8 @@ contains
     end if
     nullify(this%dff)
     nullify(this%dff_linear)
-    nullify(this%dpsicont)
     nullify(this%zff)
     nullify(this%zff_linear)
-    nullify(this%zpsicont)
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
@@ -216,26 +211,21 @@ contains
     PUSH_SUB(batch_deallocate_temporary)
 
     if(this%special_memory) then
-      if(associated(this%dpsicont)) then
+      if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
         nullify(this%dff)
         nullify(this%dff_linear)
-        nullify(this%dpsicont)
       end if
-      if(associated(this%zpsicont)) then
+      if(associated(this%zff)) then
         call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
         nullify(this%zff)
         nullify(this%zff_linear)
-        nullify(this%zpsicont)
       end if
     else
       SAFE_DEALLOCATE_P(this%dff)
       SAFE_DEALLOCATE_P(this%zff)
       nullify(this%dff_linear)
       nullify(this%zff_linear)
-
-      nullify(this%dpsicont)
-      nullify(this%zpsicont)
     end if
         
     POP_SUB(batch_deallocate_temporary)
@@ -271,7 +261,6 @@ contains
     this%dim = dim
     this%current = 1
     this%type_of = TYPE_NONE
-    nullify(this%dpsicont, this%zpsicont)
     
     this%nst_linear = nst*dim
 
