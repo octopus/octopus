@@ -418,7 +418,7 @@ contains
         case(BATCH_DEVICE_PACKED)
           call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
-          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
+          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%ff_device)
           call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack_size(1)))
 
           iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack_size(1)

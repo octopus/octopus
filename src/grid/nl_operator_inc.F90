@@ -269,8 +269,8 @@ contains
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
-    ASSERT(accel_buffer_is_allocated(fi%pack%buffer))
-    ASSERT(accel_buffer_is_allocated(fo%pack%buffer))
+    ASSERT(accel_buffer_is_allocated(fi%ff_device))
+    ASSERT(accel_buffer_is_allocated(fo%ff_device))
     
     kernel_operate = op%kernel
 
@@ -295,9 +295,9 @@ contains
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_imin)
       call accel_set_kernel_arg(kernel_operate, 4, op%buff_imax)
       call accel_set_kernel_arg(kernel_operate, 5, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 8, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
       bsize = accel_kernel_workgroup_size(kernel_operate)
@@ -313,9 +313,9 @@ contains
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_map)
       call accel_set_kernel_arg(kernel_operate, 3, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 4, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       iarg = 7
@@ -384,8 +384,8 @@ contains
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
       call accel_set_kernel_arg(kernel_operate, 4, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 5, fi%ff_device)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       if(accel_use_shared_mem()) then

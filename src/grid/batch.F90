@@ -83,6 +83,8 @@ module batch_oct_m
     integer                   , public :: pack_size(1:2)
     integer                   , public :: pack_size_real(1:2)
 
+    type(accel_mem_t)         , public    :: ff_device
+
 
     integer, public :: layout !< either BATCH_NOT_PACKED or BATCH_PACKED
     integer, public :: location !< either BATCH_HOST or BATCH_DEVICE
@@ -150,7 +152,7 @@ contains
       this%in_buffer_count = 1
       
       if(accel_is_enabled()) then
-        call accel_release_buffer(this%pack%buffer)
+        call accel_release_buffer(this%ff_device)
       else
         if(associated(this%dff_pack)) then
           call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
@@ -470,7 +472,7 @@ contains
 
       if(accel_is_enabled()) then
         this%status_of = BATCH_DEVICE_PACKED
-        call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack_size))
+        call accel_create_buffer(this%ff_device, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack_size))
       else
         this%status_of = BATCH_PACKED
         this%layout = BATCH_PACKED
@@ -577,7 +579,7 @@ contains
         this%in_buffer_count = 1
 
         if(accel_is_enabled()) then
-          call accel_release_buffer(this%pack%buffer)
+          call accel_release_buffer(this%ff_device)
         else
           if(associated(this%dff_pack)) then
             call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
@@ -673,9 +675,9 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
+        call accel_write_buffer(this%ff_device, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else if(this%type() == TYPE_CMPLX) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
+        call accel_write_buffer(this%ff_device, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       else
         ASSERT(.false.)
       end if
@@ -712,7 +714,7 @@ contains
         call accel_set_kernel_arg(kernel, 1, this%pack_size(2))
         call accel_set_kernel_arg(kernel, 2, ist - 1)
         call accel_set_kernel_arg(kernel, 3, tmp)
-        call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 4, this%ff_device)
 
         call profiling_in(prof_pack, "CL_PACK")
         call accel_kernel_run(kernel, (/this%pack_size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
@@ -752,9 +754,9 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_read_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
+        call accel_read_buffer(this%ff_device, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else
-        call accel_read_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
+        call accel_read_buffer(this%ff_device, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       end if
     else
 
@@ -773,7 +775,7 @@ contains
         call accel_set_kernel_arg(kernel, 0, this%pack_size(1))
         call accel_set_kernel_arg(kernel, 1, this%pack_size(2))
         call accel_set_kernel_arg(kernel, 2, ist - 1)
-        call accel_set_kernel_arg(kernel, 3, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 3, this%ff_device)
         call accel_set_kernel_arg(kernel, 4, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
@@ -928,9 +930,9 @@ subroutine batch_copy_data_to(this, np, dest)
   select case(this%status())
   case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(kernel_copy, 0, np)
-    call accel_set_kernel_arg(kernel_copy, 1, this%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 1, this%ff_device)
     call accel_set_kernel_arg(kernel_copy, 2, log2(this%pack_size_real(1)))
-    call accel_set_kernel_arg(kernel_copy, 3, dest%pack%buffer)
+    call accel_set_kernel_arg(kernel_copy, 3, dest%ff_device)
     call accel_set_kernel_arg(kernel_copy, 4, log2(dest%pack_size_real(1)))
     
     localsize = accel_kernel_workgroup_size(kernel_copy)/dest%pack_size_real(1)

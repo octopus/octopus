@@ -81,7 +81,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       offset = 0
     else
       ! get device pointer for CUDA-aware MPI
-      call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%pack%buffer, &
+      call accel_get_device_pointer(handle%X(recv_buffer), handle%v_local%ff_device, &
         [product(v_local%pack_size)])
       ! offset needed because the device pointer represents the full vector
       offset = v_local%pack_size(1)*vp%np_local
@@ -143,9 +143,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     nn = product(handle%ghost_send%pack_size(1:2))
     if(.not. accel%cuda_mpi) then
       SAFE_ALLOCATE(handle%X(send_buffer)(1:nn))
-      call accel_read_buffer(handle%ghost_send%pack%buffer, nn, handle%X(send_buffer))
+      call accel_read_buffer(handle%ghost_send%ff_device, nn, handle%X(send_buffer))
     else
-      call accel_get_device_pointer(handle%X(send_buffer), handle%ghost_send%pack%buffer, [nn])
+      call accel_get_device_pointer(handle%X(send_buffer), handle%ghost_send%ff_device, [nn])
     end if
   end if
 
@@ -219,7 +219,7 @@ subroutine X(ghost_update_batch_finish)(handle)
     call accel_finish()
 
     if(.not. accel%cuda_mpi) then
-      call accel_write_buffer(handle%v_local%pack%buffer, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
+      call accel_write_buffer(handle%v_local%ff_device, handle%v_local%pack_size(1)*handle%vp%np_ghost, &
         handle%X(recv_buffer), offset = handle%v_local%pack_size(1)*handle%vp%np_local)
       SAFE_DEALLOCATE_P(handle%X(send_buffer))
       SAFE_DEALLOCATE_P(handle%X(recv_buffer))
@@ -284,7 +284,7 @@ contains
     select case(ffb%status())
     case(BATCH_DEVICE_PACKED)
       np = ffb%pack_size(1)*(bndry_end - bndry_start + 1)
-      call accel_set_buffer_to_zero(ffb%pack%buffer, ffb%type(), np, offset = ffb%pack_size(1)*(bndry_start - 1))
+      call accel_set_buffer_to_zero(ffb%ff_device, ffb%type(), np, offset = ffb%pack_size(1)*(bndry_start - 1))
       call accel_finish()
 
     case(BATCH_PACKED)
@@ -431,7 +431,7 @@ contains
         call accel_set_kernel_arg(kernel_send, 0, maxsend)
         call accel_set_kernel_arg(kernel_send, 1, boundaries%buff_nsend)
         call accel_set_kernel_arg(kernel_send, 2, boundaries%buff_per_send)
-        call accel_set_kernel_arg(kernel_send, 3, ffb%pack%buffer)
+        call accel_set_kernel_arg(kernel_send, 3, ffb%ff_device)
         call accel_set_kernel_arg(kernel_send, 4, log2(ffb%pack_size_real(1)))
         call accel_set_kernel_arg(kernel_send, 5, buff_send)
 
@@ -559,7 +559,7 @@ contains
         call accel_set_kernel_arg(kernel_recv, 2, boundaries%buff_per_recv)
         call accel_set_kernel_arg(kernel_recv, 3, ubound(boundaries%per_recv, dim = 1))
         call accel_set_kernel_arg(kernel_recv, 4, buff_recv)
-        call accel_set_kernel_arg(kernel_recv, 5, ffb%pack%buffer)
+        call accel_set_kernel_arg(kernel_recv, 5, ffb%ff_device)
         call accel_set_kernel_arg(kernel_recv, 6, log2(ffb%pack_size_real(1)))
 
         wgsize = accel_kernel_workgroup_size(kernel_recv)/ffb%pack_size_real(1)
@@ -633,7 +633,7 @@ contains
 
         call accel_set_kernel_arg(kernel, 0, boundaries%nper)
         call accel_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
-        call accel_set_kernel_arg(kernel, 2, ffb%pack%buffer)
+        call accel_set_kernel_arg(kernel, 2, ffb%ff_device)
         call accel_set_kernel_arg(kernel, 3, log2(ffb%pack_size_real(1)))
 
         wgsize = accel_kernel_workgroup_size(kernel)/ffb%pack_size_real(1)
