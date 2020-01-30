@@ -21,6 +21,7 @@
 module derivatives_oct_m
   use accel_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use boundaries_oct_m
   use global_oct_m
   use iso_c_binding
