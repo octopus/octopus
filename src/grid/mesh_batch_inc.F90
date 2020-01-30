@@ -118,8 +118,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       ldbb = bb%pack%size(1)
       call blas_gemm(transa = 'n', transb = 'c', m = aa%nst, n = bb%nst, k = mesh%np, &
         alpha = R_TOTYPE(mesh%volume_element), &
-        a = aa%pack%X(psi)(1, 1), lda = ldaa, &
-        b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
+        a = aa%X(ff_pack)(1, 1), lda = ldaa, &
+        b = bb%X(ff_pack)(1, 1), ldb = ldbb, &
         beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
       
     else
@@ -129,8 +129,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           tmp1 = M_ZERO
           tmp2 = M_ZERO
           do ip = 1, mesh%np
-            tmp1 = tmp1 + R_CONJ(aa%pack%X(psi)(2*ist - 1, ip))*bb%pack%X(psi)(2*jst - 1, ip)
-            tmp2 = tmp2 + R_CONJ(aa%pack%X(psi)(2*ist    , ip))*bb%pack%X(psi)(2*jst    , ip)
+            tmp1 = tmp1 + R_CONJ(aa%X(ff_pack)(2*ist - 1, ip))*bb%X(ff_pack)(2*jst - 1, ip)
+            tmp2 = tmp2 + R_CONJ(aa%X(ff_pack)(2*ist    , ip))*bb%X(ff_pack)(2*jst    , ip)
           end do
           dd(ist, jst) = mesh%volume_element*(tmp1 + tmp2)
         end do
@@ -364,14 +364,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_pack)(ist, ip))*bb%X(ff_pack)(ist, ip)
           end do
         end do
       else
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%X(ff_pack)(ist, ip)*bb%X(ff_pack)(ist, ip)
           end do
         end do
       end if
@@ -380,14 +380,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + R_CONJ(aa%X(ff_pack)(ist, ip))*bb%X(ff_pack)(ist, ip)
           end do
         end do
       else
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + aa%X(ff_pack)(ist, ip)*bb%X(ff_pack)(ist, ip)
           end do
         end do
       end if
@@ -702,7 +702,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%pack%X(psi)(ist, ip)
+          a0 = aa%X(ff_pack)(ist, ip)
           if(abs(a0) <= M_EPSILON) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
@@ -718,7 +718,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%pack%X(psi)(ist, ip)
+          a0 = aa%X(ff_pack)(ist, ip)
           if(a0 == R_TOTYPE(M_ZERO)) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2

@@ -77,10 +77,10 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     
   case(BATCH_PACKED)
     if(yy%type() == TYPE_CMPLX) then
-      call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%zpsi, yy%pack%zpsi)
+      call lalg_axpy(xx%pack%size(1), np, aa, xx%zff_pack, yy%zff_pack)
     else
 #ifdef R_TREAL
-      call lalg_axpy(xx%pack%size(1), np, aa, xx%pack%dpsi, yy%pack%dpsi)
+      call lalg_axpy(xx%pack%size(1), np, aa, xx%dff_pack, yy%dff_pack)
 #endif
     end if
 
@@ -184,7 +184,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
-          yy%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip) + yy%pack%zpsi(ist, ip)
+          yy%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip) + yy%zff_pack(ist, ip)
         end do
       end do
     else
@@ -192,7 +192,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
-          yy%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip) + yy%pack%dpsi(ist, ip)
+          yy%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip) + yy%dff_pack(ist, ip)
         end do
       end do
 #endif
@@ -317,7 +317,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
       !$omp parallel do
       do ip = 1, np
         do ist = 1, xx%pack%size(1)
-          xx%pack%zpsi(ist, ip) = aa_linear(ist)*xx%pack%zpsi(ist, ip)
+          xx%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip)
         end do
       end do
     else
@@ -325,7 +325,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
      !$omp parallel do
      do ip = 1, np
         do ist = 1, xx%pack%size(1)
-          xx%pack%dpsi(ist, ip) = aa_linear(ist)*xx%pack%dpsi(ist, ip)
+          xx%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip)
         end do
       end do
 #endif
@@ -429,7 +429,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
-          yy%pack%zpsi(ist, ip) = xx%pack%zpsi(ist, ip) + aa_linear(ist)*yy%pack%zpsi(ist, ip)
+          yy%zff_pack(ist, ip) = xx%zff_pack(ist, ip) + aa_linear(ist)*yy%zff_pack(ist, ip)
         end do
       end do
     else
@@ -437,7 +437,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       !$omp parallel do private(ip, ist)
       do ip = 1, np
         do ist = 1, yy%pack%size(1)
-          yy%pack%dpsi(ist, ip) = xx%pack%dpsi(ist, ip) + aa_linear(ist)*yy%pack%dpsi(ist, ip)
+          yy%dff_pack(ist, ip) = xx%dff_pack(ist, ip) + aa_linear(ist)*yy%dff_pack(ist, ip)
         end do
       end do
 #endif
@@ -538,12 +538,12 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     if(this%type() == TYPE_FLOAT) then
       !omp parallel do 
       do ip = 1, np
-        this%pack%dpsi(ist, ip) = psi(ip)
+        this%dff_pack(ist, ip) = psi(ip)
       end do
     else
       !omp parallel do
       do ip = 1, np
-        this%pack%zpsi(ist, ip) = psi(ip)
+        this%zff_pack(ist, ip) = psi(ip)
       end do
     end if
   case(BATCH_DEVICE_PACKED)
@@ -669,13 +669,13 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     if(this%type() == TYPE_FLOAT) then
       !$omp parallel do
       do ip = 1, np
-        psi(ip) = this%pack%dpsi(ist, ip)
+        psi(ip) = this%dff_pack(ist, ip)
       end do
       !$omp end parallel do
     else
       !$omp parallel do
       do ip = 1, np
-        psi(ip) = this%pack%zpsi(ist, ip)
+        psi(ip) = this%zff_pack(ist, ip)
       end do
       !$omp end parallel do
     end if
@@ -825,7 +825,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
           idim = this%linear_to_idim(ii)
-          psi(ist, idim, ip) = this%pack%dpsi(ii, ip)
+          psi(ist, idim, ip) = this%dff_pack(ii, ip)
         end do
       end do
       !$omp end parallel do
@@ -837,7 +837,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
           idim = this%linear_to_idim(ii)
-          psi(ist, idim, ip) = this%pack%zpsi(ii, ip)
+          psi(ist, idim, ip) = this%zff_pack(ii, ip)
         end do
       end do
       !$omp end parallel do
@@ -902,7 +902,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
           idim = this%linear_to_idim(ii)
-          this%pack%dpsi(ii, ip) = psi(ist, idim, ip)
+          this%dff_pack(ii, ip) = psi(ist, idim, ip)
         end do
       end do
       !$omp end parallel do
@@ -914,7 +914,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
           idim = this%linear_to_idim(ii)
-          this%pack%zpsi(ii, ip) = psi(ist, idim, ip)
+          this%zff_pack(ii, ip) = psi(ist, idim, ip)
         end do
       end do
       !$omp end parallel do
@@ -988,7 +988,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
       do ip = 1, np
         mul = ff(ip)
         do ist = 1, yy%nst_linear
-          yy%pack%zpsi(ist, ip) = mul*xx%pack%zpsi(ist, ip)
+          yy%zff_pack(ist, ip) = mul*xx%zff_pack(ist, ip)
         end do
       end do
       !$omp end parallel do
@@ -998,7 +998,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
       do ip = 1, np
         mul = ff(ip)
         do ist = 1, yy%nst_linear
-          yy%pack%dpsi(ist, ip) = mul*xx%pack%dpsi(ist, ip)
+          yy%dff_pack(ist, ip) = mul*xx%dff_pack(ist, ip)
         end do
       end do
       !$omp end parallel do

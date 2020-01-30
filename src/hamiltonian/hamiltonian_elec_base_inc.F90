@@ -126,7 +126,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
           vv = potential(ip, ispin)
           Imvv = Impotential(ip, ispin)
           forall (ist = 1:psib%nst_linear)
-            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + (vv+M_zI*Imvv)*psib%pack%X(psi)(ist, ip)
+            vpsib%X(ff_pack)(ist, ip) = vpsib%X(ff_pack)(ist, ip) + (vv+M_zI*Imvv)*psib%X(ff_pack)(ist, ip)
           end forall
         end do
       else
@@ -134,7 +134,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         do ip = 1, mesh%np
           vv = potential(ip, ispin)
           forall (ist = 1:psib%nst_linear)
-            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
+            vpsib%X(ff_pack)(ist, ip) = vpsib%X(ff_pack)(ist, ip) + vv*psib%X(ff_pack)(ist, ip)
           end forall
         end do
         !$omp end parallel do
@@ -150,12 +150,12 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         !$omp parallel do private(psi1, psi2, ist, pot)
         do ip = 1, mesh%np
           do ist = 1, psib%nst_linear, 2
-            psi1 = psib%pack%zpsi(ist    , ip)
-            psi2 = psib%pack%zpsi(ist + 1, ip)
+            psi1 = psib%zff_pack(ist    , ip)
+            psi2 = psib%zff_pack(ist + 1, ip)
             pot(1:4) = potential(ip, 1:4) + M_zI * Impotential(ip, 1:4)
-            vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
+            vpsib%zff_pack(ist    , ip) = vpsib%zff_pack(ist    , ip) + &
                    pot(1)*psi1 + (pot(3) + M_zI*pot(4))*psi2
-            vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
+            vpsib%zff_pack(ist + 1, ip) = vpsib%zff_pack(ist + 1, ip) + &
                    pot(2)*psi2 + (pot(3) - M_zI*pot(4))*psi1            
           end do
         end do
@@ -165,11 +165,11 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         !$omp parallel do private(psi1, psi2, ist)
         do ip = 1, mesh%np
           do ist = 1, psib%nst_linear, 2
-            psi1 = psib%pack%zpsi(ist    , ip)
-            psi2 = psib%pack%zpsi(ist + 1, ip)
-            vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
+            psi1 = psib%zff_pack(ist    , ip)
+            psi2 = psib%zff_pack(ist + 1, ip)
+            vpsib%zff_pack(ist    , ip) = vpsib%zff_pack(ist    , ip) + &
               potential(ip, 1)*psi1 + (potential(ip, 3) + M_zI*potential(ip, 4))*psi2
-            vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
+            vpsib%zff_pack(ist + 1, ip) = vpsib%zff_pack(ist + 1, ip) + &
               potential(ip, 2)*psi2 + (potential(ip, 3) - M_zI*potential(ip, 4))*psi1            
           end do
         end do
@@ -285,7 +285,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
       do ip = 1, np
         phase = conjg(this%phase(ip, psib%ik))
         do ii = 1, psib%nst_linear
-          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+          psib%X(ff_pack)(ii, ip) = phase*src_%X(ff_pack)(ii, ip)
         end do
       end do
       !$omp end parallel do
@@ -296,7 +296,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
       do ip = 1, np
         phase = this%phase(ip, psib%ik)
         do ii = 1, psib%nst_linear
-          psib%pack%X(psi)(ii, ip) = phase*src_%pack%X(psi)(ii, ip)
+          psib%X(ff_pack)(ii, ip) = phase*src_%X(ff_pack)(ii, ip)
         end do
       end do
       !$omp end parallel do
@@ -394,9 +394,9 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
     do ip = sp + 1, der%mesh%np_part
       do ii = 1, psib%nst_linear, 2
         if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
-          psib%pack%X(psi)(ii+1, ip) = psib%pack%X(psi)(ii+1, ip)*this%phase_spiral(ip-sp, 1)
+          psib%X(ff_pack)(ii+1, ip) = psib%X(ff_pack)(ii+1, ip)*this%phase_spiral(ip-sp, 1)
         else
-          psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip-sp, 2)
+          psib%X(ff_pack)(ii, ip) = psib%X(ff_pack)(ii, ip)*this%phase_spiral(ip-sp, 2)
         end if
       end do
      end do
@@ -760,7 +760,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
         !$omp parallel do private(ist, ip)
         do ip = 1, npoints
           do ist= 1, nst
-            lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
+            lpsi(ist, ip) = psib%X(ff_pack)(ist, pmat%map(ip))
           end do
         end do
         
@@ -781,7 +781,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
           !$omp parallel do private(ist)
           do ip = 1, npoints
             do ist = 1, nst
-              lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+              lpsi(ist, ip) = psib%X(ff_pack)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
             end do
           end do
 
@@ -801,11 +801,11 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
          do ip = 1, npoints
            do ist = 1, nst, 2
              if(this%spin(3,psib%linear_to_ist(ist), psib%ik)>0) then
-               lpsi(ist, ip)   = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
-               lpsi(ist+1, ip) = psib%pack%X(psi)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 2, psib%ik)
+               lpsi(ist, ip)   = psib%X(ff_pack)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+               lpsi(ist+1, ip) = psib%X(ff_pack)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 2, psib%ik)
              else 
-               lpsi(ist, ip)   = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 3, psib%ik)
-               lpsi(ist+1, ip) = psib%pack%X(psi)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+               lpsi(ist, ip)   = psib%X(ff_pack)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 3, psib%ik)
+               lpsi(ist+1, ip) = psib%X(ff_pack)(ist+1, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
              end if
            end do
          end do
@@ -999,7 +999,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
           !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             forall(ist = 1:nst)
-              vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
+              vpsib%X(ff_pack)(ist, pmat%map(ip)) = vpsib%X(ff_pack)(ist, pmat%map(ip)) + psi(ist, ip)
             end forall
           end do
           !$omp end parallel do
@@ -1020,7 +1020,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
             do ip = 1, npoints
               phase = conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
               forall(ist = 1:nst)
-                vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                vpsib%X(ff_pack)(ist, pmat%map(ip)) = vpsib%X(ff_pack)(ist, pmat%map(ip)) &
                             + psi(ist, ip)*phase
               end forall
             end do
@@ -1045,14 +1045,14 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
               phase_mq = conjg(this%projector_phases(ip, imat, 3, vpsib%ik))
               do ist = 1, nst, 2
                 if(this%spin(3, vpsib%linear_to_ist(ist), vpsib%ik) > 0) then
-                  vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                  vpsib%X(ff_pack)(ist, pmat%map(ip)) = vpsib%X(ff_pack)(ist, pmat%map(ip)) &
                               + psi(ist, ip)*phase
-                  vpsib%pack%X(psi)(ist+1, pmat%map(ip)) = vpsib%pack%X(psi)(ist+1, pmat%map(ip)) &
+                  vpsib%X(ff_pack)(ist+1, pmat%map(ip)) = vpsib%X(ff_pack)(ist+1, pmat%map(ip)) &
                               + psi(ist+1, ip)*phase_pq
                 else
-                  vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                  vpsib%X(ff_pack)(ist, pmat%map(ip)) = vpsib%X(ff_pack)(ist, pmat%map(ip)) &
                               + psi(ist, ip)*phase_mq
-                  vpsib%pack%X(psi)(ist+1, pmat%map(ip)) = vpsib%pack%X(psi)(ist+1, pmat%map(ip)) &
+                  vpsib%X(ff_pack)(ist+1, pmat%map(ip)) = vpsib%X(ff_pack)(ist+1, pmat%map(ip)) &
                               + psi(ist+1, ip)*phase
                 end if
               end do
@@ -1256,8 +1256,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
       if(psi1b%is_packed()) then
         forall(ip = 1:npoints)
           forall(ist = 1:nst)
-            psi(0, ist, ip) = psi1b%pack%X(psi)(ist, pmat%map(ip))
-            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%pack%X(psi)(ist, pmat%map(ip))
+            psi(0, ist, ip) = psi1b%X(ff_pack)(ist, pmat%map(ip))
+            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%X(ff_pack)(ist, pmat%map(ip))
           end forall
         end forall
       else
@@ -1478,10 +1478,10 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))
-              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%X(ff_pack)(ist, pmat%map(ip))
+              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
+              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
+              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1496,10 +1496,10 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             cc = CNST(0.0)
             dd = CNST(0.0)
             do ip = 1, npoints
-              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))
-              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
-              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))
+              aa = aa + pmat%dprojectors(ip, iproj)*psib%X(ff_pack)(ist, pmat%map(ip))
+              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
+              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
+              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1523,10 +1523,10 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             dd = CNST(0.0)
             do ip = 1, npoints
               phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
-              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1543,10 +1543,10 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
             dd = CNST(0.0)
             do ip = 1, npoints
               phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
-              aa = aa + pmat%dprojectors(ip, iproj)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
-              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%pack%X(psi)(ist, pmat%map(ip))*phase(1)
+              aa = aa + pmat%dprojectors(ip, iproj)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
             end do
             projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
             projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
@@ -1652,7 +1652,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
       do idir = 1, 3
         do ip = 1, npoints
           forall(ist = 1:nst)
-            commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) = commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) &
+            commpsib(idir)%X(ff_pack)(ist, pmat%map(ip)) = commpsib(idir)%X(ff_pack)(ist, pmat%map(ip)) &
               - psi(ist, ip, idir) + pmat%position(idir, ip)*psi(ist, ip, 0)
           end forall
         end do

@@ -105,11 +105,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       
       if(fi%is_packed() .and. fo%is_packed()) then
         
-        ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
-        ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
+        ASSERT(ubound(fi%X(ff_pack), dim = 2) == op%mesh%np_part)
+        ASSERT(ubound(fo%X(ff_pack), dim = 2) >= op%mesh%np)
         
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
-          fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
+          fi%X(ff_pack)(1, 1), log2(fi%pack%size_real(1)), fo%X(ff_pack)(1, 1))
       else
         do ist = 1, fi%nst_linear
 
@@ -203,7 +203,7 @@ contains
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
           do ist = 1, fi%nst_linear
-            fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            fo%X(ff_pack)(ist, ii) = sum(wre(1:nn)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
           end do
         end do
       end do
@@ -248,7 +248,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%pack%X(psi)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do

@@ -412,7 +412,7 @@ contains
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
             forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
+              st%group%psib(ib, ik)%zff_pack(ist, ip) = st%group%psib(ib, ik)%zff_pack(ist, ip)*phase
             end forall
           end do
         case(BATCH_DEVICE_PACKED)

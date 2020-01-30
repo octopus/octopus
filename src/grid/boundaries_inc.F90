@@ -108,7 +108,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       tag = 0
       pos = vp%np_local + 1 + vp%ghost_rdispls(ipart)
 #ifdef HAVE_MPI
-      call MPI_Irecv(v_local%pack%X(psi)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
+      call MPI_Irecv(v_local%X(ff_pack)(1, pos), vp%ghost_rcounts(ipart)*v_local%pack%size(1), R_MPITYPE, &
            ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
     end do
@@ -169,7 +169,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       handle%nnb = handle%nnb + 1
       tag = 0
 #ifdef HAVE_MPI
-      call MPI_Isend(handle%ghost_send%pack%X(psi)(1, vp%ghost_sendpos(ipart)), &
+      call MPI_Isend(handle%ghost_send%X(ff_pack)(1, vp%ghost_sendpos(ipart)), &
         vp%ghost_scounts(ipart)*v_local%pack%size(1), &
         R_MPITYPE, ipart - 1, tag, vp%comm, handle%requests(handle%nnb), mpi_err)
 #endif
@@ -291,7 +291,7 @@ contains
       !$omp parallel do simd schedule(static)
       do ip = bndry_start, bndry_end
         do ist = 1, ffb%nst_linear
-          ffb%pack%X(psi)(ist, ip) = R_TOTYPE(M_ZERO)
+          ffb%X(ff_pack)(ist, ip) = R_TOTYPE(M_ZERO)
         end do
       end do
 
@@ -418,7 +418,7 @@ contains
           do ip = 1, boundaries%nsend(ipart)
             ip2 = boundaries%per_send(ip, ipart)
             do ist = 1, ffb%nst_linear
-              sendbuffer(ist, ip, ipart) = ffb%pack%X(psi)(ist, ip2)
+              sendbuffer(ist, ip, ipart) = ffb%X(ff_pack)(ist, ip2)
             end do
           end do
         end do
@@ -528,7 +528,7 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart)
+                ffb%X(ff_pack)(ist, ip2) = recvbuffer(ist, ip, ipart)
               end do
             end do
           end do
@@ -541,7 +541,7 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
+                ffb%X(ff_pack)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
               end do
             end do
@@ -611,7 +611,7 @@ contains
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
-          forall(ist = 1:ffb%nst_linear) ffb%pack%X(psi)(ist, ip_bnd) = ffb%pack%X(psi)(ist, ip_inn)
+          forall(ist = 1:ffb%nst_linear) ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn)
         end do
       else
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
@@ -622,7 +622,7 @@ contains
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
           forall(ist = 1:ffb%nst_linear)
-            ffb%pack%X(psi)(ist, ip_bnd) = ffb%pack%X(psi)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
+            ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
           end forall
         end do
       end if

@@ -156,9 +156,7 @@ contains
           call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
         end if
         nullify(this%dff_pack)
-        nullify(this%pack%dpsi)
         nullify(this%zff_pack)
-        nullify(this%pack%zpsi)
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
@@ -271,8 +269,6 @@ contains
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
     SAFE_ALLOCATE(this%ist(1:this%nst))
-
-    nullify(this%pack%dpsi, this%pack%zpsi)
 
     nullify(this%dff, this%zff, this%dff_linear, this%zff_linear)
     nullify(this%dff_pack, this%zff_pack)
@@ -478,10 +474,8 @@ contains
         ! always use hardware aware memory here
         if(this%type() == TYPE_FLOAT) then
           call c_f_pointer(dallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%dff_pack, this%pack%size)
-          this%pack%dpsi => this%dff_pack
         else if(this%type() == TYPE_CMPLX) then
           call c_f_pointer(zallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%zff_pack, this%pack%size)
-          this%pack%zpsi => this%zff_pack
         end if
       end if
       
@@ -589,9 +583,7 @@ contains
             call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
           end if
           nullify(this%dff_pack)
-          nullify(this%pack%dpsi)
           nullify(this%zff_pack)
-          nullify(this%pack%zpsi)
         end if
       end if
       
@@ -876,12 +868,12 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
     
     if(this%type() == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+      call MPI_Win_create(this%zff_pack(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     else if (this%type() == TYPE_FLOAT) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+      call MPI_Win_create(this%dff_pack(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     else
@@ -949,9 +941,9 @@ subroutine batch_copy_data_to(this, np, dest)
 
   case(BATCH_PACKED)
     if(dest%type() == TYPE_FLOAT) then
-      call blas_copy(np*this%pack%size(1), this%pack%dpsi(1, 1), 1, dest%pack%dpsi(1, 1), 1)
+      call blas_copy(np*this%pack%size(1), this%dff_pack(1, 1), 1, dest%dff_pack(1, 1), 1)
     else
-      call blas_copy(np*this%pack%size(1), this%pack%zpsi(1, 1), 1, dest%pack%zpsi(1, 1), 1)
+      call blas_copy(np*this%pack%size(1), this%zff_pack(1, 1), 1, dest%zff_pack(1, 1), 1)
     end if
 
   case(BATCH_NOT_PACKED)

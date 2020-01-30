@@ -72,7 +72,7 @@ contains
 
       do ip = 1, gr%mesh%np
         do ii = 1, f_in%nst_linear
-          f_out%pack%X(psi)(ii, ip) = gr%mesh%x(ip, this%dir)*f_in%pack%X(psi)(ii, ip)
+          f_out%X(ff_pack)(ii, ip) = gr%mesh%x(ip, this%dir)*f_in%X(ff_pack)(ii, ip)
         end do
       end do
 

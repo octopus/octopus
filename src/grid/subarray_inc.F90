@@ -94,7 +94,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     do iblock = 1, this%nblocks
       forall(ii = 1:this%blength(iblock))
         forall(ist = 1:arrayb%pack%size(1))
-          subarrayb%pack%X(psi)(ist, this%dest(iblock) + ii) = arrayb%pack%X(psi)(ist, this%offsets(iblock) + ii - 1)
+          subarrayb%X(ff_pack)(ist, this%dest(iblock) + ii) = arrayb%X(ff_pack)(ist, this%offsets(iblock) + ii - 1)
         end forall
       end forall
     end do

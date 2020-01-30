@@ -655,11 +655,11 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%pack%X(psi)(ist, ip)
+              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
           end do
         end do
         do idim1 = 1, der%dim
-          xyz_(idim1)%pack%X(psi)(ist, ip) = tmp(idim1)
+          xyz_(idim1)%X(ff_pack)(ist, ip) = tmp(idim1)
         end do
       end do
     end do

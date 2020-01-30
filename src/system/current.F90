@@ -245,7 +245,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+                + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
           end do

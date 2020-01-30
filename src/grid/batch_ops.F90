@@ -126,14 +126,14 @@ contains
         !$omp parallel do schedule(static)
         do ip = 1, this%pack%size(2)
           do ist = 1, this%pack%size(1)
-            this%pack%dpsi(ist, ip) = M_ZERO
+            this%dff_pack(ist, ip) = M_ZERO
           end do
         end do
       else
         !$omp parallel do schedule(static)
         do ip = 1, this%pack%size(2)
           do ist = 1, this%pack%size(1)
-            this%pack%zpsi(ist, ip) = M_z0
+            this%zff_pack(ist, ip) = M_z0
           end do
         end do
       end if
