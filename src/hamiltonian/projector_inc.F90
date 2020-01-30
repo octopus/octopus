@@ -33,10 +33,8 @@ subroutine X(project_psi)(mesh, bnd, pj, npj, dim, psi, ppsi, ik)
 
   PUSH_SUB(X(project_psi))
 
-  call wfs_elec_init(psib, dim, 1, ik)
-  call psib%add_state(1, psi)
-  call wfs_elec_init(ppsib, dim, 1, ik)
-  call ppsib%add_state(1, ppsi)
+  call wfs_elec_init(psib, dim, 1, 1, psi, ik)
+  call wfs_elec_init(ppsib, dim, 1, 1, ppsi, ik)
 
   call X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
 

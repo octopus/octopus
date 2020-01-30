@@ -1348,13 +1348,9 @@ contains
     SAFE_ALLOCATE(resp(1:no_e))
     SAFE_ALLOCATE(imsp(1:no_e))
 
-    call batch_init(angularb, 1, 1)
-    call batch_init(respb, 1, 1)
-    call batch_init(imspb, 1, 1)
-
-    call angularb%add_state(angular(:, 1))
-    call respb%add_state(resp)
-    call imspb%add_state(imsp)
+    call batch_init(angularb, angular(:, 1))
+    call batch_init(respb, resp)
+    call batch_init(imspb, imsp)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
@@ -1909,13 +1905,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call acc_batch%add_state(racc)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(acc_batch, racc)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -2016,13 +2008,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call acc_batch%add_state(racc)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(acc_batch, racc)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, &
@@ -2122,13 +2110,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(cur_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call cur_batch%add_state(rcur)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(cur_batch, rcur)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, cur_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)

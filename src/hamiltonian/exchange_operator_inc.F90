@@ -34,10 +34,8 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
 
   PUSH_SUB(X(exchange_operator_single))
 
-  call wfs_elec_init(psib, st_d%dim, 1, ik)
-  call psib%add_state(ist, psi)
-  call wfs_elec_init(hpsib, st_d%dim, 1, ik)
-  call hpsib%add_state(ist, hpsi)
+  call wfs_elec_init(psib, st_d%dim, ist, ist, psi, ik)
+  call wfs_elec_init(hpsib, st_d%dim, ist, ist, hpsi, ik)
 
   call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
 

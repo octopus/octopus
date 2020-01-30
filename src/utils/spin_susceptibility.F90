@@ -185,15 +185,9 @@ program spin_susceptibility
     SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
     SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
 
-    call batch_init(vecpotb, 1, num_col)
-    call batch_init(ftrealb, 1, num_col)
-    call batch_init(ftimagb, 1, num_col)
-
-    do ib = 1, num_col
-      call vecpotb%add_state(magnetization(:, ib, iq))
-      call ftrealb%add_state(ftreal(1:energy_steps,ib))
-      call ftimagb%add_state(ftimag(1:energy_steps,ib))
-    end do
+    call batch_init(vecpotb, 1, 1, num_col, magnetization(:, :, iq))
+    call batch_init(ftrealb, 1, 1, num_col, ftreal)
+    call batch_init(ftimagb, 1, 1, num_col, ftimag)
 
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)

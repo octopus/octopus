@@ -34,6 +34,22 @@ subroutine X(wfs_elec_init_contiguous)(this, dim, st_start, st_end, psi, ik)
   POP_SUB(X(wfs_elec_init_contiguous))
 end subroutine X(wfs_elec_init_contiguous)
 
+subroutine X(wfs_elec_init_contiguous_2d)(this, dim, st_start, st_end, psi, ik)
+  type(wfs_elec_t), intent(out)   :: this
+  integer,          intent(in)    :: dim
+  integer,          intent(in)    :: st_start
+  integer,          intent(in)    :: st_end
+  integer,          intent(in)    :: ik
+  R_TYPE,   target, intent(in)    :: psi(:, :)
+
+  PUSH_SUB(X(wfs_elec_init_contiguous_2d))
+
+  this%ik = ik
+  this%has_phase = .false.
+  call batch_init(this%batch_t, dim,  st_start, st_end, psi)
+
+  POP_SUB(X(wfs_elec_init_contiguous_2d))
+end subroutine X(wfs_elec_init_contiguous_2d)
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

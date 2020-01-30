@@ -656,15 +656,14 @@ end subroutine X(boundaries_set_batch)
 
 subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
   type(boundaries_t),  intent(in)    :: boundaries
-  R_TYPE, target,      intent(inout) :: ff(:) !< target for batch_add_state
+  R_TYPE, target,      intent(inout) :: ff(:)
   CMPLX, optional,     intent(in)    :: phase_correction(:)
 
   type(batch_t) :: batch_ff
 
   PUSH_SUB(X(boundaries_set_single))
 
-  call batch_init(batch_ff, 1, 1)
-  call batch_ff%add_state(ff)
+  call batch_init(batch_ff, ff)
 
   ASSERT(batch_ff%is_ok())
 

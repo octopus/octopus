@@ -176,8 +176,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
     if(present(xpsi1)) then
       call batch_init(psi1b, st%d%dim, psi1_col)
+      call psi1b%X(allocate)(1, psi1_col, ubound(psi1, dim=1))
       do ii = 1, psi1_col
-        call psi1b%add_state(ii, psi1(:, :, xpsi1(ii)))
+        call batch_set_state(psi1b, ii, ubound(psi1, dim=1), psi1(:, :, xpsi1(ii)))
       end do
     else
       call batch_init(psi1b, st%d%dim, 1, psi1_col, psi1(:, :, :))
@@ -185,8 +186,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
     if(present(xpsi2)) then
       call batch_init(psi2b, st%d%dim, psi2_col)
+      call psi2b%X(allocate)(1, psi2_col, ubound(psi2, dim=1))
       do ii = 1, psi2_col
-        call psi2b%add_state(ii, psi2(:, :, xpsi2(ii)))
+        call batch_set_state(psi2b, ii, ubound(psi2, dim=1), psi2(:, :, xpsi2(ii)))
       end do
     else
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))

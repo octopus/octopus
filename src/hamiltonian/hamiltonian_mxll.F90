@@ -479,10 +479,8 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_apply)
 
-!    call batch_init(psib, hm%d%dim, 1)
-!    call psib%add_state(ist, psi)
-!    call batch_init(hpsib, hm%d%dim, 1)
-!    call hpsib%add_state(ist, hpsi)
+!    call batch_init(psib, hm%d%dim, ist, ist, psi)
+!    call batch_init(hpsib, hm%d%dim, ist, ist, hpsi)
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !

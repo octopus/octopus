@@ -458,7 +458,7 @@ end subroutine X(nl_operator_operate_batch)
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   R_TYPE,              intent(inout) :: fi(:)  !< fi(op%np_part)
   type(nl_operator_t), intent(in)    :: op
-  R_TYPE,  target,     intent(out)   :: fo(:)  !< fo(op%np). target for batch_add_state
+  R_TYPE,  target,     intent(out)   :: fo(:)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
@@ -467,11 +467,8 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   PUSH_SUB(X(nl_operator_operate))
 
-  call batch_init(batch_fi, 1, 1)
-  call batch_fi%add_state(fi)
-
-  call batch_init(batch_fo, 1, 1)
-  call batch_fo%add_state(fo)
+  call batch_init(batch_fi, fi)
+  call batch_init(batch_fo, fo)
 
   call X(nl_operator_operate_batch)(op, batch_fi, batch_fo, ghost_update, profile, points)
 

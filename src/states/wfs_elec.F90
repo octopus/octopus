@@ -48,6 +48,8 @@ module wfs_elec_oct_m
     module procedure  wfs_elec_init_empty
     module procedure dwfs_elec_init_contiguous
     module procedure zwfs_elec_init_contiguous
+    module procedure dwfs_elec_init_contiguous_2d
+    module procedure zwfs_elec_init_contiguous_2d
   end interface wfs_elec_init
 
 contains

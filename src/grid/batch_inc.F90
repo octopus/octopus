@@ -37,13 +37,46 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
   do ist = st_start, st_end
-    call this%add_state(ist, psi(:, :, ist))
+    call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
   this%type_of = R_TYPE_VAL
 
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)
+
+subroutine X(batch_init_contiguous_2d)(this, dim, st_start, st_end, psi)
+  class(batch_t),  intent(out)   :: this
+  integer,        intent(in)    :: dim
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
+  R_TYPE, target, contiguous, intent(in)    :: psi(:, :)
+
+  R_TYPE, pointer :: psip(:, :, :)
+
+  PUSH_SUB(X(batch_init_contiguous_2d))
+
+  ASSERT(st_end == st_start .or. dim == 1)
+
+  psip(1:ubound(psi, dim=1), 1:dim, st_start:st_end) => psi(:, :)
+
+  call X(batch_init_contiguous)(this, dim, st_start, st_end, psip)
+
+  POP_SUB(X(batch_init_contiguous_2d))
+end subroutine X(batch_init_contiguous_2d)
+
+subroutine X(batch_init_single)(this, psi)
+  class(batch_t),             intent(out)   :: this
+  R_TYPE, target, contiguous, intent(in)    :: psi(:)
+
+  R_TYPE, pointer :: psip(:, :, :)
+  PUSH_SUB(X(batch_init_single))
+
+  psip(1:ubound(psi, dim=1), 1:1, 1:1) => psi(:)
+  call X(batch_init_contiguous)(this, 1, 1, 1, psip)
+
+  POP_SUB(X(batch_init_single))
+end subroutine X(batch_init_single)
 
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
@@ -75,25 +108,6 @@ subroutine X(batch_add_state)(this, ist, psi)
   POP_SUB(X(batch_add_state))
 end subroutine X(batch_add_state)
 
-!--------------------------------------------------------------
-
-subroutine X(batch_add_state_linear)(this, psi)
-  class(batch_t),  intent(inout) :: this
-  R_TYPE,  target, intent(in)    :: psi(:)
-
-  PUSH_SUB(X(batch_add_state_linear))
-
-  ASSERT(this%current <= this%nst_linear)
-  this%states_linear(this%current)%X(psi) => psi
-  this%ist_idim_index(this%current, 1) = this%current
-
-  this%max_size = max(this%max_size, ubound(this%states_linear(this%current)%X(psi), dim = 1))
-  
-  this%current = this%current + 1
-
-  POP_SUB(X(batch_add_state_linear))
-end subroutine X(batch_add_state_linear)
-
 
 !--------------------------------------------------------------
 subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
@@ -120,7 +134,7 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   this%mirror = optional_default(mirror, .false.)  
   
   do ist = st_start, st_end
-    call this%add_state(ist, this%X(psicont)(:, :, ist - st_start + 1))
+    call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_allocate))
