@@ -33,17 +33,16 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   call batch_init_empty(this, dim, st_end - st_start + 1)
 
   this%X(psicont) => psi(:, :, st_start:)
+  np = ubound(psi, dim=1)
+  this%type_of = R_TYPE_VAL
+  this%X(ff) => psi(:, :, st_start:)
+  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
-
-  np = ubound(psi, dim=1)
-  this%type_of = R_TYPE_VAL
-  this%X(ff) => psi(:, :, st_start:)
-  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)
@@ -93,9 +92,6 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   ASSERT(this%current <= this%nst)
 
-  this%states(this%current)%ist    =  ist
-  this%states(this%current)%X(psi) => psi
-
   ! now we also populate the linear array
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
@@ -105,7 +101,7 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   this%ist(this%current) = ist
 
-  this%max_size = max(this%max_size, ubound(this%states(this%current)%X(psi), dim = 1))
+  this%max_size = max(this%max_size, ubound(this%X(ff), dim=1))
   
   this%current = this%current + 1
 
@@ -134,6 +130,8 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
     SAFE_ALLOCATE(this%X(ff)(1:np, 1:this%dim, 1:nst))
   end if
   this%X(psicont) => this%X(ff)
+  this%type_of = R_TYPE_VAL
+  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
@@ -141,9 +139,6 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
-
-  this%type_of = R_TYPE_VAL
-  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)
@@ -165,10 +160,6 @@ subroutine X(batch_allocate_temporary)(this)
   end if
   this%X(psicont) => this%X(ff)
   
-  do ist = 1, this%nst
-    this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
-  end do
-
   this%type_of = R_TYPE_VAL
   this%X(ff_linear)(1:this%max_size, 1:this%nst_linear) => this%X(ff)(:, :, :)
 

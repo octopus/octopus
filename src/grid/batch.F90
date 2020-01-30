@@ -35,19 +35,10 @@ module batch_oct_m
 
   private
   public ::                         &
-    batch_state_t,                  &
     batch_pack_t,                   &
     batch_t,                        &
     batch_init
   
-  !--------------------------------------------------------------
-  type batch_state_t
-    ! Components are public by default
-    FLOAT,      pointer :: dpsi(:, :)
-    CMPLX,      pointer :: zpsi(:, :)
-    integer        :: ist
-  end type batch_state_t
-
   type batch_pack_t
     ! Components are public by default
     integer                        :: size(1:2)
@@ -59,7 +50,6 @@ module batch_oct_m
   
   type batch_t
     private
-    type(batch_state_t),   pointer         :: states(:)
     integer,                        public :: nst
     integer                                :: current
     integer,                        public :: dim
@@ -181,8 +171,6 @@ contains
       call this%deallocate()
     end if
 
-    SAFE_DEALLOCATE_P(this%states)
-    
     SAFE_DEALLOCATE_P(this%ist_idim_index)
     SAFE_DEALLOCATE_A(this%ist)
 
@@ -199,11 +187,6 @@ contains
 
     this%is_allocated = .false.
 
-    do ii = 1, this%nst
-      nullify(this%states(ii)%dpsi)
-      nullify(this%states(ii)%zpsi)
-    end do
-    
     this%current = 1
     
     if(this%special_memory) then
@@ -236,11 +219,6 @@ contains
     
     PUSH_SUB(batch_deallocate_temporary)
 
-    do ii = 1, this%nst
-      nullify(this%states(ii)%dpsi)
-      nullify(this%states(ii)%zpsi)
-    end do
-    
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
@@ -300,12 +278,6 @@ contains
     this%current = 1
     this%type_of = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont)
-    
-    SAFE_ALLOCATE(this%states(1:nst))
-    do ist = 1, nst
-      nullify(this%states(ist)%dpsi)
-      nullify(this%states(ist)%zpsi)
-    end do
     
     this%nst_linear = nst*dim
 
@@ -431,10 +403,6 @@ contains
     end if
 
     if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
-
-    do ii = 1, dest%nst
-      dest%states(ii)%ist = this%states(ii)%ist
-    end do
 
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
