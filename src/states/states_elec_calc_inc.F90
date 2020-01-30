@@ -557,7 +557,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
         ibind = batch%inv_index((/ist, idim/))
-        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+        call blas_axpy(mesh%np, -ss(ist), batch%X(ff_linear)(1, ibind), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented

@@ -66,7 +66,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     
     do ist = 1, fi%nst_linear
 #ifdef HAVE_MPI
-      call X(vec_ghost_update)(op%mesh%vp, fi%states_linear(ist)%X(psi)(:))
+      call X(vec_ghost_update)(op%mesh%vp, fi%X(ff_linear)(:, ist))
 #endif
     end do
   end if
@@ -117,8 +117,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
           ASSERT(ubound(fi%states_linear(ist)%X(psi), dim = 1) == op%mesh%np_part)
           ASSERT(ubound(fo%states_linear(ist)%X(psi), dim = 1) >= op%mesh%np)
           
-          pfi => fi%states_linear(ist)%X(psi)(:)
-          pfo => fo%states_linear(ist)%X(psi)(:)
+          pfi => fi%X(ff_linear)(:, ist)
+          pfo => fo%X(ff_linear)(:, ist)
           
           call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), logldf, pfo(1))
         end do
@@ -194,7 +194,7 @@ contains
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
           do ist = 1, fi%nst_linear
-            fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            fo%X(ff_linear)(ii, ist) = sum(wre(1:nn)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
           end do
         end do
       end do
@@ -240,7 +240,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
         end forall
       end do
       !$omp end parallel do

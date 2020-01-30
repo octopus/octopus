@@ -47,8 +47,8 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
         do ip = 1, gr%mesh%np
           
-          psi = psib%states_linear(ii)%X(psi)(ip)
-          gpsi = grad_psib(idir)%states_linear(ii)%X(psi)(ip)
+          psi = psib%X(ff_linear)(ip, ii)
+          gpsi = grad_psib(idir)%X(ff_linear)(ip, ii)
           grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi)*gpsi)
           
         end do

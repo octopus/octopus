@@ -404,7 +404,7 @@ contains
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
             forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
+              st%group%psib(ib, ik)%zff_linear(ip, ist) = st%group%psib(ib, ik)%zff_linear(ip, ist)*phase
             end forall
           end do
         case(BATCH_PACKED)

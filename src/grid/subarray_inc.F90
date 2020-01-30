@@ -104,8 +104,8 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     do ist = 1, arrayb%nst_linear
       do iblock = 1, this%nblocks
         forall(ii = 1:this%blength(iblock))
-          subarrayb%states_linear(ist)%X(psi)(this%dest(iblock) + ii) = &
-            arrayb%states_linear(ist)%X(psi)(this%offsets(iblock) + ii - 1)
+          subarrayb%X(ff_linear)(this%dest(iblock) + ii, ist) = &
+            arrayb%X(ff_linear)(this%offsets(iblock) + ii - 1, ist)
         end forall
       end do
     end do

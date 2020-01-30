@@ -311,7 +311,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = conjg(this%phase(ip, psib%ik))*src_%states_linear(ii)%X(psi)(ip)
+          psib%X(ff_linear)(ip, ii) = conjg(this%phase(ip, psib%ik))*src_%X(ff_linear)(ip, ii)
         end do
         !$omp end do nowait
       end do
@@ -322,7 +322,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
       do ii = 1, psib%nst_linear
         !$omp do
         do ip = 1, np
-          psib%states_linear(ii)%X(psi)(ip) = this%phase(ip, psib%ik)*src_%states_linear(ii)%X(psi)(ip)
+          psib%X(ff_linear)(ip, ii) = this%phase(ip, psib%ik)*src_%X(ff_linear)(ip, ii)
         end do
         !$omp end do nowait
       end do
@@ -409,13 +409,13 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
       if(this%spin(3,psib%linear_to_ist(ii), psib%ik)>0) then
         !$omp do
         do ip = sp + 1, der%mesh%np_part
-          psib%states_linear(ii+1)%X(psi)(ip) = psib%states_linear(ii+1)%X(psi)(ip)*this%phase_spiral(ip-sp, 1)
+          psib%X(ff_linear)(ip, ii+1) = psib%X(ff_linear)(ip, ii+1)*this%phase_spiral(ip-sp, 1)
         end do
         !$omp end do nowait
       else
         !$omp do
         do ip = sp + 1, der%mesh%np_part
-          psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip-sp, 2)
+          psib%X(ff_linear)(ip, ii) = psib%X(ff_linear)(ip, ii)*this%phase_spiral(ip-sp, 2)
         end do
         !$omp end do nowait
       end if
@@ -769,7 +769,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
         do ist = 1, nst
           !$omp parallel do
           do ip = 1, npoints
-            lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
+            lpsi(ist, ip) = psib%X(ff_linear)(pmat%map(ip), ist)
           end do
         end do
         
@@ -790,7 +790,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
           do ist = 1, nst
             !$omp parallel do
             do ip = 1, npoints
-              lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
+              lpsi(ist, ip) = psib%X(ff_linear)(pmat%map(ip), ist)*this%projector_phases(ip, imat, 1, psib%ik)
             end do
           end do
 
@@ -822,7 +822,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
            end if
            !$omp parallel do
            do ip = 1, npoints
-             lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, idim, psib%ik)
+             lpsi(ist, ip) = psib%X(ff_linear)(pmat%map(ip), ist)*this%projector_phases(ip, imat, idim, psib%ik)
            end do
          end do
 
@@ -1007,7 +1007,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
           do ist = 1, nst
             !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
-              vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
+              vpsib%X(ff_linear)(pmat%map(ip), ist) = vpsib%X(ff_linear)(pmat%map(ip), ist) + psi(ist, ip)
             end do
             !$omp end parallel do
           end do
@@ -1029,7 +1029,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
             do ist = 1, nst
               !$omp parallel do
               do ip = 1, npoints
-                vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
+                vpsib%X(ff_linear)(pmat%map(ip), ist) = vpsib%X(ff_linear)(pmat%map(ip), ist) &
                     + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
               end do
               !$omp end parallel do
@@ -1069,7 +1069,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
               end if
               !$omp parallel do if(.not. this%projector_self_overlap)
               do ip = 1, npoints
-                vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
+                vpsib%X(ff_linear)(pmat%map(ip), ist) = vpsib%X(ff_linear)(pmat%map(ip), ist) &
                     + psi(ist, ip)*conjg(this%projector_phases(ip, imat, idim, vpsib%ik))
               end do
               !$omp end parallel do
@@ -1263,8 +1263,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
       else
         forall(ip = 1:npoints)
           forall(ist = 1:nst) 
-            psi(0, ist, ip) = psi1b%states_linear(ist)%X(psi)(pmat%map(ip))
-            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%states_linear(ist)%X(psi)(pmat%map(ip))
+            psi(0, ist, ip) = psi1b%X(ff_linear)(pmat%map(ip), ist)
+            forall(idir = 1:ndim) psi(idir, ist, ip) = psi2b(idir)%X(ff_linear)(pmat%map(ip), ist)
           end forall
         end forall
       end if

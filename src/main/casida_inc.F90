@@ -326,7 +326,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
 
   do ip = 1, mesh%np
-    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)(ip))*st%group%psib(ablock, kk)%states_linear(alin)%X(psi)(ip)
+    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%X(ff_linear)(ip, ilin))*st%group%psib(ablock, kk)%X(ff_linear)(ip, alin)
   end do
 
   call profiling_out(prof)

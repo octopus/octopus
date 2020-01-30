@@ -409,7 +409,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     call opffb%X(allocate)(1, blocksize, this%mesh%np)
 
     forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
-      ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
+      ffb%X(ff_linear)(ip, ist) = ff(ip)
     end forall
 
     if(packstates) then
@@ -432,7 +432,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     end if
 
     forall(ip = 1:this%mesh%np)
-      opffb%states_linear(blocksize)%X(psi)(ip) = CNST(2.0)*opffb%states_linear(blocksize)%X(psi)(ip) - &
+      opffb%X(ff_linear)(ip, blocksize) = CNST(2.0)*opffb%X(ff_linear)(ip, blocksize) - &
         (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
         - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
     end forall
@@ -470,7 +470,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
     do ist = 1, blocksize
       do ip = 1,this%mesh%np_part
-        ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
+        ffb%X(ff_linear)(ip, ist) = ff(ip)
       end do
     end do
 
@@ -500,8 +500,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
     do ip = 1, this%mesh%np
       do idir = 1, this%mesh%sb%dim
-        gradffb(idir)%states_linear(blocksize)%X(psi)(ip) = &
-          gradffb(idir)%states_linear(blocksize)%X(psi)(ip) - gradff(ip, idir)
+        gradffb(idir)%X(ff_linear)(ip, blocksize) = &
+          gradffb(idir)%X(ff_linear)(ip, blocksize) - gradff(ip, idir)
       end do
     end do
 
@@ -638,11 +638,11 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%states_linear(ist)%X(psi)(ip)
+              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_linear)(ip, ist)
           end do
         end do
         do idim1 = 1, der%dim
-          xyz_(idim1)%states_linear(ist)%X(psi)(ip) = tmp(idim1)
+          xyz_(idim1)%X(ff_linear)(ip, ist) = tmp(idim1)
         end do
       end do
     end do

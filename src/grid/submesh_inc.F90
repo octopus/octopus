@@ -176,7 +176,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
       do ist = 1, psib%nst_linear
         !$omp parallel do
         do ip = 1,this%np
-          spsi(ip,ist) = psib%states_linear(ist)%X(psi)(this%map(ip))
+          spsi(ip,ist) = psib%X(ff_linear)(this%map(ip), ist)
         end do
       end do
     case(BATCH_PACKED)

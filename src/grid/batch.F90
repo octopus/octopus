@@ -1051,9 +1051,9 @@ subroutine batch_copy_data_to(this, np, dest)
     !$omp parallel do private(ist)
     do ist = 1, dest%nst_linear
       if(dest%type() == TYPE_CMPLX) then
-        call blas_copy(np, this%states_linear(ist)%zpsi(1), 1, dest%states_linear(ist)%zpsi(1), 1)
+        call blas_copy(np, this%zff_linear(1, ist), 1, dest%zff_linear(1, ist), 1)
       else
-        call blas_copy(np, this%states_linear(ist)%dpsi(1), 1, dest%states_linear(ist)%dpsi(1), 1)
+        call blas_copy(np, this%dff_linear(1, ist), 1, dest%dff_linear(1, ist), 1)
       end if
     end do
 
