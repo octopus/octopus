@@ -190,9 +190,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
 
   if(conj) then
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = R_CONJ(dd(ist, jst))
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = R_CONJ(dd(ist, jst))
   else
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = dd(ist, jst)
   end if
 
   SAFE_DEALLOCATE_A(dd)
@@ -305,8 +305,8 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   forall(ist = 1:aa%nst)
     forall(jst = 1:aa%nst) 
-      dot(aa%states(ist)%ist, aa%states(jst)%ist) = dd(ist, jst)
-      dot(aa%states(jst)%ist, aa%states(ist)%ist) = R_CONJ(dd(ist, jst))
+      dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
+      dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end forall
   end forall
 

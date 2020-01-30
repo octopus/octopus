@@ -175,7 +175,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk
         do idim = 1, dim
-          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), vvb%states(ist)%X(psi)(:, idim))
+          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), vvb%X(ff)(:, idim, ist))
         end do
       end do
 

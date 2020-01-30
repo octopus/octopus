@@ -59,7 +59,7 @@ module batch_oct_m
   
   type batch_t
     private
-    type(batch_state_t),   pointer, public :: states(:)
+    type(batch_state_t),   pointer         :: states(:)
     integer,                        public :: nst
     integer                                :: current
     integer,                        public :: dim
@@ -67,6 +67,7 @@ module batch_oct_m
 
     integer                                :: ndims
     integer,               pointer         :: ist_idim_index(:, :)
+    integer,           allocatable, public :: ist(:)
 
     logical                                :: is_allocated
     logical                                :: mirror !< keep a copy of the batch data in unpacked form
@@ -183,6 +184,7 @@ contains
     SAFE_DEALLOCATE_P(this%states)
     
     SAFE_DEALLOCATE_P(this%ist_idim_index)
+    SAFE_DEALLOCATE_A(this%ist)
 
     POP_SUB(batch_end)
   end subroutine batch_end
@@ -313,6 +315,7 @@ contains
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
+    SAFE_ALLOCATE(this%ist(1:this%nst))
 
     nullify(this%pack%dpsi, this%pack%zpsi)
 
@@ -338,7 +341,7 @@ contains
       if(this%type() == TYPE_FLOAT) then
         ok = ok .and. associated(this%dff_linear)
         ok = ok .and. ubound(this%dff_linear, dim=2) == this%nst_linear
-      else if(this%type() == TYPE_FLOAT) then
+      else if(this%type() == TYPE_CMPLX) then
         ok = ok .and. associated(this%zff_linear)
         ok = ok .and. ubound(this%zff_linear, dim=2) == this%nst_linear
       else
@@ -434,6 +437,7 @@ contains
     end do
 
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
+    dest%ist(1:this%nst) = this%ist(1:this%nst)
 
     if(optional_default(copy_data, .false.)) call this%copy_data_to(np, dest)
     

@@ -187,16 +187,16 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
       if(pot_is_cmplx)then
         do ist = 1, psib%nst
           forall (ip = 1:mesh%np)
-            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              (potential(ip, ispin)+ M_zI*Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
+            vpsib%X(ff)(ip, 1, ist) = vpsib%X(ff)(ip, 1, ist) + &
+              (potential(ip, ispin)+ M_zI*Impotential(ip, ispin)) * psib%X(ff)(ip, 1, ist)
           end forall
         end do
       else
         !$omp parallel do private(ip)
         do ist = 1, psib%nst
           forall (ip = 1:mesh%np)
-            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
+            vpsib%X(ff)(ip, 1, ist) = vpsib%X(ff)(ip, 1, ist) + &
+              potential(ip, ispin) * psib%X(ff)(ip, 1, ist)
           end forall
         end do
         !$omp end parallel do
@@ -210,8 +210,8 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
       !the spinor case is more complicated since it mixes the two components.
       if (pot_is_cmplx) then
         do ist = 1, psib%nst
-          psi  => psib%states(ist)%X(psi)
-          vpsi => vpsib%states(ist)%X(psi)
+          psi  => psib%X(ff)(:, :, ist)
+          vpsi => vpsib%X(ff)(:, :, ist)
           
           do ip = 1, mesh%np
             pot(1:4) = potential(ip, 1:4) + M_zI * Impotential(ip, 1:4)
@@ -224,8 +224,8 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         
       else
         do ist = 1, psib%nst
-          psi  => psib%states(ist)%X(psi)
-          vpsi => vpsib%states(ist)%X(psi)
+          psi  => psib%X(ff)(:, :, ist)
+          vpsi => vpsib%X(ff)(:, :, ist)
 
           forall(ip = 1:mesh%np)
             vpsi(ip, 1) = vpsi(ip, 1) + potential(ip, 1)*psi(ip, 1) + &

@@ -103,6 +103,8 @@ subroutine X(batch_add_state)(this, ist, psi)
     this%ist_idim_index(ii, 2) = idim
   end do
 
+  this%ist(this%current) = ist
+
   this%max_size = max(this%max_size, ubound(this%states(this%current)%X(psi), dim = 1))
   
   this%current = this%current + 1
