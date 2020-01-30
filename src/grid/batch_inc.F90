@@ -99,7 +99,6 @@ subroutine X(batch_add_state)(this, ist, psi)
   ! now we also populate the linear array
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
-    this%states_linear(ii)%X(psi) => psi(:, idim)
     this%ist_idim_index(ii, 1) = ist
     this%ist_idim_index(ii, 2) = idim
   end do
@@ -166,9 +165,6 @@ subroutine X(batch_allocate_temporary)(this)
   
   do ist = 1, this%nst
     this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
-    do idim = 1, this%dim
-      this%states_linear((ist - 1)*this%dim + idim)%X(psi) => this%X(psicont)(:, idim, ist)
-    end do
   end do
 
   this%type_of = R_TYPE_VAL
