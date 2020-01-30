@@ -80,7 +80,7 @@ module batch_oct_m
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
-    type(batch_state_l_t), pointer, public :: states_linear(:)
+    type(batch_state_l_t), pointer         :: states_linear(:)
 
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,                 pointer, public :: dpsicont(:, :, :)

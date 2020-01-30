@@ -2627,8 +2627,8 @@ contains
         energy_steps, energy_step, energy_start, noise)
 
       do ii = 1, time_function%nst_linear
-        call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
-          energy_function%states_linear(ii)%dpsi)
+        call compressed_sensing_spectral_analysis(cs, time_function%dff_linear(:, ii), &
+          energy_function%dff_linear(:, ii))
       end do
 
       call compressed_sensing_end(cs)

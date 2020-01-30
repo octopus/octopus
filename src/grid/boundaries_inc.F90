@@ -372,7 +372,6 @@ contains
   ! ---------------------------------------------------------
   subroutine periodic()
     integer :: ip, ist, ip_bnd, ip_inn
-    R_TYPE, pointer :: ff(:)
 
     R_TYPE, allocatable :: sendbuffer(:, :, :)
     R_TYPE, allocatable :: recvbuffer(:, :, :)
@@ -586,9 +585,9 @@ contains
       if(.not. present(phase_correction)) then
         ! do not apply phase correction; phase is set in another step
         do ist = 1, ffb%nst_linear
-          ff => ffb%states_linear(ist)%X(psi)
           forall (ip = 1:boundaries%nper)
-            ff(boundaries%per_points(POINT_BOUNDARY, ip)) = ff(boundaries%per_points(POINT_INNER, ip))
+            ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
+              ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist)
           end forall
         end do
       else
@@ -596,9 +595,9 @@ contains
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
-          ff => ffb%states_linear(ist)%X(psi)
           forall (ip = 1:boundaries%nper)
-            ff(boundaries%per_points(POINT_BOUNDARY, ip)) = ff(boundaries%per_points(POINT_INNER, ip)) * &
+            ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
+              ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
           end forall
         end do

@@ -440,7 +440,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Laplacian ', trim(type),  &
       ' bsize = ', blocksize,    &
-      ' , error = ', X(mf_nrm2)(this%mesh, opffb%states_linear(blocksize)%X(psi)), &
+      ' , error = ', X(mf_nrm2)(this%mesh, opffb%X(ff_linear)(:, blocksize)), &
       ' , Gflops = ',  &
 #ifdef R_TREAL
       blocksize*this%mesh%np*CNST(2.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
@@ -508,7 +508,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Batch gradient ', trim(type),  &
       ' bsize = ', blocksize,    &
-      ' , error = ', X(mf_nrm2)(this%mesh, gradffb(1)%states_linear(blocksize)%X(psi)), &
+      ' , error = ', X(mf_nrm2)(this%mesh, gradffb(1)%X(ff_linear)(:, blocksize)), &
       ' , Gflops = ',  &
 #ifdef R_TREAL
       blocksize*this%mesh%np*CNST(2.0)*this%grad(1)%stencil%size*this%mesh%sb%dim/(etime*CNST(1.0e9))

@@ -41,7 +41,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
 #ifndef SINGLE_PRECISION
   integer :: nri_loc, ini
-  R_TYPE,  pointer :: pfi(:), pfo(:)
 #endif
   
   PUSH_SUB(X(nl_operator_operate_batch))
@@ -96,7 +95,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 ! for the moment this is not implemented
 #ifndef SINGLE_PRECISION
 
-      !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
+      !$omp parallel private(ini, nri_loc, ist)
 #ifdef HAVE_OPENMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
 #else 
@@ -114,13 +113,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       else
         do ist = 1, fi%nst_linear
 
-          ASSERT(ubound(fi%states_linear(ist)%X(psi), dim = 1) == op%mesh%np_part)
-          ASSERT(ubound(fo%states_linear(ist)%X(psi), dim = 1) >= op%mesh%np)
+          ASSERT(ubound(fi%X(ff_linear), dim=1) == op%mesh%np_part)
+          ASSERT(ubound(fo%X(ff_linear), dim=1) >= op%mesh%np)
           
-          pfi => fi%X(ff_linear)(:, ist)
-          pfo => fo%X(ff_linear)(:, ist)
-          
-          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), logldf, pfo(1))
+          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+            fi%X(ff_linear)(1, ist), logldf, fo%X(ff_linear)(1, ist))
         end do
       end if
       !$omp end parallel

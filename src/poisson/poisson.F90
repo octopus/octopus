@@ -783,11 +783,11 @@ contains
 
     if(potb%type() == TYPE_FLOAT) then
       do ii = 1, potb%nst_linear
-        call dpoisson_solve(this, potb%states_linear(ii)%dpsi, rhob%states_linear(ii)%dpsi, all_nodes)
+        call dpoisson_solve(this, potb%dff_linear(:, ii), rhob%dff_linear(:, ii), all_nodes)
       end do
     else
       do ii = 1, potb%nst_linear
-        call zpoisson_solve(this, potb%states_linear(ii)%zpsi, rhob%states_linear(ii)%zpsi, all_nodes)
+        call zpoisson_solve(this, potb%zff_linear(:, ii), rhob%zff_linear(:, ii), all_nodes)
       end do
     end if
 

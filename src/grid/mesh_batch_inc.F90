@@ -348,7 +348,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%X(ff_linear)(:, indb), bb%X(ff_linear)(:, indb),& 
            reduce = .false., dotu = cproduct_)
       end do
     end do
@@ -685,7 +685,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%states_linear(indb)%X(psi), reduce = .false.))
+        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%X(ff_linear)(:, indb), reduce = .false.))
       end do
     end do
 
