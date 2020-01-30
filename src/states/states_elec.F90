@@ -2265,7 +2265,7 @@ contains
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        mem = mem + st%group%psib(ib, iqn)%pack_size()
+        mem = mem + st%group%psib(ib, iqn)%pack_total_size()
 
         if(mem > max_mem) then
           call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)

@@ -114,8 +114,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       conj = .true.
       call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
-      ldaa = aa%pack%size(1)
-      ldbb = bb%pack%size(1)
+      ldaa = aa%pack_size(1)
+      ldbb = bb%pack_size(1)
       call blas_gemm(transa = 'n', transb = 'c', m = aa%nst, n = bb%nst, k = mesh%np, &
         alpha = R_TOTYPE(mesh%volume_element), &
         a = aa%X(ff_pack)(1, 1), lda = ldaa, &
@@ -147,8 +147,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
     call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
       M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
-      A = aa%pack%buffer, offA = 0_8, lda = int(aa%pack%size(1), 8), &
-      B = bb%pack%buffer, offB = 0_8, ldb = int(bb%pack%size(1), 8), beta = R_TOTYPE(M_ZERO), &
+      A = aa%pack%buffer, offA = 0_8, lda = int(aa%pack_size(1), 8), &
+      B = bb%pack%buffer, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
 
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
@@ -405,21 +405,21 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   case(BATCH_DEVICE_PACKED)
 
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack_size(1))
 
     do ist = 1, aa%nst_linear
       call accel_set_stream(ist)
       call X(accel_dot)(n = int(mesh%np, 8), &
-        x = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
-        y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
+        x = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack_size(1), 8), &
+        y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack_size(1), 8), &
         res = dot_buffer, offres = int(ist - 1, 8))
     end do
     call accel_synchronize_all_streams()
     call accel_set_stream(1)
 
-    SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1))
+    SAFE_ALLOCATE(cltmp(1:aa%pack_size(1), 1))
 
-    call accel_read_buffer(dot_buffer, aa%pack%size(1), cltmp)
+    call accel_read_buffer(dot_buffer, aa%pack_size(1), cltmp)
 
     call accel_release_buffer(dot_buffer)
 
@@ -743,19 +743,19 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    SAFE_ALLOCATE(ssq(1:aa%pack%size(1)))
+    SAFE_ALLOCATE(ssq(1:aa%pack_size(1)))
 
-    call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
+    call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack_size(1))
 
     do ist = 1, aa%nst_linear
       call accel_set_stream(ist)
-      call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+      call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack_size(1), 8), &
         res = nrm2_buffer, offres = int(ist - 1, 8))
     end do
     call accel_synchronize_all_streams()
     call accel_set_stream(1)
 
-    call accel_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)
+    call accel_read_buffer(nrm2_buffer, aa%pack_size(1), ssq)
 
     call accel_release_buffer(nrm2_buffer)
 

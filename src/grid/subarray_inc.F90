@@ -75,14 +75,14 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call accel_set_kernel_arg(kernel_subarray_gather, 1, offsets_buff)
     call accel_set_kernel_arg(kernel_subarray_gather, 2, dest_buff)
     call accel_set_kernel_arg(kernel_subarray_gather, 3, arrayb%pack%buffer)
-    call accel_set_kernel_arg(kernel_subarray_gather, 4, log2(arrayb%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_subarray_gather, 4, log2(arrayb%pack_size_real(1)))
     call accel_set_kernel_arg(kernel_subarray_gather, 5, subarrayb%pack%buffer)
-    call accel_set_kernel_arg(kernel_subarray_gather, 6, log2(subarrayb%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_subarray_gather, 6, log2(subarrayb%pack_size_real(1)))
 
-    bsize = accel_kernel_workgroup_size(kernel_subarray_gather)/subarrayb%pack%size_real(1)
+    bsize = accel_kernel_workgroup_size(kernel_subarray_gather)/subarrayb%pack_size_real(1)
 
     call accel_kernel_run(kernel_subarray_gather, &
-      (/subarrayb%pack%size_real(1), bsize, this%nblocks/), (/subarrayb%pack%size_real(1), bsize, 1/))
+      (/subarrayb%pack_size_real(1), bsize, this%nblocks/), (/subarrayb%pack_size_real(1), bsize, 1/))
 
     call accel_finish()
     
@@ -93,7 +93,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
   case(BATCH_PACKED)
     do iblock = 1, this%nblocks
       forall(ii = 1:this%blength(iblock))
-        forall(ist = 1:arrayb%pack%size(1))
+        forall(ist = 1:arrayb%pack_size(1))
           subarrayb%X(ff_pack)(ist, this%dest(iblock) + ii) = arrayb%X(ff_pack)(ist, this%offsets(iblock) + ii - 1)
         end forall
       end forall

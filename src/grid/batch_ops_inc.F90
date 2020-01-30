@@ -44,32 +44,32 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
       call accel_set_kernel_arg(kernel_daxpy, 0, np)
       call accel_set_kernel_arg(kernel_daxpy, 1, aa)
       call accel_set_kernel_arg(kernel_daxpy, 2, xx%pack%buffer)
-      call accel_set_kernel_arg(kernel_daxpy, 3, log2(xx%pack%size(1)))
+      call accel_set_kernel_arg(kernel_daxpy, 3, log2(xx%pack_size(1)))
       call accel_set_kernel_arg(kernel_daxpy, 4, yy%pack%buffer)
-      call accel_set_kernel_arg(kernel_daxpy, 5, log2(yy%pack%size(1)))
+      call accel_set_kernel_arg(kernel_daxpy, 5, log2(yy%pack_size(1)))
 
-      localsize = accel_kernel_workgroup_size(kernel_daxpy)/yy%pack%size(1)
+      localsize = accel_kernel_workgroup_size(kernel_daxpy)/yy%pack_size(1)
       
       dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
       dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
 
-      call accel_kernel_run(kernel_daxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
+      call accel_kernel_run(kernel_daxpy, (/yy%pack_size(1), dim2, dim3/), (/yy%pack_size(1), localsize, 1/))
       
     else
       zaa = aa
       call accel_set_kernel_arg(kernel_zaxpy, 0, np)
       call accel_set_kernel_arg(kernel_zaxpy, 1, zaa)
       call accel_set_kernel_arg(kernel_zaxpy, 2, xx%pack%buffer)
-      call accel_set_kernel_arg(kernel_zaxpy, 3, log2(xx%pack%size(1)))
+      call accel_set_kernel_arg(kernel_zaxpy, 3, log2(xx%pack_size(1)))
       call accel_set_kernel_arg(kernel_zaxpy, 4, yy%pack%buffer)
-      call accel_set_kernel_arg(kernel_zaxpy, 5, log2(yy%pack%size(1)))
+      call accel_set_kernel_arg(kernel_zaxpy, 5, log2(yy%pack_size(1)))
 
-      localsize = accel_kernel_workgroup_size(kernel_zaxpy)/yy%pack%size(1)
+      localsize = accel_kernel_workgroup_size(kernel_zaxpy)/yy%pack_size(1)
 
       dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
       dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
       
-      call accel_kernel_run(kernel_zaxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
+      call accel_kernel_run(kernel_zaxpy, (/yy%pack_size(1), dim2, dim3/), (/yy%pack_size(1), localsize, 1/))
 
     end if
 
@@ -77,10 +77,10 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     
   case(BATCH_PACKED)
     if(yy%type() == TYPE_CMPLX) then
-      call lalg_axpy(xx%pack%size(1), np, aa, xx%zff_pack, yy%zff_pack)
+      call lalg_axpy(xx%pack_size(1), np, aa, xx%zff_pack, yy%zff_pack)
     else
 #ifdef R_TREAL
-      call lalg_axpy(xx%pack%size(1), np, aa, xx%dff_pack, yy%dff_pack)
+      call lalg_axpy(xx%pack_size(1), np, aa, xx%dff_pack, yy%dff_pack)
 #endif
     end if
 
@@ -130,7 +130,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #endif
 
   effsize = yy%nst_linear
-  if(yy%is_packed()) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack_size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
@@ -147,33 +147,33 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
     if(yy%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
-      SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
-      do ist = 1, yy%pack%size(1)
+      SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack_size(1)))
+      do ist = 1, yy%pack_size(1)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
-      call accel_write_buffer(aa_buffer, 2*yy%pack%size(1), aa_linear_double)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack_size(1))
+      call accel_write_buffer(aa_buffer, 2*yy%pack_size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
-      call accel_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack_size(1))
+      call accel_write_buffer(aa_buffer, yy%pack_size(1), aa_linear)
     end if
 
     call accel_set_kernel_arg(kernel, 0, np)
     call accel_set_kernel_arg(kernel, 1, aa_buffer)
     call accel_set_kernel_arg(kernel, 2, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel, 3, log2(xx%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 3, log2(xx%pack_size(1)*size_factor))
     call accel_set_kernel_arg(kernel, 4, yy%pack%buffer)
-    call accel_set_kernel_arg(kernel, 5, log2(yy%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 5, log2(yy%pack_size(1)*size_factor))
 
-    localsize = accel_kernel_workgroup_size(kernel)/(yy%pack%size(1)*size_factor)
+    localsize = accel_kernel_workgroup_size(kernel)/(yy%pack_size(1)*size_factor)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
     
-    call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, dim2, dim3/), (/yy%pack%size(1)*size_factor, localsize, 1/))
+    call accel_kernel_run(kernel, (/yy%pack_size(1)*size_factor, dim2, dim3/), (/yy%pack_size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
 
@@ -183,7 +183,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack%size(1)
+        do ist = 1, yy%pack_size(1)
           yy%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip) + yy%zff_pack(ist, ip)
         end do
       end do
@@ -191,7 +191,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack%size(1)
+        do ist = 1, yy%pack_size(1)
           yy%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip) + yy%dff_pack(ist, ip)
         end do
       end do
@@ -266,7 +266,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 #endif
 
   effsize = xx%nst_linear
-  if(xx%is_packed()) effsize = xx%pack%size(1)
+  if(xx%is_packed()) effsize = xx%pack_size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
@@ -280,18 +280,18 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   case(BATCH_DEVICE_PACKED)
     if(xx%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
-      SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack%size(1)))
-      do ist = 1, xx%pack%size(1)
+      SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack_size(1)))
+      do ist = 1, xx%pack_size(1)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*xx%pack%size(1))
-      call accel_write_buffer(aa_buffer, 2*xx%pack%size(1), aa_linear_double)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*xx%pack_size(1))
+      call accel_write_buffer(aa_buffer, 2*xx%pack_size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%pack%size(1))
-      call accel_write_buffer(aa_buffer, xx%pack%size(1), aa_linear)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%pack_size(1))
+      call accel_write_buffer(aa_buffer, xx%pack_size(1), aa_linear)
     end if
 
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(scal_vec)), flags = '-D' + R_TYPE_CL)
@@ -299,14 +299,14 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     call accel_set_kernel_arg(kernel, 0, np)
     call accel_set_kernel_arg(kernel, 1, aa_buffer)
     call accel_set_kernel_arg(kernel, 2, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel, 3, log2(xx%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 3, log2(xx%pack_size(1)*size_factor))
 
-    localsize = accel_kernel_workgroup_size(kernel)/(xx%pack%size(1)*size_factor)
+    localsize = accel_kernel_workgroup_size(kernel)/(xx%pack_size(1)*size_factor)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
 
-    call accel_kernel_run(kernel, (/xx%pack%size(1)*size_factor, dim2, dim3/), (/xx%pack%size(1)*size_factor, localsize, 1/))
+    call accel_kernel_run(kernel, (/xx%pack_size(1)*size_factor, dim2, dim3/), (/xx%pack_size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
 
@@ -316,7 +316,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     if(xx%type() == TYPE_CMPLX) then
       !$omp parallel do
       do ip = 1, np
-        do ist = 1, xx%pack%size(1)
+        do ist = 1, xx%pack_size(1)
           xx%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip)
         end do
       end do
@@ -324,7 +324,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 #ifdef R_TREAL
      !$omp parallel do
      do ip = 1, np
-        do ist = 1, xx%pack%size(1)
+        do ist = 1, xx%pack_size(1)
           xx%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip)
         end do
       end do
@@ -376,7 +376,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #endif
 
   effsize = yy%nst_linear
-  if(yy%is_packed()) effsize = yy%pack%size(1)
+  if(yy%is_packed()) effsize = yy%pack_size(1)
   SAFE_ALLOCATE(aa_linear(1:effsize))
 
   aa_linear = M_ZERO
@@ -390,18 +390,18 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   case(BATCH_DEVICE_PACKED)
     if(yy%type() == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
-      SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
-      do ist = 1, yy%pack%size(1)
+      SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack_size(1)))
+      do ist = 1, yy%pack_size(1)
         aa_linear_double(2*ist - 1) = aa_linear(ist)
         aa_linear_double(2*ist) = aa_linear(ist)
       end do
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack%size(1))
-      call accel_write_buffer(aa_buffer, 2*yy%pack%size(1), aa_linear_double)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, 2*yy%pack_size(1))
+      call accel_write_buffer(aa_buffer, 2*yy%pack_size(1), aa_linear_double)
       SAFE_DEALLOCATE_A(aa_linear_double)
     else
       size_factor = 1
-      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack%size(1))
-      call accel_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
+      call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, yy%pack_size(1))
+      call accel_write_buffer(aa_buffer, yy%pack_size(1), aa_linear)
     end if
 
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(xpay_vec)), flags = '-D' + R_TYPE_CL)
@@ -409,16 +409,16 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     call accel_set_kernel_arg(kernel, 0, np)
     call accel_set_kernel_arg(kernel, 1, aa_buffer)
     call accel_set_kernel_arg(kernel, 2, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel, 3, log2(xx%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 3, log2(xx%pack_size(1)*size_factor))
     call accel_set_kernel_arg(kernel, 4, yy%pack%buffer)
-    call accel_set_kernel_arg(kernel, 5, log2(yy%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 5, log2(yy%pack_size(1)*size_factor))
 
-    localsize = accel_kernel_workgroup_size(kernel)/(yy%pack%size(1)*size_factor)
+    localsize = accel_kernel_workgroup_size(kernel)/(yy%pack_size(1)*size_factor)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
     
-    call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, dim2, dim3/), (/yy%pack%size(1)*size_factor, localsize, 1/))
+    call accel_kernel_run(kernel, (/yy%pack_size(1)*size_factor, dim2, dim3/), (/yy%pack_size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
 
@@ -428,7 +428,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack%size(1)
+        do ist = 1, yy%pack_size(1)
           yy%zff_pack(ist, ip) = xx%zff_pack(ist, ip) + aa_linear(ist)*yy%zff_pack(ist, ip)
         end do
       end do
@@ -436,7 +436,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack%size(1)
+        do ist = 1, yy%pack_size(1)
           yy%dff_pack(ist, ip) = xx%dff_pack(ist, ip) + aa_linear(ist)*yy%dff_pack(ist, ip)
         end do
       end do
@@ -548,7 +548,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     end if
   case(BATCH_DEVICE_PACKED)
 
-    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), this%pack%size(2))
+    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), this%pack_size(2))
     
     if(this%type() /= R_TYPE_VAL) then
 
@@ -571,13 +571,13 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
 
 
     ! now call an opencl kernel to rearrange the data
-    call accel_set_kernel_arg(X(pack), 0, this%pack%size(1))
+    call accel_set_kernel_arg(X(pack), 0, this%pack_size(1))
     call accel_set_kernel_arg(X(pack), 1, np)
     call accel_set_kernel_arg(X(pack), 2, ist - 1)
     call accel_set_kernel_arg(X(pack), 3, tmp)
     call accel_set_kernel_arg(X(pack), 4, this%pack%buffer)
     
-    call accel_kernel_run(X(pack), (/this%pack%size(2), 1/), (/accel_max_workgroup_size(), 1/))
+    call accel_kernel_run(X(pack), (/this%pack_size(2), 1/), (/accel_max_workgroup_size(), 1/))
     
     call accel_finish()
 
@@ -682,19 +682,19 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   case(BATCH_DEVICE_PACKED)
 
-    ASSERT(np <= this%pack%size(2))
+    ASSERT(np <= this%pack_size(2))
 
-    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), this%pack%size(2))
+    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), this%pack_size(2))
     
     if(this%type() == R_TYPE_VAL) then
 
-      call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
+      call accel_set_kernel_arg(X(unpack), 0, this%pack_size(1))
       call accel_set_kernel_arg(X(unpack), 1, np)
       call accel_set_kernel_arg(X(unpack), 2, ist - 1)
       call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
       call accel_set_kernel_arg(X(unpack), 4, tmp)
       
-      call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      call accel_kernel_run(X(unpack), (/1, this%pack_size(2)/), (/1, accel_max_workgroup_size()/))
       
       call accel_finish()
       
@@ -707,13 +707,13 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       ASSERT(this%type() == TYPE_FLOAT)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
       
-      call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
+      call accel_set_kernel_arg(dunpack, 0, this%pack_size(1))
       call accel_set_kernel_arg(dunpack, 1, np)
       call accel_set_kernel_arg(dunpack, 2, ist - 1)
       call accel_set_kernel_arg(dunpack, 3, this%pack%buffer)
       call accel_set_kernel_arg(dunpack, 4, tmp)
       
-      call accel_kernel_run(dunpack, (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      call accel_kernel_run(dunpack, (/1, this%pack_size(2)/), (/1, accel_max_workgroup_size()/))
       
       SAFE_ALLOCATE(dpsi(1:np))
       
@@ -969,13 +969,13 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     call accel_set_kernel_arg(kernel_vpsi, 1, np)
     call accel_set_kernel_arg(kernel_vpsi, 2, ff_buffer)
     call accel_set_kernel_arg(kernel_vpsi, 3, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel_vpsi, 4, log2(xx%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_vpsi, 4, log2(xx%pack_size_real(1)))
     call accel_set_kernel_arg(kernel_vpsi, 5, yy%pack%buffer)
-    call accel_set_kernel_arg(kernel_vpsi, 6, log2(yy%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_vpsi, 6, log2(yy%pack_size_real(1)))
     
-    iprange = accel_kernel_workgroup_size(kernel_vpsi)/xx%pack%size_real(1)
+    iprange = accel_kernel_workgroup_size(kernel_vpsi)/xx%pack_size_real(1)
     
-    call accel_kernel_run(kernel_vpsi, (/xx%pack%size_real(1), pad(np, iprange)/), (/xx%pack%size_real(1), iprange/))
+    call accel_kernel_run(kernel_vpsi, (/xx%pack_size_real(1), pad(np, iprange)/), (/xx%pack_size_real(1), iprange/))
 
     call accel_release_buffer(ff_buffer)
 #else

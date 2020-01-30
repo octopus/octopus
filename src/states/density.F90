@@ -238,7 +238,7 @@ contains
           call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel, 3, buff_weight)
           call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         
         case (SPINORS)
@@ -249,7 +249,7 @@ contains
           call accel_set_kernel_arg(kernel, 2, this%pnp)
           call accel_set_kernel_arg(kernel, 3, buff_weight)
           call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         end select
 

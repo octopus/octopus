@@ -109,7 +109,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         ASSERT(ubound(fo%X(ff_pack), dim = 2) >= op%mesh%np)
         
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
-          fi%X(ff_pack)(1, 1), log2(fi%pack%size_real(1)), fo%X(ff_pack)(1, 1))
+          fi%X(ff_pack)(1, 1), log2(fi%pack_size_real(1)), fo%X(ff_pack)(1, 1))
       else
         do ist = 1, fi%nst_linear
 
@@ -278,9 +278,9 @@ contains
 
     call accel_write_buffer(buff_weights, op%stencil%size, wre)
 
-    ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
+    ASSERT(fi%pack_size_real(1) == fo%pack_size_real(1))
 
-    eff_size = fi%pack%size_real(1)
+    eff_size = fi%pack_size_real(1)
 
     select case(function_opencl)
     case(OP_INVMAP)
@@ -349,7 +349,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
       
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
@@ -398,7 +398,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
 
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
         call messages_fatal()
       end if

@@ -86,28 +86,28 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
       call accel_set_kernel_arg(kernel_vpsi, 1, mesh%np)
       call accel_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
       call accel_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack_size_real(1)))
       call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack_size_real(1)))
 
-      localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
+      localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack_size_real(1)
 
       dim3 = mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
       dim2 = min(accel_max_size_per_dim(2)*localsize, pad(mesh%np, localsize))
 
-      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), dim2, dim3/), (/psib%pack%size_real(1), localsize, 1/))
+      call accel_kernel_run(kernel_vpsi, (/psib%pack_size_real(1), dim2, dim3/), (/psib%pack_size_real(1), localsize, 1/))
 
     case(SPINORS)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 1, potential_opencl)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 2, pnp)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack%size(1))
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack_size(1))
       call accel_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack%size(1))
+      call accel_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack_size(1))
 
-      call accel_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
-        (/psib%pack%size(1)/2, 2*accel_max_workgroup_size()/psib%pack%size(1)/))
+      call accel_kernel_run(kernel_vpsi_spinors, (/psib%pack_size(1)/2, pnp/), &
+        (/psib%pack_size(1)/2, 2*accel_max_workgroup_size()/psib%pack_size(1)/))
 
     end select
 
@@ -343,13 +343,13 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
     call accel_set_kernel_arg(ker_phase, 2, np)
     call accel_set_kernel_arg(ker_phase, 3, this%buff_phase)
     call accel_set_kernel_arg(ker_phase, 4, src_%pack%buffer)
-    call accel_set_kernel_arg(ker_phase, 5, log2(src_%pack%size(1)))
+    call accel_set_kernel_arg(ker_phase, 5, log2(src_%pack_size(1)))
     call accel_set_kernel_arg(ker_phase, 6, psib%pack%buffer)
-    call accel_set_kernel_arg(ker_phase, 7, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(ker_phase, 7, log2(psib%pack_size(1)))
 
-    wgsize = accel_kernel_workgroup_size(ker_phase)/psib%pack%size(1)
+    wgsize = accel_kernel_workgroup_size(ker_phase)/psib%pack_size(1)
 
-    call accel_kernel_run(ker_phase, (/psib%pack%size(1), pad(np, wgsize)/), (/psib%pack%size(1), wgsize/))
+    call accel_kernel_run(ker_phase, (/psib%pack_size(1), pad(np, wgsize)/), (/psib%pack_size(1), wgsize/))
 
     call accel_finish()
   end select
@@ -446,15 +446,15 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
     call accel_set_kernel_arg(kernel_phase_spiral, 1, sp) 
     call accel_set_kernel_arg(kernel_phase_spiral, 2, der%mesh%np_part) 
     call accel_set_kernel_arg(kernel_phase_spiral, 3, psib%pack%buffer)
-    call accel_set_kernel_arg(kernel_phase_spiral, 4, log2(psib%pack%size(1)))
+    call accel_set_kernel_arg(kernel_phase_spiral, 4, log2(psib%pack_size(1)))
     call accel_set_kernel_arg(kernel_phase_spiral, 5, this%buff_phase_spiral)
     call accel_set_kernel_arg(kernel_phase_spiral, 6, spin_label_buffer)
 
-    wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack%size(1)
+    wgsize = accel_kernel_workgroup_size(kernel_phase_spiral)/psib%pack_size(1)
 
     call accel_kernel_run(kernel_phase_spiral, &
-                          (/psib%pack%size(1)/2, pad(der%mesh%np_part - sp, 2*wgsize)/), &
-                          (/psib%pack%size(1)/2, 2*wgsize/))
+                          (/psib%pack_size(1)/2, pad(der%mesh%np_part - sp, 2*wgsize)/), &
+                          (/psib%pack_size(1)/2, 2*wgsize/))
 
     call accel_finish()
 
@@ -650,7 +650,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
   if(psib%is_packed() .and. accel_is_enabled()) then
 
     call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-      this%full_projection_size*psib%pack%size_real(1))
+      this%full_projection_size*psib%pack_size_real(1))
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
     ! only do this if we have some points of projector matrices
@@ -659,12 +659,12 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
       if(allocated(this%projector_phases)) then
         call accel_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
         kernel => ker_proj_bra_phase
-        size = psib%pack%size(1)
+        size = psib%pack_size(1)
         ASSERT(R_TYPE_VAL == TYPE_CMPLX)
       else
         call accel_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
         kernel => ker_proj_bra
-        size = psib%pack%size_real(1)
+        size = psib%pack_size_real(1)
       end if
 
       call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
@@ -707,9 +707,9 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
     end if
 
     if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
+      SAFE_ALLOCATE(projection%X(projection)(1:psib%pack_size_real(1), 1:this%full_projection_size))
       call accel_read_buffer(projection%buff_projection, &
-        this%full_projection_size*psib%pack%size_real(1), projection%X(projection))
+        this%full_projection_size*psib%pack_size_real(1), projection%X(projection))
     end if
 
     call profiling_out(cl_prof)
@@ -914,7 +914,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
       ! only do this if we have points of some projector matrices
       if(this%max_npoints > 0) then
         call accel_write_buffer(projection%buff_projection, &
-          this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
+          this%full_projection_size*vpsib%pack_size_real(1), projection%X(projection))
       end if
       SAFE_DEALLOCATE_A(projection%X(projection))
     end if
@@ -1115,7 +1115,7 @@ contains
       if(this%projector_mix) then
 
         SAFE_ALLOCATE(buff_proj)
-        call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, this%full_projection_size*vpsib%pack%size_real(1))
+        call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, this%full_projection_size*vpsib%pack_size_real(1))
 
         call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
         
@@ -1123,14 +1123,14 @@ contains
         call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
         call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
         call accel_set_kernel_arg(ker_mix, 3, projection%buff_projection)
-        call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack%size_real(1)))
+        call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack_size_real(1)))
         call accel_set_kernel_arg(ker_mix, 5, buff_proj)
         
         padnprojs = pad_pow2(this%max_nprojs)
-        lnprojs = min(accel_kernel_workgroup_size(ker_mix)/vpsib%pack%size_real(1), padnprojs)
+        lnprojs = min(accel_kernel_workgroup_size(ker_mix)/vpsib%pack_size_real(1), padnprojs)
         
         call accel_kernel_run(ker_mix, &
-          (/vpsib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/vpsib%pack%size_real(1), lnprojs, 1/))
+          (/vpsib%pack_size_real(1), padnprojs, this%nprojector_matrices/), (/vpsib%pack_size_real(1), lnprojs, 1/))
         
         call accel_finish()
 
@@ -1143,12 +1143,12 @@ contains
       if(allocated(this%projector_phases)) then
         call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
         kernel => ker_proj_ket_phase
-        size = vpsib%pack%size(1)
+        size = vpsib%pack_size(1)
         ASSERT(R_TYPE_VAL == TYPE_CMPLX)
       else
         call accel_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
         kernel => ker_proj_ket
-        size = vpsib%pack%size_real(1)
+        size = vpsib%pack_size_real(1)
       end if
 
       do iregion = 1, this%nregions
@@ -1684,16 +1684,16 @@ contains
 
     padnprojs = pad_pow2(this%max_nprojs)
 
-    call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 4*this%full_projection_size*psib%pack%size_real(1))
+    call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 4*this%full_projection_size*psib%pack_size_real(1))
 
     if(allocated(this%projector_phases)) then
       call accel_kernel_start_call(ker_commutator_bra_phase, 'projector.cl', 'projector_commutator_bra_phase')
       kernel => ker_commutator_bra_phase
-      size = psib%pack%size(1)
+      size = psib%pack_size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
       call accel_kernel_start_call(ker_commutator_bra, 'projector.cl', 'projector_commutator_bra')
-      size = psib%pack%size_real(1)
+      size = psib%pack_size_real(1)
       kernel => ker_commutator_bra
     end if
     
@@ -1720,10 +1720,10 @@ contains
     call accel_finish()
 
     if(mesh%parallel_in_domains) then
-      SAFE_ALLOCATE(proj(1:4*this%full_projection_size*psib%pack%size_real(1)))
-      call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack%size_real(1), proj)
+      SAFE_ALLOCATE(proj(1:4*this%full_projection_size*psib%pack_size_real(1)))
+      call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
       call comm_allreduce(mesh%vp%comm, proj)
-      call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack%size_real(1), proj)
+      call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
     end if
 
     if(this%projector_mix) then
@@ -1731,9 +1731,9 @@ contains
       SAFE_ALLOCATE(buff_proj_copy)
       
       call accel_create_buffer(buff_proj_copy, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-        4*this%full_projection_size*psib%pack%size_real(1))
+        4*this%full_projection_size*psib%pack_size_real(1))
 
-      size = 4*psib%pack%size_real(1)
+      size = 4*psib%pack_size_real(1)
       
       call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
       
@@ -1760,12 +1760,12 @@ contains
     if(allocated(this%projector_phases)) then
       call accel_kernel_start_call(ker_commutator_ket_phase, 'projector.cl', 'projector_commutator_ket_phase')
       kernel => ker_commutator_ket_phase
-      size = psib%pack%size(1)
+      size = psib%pack_size(1)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
     else
       call accel_kernel_start_call(ker_commutator_ket, 'projector.cl', 'projector_commutator_ket')
       kernel => ker_commutator_ket
-      size = psib%pack%size_real(1)
+      size = psib%pack_size_real(1)
     end if
     
     do iregion = 1, this%nregions

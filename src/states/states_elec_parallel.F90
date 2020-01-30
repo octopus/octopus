@@ -203,12 +203,12 @@ contains
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
       if(states_are_real(this)) then
-        call MPI_Get(psib%dff_pack(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+        call MPI_Get(psib%dff_pack(1, 1), product(psib%pack_size), MPI_FLOAT, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_FLOAT, &
           this%group%rma_win(ib, iqn), mpi_err)
       else
-        call MPI_Get(psib%zff_pack(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+        call MPI_Get(psib%zff_pack(1, 1), product(psib%pack_size), MPI_CMPLX, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_CMPLX, &
           this%group%rma_win(ib, iqn), mpi_err)
       end if
         
