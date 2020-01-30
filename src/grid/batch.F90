@@ -35,18 +35,8 @@ module batch_oct_m
 
   private
   public ::                         &
-    batch_pack_t,                   &
     batch_t,                        &
     batch_init
-  
-  type batch_pack_t
-    ! Components are public by default
-    integer                        :: size(1:2)
-    integer                        :: size_real(1:2)
-    FLOAT, contiguous, pointer     :: dpsi(:, :)
-    CMPLX, contiguous, pointer     :: zpsi(:, :)
-    type(accel_mem_t)             :: buffer
-  end type batch_pack_t
   
   type batch_t
     private
@@ -67,7 +57,6 @@ module batch_oct_m
 
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
-    type(batch_pack_t),             public :: pack
     logical :: special_memory
 
 
