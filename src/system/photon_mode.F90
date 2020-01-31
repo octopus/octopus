@@ -52,13 +52,14 @@ module photon_mode_oct_m
     photon_mode_end
 
   type photon_mode_t
+    ! All components are public by default
     integer               :: nmodes
-    FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
-    FLOAT, pointer        :: pol_array(:,:)                   ! polarization of the photon field
-    FLOAT, pointer        :: pol_dipole_array(:,:)            ! polarization*dipole operator
-    FLOAT, public         :: ex                               ! photon exchange energy
+    FLOAT, allocatable    :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
+    FLOAT, allocatable    :: pol_array(:,:)                   ! polarization of the photon field
+    FLOAT, allocatable    :: pol_dipole_array(:,:)            ! polarization*dipole operator
+    FLOAT                 :: ex                               ! photon exchange energy
     FLOAT                 :: pt_number            ! number of photons in mode
-    FLOAT, pointer        :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
+    FLOAT, allocatable    :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
     type(lr_t)            :: lr                   !< to solve the equation H psi = b
   end type photon_mode_t
 
@@ -130,13 +131,13 @@ contains
 
     PUSH_SUB(photon_mode_end)
 
-    SAFE_DEALLOCATE_P(this%correlator)
+    SAFE_DEALLOCATE_A(this%correlator)
 
-    SAFE_DEALLOCATE_P(this%omega_array)
-    SAFE_DEALLOCATE_P(this%lambda_array)
+    SAFE_DEALLOCATE_A(this%omega_array)
+    SAFE_DEALLOCATE_A(this%lambda_array)
 
-    SAFE_DEALLOCATE_P(this%pol_array)
-    SAFE_DEALLOCATE_P(this%pol_dipole_array)
+    SAFE_DEALLOCATE_A(this%pol_array)
+    SAFE_DEALLOCATE_A(this%pol_dipole_array)
 
     POP_SUB(photon_mode_end)
   end subroutine photon_mode_end

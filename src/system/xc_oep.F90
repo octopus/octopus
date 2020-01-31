@@ -74,24 +74,24 @@ module xc_oep_oct_m
 
   type xc_oep_t
     private
-    integer,       public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
-    FLOAT                 :: mixing     !< how much of the function S(r) to add to vxc in every iteration
-    type(lr_t)            :: lr         !< to solve the equation H psi = b
-    type(linear_solver_t) :: solver
-    type(scf_tol_t)       :: scftol
-    integer               :: eigen_n
-    integer, pointer      :: eigen_type(:), eigen_index(:)
-    FLOAT                 :: socc, sfact
-    FLOAT,pointer, public :: vxc(:,:), uxc_bar(:,:)
-    FLOAT,   pointer      :: dlxc(:, :, :)
-    CMPLX,   pointer      :: zlxc(:, :, :)
-    integer               :: mixing_scheme
-    logical,       public :: has_photons   ! one-photon OEP
+    integer,             public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    FLOAT                       :: mixing     !< how much of the function S(r) to add to vxc in every iteration
+    type(lr_t)                  :: lr         !< to solve the equation H psi = b
+    type(linear_solver_t)       :: solver
+    type(scf_tol_t)             :: scftol
+    integer                     :: eigen_n
+    integer, pointer            :: eigen_type(:), eigen_index(:)
+    FLOAT                       :: socc, sfact
+    FLOAT,   pointer,    public :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,   pointer            :: dlxc(:, :, :)
+    CMPLX,   pointer            :: zlxc(:, :, :)
+    integer                     :: mixing_scheme
+    logical,             public :: has_photons   ! one-photon OEP
     type(photon_mode_t), public :: pt
-    FLOAT,   public       :: norm2ss
-    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
-    integer               :: noccst
-    logical               :: coctranslation_logical
+    FLOAT,               public :: norm2ss
+    FLOAT,   pointer            :: vxc_old(:,:), ss_old(:,:)
+    integer                     :: noccst
+    logical                     :: coctranslation_logical
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -272,15 +272,15 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
-      if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then
+      if (oep%level == XC_OEP_FULL .or. oep%has_photons) then
         call lr_dealloc(oep%lr)
         call linear_solver_end(oep%solver)
-        if(oep%has_photons) then
-          call lr_dealloc(oep%pt%lr)
-          call photon_mode_end(oep%pt)
-        end if
       end if
-      if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
+      if (oep%has_photons) then
+        call lr_dealloc(oep%pt%lr)
+        call photon_mode_end(oep%pt)
+      end if
+      if (oep%level == XC_OEP_FULL .and. oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
         SAFE_DEALLOCATE_P(oep%vxc_old)
         SAFE_DEALLOCATE_P(oep%ss_old)
       end if

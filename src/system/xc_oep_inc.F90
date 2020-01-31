@@ -174,7 +174,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   SAFE_ALLOCATE(orthogonal(1:oep%noccst))
 
   if (oep%has_photons) then
-    SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:oep%noccst))
+    SAFE_ALLOCATE(phi1(1:gr%mesh%np, 1:st%d%dim, 1:oep%noccst))
   end if
 
   call lalg_copy(gr%mesh%np, vxc, vxc_old)
@@ -187,7 +187,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   if (oep%has_photons) then
     if(.not. lr_is_allocated(oep%pt%lr)) then
       call lr_allocate(oep%pt%lr, st, gr%mesh)
-      oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
+      oep%pt%lr%X(dl_psi)(:, :, :, :) = M_ZERO
     end if
     call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
   end if
@@ -210,27 +210,26 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
-      if (oep%has_photons) &
-        call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
+      if (oep%has_photons) call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
 
-      if (.not.oep%has_photons) then
-        call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
+      if (oep%has_photons) then
+        orthogonal = .true.
+        orthogonal(ist) = .false.
+        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
       else
-       orthogonal = .true.
-       orthogonal(ist) = .false.
-       call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+        call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
       end if
 
       call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
-      if (.not.oep%has_photons) then
-        call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
-      else
+      if (oep%has_photons) then
         orthogonal = .true.
         orthogonal(ist) = .false.
         call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
         oep%lr%X(dl_psi)(:,:, ist, is), normalize = .false., mask = orthogonal)
+      else
+        call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
       end if
 
       ! calculate this funny function ss
