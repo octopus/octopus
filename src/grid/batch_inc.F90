@@ -99,19 +99,16 @@ end subroutine X(batch_build_indices)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, mirror, special)
+subroutine X(batch_allocate)(this)
   class(batch_t),    intent(inout) :: this
-  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
-  logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   integer :: ist
 
   PUSH_SUB(X(batch_allocate))
 
-  if(optional_default(special, .false.)) then
+  if(this%special_memory) then
     call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), &
       [this%np,this%dim,this%nst])
-    this%special_memory = .true.
   else
     SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
   end if
@@ -119,30 +116,9 @@ subroutine X(batch_allocate)(this, mirror, special)
   this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
-  this%mirror = optional_default(mirror, .false.)  
   
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)
-
-!--------------------------------------------------------------
-subroutine X(batch_allocate_temporary)(this)
-  class(batch_t),  intent(inout) :: this
-
-  PUSH_SUB(X(batch_allocate_temporary))
-
-  ASSERT(.not. associated(this%X(ff)))
-  
-  if(this%special_memory) then
-    call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), [this%np,this%dim,this%nst])
-  else
-    SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
-  end if
-  
-  this%type_of = R_TYPE_VAL
-  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
-
-  POP_SUB(X(batch_allocate_temporary))
-end subroutine X(batch_allocate_temporary)
 
 subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   class(batch_t),    intent(inout) :: this
@@ -156,7 +132,9 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   PUSH_SUB(X(batch_init))
 
   call batch_init_empty(this, dim, st_end - st_start + 1, np)
-  call this%X(allocate)(mirror, special)
+  this%mirror = optional_default(mirror, .false.)
+  this%special_memory = optional_default(special, .false.)
+  call this%X(allocate)()
   call X(batch_build_indices)(this, st_start, st_end)
 
   POP_SUB(X(batch_init))

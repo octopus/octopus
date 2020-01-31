@@ -194,47 +194,19 @@ contains
   end subroutine batch_deallocate
 
   !--------------------------------------------------------------
-
-  subroutine batch_deallocate_temporary(this)
-    type(batch_t),  intent(inout) :: this
-    
-    PUSH_SUB(batch_deallocate_temporary)
-
-    if(this%special_memory) then
-      if(associated(this%dff)) then
-        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
-        nullify(this%dff)
-        nullify(this%dff_linear)
-      end if
-      if(associated(this%zff)) then
-        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
-        nullify(this%zff)
-        nullify(this%zff_linear)
-      end if
-    else
-      SAFE_DEALLOCATE_P(this%dff)
-      SAFE_DEALLOCATE_P(this%zff)
-      nullify(this%dff_linear)
-      nullify(this%zff_linear)
-    end if
-        
-    POP_SUB(batch_deallocate_temporary)
-  end subroutine batch_deallocate_temporary
-  
-  !--------------------------------------------------------------
-  subroutine batch_allocate_temporary(this)
+  subroutine batch_allocate(this)
     type(batch_t),  intent(inout) :: this
 
-    PUSH_SUB(batch_allocate_temporary)
+    PUSH_SUB(batch_allocate)
     
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_allocate_temporary(this)
+      call this%dallocate()
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_allocate_temporary(this)
+      call this%zallocate()
     end if
 
-    POP_SUB(batch_allocate_temporary)
-  end subroutine batch_allocate_temporary
+    POP_SUB(batch_allocate)
+  end subroutine batch_allocate
 
   !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst, np)
@@ -473,7 +445,7 @@ contains
         call profiling_out(prof_copy)
       end if
 
-      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_temporary(this)
+      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate(this)
 
     end if
 
@@ -544,7 +516,7 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%is_allocated .and. .not. this%mirror) call batch_allocate_temporary(this)
+        if(this%is_allocated .and. .not. this%mirror) call batch_allocate(this)
         
         copy_ = .true.
         if(present(copy)) copy_ = copy
