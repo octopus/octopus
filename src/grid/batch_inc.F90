@@ -17,7 +17,7 @@
 !!
 
 !--------------------------------------------------------------
-subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
+subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
   class(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
@@ -26,7 +26,7 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   integer :: ist, np
 
-  PUSH_SUB(X(batch_init_contiguous))
+  PUSH_SUB(X(batch_init_with_memory_3))
 
   ASSERT(st_end >= st_start)
 
@@ -43,10 +43,10 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
 
-  POP_SUB(X(batch_init_contiguous))
-end subroutine X(batch_init_contiguous)
+  POP_SUB(X(batch_init_with_memory_3))
+end subroutine X(batch_init_with_memory_3)
 
-subroutine X(batch_init_contiguous_2d)(this, dim, st_start, st_end, psi)
+subroutine X(batch_init_with_memory_2)(this, dim, st_start, st_end, psi)
   class(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
@@ -55,29 +55,29 @@ subroutine X(batch_init_contiguous_2d)(this, dim, st_start, st_end, psi)
 
   R_TYPE, pointer :: psip(:, :, :)
 
-  PUSH_SUB(X(batch_init_contiguous_2d))
+  PUSH_SUB(X(batch_init_with_memory_2))
 
   ASSERT(st_end == st_start .or. dim == 1)
 
   psip(1:ubound(psi, dim=1), 1:dim, st_start:st_end) => psi(:, :)
 
-  call X(batch_init_contiguous)(this, dim, st_start, st_end, psip)
+  call X(batch_init_with_memory_3)(this, dim, st_start, st_end, psip)
 
-  POP_SUB(X(batch_init_contiguous_2d))
-end subroutine X(batch_init_contiguous_2d)
+  POP_SUB(X(batch_init_with_memory_2))
+end subroutine X(batch_init_with_memory_2)
 
-subroutine X(batch_init_single)(this, psi)
+subroutine X(batch_init_with_memory_1)(this, psi)
   class(batch_t),             intent(out)   :: this
   R_TYPE, target, contiguous, intent(in)    :: psi(:)
 
   R_TYPE, pointer :: psip(:, :, :)
-  PUSH_SUB(X(batch_init_single))
+  PUSH_SUB(X(batch_init_with_memory_1))
 
   psip(1:ubound(psi, dim=1), 1:1, 1:1) => psi(:)
-  call X(batch_init_contiguous)(this, 1, 1, 1, psip)
+  call X(batch_init_with_memory_3)(this, 1, 1, 1, psip)
 
-  POP_SUB(X(batch_init_single))
-end subroutine X(batch_init_single)
+  POP_SUB(X(batch_init_with_memory_1))
+end subroutine X(batch_init_with_memory_1)
 
 !--------------------------------------------------------------
 subroutine X(batch_add_state)(this, ist, psi)
@@ -161,7 +161,7 @@ subroutine X(batch_allocate_temporary)(this)
   POP_SUB(X(batch_allocate_temporary))
 end subroutine X(batch_allocate_temporary)
 
-subroutine X(batch_init_and_allocate)(this, dim, st_start, st_end, np, mirror, special)
+subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   class(batch_t),    intent(inout) :: this
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: st_start
@@ -170,15 +170,13 @@ subroutine X(batch_init_and_allocate)(this, dim, st_start, st_end, np, mirror, s
   logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
-  integer :: ist, nst
-
-  PUSH_SUB(X(batch_init_and allocate))
+  PUSH_SUB(X(batch_init))
 
   call batch_init_empty(this, dim, st_end - st_start + 1)
   call this%X(allocate)(st_start, st_end, np, mirror, special)
 
-  POP_SUB(X(batch_init_and_allocate))
-end subroutine X(batch_init_and_allocate)
+  POP_SUB(X(batch_init))
+end subroutine X(batch_init)
 
 !! Local Variables:
 !! mode: f90

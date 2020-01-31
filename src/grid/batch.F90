@@ -36,7 +36,9 @@ module batch_oct_m
   private
   public ::                         &
     batch_t,                        &
-    batch_init
+    batch_init,                     &
+    dbatch_init,                    &
+    zbatch_init
   
   type batch_t
     private
@@ -108,14 +110,12 @@ module batch_oct_m
   !--------------------------------------------------------------
   interface batch_init
     module procedure  batch_init_empty
-    module procedure dbatch_init_contiguous
-    module procedure zbatch_init_contiguous
-    module procedure dbatch_init_contiguous_2d
-    module procedure zbatch_init_contiguous_2d
-    module procedure dbatch_init_single
-    module procedure zbatch_init_single
-    module procedure dbatch_init_and_allocate
-    module procedure zbatch_init_and_allocate
+    module procedure dbatch_init_with_memory_3
+    module procedure zbatch_init_with_memory_3
+    module procedure dbatch_init_with_memory_2
+    module procedure zbatch_init_with_memory_2
+    module procedure dbatch_init_with_memory_1
+    module procedure zbatch_init_with_memory_1
   end interface batch_init
 
   integer, public, parameter :: &
