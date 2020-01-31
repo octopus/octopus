@@ -264,7 +264,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             do ist = 1, psib%nst_linear
               idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%eorb_mesh(sp, 1, idim, psib%ik), &
-                os%sphere%mesh%np, weight(1,ist), 1, R_TOTYPE(M_ONE), psib%states_linear(ist)%zpsi(sp), 1)
+                os%sphere%mesh%np, weight(1,ist), 1, R_TOTYPE(M_ONE), psib%zff_linear(sp, ist), 1)
             end do
           end do
         else
@@ -281,8 +281,8 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end do
             end do
             do ip = 1,os%sphere%np
-              psib%states_linear(ist)%zpsi(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%zpsi(os%sphere%map(ip)) + sorb(ip)
+              psib%zff_linear(os%sphere%map(ip), ist) = &
+                    psib%zff_linear(os%sphere%map(ip), ist) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
@@ -296,7 +296,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%X(orb)(sp,idim,1), &
                     os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
-                       psib%states_linear(ist)%X(psi)(sp), 1)
+                       psib%X(ff_linear)(sp, ist), 1)
             end do
           end do 
         else
@@ -311,8 +311,8 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end forall
             end do
             do ip = 1,os%sphere%np
-              psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
+              psib%X(ff_linear)(os%sphere%map(ip), ist) = &
+                    psib%X(ff_linear)(os%sphere%map(ip), ist) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)

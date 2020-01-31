@@ -446,8 +446,8 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
-    hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
+    call zderivatives_curl(der, psib%zff(:, :, 1), hpsib%zff(:, :, 1))
+    hpsib%zff(:,:,1) = P_c * hpsib%zff(:,:,1)
   
 !    if(pack) then
 !      call psib%do_unpack(copy = .false.)

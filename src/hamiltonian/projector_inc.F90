@@ -120,11 +120,11 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns) 
-              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, 1, psib%ik)
+              lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)*pj(ipj)%phase(is, 1, psib%ik)
             end forall
           else
             forall (is = 1:ns) 
-              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
+              lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)
             end forall
           end if
         end do
@@ -233,13 +233,13 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
             forall (is = 1:ns)
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
+              ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
+                ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
             end forall
           else
             forall (is = 1:ns) 
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
+              ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
+                ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)
             end forall
           end if
         end do

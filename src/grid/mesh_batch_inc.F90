@@ -82,7 +82,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
                 ss = M_ZERO
                 do ip = sp, ep
-                  ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*bb%states_linear(jndb)%X(psi)(ip)
+                  ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_linear)(ip, indb))*bb%X(ff_linear)(ip, jndb)
                 end do
                 dd(ist, jst) = dd(ist, jst) + ss
 
@@ -97,7 +97,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
                 jndb = bb%ist_idim_to_linear((/jst, idim/))
 
                 dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
-                  blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
+                  blas_dot(ep - sp + 1, aa%X(ff_linear)(sp, indb), 1, bb%X(ff_linear)(sp, jndb), 1)
               end do
             end do
 
@@ -190,9 +190,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
 
   if(conj) then
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = R_CONJ(dd(ist, jst))
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = R_CONJ(dd(ist, jst))
   else
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = dd(ist, jst)
   end if
 
   SAFE_DEALLOCATE_A(dd)
@@ -266,7 +266,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
               jndb = aa%ist_idim_to_linear((/jst, idim/))
               ss = M_ZERO
               do ip = sp, ep
-                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*aa%states_linear(jndb)%X(psi)(ip)
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_linear)(ip, indb))*aa%X(ff_linear)(ip, jndb)
               end do
               dd(ist, jst) = dd(ist, jst) + ss
 
@@ -280,7 +280,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
             do jst = 1, ist
               jndb = aa%ist_idim_to_linear((/jst, idim/))
               dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
-                blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, aa%states_linear(jndb)%X(psi)(sp), 1)
+                blas_dot(ep - sp + 1, aa%X(ff_linear)(sp, indb), 1, aa%X(ff_linear)(sp, jndb), 1)
             end do
           end do
 
@@ -305,8 +305,8 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   forall(ist = 1:aa%nst)
     forall(jst = 1:aa%nst) 
-      dot(aa%states(ist)%ist, aa%states(jst)%ist) = dd(ist, jst)
-      dot(aa%states(jst)%ist, aa%states(ist)%ist) = R_CONJ(dd(ist, jst))
+      dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
+      dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end forall
   end forall
 
@@ -348,7 +348,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%X(ff_linear)(:, indb), bb%X(ff_linear)(:, indb),& 
            reduce = .false., dotu = cproduct_)
       end do
     end do
@@ -567,7 +567,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_inner(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
       end do
       ! Then boundary points
       do ip = 1, np_bndry
@@ -575,7 +575,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_bndry(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
       end do
 
       SAFE_DEALLOCATE_A(partno_bndry)
@@ -598,7 +598,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
           pos = recv_disp(ipart) + recv_count(ipart)
-          forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+          forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
         end if
       end do
 
@@ -622,7 +622,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist) 
       end do
       
       send_count_nstl = send_count * nstl
@@ -641,7 +641,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local_rev(ip)
         INCR(recv_count(ipart), 1)
         pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
-        forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+        forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
       end do
 
     end if
@@ -685,7 +685,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%states_linear(indb)%X(psi), reduce = .false.))
+        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%X(ff_linear)(:, indb), reduce = .false.))
       end do
     end do
 

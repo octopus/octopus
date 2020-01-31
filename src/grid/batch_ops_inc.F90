@@ -87,10 +87,10 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(yy%type() == TYPE_CMPLX) then
-        call lalg_axpy(np, aa, xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
+        call lalg_axpy(np, aa, xx%zff_linear(:, ist), yy%zff_linear(:, ist))
       else
 #ifdef R_TREAL
-        call lalg_axpy(np, aa, xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
+        call lalg_axpy(np, aa, xx%dff_linear(:, ist), yy%dff_linear(:, ist))
 #endif
       end if
     end do
@@ -201,10 +201,10 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   case(BATCH_NOT_PACKED)
     do ist = 1, yy%nst_linear
       if(yy%type() == TYPE_CMPLX) then
-        call lalg_axpy(np, aa_linear(ist), xx%states_linear(ist)%zpsi, yy%states_linear(ist)%zpsi)
+        call lalg_axpy(np, aa_linear(ist), xx%zff_linear(:, ist), yy%zff_linear(:, ist))
       else
 #ifdef R_TREAL
-        call lalg_axpy(np, aa_linear(ist), xx%states_linear(ist)%dpsi, yy%states_linear(ist)%dpsi)
+        call lalg_axpy(np, aa_linear(ist), xx%dff_linear(:, ist), yy%dff_linear(:, ist))
 #endif
       end if
     end do
@@ -334,10 +334,10 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   case(BATCH_NOT_PACKED)
     do ist = 1, xx%nst_linear
       if(xx%type() == TYPE_CMPLX) then
-        call lalg_scal(np, aa_linear(ist), xx%states_linear(ist)%zpsi)
+        call lalg_scal(np, aa_linear(ist), xx%zff_linear(:, ist))
       else
 #ifdef R_TREAL
-        call lalg_scal(np, aa_linear(ist), xx%states_linear(ist)%dpsi)
+        call lalg_scal(np, aa_linear(ist), xx%dff_linear(:, ist))
 #endif
       end if
     end do
@@ -448,13 +448,13 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
       if(yy%type() == TYPE_CMPLX) then
         !omp parallel do 
         do ip = 1, np
-          yy%states_linear(ist)%zpsi(ip) = xx%states_linear(ist)%zpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%zpsi(ip)
+          yy%zff_linear(ip, ist) = xx%zff_linear(ip, ist) + aa_linear(ist)*yy%zff_linear(ip, ist)
         end do
       else
 #ifdef R_TREAL
         !omp parallel do
         do ip = 1, np
-          yy%states_linear(ist)%dpsi(ip) = xx%states_linear(ist)%dpsi(ip) + aa_linear(ist)*yy%states_linear(ist)%dpsi(ip)
+          yy%dff_linear(ip, ist) = xx%dff_linear(ip, ist) + aa_linear(ist)*yy%dff_linear(ip, ist)
         end do
 #endif
       end if
@@ -527,11 +527,11 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   case(BATCH_NOT_PACKED)
     if(this%type() == TYPE_FLOAT) then
 #ifdef R_TREAL
-      call lalg_copy(np, psi, this%states_linear(ist)%dpsi)
+      call lalg_copy(np, psi, this%dff_linear(:, ist))
 #endif
     else
 #ifdef R_TCOMPLEX
-      call lalg_copy(np, psi, this%states_linear(ist)%zpsi)
+      call lalg_copy(np, psi, this%zff_linear(:, ist))
 #endif
     end if
   case(BATCH_PACKED)
@@ -654,13 +654,13 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     if(this%type() == TYPE_FLOAT) then
       !$omp parallel do
       do ip = 1, np
-        psi(ip) = this%states_linear(ist)%dpsi(ip)
+        psi(ip) = this%dff_linear(ip, ist)
       end do
       !$omp end parallel do
     else
       !$omp parallel do
       do ip = 1, np
-        psi(ip) = this%states_linear(ist)%zpsi(ip)
+        psi(ip) = this%zff_linear(ip, ist)
       end do
       !$omp end parallel do
     end if
@@ -803,7 +803,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
-        psi(ist, idim, sp:ep) = this%states_linear(ii)%dpsi(sp:ep)
+        psi(ist, idim, sp:ep) = this%dff_linear(sp:ep, ii)
       end do
 
     else
@@ -811,7 +811,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
-        psi(ist, idim, sp:ep) = this%states_linear(ii)%zpsi(sp:ep)
+        psi(ist, idim, sp:ep) = this%zff_linear(sp:ep, ii)
       end do
 
     end if
@@ -880,7 +880,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
-        this%states_linear(ii)%dpsi(sp:ep) = psi(ist, idim, sp:ep)
+        this%dff_linear(sp:ep, ii) = psi(ist, idim, sp:ep)
       end do
 
     else
@@ -888,7 +888,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
-        this%states_linear(ii)%zpsi(sp:ep) = psi(ist, idim, sp:ep)
+        this%zff_linear(sp:ep, ii) = psi(ist, idim, sp:ep)
       end do
 
     end if
@@ -1010,7 +1010,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
       do ist = 1, yy%nst_linear
         !$omp parallel do
         do ip = 1, np
-          yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
+          yy%zff_linear(ip, ist) = ff(ip)*xx%zff_linear(ip, ist)
         end do
         !$omp end parallel do
       end do
@@ -1019,7 +1019,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
       do ist = 1, yy%nst_linear
         !$omp parallel do
         do ip = 1, np
-          yy%states_linear(ist)%zpsi(ip) = ff(ip)*xx%states_linear(ist)%zpsi(ip)
+          yy%zff_linear(ip, ist) = ff(ip)*xx%zff_linear(ip, ist)
         end do
         !$omp end parallel do
       end do

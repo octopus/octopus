@@ -517,7 +517,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
         ibind = batch%inv_index((/ist, idim/)) 
-        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
+        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%X(ff_linear)(:, ibind), phi(:,idim), reduce = .false.)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -557,7 +557,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
         ibind = batch%inv_index((/ist, idim/))
-        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+        call blas_axpy(mesh%np, -ss(ist), batch%X(ff_linear)(1, ibind), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -1733,7 +1733,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
     wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
     ibind = wfs%inv_index((/ist+st_min-1, 1/))
-    psii => wfs%states_linear(ibind)%X(psi)
+    psii => wfs%X(ff_linear)(:, ibind)
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global - 1, nst) + 1
@@ -1758,7 +1758,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
       
       wfs => st%group%psib(st%group%iblock(jst+st_min-1, jkpt), jkpt)
       ibind = wfs%inv_index((/jst+st_min-1, 1/))
-      psij => wfs%states_linear(ibind)%X(psi)
+      psij => wfs%X(ff_linear)(:, ibind)
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
@@ -1800,7 +1800,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
           if(exc_k_ .and. lkpt /= ikpt) cycle
           wfs => st%group%psib(st%group%iblock(lst+st_min-1, lkpt), lkpt)
           ibind = wfs%inv_index((/lst+st_min-1, 1/))
-          psil => wfs%states_linear(ibind)%X(psi)
+          psil => wfs%X(ff_linear)(:, ibind)
 
           if(present(phase)) then
 #ifdef R_TCOMPLEX

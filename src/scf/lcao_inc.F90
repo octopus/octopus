@@ -1220,7 +1220,7 @@ end subroutine X(lcao_alt_wf)
         end if
 
         call X(atomic_orbital_get_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
-          ispin, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
+          ispin, orbitalb%X(ff)(:, 1, iorb), derivative = derivative)
       end do
  
       call profiling_out(prof_orbitals)

@@ -139,14 +139,21 @@ contains
       end if
 
     case(BATCH_NOT_PACKED)
-      !$omp parallel do schedule(static)
-      do ist_linear = 1, this%nst_linear
-        if(associated(this%states_linear(ist_linear)%dpsi)) then
-          this%states_linear(ist_linear)%dpsi = M_ZERO
-        else
-          this%states_linear(ist_linear)%zpsi = M_z0
-        end if
-      end do
+      if(this%type() == TYPE_FLOAT) then
+        do ist_linear = 1, this%nst_linear
+          !$omp parallel do schedule(static)
+          do ip = 1, ubound(this%dff_linear, dim=1)
+            this%dff_linear(ip, ist_linear) = M_ZERO
+          end do
+        end do
+      else
+        do ist_linear = 1, this%nst_linear
+          !$omp parallel do schedule(static)
+          do ip = 1, ubound(this%zff_linear, dim=1)
+            this%zff_linear(ip, ist_linear) = M_z0
+          end do
+        end do
+      end if
 
     case default
       ASSERT(.false.)

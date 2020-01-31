@@ -2490,13 +2490,13 @@ contains
     if(time_function%type() == TYPE_CMPLX) then
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
-          time_function%states_linear(ii)%zpsi(itime) = weight(itime)*time_function%states_linear(ii)%zpsi(itime)
+          time_function%zff_linear(itime, ii) = weight(itime)*time_function%zff_linear(itime, ii)
         end do      
       end do
     else     
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
-          time_function%states_linear(ii)%dpsi(itime) = weight(itime)*time_function%states_linear(ii)%dpsi(itime)
+          time_function%dff_linear(itime, ii) = weight(itime)*time_function%dff_linear(itime, ii)
         end do
       end do
     end if      
@@ -2559,7 +2559,7 @@ contains
         energy = energy_step*(ienergy - 1) + energy_start
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
+          energy_function%dff_linear(ienergy, ii) = M_ZERO
         end do
 
         select case(transform)
@@ -2574,9 +2574,9 @@ contains
           sinz = aimag(ez)
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  time_function%states_linear(ii)%dpsi(itime) * sinz
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                  time_function%dff_linear(itime, ii) * sinz
             end do
             ez = ez * eidt
             sinz = aimag(ez)
@@ -2589,9 +2589,9 @@ contains
           cosz = real(ez, REAL_PRECISION)
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  time_function%states_linear(ii)%dpsi(itime) * cosz
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                  time_function%dff_linear(itime, ii) * cosz
             end do
             ez = ez * eidt
             cosz = real(ez, REAL_PRECISION)
@@ -2603,9 +2603,9 @@ contains
           ez = exp( -energy * ( (time_start-1)*time_step - t0) )
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                real( time_function%dff_linear(itime, ii) * ez, REAL_PRECISION)
             end do
             ez = ez * eidt
           end do
@@ -2613,8 +2613,8 @@ contains
 
         ! The total sum must be multiplied by time_step in order to get the integral.
         do ii = 1, time_function%nst_linear
-            energy_function%states_linear(ii)%dpsi(ienergy) = &
-              energy_function%states_linear(ii)%dpsi(ienergy) * time_step
+            energy_function%dff_linear(ienergy, ii) = &
+              energy_function%dff_linear(ienergy, ii) * time_step
         end do
         
 
@@ -2627,8 +2627,8 @@ contains
         energy_steps, energy_step, energy_start, noise)
 
       do ii = 1, time_function%nst_linear
-        call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
-          energy_function%states_linear(ii)%dpsi)
+        call compressed_sensing_spectral_analysis(cs, time_function%dff_linear(:, ii), &
+          energy_function%dff_linear(:, ii))
       end do
 
       call compressed_sensing_end(cs)

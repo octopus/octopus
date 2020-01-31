@@ -1587,7 +1587,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
      gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = R_TOTYPE(M_ZERO)
 
      do ibatch = 1, psib%nst
-       ist = psib%states(ibatch)%ist
+       ist = psib%ist(ibatch)
        weight = st%d%kweights(iq)*st%occ(ist, iq)
        if(weight < CNST(1.0e-10)) cycle
 

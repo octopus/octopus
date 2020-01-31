@@ -35,38 +35,21 @@ module batch_oct_m
 
   private
   public ::                         &
-    batch_state_t,                  &
-    batch_state_l_t,                &
     batch_pack_t,                   &
     batch_t,                        &
     batch_init
-  
-  !--------------------------------------------------------------
-  type batch_state_t
-    ! Components are public by default
-    FLOAT,      pointer :: dpsi(:, :)
-    CMPLX,      pointer :: zpsi(:, :)
-    integer        :: ist
-  end type batch_state_t
-
-  type batch_state_l_t
-    ! Components are public by default
-    FLOAT,      pointer :: dpsi(:)
-    CMPLX,      pointer :: zpsi(:)
-  end type batch_state_l_t
   
   type batch_pack_t
     ! Components are public by default
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT,      allocatable        :: dpsi(:, :)
-    CMPLX,      allocatable        :: zpsi(:, :)
+    FLOAT, contiguous, pointer     :: dpsi(:, :)
+    CMPLX, contiguous, pointer     :: zpsi(:, :)
     type(accel_mem_t)             :: buffer
   end type batch_pack_t
   
   type batch_t
     private
-    type(batch_state_t),   pointer, public :: states(:)
     integer,                        public :: nst
     integer                                :: current
     integer,                        public :: dim
@@ -74,13 +57,13 @@ module batch_oct_m
 
     integer                                :: ndims
     integer,               pointer         :: ist_idim_index(:, :)
+    integer,           allocatable, public :: ist(:)
 
     logical                                :: is_allocated
     logical                                :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
-    type(batch_state_l_t), pointer, public :: states_linear(:)
 
     !> If the memory is contiguous, we can perform some operations faster.
     FLOAT,                 pointer, public :: dpsicont(:, :, :)
@@ -88,8 +71,23 @@ module batch_oct_m
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t),             public :: pack
-    type(type_t)                           :: type_of !< only available if the batched is packed
     logical :: special_memory
+
+
+    !> unpacked variables; linear variables are pointers with different shapes
+    FLOAT, pointer, contiguous, public :: dff(:, :, :)
+    CMPLX, pointer, contiguous, public :: zff(:, :, :)
+    FLOAT, pointer, contiguous, public :: dff_linear(:, :)
+    CMPLX, pointer, contiguous, public :: zff_linear(:, :)
+    !> packed variables; only rank-2 arrays due to padding to powers of 2
+    FLOAT, pointer, contiguous, public :: dff_pack(:, :)
+    CMPLX, pointer, contiguous, public :: zff_pack(:, :)
+
+
+    integer, public :: layout !< either BATCH_NOT_PACKED or BATCH_PACKED
+    integer, public :: location !< either BATCH_HOST or BATCH_DEVICE
+    type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
+
   contains
     procedure ::  dallocate => dbatch_allocate
     procedure ::  zallocate => zbatch_allocate
@@ -130,7 +128,9 @@ module batch_oct_m
   integer, public, parameter :: &
     BATCH_NOT_PACKED     = 0,   &
     BATCH_PACKED         = 1,   &
-    BATCH_DEVICE_PACKED  = 2
+    BATCH_DEVICE_PACKED  = 2,   &
+    BATCH_HOST           = 3,   &
+    BATCH_DEVICE         = 4
 
   integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
                                                     !! of the buffer used to copy states to the opencl device.
@@ -152,8 +152,16 @@ contains
       if(accel_is_enabled()) then
         call accel_release_buffer(this%pack%buffer)
       else
-        SAFE_DEALLOCATE_A(this%pack%dpsi)
-        SAFE_DEALLOCATE_A(this%pack%zpsi)
+        if(associated(this%dff_pack)) then
+          call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
+        end if
+        if(associated(this%zff_pack)) then
+          call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
+        end if
+        nullify(this%dff_pack)
+        nullify(this%pack%dpsi)
+        nullify(this%zff_pack)
+        nullify(this%pack%zpsi)
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
@@ -163,13 +171,8 @@ contains
       call this%deallocate()
     end if
 
-    nullify(this%dpsicont)
-    nullify(this%zpsicont)
-
-    SAFE_DEALLOCATE_P(this%states)
-    SAFE_DEALLOCATE_P(this%states_linear)
-    
     SAFE_DEALLOCATE_P(this%ist_idim_index)
+    SAFE_DEALLOCATE_A(this%ist)
 
     POP_SUB(batch_end)
   end subroutine batch_end
@@ -178,37 +181,29 @@ contains
   subroutine batch_deallocate(this)
     class(batch_t),  intent(inout) :: this
     
-    integer :: ii
-    
     PUSH_SUB(batch_deallocate)
 
     this%is_allocated = .false.
 
-    do ii = 1, this%nst
-      nullify(this%states(ii)%dpsi)
-      nullify(this%states(ii)%zpsi)
-    end do
-    
-    do ii = 1, this%nst_linear
-      nullify(this%states_linear(ii)%dpsi)
-      nullify(this%states_linear(ii)%zpsi)
-    end do
-    
     this%current = 1
     
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
-        nullify(this%dpsicont)
+        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
-        nullify(this%zpsicont)
+        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
       end if
     else
-      SAFE_DEALLOCATE_P(this%dpsicont)
-      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%dff)
+      SAFE_DEALLOCATE_P(this%zff)
     end if
+    nullify(this%dff)
+    nullify(this%dff_linear)
+    nullify(this%dpsicont)
+    nullify(this%zff)
+    nullify(this%zff_linear)
+    nullify(this%zpsicont)
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
@@ -218,32 +213,26 @@ contains
   subroutine batch_deallocate_temporary(this)
     type(batch_t),  intent(inout) :: this
     
-    integer :: ii
-    
     PUSH_SUB(batch_deallocate_temporary)
 
-    do ii = 1, this%nst
-      nullify(this%states(ii)%dpsi)
-      nullify(this%states(ii)%zpsi)
-    end do
-    
-    do ii = 1, this%nst_linear
-      nullify(this%states_linear(ii)%dpsi)
-      nullify(this%states_linear(ii)%zpsi)
-    end do
-    
     if(this%special_memory) then
       if(associated(this%dpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%dpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
+        nullify(this%dff)
+        nullify(this%dff_linear)
         nullify(this%dpsicont)
       end if
       if(associated(this%zpsicont)) then
-        call deallocate_hardware_aware(c_loc(this%zpsicont(1,1,1)))
+        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
+        nullify(this%zff)
+        nullify(this%zff_linear)
         nullify(this%zpsicont)
       end if
     else
-      SAFE_DEALLOCATE_P(this%dpsicont)
-      SAFE_DEALLOCATE_P(this%zpsicont)
+      SAFE_DEALLOCATE_P(this%dff)
+      SAFE_DEALLOCATE_P(this%zff)
+      nullify(this%dff_linear)
+      nullify(this%zff_linear)
 
       nullify(this%dpsicont)
       nullify(this%zpsicont)
@@ -273,8 +262,6 @@ contains
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     
-    integer :: ist
-
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
@@ -286,18 +273,7 @@ contains
     this%type_of = TYPE_NONE
     nullify(this%dpsicont, this%zpsicont)
     
-    SAFE_ALLOCATE(this%states(1:nst))
-    do ist = 1, nst
-      nullify(this%states(ist)%dpsi)
-      nullify(this%states(ist)%zpsi)
-    end do
-    
     this%nst_linear = nst*dim
-    SAFE_ALLOCATE(this%states_linear(1:this%nst_linear))
-    do ist = 1, this%nst_linear
-      nullify(this%states_linear(ist)%dpsi)
-      nullify(this%states_linear(ist)%zpsi)
-    end do
 
     this%max_size = 0
     this%in_buffer_count = 0
@@ -305,6 +281,14 @@ contains
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
+    SAFE_ALLOCATE(this%ist(1:this%nst))
+
+    nullify(this%pack%dpsi, this%pack%zpsi)
+
+    nullify(this%dff, this%zff, this%dff_linear, this%zff_linear)
+    nullify(this%dff_pack, this%zff_pack)
+    this%layout = BATCH_NOT_PACKED
+    this%location = BATCH_HOST
 
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
@@ -313,24 +297,20 @@ contains
   logical function batch_is_ok(this) result(ok)
     class(batch_t), intent(in)   :: this
 
-    integer :: ist
-    logical :: all_assoc(1:2)
-    
     ! no push_sub, called too frequently
     
-    ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
-    ok = ok .and. ubound(this%states_linear, dim = 1) == this%nst_linear
+    ok = this%nst_linear >= 1
     if(ok .and. .not. this%is_packed()) then
-      ! ensure that either all real are associated, or all cplx are associated
-      all_assoc = .true.
-      do ist = 1, this%nst_linear
-        all_assoc(1) = all_assoc(1) .and. associated(this%states_linear(ist)%dpsi)
-        all_assoc(2) = all_assoc(2) .and. associated(this%states_linear(ist)%zpsi)
-      end do
-
-      ok = ok .and. (count(all_assoc, dim = 1) == 1)
-   end if
-
+      if(this%type() == TYPE_FLOAT) then
+        ok = ok .and. associated(this%dff_linear)
+        ok = ok .and. ubound(this%dff_linear, dim=2) == this%nst_linear
+      else if(this%type() == TYPE_CMPLX) then
+        ok = ok .and. associated(this%zff_linear)
+        ok = ok .and. ubound(this%zff_linear, dim=2) == this%nst_linear
+      else
+        ok = .false.
+      end if
+    end if
   end function batch_is_ok
 
   !--------------------------------------------------------------
@@ -390,7 +370,7 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
-    integer :: ii, np
+    integer :: np
 
     PUSH_SUB(batch_copy_to)
 
@@ -400,19 +380,12 @@ contains
 
     if(this%type() == TYPE_FLOAT) then
 
-      np = 0
-      do ii = 1, this%nst_linear
-        np = max(np, ubound(this%states_linear(ii)%dpsi, dim = 1))
-      end do
-
+      np = ubound(this%dff_linear, dim=1)
       call dest%dallocate(1, this%nst, np)
 
     else if(this%type() == TYPE_CMPLX) then
-      np = 0
-      do ii = 1, this%nst_linear
-        np = max(np, ubound(this%states_linear(ii)%zpsi, dim = 1))
-      end do
 
+      np = ubound(this%zff_linear, dim=1)
       call dest%zallocate(1, this%nst, np)
 
     else
@@ -422,11 +395,8 @@ contains
 
     if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
 
-    do ii = 1, dest%nst
-      dest%states(ii)%ist = this%states(ii)%ist
-    end do
-
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
+    dest%ist(1:this%nst) = this%ist(1:this%nst)
 
     if(optional_default(copy_data, .false.)) call this%copy_data_to(np, dest)
     
@@ -438,12 +408,7 @@ contains
   type(type_t) pure function batch_type(this) result(btype)
     class(batch_t),      intent(in)    :: this
 
-    if(.not. this%is_packed()) then
-      if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
-      if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
-    else
-      btype = this%type_of
-    end if
+    btype = this%type_of
      
   end function batch_type
 
@@ -520,10 +485,14 @@ contains
         call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack%size))
       else
         this%status_of = BATCH_PACKED
+        this%layout = BATCH_PACKED
+        ! always use hardware aware memory here
         if(this%type() == TYPE_FLOAT) then
-          SAFE_ALLOCATE(this%pack%dpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+          call c_f_pointer(dallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%dff_pack, this%pack%size)
+          this%pack%dpsi => this%dff_pack
         else if(this%type() == TYPE_CMPLX) then
-          SAFE_ALLOCATE(this%pack%zpsi(1:this%pack%size(1), 1:this%pack%size(2)))
+          call c_f_pointer(zallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%zff_pack, this%pack%size)
+          this%pack%zpsi => this%zff_pack
         end if
       end if
       
@@ -561,7 +530,7 @@ contains
           ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
-              this%pack%dpsi(ist, ip) = this%states_linear(ist)%dpsi(ip)
+              this%dff_pack(ist, ip) = this%dff_linear(ip, ist)
             end forall
           end forall
         end do
@@ -575,7 +544,7 @@ contains
           ep = min(sp + bsize - 1, this%pack%size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
-              this%pack%zpsi(ist, ip) = this%states_linear(ist)%zpsi(ip)
+              this%zff_pack(ist, ip) = this%zff_linear(ip, ist)
             end forall
           end forall
         end do
@@ -624,8 +593,16 @@ contains
         if(accel_is_enabled()) then
           call accel_release_buffer(this%pack%buffer)
         else
-          SAFE_DEALLOCATE_A(this%pack%dpsi)
-          SAFE_DEALLOCATE_A(this%pack%zpsi)
+          if(associated(this%dff_pack)) then
+            call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
+          end if
+          if(associated(this%zff_pack)) then
+            call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
+          end if
+          nullify(this%dff_pack)
+          nullify(this%pack%dpsi)
+          nullify(this%zff_pack)
+          nullify(this%pack%zpsi)
         end if
       end if
       
@@ -668,27 +645,19 @@ contains
 
       if(this%type() == TYPE_FLOAT) then
 
-        do ist = 1, this%nst_linear
-          ASSERT(associated(this%states_linear(ist)%dpsi))
-        end do
-        
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+            this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
           end forall
         end do
         
       else if(this%type() == TYPE_CMPLX) then
 
-        do ist = 1, this%nst_linear
-          ASSERT(associated(this%states_linear(ist)%zpsi))
-        end do
-        
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
-            this%states_linear(ist)%zpsi(ip) = this%pack%zpsi(ist, ip) 
+            this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
           end forall
         end do
         
@@ -720,9 +689,9 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
+        call accel_write_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else if(this%type() == TYPE_CMPLX) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+        call accel_write_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       else
         ASSERT(.false.)
       end if
@@ -746,10 +715,10 @@ contains
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
 
           if(this%type() == TYPE_FLOAT) then
-            call accel_write_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
+            call accel_write_buffer(tmp, ubound(this%dff_linear, dim=1), this%dff_linear(:, ist2), &
               offset = (ist2 - ist)*this%pack%size(2))
           else
-            call accel_write_buffer(tmp, ubound(this%states_linear(ist2)%zpsi, dim = 1), this%states_linear(ist2)%zpsi, &
+            call accel_write_buffer(tmp, ubound(this%zff_linear, dim=1), this%zff_linear(:, ist2), &
               offset = (ist2 - ist)*this%pack%size(2))
           end if
         end do
@@ -799,9 +768,9 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%dpsi, dim = 1), this%states_linear(1)%dpsi)
+        call accel_read_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else
-        call accel_read_buffer(this%pack%buffer, ubound(this%states_linear(1)%zpsi, dim = 1), this%states_linear(1)%zpsi)
+        call accel_read_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       end if
     else
 
@@ -839,10 +808,10 @@ contains
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
           
           if(this%type() == TYPE_FLOAT) then
-            call accel_read_buffer(tmp, ubound(this%states_linear(ist2)%dpsi, dim = 1), this%states_linear(ist2)%dpsi, &
+            call accel_read_buffer(tmp, ubound(this%dff_linear, dim=1), this%dff_linear(:, ist2), &
               offset = (ist2 - ist)*this%pack%size(2))
           else
-            call accel_read_buffer(tmp, ubound(this%states_linear(ist2)%zpsi, dim = 1), this%states_linear(ist2)%zpsi, &
+            call accel_read_buffer(tmp, ubound(this%zff_linear, dim=1), this%zff_linear(:, ist2), &
               offset = (ist2 - ist)*this%pack%size(2))
           end if
         end do
@@ -1000,9 +969,9 @@ subroutine batch_copy_data_to(this, np, dest)
     !$omp parallel do private(ist)
     do ist = 1, dest%nst_linear
       if(dest%type() == TYPE_CMPLX) then
-        call blas_copy(np, this%states_linear(ist)%zpsi(1), 1, dest%states_linear(ist)%zpsi(1), 1)
+        call blas_copy(np, this%zff_linear(1, ist), 1, dest%zff_linear(1, ist), 1)
       else
-        call blas_copy(np, this%states_linear(ist)%dpsi(1), 1, dest%states_linear(ist)%dpsi(1), 1)
+        call blas_copy(np, this%dff_linear(1, ist), 1, dest%dff_linear(1, ist), 1)
       end if
     end do
 

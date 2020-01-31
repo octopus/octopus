@@ -22,9 +22,9 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   integer,        intent(in)    :: dim
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
-  R_TYPE, target, intent(in)    :: psi(:, :, st_start:)
+  R_TYPE, target, contiguous, intent(in)    :: psi(:, :, st_start:)
 
-  integer :: ist
+  integer :: ist, np
 
   PUSH_SUB(X(batch_init_contiguous))
 
@@ -33,14 +33,16 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
   call batch_init_empty(this, dim, st_end - st_start + 1)
 
   this%X(psicont) => psi(:, :, st_start:)
+  np = ubound(psi, dim=1)
+  this%type_of = R_TYPE_VAL
+  this%X(ff) => psi(:, :, st_start:)
+  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, psi(:, :, ist))
   end do
-
-  this%type_of = R_TYPE_VAL
 
   POP_SUB(X(batch_init_contiguous))
 end subroutine X(batch_init_contiguous)
@@ -90,18 +92,16 @@ subroutine X(batch_add_state)(this, ist, psi)
 
   ASSERT(this%current <= this%nst)
 
-  this%states(this%current)%ist    =  ist
-  this%states(this%current)%X(psi) => psi
-
   ! now we also populate the linear array
   do idim = 1, this%dim
     ii = this%dim*(this%current - 1) + idim
-    this%states_linear(ii)%X(psi) => psi(:, idim)
     this%ist_idim_index(ii, 1) = ist
     this%ist_idim_index(ii, 2) = idim
   end do
 
-  this%max_size = max(this%max_size, ubound(this%states(this%current)%X(psi), dim = 1))
+  this%ist(this%current) = ist
+
+  this%max_size = max(this%max_size, ubound(this%X(ff), dim=1))
   
   this%current = this%current + 1
 
@@ -124,11 +124,14 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
 
   nst = st_end - st_start + 1
   if(optional_default(special, .false.)) then
-    call c_f_pointer(X(allocate_hardware_aware)(np*this%dim*nst), this%X(psicont), [np,this%dim,nst])
+    call c_f_pointer(X(allocate_hardware_aware)(np*this%dim*nst), this%X(ff), [np,this%dim,nst])
     this%special_memory = .true.
   else
-    SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:nst))
+    SAFE_ALLOCATE(this%X(ff)(1:np, 1:this%dim, 1:nst))
   end if
+  this%X(psicont) => this%X(ff)
+  this%type_of = R_TYPE_VAL
+  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
@@ -144,24 +147,19 @@ end subroutine X(batch_allocate)
 subroutine X(batch_allocate_temporary)(this)
   class(batch_t),  intent(inout) :: this
 
-  integer :: ist, idim
-
   PUSH_SUB(X(batch_allocate_temporary))
 
   ASSERT(.not. associated(this%X(psicont)))
   
   if(this%special_memory) then
-    call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(psicont), [this%max_size,this%dim,this%nst])
+    call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(ff), [this%max_size,this%dim,this%nst])
   else
-    SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
+    SAFE_ALLOCATE(this%X(ff)(1:this%max_size, 1:this%dim, 1:this%nst))
   end if
+  this%X(psicont) => this%X(ff)
   
-  do ist = 1, this%nst
-    this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
-    do idim = 1, this%dim
-      this%states_linear((ist - 1)*this%dim + idim)%X(psi) => this%X(psicont)(:, idim, ist)
-    end do
-  end do
+  this%type_of = R_TYPE_VAL
+  this%X(ff_linear)(1:this%max_size, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   POP_SUB(X(batch_allocate_temporary))
 end subroutine X(batch_allocate_temporary)
