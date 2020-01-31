@@ -44,7 +44,7 @@ module batch_oct_m
     private
     integer,                        public :: nst
     integer,                        public :: dim
-    integer                                :: max_size
+    integer                                :: np
 
     integer                                :: ndims
     integer,               pointer         :: ist_idim_index(:, :)
@@ -237,10 +237,11 @@ contains
   end subroutine batch_allocate_temporary
 
   !--------------------------------------------------------------
-  subroutine batch_init_empty (this, dim, nst)
+  subroutine batch_init_empty (this, dim, nst, np)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
+    integer,       intent(in)    :: np
     
     PUSH_SUB(batch_init_empty)
 
@@ -253,7 +254,7 @@ contains
     
     this%nst_linear = nst*dim
 
-    this%max_size = 0
+    this%np = np
     this%in_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
 
@@ -349,24 +350,12 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
-    integer :: np
-
     PUSH_SUB(batch_copy_to)
 
-    call batch_init_empty(dest, this%dim, this%nst)
-
-    dest%type_of = this%type_of
-
     if(this%type() == TYPE_FLOAT) then
-
-      np = ubound(this%dff_linear, dim=1)
-      call dest%dallocate(1, this%nst, np)
-
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
     else if(this%type() == TYPE_CMPLX) then
-
-      np = ubound(this%zff_linear, dim=1)
-      call dest%zallocate(1, this%nst, np)
-
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -377,7 +366,7 @@ contains
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
 
-    if(optional_default(copy_data, .false.)) call this%copy_data_to(np, dest)
+    if(optional_default(copy_data, .false.)) call this%copy_data_to(this%np, dest)
     
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to
@@ -426,7 +415,7 @@ contains
   integer function batch_pack_total_size(this) result(size)
     class(batch_t),      intent(inout) :: this
 
-    size = this%max_size
+    size = this%np
     if(accel_is_enabled()) size = accel_padded_size(size)
     size = size*pad_pow2(this%nst_linear)*types_get_size(this%type())
 
@@ -452,7 +441,7 @@ contains
     if(.not. this%is_packed()) then
       this%type_of = this%type()
       this%pack_size(1) = pad_pow2(this%nst_linear)
-      this%pack_size(2) = this%max_size
+      this%pack_size(2) = this%np
 
       if(accel_is_enabled()) this%pack_size(2) = accel_padded_size(this%pack_size(2))
 

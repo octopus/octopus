@@ -24,18 +24,15 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
   integer,        intent(in)    :: st_end
   R_TYPE, target, contiguous, intent(in)    :: psi(:, :, st_start:)
 
-  integer :: ist, np
-
   PUSH_SUB(X(batch_init_with_memory_3))
 
   ASSERT(st_end >= st_start)
 
-  call batch_init_empty(this, dim, st_end - st_start + 1)
+  call batch_init_empty(this, dim, st_end - st_start + 1, ubound(psi, dim=1))
 
-  np = ubound(psi, dim=1)
   this%type_of = R_TYPE_VAL
   this%X(ff) => psi(:, :, st_start:)
-  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
+  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
@@ -97,40 +94,33 @@ subroutine X(batch_build_indices)(this, st_start, st_end)
     this%ist(ist - st_start + 1) = ist
   end do
 
-  this%max_size = ubound(this%X(ff), dim=1)
-
   POP_SUB(X(batch_build_indices))
 end subroutine X(batch_build_indices)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
+subroutine X(batch_allocate)(this, mirror, special)
   class(batch_t),    intent(inout) :: this
-  integer,           intent(in)    :: st_start
-  integer,           intent(in)    :: st_end
-  integer,           intent(in)    :: np
   logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
-  integer :: ist, nst
+  integer :: ist
 
   PUSH_SUB(X(batch_allocate))
 
-  nst = st_end - st_start + 1
   if(optional_default(special, .false.)) then
-    call c_f_pointer(X(allocate_hardware_aware)(np*this%dim*nst), this%X(ff), [np,this%dim,nst])
+    call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), &
+      [this%np,this%dim,this%nst])
     this%special_memory = .true.
   else
-    SAFE_ALLOCATE(this%X(ff)(1:np, 1:this%dim, 1:nst))
+    SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
   end if
   this%type_of = R_TYPE_VAL
-  this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
+  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
   
-  call X(batch_build_indices)(this, st_start, st_end)
-
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)
 
@@ -143,13 +133,13 @@ subroutine X(batch_allocate_temporary)(this)
   ASSERT(.not. associated(this%X(ff)))
   
   if(this%special_memory) then
-    call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(ff), [this%max_size,this%dim,this%nst])
+    call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), [this%np,this%dim,this%nst])
   else
-    SAFE_ALLOCATE(this%X(ff)(1:this%max_size, 1:this%dim, 1:this%nst))
+    SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
   end if
   
   this%type_of = R_TYPE_VAL
-  this%X(ff_linear)(1:this%max_size, 1:this%nst_linear) => this%X(ff)(:, :, :)
+  this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   POP_SUB(X(batch_allocate_temporary))
 end subroutine X(batch_allocate_temporary)
@@ -165,8 +155,9 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
 
   PUSH_SUB(X(batch_init))
 
-  call batch_init_empty(this, dim, st_end - st_start + 1)
-  call this%X(allocate)(st_start, st_end, np, mirror, special)
+  call batch_init_empty(this, dim, st_end - st_start + 1, np)
+  call this%X(allocate)(mirror, special)
+  call X(batch_build_indices)(this, st_start, st_end)
 
   POP_SUB(X(batch_init))
 end subroutine X(batch_init)
