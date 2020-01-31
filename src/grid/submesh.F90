@@ -19,6 +19,7 @@
 #include "global.h"
   
 module submesh_oct_m
+  use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
   use comm_oct_m
@@ -33,6 +34,7 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use types_oct_m
     
   implicit none
   private 
@@ -788,6 +790,12 @@ contains
         sm%cube_map%map(idir,ip) = nint(chi(idir)/sm%mesh%spacing(idir))
       end do
     end do
+
+    if(accel_is_enabled()) then
+      call accel_create_buffer(sm%cube_map%map_buffer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, sm%cube_map%nmap*5)
+      call accel_write_buffer(sm%cube_map%map_buffer, sm%cube_map%nmap*5, sm%cube_map%map)
+    end if
+
 
     POP_SUB(submesh_init_cube_map)
   end subroutine submesh_init_cube_map
