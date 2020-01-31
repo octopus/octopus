@@ -39,9 +39,7 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
 
   ASSERT(ubound(psi, dim = 3) >= st_end)
 
-  do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, psi(:, :, ist))
-  end do
+  call X(batch_build_indices)(this, st_start, st_end)
 
   POP_SUB(X(batch_init_with_memory_3))
 end subroutine X(batch_init_with_memory_3)
@@ -80,32 +78,29 @@ subroutine X(batch_init_with_memory_1)(this, psi)
 end subroutine X(batch_init_with_memory_1)
 
 !--------------------------------------------------------------
-subroutine X(batch_add_state)(this, ist, psi)
+subroutine X(batch_build_indices)(this, st_start, st_end)
   class(batch_t), intent(inout) :: this
-  integer,        intent(in)    :: ist
-  R_TYPE, target, intent(in)    :: psi(:, :)
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
 
-  integer :: idim, ii
+  integer :: idim, ii, ist
 
-  PUSH_SUB(X(batch_add_state))
+  PUSH_SUB(X(batch_build_indices))
 
-  ASSERT(this%current <= this%nst)
-
-  ! now we also populate the linear array
-  do idim = 1, this%dim
-    ii = this%dim*(this%current - 1) + idim
-    this%ist_idim_index(ii, 1) = ist
-    this%ist_idim_index(ii, 2) = idim
+  do ist = st_start, st_end
+    ! now we also populate the linear array
+    do idim = 1, this%dim
+      ii = this%dim*(ist - st_start) + idim
+      this%ist_idim_index(ii, 1) = ist
+      this%ist_idim_index(ii, 2) = idim
+    end do
+    this%ist(ist - st_start + 1) = ist
   end do
 
-  this%ist(this%current) = ist
+  this%max_size = ubound(this%X(ff), dim=1)
 
-  this%max_size = max(this%max_size, ubound(this%X(ff), dim=1))
-  
-  this%current = this%current + 1
-
-  POP_SUB(X(batch_add_state))
-end subroutine X(batch_add_state)
+  POP_SUB(X(batch_build_indices))
+end subroutine X(batch_build_indices)
 
 
 !--------------------------------------------------------------
@@ -134,9 +129,7 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
   
-  do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, this%X(ff)(:, :, ist - st_start + 1))
-  end do
+  call X(batch_build_indices)(this, st_start, st_end)
 
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)

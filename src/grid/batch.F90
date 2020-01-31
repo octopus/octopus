@@ -43,7 +43,6 @@ module batch_oct_m
   type batch_t
     private
     integer,                        public :: nst
-    integer                                :: current
     integer,                        public :: dim
     integer                                :: max_size
 
@@ -175,8 +174,6 @@ contains
 
     this%is_allocated = .false.
 
-    this%current = 1
-    
     if(this%special_memory) then
       if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
@@ -252,7 +249,6 @@ contains
     this%special_memory = .false.
     this%nst = nst
     this%dim = dim
-    this%current = 1
     this%type_of = TYPE_NONE
     
     this%nst_linear = nst*dim
