@@ -56,13 +56,6 @@ module system_mxll_oct_m
   type, extends(system_abst_t) :: system_mxll_t
     ! Components are public by default
     type(states_mxll_t), pointer :: st    !< the states
-    type(space_t)                :: space
-    type(geometry_t)             :: geo
-    type(grid_t),        pointer :: gr    !< the mesh
-    type(states_mxll_t), pointer :: st    !< the states
-    type(output_t)               :: outp  !< the output
-    type(multicomm_t)            :: mc    !< index and domain communicators
-    type(namespace_t)            :: namespace
     type(hamiltonian_mxll_t)     :: hm
   end type system_mxll_t
 

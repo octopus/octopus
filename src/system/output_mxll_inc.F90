@@ -395,7 +395,7 @@
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD) /= 0) then
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
-      call get_magnetic_field_state(st%rs_state_long, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), &
+      call get_magnetic_field_state(st%rs_state_long, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), gr%mesh%np)
       do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field_long-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)

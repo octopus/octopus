@@ -789,7 +789,7 @@ contains
   subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    type(batch_t),            intent(in)    :: rsb
+    CMPLX,                  intent(in)      :: rs_state(:,:)
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)
@@ -797,7 +797,6 @@ contains
     FLOAT,          optional, intent(inout) :: mean_value(:)
 
     integer            :: ip, ii, ip_in, idir
-    CMPLX, allocatable :: rs_aux(:,:)
 
     PUSH_SUB(get_poynting_vector)
 

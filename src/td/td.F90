@@ -670,7 +670,7 @@ contains
     
     if(td%iter == 0) then
        call td_write_mxll_iter(write_handler, gr, sys%st, sys%hm, td%dt, 0)
-       call td_write_mxll_free_data(write_handler, gr, sys%st, sys%hm, sys%geo, sys%outp, 0, td%dt)
+       call td_write_mxll_free_data(write_handler, sys%namespace, gr, sys%st, sys%hm, sys%geo, sys%outp, 0, td%dt)
      end if
 
     !call td_check_trotter(td, sys, h)
@@ -750,7 +750,7 @@ contains
        ! write down data
        if ((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
             iter == td%max_iter .or. stopping) then
-         call td_write_mxll_free_data(write_handler, gr, sys%st, sys%hm, sys%geo, sys%outp, iter, td%dt)
+         call td_write_mxll_free_data(write_handler, sys%namespace, gr, sys%st, sys%hm, sys%geo, sys%outp, iter, td%dt)
        end if
 
        if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart

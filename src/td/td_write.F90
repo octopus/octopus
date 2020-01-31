@@ -3714,8 +3714,9 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_mxll_free_data(writ, gr, st, hm, geo, outp, iter, dt)
+  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, geo, outp, iter, dt)
     type(td_write_t),     intent(inout) :: writ
+    type(namespace_t),    intent(in)    :: namespace
     type(grid_t),         intent(inout) :: gr
     type(states_mxll_t),       intent(inout) :: st
     type(hamiltonian_mxll_t),  intent(inout) :: hm
@@ -3740,8 +3741,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_mxll(outp, gr, st, hm, iter*dt, geo, filename)
- 
+    call output_mxll(outp, namespace, gr, st, hm, iter*dt, geo, filename)
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)
   end subroutine td_write_mxll_free_data
