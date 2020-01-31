@@ -161,6 +161,25 @@ subroutine X(batch_allocate_temporary)(this)
   POP_SUB(X(batch_allocate_temporary))
 end subroutine X(batch_allocate_temporary)
 
+subroutine X(batch_init_and_allocate)(this, dim, st_start, st_end, np, mirror, special)
+  class(batch_t),    intent(inout) :: this
+  integer,           intent(in)    :: dim
+  integer,           intent(in)    :: st_start
+  integer,           intent(in)    :: st_end
+  integer,           intent(in)    :: np
+  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+  logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
+
+  integer :: ist, nst
+
+  PUSH_SUB(X(batch_init_and allocate))
+
+  call batch_init_empty(this, dim, st_end - st_start + 1)
+  call this%X(allocate)(st_start, st_end, np, mirror, special)
+
+  POP_SUB(X(batch_init_and_allocate))
+end subroutine X(batch_init_and_allocate)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
