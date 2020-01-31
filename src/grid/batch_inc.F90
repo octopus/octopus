@@ -32,7 +32,6 @@ subroutine X(batch_init_contiguous)(this, dim, st_start, st_end, psi)
 
   call batch_init_empty(this, dim, st_end - st_start + 1)
 
-  this%X(psicont) => psi(:, :, st_start:)
   np = ubound(psi, dim=1)
   this%type_of = R_TYPE_VAL
   this%X(ff) => psi(:, :, st_start:)
@@ -129,7 +128,6 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   else
     SAFE_ALLOCATE(this%X(ff)(1:np, 1:this%dim, 1:nst))
   end if
-  this%X(psicont) => this%X(ff)
   this%type_of = R_TYPE_VAL
   this%X(ff_linear)(1:np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
@@ -137,7 +135,7 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, mirror, special)
   this%mirror = optional_default(mirror, .false.)  
   
   do ist = st_start, st_end
-    call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
+    call X(batch_add_state)(this, ist, this%X(ff)(:, :, ist - st_start + 1))
   end do
 
   POP_SUB(X(batch_allocate))
@@ -149,14 +147,13 @@ subroutine X(batch_allocate_temporary)(this)
 
   PUSH_SUB(X(batch_allocate_temporary))
 
-  ASSERT(.not. associated(this%X(psicont)))
+  ASSERT(.not. associated(this%X(ff)))
   
   if(this%special_memory) then
     call c_f_pointer(X(allocate_hardware_aware)(this%max_size*this%dim*this%nst), this%X(ff), [this%max_size,this%dim,this%nst])
   else
     SAFE_ALLOCATE(this%X(ff)(1:this%max_size, 1:this%dim, 1:this%nst))
   end if
-  this%X(psicont) => this%X(ff)
   
   this%type_of = R_TYPE_VAL
   this%X(ff_linear)(1:this%max_size, 1:this%nst_linear) => this%X(ff)(:, :, :)

@@ -35,18 +35,8 @@ module batch_oct_m
 
   private
   public ::                         &
-    batch_pack_t,                   &
     batch_t,                        &
     batch_init
-  
-  type batch_pack_t
-    ! Components are public by default
-    integer                        :: size(1:2)
-    integer                        :: size_real(1:2)
-    FLOAT, contiguous, pointer     :: dpsi(:, :)
-    CMPLX, contiguous, pointer     :: zpsi(:, :)
-    type(accel_mem_t)             :: buffer
-  end type batch_pack_t
   
   type batch_t
     private
@@ -65,12 +55,8 @@ module batch_oct_m
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
 
-    !> If the memory is contiguous, we can perform some operations faster.
-    FLOAT,                 pointer, public :: dpsicont(:, :, :)
-    CMPLX,                 pointer, public :: zpsicont(:, :, :)
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
-    type(batch_pack_t),             public :: pack
     logical :: special_memory
 
 
@@ -82,6 +68,11 @@ module batch_oct_m
     !> packed variables; only rank-2 arrays due to padding to powers of 2
     FLOAT, pointer, contiguous, public :: dff_pack(:, :)
     CMPLX, pointer, contiguous, public :: zff_pack(:, :)
+
+    integer                   , public :: pack_size(1:2)
+    integer                   , public :: pack_size_real(1:2)
+
+    type(accel_mem_t)         , public    :: ff_device
 
 
     integer, public :: layout !< either BATCH_NOT_PACKED or BATCH_PACKED
@@ -106,7 +97,7 @@ module batch_oct_m
     procedure :: ist_idim_to_linear => batch_ist_idim_to_linear
     procedure :: linear_to_idim => batch_linear_to_idim
     procedure :: linear_to_ist => batch_linear_to_ist
-    procedure :: pack_size => batch_pack_size
+    procedure :: pack_total_size => batch_pack_total_size
     procedure :: remote_access_start => batch_remote_access_start
     procedure :: remote_access_stop => batch_remote_access_stop
     procedure :: status => batch_status
@@ -150,7 +141,7 @@ contains
       this%in_buffer_count = 1
       
       if(accel_is_enabled()) then
-        call accel_release_buffer(this%pack%buffer)
+        call accel_release_buffer(this%ff_device)
       else
         if(associated(this%dff_pack)) then
           call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
@@ -159,9 +150,7 @@ contains
           call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
         end if
         nullify(this%dff_pack)
-        nullify(this%pack%dpsi)
         nullify(this%zff_pack)
-        nullify(this%pack%zpsi)
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
@@ -188,10 +177,10 @@ contains
     this%current = 1
     
     if(this%special_memory) then
-      if(associated(this%dpsicont)) then
+      if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
       end if
-      if(associated(this%zpsicont)) then
+      if(associated(this%zff)) then
         call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
       end if
     else
@@ -200,10 +189,8 @@ contains
     end if
     nullify(this%dff)
     nullify(this%dff_linear)
-    nullify(this%dpsicont)
     nullify(this%zff)
     nullify(this%zff_linear)
-    nullify(this%zpsicont)
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
@@ -216,26 +203,21 @@ contains
     PUSH_SUB(batch_deallocate_temporary)
 
     if(this%special_memory) then
-      if(associated(this%dpsicont)) then
+      if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
         nullify(this%dff)
         nullify(this%dff_linear)
-        nullify(this%dpsicont)
       end if
-      if(associated(this%zpsicont)) then
+      if(associated(this%zff)) then
         call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
         nullify(this%zff)
         nullify(this%zff_linear)
-        nullify(this%zpsicont)
       end if
     else
       SAFE_DEALLOCATE_P(this%dff)
       SAFE_DEALLOCATE_P(this%zff)
       nullify(this%dff_linear)
       nullify(this%zff_linear)
-
-      nullify(this%dpsicont)
-      nullify(this%zpsicont)
     end if
         
     POP_SUB(batch_deallocate_temporary)
@@ -271,7 +253,6 @@ contains
     this%dim = dim
     this%current = 1
     this%type_of = TYPE_NONE
-    nullify(this%dpsicont, this%zpsicont)
     
     this%nst_linear = nst*dim
 
@@ -282,8 +263,6 @@ contains
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
     SAFE_ALLOCATE(this%ist(1:this%nst))
-
-    nullify(this%pack%dpsi, this%pack%zpsi)
 
     nullify(this%dff, this%zff, this%dff_linear, this%zff_linear)
     nullify(this%dff_pack, this%zff_pack)
@@ -444,14 +423,14 @@ contains
 
   ! ----------------------------------------------------
 
-  integer function batch_pack_size(this) result(size)
+  integer function batch_pack_total_size(this) result(size)
     class(batch_t),      intent(inout) :: this
 
     size = this%max_size
     if(accel_is_enabled()) size = accel_padded_size(size)
     size = size*pad_pow2(this%nst_linear)*types_get_size(this%type())
 
-  end function batch_pack_size
+  end function batch_pack_total_size
 
   ! ----------------------------------------------------
 
@@ -472,27 +451,25 @@ contains
 
     if(.not. this%is_packed()) then
       this%type_of = this%type()
-      this%pack%size(1) = pad_pow2(this%nst_linear)
-      this%pack%size(2) = this%max_size
+      this%pack_size(1) = pad_pow2(this%nst_linear)
+      this%pack_size(2) = this%max_size
 
-      if(accel_is_enabled()) this%pack%size(2) = accel_padded_size(this%pack%size(2))
+      if(accel_is_enabled()) this%pack_size(2) = accel_padded_size(this%pack_size(2))
 
-      this%pack%size_real = this%pack%size
-      if(type_is_complex(this%type())) this%pack%size_real(1) = 2*this%pack%size_real(1)
+      this%pack_size_real = this%pack_size
+      if(type_is_complex(this%type())) this%pack_size_real(1) = 2*this%pack_size_real(1)
 
       if(accel_is_enabled()) then
         this%status_of = BATCH_DEVICE_PACKED
-        call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack%size))
+        call accel_create_buffer(this%ff_device, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack_size))
       else
         this%status_of = BATCH_PACKED
         this%layout = BATCH_PACKED
         ! always use hardware aware memory here
         if(this%type() == TYPE_FLOAT) then
-          call c_f_pointer(dallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%dff_pack, this%pack%size)
-          this%pack%dpsi => this%dff_pack
+          call c_f_pointer(dallocate_hardware_aware(this%pack_size(1)*this%pack_size(2)), this%dff_pack, this%pack_size)
         else if(this%type() == TYPE_CMPLX) then
-          call c_f_pointer(zallocate_hardware_aware(this%pack%size(1)*this%pack%size(2)), this%zff_pack, this%pack%size)
-          this%pack%zpsi => this%zff_pack
+          call c_f_pointer(zallocate_hardware_aware(this%pack_size(1)*this%pack_size(2)), this%zff_pack, this%pack_size)
         end if
       end if
       
@@ -526,8 +503,8 @@ contains
         bsize = hardware%dblock_size
       
         !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack%size(2), bsize
-          ep = min(sp + bsize - 1, this%pack%size(2))
+        do sp = 1, this%pack_size(2), bsize
+          ep = min(sp + bsize - 1, this%pack_size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
               this%dff_pack(ist, ip) = this%dff_linear(ip, ist)
@@ -540,8 +517,8 @@ contains
         bsize = hardware%zblock_size
 
         !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack%size(2), bsize
-          ep = min(sp + bsize - 1, this%pack%size(2))
+        do sp = 1, this%pack_size(2), bsize
+          ep = min(sp + bsize - 1, this%pack_size(2))
           forall(ist = 1:this%nst_linear)
             forall(ip = sp:ep)
               this%zff_pack(ist, ip) = this%zff_linear(ip, ist)
@@ -554,7 +531,7 @@ contains
         call messages_fatal(1)
       end if
 
-      call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
+      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
       
     end subroutine pack_copy
 
@@ -591,7 +568,7 @@ contains
         this%in_buffer_count = 1
 
         if(accel_is_enabled()) then
-          call accel_release_buffer(this%pack%buffer)
+          call accel_release_buffer(this%ff_device)
         else
           if(associated(this%dff_pack)) then
             call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
@@ -600,9 +577,7 @@ contains
             call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
           end if
           nullify(this%dff_pack)
-          nullify(this%pack%dpsi)
           nullify(this%zff_pack)
-          nullify(this%pack%zpsi)
         end if
       end if
       
@@ -646,7 +621,7 @@ contains
       if(this%type() == TYPE_FLOAT) then
 
         !$omp parallel do private(ist)
-        do ip = 1, this%pack%size(2)
+        do ip = 1, this%pack_size(2)
           forall(ist = 1:this%nst_linear)
             this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
           end forall
@@ -655,7 +630,7 @@ contains
       else if(this%type() == TYPE_CMPLX) then
 
         !$omp parallel do private(ist)
-        do ip = 1, this%pack%size(2)
+        do ip = 1, this%pack_size(2)
           forall(ist = 1:this%nst_linear)
             this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
           end forall
@@ -666,7 +641,7 @@ contains
         call messages_fatal(1)
       end if
       
-      call profiling_count_transfers(this%nst_linear*this%pack%size(2), this%type())
+      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
       
     end subroutine unpack_copy
 
@@ -689,9 +664,9 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
+        call accel_write_buffer(this%ff_device, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else if(this%type() == TYPE_CMPLX) then
-        call accel_write_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
+        call accel_write_buffer(this%ff_device, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       else
         ASSERT(.false.)
       end if
@@ -705,9 +680,9 @@ contains
         kernel => zpack
       end if
       
-      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
+      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack_size(1))
 
-      call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), unroll*this%pack%size(2))
+      call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), unroll*this%pack_size(2))
       
       do ist = 1, this%nst_linear, unroll
         
@@ -716,27 +691,27 @@ contains
 
           if(this%type() == TYPE_FLOAT) then
             call accel_write_buffer(tmp, ubound(this%dff_linear, dim=1), this%dff_linear(:, ist2), &
-              offset = (ist2 - ist)*this%pack%size(2))
+              offset = (ist2 - ist)*this%pack_size(2))
           else
             call accel_write_buffer(tmp, ubound(this%zff_linear, dim=1), this%zff_linear(:, ist2), &
-              offset = (ist2 - ist)*this%pack%size(2))
+              offset = (ist2 - ist)*this%pack_size(2))
           end if
         end do
 
         ! now call an opencl kernel to rearrange the data
-        call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call accel_set_kernel_arg(kernel, 1, this%pack%size(2))
+        call accel_set_kernel_arg(kernel, 0, this%pack_size(1))
+        call accel_set_kernel_arg(kernel, 1, this%pack_size(2))
         call accel_set_kernel_arg(kernel, 2, ist - 1)
         call accel_set_kernel_arg(kernel, 3, tmp)
-        call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 4, this%ff_device)
 
         call profiling_in(prof_pack, "CL_PACK")
-        call accel_kernel_run(kernel, (/this%pack%size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
+        call accel_kernel_run(kernel, (/this%pack_size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
 
         if(this%type() == TYPE_FLOAT) then
-          call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
+          call profiling_count_transfers(unroll*this%pack_size(2), M_ONE)
         else
-          call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
+          call profiling_count_transfers(unroll*this%pack_size(2), M_ZI)
         end if
 
         call accel_finish()
@@ -768,16 +743,16 @@ contains
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
-        call accel_read_buffer(this%pack%buffer, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
+        call accel_read_buffer(this%ff_device, ubound(this%dff_linear, dim=1), this%dff_linear(:, 1))
       else
-        call accel_read_buffer(this%pack%buffer, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
+        call accel_read_buffer(this%ff_device, ubound(this%zff_linear, dim=1), this%zff_linear(:, 1))
       end if
     else
 
-      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack%size(1))
+      unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack_size(1))
 
       ! we use a kernel to move to a temporary array and then we read
-      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), unroll*this%pack%size(2))
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, this%type(), unroll*this%pack_size(2))
 
       if(this%type() == TYPE_FLOAT) then
         kernel => dunpack
@@ -786,19 +761,19 @@ contains
       end if
 
       do ist = 1, this%nst_linear, unroll
-        call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call accel_set_kernel_arg(kernel, 1, this%pack%size(2))
+        call accel_set_kernel_arg(kernel, 0, this%pack_size(1))
+        call accel_set_kernel_arg(kernel, 1, this%pack_size(2))
         call accel_set_kernel_arg(kernel, 2, ist - 1)
-        call accel_set_kernel_arg(kernel, 3, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 3, this%ff_device)
         call accel_set_kernel_arg(kernel, 4, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
-        call accel_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, accel_max_workgroup_size()/unroll/))
+        call accel_kernel_run(kernel, (/unroll, this%pack_size(2)/), (/unroll, accel_max_workgroup_size()/unroll/))
 
         if(this%type() == TYPE_FLOAT) then
-          call profiling_count_transfers(unroll*this%pack%size(2), M_ONE)
+          call profiling_count_transfers(unroll*this%pack_size(2), M_ONE)
         else
-          call profiling_count_transfers(unroll*this%pack%size(2), M_ZI)
+          call profiling_count_transfers(unroll*this%pack_size(2), M_ZI)
         end if
 
         call accel_finish()
@@ -809,10 +784,10 @@ contains
           
           if(this%type() == TYPE_FLOAT) then
             call accel_read_buffer(tmp, ubound(this%dff_linear, dim=1), this%dff_linear(:, ist2), &
-              offset = (ist2 - ist)*this%pack%size(2))
+              offset = (ist2 - ist)*this%pack_size(2))
           else
             call accel_read_buffer(tmp, ubound(this%zff_linear, dim=1), this%zff_linear(:, ist2), &
-              offset = (ist2 - ist)*this%pack%size(2))
+              offset = (ist2 - ist)*this%pack_size(2))
           end if
         end do
 
@@ -887,12 +862,12 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
     
     if(this%type() == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%zpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+      call MPI_Win_create(this%zff_pack(1, 1), int(product(this%pack_size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     else if (this%type() == TYPE_FLOAT) then
 #ifdef HAVE_MPI2
-      call MPI_Win_create(this%pack%dpsi(1, 1), int(product(this%pack%size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
+      call MPI_Win_create(this%dff_pack(1, 1), int(product(this%pack_size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
         types_get_size(this%type()), MPI_INFO_NULL, mpi_grp%comm, rma_win, mpi_err)
 #endif
     else
@@ -944,25 +919,25 @@ subroutine batch_copy_data_to(this, np, dest)
   select case(this%status())
   case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(kernel_copy, 0, np)
-    call accel_set_kernel_arg(kernel_copy, 1, this%pack%buffer)
-    call accel_set_kernel_arg(kernel_copy, 2, log2(this%pack%size_real(1)))
-    call accel_set_kernel_arg(kernel_copy, 3, dest%pack%buffer)
-    call accel_set_kernel_arg(kernel_copy, 4, log2(dest%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 1, this%ff_device)
+    call accel_set_kernel_arg(kernel_copy, 2, log2(this%pack_size_real(1)))
+    call accel_set_kernel_arg(kernel_copy, 3, dest%ff_device)
+    call accel_set_kernel_arg(kernel_copy, 4, log2(dest%pack_size_real(1)))
     
-    localsize = accel_kernel_workgroup_size(kernel_copy)/dest%pack%size_real(1)
+    localsize = accel_kernel_workgroup_size(kernel_copy)/dest%pack_size_real(1)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
     
-    call accel_kernel_run(kernel_copy, (/dest%pack%size_real(1), dim2, dim3/), (/dest%pack%size_real(1), localsize, 1/))
+    call accel_kernel_run(kernel_copy, (/dest%pack_size_real(1), dim2, dim3/), (/dest%pack_size_real(1), localsize, 1/))
     
     call accel_finish()
 
   case(BATCH_PACKED)
     if(dest%type() == TYPE_FLOAT) then
-      call blas_copy(np*this%pack%size(1), this%pack%dpsi(1, 1), 1, dest%pack%dpsi(1, 1), 1)
+      call blas_copy(np*this%pack_size(1), this%dff_pack(1, 1), 1, dest%dff_pack(1, 1), 1)
     else
-      call blas_copy(np*this%pack%size(1), this%pack%zpsi(1, 1), 1, dest%pack%zpsi(1, 1), 1)
+      call blas_copy(np*this%pack_size(1), this%zff_pack(1, 1), 1, dest%zff_pack(1, 1), 1)
     end if
 
   case(BATCH_NOT_PACKED)

@@ -204,12 +204,12 @@ contains
       call accel_set_kernel_arg(kernel, 0, psib%nst)
       call accel_set_kernel_arg(kernel, 1, der%mesh%np)
       call accel_set_kernel_arg(kernel, 2, buff_weight)
-      call accel_set_kernel_arg(kernel, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
-      call accel_set_kernel_arg(kernel, 5, gpsib(1)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 6, gpsib(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 7, gpsib(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack%size(1)))
+      call accel_set_kernel_arg(kernel, 3, psib%ff_device)
+      call accel_set_kernel_arg(kernel, 4, log2(psib%pack_size(1)))
+      call accel_set_kernel_arg(kernel, 5, gpsib(1)%ff_device)
+      call accel_set_kernel_arg(kernel, 6, gpsib(2)%ff_device)
+      call accel_set_kernel_arg(kernel, 7, gpsib(3)%ff_device)
+      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack_size(1)))
       call accel_set_kernel_arg(kernel, 9, buff_current)
       
       wgsize = accel_kernel_workgroup_size(kernel)
@@ -245,7 +245,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+                + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
           end do

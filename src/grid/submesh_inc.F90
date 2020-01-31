@@ -185,13 +185,13 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
       do ip = 1, this%np
         ip_map = this%map(ip)
         do ii = 1, m
-          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
+          spsi(ii,ip) = psib%X(ff_pack)(ii,ip_map)
         end do
         do ii = m+1, psib%nst_linear, 4
-          spsi(ii,ip) = psib%pack%X(psi)(ii,ip_map)
-          spsi(ii+1,ip) = psib%pack%X(psi)(ii+1,ip_map)
-          spsi(ii+2,ip) = psib%pack%X(psi)(ii+2,ip_map)
-          spsi(ii+3,ip) = psib%pack%X(psi)(ii+3,ip_map)
+          spsi(ii,ip) = psib%X(ff_pack)(ii,ip_map)
+          spsi(ii+1,ip) = psib%X(ff_pack)(ii+1,ip_map)
+          spsi(ii+2,ip) = psib%X(ff_pack)(ii+2,ip_map)
+          spsi(ii+3,ip) = psib%X(ff_pack)(ii+3,ip_map)
         end do
       end do
       !$omp end parallel do
@@ -345,13 +345,13 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
         do jst = 1, ss%nst
           if(ss%type() == TYPE_FLOAT) then
             forall(is = 1:this%np)
-              mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%dff(is, jdim, jst)
+              mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%dff(is, jdim, jst)
             end forall
           else
             
 #ifdef R_TCOMPLEX
             forall(is = 1:this%np)
-              mm%pack%X(psi)(ii, this%map(is)) = mm%pack%X(psi)(ii, this%map(is)) + factor(jst, ist)*ss%zff(is, jdim, jst)
+              mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%zff(is, jdim, jst)
             end forall
 #else
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"

@@ -655,11 +655,11 @@ subroutine X(batch_vector_uvw_to_xyz)(der, uvw, xyz)
         do idim2 = 1, der%dim
           do idim1 = 1, der%dim
             tmp(idim1) = tmp(idim1) + &
-              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%pack%X(psi)(ist, ip)
+              der%mesh%sb%klattice_primitive(idim1, idim2) * uvw(idim2)%X(ff_pack)(ist, ip)
           end do
         end do
         do idim1 = 1, der%dim
-          xyz_(idim1)%pack%X(psi)(ist, ip) = tmp(idim1)
+          xyz_(idim1)%X(ff_pack)(ist, ip) = tmp(idim1)
         end do
       end do
     end do
@@ -683,30 +683,30 @@ contains
 
     call accel_set_kernel_arg(kernel_uvw_xyz, 0, der%mesh%np)
     call accel_set_kernel_arg(kernel_uvw_xyz, 1, matrix_buffer)
-    call accel_set_kernel_arg(kernel_uvw_xyz, 2, uvw(1)%pack%buffer)
-    call accel_set_kernel_arg(kernel_uvw_xyz, 3, log2(uvw(1)%pack%size_real(1)))
-    call accel_set_kernel_arg(kernel_uvw_xyz, 4, xyz_(1)%pack%buffer)
-    call accel_set_kernel_arg(kernel_uvw_xyz, 5, log2(xyz_(1)%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_uvw_xyz, 2, uvw(1)%ff_device)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 3, log2(uvw(1)%pack_size_real(1)))
+    call accel_set_kernel_arg(kernel_uvw_xyz, 4, xyz_(1)%ff_device)
+    call accel_set_kernel_arg(kernel_uvw_xyz, 5, log2(xyz_(1)%pack_size_real(1)))
     if(der%dim > 1) then
-      call accel_set_kernel_arg(kernel_uvw_xyz, 6, uvw(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 7, log2(uvw(2)%pack%size_real(1)))
-      call accel_set_kernel_arg(kernel_uvw_xyz, 8, xyz_(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 9, log2(xyz_(2)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 6, uvw(2)%ff_device)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 7, log2(uvw(2)%pack_size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 8, xyz_(2)%ff_device)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 9, log2(xyz_(2)%pack_size_real(1)))
     end if
     if(der%dim > 2) then
-      call accel_set_kernel_arg(kernel_uvw_xyz, 10, uvw(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 11, log2(uvw(3)%pack%size_real(1)))
-      call accel_set_kernel_arg(kernel_uvw_xyz, 12, xyz_(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel_uvw_xyz, 13, log2(xyz_(3)%pack%size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 10, uvw(3)%ff_device)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 11, log2(uvw(3)%pack_size_real(1)))
+      call accel_set_kernel_arg(kernel_uvw_xyz, 12, xyz_(3)%ff_device)
+      call accel_set_kernel_arg(kernel_uvw_xyz, 13, log2(xyz_(3)%pack_size_real(1)))
     end if
 
-    localsize = accel_kernel_workgroup_size(kernel_uvw_xyz)/uvw(1)%pack%size_real(1)
+    localsize = accel_kernel_workgroup_size(kernel_uvw_xyz)/uvw(1)%pack_size_real(1)
 
     dim3 = der%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(der%mesh%np, localsize))
 
-    call accel_kernel_run(kernel_uvw_xyz, (/uvw(1)%pack%size_real(1), dim2, dim3/), &
-      (/uvw(1)%pack%size_real(1), localsize, 1/))
+    call accel_kernel_run(kernel_uvw_xyz, (/uvw(1)%pack_size_real(1), dim2, dim3/), &
+      (/uvw(1)%pack_size_real(1), localsize, 1/))
     call accel_finish()
 
     call accel_release_buffer(matrix_buffer)

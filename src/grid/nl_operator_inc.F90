@@ -105,11 +105,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       
       if(fi%is_packed() .and. fo%is_packed()) then
         
-        ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
-        ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
+        ASSERT(ubound(fi%X(ff_pack), dim = 2) == op%mesh%np_part)
+        ASSERT(ubound(fo%X(ff_pack), dim = 2) >= op%mesh%np)
         
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
-          fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
+          fi%X(ff_pack)(1, 1), log2(fi%pack_size_real(1)), fo%X(ff_pack)(1, 1))
       else
         do ist = 1, fi%nst_linear
 
@@ -203,7 +203,7 @@ contains
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
           do ist = 1, fi%nst_linear
-            fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            fo%X(ff_pack)(ist, ii) = sum(wre(1:nn)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
           end do
         end do
       end do
@@ -248,7 +248,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%pack%X(psi)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -269,8 +269,8 @@ contains
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
-    ASSERT(accel_buffer_is_allocated(fi%pack%buffer))
-    ASSERT(accel_buffer_is_allocated(fo%pack%buffer))
+    ASSERT(accel_buffer_is_allocated(fi%ff_device))
+    ASSERT(accel_buffer_is_allocated(fo%ff_device))
     
     kernel_operate = op%kernel
 
@@ -278,9 +278,9 @@ contains
 
     call accel_write_buffer(buff_weights, op%stencil%size, wre)
 
-    ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
+    ASSERT(fi%pack_size_real(1) == fo%pack_size_real(1))
 
-    eff_size = fi%pack%size_real(1)
+    eff_size = fi%pack_size_real(1)
 
     select case(function_opencl)
     case(OP_INVMAP)
@@ -295,9 +295,9 @@ contains
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_imin)
       call accel_set_kernel_arg(kernel_operate, 4, op%buff_imax)
       call accel_set_kernel_arg(kernel_operate, 5, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 8, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
       bsize = accel_kernel_workgroup_size(kernel_operate)
@@ -313,9 +313,9 @@ contains
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_map)
       call accel_set_kernel_arg(kernel_operate, 3, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 4, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       iarg = 7
@@ -349,7 +349,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
       
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
@@ -384,8 +384,8 @@ contains
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
       call accel_set_kernel_arg(kernel_operate, 4, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 5, fi%ff_device)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       if(accel_use_shared_mem()) then
@@ -398,7 +398,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
 
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
         call messages_fatal()
       end if
