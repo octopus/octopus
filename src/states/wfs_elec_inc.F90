@@ -17,7 +17,7 @@
 !!
 
 !--------------------------------------------------------------
-subroutine X(wfs_elec_init_contiguous)(this, dim, st_start, st_end, psi, ik)
+subroutine X(wfs_elec_init_with_memory_3)(this, dim, st_start, st_end, psi, ik)
   type(wfs_elec_t), intent(out)   :: this
   integer,          intent(in)    :: dim
   integer,          intent(in)    :: st_start
@@ -25,16 +25,16 @@ subroutine X(wfs_elec_init_contiguous)(this, dim, st_start, st_end, psi, ik)
   integer,          intent(in)    :: ik
   R_TYPE,   target, intent(in)    :: psi(:, :, st_start:)
 
-  PUSH_SUB(X(wfs_elec_init_contiguous))
+  PUSH_SUB(X(wfs_elec_init_with_memory_3))
 
   this%ik = ik
   this%has_phase = .false.
   call batch_init(this%batch_t, dim,  st_start, st_end, psi)
 
-  POP_SUB(X(wfs_elec_init_contiguous))
-end subroutine X(wfs_elec_init_contiguous)
+  POP_SUB(X(wfs_elec_init_with_memory_3))
+end subroutine X(wfs_elec_init_with_memory_3)
 
-subroutine X(wfs_elec_init_contiguous_2d)(this, dim, st_start, st_end, psi, ik)
+subroutine X(wfs_elec_init_with_memory_2)(this, dim, st_start, st_end, psi, ik)
   type(wfs_elec_t), intent(out)   :: this
   integer,          intent(in)    :: dim
   integer,          intent(in)    :: st_start
@@ -42,14 +42,34 @@ subroutine X(wfs_elec_init_contiguous_2d)(this, dim, st_start, st_end, psi, ik)
   integer,          intent(in)    :: ik
   R_TYPE,   target, intent(in)    :: psi(:, :)
 
-  PUSH_SUB(X(wfs_elec_init_contiguous_2d))
+  PUSH_SUB(X(wfs_elec_init_with_memory_2))
 
   this%ik = ik
   this%has_phase = .false.
   call batch_init(this%batch_t, dim,  st_start, st_end, psi)
 
-  POP_SUB(X(wfs_elec_init_contiguous_2d))
-end subroutine X(wfs_elec_init_contiguous_2d)
+  POP_SUB(X(wfs_elec_init_with_memory_2))
+end subroutine X(wfs_elec_init_with_memory_2)
+
+subroutine X(wfs_elec_init)(this, dim, st_start, st_end, np, ik, mirror, special)
+  type(wfs_elec_t),  intent(inout) :: this
+  integer,           intent(in)    :: dim
+  integer,           intent(in)    :: st_start
+  integer,           intent(in)    :: st_end
+  integer,           intent(in)    :: np
+  integer,           intent(in)    :: ik
+  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
+  logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
+
+  PUSH_SUB(X(wfs_elec_init))
+
+  this%ik = ik
+  this%has_phase = .false.
+  call X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
+
+  POP_SUB(X(wfs_elec_init))
+end subroutine X(wfs_elec_init)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

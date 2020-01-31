@@ -29,7 +29,9 @@ module wfs_elec_oct_m
   private
   public ::                         &
     wfs_elec_t,                     &
-    wfs_elec_init
+    wfs_elec_init,                  &
+    dwfs_elec_init,                &
+    zwfs_elec_init
 
   type, extends(batch_t) :: wfs_elec_t
     private
@@ -46,10 +48,10 @@ module wfs_elec_oct_m
   !--------------------------------------------------------------
   interface wfs_elec_init
     module procedure  wfs_elec_init_empty
-    module procedure dwfs_elec_init_contiguous
-    module procedure zwfs_elec_init_contiguous
-    module procedure dwfs_elec_init_contiguous_2d
-    module procedure zwfs_elec_init_contiguous_2d
+    module procedure dwfs_elec_init_with_memory_3
+    module procedure zwfs_elec_init_with_memory_3
+    module procedure dwfs_elec_init_with_memory_2
+    module procedure zwfs_elec_init_with_memory_2
   end interface wfs_elec_init
 
 contains
