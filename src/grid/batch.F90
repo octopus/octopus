@@ -109,7 +109,6 @@ module batch_oct_m
 
   !--------------------------------------------------------------
   interface batch_init
-    module procedure  batch_init_empty
     module procedure dbatch_init_with_memory_3
     module procedure zbatch_init_with_memory_3
     module procedure dbatch_init_with_memory_2
@@ -281,6 +280,9 @@ contains
     ! no push_sub, called too frequently
     
     ok = this%nst_linear >= 1
+    ok = ok .and. (associated(this%dff) .or.  associated(this%zff) .or. &
+                   associated(this%dff_pack) .or.  associated(this%zff_pack))
+    ok = ok .and. (this%type() == TYPE_CMPLX .or. this%type() == TYPE_FLOAT)
     if(ok .and. .not. this%is_packed()) then
       if(this%type() == TYPE_FLOAT) then
         ok = ok .and. associated(this%dff_linear)

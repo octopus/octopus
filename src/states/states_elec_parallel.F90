@@ -187,12 +187,13 @@ contains
       return
     else
       SAFE_ALLOCATE_TYPE(wfs_elec_t, psib)
-      call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
-        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call dwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       else
-        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call zwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       end if
 
       ASSERT(allocated(this%group%rma_win))      

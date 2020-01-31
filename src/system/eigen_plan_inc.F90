@@ -168,15 +168,12 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         end if
       end do ortho
 
-      call wfs_elec_init(vvb, st%d%dim, blk, ik)
+      call X(wfs_elec_init)(vvb, st%d%dim, 1, blk, gr%mesh%np_part, ik)
       call wfs_elec_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:), ik)
-      call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk
-        do idim = 1, dim
-          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), vvb%X(ff)(:, idim, ist))
-        end do
+        call batch_set_state(vvb, ist, gr%mesh%np, vv(:, :, d1 + ist))
       end do
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb)

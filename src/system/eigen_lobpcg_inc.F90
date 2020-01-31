@@ -394,10 +394,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Apply Hamiltonian to residuals.
 
     if(lnuc > 0) then
-      call wfs_elec_init(psib, st%d%dim, lnuc, ik)
-      call wfs_elec_init(hpsib, st%d%dim, lnuc, ik)
-      call psib%X(allocate)(1, lnuc, ubound(res, dim=1))
-      call hpsib%X(allocate)(1, lnuc, ubound(h_res, dim=1))
+      call X(wfs_elec_init)(psib, st%d%dim, 1, lnuc, ubound(res, dim=1), ik)
+      call X(wfs_elec_init)(hpsib, st%d%dim, 1, lnuc, ubound(h_res, dim=1), ik)
     end if
     
     do i = 1, lnuc

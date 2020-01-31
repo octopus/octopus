@@ -404,11 +404,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   blocksize = min_blocksize
   do
 
-    call batch_init(ffb, 1, blocksize)
-    call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
-
-    call batch_init(opffb, 1, blocksize)
-    call opffb%X(allocate)(1, blocksize, this%mesh%np)
+    call X(batch_init)(ffb, 1, 1, blocksize, this%mesh%np_part)
+    call X(batch_init)(opffb, 1, 1, blocksize, this%mesh%np)
 
     do ist = 1, blocksize
       call batch_set_state(ffb, ist, this%mesh%np_part, ff)
@@ -465,8 +462,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
   blocksize = min_blocksize
   do
-    call batch_init(ffb, 1, blocksize)
-    call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
+    call X(batch_init)(ffb, 1, 1, blocksize, this%mesh%np_part)
 
     do ist = 1, blocksize
       call batch_set_state(ffb, ist, this%mesh%np_part, ff)

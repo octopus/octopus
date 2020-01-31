@@ -1089,13 +1089,11 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
-            call st%group%psib(ib, iqn)%dallocate(bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              mirror=st%d%mirror_states, special=.true.)
           else
-            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
-            call st%group%psib(ib, iqn)%zallocate(bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              mirror=st%d%mirror_states, special=.true.)
           end if
           
         end do

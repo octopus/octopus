@@ -520,8 +520,6 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     ! initialize the radial grid
     call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
-    ! FIXME: the second argument should be dim = st%d%dim, not 1!
-    call batch_init(this%orbitals(iatom), 1, this%mult*norbs)
   end do
 
   if(this%keep_orb) then
@@ -1205,8 +1203,8 @@ end subroutine X(lcao_alt_wf)
 
       call profiling_in(prof_orbitals, "LCAO_ORBITALS")
 
-      ! allocate memory
-      call orbitalb%X(allocate)(1, norbs, sphere%np)
+      ! FIXME: the second argument should be dim = st%d%dim, not 1!
+      call X(batch_init)(orbitalb, 1, 1, norbs, sphere%np)
       
       ! generate the orbitals
       do iorb = 1, norbs

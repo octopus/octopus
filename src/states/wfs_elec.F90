@@ -47,7 +47,6 @@ module wfs_elec_oct_m
 
   !--------------------------------------------------------------
   interface wfs_elec_init
-    module procedure  wfs_elec_init_empty
     module procedure dwfs_elec_init_with_memory_3
     module procedure zwfs_elec_init_with_memory_3
     module procedure dwfs_elec_init_with_memory_2
@@ -55,22 +54,6 @@ module wfs_elec_oct_m
   end interface wfs_elec_init
 
 contains
-
-  !--------------------------------------------------------------
-  subroutine wfs_elec_init_empty(this, dim, nst, ik)
-    type(wfs_elec_t), intent(out)   :: this
-    integer,          intent(in)    :: dim
-    integer,          intent(in)    :: nst
-    integer,          intent(in)    :: ik
-
-    PUSH_SUB(wfs_elec_init_empty)
-
-    this%ik = ik
-    this%has_phase = .false.
-    call batch_init(this%batch_t, dim, nst)
-
-    POP_SUB(wfs_elec_init_empty)
-  end subroutine wfs_elec_init_empty
 
   !--------------------------------------------------------------
   subroutine wfs_elec_clone_to(this, dest, pack, copy_data)

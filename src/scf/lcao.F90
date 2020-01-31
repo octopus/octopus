@@ -953,7 +953,7 @@ contains
     PUSH_SUB(lcao_alt_end_orbital)
 
     if(orbitalb%is_ok()) then
-      call orbitalb%deallocate
+      call orbitalb%end()
     end if
 
     POP_SUB(lcao_alt_end_orbital)
