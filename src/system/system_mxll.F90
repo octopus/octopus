@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 F. Bonafe, H. Appel, R. Jestaedt
+!! Copyright (C) 2019-2020 F. Bonafe, H. Appel, R. Jestaedt
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -37,8 +37,8 @@ module system_mxll_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use space_oct_m
-  use states_mxll_oct_m
   use system_abst_oct_m
+  use states_mxll_oct_m
   use system_oct_m
   
   implicit none
@@ -56,6 +56,13 @@ module system_mxll_oct_m
   type, extends(system_abst_t) :: system_mxll_t
     ! Components are public by default
     type(states_mxll_t), pointer :: st    !< the states
+    type(space_t)                :: space
+    type(geometry_t)             :: geo
+    type(grid_t),        pointer :: gr    !< the mesh
+    type(states_mxll_t), pointer :: st    !< the states
+    type(output_t)               :: outp  !< the output
+    type(multicomm_t)            :: mc    !< index and domain communicators
+    type(namespace_t)            :: namespace
     type(hamiltonian_mxll_t)     :: hm
   end type system_mxll_t
 

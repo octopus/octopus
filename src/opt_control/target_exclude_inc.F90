@@ -74,8 +74,8 @@
 
     PUSH_SUB(target_output_exclude)
     
-    call io_mkdir(trim(dir), outp%namespace)
-    call output_states(tg%st, namespace, gr, geo, hm, trim(dir), outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
     POP_SUB(target_output_exclude)
   end subroutine target_output_exclude
@@ -128,7 +128,7 @@
     PUSH_SUB(target_chi_exclude)
 
     do ib = chi_out%group%block_start, chi_out%group%block_end 
-      call batch_copy_data(gr%mesh%np, psi_in%group%psib(ib, 1), chi_out%group%psib(ib, 1))
+      call psi_in%group%psib(ib, 1)%copy_data_to(gr%mesh%np, chi_out%group%psib(ib, 1))
     end do
 
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:tg%st%d%dim))

@@ -39,6 +39,7 @@ module stress_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use periodic_copy_oct_m
   use poisson_fft_oct_m
   use poisson_oct_m
@@ -74,11 +75,13 @@ contains
 
   ! ---------------------------------------------------------
   !> This computes the total stress on the lattice
-  subroutine stress_calculate(gr, hm, st, geo)
-    type(grid_t),         intent(inout) :: gr !< grid
-    type(hamiltonian_elec_t),  intent(inout) :: hm
-    type(states_elec_t),  intent(inout) :: st
-    type(geometry_t),     intent(inout) :: geo !< geometry
+  subroutine stress_calculate(namespace, gr, hm, st, geo)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr !< grid
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(states_elec_t),      intent(inout) :: st
+    type(geometry_t),         intent(inout) :: geo !< geometry
+
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
     FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
@@ -93,7 +96,7 @@ contains
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
       write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
       write(message(2), '(a)') "Stress might not be correct."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
     end if
   
     stress(:,:) = M_ZERO
@@ -216,7 +219,7 @@ contains
       case(FFTLIB_PFFT)
 ! Not implemented yet
          write(message(1),'(a)') 'Internal error: PFFT library is not applicable for stress calculation.'
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
       case(FFTLIB_FFTW)
          if(associated(cube%Lrs))then
             xx(1:3) = cube%Lrs(1,1:3)
@@ -245,7 +248,7 @@ contains
       case(FFTLIB_ACCEL)
 ! Not implemented yet
          write(message(1),'(a)') 'Internal error: ACCEL library is not applicable for stress calculation.'
-         call messages_fatal(1)
+         call messages_fatal(1, namespace=namespace)
       case default
          ASSERT(.false.)
        end select

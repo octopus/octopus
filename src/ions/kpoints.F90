@@ -318,7 +318,7 @@ contains
 
       if(this%use_symmetries) then
         write(message(1), '(a)') "User-defined k-points are not compatible with KPointsUseSymmetries=yes."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       call read_user_kpoints()
@@ -330,7 +330,7 @@ contains
        
       if(this%use_symmetries) then
         write(message(1), '(a)') "KPointsPath is not compatible with KPointsUseSymmetries=yes."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
       call read_path() 
     end if
@@ -339,7 +339,7 @@ contains
     if(this%method == 0) then
       write(message(1), '(a)') "Unable to determine the method for defining k-points."
       write(message(2), '(a)') "Octopus will continue assuming a Monkhorst Pack grid."
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       this%method = KPOINTS_MONKH_PACK
       call read_MP(gamma_only = .false.)
     end if
@@ -454,8 +454,13 @@ contains
       if(.not. gamma_only_) then
         ncols = parse_block_cols(blk, 0)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but must have ', dim
-          call messages_fatal(1)
+          write(message(1),'(a,i3,a,i3)') 'KPointsGrid first row has ', ncols, ' columns but should have ', dim
+          if(ncols < dim) then
+            call messages_fatal(1, namespace=namespace)
+          else
+            write(message(2),'(a)') 'Continuing, but ignoring the additional values.'
+            call messages_warning(2, namespace=namespace)
+          end if
         end if
         do ii = 1, dim
           call parse_block_integer(blk, 0, ii - 1, this%nik_axis(ii))
@@ -463,14 +468,14 @@ contains
 
         if (any(this%nik_axis(1:dim) < 1)) then
           message(1) = 'Input: KPointsGrid is not valid.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         if(parse_block_n(blk) > 1) then ! we have a shift, or even more
           ncols = parse_block_cols(blk, 1)
           if(ncols /= dim) then
             write(message(1),'(a,i3,a,i3)') 'KPointsGrid shift has ', ncols, ' columns but must have ', dim
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
           do is = 1, nshifts
             do ii = 1, dim
@@ -513,7 +518,7 @@ contains
       if(this%use_symmetries) then
         message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
-        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal)
+        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal, namespace)
       end if
 
       call kpoints_grid_copy(this%full, this%reduced)
@@ -613,7 +618,7 @@ contains
 
       if(parse_block(namespace, 'KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ! There is one high symmetry k-point per line
@@ -621,7 +626,7 @@ contains
       nhighsympoints = parse_block_n(blk)-1
       if( nhighsympoints /= nsegments +1) then
         write(message(1),'(a,i3,a,i3)') 'The first row of KPointsPath is not compatible with the number of specified k-points.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(resolution(1:nsegments))
@@ -637,7 +642,7 @@ contains
         ncols = parse_block_cols(blk, ik)
         if(ncols /= dim) then
           write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
 
         do idir = 1, dim
@@ -735,7 +740,7 @@ contains
         else
           ! This case should really never happen. But why not dying otherwise?!
           write(message(1),'(a)') 'Internal error loading user-defined k-point list.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end if
 
@@ -775,7 +780,7 @@ contains
       if(any(user_kpoints_grid%weight(:) < M_EPSILON)) then
         call messages_experimental('K-points with zero weight')
         message(1) = "Found k-points with zero weight. They are excluded from density calculation"
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
         ! count k-points with zero weight and  make sure the points are given in
         ! a block after all regular k-points. This is for convenience, so they can be skipped
         ! easily and not a big restraint for the user who has to provide the k-points
@@ -786,7 +791,7 @@ contains
             if(ik < user_kpoints_grid%npoints) then
               if(user_kpoints_grid%weight(ik+1) > M_EPSILON) then
                 message(1) = "K-points with zero weight must follow all regular k-points in a block"
-                call messages_fatal(1)
+                call messages_fatal(1, namespace=namespace)
               endif
             end if
             this%nik_skip = this%nik_skip + 1
@@ -799,7 +804,7 @@ contains
       weight_sum = sum(user_kpoints_grid%weight(1:user_kpoints_grid%npoints))
       if(weight_sum < M_EPSILON) then
         message(1) = "k-point weights must sum to a positive number."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       user_kpoints_grid%weight = user_kpoints_grid%weight / weight_sum
 
@@ -1292,8 +1297,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine kpoints_write_info(this, iunit, absolute_coordinates)
+  subroutine kpoints_write_info(this, namespace, iunit, absolute_coordinates)
     type(kpoints_t),    intent(in) :: this
+    type(namespace_t),  intent(in) :: namespace
     integer,            intent(in) :: iunit
     logical, optional,  intent(in) :: absolute_coordinates
     
@@ -1303,7 +1309,7 @@ contains
     
     PUSH_SUB(kpoints_write_info)
     
-    call messages_print_stress(iunit, 'Brillouin zone sampling')
+    call messages_print_stress(iunit, 'Brillouin zone sampling', namespace=namespace)
 
     if(this%method == KPOINTS_MONKH_PACK) then
 
@@ -1363,7 +1369,7 @@ contains
 
     call messages_info(iunit = iunit)
 
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(kpoints_write_info)
   end subroutine kpoints_write_info
@@ -1464,12 +1470,13 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal)
+  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal, namespace)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
     FLOAT,                intent(in) :: klattice(:,:)
     logical,              intent(in) :: time_reversal
+    type(namespace_t),    intent(in) :: namespace
     
     integer, allocatable :: kmap(:)
     FLOAT :: kpt(1:MAX_DIM), diff(1:MAX_DIM)
@@ -1539,7 +1546,7 @@ contains
            ") ", "has no symmetric in the k-point grid for the following symmetry"
           write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', transpose(symm_op_rotation_matrix_red(symm%ops(iop)))
           message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
-          call messages_fatal(3)    
+          call messages_fatal(3, namespace=namespace)
         end if
       end do
     end do

@@ -45,6 +45,7 @@ module density_oct_m
   use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -77,7 +78,7 @@ contains
   
   subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
-    type(states_elec_t),       target,   intent(in)    :: st
+    type(states_elec_t),  target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
 
@@ -119,10 +120,9 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib)
+  subroutine density_calc_accumulate(this, psib)
     type(density_calc_t),         intent(inout) :: this
-    integer,                      intent(in)    :: ik
-    type(batch_t),                intent(in)    :: psib
+    type(wfs_elec_t),             intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -137,14 +137,14 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
+    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%states(ist)%ist, psib%ik)
 
     if (.not. this%gr%have_fine_mesh) then 
 
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         select case (this%st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
@@ -400,7 +400,7 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
       end do
     end do
 
@@ -423,7 +423,7 @@ contains
     integer :: nodeto, nodefr, nsend, nreceiv
     type(states_elec_t) :: staux
     CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
-    type(batch_t)  :: psib
+    type(wfs_elec_t)  :: psib
     type(density_calc_t) :: dens_calc
 #ifdef HAVE_MPI
     integer :: status(MPI_STATUS_SIZE)
@@ -434,7 +434,7 @@ contains
     if(n >= st%nst) then
       write(message(1),'(a)') 'Attempting to freeze a number of orbitals which is larger or equal to'
       write(message(2),'(a)') 'the total number. The program has to stop.'
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
     ASSERT(states_are_complex(st))
@@ -452,7 +452,7 @@ contains
         !We can use the full batch 
         if(states_elec_block_max(st, ib) <= n) then
 
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
           if(states_elec_block_max(st, ib) == n) exit
 
         else !Here we only use a part of this batch 
@@ -465,9 +465,9 @@ contains
             call states_elec_get_state(st, gr%mesh, states_elec_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
           end do
 
-          call batch_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi)
-          call density_calc_accumulate(dens_calc, ik, psib)
-          call batch_end(psib)
+          call wfs_elec_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi, ik)
+          call density_calc_accumulate(dens_calc, psib)
+          call psib%end()
           SAFE_DEALLOCATE_A(psi)
           
           exit

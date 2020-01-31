@@ -73,19 +73,20 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_local(tg, gr, dir, geo, outp)
-    type(target_t),   intent(in) :: tg
-    type(grid_t),     intent(in) :: gr
-    character(len=*), intent(in) :: dir
-    type(geometry_t), intent(in) :: geo
-    type(output_t),   intent(in) :: outp
+  subroutine target_output_local(tg, namespace, gr, dir, geo, outp)
+    type(target_t),    intent(in) :: tg
+    type(namespace_t), intent(in) :: namespace
+    type(grid_t),      intent(in) :: gr
+    character(len=*),  intent(in) :: dir
+    type(geometry_t),  intent(in) :: geo
+    type(output_t),    intent(in) :: outp
 
     integer :: ierr
     PUSH_SUB(target_output_local)
     
-    call io_mkdir(trim(dir), outp%namespace)
+    call io_mkdir(trim(dir), namespace)
     if(outp%how /= 0) then
-      call dio_function_output(outp%how, trim(dir), 'local_target', outp%namespace, gr%mesh, &
+      call dio_function_output(outp%how, trim(dir), 'local_target', namespace, gr%mesh, &
         tg%rho, units_out%length**(-gr%sb%dim), ierr, geo = geo)
     end if
 

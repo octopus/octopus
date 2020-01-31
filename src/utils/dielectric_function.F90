@@ -110,7 +110,7 @@ program dielectric_function
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
-  call spectrum_count_time_steps(in_file, time_steps, dt)
+  call spectrum_count_time_steps(default_namespace, in_file, time_steps, dt)
 
   if(parse_is_defined(default_namespace, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
@@ -134,7 +134,7 @@ program dielectric_function
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
-    call spectrum_count_time_steps(ref_file, time_steps_ref, dt_ref)
+    call spectrum_count_time_steps(default_namespace, ref_file, time_steps_ref, dt_ref)
     if(time_steps_ref < time_steps) then
       message(1) = "The reference calculation does not contain enought time steps"
       call messages_fatal(1)
@@ -192,14 +192,14 @@ program dielectric_function
   SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
   SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
-  call batch_init(vecpotb, space%dim)
-  call batch_init(ftrealb, space%dim)
-  call batch_init(ftimagb, space%dim)
+  call batch_init(vecpotb, 1, space%dim)
+  call batch_init(ftrealb, 1, space%dim)
+  call batch_init(ftimagb, 1, space%dim)
 
   do ii = 1, space%dim
-    call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
-    call batch_add_state(ftrealb, ftreal(:,  ii))
-    call batch_add_state(ftimagb, ftimag(:,  ii))
+    call vecpotb%add_state(vecpot(:, space%dim + ii))
+    call ftrealb%add_state(ftreal(:, ii))
+    call ftimagb%add_state(ftimag(:, ii))
   end do
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
@@ -213,9 +213,9 @@ program dielectric_function
     spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
-  call batch_end(vecpotb)
-  call batch_end(ftrealb)
-  call batch_end(ftimagb)
+  call vecpotb%end()
+  call ftrealb%end()
+  call ftimagb%end()
 
   SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
   SAFE_ALLOCATE(dielectric(1:space%dim, 1:energy_steps))

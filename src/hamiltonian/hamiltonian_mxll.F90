@@ -304,8 +304,7 @@ contains
     default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN
     call parse_variable(namespace, 'MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
-      write(message(1),'(a)') 'Calculation from E and B field not implemented yet.'
-      call messages_fatal(1)
+      call messages_not_implemented("Calculation from E and B field not implemented yet.", namespace=namespace)
     end if
 
     hm%rs_state_fft_map     => st%rs_state_fft_map
@@ -415,8 +414,9 @@ contains
   end function hamiltonian_mxll_apply_packed
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, time, terms, set_bc)
+  subroutine hamiltonian_mxll_apply_batch(hm, namespace, der, psib, hpsib, time, terms, set_bc)
     type(hamiltonian_mxll_t),  intent(in)    :: hm
+    type(namespace_t),         intent(in)    :: namespace
     type(derivatives_t),       intent(in)    :: der
     type(batch_t), target,     intent(inout) :: psib
     type(batch_t), target,     intent(inout) :: hpsib
@@ -431,10 +431,10 @@ contains
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
 
-    ASSERT(batch_status(psib) == batch_status(hpsib))
+    ASSERT(psib%status() == hpsib%status())
 
-    ASSERT(batch_is_ok(psib))
-    ASSERT(batch_is_ok(hpsib))
+    ASSERT(psib%is_ok())
+    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment
@@ -446,15 +446,15 @@ contains
 !      .and. terms_ == TERM_ALL
 
 !    if(pack) then
-!      call batch_pack(psib)
-!      call batch_pack(hpsib, copy = .false.)
+!      call psib%do_pack()
+!      call hpsib%do_pack(copy = .false.)
 !    end if
 
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       endif
     end if
 
@@ -462,8 +462,8 @@ contains
     hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
   
 !    if(pack) then
-!      call batch_unpack(psib, copy = .false.)
-!      call batch_unpack(hpsib)
+!      call psib%do_unpack(copy = .false.)
+!      call hpsib%do_unpack()
 !    end if
 
     call profiling_out(prof_hamiltonian)
@@ -472,8 +472,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states
-  subroutine hamiltonian_mxll_apply(hm, der, psi, oppsi, ist, ik, time, terms, set_bc)
+  subroutine hamiltonian_mxll_apply(hm, namespace, der, psi, oppsi, ist, ik, time, terms, set_bc)
     type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(in)    :: der
     integer,                  intent(in)    :: ist       !< the index of the state
     integer,                  intent(in)    :: ik        !< the index of the k-point
@@ -491,14 +492,14 @@ contains
     PUSH_SUB(hamiltonian_mxll_apply)
 
 !    call batch_init(psib, hm%d%dim, 1)
-!    call batch_add_state(psib, ist, psi)
+!    call psib%add_state(ist, psi)
 !    call batch_init(hpsib, hm%d%dim, 1)
-!    call batch_add_state(hpsib, ist, hpsi)
+!    call hpsib%add_state(ist, hpsi)
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !
-!    call batch_end(psib)
-!    call batch_end(hpsib)
+!    call psib%end()
+!    call hpsib%end()
 
     call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
 
@@ -506,7 +507,7 @@ contains
       if (abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
     end if
 
@@ -524,8 +525,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_apply_all(hm, der, st, hst, time)
+  subroutine hamiltonian_mxll_apply_all(hm, namespace, der, st, hst, time)
     type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(namespace_t),        intent(in)    :: namespace
     type(derivatives_t),      intent(inout) :: der
     type(states_mxll_t),      intent(inout) :: st
     type(states_mxll_t),      intent(inout) :: hst
@@ -543,13 +545,13 @@ contains
 !      end do
 !    end do
   !  else
-    if (present(time)) then 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
-        end do
-      end do
-    end if
+!    if (present(time)) then 
+!      do ik = st%d%kpt%start, st%d%kpt%end
+!        do ib = st%group%block_start, st%group%block_end
+!          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
+!        end do
+!      end do
+!    end if
 
     POP_SUB(hamiltonian_mxll_apply_all)
   end subroutine hamiltonian_mxll_apply_all

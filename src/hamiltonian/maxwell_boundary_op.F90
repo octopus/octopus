@@ -205,18 +205,18 @@ contains
     !%End
     if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
-      call messages_print_stress(stdout, trim('Maxwell boundary conditions:'))
+      call messages_print_stress(stdout, trim('Maxwell boundary conditions:'), namespace=namespace)
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
       if (nlines /= 1) then
         message(1) = 'MaxwellBoundaryConditions has to consist of one line!'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       ncols = parse_block_cols(blk, 0)
       if (ncols /= 3) then
         message(1) = 'MaxwellBoundaryConditions has to consist of three columns!'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       do icol = 1, ncols
         call parse_block_integer(blk, 0, icol-1, bc%bc_type(icol))
@@ -236,7 +236,7 @@ contains
           if (.not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
             write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "maxwell_plane_waves".'
             write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM)
           string = 'Medium boundary'
@@ -245,7 +245,7 @@ contains
         call messages_info(1)
       end do
 
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
     
     !%Variable MaxwellAbsorbingBoundaries
@@ -280,12 +280,12 @@ contains
       nlines = parse_block_n(blk)
       if (nlines /= 1) then
         message(1) = 'MaxwellAbsorbingBounaries has to consist of one line!'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       ncols = parse_block_cols(blk, 0)
       if (ncols /= 3) then
         message(1) = 'MaxwellAbsorbingBoundaries has to consist of three columns!'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end if
     do icol=1, ncols
@@ -310,7 +310,7 @@ contains
 
     if (ab_mask_check .or. ab_pml_check) then
       write(str, '(a,i5)') 'Maxwell Absorbing Boundaries'
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
     end if
 
     do idim = 1, st%d%dim
@@ -625,7 +625,7 @@ contains
     if(debug%info) call bc_mxll_write_info(bc, gr%mesh, namespace)
 
     if (ab_mask_check .or. ab_pml_check) then
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     POP_SUB(bc_mxll_init)
@@ -1680,7 +1680,7 @@ contains
 
     if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then
 
-      call messages_print_stress(stdout, trim('Substitution of the electromagnetic incident waves'))
+      call messages_print_stress(stdout, trim('Substitution of the electromagnetic incident waves'), namespace=namespace)
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
@@ -1704,7 +1704,7 @@ contains
         if ((ncols /= 6) .and. (ncols /= 8) .and. (ncols /= 10) .and. (ncols /= 9)) then
           message(1) = 'Each line in the UserDefinedMaxwellIncidentWaves block must have'
           message(2) = 'six, eight, nine or ten columns.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         ! check input modus e.g. parser of defined functions
@@ -1771,7 +1771,7 @@ contains
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), '"" field defined in the &
                                       UserDefinedMaxwellIncidentWaves block'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           k_vector(:) = bc%plane_waves_mx_function(il)%k_vector(:)
@@ -1780,11 +1780,11 @@ contains
           if (abs(test) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
           if (Sqrt(sum(k_vector(:)**2)) < 1e-10) then
             message(1) = 'The k vector is not defined correctly.'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           end if
 
           bc%plane_waves_e_field(:,il)  = e_field(:)
@@ -1816,7 +1816,7 @@ contains
           !if (ierr /= 0) then            
           !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), '" field defined in the &
           !                            UserDefinedMaxwellIncidentWaves block'
-          !  call messages_fatal(1)
+          !  call messages_fatal(1, namespace=namespace)
           !end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
 
@@ -1831,7 +1831,7 @@ contains
          end if
       end do
 
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
 
     end if
 

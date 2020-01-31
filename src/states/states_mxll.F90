@@ -82,7 +82,7 @@ module states_mxll_oct_m
     ! Components are public by default
     type(states_elec_dim_t)      :: d
     integer                      :: rs_sign
-    type(states_elec_group_t)    :: group
+!    type(states_elec_group_t)    :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
     type(type_t), public         :: wfs_type         !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
     integer, public              :: nst                   !< Number of states in each irreducible subspace
@@ -212,7 +212,7 @@ contains
     PUSH_SUB(states_mxll_null)
 
     call states_elec_dim_null(st%d)
-    call states_elec_group_null(st%group)
+!    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist) 
     st%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
@@ -353,7 +353,7 @@ contains
         ncols = parse_block_cols(blk,0)
         if (ncols < 3 .or. ncols > 3) then
             message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
         end if
         do idim=1, st%d%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
@@ -458,6 +458,7 @@ contains
     FLOAT,   optional, intent(in)    :: mu_element
 
     ! no PUSH_SUB, called too often
+
 
     if (present(ep_element) .and. present(mu_element)) then
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
@@ -659,7 +660,7 @@ contains
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
       end if
    end do
-
+   
    POP_SUB(get_magnetic_field_state)
 
   end subroutine get_magnetic_field_state
@@ -788,7 +789,7 @@ contains
   subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    CMPLX,                    intent(in)    :: rs_state(:,:)
+    type(batch_t),            intent(in)    :: rsb
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)

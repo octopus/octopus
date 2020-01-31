@@ -134,16 +134,15 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   integer,             intent(in)    :: nsigma
 
   integer :: ip, ist, ik, ispin, isigma
-  FLOAT   :: weight, xx, dsmear, dos_ef, ef_shift
+  FLOAT   :: weight, xx, dsmear, dos_ef
   R_TYPE  :: cc, dd, avg_dl_rho
   logical :: is_ef_shift
-  R_TYPE, allocatable :: psi(:, :)
+  R_TYPE, allocatable :: psi(:, :), psi2(:, :)
+  FLOAT, allocatable :: ef_shift(:)
 
   PUSH_SUB(X(lr_build_dl_rho))
 
-  if(st%d%ispin == SPINORS) then
-    call messages_not_implemented('linear response density for spinors')
-  end if
+  ASSERT(st%d%ispin /= SPINORS)
 
   ! correction to density response due to shift in Fermi level
   ! it is zero without smearing since there is no Fermi level
@@ -203,27 +202,34 @@ subroutine X(lr_build_dl_rho) (mesh, st, lr, nsigma)
   end if
 
   if(is_ef_shift) then
+    SAFE_ALLOCATE(ef_shift(1:nsigma))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:st%d%dim))
     do isigma = 1, nsigma
       avg_dl_rho = M_ZERO
       do ispin = 1, st%d%nspin
         avg_dl_rho = avg_dl_rho + X(mf_integrate)(mesh, lr(isigma)%X(dl_rho)(:, ispin))
       end do
-      ef_shift = -TOFLOAT(avg_dl_rho) / dos_ef
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
-        do ist  = st%st_start, st%st_end
-          xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+      ef_shift(isigma) = -TOFLOAT(avg_dl_rho) / dos_ef
+    end do
 
-          call states_elec_get_state(st, mesh, ist, ik, psi)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+      do ist  = st%st_start, st%st_end
+        xx = (st%smear%e_fermi - st%eigenval(ist, ik) + CNST(1e-14))/dsmear
+        weight = st%d%kweights(ik)*smear_delta_function(st%smear, xx)*st%smear%el_per_state
+
+        call states_elec_get_state(st, mesh, ist, ik, psi)
+        do ip = 1, mesh%np
+          psi2(ip, 1) = R_CONJ(psi(ip, 1))*psi(ip, 1) 
+        end do
           
-          do ip = 1, mesh%np
-            lr(isigma)%X(dl_rho)(ip, ispin) = lr(isigma)%X(dl_rho)(ip, ispin) + abs(psi(ip, 1))**2 &
-              *ef_shift*st%d%kweights(ik)*smear_delta_function(st%smear, xx)*st%smear%el_per_state
-          end do
-          
+        do isigma = 1, nsigma
+          call lalg_axpy(mesh%np, ef_shift(isigma)*weight, psi2(:,1), lr(isigma)%X(dl_rho)(:, ispin))
         end do
       end do
     end do
+    SAFE_DEALLOCATE_A(ef_shift)
+    SAFE_DEALLOCATE_A(psi2)
   end if
 
   SAFE_DEALLOCATE_A(psi)  

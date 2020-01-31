@@ -129,7 +129,7 @@ contains
 
     if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
-      !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'))
+      !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'), namespace=namespace)
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
@@ -145,7 +145,7 @@ contains
         if(ncols  <  4 .or. ncols > 4) then
           message(1) = 'Each line in the UserDefinedMaxwellStates block must have'
           message(2) = 'four columns.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
 
         call parse_block_integer(blk, il - 1, 0, idim)
@@ -205,7 +205,7 @@ contains
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr
-              call messages_fatal(2)
+              call messages_fatal(2, namespace=namespace)
             end if
             e_field = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
@@ -215,7 +215,7 @@ contains
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
               write(message(2),'(a,i1)') 'Error code: ', ierr
-              call messages_fatal(2)
+              call messages_fatal(2, namespace=namespace)
             end if
             b_field = units_to_atomic(unit_one/units_inp%length**2, b_field)
           end if
@@ -229,7 +229,7 @@ contains
         case default
           message(1) = 'Wrong entry in UserDefinedMaxwellStates, column 2.'
           message(2) = 'You may state "formula" or "file" here.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
 
         rs_state(:,idim) = rs_state(:,idim) + rs_state_add(:,idim)
@@ -243,11 +243,11 @@ contains
       SAFE_DEALLOCATE_A(rs_state)
       SAFE_DEALLOCATE_A(rs_state_add)
       call parse_block_end(blk)
-      !call messages_print_stress(stdout)
+      !call messages_print_stress(stdout, namespace=namespace)
 
     else
       message(1) = "'UserDefineInitialdStates' has to be specified as block."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(states_mxll_read_user_def)
@@ -362,10 +362,11 @@ contains
   end subroutine states_mxll_dump
 
   !----------------------------------------------------------
-  subroutine states_mxll_load(restart, st, gr, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
+  subroutine states_mxll_load(restart, st, gr, namespace, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_mxll_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
+    type(namespace_t),          intent(in)    :: namespace
     CMPLX,                      intent(inout) :: zff(:,:)
     integer,                    intent(in)    :: zff_dim
     integer,                    intent(out)   :: ierr
@@ -541,11 +542,11 @@ contains
       ! otherwise ierr = 0 would mean either all was read correctly, or nothing at all was read!
 
       write(str, '(a,i5)') 'Reading Maxwell states.'
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
       write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
            st%nst * zff_dim, ' could be read.'
       call messages_info(1)
-      call messages_print_stress(stdout)
+      call messages_print_stress(stdout, namespace=namespace)
     end if
 
     message(1) = 'Info: Maxwell states reading done.'

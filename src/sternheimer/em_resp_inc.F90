@@ -16,19 +16,18 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(run_sternheimer)(namespace)
-  type(namespace_t),      intent(in)  :: namespace
+subroutine X(run_sternheimer)()
   
   R_TYPE, allocatable :: inhomog(:,:,:,:,:)
   integer :: ik, ik0, ist
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
-  call restart_init(restart_dump, namespace, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+  call restart_init(restart_dump, sys%namespace, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
   if(.not. fromscratch) then
 
-    call restart_init(restart_load, namespace, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, sys%namespace, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     do idir = 1, sys%gr%sb%dim
 
@@ -328,7 +327,7 @@ subroutine X(run_sternheimer)(namespace)
       if(em_vars%calc_hyperpol .and. use_kdotp) then
         call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
-        call restart_init(kdotp_restart, namespace, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(kdotp_restart, sys%namespace, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do idir2 = 1, gr%sb%periodic_dim
           write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
@@ -584,8 +583,7 @@ subroutine X(calc_properties_linear)()
 end subroutine X(calc_properties_linear)
 
 ! ---------------------------------------------------------
-subroutine X(calc_properties_nonlinear)(namespace)
-  type(namespace_t), intent(in) :: namespace
+subroutine X(calc_properties_nonlinear)()
 
   PUSH_SUB(em_resp_run.X(calc_properties_nonlinear))
 
@@ -605,8 +603,8 @@ subroutine X(calc_properties_nonlinear)(namespace)
     
     str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%freq_factor(1)*em_vars%omega(iomega)))
     write(dirname_output, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
-    call io_mkdir(trim(dirname_output), namespace)
-    call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(1:3), em_vars%ok(1), dirname_output, namespace)
+    call io_mkdir(trim(dirname_output), sys%namespace)
+    call out_hyperpolarizability(gr%sb, em_vars%beta, em_vars%freq_factor(1:3), em_vars%ok(1), dirname_output, sys%namespace)
   end if
 
   POP_SUB(em_resp_run.X(calc_properties_nonlinear))

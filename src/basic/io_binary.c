@@ -186,7 +186,7 @@ static inline int check_header(header_t * hp, int * correct_endianness){
   return 0;
 }
 
-void io_write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+void io_write_header(const fint * np, fint * type, fint * ierr, fint * iio, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   header_t * hp;
@@ -201,6 +201,7 @@ void io_write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname
   TO_C_STR1(fname, filename);
   fd = open (filename, O_WRONLY | O_CREAT | O_TRUNC, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
+  *iio+=100;
   if( fd < 0 ) {
     printf("Filename is %s\n",filename);
     inf_error("octopus.write_header in creating the header");
@@ -226,17 +227,18 @@ void io_write_header(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname
   free(hp);
   free(filename);
   close(fd);
+  *iio += 1;
 }
 
-void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+void FC_FUNC_(write_header,WRITE_HEADER)(const fint * np, fint * type, fint * ierr, fint * iio, STR_F_TYPE fname STR_ARG1)
 { 
   unsigned long fname_len;
   fname_len = l1;
-  io_write_header(np, type, ierr, fname, fname_len);
+  io_write_header(np, type, ierr, iio, fname, fname_len);
 }
 
 void FC_FUNC_(write_binary,WRITE_BINARY)
-     (const fint * np, void * ff, fint * type, fint * ierr, fint * nhd, fint * flpe, STR_F_TYPE fname STR_ARG1)
+     (const fint * np, void * ff, fint * type, fint * ierr, fint * iio, fint * nhd, fint * flpe, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   int fd, ii;
@@ -250,12 +252,12 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
   TO_C_STR1(fname, filename);
 
   if(*nhd != 1){
-    io_write_header(np, type, ierr, fname, fname_len);
+    io_write_header(np, type, ierr, iio, fname, fname_len);
   }
   
   fd = open (filename, O_WRONLY, 
 	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );    
-  
+  iio += 100; 
   free(filename);
   if( fd < 0 ) {
     inf_error("octopus.write_binary in opening the file");
@@ -283,11 +285,12 @@ void FC_FUNC_(write_binary,WRITE_BINARY)
 
   /* close the file */
   close(fd);
+  iio++;
   return;
 }
 
 /* this function neither allocates nor deallocates 'hp' */
-void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_TYPE fname STR_ARG1)
+void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, fint * iio, STR_F_TYPE fname STR_ARG1)
 {
   char * filename;
   int fd;
@@ -296,6 +299,7 @@ void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_
   *ierr = 0;
   TO_C_STR1(fname, filename);
   fd = open(filename, O_RDONLY);
+  *iio += 100;
   free(filename);
   if(fd < 0){
     *ierr = 2;
@@ -318,10 +322,11 @@ void io_read_header(header_t * hp, int * correct_endianness, fint * ierr, STR_F_
   }
 
   close(fd);
+  *iio++;
 }
 
 void FC_FUNC_(read_binary,READ_BINARY)
-     (const fint * np, const fint * offset, byte * ff, fint * output_type, fint * ierr, STR_F_TYPE fname STR_ARG1)
+     (const fint * np, const fint * offset, byte * ff, fint * output_type, fint * ierr, fint * iio, STR_F_TYPE fname STR_ARG1)
 {
   header_t * hp;
   char * filename;
@@ -337,7 +342,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   fname_len = l1;
   hp = (header_t *) malloc(sizeof(header_t));
   assert(hp != NULL);
-  io_read_header(hp, &correct_endianness, ierr, fname, fname_len);
+  io_read_header(hp, &correct_endianness, ierr, iio, fname, fname_len);
   if (*ierr != 0) {
      free(hp);
      return;
@@ -352,6 +357,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
 
   TO_C_STR1(fname, filename);
   fd = open(filename, O_RDONLY);
+  *iio += 100;
   free(filename);
   
   if(fd < 0){
@@ -378,6 +384,7 @@ void FC_FUNC_(read_binary,READ_BINARY)
   moved = read(fd, read_f, (*np)*size_of[hp->type]);
 
   close(fd);
+  *iio++;
   
   if ( moved != (*np)*size_of[hp->type]) { 
     /* we couldn't read the whole dataset */
@@ -497,7 +504,7 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 
 
 void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
-     (fint * np, fint * type, fint * file_size, fint * ierr, STR_F_TYPE fname STR_ARG1)
+     (fint * np, fint * type, fint * file_size, fint * ierr, fint * iio, STR_F_TYPE fname STR_ARG1)
 {
   header_t * hp;
   int correct_endianness;
@@ -510,10 +517,15 @@ void FC_FUNC_(get_info_binary,GET_INFO_BINARY)
 
   /* read header */
   fname_len = l1;
-  io_read_header(hp, &correct_endianness, ierr, fname, fname_len);
+  io_read_header(hp, &correct_endianness, ierr, iio, fname, fname_len);
 
-  *np  = hp->np;
-  *type = (int) hp->type;
+  if(*ierr == 0) {
+    *np  = hp->np;
+    *type = (int) hp->type;
+  } else {
+    *np = 0;
+    *type = TYPE_NONE;
+  }
   free(hp);
 
   TO_C_STR1(fname, filename);

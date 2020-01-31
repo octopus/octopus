@@ -24,3 +24,7 @@ Carbon.ExtraStates = 2
  2/3 | 2/3 | 2/3
  0 | 0 | 0
 %
+
+# This leads to a warning that we capture
+Hydrogen.EigensolverMaxIter = 5000
+FlushMessages = yes

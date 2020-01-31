@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
+subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
   type(preconditioner_t),   intent(in)    :: pre
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   R_TYPE,                   intent(inout) :: a(:,:)
@@ -60,7 +61,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, a, b, omega)
 
   case default
    write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
-   call messages_fatal(1)
+   call messages_fatal(1, namespace=namespace)
 
   end select
 
@@ -222,12 +223,13 @@ end subroutine X(preconditioner_apply)
 
 ! ----------------------------------------
 
-subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
+subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   type(preconditioner_t),   intent(in)    :: pre
+  type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  type(batch_t),            intent(inout) :: aa
-  type(batch_t),            intent(inout) :: bb
+  class(batch_t),           intent(inout) :: aa
+  class(batch_t),           intent(inout) :: bb
   R_TYPE,         optional, intent(in)    :: omega(:)
 
   integer :: ii
@@ -237,20 +239,22 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, aa, bb, omega)
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
 
+  call aa%check_compatibility_with(bb)
+
   if(pre%which == PRE_FILTER) then
 
     call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
 
   else if(pre%which == PRE_NONE) then
 
-    call batch_copy_data(gr%der%mesh%np, aa, bb)
+    call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
     SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, gr, hm, psia, psib, omega(ii))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, omega(ii))
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)

@@ -63,6 +63,7 @@ program wannier90_interface
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
   use ylm_wannier_oct_m
 
   implicit none
@@ -416,7 +417,7 @@ contains
          sys%st%occ(ist, 1)=M_HALF*loct_erfc((sys%st%eigenval(ist, 1)-scdm_mu) / scdm_sigma)
       end do
 
-      call zscdm_rrqr(sys%st, scdm, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
+      call zscdm_rrqr(scdm, sys%namespace, sys%st, sys%gr%der%mesh, w90_num_bands, .true., 1, jpvt)
 
       ! reset occupations at gamma
       do ist = 1, w90_num_bands
@@ -480,19 +481,19 @@ contains
     end if
 
     ! ---- actual interface work ----------
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_MMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_MMN) /= 0) then
       call create_wannier90_mmn(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_UNK) /= 0) then
       call write_unk(sys%gr%mesh, sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       call create_wannier90_amn(sys%gr%mesh, sys%gr%sb,sys%st)
     end if
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_EIG) /= 0) then
       call create_wannier90_eig()
     end if
 
@@ -621,7 +622,7 @@ contains
       band_index(ii) = itemp
     end do
 
-    if(iand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
+    if(bitand(w90_what, OPTION__WANNIER90FILES__W90_AMN) /= 0) then
       ! parse file again for definitions of projections
       w90_nnkp = io_open(trim(filename), namespace, action='read', position='rewind')
 
@@ -733,7 +734,7 @@ contains
     CMPLX, allocatable :: overlap(:)
     CMPLX, allocatable :: psim(:,:), psin(:,:), phase(:)
     type(profile_t), save :: prof, reduce_prof
-    type(batch_t), pointer :: batch
+    type(wfs_elec_t), pointer :: batch
 
     PUSH_SUB(create_wannier90_mmn)
 
@@ -799,11 +800,11 @@ contains
            if(exclude_list(ist)) cycle
 
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
-           select case(batch_status(batch))
+           select case(batch%status())
            case(BATCH_NOT_PACKED)
              overlap(band_index(ist)) = M_z0
              do idim = 1, st%d%dim
-               ibind = batch_inv_index(batch, (/ist, idim/))
+               ibind = batch%inv_index((/ist, idim/))
                overlap(band_index(ist)) = overlap(band_index(ist)) + &
                     zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
              end do
@@ -1054,7 +1055,8 @@ contains
         SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
         orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
       
-        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED)
+        call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, &
+                                        kpt_max = w90_num_kpts)
       
         SAFE_DEALLOCATE_A(rr)
       end do

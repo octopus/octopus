@@ -23,6 +23,7 @@ module ps_in_grid_oct_m
   use global_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -138,10 +139,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_in_grid_vlocal(ps, l_loc, rcore)
+  subroutine ps_in_grid_vlocal(ps, l_loc, rcore, namespace)
     type(ps_in_grid_t), intent(inout) :: ps
     integer,            intent(in)    :: l_loc
     FLOAT,              intent(in)    :: rcore
+    type(namespace_t),  intent(in)    :: namespace
 
     integer :: ir
     FLOAT :: a, b, qtot
@@ -155,7 +157,7 @@ contains
     else if(l_loc == -1) then
       if(ps%g%flavor /= LOGRID_PSF) then
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       a = CNST(1.82) / rcore
@@ -310,8 +312,9 @@ contains
 
   ! ---------------------------------------------------------
   !> checks normalization of the pseudo wavefunctions
-  subroutine ps_in_grid_check_rphi(ps)
+  subroutine ps_in_grid_check_rphi(ps, namespace)
     type(ps_in_grid_t), intent(in) :: ps
+    type(namespace_t),  intent(in) :: namespace
     
     integer :: l
     FLOAT   :: nrm
@@ -325,7 +328,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", l-1, ' is not normalized.'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
     end do
 

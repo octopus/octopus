@@ -242,8 +242,6 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #endif
   (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
   y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
-
-  call accel_finish()
 #endif
 
 #ifdef HAVE_OPENCL
@@ -289,8 +287,6 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
 #ifdef HAVE_CUDA
   call aX(cuda_blas_,nrm2)(handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
     res = res%mem, offres = offres)
-
-  call accel_finish()
 #endif
 
 

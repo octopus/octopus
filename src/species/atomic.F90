@@ -22,6 +22,7 @@ module atomic_oct_m
   use global_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use XC_F90(lib_m)
 

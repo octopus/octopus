@@ -51,6 +51,7 @@ module sternheimer_oct_m
   use unit_system_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
 
@@ -248,7 +249,7 @@ contains
       call scf_tol_init(this%scf_tol, sys%namespace, sys%st%qtot)
     end if
 
-    if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks)
+    if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
 
     nullify(this%drhs)
     nullify(this%zrhs)
@@ -277,8 +278,9 @@ contains
 
 
   !-----------------------------------------------------------
-  subroutine sternheimer_build_fxc(this, mesh, st, ks)
+  subroutine sternheimer_build_fxc(this, namespace, mesh, st, ks)
     type(sternheimer_t), intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     type(v_ks_t),        intent(in)    :: ks
@@ -292,7 +294,7 @@ contains
 
     SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
     call states_elec_total_density(st, mesh, rho)
-    call xc_get_fxc(ks%xc, mesh, rho, st%d%ispin, this%fxc)
+    call xc_get_fxc(ks%xc, mesh, namespace, rho, st%d%ispin, this%fxc)
     SAFE_DEALLOCATE_A(rho)
 
     POP_SUB(sternheimer_build_fxc)
@@ -301,8 +303,9 @@ contains
 
 
   !-----------------------------------------------------------
-  subroutine sternheimer_build_kxc(this, mesh, st, ks)
+  subroutine sternheimer_build_kxc(this, namespace, mesh, st, ks)
     type(sternheimer_t), intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
     type(v_ks_t),        intent(in)    :: ks
@@ -317,7 +320,7 @@ contains
 
       SAFE_ALLOCATE(rho(1:mesh%np, 1:st%d%nspin))
       call states_elec_total_density(st, mesh, rho)
-      call xc_get_kxc(ks%xc, mesh, rho, st%d%ispin, this%kxc)
+      call xc_get_kxc(ks%xc, mesh, namespace, rho, st%d%ispin, this%kxc)
       SAFE_DEALLOCATE_A(rho)
     end if
 

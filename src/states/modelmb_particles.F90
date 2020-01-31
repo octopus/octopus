@@ -166,12 +166,12 @@ contains
     if (this%ntype_of_particle > this%nparticle) then
       write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be <= Number of modelmb particles ', &
         this%ntype_of_particle, this%nparticle
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     
     if (this%ndim*this%nparticle /= gr%sb%dim) then
       message(1) = ' Number of modelmb particles * dimension of modelmb space must be = Ndim'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! read in blocks

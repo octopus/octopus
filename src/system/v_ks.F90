@@ -36,6 +36,7 @@ module v_ks_oct_m
   use kick_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -71,6 +72,7 @@ module v_ks_oct_m
   private
   public ::             &
     v_ks_t,             &
+    v_ks_nullify,       &
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
@@ -134,6 +136,26 @@ module v_ks_oct_m
   end type v_ks_t
 
 contains
+ 
+  ! ---------------------------------------------------------
+  subroutine v_ks_nullify(ks)
+    type(v_ks_t),            intent(inout) :: ks
+
+    PUSH_SUB(v_ks_nullify)
+
+    ks%theory_level = -1
+    ks%frozen_hxc = .false.
+    ks%xc_family = 0
+    ks%xc_flags = 0
+    ks%sic_type = -1
+    ks%calculate_current = .false.
+    ks%vdw_correction = -1
+    ks%vdw_self_consistent = .false.
+    ks%include_td_field = .false.
+
+    POP_SUB(v_ks_nullify)
+  end subroutine v_ks_nullify
+  
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, namespace, gr, st, geo, mc)
@@ -253,7 +275,7 @@ contains
       (c_id /= pseudo_c_functional .and. pseudo_c_functional /= PSEUDO_EXCHANGE_ANY)) then
       call messages_write('The XCFunctional that you selected does not match the one used', new_line = .true.)
       call messages_write('to generate the pseudopotentials.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
 
     ! FIXME: we rarely need this. We should only parse when necessary.
@@ -329,11 +351,11 @@ contains
       if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
         call messages_experimental("Hartree in fully periodic system")
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree with k-points")
+        call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree-Fock with k-points")
+        call messages_not_implemented("Hartree-Fock with k-points", namespace=namespace)
       
       ks%sic_type = SIC_NONE
 
@@ -370,7 +392,7 @@ contains
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh")
+        if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
         call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
       end if
@@ -382,13 +404,15 @@ contains
     end select
 
     if (st%d%ispin == SPINORS) then
-      if(bitand(ks%xc_family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA) /= 0) call messages_not_implemented("GGA with spinors")
-      if(bitand(ks%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) call messages_not_implemented("MGGA with spinors")
+      if(bitand(ks%xc_family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA) /= 0) &
+        call messages_not_implemented("GGA with spinors", namespace=namespace)
+      if(bitand(ks%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+        call messages_not_implemented("MGGA with spinors", namespace=namespace)
     end if
 
     ks%frozen_hxc = .false.
 
-    call v_ks_write_info(ks, stdout)
+    call v_ks_write_info(ks, stdout, namespace)
 
     ks%gr => gr
     ks%calc%calculating = .false.
@@ -438,13 +462,13 @@ contains
 
         if(ks%gr%sb%dim /= 3) then
           call messages_write('vdw_d3 can only be used in 3-dimensional systems')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
         
         do iatom = 1, geo%natoms
           if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
             call messages_write('vdw_d3 is not implemented when non-atomic species are present')
-            call messages_fatal()
+            call messages_fatal(namespace=namespace)
           end if
         end do
          
@@ -488,14 +512,14 @@ contains
           call messages_write('XCFunctional.  Please select a different XCFunctional, or select a')
           call messages_new_line()
           call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
 
         if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
           call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
           call messages_new_line()
           call messages_write('to be periodic in three dimensions.')
-          call messages_warning()
+          call messages_warning(namespace=namespace)
         end if
           
         call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
@@ -531,7 +555,7 @@ contains
 
         if(xf == PSEUDO_EXCHANGE_UNKNOWN .or. cf == PSEUDO_CORRELATION_UNKNOWN) then
           call messages_write("Unknown XC functional for species '"//trim(species_label(geo%species(ispecies)))//"'")
-          call messages_warning()
+          call messages_warning(namespace=namespace)
           cycle
         end if
 
@@ -540,7 +564,7 @@ contains
         else
           if(xf /= x_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
-            call messages_warning()
+            call messages_warning(namespace=namespace)
             warned_inconsistent = .true.
           end if
         end if
@@ -550,7 +574,7 @@ contains
         else
           if(cf /= c_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
-            call messages_warning()
+            call messages_warning(namespace=namespace)
             warned_inconsistent = .true.
           end if
         end if
@@ -597,25 +621,26 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_write_info(ks, iunit)
-    type(v_ks_t), intent(in) :: ks
-    integer,      intent(in) :: iunit
+  subroutine v_ks_write_info(ks, iunit, namespace)
+    type(v_ks_t),      intent(in) :: ks
+    integer,           intent(in) :: iunit
+    type(namespace_t), intent(in) :: namespace
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     PUSH_SUB(v_ks_write_info)
 
-    call messages_print_stress(iunit, "Theory Level")
+    call messages_print_stress(iunit, "Theory Level", namespace=namespace)
     call messages_print_var_option(iunit, "TheoryLevel", ks%theory_level)
 
     select case(ks%theory_level)
     case(HARTREE_FOCK)
       write(iunit, '(1x)')
-      call xc_write_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit, namespace)
 
     case(KOHN_SHAM_DFT)
       write(iunit, '(1x)')
-      call xc_write_info(ks%xc, iunit)
+      call xc_write_info(ks%xc, iunit, namespace)
 
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
@@ -629,7 +654,7 @@ contains
 
     end select
 
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(v_ks_write_info)
   end subroutine v_ks_write_info
@@ -659,7 +684,7 @@ contains
     call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
-      call energy_calc_eigenvalues(hm, ks%gr%der, st)
+      call energy_calc_eigenvalues(namespace, hm, ks%gr%der, st)
     end if
 
     POP_SUB(v_ks_calc)
@@ -687,7 +712,10 @@ contains
 
     PUSH_SUB(v_ks_calc_start)
 
-    calc_current_ = optional_default(calc_current, .true.)
+    calc_current_ = optional_default(calc_current, .true.)  &
+                   .and. ks%calculate_current &
+                   .and. states_are_complex(st) &
+                   .or. hamiltonian_elec_needs_current(hm, states_are_real(st))
 
     call profiling_in(prof, "KOHN_SHAM_CALC")
 
@@ -713,7 +741,10 @@ contains
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
       if(optional_default(calc_berry, .true.)) then
-        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
+        if(st%parallel_in_states) then
+          call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
+        end if
+        call berry_potential(st, namespace, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
         ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
@@ -722,9 +753,9 @@ contains
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
-      if(ks%calculate_current .and. calc_current_ ) then
+      if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
       end if
 
       POP_SUB(v_ks_calc_start)
@@ -757,9 +788,9 @@ contains
       ks%calc%total_density_alloc = .false.
     end if
 
-    if(ks%calculate_current .and. calc_current_ ) then
+    if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
     nullify(ks%calc%hf_st) 
@@ -773,7 +804,7 @@ contains
           call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
           call messages_new_line()
           call messages_write("or disable acceleration using 'DisableAccel = yes'.")
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end if
         call states_elec_parallel_remote_access_start(ks%calc%hf_st)
       end if
@@ -843,10 +874,10 @@ contains
       PUSH_SUB(add_adsic)
       
       if (family_is_mgga(hm%xc%family)) then
-        call messages_not_implemented('ADSIC with MGGAs')
+        call messages_not_implemented('ADSIC with MGGAs', namespace=namespace)
       end if
       if (st%d%ispin == SPINORS) then
-        call messages_not_implemented('ADSIC with non-collinear spin')      
+        call messages_not_implemented('ADSIC with non-collinear spin', namespace=namespace)
       end if
 
       SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
@@ -1038,11 +1069,13 @@ contains
         end do
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
-        if(states_are_real(st)) then
-          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
-        else
-          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
-          ks%calc%energy%int_dft_u   = real(ctmp)
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          if(states_are_real(st)) then
+            ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
+          else
+            ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
+            ks%calc%energy%int_dft_u   = real(ctmp, REAL_PRECISION)
+          end if
         end if
 
       end if
