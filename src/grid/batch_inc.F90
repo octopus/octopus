@@ -102,8 +102,6 @@ end subroutine X(batch_build_indices)
 subroutine X(batch_allocate)(this)
   class(batch_t),    intent(inout) :: this
 
-  integer :: ist
-
   PUSH_SUB(X(batch_allocate))
 
   if(this%special_memory) then
