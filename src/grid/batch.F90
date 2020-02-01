@@ -51,6 +51,7 @@ module batch_oct_m
     integer,           allocatable, public :: ist(:)
 
     logical                                :: is_allocated
+    logical                                :: own_memory !< does the batch own the memory or is it foreign memory?
     logical                                :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
@@ -81,14 +82,14 @@ module batch_oct_m
     type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
 
   contains
-    procedure ::  dallocate => dbatch_allocate
-    procedure ::  zallocate => zbatch_allocate
+    procedure, private ::  dallocate => dbatch_allocate
+    procedure, private ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: clone_to => batch_clone_to
     procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
-    procedure :: deallocate => batch_deallocate
+    procedure, private :: deallocate => batch_deallocate
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
@@ -135,7 +136,7 @@ contains
 
     PUSH_SUB(batch_end)
 
-    if(this%is_allocated .and. this%is_packed()) then
+    if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
       this%in_buffer_count = 1
@@ -218,6 +219,7 @@ contains
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
+    this%own_memory = .false.
     this%mirror = .false.
     this%special_memory = .false.
     this%nst = nst
@@ -516,11 +518,11 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%is_allocated .and. .not. this%mirror) call batch_allocate(this)
+        if(this%own_memory .and. .not. this%mirror) call batch_allocate(this)
         
         copy_ = .true.
         if(present(copy)) copy_ = copy
-        if(this%is_allocated .and. .not. this%mirror) copy_ = .true.
+        if(this%own_memory .and. .not. this%mirror) copy_ = .true.
         
         if(copy_) call batch_sync(this)
         

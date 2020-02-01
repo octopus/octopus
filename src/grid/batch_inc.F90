@@ -116,6 +116,7 @@ subroutine X(batch_allocate)(this)
   this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
+  this%own_memory = .true.
   
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)
@@ -134,6 +135,7 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   call batch_init_empty(this, dim, st_end - st_start + 1, np)
   this%mirror = optional_default(mirror, .false.)
   this%special_memory = optional_default(special, .false.)
+
   call this%X(allocate)()
   call X(batch_build_indices)(this, st_start, st_end)
 
