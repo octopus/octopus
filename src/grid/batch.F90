@@ -466,7 +466,7 @@ contains
         select case(source)
         case(BATCH_NOT_PACKED)
           ! copy from unpacked host array to device
-          call batch_write_to_opencl_buffer(this)
+          call batch_write_unpacked_to_device(this)
         case(BATCH_PACKED)
           ! copy from packed host array to device -> not yet implemented
           ASSERT(source /= BATCH_PACKED)
@@ -551,7 +551,7 @@ contains
             select case(target)
             ! unpack from packed_device to unpacked_host
             case(BATCH_NOT_PACKED)
-              call batch_read_from_opencl_buffer(this)
+              call batch_read_device_to_unpacked(this)
             ! unpack from packed_device to packed_host -> not yet implemented
             case(BATCH_PACKED)
               ASSERT(target /= BATCH_PACKED)
@@ -589,7 +589,7 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_write_to_opencl_buffer(this)
+  subroutine batch_write_unpacked_to_device(this)
     class(batch_t),      intent(inout)  :: this
 
     integer :: ist, ist2, unroll
@@ -597,7 +597,7 @@ contains
     type(profile_t), save :: prof_pack
     type(accel_kernel_t), pointer :: kernel
 
-    PUSH_SUB(batch_write_to_opencl_buffer)
+    PUSH_SUB(batch_write_unpacked_to_device)
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -661,12 +661,12 @@ contains
 
     end if
 
-    POP_SUB(batch_write_to_opencl_buffer)
-  end subroutine batch_write_to_opencl_buffer
+    POP_SUB(batch_write_unpacked_to_device)
+  end subroutine batch_write_unpacked_to_device
 
   ! ------------------------------------------------------------------
 
-  subroutine batch_read_from_opencl_buffer(this)
+  subroutine batch_read_device_to_unpacked(this)
     class(batch_t),      intent(inout) :: this
 
     integer :: ist, ist2, unroll
@@ -674,7 +674,7 @@ contains
     type(accel_kernel_t), pointer :: kernel
     type(profile_t), save :: prof_unpack
 
-    PUSH_SUB(batch_read_from_opencl_buffer)
+    PUSH_SUB(batch_read_device_to_unpacked)
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -732,8 +732,8 @@ contains
       call accel_release_buffer(tmp)
     end if
 
-    POP_SUB(batch_read_from_opencl_buffer)
-  end subroutine batch_read_from_opencl_buffer
+    POP_SUB(batch_read_device_to_unpacked)
+  end subroutine batch_read_device_to_unpacked
 
 ! ------------------------------------------------------
 integer function batch_inv_index(this, cind) result(index)
