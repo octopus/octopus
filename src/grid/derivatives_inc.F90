@@ -342,7 +342,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
 
-  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :)
+  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :), res(:), resgrad(:, :)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist
   type(batch_t) :: ffb, opffb
@@ -357,6 +357,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))
   SAFE_ALLOCATE(gradff(1:this%mesh%np, 1:this%mesh%sb%dim))
+  SAFE_ALLOCATE(res(1:this%mesh%np_part))
+  SAFE_ALLOCATE(resgrad(1:this%mesh%np, 1:this%mesh%sb%dim))
 
 #ifdef R_TREAL
 #ifdef SINGLE_PRECISION
@@ -408,9 +410,9 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     call batch_init(opffb, 1, blocksize)
     call opffb%X(allocate)(1, blocksize, this%mesh%np)
 
-    forall(ist = 1:blocksize, ip = 1:this%mesh%np_part)
-      ffb%X(ff_linear)(ip, ist) = ff(ip)
-    end forall
+    do ist = 1, blocksize
+      call batch_set_state(ffb, ist, this%mesh%np_part, ff)
+    end do
 
     if(packstates) then
       call ffb%do_pack()
@@ -427,12 +429,13 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     end do
     etime = (loct_clock() - stime)/dble(repetitions)
 
-    if(packstates) then
-      call opffb%do_unpack()
-    end if
+    call batch_get_state(opffb, blocksize, this%mesh%np, res)
+
+    call ffb%end()
+    call opffb%end()
 
     forall(ip = 1:this%mesh%np)
-      opffb%X(ff_linear)(ip, blocksize) = CNST(2.0)*opffb%X(ff_linear)(ip, blocksize) - &
+      res(ip) = CNST(2.0)*res(ip) - &
         (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
         - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
     end forall
@@ -440,7 +443,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Laplacian ', trim(type),  &
       ' bsize = ', blocksize,    &
-      ' , error = ', X(mf_nrm2)(this%mesh, opffb%X(ff_linear)(:, blocksize)), &
+      ' , error = ', X(mf_nrm2)(this%mesh, res), &
       ' , Gflops = ',  &
 #ifdef R_TREAL
       blocksize*this%mesh%np*CNST(2.0)*this%lapl%stencil%size/(etime*CNST(1.0e9))
@@ -449,9 +452,6 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 #endif
 
     call messages_info(1)
-
-    call ffb%end()
-    call opffb%end()
 
     blocksize = 2*blocksize
     if(blocksize > max_blocksize) exit
@@ -469,9 +469,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
 
     do ist = 1, blocksize
-      do ip = 1,this%mesh%np_part
-        ffb%X(ff_linear)(ip, ist) = ff(ip)
-      end do
+      call batch_set_state(ffb, ist, this%mesh%np_part, ff)
     end do
 
     if(packstates) then
@@ -492,23 +490,25 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     end do
     etime = (loct_clock() - stime)/dble(repetitions)
 
-    if(packstates) then
-      do idir = 1, this%mesh%sb%dim
-        call gradffb(idir)%do_unpack()
-      end do
-    end if
+    do idir = 1, this%mesh%sb%dim
+      call batch_get_state(gradffb(idir), blocksize, this%mesh%np, resgrad(:, idir))
+    end do
 
-    do ip = 1, this%mesh%np
-      do idir = 1, this%mesh%sb%dim
-        gradffb(idir)%X(ff_linear)(ip, blocksize) = &
-          gradffb(idir)%X(ff_linear)(ip, blocksize) - gradff(ip, idir)
+    call ffb%end()
+    do idir = 1, this%mesh%sb%dim
+      call gradffb(idir)%end()
+    end do
+
+    do idir = 1, this%mesh%sb%dim
+      do ip = 1, this%mesh%np
+        resgrad(ip, idir) = resgrad(ip, idir) - gradff(ip, idir)
       end do
     end do
 
     write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Batch gradient ', trim(type),  &
       ' bsize = ', blocksize,    &
-      ' , error = ', X(mf_nrm2)(this%mesh, gradffb(1)%X(ff_linear)(:, blocksize)), &
+      ' , error (x direction) = ', X(mf_nrm2)(this%mesh, resgrad(:, 1)), &
       ' , Gflops = ',  &
 #ifdef R_TREAL
       blocksize*this%mesh%np*CNST(2.0)*this%grad(1)%stencil%size*this%mesh%sb%dim/(etime*CNST(1.0e9))
@@ -516,11 +516,6 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
       blocksize*this%mesh%np*CNST(4.0)*this%grad(1)%stencil%size*this%mesh%sb%dim/(etime*CNST(1.0e9))
 #endif
     call messages_info(1)
-
-    call ffb%end()
-    do idir = 1, this%mesh%sb%dim
-      call gradffb(idir)%end()
-    end do
 
     blocksize = 2*blocksize
     if(blocksize > max_blocksize) exit
@@ -547,6 +542,8 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(opff)
   SAFE_DEALLOCATE_A(gradff)
+  SAFE_DEALLOCATE_A(res)
+  SAFE_DEALLOCATE_A(resgrad)
 
 end subroutine X(derivatives_test)
 
