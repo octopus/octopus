@@ -82,14 +82,14 @@ module batch_oct_m
     type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
 
   contains
-    procedure, private ::  dallocate => dbatch_allocate
-    procedure, private ::  zallocate => zbatch_allocate
+    procedure, private :: dallocate_unpacked_host => dbatch_allocate_unpacked_host
+    procedure, private :: zallocate_unpacked_host => zbatch_allocate_unpacked_host
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: clone_to => batch_clone_to
     procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
-    procedure, private :: deallocate => batch_deallocate
+    procedure, private :: deallocate_unpacked_host => batch_deallocate_unpacked_host
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
@@ -157,7 +157,7 @@ contains
     end if
 
     if(this%is_allocated) then
-      call this%deallocate()
+      call this%deallocate_unpacked_host()
     end if
 
     SAFE_DEALLOCATE_P(this%ist_idim_index)
@@ -167,10 +167,10 @@ contains
   end subroutine batch_end
 
   !--------------------------------------------------------------
-  subroutine batch_deallocate(this)
+  subroutine batch_deallocate_unpacked_host(this)
     class(batch_t),  intent(inout) :: this
     
-    PUSH_SUB(batch_deallocate)
+    PUSH_SUB(batch_deallocate_unpacked_host)
 
     this%is_allocated = .false.
 
@@ -190,23 +190,23 @@ contains
     nullify(this%zff)
     nullify(this%zff_linear)
     
-    POP_SUB(batch_deallocate)
-  end subroutine batch_deallocate
+    POP_SUB(batch_deallocate_unpacked_host)
+  end subroutine batch_deallocate_unpacked_host
 
   !--------------------------------------------------------------
-  subroutine batch_allocate(this)
+  subroutine batch_allocate_unpacked_host(this)
     type(batch_t),  intent(inout) :: this
 
-    PUSH_SUB(batch_allocate)
+    PUSH_SUB(batch_allocate_unpacked_host)
     
     if(this%type() == TYPE_FLOAT) then
-      call this%dallocate()
+      call this%dallocate_unpacked_host()
     else if(this%type() == TYPE_CMPLX) then
-      call this%zallocate()
+      call this%zallocate_unpacked_host()
     end if
 
-    POP_SUB(batch_allocate)
-  end subroutine batch_allocate
+    POP_SUB(batch_allocate_unpacked_host)
+  end subroutine batch_allocate_unpacked_host
 
   !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst, np)
@@ -422,7 +422,7 @@ contains
         call profiling_out(prof_copy)
       end if
 
-      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate(this)
+      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_unpacked_host(this)
 
     end if
 
@@ -493,7 +493,7 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%own_memory .and. .not. this%mirror) call batch_allocate(this)
+        if(this%own_memory .and. .not. this%mirror) call batch_allocate_unpacked_host(this)
         
         copy_ = .true.
         if(present(copy)) copy_ = copy

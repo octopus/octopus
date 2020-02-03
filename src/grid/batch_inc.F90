@@ -100,10 +100,10 @@ end subroutine X(batch_build_indices)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this)
+subroutine X(batch_allocate_unpacked_host)(this)
   class(batch_t),    intent(inout) :: this
 
-  PUSH_SUB(X(batch_allocate))
+  PUSH_SUB(X(batch_allocate_unpacked_host))
 
   if(this%special_memory) then
     call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), &
@@ -117,8 +117,8 @@ subroutine X(batch_allocate)(this)
   this%is_allocated = .true.
   this%own_memory = .true.
   
-  POP_SUB(X(batch_allocate))
-end subroutine X(batch_allocate)
+  POP_SUB(X(batch_allocate_unpacked_host))
+end subroutine X(batch_allocate_unpacked_host)
 
 subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   class(batch_t),    intent(inout) :: this
@@ -135,7 +135,7 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   this%mirror = optional_default(mirror, .false.)
   this%special_memory = optional_default(special, .false.)
 
-  call this%X(allocate)()
+  call this%X(allocate_unpacked_host)()
   call X(batch_build_indices)(this, st_start, st_end)
 
   POP_SUB(X(batch_init))
