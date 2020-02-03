@@ -82,19 +82,11 @@ module batch_oct_m
     type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
 
   contains
-    procedure, private :: dallocate_unpacked_host => dbatch_allocate_unpacked_host
-    procedure, private :: zallocate_unpacked_host => zbatch_allocate_unpacked_host
-    procedure, private :: allocate_unpacked_host => batch_allocate_unpacked_host
-    procedure, private :: dallocate_packed_host => dbatch_allocate_packed_host
-    procedure, private :: zallocate_packed_host => zbatch_allocate_packed_host
-    procedure, private :: allocate_packed_host => batch_allocate_packed_host
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: clone_to => batch_clone_to
     procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
-    procedure, private :: deallocate_unpacked_host => batch_deallocate_unpacked_host
-    procedure, private :: deallocate_packed_host => batch_deallocate_packed_host
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
@@ -109,6 +101,16 @@ module batch_oct_m
     procedure :: status => batch_status
     procedure :: type => batch_type
     procedure :: type_as_int => batch_type_as_integer
+    procedure, private :: dallocate_unpacked_host => dbatch_allocate_unpacked_host
+    procedure, private :: zallocate_unpacked_host => zbatch_allocate_unpacked_host
+    procedure, private :: allocate_unpacked_host => batch_allocate_unpacked_host
+    procedure, private :: dallocate_packed_host => dbatch_allocate_packed_host
+    procedure, private :: zallocate_packed_host => zbatch_allocate_packed_host
+    procedure, private :: allocate_packed_host => batch_allocate_packed_host
+    procedure, private :: allocate_packed_device => batch_allocate_packed_device
+    procedure, private :: deallocate_unpacked_host => batch_deallocate_unpacked_host
+    procedure, private :: deallocate_packed_host => batch_deallocate_packed_host
+    procedure, private :: deallocate_packed_device => batch_deallocate_packed_device
   end type batch_t
 
   !--------------------------------------------------------------
@@ -146,7 +148,7 @@ contains
       this%in_buffer_count = 1
 
       if(accel_is_enabled()) then
-        call accel_release_buffer(this%ff_device)
+        call this%deallocate_packed_device()
       else
         call this%deallocate_packed_host()
       end if
@@ -215,6 +217,17 @@ contains
   end subroutine batch_deallocate_packed_host
 
   !--------------------------------------------------------------
+  subroutine batch_deallocate_packed_device(this)
+    class(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_deallocate_packed_device)
+
+    call accel_release_buffer(this%ff_device)
+
+    POP_SUB(batch_deallocate_packed_device)
+  end subroutine batch_deallocate_packed_device
+
+  !--------------------------------------------------------------
   subroutine batch_allocate_unpacked_host(this)
     class(batch_t),  intent(inout) :: this
 
@@ -243,6 +256,17 @@ contains
 
     POP_SUB(batch_allocate_packed_host)
   end subroutine batch_allocate_packed_host
+
+  !--------------------------------------------------------------
+  subroutine batch_allocate_packed_device(this)
+    class(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_allocate_packed_device)
+
+    call accel_create_buffer(this%ff_device, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack_size))
+
+    POP_SUB(batch_allocate_packed_device)
+  end subroutine batch_allocate_packed_device
 
   !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst, np)
@@ -435,7 +459,7 @@ contains
 
       if(accel_is_enabled()) then
         this%status_of = BATCH_DEVICE_PACKED
-        call accel_create_buffer(this%ff_device, ACCEL_MEM_READ_WRITE, this%type(), product(this%pack_size))
+        call this%allocate_packed_device()
       else
         this%status_of = BATCH_PACKED
         this%layout = BATCH_PACKED
@@ -537,7 +561,7 @@ contains
         this%in_buffer_count = 1
 
         if(accel_is_enabled()) then
-          call accel_release_buffer(this%ff_device)
+          call this%deallocate_packed_device()
         else
           call this%deallocate_packed_host()
         end if
