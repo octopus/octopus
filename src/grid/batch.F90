@@ -58,6 +58,7 @@ module batch_oct_m
     integer,                        public :: nst_linear
 
     integer                                :: status_of
+    type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     logical :: special_memory
 
@@ -75,11 +76,6 @@ module batch_oct_m
     integer                   , public :: pack_size_real(1:2)
 
     type(accel_mem_t)         , public    :: ff_device
-
-
-    integer, public :: layout !< either BATCH_NOT_PACKED or BATCH_PACKED
-    integer, public :: location !< either BATCH_HOST or BATCH_DEVICE
-    type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
 
   contains
     procedure :: check_compatibility_with => batch_check_compatibility_with
@@ -126,9 +122,7 @@ module batch_oct_m
   integer, public, parameter :: &
     BATCH_NOT_PACKED     = 0,   &
     BATCH_PACKED         = 1,   &
-    BATCH_DEVICE_PACKED  = 2,   &
-    BATCH_HOST           = 3,   &
-    BATCH_DEVICE         = 4
+    BATCH_DEVICE_PACKED  = 2
 
   integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
                                                     !! of the buffer used to copy states to the opencl device.
@@ -297,8 +291,6 @@ contains
 
     nullify(this%dff, this%zff, this%dff_linear, this%zff_linear)
     nullify(this%dff_pack, this%zff_pack)
-    this%layout = BATCH_NOT_PACKED
-    this%location = BATCH_HOST
 
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
@@ -453,7 +445,6 @@ contains
         call this%allocate_packed_device()
       else
         this%status_of = BATCH_PACKED
-        this%layout = BATCH_PACKED
         call this%allocate_packed_host()
       end if
 
