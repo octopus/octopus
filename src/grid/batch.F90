@@ -58,6 +58,7 @@ module batch_oct_m
     integer,                        public :: nst_linear
 
     integer                                :: status_of
+    integer                                :: status_host
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
     logical :: special_memory
@@ -139,6 +140,7 @@ contains
     if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
+      this%status_host = BATCH_NOT_PACKED
       this%in_buffer_count = 1
 
       if(accel_is_enabled()) then
@@ -284,6 +286,7 @@ contains
     this%np = np
     this%in_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
+    this%status_host = BATCH_NOT_PACKED
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -441,6 +444,7 @@ contains
         call this%allocate_packed_device()
       else
         this%status_of = BATCH_PACKED
+        this%status_host = BATCH_PACKED
         call this%allocate_packed_host()
       end if
 
@@ -505,6 +509,7 @@ contains
 
         ! now deallocate
         this%status_of = BATCH_NOT_PACKED
+        this%status_host = BATCH_NOT_PACKED
         this%in_buffer_count = 1
 
         if(accel_is_enabled()) then
