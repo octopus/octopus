@@ -429,15 +429,11 @@ contains
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
 
-    logical :: copy_
     type(profile_t), save :: prof, prof_copy
 
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_DO_PACK")
-
-    copy_ = .true.
-    if(present(copy)) copy_ = copy
 
     if(.not. this%is_packed()) then
       if(accel_is_enabled()) then
@@ -448,7 +444,7 @@ contains
         call this%allocate_packed_host()
       end if
 
-      if(copy_) then
+      if(optional_default(copy, .true.)) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
         if(accel_is_enabled()) then
           call batch_write_to_opencl_buffer(this)
