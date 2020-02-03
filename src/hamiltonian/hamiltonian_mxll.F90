@@ -421,8 +421,6 @@ contains
 
     ASSERT(psib%status() == hpsib%status())
 
-    ASSERT(psib%is_ok())
-    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment

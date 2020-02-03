@@ -36,20 +36,22 @@ module batch_oct_m
   private
   public ::                         &
     batch_t,                        &
-    batch_init
+    batch_init,                     &
+    dbatch_init,                    &
+    zbatch_init
   
   type batch_t
     private
     integer,                        public :: nst
-    integer                                :: current
     integer,                        public :: dim
-    integer                                :: max_size
+    integer                                :: np
 
     integer                                :: ndims
     integer,               pointer         :: ist_idim_index(:, :)
     integer,           allocatable, public :: ist(:)
 
     logical                                :: is_allocated
+    logical                                :: own_memory !< does the batch own the memory or is it foreign memory?
     logical                                :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
@@ -80,19 +82,18 @@ module batch_oct_m
     type(type_t) :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
 
   contains
-    procedure ::  dallocate => dbatch_allocate
-    procedure ::  zallocate => zbatch_allocate
+    procedure, private ::  dallocate => dbatch_allocate
+    procedure, private ::  zallocate => zbatch_allocate
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: clone_to => batch_clone_to
     procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
-    procedure :: deallocate => batch_deallocate
+    procedure, private :: deallocate => batch_deallocate
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
     procedure :: inv_index => batch_inv_index
-    procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
     procedure :: ist_idim_to_linear => batch_ist_idim_to_linear
     procedure :: linear_to_idim => batch_linear_to_idim
@@ -107,13 +108,12 @@ module batch_oct_m
 
   !--------------------------------------------------------------
   interface batch_init
-    module procedure  batch_init_empty
-    module procedure dbatch_init_contiguous
-    module procedure zbatch_init_contiguous
-    module procedure dbatch_init_contiguous_2d
-    module procedure zbatch_init_contiguous_2d
-    module procedure dbatch_init_single
-    module procedure zbatch_init_single
+    module procedure dbatch_init_with_memory_3
+    module procedure zbatch_init_with_memory_3
+    module procedure dbatch_init_with_memory_2
+    module procedure zbatch_init_with_memory_2
+    module procedure dbatch_init_with_memory_1
+    module procedure zbatch_init_with_memory_1
   end interface batch_init
 
   integer, public, parameter :: &
@@ -135,7 +135,7 @@ contains
 
     PUSH_SUB(batch_end)
 
-    if(this%is_allocated .and. this%is_packed()) then
+    if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
       this%in_buffer_count = 1
@@ -174,8 +174,6 @@ contains
 
     this%is_allocated = .false.
 
-    this%current = 1
-    
     if(this%special_memory) then
       if(associated(this%dff)) then
         call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
@@ -196,67 +194,40 @@ contains
   end subroutine batch_deallocate
 
   !--------------------------------------------------------------
-
-  subroutine batch_deallocate_temporary(this)
-    type(batch_t),  intent(inout) :: this
-    
-    PUSH_SUB(batch_deallocate_temporary)
-
-    if(this%special_memory) then
-      if(associated(this%dff)) then
-        call deallocate_hardware_aware(c_loc(this%dff(1,1,1)))
-        nullify(this%dff)
-        nullify(this%dff_linear)
-      end if
-      if(associated(this%zff)) then
-        call deallocate_hardware_aware(c_loc(this%zff(1,1,1)))
-        nullify(this%zff)
-        nullify(this%zff_linear)
-      end if
-    else
-      SAFE_DEALLOCATE_P(this%dff)
-      SAFE_DEALLOCATE_P(this%zff)
-      nullify(this%dff_linear)
-      nullify(this%zff_linear)
-    end if
-        
-    POP_SUB(batch_deallocate_temporary)
-  end subroutine batch_deallocate_temporary
-  
-  !--------------------------------------------------------------
-  subroutine batch_allocate_temporary(this)
+  subroutine batch_allocate(this)
     type(batch_t),  intent(inout) :: this
 
-    PUSH_SUB(batch_allocate_temporary)
+    PUSH_SUB(batch_allocate)
     
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_allocate_temporary(this)
+      call this%dallocate()
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_allocate_temporary(this)
+      call this%zallocate()
     end if
 
-    POP_SUB(batch_allocate_temporary)
-  end subroutine batch_allocate_temporary
+    POP_SUB(batch_allocate)
+  end subroutine batch_allocate
 
   !--------------------------------------------------------------
-  subroutine batch_init_empty (this, dim, nst)
+  subroutine batch_init_empty (this, dim, nst, np)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
+    integer,       intent(in)    :: np
     
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
+    this%own_memory = .false.
     this%mirror = .false.
     this%special_memory = .false.
     this%nst = nst
     this%dim = dim
-    this%current = 1
     this%type_of = TYPE_NONE
     
     this%nst_linear = nst*dim
 
-    this%max_size = 0
+    this%np = np
     this%in_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
 
@@ -271,26 +242,6 @@ contains
 
     POP_SUB(batch_init_empty)
   end subroutine batch_init_empty
-
-  !--------------------------------------------------------------
-  logical function batch_is_ok(this) result(ok)
-    class(batch_t), intent(in)   :: this
-
-    ! no push_sub, called too frequently
-    
-    ok = this%nst_linear >= 1
-    if(ok .and. .not. this%is_packed()) then
-      if(this%type() == TYPE_FLOAT) then
-        ok = ok .and. associated(this%dff_linear)
-        ok = ok .and. ubound(this%dff_linear, dim=2) == this%nst_linear
-      else if(this%type() == TYPE_CMPLX) then
-        ok = ok .and. associated(this%zff_linear)
-        ok = ok .and. ubound(this%zff_linear, dim=2) == this%nst_linear
-      else
-        ok = .false.
-      end if
-    end if
-  end function batch_is_ok
 
   !--------------------------------------------------------------
 
@@ -349,24 +300,12 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
-    integer :: np
-
     PUSH_SUB(batch_copy_to)
 
-    call batch_init_empty(dest, this%dim, this%nst)
-
-    dest%type_of = this%type_of
-
     if(this%type() == TYPE_FLOAT) then
-
-      np = ubound(this%dff_linear, dim=1)
-      call dest%dallocate(1, this%nst, np)
-
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
     else if(this%type() == TYPE_CMPLX) then
-
-      np = ubound(this%zff_linear, dim=1)
-      call dest%zallocate(1, this%nst, np)
-
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -377,7 +316,7 @@ contains
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
 
-    if(optional_default(copy_data, .false.)) call this%copy_data_to(np, dest)
+    if(optional_default(copy_data, .false.)) call this%copy_data_to(this%np, dest)
     
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to
@@ -426,7 +365,7 @@ contains
   integer function batch_pack_total_size(this) result(size)
     class(batch_t),      intent(inout) :: this
 
-    size = this%max_size
+    size = this%np
     if(accel_is_enabled()) size = accel_padded_size(size)
     size = size*pad_pow2(this%nst_linear)*types_get_size(this%type())
 
@@ -444,7 +383,6 @@ contains
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_DO_PACK")
-    ASSERT(this%is_ok())
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
@@ -452,7 +390,7 @@ contains
     if(.not. this%is_packed()) then
       this%type_of = this%type()
       this%pack_size(1) = pad_pow2(this%nst_linear)
-      this%pack_size(2) = this%max_size
+      this%pack_size(2) = this%np
 
       if(accel_is_enabled()) this%pack_size(2) = accel_padded_size(this%pack_size(2))
 
@@ -484,7 +422,7 @@ contains
         call profiling_out(prof_copy)
       end if
 
-      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_temporary(this)
+      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate(this)
 
     end if
 
@@ -555,11 +493,11 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%is_allocated .and. .not. this%mirror) call batch_allocate_temporary(this)
+        if(this%own_memory .and. .not. this%mirror) call batch_allocate(this)
         
         copy_ = .true.
         if(present(copy)) copy_ = copy
-        if(this%is_allocated .and. .not. this%mirror) copy_ = .true.
+        if(this%own_memory .and. .not. this%mirror) copy_ = .true.
         
         if(copy_) call batch_sync(this)
         
@@ -659,8 +597,6 @@ contains
 
     PUSH_SUB(batch_write_to_opencl_buffer)
 
-    ASSERT(this%is_ok())
-
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -737,8 +673,6 @@ contains
     type(profile_t), save :: prof_unpack
 
     PUSH_SUB(batch_read_from_opencl_buffer)
-
-    ASSERT(this%is_ok())
 
     if(this%nst_linear == 1) then
       ! we can copy directly
