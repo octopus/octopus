@@ -448,15 +448,6 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. this%is_packed()) then
-      this%type_of = this%type()
-      this%pack_size(1) = pad_pow2(this%nst_linear)
-      this%pack_size(2) = this%np
-
-      if(accel_is_enabled()) this%pack_size(2) = accel_padded_size(this%pack_size(2))
-
-      this%pack_size_real = this%pack_size
-      if(type_is_complex(this%type())) this%pack_size_real(1) = 2*this%pack_size_real(1)
-
       if(accel_is_enabled()) then
         this%status_of = BATCH_DEVICE_PACKED
         call this%allocate_packed_device()
@@ -957,6 +948,38 @@ subroutine batch_check_compatibility_with(this, target, only_check_dim)
   POP_SUB(batch_check_compatibility_with)
 
 end subroutine batch_check_compatibility_with
+
+!--------------------------------------------------------------
+subroutine batch_build_indices(this, st_start, st_end)
+  class(batch_t), intent(inout) :: this
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
+
+  integer :: idim, ii, ist
+
+  PUSH_SUB(batch_build_indices)
+
+  do ist = st_start, st_end
+    ! now we also populate the linear array
+    do idim = 1, this%dim
+      ii = this%dim*(ist - st_start) + idim
+      this%ist_idim_index(ii, 1) = ist
+      this%ist_idim_index(ii, 2) = idim
+    end do
+    this%ist(ist - st_start + 1) = ist
+  end do
+
+  ! compute packed sizes
+  this%pack_size(1) = pad_pow2(this%nst_linear)
+  this%pack_size(2) = this%np
+  if(accel_is_enabled()) this%pack_size(2) = accel_padded_size(this%pack_size(2))
+
+  this%pack_size_real = this%pack_size
+  if(type_is_complex(this%type())) this%pack_size_real(1) = 2*this%pack_size_real(1)
+
+  POP_SUB(batch_build_indices)
+end subroutine batch_build_indices
+
 
 #include "real.F90"
 #include "batch_inc.F90"
