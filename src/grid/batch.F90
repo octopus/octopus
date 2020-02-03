@@ -468,8 +468,8 @@ contains
           ! copy from unpacked host array to device
           call batch_write_unpacked_to_device(this)
         case(BATCH_PACKED)
-          ! copy from packed host array to device -> not yet implemented
-          ASSERT(source /= BATCH_PACKED)
+          ! copy from packed host array to device
+          call batch_write_packed_to_device(this)
         end select
         call profiling_out(prof_copy)
       case(BATCH_PACKED)
@@ -552,9 +552,9 @@ contains
             ! unpack from packed_device to unpacked_host
             case(BATCH_NOT_PACKED)
               call batch_read_device_to_unpacked(this)
-            ! unpack from packed_device to packed_host -> not yet implemented
+            ! unpack from packed_device to packed_host
             case(BATCH_PACKED)
-              ASSERT(target /= BATCH_PACKED)
+              call batch_read_device_to_packed(this)
             end select
           end if
           call profiling_out(prof)
@@ -734,6 +734,44 @@ contains
 
     POP_SUB(batch_read_device_to_unpacked)
   end subroutine batch_read_device_to_unpacked
+
+  ! ------------------------------------------------------------------
+  subroutine batch_write_packed_to_device(this)
+    class(batch_t),      intent(inout)  :: this
+
+    type(profile_t), save :: prof_pack
+
+    PUSH_SUB(batch_write_packed_to_device)
+
+    call profiling_in(prof_pack, "CL_PACK")
+    if(this%type() == TYPE_FLOAT) then
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+    else
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+    end if
+    call profiling_out(prof_pack)
+
+    POP_SUB(batch_write_packed_to_device)
+  end subroutine batch_write_packed_to_device
+
+  ! ------------------------------------------------------------------
+  subroutine batch_read_device_to_packed(this)
+    class(batch_t),      intent(inout) :: this
+
+    type(profile_t), save :: prof_unpack
+
+    PUSH_SUB(batch_read_device_to_packed)
+
+    call profiling_in(prof_unpack, "CL_UNPACK")
+    if(this%type() == TYPE_FLOAT) then
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+    else
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+    end if
+    call profiling_out(prof_unpack)
+
+    POP_SUB(batch_read_device_to_packed)
+  end subroutine batch_read_device_to_packed
 
 ! ------------------------------------------------------
 integer function batch_inv_index(this, cind) result(index)
