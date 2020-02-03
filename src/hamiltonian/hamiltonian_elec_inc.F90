@@ -107,8 +107,6 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     if(psib%status() == BATCH_DEVICE_PACKED) set_phase = .true.
   end if
 
-  ASSERT(psib%is_ok())
-  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 
@@ -463,8 +461,6 @@ subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hp
   ! We will assume, for the moment, no spinors.
   if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
 
-  ASSERT(psib%is_ok())
-  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
 
   ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)

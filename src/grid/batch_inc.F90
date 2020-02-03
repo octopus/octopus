@@ -34,7 +34,8 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
   this%X(ff) => psi(:, :, st_start:)
   this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
-  ASSERT(ubound(psi, dim = 3) >= st_end)
+  ASSERT(ubound(psi, dim=3) >= st_end)
+  ASSERT(ubound(psi, dim=2) == dim)
 
   call X(batch_build_indices)(this, st_start, st_end)
 

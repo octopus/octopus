@@ -158,9 +158,6 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
   call batch_init(batch_ff, ff)
   call batch_init(batch_op_ff, op_ff)
 
-  ASSERT(batch_ff%is_ok())
-  ASSERT(batch_op_ff%is_ok())
-
   call X(derivatives_batch_perform) (op, der, batch_ff, batch_op_ff, ghost_update, set_bc, factor)
 
   call batch_ff%end()

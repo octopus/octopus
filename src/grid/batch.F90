@@ -94,7 +94,6 @@ module batch_oct_m
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
     procedure :: inv_index => batch_inv_index
-    procedure :: is_ok => batch_is_ok
     procedure :: is_packed => batch_is_packed
     procedure :: ist_idim_to_linear => batch_ist_idim_to_linear
     procedure :: linear_to_idim => batch_linear_to_idim
@@ -245,29 +244,6 @@ contains
   end subroutine batch_init_empty
 
   !--------------------------------------------------------------
-  logical function batch_is_ok(this) result(ok)
-    class(batch_t), intent(in)   :: this
-
-    ! no push_sub, called too frequently
-    
-    ok = this%nst_linear >= 1
-    ok = ok .and. (associated(this%dff) .or.  associated(this%zff) .or. &
-                   associated(this%dff_pack) .or.  associated(this%zff_pack))
-    ok = ok .and. (this%type() == TYPE_CMPLX .or. this%type() == TYPE_FLOAT)
-    if(ok .and. .not. this%is_packed()) then
-      if(this%type() == TYPE_FLOAT) then
-        ok = ok .and. associated(this%dff_linear)
-        ok = ok .and. ubound(this%dff_linear, dim=2) == this%nst_linear
-      else if(this%type() == TYPE_CMPLX) then
-        ok = ok .and. associated(this%zff_linear)
-        ok = ok .and. ubound(this%zff_linear, dim=2) == this%nst_linear
-      else
-        ok = .false.
-      end if
-    end if
-  end function batch_is_ok
-
-  !--------------------------------------------------------------
 
   subroutine batch_clone_to(this, dest, pack, copy_data)
     class(batch_t),              intent(in)    :: this
@@ -407,7 +383,6 @@ contains
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_DO_PACK")
-    ASSERT(this%is_ok())
 
     copy_ = .true.
     if(present(copy)) copy_ = copy
@@ -622,8 +597,6 @@ contains
 
     PUSH_SUB(batch_write_to_opencl_buffer)
 
-    ASSERT(this%is_ok())
-
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -700,8 +673,6 @@ contains
     type(profile_t), save :: prof_unpack
 
     PUSH_SUB(batch_read_from_opencl_buffer)
-
-    ASSERT(this%is_ok())
 
     if(this%nst_linear == 1) then
       ! we can copy directly

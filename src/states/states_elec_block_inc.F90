@@ -192,9 +192,6 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
     end if
 
-    ASSERT(psi1b%is_ok())
-    ASSERT(psi2b%is_ok())
-
     call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
     
     call psi1b%end()
