@@ -39,7 +39,7 @@ module batch_oct_m
     batch_init,                     &
     dbatch_init,                    &
     zbatch_init
-  
+
   type batch_t
     private
     integer,                        public :: nst
@@ -84,12 +84,17 @@ module batch_oct_m
   contains
     procedure, private :: dallocate_unpacked_host => dbatch_allocate_unpacked_host
     procedure, private :: zallocate_unpacked_host => zbatch_allocate_unpacked_host
+    procedure, private :: allocate_unpacked_host => batch_allocate_unpacked_host
+    procedure, private :: dallocate_packed_host => dbatch_allocate_packed_host
+    procedure, private :: zallocate_packed_host => zbatch_allocate_packed_host
+    procedure, private :: allocate_packed_host => batch_allocate_packed_host
     procedure :: check_compatibility_with => batch_check_compatibility_with
     procedure :: clone_to => batch_clone_to
     procedure :: clone_to_array => batch_clone_to_array
     procedure :: copy_to => batch_copy_to
     procedure :: copy_data_to => batch_copy_data_to
     procedure, private :: deallocate_unpacked_host => batch_deallocate_unpacked_host
+    procedure, private :: deallocate_packed_host => batch_deallocate_packed_host
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
     procedure :: end => batch_end
@@ -139,18 +144,11 @@ contains
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
       this%in_buffer_count = 1
-      
+
       if(accel_is_enabled()) then
         call accel_release_buffer(this%ff_device)
       else
-        if(associated(this%dff_pack)) then
-          call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
-        end if
-        if(associated(this%zff_pack)) then
-          call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
-        end if
-        nullify(this%dff_pack)
-        nullify(this%zff_pack)
+        call this%deallocate_packed_host()
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
@@ -169,7 +167,7 @@ contains
   !--------------------------------------------------------------
   subroutine batch_deallocate_unpacked_host(this)
     class(batch_t),  intent(inout) :: this
-    
+
     PUSH_SUB(batch_deallocate_unpacked_host)
 
     this%is_allocated = .false.
@@ -189,16 +187,39 @@ contains
     nullify(this%dff_linear)
     nullify(this%zff)
     nullify(this%zff_linear)
-    
+
     POP_SUB(batch_deallocate_unpacked_host)
   end subroutine batch_deallocate_unpacked_host
 
   !--------------------------------------------------------------
+  subroutine batch_deallocate_packed_host(this)
+    class(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_deallocate_packed_host)
+
+    if(this%special_memory) then
+      if(associated(this%dff_pack)) then
+        call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
+      end if
+      if(associated(this%zff_pack)) then
+        call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
+      end if
+    else
+      SAFE_DEALLOCATE_P(this%dff_pack)
+      SAFE_DEALLOCATE_P(this%zff_pack)
+    end if
+    nullify(this%dff_pack)
+    nullify(this%zff_pack)
+
+    POP_SUB(batch_deallocate_packed_host)
+  end subroutine batch_deallocate_packed_host
+
+  !--------------------------------------------------------------
   subroutine batch_allocate_unpacked_host(this)
-    type(batch_t),  intent(inout) :: this
+    class(batch_t),  intent(inout) :: this
 
     PUSH_SUB(batch_allocate_unpacked_host)
-    
+
     if(this%type() == TYPE_FLOAT) then
       call this%dallocate_unpacked_host()
     else if(this%type() == TYPE_CMPLX) then
@@ -209,12 +230,27 @@ contains
   end subroutine batch_allocate_unpacked_host
 
   !--------------------------------------------------------------
+  subroutine batch_allocate_packed_host(this)
+    class(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_allocate_packed_host)
+
+    if(this%type() == TYPE_FLOAT) then
+      call this%dallocate_packed_host()
+    else if(this%type() == TYPE_CMPLX) then
+      call this%zallocate_packed_host()
+    end if
+
+    POP_SUB(batch_allocate_packed_host)
+  end subroutine batch_allocate_packed_host
+
+  !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst, np)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
     integer,       intent(in)    :: nst
     integer,       intent(in)    :: np
-    
+
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
@@ -224,7 +260,7 @@ contains
     this%nst = nst
     this%dim = dim
     this%type_of = TYPE_NONE
-    
+
     this%nst_linear = nst*dim
 
     this%np = np
@@ -291,7 +327,7 @@ contains
 
     POP_SUB(batch_clone_to_array)
   end subroutine batch_clone_to_array
-  
+
   !--------------------------------------------------------------
 
   subroutine batch_copy_to(this, dest, pack, copy_data)
@@ -317,7 +353,7 @@ contains
     dest%ist(1:this%nst) = this%ist(1:this%nst)
 
     if(optional_default(copy_data, .false.)) call this%copy_data_to(this%np, dest)
-    
+
     POP_SUB(batch_copy_to)
   end subroutine batch_copy_to
 
@@ -327,7 +363,7 @@ contains
     class(batch_t),      intent(in)    :: this
 
     btype = this%type_of
-     
+
   end function batch_type
 
   ! ----------------------------------------------------
@@ -351,7 +387,7 @@ contains
 
     bstatus = this%status_of
   end function batch_status
-  
+
   ! ----------------------------------------------------
 
   logical pure function batch_is_packed(this) result(in_buffer)
@@ -403,14 +439,9 @@ contains
       else
         this%status_of = BATCH_PACKED
         this%layout = BATCH_PACKED
-        ! always use hardware aware memory here
-        if(this%type() == TYPE_FLOAT) then
-          call c_f_pointer(dallocate_hardware_aware(this%pack_size(1)*this%pack_size(2)), this%dff_pack, this%pack_size)
-        else if(this%type() == TYPE_CMPLX) then
-          call c_f_pointer(zallocate_hardware_aware(this%pack_size(1)*this%pack_size(2)), this%zff_pack, this%pack_size)
-        end if
+        call this%allocate_packed_host()
       end if
-      
+
       if(copy_) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
         if(accel_is_enabled()) then
@@ -422,7 +453,7 @@ contains
         call profiling_out(prof_copy)
       end if
 
-      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_unpacked_host(this)
+      if(this%is_allocated .and. .not. this%mirror) call this%deallocate_unpacked_host()
 
     end if
 
@@ -434,12 +465,12 @@ contains
 
     subroutine pack_copy()
       integer :: ist, ip, sp, ep, bsize
-      
- 
+
+
       if(this%type() == TYPE_FLOAT) then
 
         bsize = hardware%dblock_size
-      
+
         !$omp parallel do private(ep, ist, ip)
         do sp = 1, this%pack_size(2), bsize
           ep = min(sp + bsize - 1, this%pack_size(2))
@@ -470,7 +501,7 @@ contains
       end if
 
       call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-      
+
     end subroutine pack_copy
 
   end subroutine batch_do_pack
@@ -493,14 +524,14 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%own_memory .and. .not. this%mirror) call batch_allocate_unpacked_host(this)
-        
+        if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
+
         copy_ = .true.
         if(present(copy)) copy_ = copy
         if(this%own_memory .and. .not. this%mirror) copy_ = .true.
-        
+
         if(copy_) call batch_sync(this)
-        
+
         ! now deallocate
         this%status_of = BATCH_NOT_PACKED
         this%in_buffer_count = 1
@@ -508,17 +539,10 @@ contains
         if(accel_is_enabled()) then
           call accel_release_buffer(this%ff_device)
         else
-          if(associated(this%dff_pack)) then
-            call deallocate_hardware_aware(c_loc(this%dff_pack(1,1)))
-          end if
-          if(associated(this%zff_pack)) then
-            call deallocate_hardware_aware(c_loc(this%zff_pack(1,1)))
-          end if
-          nullify(this%dff_pack)
-          nullify(this%zff_pack)
+          call this%deallocate_packed_host()
         end if
       end if
-      
+
       INCR(this%in_buffer_count, -1)
     end if
 
@@ -532,25 +556,25 @@ contains
 
   subroutine batch_sync(this)
     class(batch_t),      intent(inout) :: this
-    
+
     type(profile_t), save :: prof
 
     PUSH_SUB(batch_sync)
 
     if(this%is_packed()) then
       call profiling_in(prof, "BATCH_UNPACK_COPY")
-      
+
       if(accel_is_enabled()) then
         call batch_read_from_opencl_buffer(this)
       else
         call unpack_copy()
       end if
-      
+
       call profiling_out(prof)
     end if
-    
+
     POP_SUB(batch_sync)
-    
+
   contains
 
     subroutine unpack_copy()
@@ -564,7 +588,7 @@ contains
             this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
           end forall
         end do
-        
+
       else if(this%type() == TYPE_CMPLX) then
 
         !$omp parallel do private(ist)
@@ -573,14 +597,14 @@ contains
             this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
           end forall
         end do
-        
+
       else
         message(1) = "Internal error: unknown batch type in batch_sync."
         call messages_fatal(1)
       end if
-      
+
       call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-      
+
     end subroutine unpack_copy
 
   end subroutine batch_sync
@@ -615,13 +639,13 @@ contains
       else
         kernel => zpack
       end if
-      
+
       unroll = min(CL_PACK_MAX_BUFFER_SIZE, this%pack_size(1))
 
       call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, this%type(), unroll*this%pack_size(2))
-      
+
       do ist = 1, this%nst_linear, unroll
-        
+
         ! copy a number 'unroll' of states to the buffer
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
 
@@ -715,7 +739,7 @@ contains
 
         ! copy a number 'unroll' of states from the buffer
         do ist2 = ist, min(ist + unroll - 1, this%nst_linear)
-          
+
           if(this%type() == TYPE_FLOAT) then
             call accel_read_buffer(tmp, ubound(this%dff_linear, dim=1), this%dff_linear(:, ist2), &
               offset = (ist2 - ist)*this%pack_size(2))
@@ -751,7 +775,7 @@ end function batch_inv_index
 integer pure function batch_ist_idim_to_linear(this, cind) result(index)
   class(batch_t),     intent(in)    :: this
   integer,            intent(in)    :: cind(:)
-  
+
   if(ubound(cind, dim = 1) == 1) then
     index = cind(1)
   else
@@ -765,7 +789,7 @@ end function batch_ist_idim_to_linear
 integer pure function batch_linear_to_ist(this, linear_index) result(ist)
   class(batch_t),     intent(in)    :: this
   integer,            intent(in)    :: linear_index
-  
+
   ist = this%ist_idim_index(linear_index, 1)
 
 end function batch_linear_to_ist
@@ -775,9 +799,9 @@ end function batch_linear_to_ist
 integer pure function batch_linear_to_idim(this, linear_index) result(idim)
   class(batch_t),     intent(in)    :: this
   integer,            intent(in)    :: linear_index
-  
+
   idim = this%ist_idim_index(linear_index, 2)
-  
+
 end function batch_linear_to_idim
 
 ! ------------------------------------------------------
@@ -790,10 +814,10 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
   PUSH_SUB(batch_remote_access_start)
 
   ASSERT(.not. accel_is_enabled())
-  
+
   if(mpi_grp%size > 1) then
     call this%do_pack()
-    
+
     if(this%type() == TYPE_CMPLX) then
 #ifdef HAVE_MPI2
       call MPI_Win_create(this%zff_pack(1, 1), int(product(this%pack_size)*types_get_size(this%type()), MPI_ADDRESS_KIND), &
@@ -808,11 +832,11 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
       message(1) = "Internal error: unknown batch type in batch_remote_access_start."
       call messages_fatal(1)
     end if
-    
+
   else
     rma_win = -1
   end if
-  
+
   POP_SUB(batch_remote_access_start)
 end subroutine batch_remote_access_start
 
@@ -821,7 +845,7 @@ end subroutine batch_remote_access_start
 subroutine batch_remote_access_stop(this, rma_win)
   class(batch_t),     intent(inout) :: this
   integer,            intent(inout) :: rma_win
-  
+
   PUSH_SUB(batch_remote_access_stop)
 
   if(rma_win /= -1) then
@@ -830,7 +854,7 @@ subroutine batch_remote_access_stop(this, rma_win)
 #endif
     call this%do_unpack()
   end if
-  
+
   POP_SUB(batch_remote_access_stop)
 end subroutine batch_remote_access_stop
 
@@ -857,14 +881,14 @@ subroutine batch_copy_data_to(this, np, dest)
     call accel_set_kernel_arg(kernel_copy, 2, log2(this%pack_size_real(1)))
     call accel_set_kernel_arg(kernel_copy, 3, dest%ff_device)
     call accel_set_kernel_arg(kernel_copy, 4, log2(dest%pack_size_real(1)))
-    
+
     localsize = accel_kernel_workgroup_size(kernel_copy)/dest%pack_size_real(1)
 
     dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
-    
+
     call accel_kernel_run(kernel_copy, (/dest%pack_size_real(1), dim2, dim3/), (/dest%pack_size_real(1), localsize, 1/))
-    
+
     call accel_finish()
 
   case(BATCH_PACKED)
