@@ -134,6 +134,41 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   POP_SUB(X(batch_init))
 end subroutine X(batch_init)
 
+!--------------------------------------------------------------
+subroutine X(batch_pack_copy)(this)
+  class(batch_t),    intent(inout) :: this
+
+  integer :: ist, ip, sp, ep, bsize
+  ! no push_sub, called too frequently
+
+  bsize = hardware%X(block_size)
+
+  !$omp parallel do private(ep, ist, ip)
+  do sp = 1, this%pack_size(2), bsize
+    ep = min(sp + bsize - 1, this%pack_size(2))
+    do ist = 1, this%nst_linear
+      do ip = sp, ep
+        this%X(ff_pack)(ist, ip) = this%X(ff_linear)(ip, ist)
+      end do
+    end do
+  end do
+end subroutine X(batch_pack_copy)
+
+!--------------------------------------------------------------
+subroutine X(batch_unpack_copy)(this)
+  class(batch_t),    intent(inout) :: this
+
+  integer :: ist, ip
+  ! no push_sub, called too frequently
+
+  !$omp parallel do private(ist)
+  do ip = 1, this%pack_size(2)
+    do ist = 1, this%nst_linear
+      this%X(ff_linear)(ip, ist) = this%X(ff_pack)(ist, ip)
+    end do
+  end do
+end subroutine X(batch_unpack_copy)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -470,44 +470,13 @@ contains
   contains
 
     subroutine pack_copy()
-      integer :: ist, ip, sp, ep, bsize
-
-
       if(this%type() == TYPE_FLOAT) then
-
-        bsize = hardware%dblock_size
-
-        !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack_size(2), bsize
-          ep = min(sp + bsize - 1, this%pack_size(2))
-          forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%dff_pack(ist, ip) = this%dff_linear(ip, ist)
-            end forall
-          end forall
-        end do
-
+        call dbatch_pack_copy(this)
       else if(this%type() == TYPE_CMPLX) then
-
-        bsize = hardware%zblock_size
-
-        !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack_size(2), bsize
-          ep = min(sp + bsize - 1, this%pack_size(2))
-          forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%zff_pack(ist, ip) = this%zff_linear(ip, ist)
-            end forall
-          end forall
-        end do
-
-      else
-        message(1) = "Internal error: unknown batch type in batch_do_pack."
-        call messages_fatal(1)
+        call zbatch_pack_copy(this)
       end if
 
       call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-
     end subroutine pack_copy
 
   end subroutine batch_do_pack
@@ -587,30 +556,12 @@ contains
       integer :: ist, ip
 
       if(this%type() == TYPE_FLOAT) then
-
-        !$omp parallel do private(ist)
-        do ip = 1, this%pack_size(2)
-          forall(ist = 1:this%nst_linear)
-            this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
-          end forall
-        end do
-
+        call dbatch_unpack_copy(this)
       else if(this%type() == TYPE_CMPLX) then
-
-        !$omp parallel do private(ist)
-        do ip = 1, this%pack_size(2)
-          forall(ist = 1:this%nst_linear)
-            this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
-          end forall
-        end do
-
-      else
-        message(1) = "Internal error: unknown batch type in batch_sync."
-        call messages_fatal(1)
+        call zbatch_unpack_copy(this)
       end if
 
       call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-
     end subroutine unpack_copy
 
   end subroutine batch_sync
