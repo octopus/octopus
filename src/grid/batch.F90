@@ -432,35 +432,56 @@ contains
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
 
+    logical               :: copy_
     type(profile_t), save :: prof, prof_copy
+    integer               :: source, target
 
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_DO_PACK")
 
-    if(.not. this%is_packed()) then
+    copy_ = optional_default(copy, .true.)
+
+    ! get source and target states for this batch
+    source = this%status()
+    select case(source)
+    case(BATCH_NOT_PACKED, BATCH_PACKED)
       if(accel_is_enabled()) then
-        this%status_of = BATCH_DEVICE_PACKED
-        call this%allocate_packed_device()
+        target = BATCH_DEVICE_PACKED
       else
+        target = BATCH_PACKED
+      end if
+    case(BATCH_DEVICE_PACKED)
+      target = BATCH_DEVICE_PACKED
+    end select
+
+    ! only do something if target is different from source
+    if(source /= target) then
+      select case(target)
+      case(BATCH_DEVICE_PACKED)
+        call this%allocate_packed_device()
+        this%status_of = BATCH_DEVICE_PACKED
+
+        call profiling_in(prof_copy, "BATCH_PACK_COPY")
+        select case(source)
+        case(BATCH_NOT_PACKED)
+          ! copy from unpacked host array to device
+          call batch_write_to_opencl_buffer(this)
+        case(BATCH_PACKED)
+          ! copy from packed host array to device -> not yet implemented
+          ASSERT(source /= BATCH_PACKED)
+        end select
+        call profiling_out(prof_copy)
+      case(BATCH_PACKED)
+        call this%allocate_packed_host()
         this%status_of = BATCH_PACKED
         this%status_host = BATCH_PACKED
-        call this%allocate_packed_host()
-      end if
 
-      if(optional_default(copy, .true.)) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
-        if(accel_is_enabled()) then
-          call batch_write_to_opencl_buffer(this)
-        else
-          call pack_copy()
-        end if
-
+        call pack_copy()
         call profiling_out(prof_copy)
-      end if
-
+      end select
       if(this%is_allocated .and. .not. this%mirror) call this%deallocate_unpacked_host()
-
     end if
 
     INCR(this%in_buffer_count, 1)
@@ -490,33 +511,57 @@ contains
 
     logical :: copy_
     type(profile_t), save :: prof
+    integer               :: source, target
 
     PUSH_SUB(batch_do_unpack)
 
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
-    if(this%is_packed()) then
+    copy_ = optional_default(copy, .true.)
+    if(this%own_memory .and. .not. this%mirror) copy_ = .true.
 
+    ! get source and target states for this batch
+    source = this%status()
+    select case(source)
+    case(BATCH_NOT_PACKED)
+      target = source
+    case(BATCH_PACKED)
+      target = BATCH_NOT_PACKED
+    case(BATCH_DEVICE_PACKED)
+      target = this%status_host
+    end select
+
+    ! only do something if target is different from source
+    if(source /= target) then
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
         if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
 
-        copy_ = .true.
-        if(present(copy)) copy_ = copy
-        if(this%own_memory .and. .not. this%mirror) copy_ = .true.
-
-        if(copy_) call batch_sync(this)
-
-        ! now deallocate
-        this%status_of = BATCH_NOT_PACKED
-        this%status_host = BATCH_NOT_PACKED
-        this%in_buffer_count = 1
-
-        if(accel_is_enabled()) then
-          call this%deallocate_packed_device()
-        else
+        select case(source)
+        case(BATCH_PACKED)
+          ! unpack from packed_host to unpacked_host
+          call profiling_in(prof, "BATCH_UNPACK_COPY")
+          if(copy_) call unpack_copy()
+          call profiling_out(prof)
           call this%deallocate_packed_host()
-        end if
+          this%status_host = target
+        case(BATCH_DEVICE_PACKED)
+          call profiling_in(prof, "BATCH_UNPACK_COPY")
+          if(copy_) then
+            select case(target)
+            ! unpack from packed_device to unpacked_host
+            case(BATCH_NOT_PACKED)
+              call batch_read_from_opencl_buffer(this)
+            ! unpack from packed_device to packed_host -> not yet implemented
+            case(BATCH_PACKED)
+              ASSERT(target /= BATCH_PACKED)
+            end select
+          end if
+          call profiling_out(prof)
+          call this%deallocate_packed_device()
+        end select
+        this%status_of = target
+        this%in_buffer_count = 1
       end if
 
       INCR(this%in_buffer_count, -1)
@@ -525,31 +570,6 @@ contains
     call profiling_out(prof)
 
     POP_SUB(batch_do_unpack)
-
-  end subroutine batch_do_unpack
-
-  ! ----------------------------------------------------
-
-  subroutine batch_sync(this)
-    class(batch_t),      intent(inout) :: this
-
-    type(profile_t), save :: prof
-
-    PUSH_SUB(batch_sync)
-
-    if(this%is_packed()) then
-      call profiling_in(prof, "BATCH_UNPACK_COPY")
-
-      if(accel_is_enabled()) then
-        call batch_read_from_opencl_buffer(this)
-      else
-        call unpack_copy()
-      end if
-
-      call profiling_out(prof)
-    end if
-
-    POP_SUB(batch_sync)
 
   contains
 
@@ -565,7 +585,7 @@ contains
       call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
     end subroutine unpack_copy
 
-  end subroutine batch_sync
+  end subroutine batch_do_unpack
 
   ! ----------------------------------------------------
 
