@@ -126,7 +126,11 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, special)
   this%type_of = R_TYPE_VAL
   call batch_build_indices(this, st_start, st_end)
 
-  call this%X(allocate_unpacked_host)()
+  call this%X(allocate_packed_host)()
+  this%status_of = BATCH_PACKED
+  this%status_host = BATCH_PACKED
+  INCR(this%host_buffer_count, 1)
+
   this%own_memory = .true.
 
   POP_SUB(X(batch_init))

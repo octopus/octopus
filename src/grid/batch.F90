@@ -359,15 +359,15 @@ contains
     PUSH_SUB(batch_copy_to)
 
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
     end if
 
-    if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
+    if(this%status() /= dest%status() .and. optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
 
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
