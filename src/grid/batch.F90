@@ -60,7 +60,8 @@ module batch_oct_m
     integer                                :: status_of
     integer                                :: status_host
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
-    integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
+    integer                                :: device_buffer_count !< whether there is a copy in the opencl buffer
+    integer                                :: host_buffer_count !< whether the batch was packed on the cpu
     logical :: special_memory
 
 
@@ -141,7 +142,8 @@ contains
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
       this%status_host = BATCH_NOT_PACKED
-      this%in_buffer_count = 1
+      this%host_buffer_count = 0
+      this%device_buffer_count = 0
 
       if(accel_is_enabled()) then
         call this%deallocate_packed_device()
@@ -284,7 +286,8 @@ contains
     this%nst_linear = nst*dim
 
     this%np = np
-    this%in_buffer_count = 0
+    this%device_buffer_count = 0
+    this%host_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
     this%status_host = BATCH_NOT_PACKED
 
@@ -412,7 +415,7 @@ contains
   logical pure function batch_is_packed(this) result(in_buffer)
     class(batch_t),      intent(in)    :: this
 
-    in_buffer = this%in_buffer_count > 0
+    in_buffer = (this%device_buffer_count > 0) .or. (this%host_buffer_count > 0)
   end function batch_is_packed
 
   ! ----------------------------------------------------
@@ -484,7 +487,12 @@ contains
       if(this%is_allocated .and. .not. this%mirror) call this%deallocate_unpacked_host()
     end if
 
-    INCR(this%in_buffer_count, 1)
+    select case(target)
+    case(BATCH_DEVICE_PACKED)
+      INCR(this%device_buffer_count, 1)
+    case(BATCH_PACKED)
+      INCR(this%host_buffer_count, 1)
+    end select
 
     call profiling_out(prof)
 
@@ -509,7 +517,7 @@ contains
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
-    logical :: copy_
+    logical :: copy_, force_
     type(profile_t), save :: prof
     integer               :: source, target
 
@@ -519,6 +527,8 @@ contains
 
     copy_ = optional_default(copy, .true.)
     if(this%own_memory .and. .not. this%mirror) copy_ = .true.
+
+    force_ = optional_default(force, .false.)
 
     ! get source and target states for this batch
     source = this%status()
@@ -533,24 +543,28 @@ contains
 
     ! only do something if target is different from source
     if(source /= target) then
-      if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
-
-        if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
-
-        select case(source)
-        case(BATCH_PACKED)
+      select case(source)
+      case(BATCH_PACKED)
+        if(this%host_buffer_count == 1 .or. force_) then
+          if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
           call profiling_in(prof, "BATCH_UNPACK_COPY")
           if(copy_) call unpack_copy()
           call profiling_out(prof)
           call this%deallocate_packed_host()
           this%status_host = target
-        case(BATCH_DEVICE_PACKED)
+          this%status_of = target
+          this%host_buffer_count = 1
+        end if
+        INCR(this%host_buffer_count, -1)
+      case(BATCH_DEVICE_PACKED)
+        if(this%device_buffer_count == 1 .or. force_) then
           call profiling_in(prof, "BATCH_UNPACK_COPY")
           if(copy_) then
             select case(target)
             ! unpack from packed_device to unpacked_host
             case(BATCH_NOT_PACKED)
+              if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
               call batch_read_device_to_unpacked(this)
             ! unpack from packed_device to packed_host
             case(BATCH_PACKED)
@@ -559,12 +573,11 @@ contains
           end if
           call profiling_out(prof)
           call this%deallocate_packed_device()
-        end select
-        this%status_of = target
-        this%in_buffer_count = 1
-      end if
-
-      INCR(this%in_buffer_count, -1)
+          this%status_of = target
+          this%device_buffer_count = 1
+        end if
+        INCR(this%device_buffer_count, -1)
+      end select
     end if
 
     call profiling_out(prof)
