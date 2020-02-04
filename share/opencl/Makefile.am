@@ -33,6 +33,8 @@ dist_opencl_DATA =              \
 	projector.cl            \
 	pack.cl                 \
 	copy.cl                 \
+	complex_conj.cl	        \
+	complex_conj_combine.cl \
 	subarray.cl             \
 	density.cl              \
 	phase.cl                \

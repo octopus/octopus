@@ -458,15 +458,19 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof, profcomm
-  R_TYPE, allocatable :: tmp(:), phi(:, :)
+  R_TYPE, allocatable :: tmp(:), phi(:, :), tmp_dot(:,:)
   R_TYPE :: temp
+
+  ! Variables related to the GPU:
+  type(accel_mem_t) :: phi_buffer
+  type(accel_mem_t) :: dot_buffer
+  type(accel_mem_t) :: tmp_dot_buffer
+  integer :: wgsize
 
   PUSH_SUB(X(mesh_batch_mf_dotp))
   call profiling_in(prof, "DOTPV_MF_BATCH")
 
   ASSERT(aa%dim == ubound(psi,dim=2))
-
-  ASSERT(aa%status() /= BATCH_DEVICE_PACKED)
 
   nst_ = aa%nst
   if(present(nst)) nst_ = nst 
@@ -489,6 +493,11 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     if(aa%dim == 1) then
       !Here we compute the complex conjuguate of the dot product first and then
       !we take the conjugate at the end
+
+      ! Note: this is to avoid taking the complex conjugate of the whole batch, but rather that of
+      ! the single function only.
+      ! In the aa%dim>1 case, that is taken care of by the mf_dotp function.
+
       if(mesh%use_curvilinear) then
         !$omp parallel do
         do ip = 1, mesh%np
@@ -497,7 +506,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
       else
         !$omp parallel do
         do ip = 1, mesh%np
-         phi(ip, 1) = R_CONJ(psi(ip, 1))
+          phi(ip, 1) = R_CONJ(psi(ip, 1))
         end do
       end if
 
@@ -510,16 +519,134 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     else
 
-      dot(1:nst_) = M_ZERO
+      ! Note: curvilinear coordinates are handled inside the ml_dotp function!
+
+      ! ToDo: rewrite this in terms of gemv with stride.
+  
+      ! Old code:
+
+!!      dot(1:nst_) = M_ZERO
+!!      do ist = 1, nst_
+!!        call batch_get_state(aa, ist, mesh%np, phi)
+!!        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
+!!               reduce = .false.)
+!!      end do
+
+      ! Alternative code:
+
+      if(mesh%use_curvilinear) then
+        !$omp parallel do
+        do idim=1, aa%dim
+          do ip = 1, mesh%np
+            phi(ip, idim) = mesh%vol_pp(ip)*R_CONJ(psi(ip, idim))
+          end do
+        end do
+      else
+        !$omp parallel do
+        do idim=1, aa%dim
+          do ip = 1, mesh%np
+            phi(ip, idim) = R_CONJ(psi(ip, idim))
+          end do
+        end do
+      end if
+
+      SAFE_ALLOCATE(tmp_dot(1:aa%nst*aa%dim, aa%dim))
+      ! tmp_dot(:,:) = M_ZERO
+      ! dot(:) = M_ZERO
+
+      call blas_gemm( 'N',                                 & !< transpose A
+                      'N',                                 & !< transpose B     
+                      aa%dim*nst_,                         & !< M: number of states to process 
+                      aa%dim,                              & !< N: aa%sim
+                      mesh%np,                             & !< K: number of mesh points (np)
+                      R_TOTYPE(mesh%volume_element),       & !< alpha: volume element
+                      aa%pack%X(psi)(1,1),                 & !< matrix A(LDA, K)
+                      ubound(aa%pack%X(psi), dim=1),       & !< leading dimension of matrix
+                      phi(1,1),                            & !< matrix B(K, M): 
+                      mesh%np,                             & !< LDB
+                      R_TOTYPE(M_ZERO),                    & !< beta: 0
+                      tmp_dot(1,1),                        & !< matrix C(M, N)
+                      aa%dim * aa%nst)                       !< LDC 
+
       do ist = 1, nst_
-        call batch_get_state(aa, ist, mesh%np, phi)
-        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
-               reduce = .false.)
+        dot(ist) = R_CONJ(tmp_dot(2*ist-1, 1) + tmp_dot(2*ist, 2))
       end do
+
+      SAFE_DEALLOCATE_A(tmp_dot)
 
     end if
 
     SAFE_DEALLOCATE_A(phi)
+
+  case(BATCH_DEVICE_PACKED)
+
+    ASSERT(.not. mesh%use_curvilinear)
+    ASSERT(.false.)
+
+    ! First, move the state to the GPU
+    ! - create buffers
+    !   * single state phi:
+ 
+    call accel_create_buffer(phi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np * aa%dim)
+    call accel_write_buffer(phi_buffer, mesh%np * aa%dim, psi)
+ 
+    !   * result:
+
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst)
+
+    if(aa%dim>1) then
+      call accel_create_buffer(tmp_dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*aa%dim * aa%dim)
+    endif
+        
+    ! Take the complex conjugate of the state
+    ! use kernel: complex_conj
+    call accel_set_kernel_arg(kernel_complex_conj, 0, mesh%np * aa%dim)
+    call accel_set_kernel_arg(kernel_complex_conj, 1, phi_buffer)
+
+    wgsize = accel_kernel_workgroup_size(kernel_complex_conj)
+
+    call accel_kernel_run(kernel_complex_conj, (/pad(mesh%np * aa%dim, wgsize)/), (/wgsize/))
+    call accel_finish()
+
+    ! call the gemm kernel
+
+    call X(accel_gemm)( ACCEL_BLAS_N,                & !< transpose A
+                        ACCEL_BLAS_N,                & !< transpose B 
+                        int(aa%dim*nst_, 8),                    & !< M: number of states to process 
+                        int(aa%dim, 8),                         & !< N: aa%sim
+                        int(mesh%np, 8),                        & !< K: number of mesh points (np)
+                        R_TOTYPE(mesh%volume_element),          & !< alpha: volume element
+                        aa%pack%buffer,                         & !< matrix A(LDA, K)
+                        int(0, 8),                              & !< offset
+                        int(ubound(aa%pack%X(psi), dim=1), 8),  & !< leading dimension of matrix
+                        phi_buffer,                             & !< matrix B(K, M): 
+                        int(0, 8),                              & !< offset
+                        int(mesh%np, 8),                        & !< LDB
+                        R_TOTYPE(M_ZERO),                       & !< beta: 0
+                        tmp_dot_buffer,                         & !< matrix C(M, N)
+                        int(0, 8),                              & !< offset
+                        int(aa%dim * aa%nst, 8) )                 !< LDC 
+
+
+    call accel_finish() ! we might be able to remove this barrier
+
+    ! Take the complex conjugate of the result
+    call accel_set_kernel_arg(kernel_complex_conj, 0, nst)
+    call accel_set_kernel_arg(kernel_complex_conj, 1, tmp_dot_buffer)
+    call accel_set_kernel_arg(kernel_complex_conj, 2, dot_buffer)
+
+    call accel_kernel_run(kernel_complex_conj_combine, (/pad(nst, wgsize)/), (/wgsize/))
+    call accel_finish()
+
+
+    ! Move the result back to the CPU
+    call accel_read_buffer(dot_buffer, nst_, dot)
+
+    ! Release accel buffers:
+    call accel_release_buffer(phi_buffer)
+    call accel_release_buffer(dot_buffer)
+    call accel_release_buffer(tmp_dot_buffer)
+
 
   end select
 

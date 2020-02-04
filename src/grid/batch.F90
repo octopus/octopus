@@ -59,7 +59,7 @@ module batch_oct_m
     ! Components are public by default
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
-    FLOAT,      allocatable        :: dpsi(:, :)
+    FLOAT,      allocatable        :: dpsi(:, :) !< dpsi(ist_linear, ip)
     CMPLX,      allocatable        :: zpsi(:, :)
     type(accel_mem_t)             :: buffer
   end type batch_pack_t
@@ -83,7 +83,7 @@ module batch_oct_m
     type(batch_state_l_t), pointer, public :: states_linear(:)
 
     !> If the memory is contiguous, we can perform some operations faster.
-    FLOAT,                 pointer, public :: dpsicont(:, :, :)
+    FLOAT,                 pointer, public :: dpsicont(:, :, :)    !< dpsicont(ip, idim, ist)
     CMPLX,                 pointer, public :: zpsicont(:, :, :)
     integer                                :: status_of
     integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer

@@ -177,6 +177,8 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_daxpy
   type(accel_kernel_t), public, target, save :: kernel_zaxpy
   type(accel_kernel_t), public, target, save :: kernel_copy
+  type(accel_kernel_t), public, target, save :: kernel_complex_conj
+  type(accel_kernel_t), public, target, save :: kernel_complex_conj_combine
   type(accel_kernel_t), public, target, save :: dpack
   type(accel_kernel_t), public, target, save :: zpack
   type(accel_kernel_t), public, target, save :: dunpack
@@ -584,6 +586,8 @@ contains
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
     call accel_kernel_start_call(zunpack, 'pack.cl', "zunpack")
     call accel_kernel_start_call(kernel_copy, 'copy.cl', "copy")
+    call accel_kernel_start_call(kernel_complex_conj, 'complex_conj.cl', "complex_conj")
+    call accel_kernel_start_call(kernel_complex_conj_combine, 'complex_conj_combine.cl', "complex_conj_combine")
     call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
