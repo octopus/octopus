@@ -37,7 +37,7 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
   ASSERT(ubound(psi, dim=3) >= st_end)
   ASSERT(ubound(psi, dim=2) == dim)
 
-  call X(batch_build_indices)(this, st_start, st_end)
+  call batch_build_indices(this, st_start, st_end)
 
   POP_SUB(X(batch_init_with_memory_3))
 end subroutine X(batch_init_with_memory_3)
@@ -75,35 +75,12 @@ subroutine X(batch_init_with_memory_1)(this, psi)
   POP_SUB(X(batch_init_with_memory_1))
 end subroutine X(batch_init_with_memory_1)
 
-!--------------------------------------------------------------
-subroutine X(batch_build_indices)(this, st_start, st_end)
-  class(batch_t), intent(inout) :: this
-  integer,        intent(in)    :: st_start
-  integer,        intent(in)    :: st_end
-
-  integer :: idim, ii, ist
-
-  PUSH_SUB(X(batch_build_indices))
-
-  do ist = st_start, st_end
-    ! now we also populate the linear array
-    do idim = 1, this%dim
-      ii = this%dim*(ist - st_start) + idim
-      this%ist_idim_index(ii, 1) = ist
-      this%ist_idim_index(ii, 2) = idim
-    end do
-    this%ist(ist - st_start + 1) = ist
-  end do
-
-  POP_SUB(X(batch_build_indices))
-end subroutine X(batch_build_indices)
-
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this)
+subroutine X(batch_allocate_unpacked_host)(this)
   class(batch_t),    intent(inout) :: this
 
-  PUSH_SUB(X(batch_allocate))
+  PUSH_SUB(X(batch_allocate_unpacked_host))
 
   if(this%special_memory) then
     call c_f_pointer(X(allocate_hardware_aware)(this%np*this%dim*this%nst), this%X(ff), &
@@ -111,15 +88,29 @@ subroutine X(batch_allocate)(this)
   else
     SAFE_ALLOCATE(this%X(ff)(1:this%np, 1:this%dim, 1:this%nst))
   end if
-  this%type_of = R_TYPE_VAL
   this%X(ff_linear)(1:this%np, 1:this%nst_linear) => this%X(ff)(:, :, :)
 
   this%is_allocated = .true.
-  this%own_memory = .true.
-  
-  POP_SUB(X(batch_allocate))
-end subroutine X(batch_allocate)
 
+  POP_SUB(X(batch_allocate_unpacked_host))
+end subroutine X(batch_allocate_unpacked_host)
+
+!--------------------------------------------------------------
+subroutine X(batch_allocate_packed_host)(this)
+  class(batch_t),    intent(inout) :: this
+
+  PUSH_SUB(X(batch_allocate_packed_host))
+
+  if(this%special_memory) then
+    call c_f_pointer(X(allocate_hardware_aware)(this%pack_size(1)*this%pack_size(2)), this%X(ff_pack), this%pack_size)
+  else
+    SAFE_ALLOCATE(this%X(ff_pack)(1:this%pack_size(1), 1:this%pack_size(2)))
+  end if
+
+  POP_SUB(X(batch_allocate_packed_host))
+end subroutine X(batch_allocate_packed_host)
+
+!--------------------------------------------------------------
 subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   class(batch_t),    intent(inout) :: this
   integer,           intent(in)    :: dim
@@ -134,9 +125,11 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
   call batch_init_empty(this, dim, st_end - st_start + 1, np)
   this%mirror = optional_default(mirror, .false.)
   this%special_memory = optional_default(special, .false.)
+  this%type_of = R_TYPE_VAL
+  call batch_build_indices(this, st_start, st_end)
 
-  call this%X(allocate)()
-  call X(batch_build_indices)(this, st_start, st_end)
+  call this%X(allocate_unpacked_host)()
+  this%own_memory = .true.
 
   POP_SUB(X(batch_init))
 end subroutine X(batch_init)
