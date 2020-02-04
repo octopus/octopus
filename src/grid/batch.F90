@@ -520,7 +520,7 @@ contains
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
     logical :: copy_, force_
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_unpack
     integer               :: source, target
 
     PUSH_SUB(batch_do_unpack)
@@ -550,9 +550,9 @@ contains
         if(this%host_buffer_count == 1 .or. force_) then
           if(this%own_memory) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
-          call profiling_in(prof, "BATCH_UNPACK_COPY")
+          call profiling_in(prof_unpack, "BATCH_UNPACK_COPY")
           if(copy_) call unpack_copy()
-          call profiling_out(prof)
+          call profiling_out(prof_unpack)
           call this%deallocate_packed_host()
           this%status_host = target
           this%status_of = target
@@ -561,7 +561,7 @@ contains
         INCR(this%host_buffer_count, -1)
       case(BATCH_DEVICE_PACKED)
         if(this%device_buffer_count == 1 .or. force_) then
-          call profiling_in(prof, "BATCH_UNPACK_COPY")
+          call profiling_in(prof_unpack, "BATCH_UNPACK_COPY")
           if(copy_) then
             select case(target)
             ! unpack from packed_device to unpacked_host
@@ -572,7 +572,7 @@ contains
               call batch_read_device_to_packed(this)
             end select
           end if
-          call profiling_out(prof)
+          call profiling_out(prof_unpack)
           call this%deallocate_packed_device()
           this%status_of = target
           this%device_buffer_count = 1
