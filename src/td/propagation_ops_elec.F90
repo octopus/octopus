@@ -234,9 +234,9 @@ contains
     call profiling_in(prof, 'ELEC_EXP_APPLY')
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      call do_pack(st, hm, st%group%block_start, ik)
+      call propagation_ops_do_pack(st, hm, st%group%block_start, ik)
       do ib = st%group%block_start, st%group%block_end
-        if(ib + 1 <= st%group%block_end) call do_pack(st, hm, ib+1, ik)
+        if(ib + 1 <= st%group%block_end) call propagation_ops_do_pack(st, hm, ib+1, ik)
         call accel_set_stream(ib)
 
         call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
@@ -248,55 +248,16 @@ contains
         end if
         call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
 
-        call do_unpack(st, hm, ib, ik)
-        if(ib-1 >= st%group%block_start) call finish_unpack(st, hm, ib-1, ik)
+        call propagation_ops_do_unpack(st, hm, ib, ik)
+        if(ib-1 >= st%group%block_start) call propagation_ops_finish_unpack(st, hm, ib-1, ik)
       end do
-      call finish_unpack(st, hm, st%group%block_end, ik)
+      call propagation_ops_finish_unpack(st, hm, st%group%block_end, ik)
     end do
 
     call profiling_out(prof)
 
     POP_SUB(propagation_ops_elec_exp_apply)
 
-    contains
-      subroutine do_pack(st, hm, ib, ik)
-        type(states_elec_t),      intent(inout) :: st
-        type(hamiltonian_elec_t), intent(inout) :: hm
-        integer,                  intent(in)    :: ib
-        integer,                  intent(in)    :: ik
-
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call accel_set_stream(ib)
-          call st%group%psib(ib, ik)%do_pack(async=.true.)
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack(async=.true.)
-        end if
-      end subroutine do_pack
-
-      subroutine do_unpack(st, hm, ib, ik)
-        type(states_elec_t),      intent(inout) :: st
-        type(hamiltonian_elec_t), intent(inout) :: hm
-        integer,                  intent(in)    :: ib
-        integer,                  intent(in)    :: ik
-
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call accel_set_stream(ib)
-          call st%group%psib(ib, ik)%do_unpack(async=.true.)
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack(async=.true.)
-        end if
-      end subroutine do_unpack
-
-      subroutine finish_unpack(st, hm, ib, ik)
-        type(states_elec_t),      intent(inout) :: st
-        type(hamiltonian_elec_t), intent(inout) :: hm
-        integer,                  intent(in)    :: ib
-        integer,                  intent(in)    :: ik
-
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call accel_set_stream(ib)
-          call st%group%psib(ib, ik)%finish_unpack()
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%finish_unpack()
-        end if
-      end subroutine finish_unpack
   end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
@@ -375,6 +336,54 @@ contains
 
     POP_SUB(propagation_ops_elec_fuse_density_exp_apply)
   end subroutine propagation_ops_elec_fuse_density_exp_apply
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_do_pack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_do_pack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%do_pack(async=.true.)
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack(async=.true.)
+    end if
+    POP_SUB(propagation_ops_do_pack)
+  end subroutine propagation_ops_do_pack
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_do_unpack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_do_unpack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%do_unpack(async=.true.)
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack(async=.true.)
+    end if
+    POP_SUB(propagation_ops_do_unpack)
+  end subroutine propagation_ops_do_unpack
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_finish_unpack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_finish_unpack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%finish_unpack()
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%finish_unpack()
+    end if
+    POP_SUB(propagation_ops_finish_unpack)
+  end subroutine propagation_ops_finish_unpack
 
   ! ---------------------------------------------------------
   subroutine propagation_ops_elec_interpolate_get(mesh, hm, interp)
