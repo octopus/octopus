@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagation_ops_elec_oct_m
+  use accel_oct_m
   use batch_oct_m
   use density_oct_m  
   use exponential_oct_m
@@ -233,11 +234,10 @@ contains
     call profiling_in(prof, 'ELEC_EXP_APPLY')
 
     do ik = st%d%kpt%start, st%d%kpt%end
+      call do_pack(st, hm, st%group%block_start, ik)
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_pack()
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
-        end if
+        if(ib + 1 <= st%group%block_end) call do_pack(st, hm, ib+1, ik)
+        call accel_set_stream(ib)
 
         call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
@@ -248,16 +248,55 @@ contains
         end if
         call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
 
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_unpack()
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
-        end if
+        call do_unpack(st, hm, ib, ik)
+        if(ib-1 >= st%group%block_start) call finish_unpack(st, hm, ib-1, ik)
       end do
+      call finish_unpack(st, hm, st%group%block_end, ik)
     end do
 
     call profiling_out(prof)
 
     POP_SUB(propagation_ops_elec_exp_apply)
+
+    contains
+      subroutine do_pack(st, hm, ib, ik)
+        type(states_elec_t),      intent(inout) :: st
+        type(hamiltonian_elec_t), intent(inout) :: hm
+        integer,                  intent(in)    :: ib
+        integer,                  intent(in)    :: ik
+
+        if (hamiltonian_elec_apply_packed(hm)) then
+          call accel_set_stream(ib)
+          call st%group%psib(ib, ik)%do_pack(async=.true.)
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack(async=.true.)
+        end if
+      end subroutine do_pack
+
+      subroutine do_unpack(st, hm, ib, ik)
+        type(states_elec_t),      intent(inout) :: st
+        type(hamiltonian_elec_t), intent(inout) :: hm
+        integer,                  intent(in)    :: ib
+        integer,                  intent(in)    :: ik
+
+        if (hamiltonian_elec_apply_packed(hm)) then
+          call accel_set_stream(ib)
+          call st%group%psib(ib, ik)%do_unpack(async=.true.)
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack(async=.true.)
+        end if
+      end subroutine do_unpack
+
+      subroutine finish_unpack(st, hm, ib, ik)
+        type(states_elec_t),      intent(inout) :: st
+        type(hamiltonian_elec_t), intent(inout) :: hm
+        integer,                  intent(in)    :: ib
+        integer,                  intent(in)    :: ik
+
+        if (hamiltonian_elec_apply_packed(hm)) then
+          call accel_set_stream(ib)
+          call st%group%psib(ib, ik)%finish_unpack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%finish_unpack()
+        end if
+      end subroutine finish_unpack
   end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
