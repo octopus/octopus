@@ -150,6 +150,7 @@ contains
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
+      if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
     end if
 
     if(this%is_allocated) then
@@ -462,25 +463,28 @@ contains
         call this%allocate_packed_device()
         this%status_of = BATCH_DEVICE_PACKED
 
-        call profiling_in(prof_copy, "BATCH_PACK_COPY")
-        select case(source)
-        case(BATCH_NOT_PACKED)
-          ! copy from unpacked host array to device
-          call batch_write_unpacked_to_device(this)
-        case(BATCH_PACKED)
-          ! copy from packed host array to device
-          call batch_write_packed_to_device(this)
-        end select
-        call profiling_out(prof_copy)
+        if(copy_) then
+          call profiling_in(prof_copy, "BATCH_PACK_COPY")
+          select case(source)
+          case(BATCH_NOT_PACKED)
+            ! copy from unpacked host array to device
+            call batch_write_unpacked_to_device(this)
+          case(BATCH_PACKED)
+            ! copy from packed host array to device
+            call batch_write_packed_to_device(this)
+          end select
+          call profiling_out(prof_copy)
+        end if
       case(BATCH_PACKED)
         call this%allocate_packed_host()
         this%status_of = BATCH_PACKED
         this%status_host = BATCH_PACKED
 
-        call profiling_in(prof_copy, "BATCH_PACK_COPY")
-        call pack_copy()
-        call profiling_out(prof_copy)
-
+        if(copy_) then
+          call profiling_in(prof_copy, "BATCH_PACK_COPY")
+          call pack_copy()
+          call profiling_out(prof_copy)
+        end if
         if(this%own_memory) call this%deallocate_unpacked_host()
       end select
     end if
@@ -524,6 +528,7 @@ contains
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
     copy_ = optional_default(copy, .true.)
+    if(this%own_memory) copy_ = .true.
 
     force_ = optional_default(force, .false.)
 
