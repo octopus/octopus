@@ -521,7 +521,6 @@ contains
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
     copy_ = optional_default(copy, .true.)
-    if(this%own_memory) copy_ = .true.
 
     force_ = optional_default(force, .false.)
 
@@ -545,7 +544,7 @@ contains
         if(this%host_buffer_count == 1 .or. force_) then
           if(this%own_memory) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
-          if(copy_) then
+          if(copy_ .or. this%own_memory) then
             if(this%type() == TYPE_FLOAT) then
               call dbatch_unpack_copy(this)
             else if(this%type() == TYPE_CMPLX) then
