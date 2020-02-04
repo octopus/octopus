@@ -339,7 +339,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
 
-  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :), res(:), resgrad(:, :), curlff(:, :)
+  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :), curlff(:, :), res(:), resgrad(:, :), rescurl(:, :)
   R_TYPE :: aa, bb, cc
   integer :: ip, idir, ist, ib
   type(batch_t) :: ffb, opffb
@@ -549,13 +549,10 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
     SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
     do blocksize = 3, 9, 3
-      call batch_init(ffb, 1, blocksize)
-      call ffb%X(allocate)(1, blocksize, this%mesh%np_part)
+      call X(batch_init)(ffb, 1, 1, blocksize, this%mesh%np_part)
 
       do ist = 1, blocksize
-        do ip = 1,this%mesh%np_part
-          ffb%states_linear(ist)%X(psi)(ip) = ff(ip)
-        end do
+        call batch_set_state(ffb, ist, this%mesh%np_part, ff)
       end do
 
       if(packstates) then
@@ -574,32 +571,33 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
         call X(derivatives_batch_curl)(this, ffb, gradffb)
       end if
 
-      if(packstates) then
-        call ffb%do_unpack()
-      end if
+      SAFE_ALLOCATE(rescurl(1:this%mesh%np, 1:blocksize))
+      do ist = 1, blocksize
+        call batch_get_state(ffb, ist, this%mesh%np, rescurl(:, ist))
+      end do
+
+      call ffb%end()
+      do idir = 1, this%mesh%sb%dim
+        call gradffb(idir)%end()
+      end do
 
       do ip = 1, this%mesh%np
         do ib = 0, blocksize-1, this%mesh%sb%dim
           do idir = 1, this%mesh%sb%dim
-            ffb%states_linear(ib+idir)%X(psi)(ip) = &
-              ffb%states_linear(ib+idir)%X(psi)(ip) - curlff(ip, idir)
+            rescurl(ip, ib+idir) = rescurl(ip, ib+idir) - curlff(ip, idir)
           end do
         end do
       end do
 
       norm = M_ZERO
       do ist = 1, blocksize
-        norm = norm + X(mf_nrm2)(this%mesh, ffb%states_linear(ist)%X(psi))
+        norm = norm + X(mf_nrm2)(this%mesh, rescurl(:, ist))
       end do
+      SAFE_DEALLOCATE_A(rescurl)
 
       write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
         'Batch curl ', trim(type), ' bsize = ', blocksize, ' , error = ', norm
       call messages_info(1)
-
-      call ffb%end()
-      do idir = 1, this%mesh%sb%dim
-        call gradffb(idir)%end()
-      end do
     end do
     SAFE_DEALLOCATE_A(gradffb)
   end if
@@ -842,12 +840,9 @@ subroutine X(derivatives_batch_curl_from_gradient)(der, ffb, gradb)
     do ivec = 0, ffb%nst_linear-1, der%dim
       !$omp parallel do
       do ip = 1, der%mesh%np
-        ffb%states_linear(ivec+1)%X(psi)(ip) =  &
-          gradb(2)%states_linear(ivec+3)%X(psi)(ip) - gradb(3)%states_linear(ivec+2)%X(psi)(ip)
-        ffb%states_linear(ivec+2)%X(psi)(ip) =  &
-          gradb(3)%states_linear(ivec+1)%X(psi)(ip) - gradb(1)%states_linear(ivec+3)%X(psi)(ip)
-        ffb%states_linear(ivec+3)%X(psi)(ip) =  &
-          gradb(1)%states_linear(ivec+2)%X(psi)(ip) - gradb(2)%states_linear(ivec+1)%X(psi)(ip)
+        ffb%X(ff_linear)(ip, ivec+1) = gradb(2)%X(ff_linear)(ip, ivec+3) - gradb(3)%X(ff_linear)(ip, ivec+2)
+        ffb%X(ff_linear)(ip, ivec+2) = gradb(3)%X(ff_linear)(ip, ivec+1) - gradb(1)%X(ff_linear)(ip, ivec+3)
+        ffb%X(ff_linear)(ip, ivec+3) = gradb(1)%X(ff_linear)(ip, ivec+2) - gradb(2)%X(ff_linear)(ip, ivec+1)
       end do
     end do
   case(BATCH_PACKED)
@@ -855,29 +850,29 @@ subroutine X(derivatives_batch_curl_from_gradient)(der, ffb, gradb)
     do ip = 1, der%mesh%np
       ! loop over ivec in case we have several vectors per batch
       do ivec = 0, ffb%nst_linear-1, der%dim
-        ffb%pack%X(psi)(ivec+1, ip) = gradb(2)%pack%X(psi)(ivec+3, ip) - gradb(3)%pack%X(psi)(ivec+2, ip)
-        ffb%pack%X(psi)(ivec+2, ip) = gradb(3)%pack%X(psi)(ivec+1, ip) - gradb(1)%pack%X(psi)(ivec+3, ip)
-        ffb%pack%X(psi)(ivec+3, ip) = gradb(1)%pack%X(psi)(ivec+2, ip) - gradb(2)%pack%X(psi)(ivec+1, ip)
+        ffb%X(ff_pack)(ivec+1, ip) = gradb(2)%X(ff_pack)(ivec+3, ip) - gradb(3)%X(ff_pack)(ivec+2, ip)
+        ffb%X(ff_pack)(ivec+2, ip) = gradb(3)%X(ff_pack)(ivec+1, ip) - gradb(1)%X(ff_pack)(ivec+3, ip)
+        ffb%X(ff_pack)(ivec+3, ip) = gradb(1)%X(ff_pack)(ivec+2, ip) - gradb(2)%X(ff_pack)(ivec+1, ip)
       end do
     end do
   case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(aX(kernel_, curl), 0, der%mesh%np)
-    call accel_set_kernel_arg(aX(kernel_, curl), 1, ffb%pack%buffer)
-    call accel_set_kernel_arg(aX(kernel_, curl), 2, log2(ffb%pack%size(1)))
-    call accel_set_kernel_arg(aX(kernel_, curl), 3, gradb(1)%pack%buffer)
-    call accel_set_kernel_arg(aX(kernel_, curl), 4, log2(gradb(1)%pack%size(1)))
-    call accel_set_kernel_arg(aX(kernel_, curl), 5, gradb(2)%pack%buffer)
-    call accel_set_kernel_arg(aX(kernel_, curl), 6, log2(gradb(2)%pack%size(1)))
-    call accel_set_kernel_arg(aX(kernel_, curl), 7, gradb(3)%pack%buffer)
-    call accel_set_kernel_arg(aX(kernel_, curl), 8, log2(gradb(3)%pack%size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 1, ffb%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 2, log2(ffb%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 3, gradb(1)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 4, log2(gradb(1)%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 5, gradb(2)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 6, log2(gradb(2)%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 7, gradb(3)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 8, log2(gradb(3)%pack_size(1)))
 
-    localsize = accel_kernel_workgroup_size(aX(kernel_, curl))/ffb%pack%size(1)
+    localsize = accel_kernel_workgroup_size(aX(kernel_, curl))/ffb%pack_size(1)
 
     dim3 = der%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
     dim2 = min(accel_max_size_per_dim(2)*localsize, pad(der%mesh%np, localsize))
 
-    call accel_kernel_run(aX(kernel_, curl), (/ffb%pack%size(1), dim2, dim3/), &
-      (/ffb%pack%size(1), localsize, 1/))
+    call accel_kernel_run(aX(kernel_, curl), (/ffb%pack_size(1), dim2, dim3/), &
+      (/ffb%pack_size(1), localsize, 1/))
     call accel_finish()
   end select
 
