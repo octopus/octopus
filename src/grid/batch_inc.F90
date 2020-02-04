@@ -111,19 +111,17 @@ subroutine X(batch_allocate_packed_host)(this)
 end subroutine X(batch_allocate_packed_host)
 
 !--------------------------------------------------------------
-subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
+subroutine X(batch_init)(this, dim, st_start, st_end, np, special)
   class(batch_t),    intent(inout) :: this
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: st_start
   integer,           intent(in)    :: st_end
   integer,           intent(in)    :: np
-  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   PUSH_SUB(X(batch_init))
 
   call batch_init_empty(this, dim, st_end - st_start + 1, np)
-  this%mirror = optional_default(mirror, .false.)
   this%special_memory = optional_default(special, .false.)
   this%type_of = R_TYPE_VAL
   call batch_build_indices(this, st_start, st_end)

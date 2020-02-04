@@ -52,8 +52,6 @@ module batch_oct_m
 
     logical                                :: is_allocated
     logical                                :: own_memory !< does the batch own the memory or is it foreign memory?
-    logical                                :: mirror !< keep a copy of the batch data in unpacked form
-
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
 
@@ -277,7 +275,6 @@ contains
 
     this%is_allocated = .false.
     this%own_memory = .false.
-    this%mirror = .false.
     this%special_memory = .false.
     this%nst = nst
     this%dim = dim
@@ -361,9 +358,9 @@ contains
     PUSH_SUB(batch_copy_to)
 
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -483,8 +480,9 @@ contains
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
         call pack_copy()
         call profiling_out(prof_copy)
+
+        if(this%own_memory) call this%deallocate_unpacked_host()
       end select
-      if(this%is_allocated .and. .not. this%mirror) call this%deallocate_unpacked_host()
     end if
 
     select case(target)
@@ -526,7 +524,6 @@ contains
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
     copy_ = optional_default(copy, .true.)
-    if(this%own_memory .and. .not. this%mirror) copy_ = .true.
 
     force_ = optional_default(force, .false.)
 
@@ -546,7 +543,7 @@ contains
       select case(source)
       case(BATCH_PACKED)
         if(this%host_buffer_count == 1 .or. force_) then
-          if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
+          if(this%own_memory) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
           call profiling_in(prof, "BATCH_UNPACK_COPY")
           if(copy_) call unpack_copy()
@@ -564,7 +561,6 @@ contains
             select case(target)
             ! unpack from packed_device to unpacked_host
             case(BATCH_NOT_PACKED)
-              if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
               call batch_read_device_to_unpacked(this)
             ! unpack from packed_device to packed_host
             case(BATCH_PACKED)
