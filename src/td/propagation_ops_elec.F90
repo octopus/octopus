@@ -283,11 +283,10 @@ contains
     call density_calc_init(dens_calc, st, gr, st%rho)
 
     do ik = st%d%kpt%start, st%d%kpt%end
+      call propagation_ops_do_pack(st, hm, st%group%block_start, ik)
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_pack()
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
-        end if
+        if(ib + 1 <= st%group%block_end) call propagation_ops_do_pack(st, hm, ib+1, ik)
+        call accel_set_stream(ib)
 
         call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if(present(dt2)) then
@@ -323,11 +322,10 @@ contains
           call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end if
 
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call st%group%psib(ib, ik)%do_unpack()
-          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
-        end if
+        call propagation_ops_do_unpack(st, hm, ib, ik)
+        if(ib-1 >= st%group%block_start) call propagation_ops_finish_unpack(st, hm, ib-1, ik)
       end do
+      call propagation_ops_finish_unpack(st, hm, st%group%block_end, ik)
     end do
 
     call density_calc_end(dens_calc)
