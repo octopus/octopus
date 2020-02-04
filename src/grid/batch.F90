@@ -85,6 +85,7 @@ module batch_oct_m
     procedure :: copy_data_to => batch_copy_data_to
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
+    procedure :: finish_unpack => batch_finish_unpack
     procedure :: end => batch_end
     procedure :: inv_index => batch_inv_index
     procedure :: is_packed => batch_is_packed
@@ -429,11 +430,13 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_do_pack(this, copy)
+  subroutine batch_do_pack(this, copy, async)
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
+    logical,   optional, intent(in)    :: async
 
     logical               :: copy_
+    logical               :: async_
     type(profile_t), save :: prof
     integer               :: source, target
 
@@ -442,6 +445,8 @@ contains
     call profiling_in(prof, "BATCH_DO_PACK")
 
     copy_ = optional_default(copy, .true.)
+
+    async_ = optional_default(async, .false.)
 
     ! get source and target states for this batch
     source = this%status()
@@ -470,7 +475,7 @@ contains
             call batch_write_unpacked_to_device(this)
           case(BATCH_PACKED)
             ! copy from packed host array to device
-            call batch_write_packed_to_device(this)
+            call batch_write_packed_to_device(this, async_)
           end select
         end if
       case(BATCH_PACKED)
@@ -501,12 +506,13 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_do_unpack(this, copy, force)
+  subroutine batch_do_unpack(this, copy, force, async)
     class(batch_t),     intent(inout) :: this
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
+    logical, optional,  intent(in)    :: async
 
-    logical :: copy_, force_
+    logical :: copy_, force_, async_
     type(profile_t), save :: prof
     integer               :: source, target
 
@@ -518,6 +524,8 @@ contains
     if(this%own_memory) copy_ = .true.
 
     force_ = optional_default(force, .false.)
+
+    async_ = optional_default(async, .false.)
 
     ! get source and target states for this batch
     source = this%status()
@@ -559,10 +567,10 @@ contains
               call batch_read_device_to_unpacked(this)
             ! unpack from packed_device to packed_host
             case(BATCH_PACKED)
-              call batch_read_device_to_packed(this)
+              call batch_read_device_to_packed(this, async_)
             end select
           end if
-          call this%deallocate_packed_device()
+          if(.not. async_) call this%deallocate_packed_device()
           this%status_of = target
           this%device_buffer_count = 1
         end if
@@ -574,6 +582,18 @@ contains
 
     POP_SUB(batch_do_unpack)
   end subroutine batch_do_unpack
+
+  ! ----------------------------------------------------
+  subroutine batch_finish_unpack(this)
+    class(batch_t),      intent(inout)  :: this
+
+    PUSH_SUB(batch_finish_unpack)
+    if(accel_buffer_is_allocated(this%ff_device)) then
+      call accel_finish()
+      call this%deallocate_packed_device()
+    end if
+    POP_SUB(batch_finish_unpack)
+  end subroutine batch_finish_unpack
 
   ! ----------------------------------------------------
 
@@ -728,8 +748,9 @@ contains
   end subroutine batch_read_device_to_unpacked
 
   ! ------------------------------------------------------------------
-  subroutine batch_write_packed_to_device(this)
+  subroutine batch_write_packed_to_device(this, async)
     class(batch_t),      intent(inout)  :: this
+    logical,   optional, intent(in)     :: async
 
     type(profile_t), save :: prof_pack
 
@@ -737,9 +758,9 @@ contains
 
     call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
-      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
-      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack, async=async)
     end if
     call profiling_out(prof_pack)
 
@@ -747,8 +768,9 @@ contains
   end subroutine batch_write_packed_to_device
 
   ! ------------------------------------------------------------------
-  subroutine batch_read_device_to_packed(this)
+  subroutine batch_read_device_to_packed(this, async)
     class(batch_t),      intent(inout) :: this
+    logical,   optional, intent(in)    :: async
 
     type(profile_t), save :: prof_unpack
 
@@ -756,9 +778,9 @@ contains
 
     call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
-      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
-      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack, async=async)
     end if
     call profiling_out(prof_unpack)
 
