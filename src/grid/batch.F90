@@ -588,8 +588,6 @@ contains
   contains
 
     subroutine unpack_copy()
-      integer :: ist, ip
-
       if(this%type() == TYPE_FLOAT) then
         call dbatch_unpack_copy(this)
       else if(this%type() == TYPE_CMPLX) then
