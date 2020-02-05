@@ -31,6 +31,3 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
-
-StatesMirror = yes
-

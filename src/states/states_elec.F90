@@ -1090,10 +1090,10 @@ contains
 
           if (states_are_real(st)) then
             call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              mirror=st%d%mirror_states, special=.true.)
+              special=.true.)
           else
             call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              mirror=st%d%mirror_states, special=.true.)
+              special=.true.)
           end if
           
         end do
@@ -1265,26 +1265,7 @@ contains
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
-    !%Variable StatesMirror
-    !%Type logical
-    !%Section Execution::Optimization
-    !%Description
-    !% When this is enabled, Octopus keeps a copy of the states in
-    !% main memory. This speeds up calculations when working with
-    !% GPUs, as the memory does not to be copied back, but consumes
-    !% more main memory.
-    !%
-    !% The default is false, except when acceleration is enabled and
-    !% StatesPack is disabled.
-    !%End
-
-    defaultl = .false.
-    if(accel_is_enabled() .and. .not. st%d%pack_states) then
-      defaultl = .true.
-    end if
-    call parse_variable(namespace, 'StatesMirror', defaultl, st%d%mirror_states)
-
-    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
+    call messages_obsolete_variable(namespace, 'StatesMirror')
 
     !%Variable StatesOrthogonalization
     !%Type integer

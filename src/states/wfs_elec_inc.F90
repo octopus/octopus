@@ -51,21 +51,20 @@ subroutine X(wfs_elec_init_with_memory_2)(this, dim, st_start, st_end, psi, ik)
   POP_SUB(X(wfs_elec_init_with_memory_2))
 end subroutine X(wfs_elec_init_with_memory_2)
 
-subroutine X(wfs_elec_init)(this, dim, st_start, st_end, np, ik, mirror, special)
+subroutine X(wfs_elec_init)(this, dim, st_start, st_end, np, ik, special)
   type(wfs_elec_t),  intent(inout) :: this
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: st_start
   integer,           intent(in)    :: st_end
   integer,           intent(in)    :: np
   integer,           intent(in)    :: ik
-  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   PUSH_SUB(X(wfs_elec_init))
 
   this%ik = ik
   this%has_phase = .false.
-  call X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
+  call X(batch_init)(this, dim, st_start, st_end, np, special)
 
   POP_SUB(X(wfs_elec_init))
 end subroutine X(wfs_elec_init)

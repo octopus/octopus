@@ -1,4 +1,4 @@
-!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2008 X. Andrade, 2020 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -111,19 +111,17 @@ subroutine X(batch_allocate_packed_host)(this)
 end subroutine X(batch_allocate_packed_host)
 
 !--------------------------------------------------------------
-subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
+subroutine X(batch_init)(this, dim, st_start, st_end, np, special)
   class(batch_t),    intent(inout) :: this
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: st_start
   integer,           intent(in)    :: st_end
   integer,           intent(in)    :: np
-  logical, optional, intent(in)    :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   PUSH_SUB(X(batch_init))
 
   call batch_init_empty(this, dim, st_end - st_start + 1, np)
-  this%mirror = optional_default(mirror, .false.)
   this%special_memory = optional_default(special, .false.)
   this%type_of = R_TYPE_VAL
   call batch_build_indices(this, st_start, st_end)
@@ -133,6 +131,52 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, mirror, special)
 
   POP_SUB(X(batch_init))
 end subroutine X(batch_init)
+
+!--------------------------------------------------------------
+subroutine X(batch_pack_copy)(this)
+  class(batch_t),    intent(inout) :: this
+
+  integer :: ist, ip, sp, ep, bsize
+  type(profile_t), save :: prof_copy
+  ! no push_sub, called too frequently
+
+  call profiling_in(prof_copy, "BATCH_PACK_COPY")
+
+  bsize = hardware%X(block_size)
+
+  !$omp parallel do private(ep, ist, ip)
+  do sp = 1, this%pack_size(2), bsize
+    ep = min(sp + bsize - 1, this%pack_size(2))
+    do ist = 1, this%nst_linear
+      do ip = sp, ep
+        this%X(ff_pack)(ist, ip) = this%X(ff_linear)(ip, ist)
+      end do
+    end do
+  end do
+
+  call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
+  call profiling_out(prof_copy)
+end subroutine X(batch_pack_copy)
+
+!--------------------------------------------------------------
+subroutine X(batch_unpack_copy)(this)
+  class(batch_t),    intent(inout) :: this
+
+  integer :: ist, ip
+  type(profile_t), save :: prof_copy
+  ! no push_sub, called too frequently
+
+  call profiling_in(prof_copy, "BATCH_UNPACK_COPY")
+
+  !$omp parallel do private(ist)
+  do ip = 1, this%pack_size(2)
+    do ist = 1, this%nst_linear
+      this%X(ff_linear)(ip, ist) = this%X(ff_pack)(ist, ip)
+    end do
+  end do
+  call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
+  call profiling_out(prof_copy)
+end subroutine X(batch_unpack_copy)
 
 !! Local Variables:
 !! mode: f90

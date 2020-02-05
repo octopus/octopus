@@ -326,19 +326,19 @@ contains
 
     PUSH_SUB(states_mxll_allocate)
 
-    call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part, mirror=st%d%mirror_states)
+    call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rsb)
 
-    call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part, mirror=st%d%mirror_states)
+    call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_transb)
  
-    call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part, mirror=st%d%mirror_states)
+    call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_longb)
 
-    call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part, mirror=st%d%mirror_states)
+    call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_curr_dens_rest1b)
     
-    call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part, mirror=st%d%mirror_states)
+    call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative

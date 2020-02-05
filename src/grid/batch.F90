@@ -1,4 +1,4 @@
-!! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2008 X. Andrade, 2020 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -52,14 +52,14 @@ module batch_oct_m
 
     logical                                :: is_allocated
     logical                                :: own_memory !< does the batch own the memory or is it foreign memory?
-    logical                                :: mirror !< keep a copy of the batch data in unpacked form
-
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer,                        public :: nst_linear
 
     integer                                :: status_of
+    integer                                :: status_host
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
-    integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
+    integer                                :: device_buffer_count !< whether there is a copy in the opencl buffer
+    integer                                :: host_buffer_count !< whether the batch was packed on the cpu
     logical :: special_memory
 
 
@@ -139,7 +139,9 @@ contains
     if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
       this%status_of = BATCH_NOT_PACKED
-      this%in_buffer_count = 1
+      this%status_host = BATCH_NOT_PACKED
+      this%host_buffer_count = 0
+      this%device_buffer_count = 0
 
       if(accel_is_enabled()) then
         call this%deallocate_packed_device()
@@ -148,6 +150,7 @@ contains
       end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
+      if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
     end if
 
     if(this%is_allocated) then
@@ -273,7 +276,6 @@ contains
 
     this%is_allocated = .false.
     this%own_memory = .false.
-    this%mirror = .false.
     this%special_memory = .false.
     this%nst = nst
     this%dim = dim
@@ -282,8 +284,10 @@ contains
     this%nst_linear = nst*dim
 
     this%np = np
-    this%in_buffer_count = 0
+    this%device_buffer_count = 0
+    this%host_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
+    this%status_host = BATCH_NOT_PACKED
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))
@@ -355,9 +359,9 @@ contains
     PUSH_SUB(batch_copy_to)
 
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, mirror=this%mirror, special=this%special_memory)
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
@@ -409,7 +413,7 @@ contains
   logical pure function batch_is_packed(this) result(in_buffer)
     class(batch_t),      intent(in)    :: this
 
-    in_buffer = this%in_buffer_count > 0
+    in_buffer = (this%device_buffer_count > 0) .or. (this%host_buffer_count > 0)
   end function batch_is_packed
 
   ! ----------------------------------------------------
@@ -429,87 +433,70 @@ contains
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
 
-    logical :: copy_
-    type(profile_t), save :: prof, prof_copy
+    logical               :: copy_
+    type(profile_t), save :: prof
+    integer               :: source, target
 
     ! no push_sub, called too frequently
 
     call profiling_in(prof, "BATCH_DO_PACK")
 
-    copy_ = .true.
-    if(present(copy)) copy_ = copy
+    copy_ = optional_default(copy, .true.)
 
-    if(.not. this%is_packed()) then
+    ! get source and target states for this batch
+    source = this%status()
+    select case(source)
+    case(BATCH_NOT_PACKED, BATCH_PACKED)
       if(accel_is_enabled()) then
-        this%status_of = BATCH_DEVICE_PACKED
-        call this%allocate_packed_device()
+        target = BATCH_DEVICE_PACKED
       else
-        this%status_of = BATCH_PACKED
-        call this%allocate_packed_host()
+        target = BATCH_PACKED
       end if
+    case(BATCH_DEVICE_PACKED)
+      target = BATCH_DEVICE_PACKED
+    end select
 
-      if(copy_) then
-        call profiling_in(prof_copy, "BATCH_PACK_COPY")
-        if(accel_is_enabled()) then
-          call batch_write_to_opencl_buffer(this)
-        else
-          call pack_copy()
+    ! only do something if target is different from source
+    if(source /= target) then
+      select case(target)
+      case(BATCH_DEVICE_PACKED)
+        call this%allocate_packed_device()
+        this%status_of = BATCH_DEVICE_PACKED
+
+        if(copy_) then
+          select case(source)
+          case(BATCH_NOT_PACKED)
+            ! copy from unpacked host array to device
+            call batch_write_unpacked_to_device(this)
+          case(BATCH_PACKED)
+            ! copy from packed host array to device
+            call batch_write_packed_to_device(this)
+          end select
         end if
+      case(BATCH_PACKED)
+        call this%allocate_packed_host()
+        this%status_of = BATCH_PACKED
+        this%status_host = BATCH_PACKED
 
-        call profiling_out(prof_copy)
-      end if
-
-      if(this%is_allocated .and. .not. this%mirror) call this%deallocate_unpacked_host()
-
+        if(copy_) then
+          if(this%type() == TYPE_FLOAT) then
+            call dbatch_pack_copy(this)
+          else if(this%type() == TYPE_CMPLX) then
+            call zbatch_pack_copy(this)
+          end if
+        end if
+        if(this%own_memory) call this%deallocate_unpacked_host()
+      end select
     end if
 
-    INCR(this%in_buffer_count, 1)
+    select case(target)
+    case(BATCH_DEVICE_PACKED)
+      INCR(this%device_buffer_count, 1)
+    case(BATCH_PACKED)
+      INCR(this%host_buffer_count, 1)
+    end select
 
     call profiling_out(prof)
-
-  contains
-
-    subroutine pack_copy()
-      integer :: ist, ip, sp, ep, bsize
-
-
-      if(this%type() == TYPE_FLOAT) then
-
-        bsize = hardware%dblock_size
-
-        !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack_size(2), bsize
-          ep = min(sp + bsize - 1, this%pack_size(2))
-          forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%dff_pack(ist, ip) = this%dff_linear(ip, ist)
-            end forall
-          end forall
-        end do
-
-      else if(this%type() == TYPE_CMPLX) then
-
-        bsize = hardware%zblock_size
-
-        !$omp parallel do private(ep, ist, ip)
-        do sp = 1, this%pack_size(2), bsize
-          ep = min(sp + bsize - 1, this%pack_size(2))
-          forall(ist = 1:this%nst_linear)
-            forall(ip = sp:ep)
-              this%zff_pack(ist, ip) = this%zff_linear(ip, ist)
-            end forall
-          end forall
-        end do
-
-      else
-        message(1) = "Internal error: unknown batch type in batch_do_pack."
-        call messages_fatal(1)
-      end if
-
-      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-
-    end subroutine pack_copy
-
   end subroutine batch_do_pack
 
   ! ----------------------------------------------------
@@ -519,114 +506,88 @@ contains
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
-    logical :: copy_
+    logical :: copy_, force_
     type(profile_t), save :: prof
+    integer               :: source, target
 
     PUSH_SUB(batch_do_unpack)
 
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
-    if(this%is_packed()) then
+    copy_ = optional_default(copy, .true.)
+    if(this%own_memory) copy_ = .true.
 
-      if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
+    force_ = optional_default(force, .false.)
 
-        if(this%own_memory .and. .not. this%mirror) call this%allocate_unpacked_host()
+    ! get source and target states for this batch
+    source = this%status()
+    select case(source)
+    case(BATCH_NOT_PACKED)
+      target = source
+    case(BATCH_PACKED)
+      target = BATCH_NOT_PACKED
+    case(BATCH_DEVICE_PACKED)
+      target = this%status_host
+    end select
 
-        copy_ = .true.
-        if(present(copy)) copy_ = copy
-        if(this%own_memory .and. .not. this%mirror) copy_ = .true.
-
-        if(copy_) call batch_sync(this)
-
-        ! now deallocate
-        this%status_of = BATCH_NOT_PACKED
-        this%in_buffer_count = 1
-
-        if(accel_is_enabled()) then
-          call this%deallocate_packed_device()
-        else
+    ! only do something if target is different from source
+    if(source /= target) then
+      select case(source)
+      case(BATCH_PACKED)
+        if(this%host_buffer_count == 1 .or. force_) then
+          if(this%own_memory) call this%allocate_unpacked_host()
+          ! unpack from packed_host to unpacked_host
+          if(copy_) then
+            if(this%type() == TYPE_FLOAT) then
+              call dbatch_unpack_copy(this)
+            else if(this%type() == TYPE_CMPLX) then
+              call zbatch_unpack_copy(this)
+            end if
+          end if
           call this%deallocate_packed_host()
+          this%status_host = target
+          this%status_of = target
+          this%host_buffer_count = 1
         end if
-      end if
-
-      INCR(this%in_buffer_count, -1)
+        INCR(this%host_buffer_count, -1)
+      case(BATCH_DEVICE_PACKED)
+        if(this%device_buffer_count == 1 .or. force_) then
+          if(copy_) then
+            select case(target)
+            ! unpack from packed_device to unpacked_host
+            case(BATCH_NOT_PACKED)
+              call batch_read_device_to_unpacked(this)
+            ! unpack from packed_device to packed_host
+            case(BATCH_PACKED)
+              call batch_read_device_to_packed(this)
+            end select
+          end if
+          call this%deallocate_packed_device()
+          this%status_of = target
+          this%device_buffer_count = 1
+        end if
+        INCR(this%device_buffer_count, -1)
+      end select
     end if
 
     call profiling_out(prof)
 
     POP_SUB(batch_do_unpack)
-
   end subroutine batch_do_unpack
 
   ! ----------------------------------------------------
 
-  subroutine batch_sync(this)
-    class(batch_t),      intent(inout) :: this
-
-    type(profile_t), save :: prof
-
-    PUSH_SUB(batch_sync)
-
-    if(this%is_packed()) then
-      call profiling_in(prof, "BATCH_UNPACK_COPY")
-
-      if(accel_is_enabled()) then
-        call batch_read_from_opencl_buffer(this)
-      else
-        call unpack_copy()
-      end if
-
-      call profiling_out(prof)
-    end if
-
-    POP_SUB(batch_sync)
-
-  contains
-
-    subroutine unpack_copy()
-      integer :: ist, ip
-
-      if(this%type() == TYPE_FLOAT) then
-
-        !$omp parallel do private(ist)
-        do ip = 1, this%pack_size(2)
-          forall(ist = 1:this%nst_linear)
-            this%dff_linear(ip, ist) = this%dff_pack(ist, ip)
-          end forall
-        end do
-
-      else if(this%type() == TYPE_CMPLX) then
-
-        !$omp parallel do private(ist)
-        do ip = 1, this%pack_size(2)
-          forall(ist = 1:this%nst_linear)
-            this%zff_linear(ip, ist) = this%zff_pack(ist, ip)
-          end forall
-        end do
-
-      else
-        message(1) = "Internal error: unknown batch type in batch_sync."
-        call messages_fatal(1)
-      end if
-
-      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-
-    end subroutine unpack_copy
-
-  end subroutine batch_sync
-
-  ! ----------------------------------------------------
-
-  subroutine batch_write_to_opencl_buffer(this)
+  subroutine batch_write_unpacked_to_device(this)
     class(batch_t),      intent(inout)  :: this
 
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
-    type(profile_t), save :: prof_pack
+    type(profile_t), save :: prof, prof_pack
     type(accel_kernel_t), pointer :: kernel
 
-    PUSH_SUB(batch_write_to_opencl_buffer)
+    PUSH_SUB(batch_write_unpacked_to_device)
 
+    call profiling_in(prof, "BATCH_PACK_COPY_CL")
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -689,20 +650,22 @@ contains
 
     end if
 
-    POP_SUB(batch_write_to_opencl_buffer)
-  end subroutine batch_write_to_opencl_buffer
+    call profiling_out(prof)
+    POP_SUB(batch_write_unpacked_to_device)
+  end subroutine batch_write_unpacked_to_device
 
   ! ------------------------------------------------------------------
 
-  subroutine batch_read_from_opencl_buffer(this)
+  subroutine batch_read_device_to_unpacked(this)
     class(batch_t),      intent(inout) :: this
 
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
     type(accel_kernel_t), pointer :: kernel
-    type(profile_t), save :: prof_unpack
+    type(profile_t), save :: prof, prof_unpack
 
-    PUSH_SUB(batch_read_from_opencl_buffer)
+    PUSH_SUB(batch_read_device_to_unpacked)
+    call profiling_in(prof, "BATCH_UNPACK_COPY_CL")
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -760,8 +723,47 @@ contains
       call accel_release_buffer(tmp)
     end if
 
-    POP_SUB(batch_read_from_opencl_buffer)
-  end subroutine batch_read_from_opencl_buffer
+    call profiling_out(prof)
+    POP_SUB(batch_read_device_to_unpacked)
+  end subroutine batch_read_device_to_unpacked
+
+  ! ------------------------------------------------------------------
+  subroutine batch_write_packed_to_device(this)
+    class(batch_t),      intent(inout)  :: this
+
+    type(profile_t), save :: prof_pack
+
+    PUSH_SUB(batch_write_packed_to_device)
+
+    call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
+    if(this%type() == TYPE_FLOAT) then
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+    else
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+    end if
+    call profiling_out(prof_pack)
+
+    POP_SUB(batch_write_packed_to_device)
+  end subroutine batch_write_packed_to_device
+
+  ! ------------------------------------------------------------------
+  subroutine batch_read_device_to_packed(this)
+    class(batch_t),      intent(inout) :: this
+
+    type(profile_t), save :: prof_unpack
+
+    PUSH_SUB(batch_read_device_to_packed)
+
+    call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
+    if(this%type() == TYPE_FLOAT) then
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+    else
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+    end if
+    call profiling_out(prof_unpack)
+
+    POP_SUB(batch_read_device_to_packed)
+  end subroutine batch_read_device_to_packed
 
 ! ------------------------------------------------------
 integer function batch_inv_index(this, cind) result(index)
