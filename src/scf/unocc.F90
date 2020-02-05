@@ -356,7 +356,7 @@ contains
 
       call messages_obsolete_variable(sys%namespace, "NumberUnoccStates", "ExtraStates")
 
-      call states_elec_allocate_wfns(st, mesh)
+      call states_elec_allocate_wfns(st, mesh, packed=.true.)
 
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)

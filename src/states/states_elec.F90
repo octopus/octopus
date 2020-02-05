@@ -965,11 +965,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_elec_t structure.
-  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip)
+  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip, packed)
     type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: skip(:)
+    logical,      optional, intent(in)      :: packed
 
     PUSH_SUB(states_elec_allocate_wfns)
 
@@ -978,7 +979,7 @@ contains
       st%wfs_type = wfs_type
     end if
 
-    call states_elec_init_block(st, mesh, skip = skip)
+    call states_elec_init_block(st, mesh, skip = skip, packed=packed)
     call states_elec_set_zero(st)
 
     POP_SUB(states_elec_allocate_wfns)
@@ -1001,14 +1002,15 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_elec_init_block(st, mesh, verbose, skip)
+  subroutine states_elec_init_block(st, mesh, verbose, skip, packed)
     type(states_elec_t),           intent(inout) :: st
     type(mesh_t),                  intent(in)    :: mesh
     logical, optional,             intent(in)    :: verbose
     logical, optional,             intent(in)    :: skip(:)
+    logical, optional,             intent(in)    :: packed
 
     integer :: ib, iqn, ist, istmin, istmax
-    logical :: same_node, verbose_
+    logical :: same_node, verbose_, packed_
     integer, allocatable :: bstart(:), bend(:)
 
     PUSH_SUB(states_elec_init_block)
@@ -1020,6 +1022,7 @@ contains
     st%group%iblock = 0
 
     verbose_ = optional_default(verbose, .true.)
+    packed_ = optional_default(packed, .false.)
 
     !In case we have a list of state to skip, we do not allocate them 
     istmin = 1
@@ -1090,10 +1093,10 @@ contains
 
           if (states_are_real(st)) then
             call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true., packed=.true.)
+              special=.true., packed=packed_)
           else
             call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true., packed=.true.)
+              special=.true., packed=packed_)
           end if
           
         end do
