@@ -434,7 +434,7 @@ contains
     logical,   optional, intent(in)    :: copy
 
     logical               :: copy_
-    type(profile_t), save :: prof, prof_copy
+    type(profile_t), save :: prof
     integer               :: source, target
 
     ! no push_sub, called too frequently
@@ -464,7 +464,6 @@ contains
         this%status_of = BATCH_DEVICE_PACKED
 
         if(copy_) then
-          call profiling_in(prof_copy, "BATCH_PACK_COPY")
           select case(source)
           case(BATCH_NOT_PACKED)
             ! copy from unpacked host array to device
@@ -473,7 +472,6 @@ contains
             ! copy from packed host array to device
             call batch_write_packed_to_device(this)
           end select
-          call profiling_out(prof_copy)
         end if
       case(BATCH_PACKED)
         call this%allocate_packed_host()
@@ -509,7 +507,7 @@ contains
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
 
     logical :: copy_, force_
-    type(profile_t), save :: prof, prof_unpack
+    type(profile_t), save :: prof
     integer               :: source, target
 
     PUSH_SUB(batch_do_unpack)
@@ -554,7 +552,6 @@ contains
         INCR(this%host_buffer_count, -1)
       case(BATCH_DEVICE_PACKED)
         if(this%device_buffer_count == 1 .or. force_) then
-          call profiling_in(prof_unpack, "BATCH_UNPACK_COPY")
           if(copy_) then
             select case(target)
             ! unpack from packed_device to unpacked_host
@@ -565,7 +562,6 @@ contains
               call batch_read_device_to_packed(this)
             end select
           end if
-          call profiling_out(prof_unpack)
           call this%deallocate_packed_device()
           this%status_of = target
           this%device_buffer_count = 1
@@ -586,11 +582,12 @@ contains
 
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
-    type(profile_t), save :: prof_pack
+    type(profile_t), save :: prof, prof_pack
     type(accel_kernel_t), pointer :: kernel
 
     PUSH_SUB(batch_write_unpacked_to_device)
 
+    call profiling_in(prof, "BATCH_PACK_COPY_CL")
     if(this%nst_linear == 1) then
       ! we can copy directly
       if(this%type() == TYPE_FLOAT) then
@@ -653,6 +650,7 @@ contains
 
     end if
 
+    call profiling_out(prof)
     POP_SUB(batch_write_unpacked_to_device)
   end subroutine batch_write_unpacked_to_device
 
@@ -664,9 +662,10 @@ contains
     integer :: ist, ist2, unroll
     type(accel_mem_t) :: tmp
     type(accel_kernel_t), pointer :: kernel
-    type(profile_t), save :: prof_unpack
+    type(profile_t), save :: prof, prof_unpack
 
     PUSH_SUB(batch_read_device_to_unpacked)
+    call profiling_in(prof, "BATCH_UNPACK_COPY_CL")
 
     if(this%nst_linear == 1) then
       ! we can copy directly
@@ -724,6 +723,7 @@ contains
       call accel_release_buffer(tmp)
     end if
 
+    call profiling_out(prof)
     POP_SUB(batch_read_device_to_unpacked)
   end subroutine batch_read_device_to_unpacked
 
@@ -735,7 +735,7 @@ contains
 
     PUSH_SUB(batch_write_packed_to_device)
 
-    call profiling_in(prof_pack, "CL_PACK")
+    call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
       call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
     else
@@ -754,7 +754,7 @@ contains
 
     PUSH_SUB(batch_read_device_to_packed)
 
-    call profiling_in(prof_unpack, "CL_UNPACK")
+    call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
       call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
     else
