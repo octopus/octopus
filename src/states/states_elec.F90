@@ -1090,10 +1090,10 @@ contains
 
           if (states_are_real(st)) then
             call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true.)
+              special=.true., packed=.true.)
           else
             call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true.)
+              special=.true., packed=.true.)
           end if
           
         end do

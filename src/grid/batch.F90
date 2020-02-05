@@ -357,12 +357,15 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
+    logical :: host_packed
+
     PUSH_SUB(batch_copy_to)
 
+    host_packed = this%host_buffer_count > 0
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np)
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np)
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
