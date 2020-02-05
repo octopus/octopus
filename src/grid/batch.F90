@@ -60,22 +60,23 @@ module batch_oct_m
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
     integer                                :: device_buffer_count !< whether there is a copy in the opencl buffer
     integer                                :: host_buffer_count !< whether the batch was packed on the cpu
-    logical :: special_memory
+    logical                                :: special_memory
+    logical                                :: needs_finish_unpack
 
 
     !> unpacked variables; linear variables are pointers with different shapes
-    FLOAT, pointer, contiguous, public :: dff(:, :, :)
-    CMPLX, pointer, contiguous, public :: zff(:, :, :)
-    FLOAT, pointer, contiguous, public :: dff_linear(:, :)
-    CMPLX, pointer, contiguous, public :: zff_linear(:, :)
+    FLOAT, pointer, contiguous,     public :: dff(:, :, :)
+    CMPLX, pointer, contiguous,     public :: zff(:, :, :)
+    FLOAT, pointer, contiguous,     public :: dff_linear(:, :)
+    CMPLX, pointer, contiguous,     public :: zff_linear(:, :)
     !> packed variables; only rank-2 arrays due to padding to powers of 2
-    FLOAT, pointer, contiguous, public :: dff_pack(:, :)
-    CMPLX, pointer, contiguous, public :: zff_pack(:, :)
+    FLOAT, pointer, contiguous,     public :: dff_pack(:, :)
+    CMPLX, pointer, contiguous,     public :: zff_pack(:, :)
 
-    integer                   , public :: pack_size(1:2)
-    integer                   , public :: pack_size_real(1:2)
+    integer,                        public :: pack_size(1:2)
+    integer,                        public :: pack_size_real(1:2)
 
-    type(accel_mem_t)         , public    :: ff_device
+    type(accel_mem_t),              public :: ff_device
 
   contains
     procedure :: check_compatibility_with => batch_check_compatibility_with
@@ -139,16 +140,15 @@ contains
 
     if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
+      if(this%status() == BATCH_DEVICE_PACKED) then
+        call this%deallocate_packed_device()
+      else if(this%status() == BATCH_PACKED) then
+        call this%deallocate_packed_host()
+      end if
       this%status_of = BATCH_NOT_PACKED
       this%status_host = BATCH_NOT_PACKED
       this%host_buffer_count = 0
       this%device_buffer_count = 0
-
-      if(accel_is_enabled()) then
-        call this%deallocate_packed_device()
-      else
-        call this%deallocate_packed_host()
-      end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
       if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
@@ -278,6 +278,7 @@ contains
     this%is_allocated = .false.
     this%own_memory = .false.
     this%special_memory = .false.
+    this%needs_finish_unpack = .false.
     this%nst = nst
     this%dim = dim
     this%type_of = TYPE_NONE
@@ -572,7 +573,11 @@ contains
               call batch_read_device_to_packed(this, async_)
             end select
           end if
-          if(.not. async_) call this%deallocate_packed_device()
+          if(async_) then
+            this%needs_finish_unpack = .true.
+          else
+            call this%deallocate_packed_device()
+          end if
           this%status_of = target
           this%device_buffer_count = 1
         end if
@@ -590,10 +595,10 @@ contains
     class(batch_t),      intent(inout)  :: this
 
     PUSH_SUB(batch_finish_unpack)
-    if(this%status() == BATCH_DEVICE_PACKED .and. &
-       accel_buffer_is_allocated(this%ff_device)) then
+    if(this%needs_finish_unpack) then
       call accel_finish()
       call this%deallocate_packed_device()
+      this%needs_finish_unpack = .false.
     end if
     POP_SUB(batch_finish_unpack)
   end subroutine batch_finish_unpack
