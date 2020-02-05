@@ -520,8 +520,6 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     else
 
       ! Note: curvilinear coordinates are handled inside the ml_dotp function!
-
-      ! ToDo: rewrite this in terms of gemv with stride.
   
       ! Old code:
 
@@ -533,6 +531,13 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 !!      end do
 
       ! Alternative code:
+      !
+      ! The new code avoids the batch_get_state calls, which might involve costly memory copies, 
+      ! and also serves as prototype for the GPU code.
+      ! The current version with the interleaved memory layout of packed patches (up, down, up, down, ...) 
+      ! requires ab artificially enlarged matrix to deploy the GEMM routine.
+      ! If, in future, the memory layout of packed states will be changed to (up, up, ..., down, down, ...)
+      ! this will no longer be necessary
 
       if(mesh%use_curvilinear) then
         !$omp parallel do
@@ -581,7 +586,6 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   case(BATCH_DEVICE_PACKED)
 
     ASSERT(.not. mesh%use_curvilinear)
-    ASSERT(.false.)
 
     ! First, move the state to the GPU
     ! - create buffers
@@ -663,8 +667,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 end subroutine X(mesh_batch_mf_dotp)
 
 ! --------------------------------------------------------------------------
-! This routine performs a set of axpy operations for each mesh function x of a batch, 
-! and accumulate the result to y, a single mesh function.
+! This routine performs a set of axpy operations for each mesh function x of a batch (xx), 
+! and accumulate the result to y (psi in this case), a single mesh function.
 subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   type(mesh_t),      intent(in)    :: mesh
   class(batch_t),    intent(in)    :: xx
@@ -675,13 +679,15 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof
   R_TYPE, allocatable :: phi(:,:)
+  R_TYPE, allocatable :: aa_tmp(:,:)
+
+  type(accel_mem_t) :: aa_tmp_buffer
+  type(accel_mem_t) :: psi_buffer
 
   PUSH_SUB(X(mesh_batch_mf_axpy))
   call profiling_in(prof, "AXPY_MF_BATCH")
 
   ASSERT(xx%dim == ubound(psi,dim=2))
-
-  ASSERT(xx%status() /= BATCH_DEVICE_PACKED)
 
   nst_ = xx%nst
   if(present(nst)) nst_ = nst
@@ -703,7 +709,10 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
       call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
                     ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+
     else !Spinor case
+
+      ! Old code:
 
       SAFE_ALLOCATE(phi(1:mesh%np, 1:xx%dim))
 
@@ -717,7 +726,45 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
       SAFE_DEALLOCATE_A(phi)
 
+      ! Alternative code:
+      !
+      ! The new code avoids the batch_get_state calls, which might involve costly memory copies, 
+      ! and also serves as prototype for the GPU code.
+      ! The current version with the interleaved memory layout of packed patches (up, down, up, down, ...) 
+      ! requires ab artificially enlarged matrix to deploy the GEMM routine.
+      ! If, in future, the memory layout of packed states will be changed to (up, up, ..., down, down, ...)
+      ! this will no longer be necessary
+
+!!      SAFE_ALLOCATE(aa_tmp(1:xx%dim*xx%nst, 1:xx%dim))
+!!
+!!      do ist=1, xx%nst
+!!        aa_tmp(2*ist-1, 1) = aa(ist)
+!!        aa_tmp(2*ist  , 1) = R_TOTYPE(M_ZERO)
+!!        aa_tmp(2*ist-1, 2) = R_TOTYPE(M_ZERO)
+!!        aa_tmp(2*ist  , 2) = aa(ist)
+!!      end do
+!!
+!!      call blas_gemm( 'T',                                 & !< transpose A: we transpose xx%pack
+!!                      'N',                                 & !< transpose B: we don't transpose aa_tmp     
+!!                      mesh%np,                             & !< M: mesh%np 
+!!                      xx%dim,                              & !< N: xx%dim
+!!                      xx%dim*nst_,                         & !< K: number of states to process (xx%dim * nst_)
+!!                      R_TOTYPE(M_ONE),                     & !< alpha: 1
+!!                      xx%pack%X(psi)(1,1),                 & !< A(K, M) ( A^T(M,K) ) : xx%pack%X(psi)(xx%dim%xx%nst, mesh%np)
+!!                      ubound(xx%pack%X(psi), dim=1),       & !< LDA
+!!                      aa_tmp(1,1),                         & !< B(K, N): aa_tmp(xx%nst*xx%dim, xx%dim)
+!!                      xx%dim*xx%nst,                       & !< LDB
+!!                      R_TOTYPE(M_ONE),                     & !< beta: 1 (accumulating the result)
+!!                      psi(1,1),                            & !< C(M, N): psi(mesh%np, xx%dim)
+!!                      mesh%np)                               !< LDC 
+!!
+!!      SAFE_DEALLOCATE_A(aa_tmp)
+!!
     end if
+
+  case(BATCH_DEVICE_PACKED)
+
+    ASSERT(xx%status() /= BATCH_DEVICE_PACKED)
 
   end select
 
