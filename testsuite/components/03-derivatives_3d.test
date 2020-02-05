@@ -41,6 +41,14 @@ match ; Complex Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient compl
 match ; Complex Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient complex bsize =  16', 12) ; 3.26e-5
 match ; Complex Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient complex bsize =  32', 12) ; 3.26e-5
 
+match ; Real curl (blocksize =   3); GREPFIELD(out, 'Batch curl real bsize =   3', 10) ; 1.39e-4
+match ; Real curl (blocksize =   6); GREPFIELD(out, 'Batch curl real bsize =   6', 10) ; 2.77e-4
+match ; Real curl (blocksize =   9); GREPFIELD(out, 'Batch curl real bsize =   9', 10) ; 4.16e-4
+
+match ; Complex curl (blocksize =   3); GREPFIELD(out, 'Batch curl complex bsize =   3', 10) ; 1.39e-4
+match ; Complex curl (blocksize =   6); GREPFIELD(out, 'Batch curl complex bsize =   6', 10) ; 2.77e-4
+match ; Complex curl (blocksize =   9); GREPFIELD(out, 'Batch curl complex bsize =   9', 10) ; 4.16e-4
+
 Precision : 1.0e-4
 Input: 03-derivatives_3d.02-non-orthogonal.inp
 
@@ -74,3 +82,55 @@ match ; Complex Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient compl
 match ; Complex Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient complex bsize =   8', 12) ; 3.65e-5
 match ; Complex Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient complex bsize =  16', 12) ; 3.65e-5
 match ; Complex Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient complex bsize =  32', 12) ; 3.65e-5
+
+Precision : 3.0e-4
+match ; Real curl (blocksize =   3); GREPFIELD(out, 'Batch curl real bsize =   3', 10) ; 1.76e-4
+match ; Real curl (blocksize =   6); GREPFIELD(out, 'Batch curl real bsize =   6', 10) ; 3.53e-4
+match ; Real curl (blocksize =   9); GREPFIELD(out, 'Batch curl real bsize =   9', 10) ; 5.29e-4
+
+match ; Complex curl (blocksize =   3); GREPFIELD(out, 'Batch curl complex bsize =   3', 10) ; 1.77e-4
+match ; Complex curl (blocksize =   6); GREPFIELD(out, 'Batch curl complex bsize =   6', 10) ; 3.53e-4
+match ; Complex curl (blocksize =   9); GREPFIELD(out, 'Batch curl complex bsize =   9', 10) ; 5.30e-4
+
+Precision : 1.0e-4
+Input: 03-derivatives_3d.02-non-orthogonal_unpacked.inp
+
+match ; Real Laplacian (blocksize =   1); GREPFIELD(out, 'Laplacian real bsize =   1', 9) ; 2.32e-5
+match ; Real Laplacian (blocksize =   2); GREPFIELD(out, 'Laplacian real bsize =   2', 9) ; 2.32e-5
+match ; Real Laplacian (blocksize =   4); GREPFIELD(out, 'Laplacian real bsize =   4', 9) ; 2.32e-5
+match ; Real Laplacian (blocksize =   8); GREPFIELD(out, 'Laplacian real bsize =   8', 9) ; 2.32e-5
+match ; Real Laplacian (blocksize =  16); GREPFIELD(out, 'Laplacian real bsize =  16', 9) ; 2.32e-5
+match ; Real Laplacian (blocksize =  32); GREPFIELD(out, 'Laplacian real bsize =  32', 9) ; 2.32e-5
+
+match ; Complex Laplacian (blocksize =   1); GREPFIELD(out, 'Laplacian complex bsize =   1', 9) ; 2.33e-5
+match ; Complex Laplacian (blocksize =   2); GREPFIELD(out, 'Laplacian complex bsize =   2', 9) ; 2.33e-5
+match ; Complex Laplacian (blocksize =   4); GREPFIELD(out, 'Laplacian complex bsize =   4', 9) ; 2.33e-5
+match ; Complex Laplacian (blocksize =   8); GREPFIELD(out, 'Laplacian complex bsize =   8', 9) ; 2.33e-5
+match ; Complex Laplacian (blocksize =  16); GREPFIELD(out, 'Laplacian complex bsize =  16', 9) ; 2.33e-5
+match ; Complex Laplacian (blocksize =  32); GREPFIELD(out, 'Laplacian complex bsize =  32', 9) ; 2.33e-5
+
+match ; Real gradient; GREPFIELD(out, 'Gradient real', 5) ; 6.32e-5
+match ; Complex gradient; GREPFIELD(out, 'Gradient complex', 5) ; 6.33e-5
+
+match ; Real Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient real bsize =   1', 12) ; 3.65e-5
+match ; Real Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient real bsize =   2', 12) ; 3.65e-5
+match ; Real Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient real bsize =   4', 12) ; 3.65e-5
+match ; Real Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient real bsize =   8', 12) ; 3.65e-5
+match ; Real Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient real bsize =  16', 12) ; 3.65e-5
+match ; Real Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient real bsize =  32', 12) ; 3.65e-5
+
+match ; Complex Gradient (blocksize =   1); GREPFIELD(out, 'Batch gradient complex bsize =   1', 12) ; 3.65e-5
+match ; Complex Gradient (blocksize =   2); GREPFIELD(out, 'Batch gradient complex bsize =   2', 12) ; 3.65e-5
+match ; Complex Gradient (blocksize =   4); GREPFIELD(out, 'Batch gradient complex bsize =   4', 12) ; 3.65e-5
+match ; Complex Gradient (blocksize =   8); GREPFIELD(out, 'Batch gradient complex bsize =   8', 12) ; 3.65e-5
+match ; Complex Gradient (blocksize =  16); GREPFIELD(out, 'Batch gradient complex bsize =  16', 12) ; 3.65e-5
+match ; Complex Gradient (blocksize =  32); GREPFIELD(out, 'Batch gradient complex bsize =  32', 12) ; 3.65e-5
+
+Precision : 3.0e-4
+match ; Real curl (blocksize =   3); GREPFIELD(out, 'Batch curl real bsize =   3', 10) ; 1.76e-4
+match ; Real curl (blocksize =   6); GREPFIELD(out, 'Batch curl real bsize =   6', 10) ; 3.53e-4
+match ; Real curl (blocksize =   9); GREPFIELD(out, 'Batch curl real bsize =   9', 10) ; 5.29e-4
+
+match ; Complex curl (blocksize =   3); GREPFIELD(out, 'Batch curl complex bsize =   3', 10) ; 1.77e-4
+match ; Complex curl (blocksize =   6); GREPFIELD(out, 'Batch curl complex bsize =   6', 10) ; 3.53e-4
+match ; Complex curl (blocksize =   9); GREPFIELD(out, 'Batch curl complex bsize =   9', 10) ; 5.30e-4

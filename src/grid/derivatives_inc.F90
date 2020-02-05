@@ -339,15 +339,16 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
 
-  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :), res(:), resgrad(:, :)
+  R_TYPE, allocatable :: ff(:), opff(:, :), gradff(:, :), curlff(:, :), res(:), resgrad(:, :), rescurl(:, :)
   R_TYPE :: aa, bb, cc
-  integer :: ip, idir, ist
+  integer :: ip, idir, ist, ib
   type(batch_t) :: ffb, opffb
   type(batch_t), allocatable :: gradffb(:)
   integer :: blocksize, itime
   logical :: packstates
   real(8) :: stime, etime
   character(len=20) :: type
+  FLOAT :: norm
 
   call parse_variable(namespace, 'StatesPack', .true., packstates)
 
@@ -356,6 +357,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_ALLOCATE(gradff(1:this%mesh%np, 1:this%mesh%sb%dim))
   SAFE_ALLOCATE(res(1:this%mesh%np_part))
   SAFE_ALLOCATE(resgrad(1:this%mesh%np, 1:this%mesh%sb%dim))
+  SAFE_ALLOCATE(curlff(1:this%mesh%np, 1:this%mesh%sb%dim))
 
 #ifdef R_TREAL
 #ifdef SINGLE_PRECISION
@@ -393,6 +395,15 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
       gradff(ip, idir) = -M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2))
     end do
   end do
+
+  ! curl only needed in 3D
+  if(this%mesh%sb%dim == 3) then
+    do ip = 1, this%mesh%np
+      curlff(ip, 1) = -M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2))*(this%mesh%x(ip, 2) - this%mesh%x(ip, 3))
+      curlff(ip, 2) = -M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2))*(this%mesh%x(ip, 3) - this%mesh%x(ip, 1))
+      curlff(ip, 3) = -M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2))*(this%mesh%x(ip, 1) - this%mesh%x(ip, 2))
+    end do
+  end if
 
   message(1) = "Testing Laplacian"
   call messages_info(1)
@@ -524,10 +535,72 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   message(1) = ''
   call messages_info(1)
 
-
   write(message(1), '(3a, es17.10)') 'Gradient ', trim(type),  &
     ' err = ', X(mf_nrm2)(this%mesh, this%mesh%sb%dim, opff)
   call messages_info(1)
+
+  message(1) = ''
+  call messages_info(1)
+
+  ! test curl for 3D case
+  if(this%mesh%sb%dim == 3) then
+    message(1) = "Testing curl"
+    call messages_info(1)
+
+    SAFE_ALLOCATE(gradffb(1:this%mesh%sb%dim))
+    do blocksize = 3, 9, 3
+      call X(batch_init)(ffb, 1, 1, blocksize, this%mesh%np_part)
+
+      do ist = 1, blocksize
+        call batch_set_state(ffb, ist, this%mesh%np_part, ff)
+      end do
+
+      if(packstates) then
+        call ffb%do_pack()
+      end if
+
+      do idir = 1, this%mesh%sb%dim
+        call ffb%copy_to(gradffb(idir))
+      end do
+
+      ! test for one blocksize without precomputed gradient
+      if(blocksize ==9) then
+        call X(derivatives_batch_curl)(this, ffb, set_bc=.false.)
+      else
+        call X(derivatives_batch_grad)(this, ffb, gradffb, set_bc=.false.)
+        call X(derivatives_batch_curl)(this, ffb, gradffb)
+      end if
+
+      SAFE_ALLOCATE(rescurl(1:this%mesh%np, 1:blocksize))
+      do ist = 1, blocksize
+        call batch_get_state(ffb, ist, this%mesh%np, rescurl(:, ist))
+      end do
+
+      call ffb%end()
+      do idir = 1, this%mesh%sb%dim
+        call gradffb(idir)%end()
+      end do
+
+      do ip = 1, this%mesh%np
+        do ib = 0, blocksize-1, this%mesh%sb%dim
+          do idir = 1, this%mesh%sb%dim
+            rescurl(ip, ib+idir) = rescurl(ip, ib+idir) - curlff(ip, idir)
+          end do
+        end do
+      end do
+
+      norm = M_ZERO
+      do ist = 1, blocksize
+        norm = norm + X(mf_nrm2)(this%mesh, rescurl(:, ist))
+      end do
+      SAFE_DEALLOCATE_A(rescurl)
+
+      write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
+        'Batch curl ', trim(type), ' bsize = ', blocksize, ' , error = ', norm
+      call messages_info(1)
+    end do
+    SAFE_DEALLOCATE_A(gradffb)
+  end if
 
   message(1) = ''
   call messages_info(1)
@@ -537,6 +610,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_DEALLOCATE_A(gradff)
   SAFE_DEALLOCATE_A(res)
   SAFE_DEALLOCATE_A(resgrad)
+  SAFE_DEALLOCATE_A(curlff)
 
 end subroutine X(derivatives_test)
 
@@ -704,6 +778,106 @@ contains
     POP_SUB(uvw_to_xyz_opencl)
   end subroutine uvw_to_xyz_opencl
 end subroutine X(batch_vector_uvw_to_xyz)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_batch_curl)(der, ffb, gradb, ghost_update, set_bc)
+  type(derivatives_t),              intent(in)    :: der
+  class(batch_t),                   intent(inout) :: ffb
+  class(batch_t), target, optional, intent(in)    :: gradb(:)
+  logical, optional,   intent(in)    :: ghost_update
+  logical, optional,   intent(in)    :: set_bc
+
+  class(batch_t), pointer :: gradb_(:)
+  integer :: idir
+
+  PUSH_SUB(X(derivatives_batch_curl))
+  call profiling_in(curl_batch_prof, "CURL_BATCH")
+
+  if(present(gradb)) then
+    gradb_ => gradb
+  else
+    allocate(gradb_(1:der%dim), mold=ffb)
+    do idir = 1, der%dim
+      call ffb%copy_to(gradb_(idir))
+    end do
+    call X(derivatives_batch_grad)(der, ffb, gradb_, ghost_update=ghost_update, set_bc=set_bc)
+  end if
+
+  call X(derivatives_batch_curl_from_gradient)(der, ffb, gradb_)
+
+  if(.not.present(gradb)) then
+    do idir = 1, der%dim
+      call gradb_(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb_)
+  end if
+
+  call profiling_out(curl_batch_prof)
+  POP_SUB(X(derivatives_batch_curl))
+end subroutine X(derivatives_batch_curl)
+
+! ---------------------------------------------------------
+subroutine X(derivatives_batch_curl_from_gradient)(der, ffb, gradb)
+  type(derivatives_t), intent(in)    :: der
+  class(batch_t),      intent(inout) :: ffb
+  class(batch_t),      intent(in)    :: gradb(:)
+
+  integer :: ip, ist, ivec
+  integer :: localsize, dim2, dim3
+
+  PUSH_SUB(X(derivatives_batch_curl_from_gradient))
+
+  ASSERT(der%dim==3)
+  ASSERT(size(gradb) == der%dim)
+  ASSERT(modulo(ffb%nst_linear, der%dim) == 0)
+  do ist = 1, 3
+    ASSERT(ffb%status() == gradb(ist)%status())
+  end do
+
+  select case(ffb%status())
+  case(BATCH_NOT_PACKED)
+    ! loop over ivec in case we have several vectors per batch
+    do ivec = 0, ffb%nst_linear-1, der%dim
+      !$omp parallel do
+      do ip = 1, der%mesh%np
+        ffb%X(ff_linear)(ip, ivec+1) = gradb(2)%X(ff_linear)(ip, ivec+3) - gradb(3)%X(ff_linear)(ip, ivec+2)
+        ffb%X(ff_linear)(ip, ivec+2) = gradb(3)%X(ff_linear)(ip, ivec+1) - gradb(1)%X(ff_linear)(ip, ivec+3)
+        ffb%X(ff_linear)(ip, ivec+3) = gradb(1)%X(ff_linear)(ip, ivec+2) - gradb(2)%X(ff_linear)(ip, ivec+1)
+      end do
+    end do
+  case(BATCH_PACKED)
+    !$omp parallel do
+    do ip = 1, der%mesh%np
+      ! loop over ivec in case we have several vectors per batch
+      do ivec = 0, ffb%nst_linear-1, der%dim
+        ffb%X(ff_pack)(ivec+1, ip) = gradb(2)%X(ff_pack)(ivec+3, ip) - gradb(3)%X(ff_pack)(ivec+2, ip)
+        ffb%X(ff_pack)(ivec+2, ip) = gradb(3)%X(ff_pack)(ivec+1, ip) - gradb(1)%X(ff_pack)(ivec+3, ip)
+        ffb%X(ff_pack)(ivec+3, ip) = gradb(1)%X(ff_pack)(ivec+2, ip) - gradb(2)%X(ff_pack)(ivec+1, ip)
+      end do
+    end do
+  case(BATCH_DEVICE_PACKED)
+    call accel_set_kernel_arg(aX(kernel_, curl), 0, der%mesh%np)
+    call accel_set_kernel_arg(aX(kernel_, curl), 1, ffb%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 2, log2(ffb%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 3, gradb(1)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 4, log2(gradb(1)%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 5, gradb(2)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 6, log2(gradb(2)%pack_size(1)))
+    call accel_set_kernel_arg(aX(kernel_, curl), 7, gradb(3)%ff_device)
+    call accel_set_kernel_arg(aX(kernel_, curl), 8, log2(gradb(3)%pack_size(1)))
+
+    localsize = accel_kernel_workgroup_size(aX(kernel_, curl))/ffb%pack_size(1)
+
+    dim3 = der%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(der%mesh%np, localsize))
+
+    call accel_kernel_run(aX(kernel_, curl), (/ffb%pack_size(1), dim2, dim3/), &
+      (/ffb%pack_size(1), localsize, 1/))
+    call accel_finish()
+  end select
+
+  POP_SUB(X(derivatives_batch_curl_from_gradient))
+end subroutine X(derivatives_batch_curl_from_gradient)
 
 !! Local Variables:
 !! mode: f90
