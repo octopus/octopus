@@ -481,9 +481,11 @@ contains
         this%status_host = BATCH_PACKED
 
         if(copy_) then
-          call profiling_in(prof_copy, "BATCH_PACK_COPY")
-          call pack_copy()
-          call profiling_out(prof_copy)
+          if(this%type() == TYPE_FLOAT) then
+            call dbatch_pack_copy(this)
+          else if(this%type() == TYPE_CMPLX) then
+            call zbatch_pack_copy(this)
+          end if
         end if
         if(this%own_memory) call this%deallocate_unpacked_host()
       end select
@@ -497,19 +499,6 @@ contains
     end select
 
     call profiling_out(prof)
-
-  contains
-
-    subroutine pack_copy()
-      if(this%type() == TYPE_FLOAT) then
-        call dbatch_pack_copy(this)
-      else if(this%type() == TYPE_CMPLX) then
-        call zbatch_pack_copy(this)
-      end if
-
-      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-    end subroutine pack_copy
-
   end subroutine batch_do_pack
 
   ! ----------------------------------------------------
@@ -550,9 +539,13 @@ contains
         if(this%host_buffer_count == 1 .or. force_) then
           if(this%own_memory) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
-          call profiling_in(prof_unpack, "BATCH_UNPACK_COPY")
-          if(copy_) call unpack_copy()
-          call profiling_out(prof_unpack)
+          if(copy_) then
+            if(this%type() == TYPE_FLOAT) then
+              call dbatch_unpack_copy(this)
+            else if(this%type() == TYPE_CMPLX) then
+              call zbatch_unpack_copy(this)
+            end if
+          end if
           call this%deallocate_packed_host()
           this%status_host = target
           this%status_of = target
@@ -584,19 +577,6 @@ contains
     call profiling_out(prof)
 
     POP_SUB(batch_do_unpack)
-
-  contains
-
-    subroutine unpack_copy()
-      if(this%type() == TYPE_FLOAT) then
-        call dbatch_unpack_copy(this)
-      else if(this%type() == TYPE_CMPLX) then
-        call zbatch_unpack_copy(this)
-      end if
-
-      call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
-    end subroutine unpack_copy
-
   end subroutine batch_do_unpack
 
   ! ----------------------------------------------------

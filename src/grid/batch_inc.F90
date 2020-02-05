@@ -137,7 +137,10 @@ subroutine X(batch_pack_copy)(this)
   class(batch_t),    intent(inout) :: this
 
   integer :: ist, ip, sp, ep, bsize
+  type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
+
+  call profiling_in(prof_copy, "BATCH_PACK_COPY")
 
   bsize = hardware%X(block_size)
 
@@ -150,6 +153,9 @@ subroutine X(batch_pack_copy)(this)
       end do
     end do
   end do
+
+  call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
+  call profiling_out(prof_copy)
 end subroutine X(batch_pack_copy)
 
 !--------------------------------------------------------------
@@ -157,7 +163,10 @@ subroutine X(batch_unpack_copy)(this)
   class(batch_t),    intent(inout) :: this
 
   integer :: ist, ip
+  type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
+
+  call profiling_in(prof_copy, "BATCH_UNPACK_COPY")
 
   !$omp parallel do private(ist)
   do ip = 1, this%pack_size(2)
@@ -165,6 +174,8 @@ subroutine X(batch_unpack_copy)(this)
       this%X(ff_linear)(ip, ist) = this%X(ff_pack)(ist, ip)
     end do
   end do
+  call profiling_count_transfers(this%nst_linear*this%pack_size(2), this%type())
+  call profiling_out(prof_copy)
 end subroutine X(batch_unpack_copy)
 
 !! Local Variables:
