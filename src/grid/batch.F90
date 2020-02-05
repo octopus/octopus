@@ -590,7 +590,8 @@ contains
     class(batch_t),      intent(inout)  :: this
 
     PUSH_SUB(batch_finish_unpack)
-    if(accel_buffer_is_allocated(this%ff_device)) then
+    if(this%status() == BATCH_DEVICE_PACKED .and. &
+       accel_buffer_is_allocated(this%ff_device)) then
       call accel_finish()
       call this%deallocate_packed_device()
     end if
