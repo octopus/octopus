@@ -164,7 +164,7 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset, async)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1, 1))
