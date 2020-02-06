@@ -19,6 +19,7 @@
 #include "global.h"
 
 module multisystem_oct_m
+  use celestial_body_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -33,9 +34,10 @@ module multisystem_oct_m
     multisystem_init, &
     multisystem_end
 
-  integer, parameter ::     &
-    SYSTEM_ELECTRONIC = 1,  &
-    SYSTEM_MAXWELL    = 2
+  integer, parameter ::         &
+    SYSTEM_ELECTRONIC     = 1,  &
+    SYSTEM_MAXWELL        = 2,  &
+    SYSTEM_CELESTIAL_BODY = 3
   
 contains
 
@@ -64,6 +66,8 @@ contains
     !% An electronic system.
     !%Option maxwell 2
     !% A maxwell system.
+    !%Option celestial_body 3
+    !% A celestial body. Used for testing purposes only.
     !%End
     if(parse_block(global_namespace, 'Systems', blk) == 0) then
       do isys = 1, parse_block_n(blk)
@@ -71,6 +75,8 @@ contains
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
           SAFE_ALLOCATE_TYPE(system_t, system)
+        case (SYSTEM_CELESTIAL_BODY)
+          SAFE_ALLOCATE_TYPE(celestial_body_t, system)
         case default
           call messages_input_error('Systems')
         end select
@@ -85,6 +91,8 @@ contains
         select type (sys_ptr)
         type is (system_t)
           call system_init(sys_ptr, namespace_t(system_name))
+        type is (celestial_body_t)
+          call celestial_body_init(sys_ptr, namespace_t(system_name))
         end select
         call systems%next()
       end do
@@ -115,6 +123,8 @@ contains
       select type (sys)
       type is (system_t)
         call system_end(sys)
+      type is (celestial_body_t)
+        call sys%end()
       end select
       call systems%next()
     end do
