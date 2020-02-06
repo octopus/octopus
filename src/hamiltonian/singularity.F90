@@ -22,30 +22,17 @@ module singularity_oct_m
   use comm_oct_m
   use distributed_oct_m
   use global_oct_m
-  use hamiltonian_elec_base_oct_m
   use kpoints_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
-  use mesh_oct_m
-  use mesh_function_oct_m
-  use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use par_vec_oct_m
   use namespace_oct_m
-  use poisson_oct_m
   use profiling_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
-  use symmetries_oct_m
-  use symmetrizer_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
-  use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use xc_oct_m
 
   implicit none
 

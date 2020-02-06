@@ -39,6 +39,7 @@ module exchange_operator_oct_m
   use profiling_oct_m
   use scdm_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
   use states_elec_oct_m
@@ -74,6 +75,8 @@ module exchange_operator_oct_m
     FLOAT :: cam_beta
 
     type(scdm_t)  :: scdm
+
+    type(singularity_t) :: singul !< Coulomb singularity
   end type exchange_operator_t
  
 contains
@@ -92,10 +95,10 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, st_d, sb, mesh, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, st, sb, mesh, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
     type(namespace_t), target, intent(in)    :: namespace
-    type(states_elec_dim_t),   intent(in)    :: st_d
+    type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
     type(mesh_t),              intent(in)    :: mesh
     FLOAT,                     intent(in)    :: omega, alpha, beta
@@ -105,6 +108,8 @@ contains
     this%cam_omega = omega
     this%cam_alpha = alpha
     this%cam_beta  = beta
+
+    call singularity_init(this%singul, namespace, st, sb)
 
     POP_SUB(exchange_operator_init)
   end subroutine exchange_operator_init
@@ -136,6 +141,8 @@ contains
       SAFE_DEALLOCATE_P(this%st)
     end if
     nullify(this%st)
+
+    call singularity_end(this%singul)
 
     POP_SUB(exchange_operator_end)
   end subroutine exchange_operator_end

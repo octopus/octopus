@@ -27,7 +27,7 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   integer,                   intent(in)    :: ik
   R_TYPE,                    intent(in)    :: psi(:, :)
   R_TYPE,                    intent(inout) :: hpsi(:, :)
-  type(poisson_t),           intent(in)    :: psolver
+  type(poisson_t),           intent(inout) :: psolver
   logical,                   intent(in)    :: rdmft
 
   type(wfs_elec_t) :: psib, hpsib
@@ -54,7 +54,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   type(states_elec_dim_t),   intent(in)    :: st_d
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
-  type(poisson_t),           intent(in)    :: psolver
+  type(poisson_t),           intent(inout) :: psolver
   logical,                   intent(in)    :: rdmft
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
@@ -63,7 +63,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
   R_TYPE, allocatable :: rho(:), pot(:)
   FLOAT :: qq(1:MAX_DIM) 
-  integer :: ikpoint
+  integer :: ikpoint, ikpoint2, npath
 
   type(profile_t), save :: prof, prof2
 
@@ -75,13 +75,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   ! in the Coulomb potential, and must be changed for each q point
   exx_coef = max(this%cam_alpha,this%cam_beta)
 
-  if(this%cam_omega <= M_EPSILON) then
-    if(st_d%nik > st_d%ispin) then
-      call messages_not_implemented("unscreened exchange operator without k-points", namespace=namespace)
-    end if
-  end if
-
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  npath = SIZE(der%mesh%sb%kpoints%coord_along_path)
 
   if(this%cam_beta > M_EPSILON) then
     ASSERT(this%cam_alpha < M_EPSILON)
@@ -108,6 +102,23 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
 
     do ik2 = 1, st_d%nik
       if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+
+      ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
+      !Down-sampling and q-grid
+      if(st_d%ispin /= SPIN_POLARIZED .or. st_d%nik > st_d%ispin) then
+        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ikpoint2)) cycle
+        qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                      - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2, absolute_coordinates=.false.)
+      end if
+      ! Updating of the poisson solver
+      ! In case of k-points, the poisson solver must contains k-q
+      ! in the Coulomb potential, and must be changed for each q point
+      if(st_d%ispin /= SPIN_POLARIZED .or. st_d%nik > st_d%ispin .or. this%cam_omega > M_EPSILON) then
+        call poisson_kernel_reinit(psolver, namespace, qq, &
+                  -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
+                     *(this%singul%Fk(ik2)-this%singul%FF))
+      end if
+
       
       do ib = 1, this%st%group%nblocks
         !We copy data into psi2b from the corresponding MPI task
