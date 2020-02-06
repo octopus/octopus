@@ -928,9 +928,9 @@ contains
     sun_namespace = namespace_t("Sun")
 
     !Initialize subsystems
-    call sun%init(sun_namespace)
-    call earth%init(earth_namespace)
-    call moon%init(moon_namespace)
+    call celestial_body_init(sun, sun_namespace)
+    call celestial_body_init(earth, earth_namespace)
+    call celestial_body_init(moon, moon_namespace)
 
     !Define interactions manually
     call sun%add_interaction_partner(earth)

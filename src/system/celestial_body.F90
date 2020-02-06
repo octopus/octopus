@@ -32,7 +32,8 @@ module celestial_body_oct_m
 
   private
   public ::               &
-    celestial_body_t
+    celestial_body_t,     &
+    celestial_body_init
 
   type, extends(system_abst_t) :: celestial_body_t
     private
@@ -52,7 +53,6 @@ module celestial_body_oct_m
     procedure :: do_td_operation => celestial_body_do_td
     procedure :: pull_interaction => celestial_body_pull
     procedure :: get_needed_quantity => celestial_body_needed_quantity
-    procedure :: init => celestial_body_init
     procedure :: set_propagator => celestial_body_set_prop
     procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
     procedure :: gravitational_interaction => celestial_body_gravitational_interaction
