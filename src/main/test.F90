@@ -988,6 +988,9 @@ contains
 
     call io_close(iunit)
 
+    SAFE_DEALLOCATE_P(sun)
+    SAFE_DEALLOCATE_P(earth)
+    SAFE_DEALLOCATE_P(moon)
 
     POP_SUB(test_celestial_dynamics)
   end subroutine test_celestial_dynamics
