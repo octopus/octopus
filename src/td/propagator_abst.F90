@@ -43,19 +43,10 @@ module propagator_abst_oct_m
 
   contains
     !Below are the list of operations that needs to be implemented
-    procedure(propagator_init), deferred    :: init
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
     procedure :: rewind => propagator_rewind
   end type propagator_abst_t
-
-  abstract interface
-    subroutine propagator_init(this, time, dt)
-      import propagator_abst_t
-      class(propagator_abst_t), intent(inout) :: this
-      FLOAT,                    intent(in)    :: time, dt
-    end subroutine propagator_init
-  end interface
 
 contains
 
