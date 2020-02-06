@@ -149,6 +149,7 @@ contains
     PUSH_SUB(celestial_body_alloc_receiver)
 
     SAFE_ALLOCATE(this%forces(1:this%space%dim, 1:this%nb_partners))
+    this%forces = M_ZERO
 
     POP_SUB(celestial_body_alloc_receiver)
   end subroutine celestial_body_alloc_receiver
