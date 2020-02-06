@@ -947,9 +947,9 @@ contains
 
     !Creates Verlet propagators
     call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
-    call prop_sun%init(M_ZERO, dt)
-    call prop_earth%init(M_ZERO, dt)
-    call prop_moon%init(M_ZERO, dt)
+    prop_sun = propagator_verlet_t(M_ZERO, dt)
+    prop_earth = propagator_verlet_t(M_ZERO, dt)
+    prop_moon = propagator_verlet_t(M_ZERO, dt)
 
     !Associate them to subsystems
     call sun%set_propagator(prop_sun)
