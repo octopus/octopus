@@ -34,18 +34,18 @@ module propagator_verlet_oct_m
 
   type, extends(propagator_abst_t) :: propagator_verlet_t
     private
-
-    contains
-    procedure :: init => propagator_verlet_init
   end type propagator_verlet_t
+
+  interface propagator_verlet_t
+    procedure propagator_verlet_init
+  end interface propagator_verlet_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagator_verlet_init(this, time, dt)
-    class(propagator_verlet_t),  intent(inout) :: this
-    FLOAT,                       intent(in)    :: time
-    FLOAT,                       intent(in)    :: dt
+  type(propagator_verlet_t) function propagator_verlet_init(time, dt) result(this)
+    FLOAT, intent(in)    :: time
+    FLOAT, intent(in)    :: dt
 
     PUSH_SUB(propagator_verlet_init)
 
@@ -60,7 +60,7 @@ contains
     this%dt = dt
 
     POP_SUB(propagator_verlet_init)
-  end subroutine propagator_verlet_init
+  end function propagator_verlet_init
 
 end module propagator_verlet_oct_m
 
