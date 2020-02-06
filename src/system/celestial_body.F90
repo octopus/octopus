@@ -55,6 +55,7 @@ module celestial_body_oct_m
     procedure :: init => celestial_body_init
     procedure :: set_propagator => celestial_body_set_prop
     procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
+    procedure :: gravitational_interaction => celestial_body_gravitational_interaction
   end type celestial_body_t
 
 contains
@@ -209,23 +210,14 @@ contains
     integer,                 intent(in)    :: interaction
     integer,                 intent(in)    :: partner_index
 
-    FLOAT :: GG
-    FLOAT :: dist
-
     PUSH_SUB(celestial_body_pull)
-
-    GG = CNST(6.67430e-11)
 
     select case(interaction)
     case(FORCE)
 
       select type(remote)
       class is(celestial_body_t)
-
-        dist = sqrt(sum((remote%pos(1:this%space%dim) - this%pos(1:this%space%dim))**2))
-        this%forces(1:this%space%dim, partner_index) = (remote%pos(1:this%space%dim) - this%pos(1:this%space%dim)) &
-                                                    * GG * this%mass * remote%mass / dist**3
-
+        call remote%gravitational_interaction(this%pos, this%mass, this%forces(1:this%space%dim, partner_index))
       class default
         message(1) = "Unsupported partner class for force interaction"
         call messages_fatal(1, namespace=this%namespace)
@@ -238,6 +230,25 @@ contains
 
     POP_SUB(celestial_body_pull)
   end subroutine celestial_body_pull
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_gravitational_interaction(this, position, mass, force)
+    class(celestial_body_t), intent(in)  :: this
+    FLOAT,                   intent(in)  :: position(this%space%dim)
+    FLOAT,                   intent(in)  :: mass
+    FLOAT,                   intent(out) :: force(this%space%dim)
+
+    FLOAT, parameter :: GG = CNST(6.67430e-11)
+    FLOAT :: dist3
+
+    PUSH_SUB(celestial_body_gravitational_interaction)
+
+    dist3 = sum((this%pos(1:this%space%dim) - position(1:this%space%dim))**2)**(M_THREE/M_TWO)
+
+    force(1:this%space%dim) = (this%pos(1:this%space%dim) - position(1:this%space%dim)) / dist3 * (GG * mass * this%mass)
+
+    POP_SUB(celestial_body_force_interaction)
+  end subroutine celestial_body_gravitational_interaction
 
 end module celestial_body_oct_m
 
