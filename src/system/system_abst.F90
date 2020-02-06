@@ -49,16 +49,16 @@ module system_abst_oct_m
     private
     type(namespace_t),   public :: namespace
     type(linked_list_t), public :: interactions
-    integer, public :: nb_partners = 0
+    integer,             public :: nb_partners = 0
 
   contains
-    procedure(system_do_td_op), deferred :: do_td_operation
-    procedure(system_pull_interaction), deferred :: pull_interaction
+    procedure                                       :: system_dt
+    procedure                                       :: add_interaction_partner
+    procedure(system_do_td_op),            deferred :: do_td_operation
+    procedure(system_pull_interaction),    deferred :: pull_interaction
     procedure(system_get_needed_quantity), deferred :: get_needed_quantity
-    procedure :: add_interaction_partner
-    procedure(system_set_propagator), deferred :: set_propagator
-    procedure(system_alloc_receiver), deferred :: allocate_receiv_structure
-    procedure :: system_dt
+    procedure(system_set_propagator),      deferred :: set_propagator
+    procedure(system_alloc_receiver),      deferred :: allocate_receiv_structure
   end type system_abst_t
 
   abstract interface
@@ -68,23 +68,23 @@ module system_abst_oct_m
       integer             , intent(in)    :: operation
     end subroutine system_do_td_op
 
-    subroutine system_pull_interaction(sys, remote, interaction, partner_index)
+    subroutine system_pull_interaction(this, remote, interaction, partner_index)
       import system_abst_t
-      class(system_abst_t),     intent(inout) :: sys
+      class(system_abst_t),     intent(inout) :: this
       class(system_abst_t),     intent(inout) :: remote
       integer,                  intent(in)    :: interaction
       integer,                  intent(in)    :: partner_index
     end subroutine system_pull_interaction
 
-    integer function system_get_needed_quantity(sys)
+    integer function system_get_needed_quantity(this)
       import system_abst_t
-      class(system_abst_t),     intent(in) :: sys
+      class(system_abst_t),     intent(in) :: this
     end function system_get_needed_quantity
 
-    subroutine system_set_propagator(sys, prop)
+    subroutine system_set_propagator(this, prop)
       import system_abst_t
       import propagator_abst_t
-      class(system_abst_t),             intent(inout) :: sys
+      class(system_abst_t),             intent(inout) :: this
       class(propagator_abst_t), target, intent(in)    :: prop
     end subroutine system_set_propagator
 
@@ -96,14 +96,14 @@ module system_abst_oct_m
 
 contains
 
-  subroutine add_interaction_partner(sys, remote)
-    class(system_abst_t),     intent(inout) :: sys
+  subroutine add_interaction_partner(this, remote)
+    class(system_abst_t),     intent(inout) :: this
     class(system_abst_t),     intent(in)    :: remote
 
     PUSH_SUB(add_interaction_partner)
 
-    call sys%interactions%add_node(remote)
-    sys%nb_partners = sys%nb_partners+1
+    call this%interactions%add_node(remote)
+    this%nb_partners = this%nb_partners+1
 
     POP_SUB(add_interaction_partner)
   end subroutine add_interaction_partner
