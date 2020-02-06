@@ -44,7 +44,6 @@ module system_abst_oct_m
     TOTAL_CURRENT                = 1,  &
     FORCE                        = 2
 
-
   type, abstract :: system_abst_t
     private
     type(namespace_t),   public :: namespace
@@ -120,11 +119,19 @@ contains
     tdop = prop%get_td_operation()
     select case(tdop)
     case(FINISHED)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step finished for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
      ! call propagator_finished(prop)
       !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
       !ONLY IF WE ARE NOT YET FINISHED
 
     case(UPDATE_INTERACTION)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Updating interactions for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
 
       inter = this%get_needed_quantity()
 
