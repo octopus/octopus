@@ -57,6 +57,8 @@ module celestial_body_oct_m
     procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
     procedure :: gravitational_interaction => celestial_body_gravitational_interaction
     procedure :: write_td_info => celestial_body_write_td_info
+    procedure :: end => celestial_body_end
+    final :: celestial_body_finalize
   end type celestial_body_t
 
 contains
@@ -227,7 +229,7 @@ contains
 
   end subroutine celestial_body_do_td
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine celestial_body_pull(this, remote, interaction, partner_index)
     class(celestial_body_t), intent(inout) :: this
     class(system_abst_t),    intent(inout) :: remote
@@ -274,7 +276,7 @@ contains
     POP_SUB(celestial_body_force_interaction)
   end subroutine celestial_body_gravitational_interaction
 
-! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine celestial_body_write_td_info(this)
     class(celestial_body_t), intent(in) :: this
 
@@ -293,6 +295,28 @@ contains
 
     POP_SUB(celestial_body_write_td_info)
   end subroutine celestial_body_write_td_info
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_end(this)
+    class(celestial_body_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_end)
+
+    SAFE_DEALLOCATE_A(this%forces)
+
+    POP_SUB(celestial_body_end)
+  end subroutine celestial_body_end
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_finalize(this)
+    type(celestial_body_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_finalize)
+
+    call this%end()
+
+    POP_SUB(celestial_body_finalize)
+  end subroutine celestial_body_finalize
 
 end module celestial_body_oct_m
 
