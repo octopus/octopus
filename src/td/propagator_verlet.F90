@@ -42,22 +42,22 @@ module propagator_verlet_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagator_verlet_init(prop, time, dt)
-    class(propagator_verlet_t),  intent(inout) :: prop
+  subroutine propagator_verlet_init(this, time, dt)
+    class(propagator_verlet_t),  intent(inout) :: this
     FLOAT,                       intent(in)    :: time
     FLOAT,                       intent(in)    :: dt
 
     PUSH_SUB(propagator_verlet_init)
 
-    call prop%list%add_node(VERLET_UPDATE_POS)
-    call prop%list%add_node(VERLET_SYNC_DT)
-    call prop%list%add_node(UPDATE_INTERACTION)
-    call prop%list%add_node(VERLET_COMPUTE_ACC)
-    call prop%list%add_node(VERLET_COMPUTE_VEL)
-    call prop%list%add_node(FINISHED)
+    call this%list%add_node(VERLET_UPDATE_POS)
+    call this%list%add_node(VERLET_SYNC_DT)
+    call this%list%add_node(UPDATE_INTERACTION)
+    call this%list%add_node(VERLET_COMPUTE_ACC)
+    call this%list%add_node(VERLET_COMPUTE_VEL)
+    call this%list%add_node(FINISHED)
 
-    prop%internal_time = time
-    prop%dt = dt
+    this%internal_time = time
+    this%dt = dt
 
     POP_SUB(propagator_verlet_init)
   end subroutine propagator_verlet_init

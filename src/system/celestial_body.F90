@@ -120,8 +120,8 @@ contains
   end subroutine celestial_body_init
 
   ! ---------------------------------------------------------
-  integer function celestial_body_needed_quantity(sys)
-    class(celestial_body_t),  intent(in) :: sys
+  integer function celestial_body_needed_quantity(this)
+    class(celestial_body_t),  intent(in) :: this
 
     PUSH_SUB(celestial_body_needed_quantity)
 
@@ -131,13 +131,13 @@ contains
   end function celestial_body_needed_quantity
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_set_prop(sys, prop)
-    class(celestial_body_t),          intent(inout) :: sys
+  subroutine celestial_body_set_prop(this, prop)
+    class(celestial_body_t),          intent(inout) :: this
     class(propagator_abst_t), target, intent(in)    :: prop
 
     PUSH_SUB(celestial_body_set_prop)
 
-    sys%prop => prop
+    this%prop => prop
 
     POP_SUB(celestial_body_set_prop)
   end subroutine celestial_body_set_prop
@@ -202,11 +202,11 @@ contains
   end subroutine celestial_body_do_td
 
    ! ---------------------------------------------------------
-  subroutine celestial_body_pull(sys, remote, interaction, partner_index)
-    class(celestial_body_t),  intent(inout) :: sys
-    class(system_abst_t),  intent(inout) :: remote
-    integer,               intent(in)    :: interaction
-    integer,               intent(in)    :: partner_index
+  subroutine celestial_body_pull(this, remote, interaction, partner_index)
+    class(celestial_body_t), intent(inout) :: this
+    class(system_abst_t),    intent(inout) :: remote
+    integer,                 intent(in)    :: interaction
+    integer,                 intent(in)    :: partner_index
 
     FLOAT :: GG
     FLOAT :: dist
@@ -221,18 +221,18 @@ contains
       select type(remote)
       class is(celestial_body_t)
 
-        dist = sqrt(sum((remote%pos(1:sys%space%dim)-sys%pos(1:sys%space%dim))**2))
-        sys%forces(1:sys%space%dim, partner_index) = (remote%pos(1:sys%space%dim)-sys%pos(1:sys%space%dim)) &
-                                                  * GG * sys%mass * remote%mass / dist**3
+        dist = sqrt(sum((remote%pos(1:this%space%dim) - this%pos(1:this%space%dim))**2))
+        this%forces(1:this%space%dim, partner_index) = (remote%pos(1:this%space%dim) - this%pos(1:this%space%dim)) &
+                                                    * GG * this%mass * remote%mass / dist**3
 
       class default
         message(1) = "Unsupported partner class for force interaction"
-        call messages_fatal(1, namespace=sys%namespace)
+        call messages_fatal(1, namespace=this%namespace)
       end select
 
     case default
       message(1) = "Unsupported pull interaction."
-      call messages_fatal(1, namespace=sys%namespace)
+      call messages_fatal(1, namespace=this%namespace)
     end select
 
     POP_SUB(celestial_body_pull)

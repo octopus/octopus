@@ -50,44 +50,44 @@ module propagator_abst_oct_m
   end type propagator_abst_t
 
   abstract interface
-    subroutine propagator_init(prop, time, dt)
+    subroutine propagator_init(this, time, dt)
       import propagator_abst_t
-      class(propagator_abst_t), intent(inout) :: prop
+      class(propagator_abst_t), intent(inout) :: this
       FLOAT,                    intent(in)    :: time, dt
     end subroutine propagator_init
   end interface
 
 contains
 
-  subroutine propagator_rewind(prop)
-    class(propagator_abst_t), intent(inout) :: prop
+  subroutine propagator_rewind(this)
+    class(propagator_abst_t), intent(inout) :: this
 
     PUSH_SUB(propagator_rewind)
 
-    call prop%list%rewind()
-    prop%step_done = .false.
+    call this%list%rewind()
+    this%step_done = .false.
 
     POP_SUB(propagator_rewind)
   end subroutine propagator_rewind
 
-  subroutine propagator_finished(prop)
-    class(propagator_abst_t), intent(inout) :: prop
+  subroutine propagator_finished(this)
+    class(propagator_abst_t), intent(inout) :: this
 
     PUSH_SUB(propagator_finished)
 
-    prop%step_done = .true.
+    this%step_done = .true.
 
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
 
-  integer function propagator_get_tdop(prop) result(tdop)
-    class(propagator_abst_t), intent(in) :: prop
+  integer function propagator_get_tdop(this) result(tdop)
+    class(propagator_abst_t), intent(in) :: this
 
     class(*), pointer :: current_ops
 
     PUSH_SUB(propagator_get_tdop)
 
-    current_ops => prop%list%current()
+    current_ops => this%list%current()
 
     select type(current_ops)
     type is (integer)
@@ -100,10 +100,10 @@ contains
     POP_SUB(propagator_get_tdop)
   end function propagator_get_tdop
 
-  logical pure function propagator_step_is_done(prop) result(step_is_done)
-    class(propagator_abst_t), intent(in) :: prop
+  logical pure function propagator_step_is_done(this) result(step_is_done)
+    class(propagator_abst_t), intent(in) :: this
 
-    step_is_done = prop%step_done
+    step_is_done = this%step_done
 
   end function propagator_step_is_done
 
