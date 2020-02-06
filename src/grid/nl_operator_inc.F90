@@ -85,7 +85,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(accel_is_enabled() .and. fi%status() == BATCH_DEVICE_PACKED) then
+    else if(fi%status() == BATCH_DEVICE_PACKED) then
       use_opencl = .true.
       call operate_opencl()
     else if(X(function_global) == OP_FORTRAN) then
@@ -103,9 +103,9 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       nri_loc = nri
 #endif
       
-      if(fi%is_packed() .and. fo%is_packed()) then
+      if(fi%status() == BATCH_PACKED) then
         
-        ASSERT(ubound(fi%X(ff_pack), dim = 2) == op%mesh%np_part)
+        ASSERT(ubound(fi%X(ff_pack), dim = 2) >= op%mesh%np_part)
         ASSERT(ubound(fo%X(ff_pack), dim = 2) >= op%mesh%np)
         
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
