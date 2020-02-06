@@ -909,7 +909,7 @@ contains
     type(test_parameters_t), intent(in) :: param
 
     type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
-    type(celestial_body_t) :: sun, earth, moon
+    class(celestial_body_t), pointer :: sun, earth, moon
     type(propagator_verlet_t) :: prop_sun, prop_earth, prop_moon
     integer :: it, Nstep, internal_loop, iunit
     logical :: all_done
@@ -928,9 +928,9 @@ contains
     sun_namespace = namespace_t("Sun")
 
     !Initialize subsystems
-    call sun%init(sun_namespace)
-    call earth%init(earth_namespace)
-    call moon%init(moon_namespace)
+    sun => celestial_body_t(sun_namespace)
+    earth => celestial_body_t(earth_namespace)
+    moon => celestial_body_t(moon_namespace)
 
     !Define interactions manually
     call sun%add_interaction_partner(earth)

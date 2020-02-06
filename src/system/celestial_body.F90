@@ -52,7 +52,6 @@ module celestial_body_oct_m
     procedure :: do_td_operation => celestial_body_do_td
     procedure :: pull_interaction => celestial_body_pull
     procedure :: get_needed_quantity => celestial_body_needed_quantity
-    procedure :: init => celestial_body_init
     procedure :: set_propagator => celestial_body_set_prop
     procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
     procedure :: gravitational_interaction => celestial_body_gravitational_interaction
@@ -61,16 +60,22 @@ module celestial_body_oct_m
     final :: celestial_body_finalize
   end type celestial_body_t
 
+  interface celestial_body_t
+    procedure celestial_body_init
+  end interface celestial_body_t
+
 contains
 
-  subroutine celestial_body_init(sys, namespace)
-    class(celestial_body_t),  intent(inout) :: sys
-    type(namespace_t),        intent(in)    :: namespace
+  function celestial_body_init(namespace) result(sys)
+    class(celestial_body_t), pointer    :: sys
+    type(namespace_t),       intent(in) :: namespace
 
     integer :: n_rows, idir
     type(block_t) :: blk
 
     PUSH_SUB(celestial_body_init)
+
+    SAFE_ALLOCATE(sys)
 
     sys%namespace = namespace
 
@@ -128,7 +133,7 @@ contains
     call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(celestial_body_init)
-  end subroutine celestial_body_init
+  end function celestial_body_init
 
   ! ---------------------------------------------------------
   integer function celestial_body_needed_quantity(this)
