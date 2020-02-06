@@ -979,7 +979,9 @@ contains
         all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
         INCR(internal_loop, 1)
       end do
-
+      call sun%write_td_info()
+      call earth%write_td_info()
+      call moon%write_td_info()
       write(stdout,'(a,i5)') 'Iteraction : ', it
       write(iunit, '(i5,6(1x,e13.6))') it, sun%pos(1:2), earth%pos(1:2), moon%pos(1:2)
     end do
