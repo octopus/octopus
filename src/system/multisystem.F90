@@ -92,7 +92,7 @@ contains
         type is (system_t)
           call system_init(sys_ptr, namespace_t(system_name))
         type is (celestial_body_t)
-          call celestial_body_init(sys_ptr, namespace_t(system_name))
+          sys_ptr = celestial_body_t(namespace_t(system_name))
         end select
         call systems%next()
       end do

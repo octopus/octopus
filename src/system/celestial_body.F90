@@ -32,8 +32,7 @@ module celestial_body_oct_m
 
   private
   public ::               &
-    celestial_body_t,     &
-    celestial_body_init
+    celestial_body_t
 
   type, extends(system_abst_t) :: celestial_body_t
     private
@@ -61,10 +60,13 @@ module celestial_body_oct_m
     final :: celestial_body_finalize
   end type celestial_body_t
 
+  interface celestial_body_t
+    procedure celestial_body_init
+  end interface celestial_body_t
+
 contains
 
-  subroutine celestial_body_init(sys, namespace)
-    class(celestial_body_t),  intent(inout) :: sys
+  type(celestial_body_t) function celestial_body_init(namespace) result(sys)
     type(namespace_t),        intent(in)    :: namespace
 
     integer :: n_rows, idir
@@ -128,7 +130,7 @@ contains
     call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(celestial_body_init)
-  end subroutine celestial_body_init
+  end function celestial_body_init
 
   ! ---------------------------------------------------------
   integer function celestial_body_needed_quantity(this)
