@@ -754,7 +754,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
       ! Unfold aa(1:nst) into aa_tmp(1:xx%nst*xx*dim, xx%dim) and set up mask to eliminate wrong cross terms:
 
-!!      SAFE_ALLOCATE(aa_tmp(1:xx%dim*xx%nst, 1:xx%dim))
+      SAFE_ALLOCATE(aa_tmp(1:xx%dim*xx%nst, 1:xx%dim)) ! cannot be commented out
 !!
 !!      do ist=1, xx%nst
 !!        aa_tmp(2*ist-1, 1) = aa(ist)
@@ -779,7 +779,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 !!                      psi(1,1),                            & !< C(M, N): psi(mesh%np, xx%dim)
 !!                      mesh%np)                               !< LDC 
 !!
-!!      SAFE_DEALLOCATE_A(aa_tmp)
+      SAFE_DEALLOCATE_A(aa_tmp) ! cannot be commented out
 !!
     end if
 
