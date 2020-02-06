@@ -779,10 +779,16 @@ contains
 
     if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED  &
           .and. .not. this%is_dressed) then
-      !We add the profiling here, as the other path uses dpoisson_solve
-      call profiling_in(prof, 'ZPOISSON_SOLVE')
-      call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map)
-      call profiling_out(prof)
+      !The default (rel) Poisson solver is used for OEP and Sternheimer calls were we don't need
+      !a complex-to-xomplex FFT as these parts use the normal Coulomb potential
+      if(this%cube%fft%type == FFT_COMPLEX) then
+        !We add the profiling here, as the other path uses dpoisson_solve
+        call profiling_in(prof, 'ZPOISSON_SOLVE')
+        call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call profiling_out(prof)
+      else 
+        call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+      end if
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
     end if
