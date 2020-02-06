@@ -130,7 +130,7 @@ contains
         message(1) = "Debug: Propagation step finished for " + trim(this%namespace%get())
         call messages_info(1)
       end if
-     ! call propagator_finished(prop)
+      call prop%finished()
       !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
       !ONLY IF WE ARE NOT YET FINISHED
 
