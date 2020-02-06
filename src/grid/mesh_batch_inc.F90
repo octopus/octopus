@@ -614,8 +614,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     ! call the gemm kernel
 
-    call X(accel_gemm)( ACCEL_BLAS_N,                & !< transpose A
-                        ACCEL_BLAS_N,                & !< transpose B 
+    call X(accel_gemm)( ACCEL_BLAS_N,                           & !< transpose A
+                        ACCEL_BLAS_N,                           & !< transpose B 
                         int(aa%dim*nst_, 8),                    & !< M: number of states to process 
                         int(aa%dim, 8),                         & !< N: aa%sim
                         int(mesh%np, 8),                        & !< K: number of mesh points (np)
@@ -707,8 +707,25 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
     if(xx%dim == 1) then 
 
-      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
-                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+!!      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
+!!                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+
+      ! For testing: write the gemv in terms of a gemm call:
+
+      call blas_gemm( 'T',                                 & !< transpose A: we transpose xx%pack
+                      'N',                                 & !< transpose B: we don't transpose aa_tmp     
+                      mesh%np,                             & !< M: mesh%np 
+                      1,                                   & !< N: xx%dim
+                      nst_,                                & !< K: number of states to process (xx%dim * nst_)
+                      R_TOTYPE(M_ONE),                     & !< alpha: 1
+                      xx%pack%X(psi)(1,1),                 & !< A(K, M) ( A^T(M,K) ) : xx%pack%X(psi)(xx%dim%xx%nst, mesh%np)
+                      ubound(xx%pack%X(psi), dim=1),       & !< LDA
+                      aa(1),                               & !< B(K, N): aa_tmp(xx%nst*xx%dim, xx%dim)
+                      xx%nst,                              & !< LDB
+                      R_TOTYPE(M_ONE),                     & !< beta: 1 (accumulating the result)
+                      psi(1,1),                            & !< C(M, N): psi(mesh%np, xx%dim)
+                      mesh%np)                               !< LDC 
+
 
     else !Spinor case
 
@@ -735,6 +752,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
       ! If, in future, the memory layout of packed states will be changed to (up, up, ..., down, down, ...)
       ! this will no longer be necessary
 
+      ! Unfold aa(1:nst) into aa_tmp(1:xx%nst*xx*dim, xx%dim) and set up mask to eliminate wrong cross terms:
+
 !!      SAFE_ALLOCATE(aa_tmp(1:xx%dim*xx%nst, 1:xx%dim))
 !!
 !!      do ist=1, xx%nst
@@ -744,6 +763,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 !!        aa_tmp(2*ist  , 2) = aa(ist)
 !!      end do
 !!
+!!     ! Apply GEMM to perform vector-vector products and sum over states:
+!!            
 !!      call blas_gemm( 'T',                                 & !< transpose A: we transpose xx%pack
 !!                      'N',                                 & !< transpose B: we don't transpose aa_tmp     
 !!                      mesh%np,                             & !< M: mesh%np 
