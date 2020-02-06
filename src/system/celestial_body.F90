@@ -56,6 +56,7 @@ module celestial_body_oct_m
     procedure :: set_propagator => celestial_body_set_prop
     procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
     procedure :: gravitational_interaction => celestial_body_gravitational_interaction
+    procedure :: write_td_info => celestial_body_write_td_info
   end type celestial_body_t
 
 contains
@@ -71,6 +72,8 @@ contains
 
     sys%namespace = namespace
 
+    call messages_print_stress(stdout, "Celestial Body", namespace=namespace)
+
     call space_init(sys%space, namespace)
 
     !%Variable CelestialBodyMass
@@ -80,6 +83,7 @@ contains
     !% Mass of celestial body.
     !%End
     call parse_variable(namespace, 'CelestialBodyMass', M_ONE, sys%mass)
+    call messages_print_var_value(stdout, 'CelestialBodyMass', sys%mass)
 
     !%Variable CelestialBodyInitialPosition
     !%Type block
@@ -97,6 +101,7 @@ contains
       end do
       call parse_block_end(blk)
     end if
+    call messages_print_var_value(stdout, 'CelestialBodyInitialPosition', sys%pos(1:sys%space%dim))
 
     !%Variable CelestialBodyInitialVelocity
     !%Type block
@@ -113,9 +118,12 @@ contains
       end do
       call parse_block_end(blk)
     end if
+    call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', sys%vel(1:sys%space%dim))
 
     sys%acc = M_ZERO
     sys%tot_force = M_ZERO
+
+    call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(celestial_body_init)
   end subroutine celestial_body_init
@@ -167,11 +175,19 @@ contains
 
     select case(operation)
     case(VERLET_SYNC_DT)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
 
       this%prop%internal_time = this%prop%internal_time + this%prop%dt
       call this%prop%list%next()
 
     case(VERLET_UPDATE_POS)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Updating positions for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
 
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
@@ -179,6 +195,10 @@ contains
       call this%prop%list%next()
 
     case(VERLET_COMPUTE_ACC)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
@@ -189,6 +209,10 @@ contains
       call this%prop%list%next()
 
     case(VERLET_COMPUTE_VEL)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
 
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
@@ -249,6 +273,26 @@ contains
 
     POP_SUB(celestial_body_force_interaction)
   end subroutine celestial_body_gravitational_interaction
+
+! ---------------------------------------------------------
+  subroutine celestial_body_write_td_info(this)
+    class(celestial_body_t), intent(in) :: this
+
+    integer :: idir
+    character(len=20) :: fmt
+
+    PUSH_SUB(celestial_body_write_td_info)
+
+    write(message(1),'(2X,A,1X,A)') "Celestial body:", trim(this%namespace%get())
+
+    write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
+    write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
+    write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
+    write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
+    call messages_info(4)
+
+    POP_SUB(celestial_body_write_td_info)
+  end subroutine celestial_body_write_td_info
 
 end module celestial_body_oct_m
 

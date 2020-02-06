@@ -58,6 +58,7 @@ module system_abst_oct_m
     procedure(system_get_needed_quantity), deferred :: get_needed_quantity
     procedure(system_set_propagator),      deferred :: set_propagator
     procedure(system_alloc_receiver),      deferred :: allocate_receiv_structure
+    procedure(system_write_td_info),       deferred :: write_td_info
   end type system_abst_t
 
   abstract interface
@@ -91,6 +92,12 @@ module system_abst_oct_m
       import system_abst_t
       class(system_abst_t), intent(inout) :: this
     end subroutine system_alloc_receiver
+
+    subroutine system_write_td_info(this)
+      import system_abst_t
+      class(system_abst_t), intent(in) :: this
+    end subroutine system_write_td_info
+
   end interface
 
 contains
