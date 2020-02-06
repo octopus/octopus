@@ -28,9 +28,7 @@ module propagator_abst_oct_m
 
   private
   public ::                            &
-    propagator_abst_t,                 &
-    propagator_rewind,                 &
-    propagator_finished
+    propagator_abst_t
 
   type, abstract :: propagator_abst_t
     private
@@ -46,6 +44,7 @@ module propagator_abst_oct_m
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
     procedure :: rewind => propagator_rewind
+    procedure :: finished => propagator_finished
   end type propagator_abst_t
 
 contains
