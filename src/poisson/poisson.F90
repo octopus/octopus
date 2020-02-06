@@ -779,7 +779,7 @@ contains
 
     if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED  &
           .and. .not. this%is_dressed) then
-      !The default (rel) Poisson solver is used for OEP and Sternheimer calls were we don't need
+      !The default (real) Poisson solver is used for OEP and Sternheimer calls were we do not need
       !a complex-to-xomplex FFT as these parts use the normal Coulomb potential
       if(this%cube%fft%type == FFT_COMPLEX) then
         !We add the profiling here, as the other path uses dpoisson_solve
