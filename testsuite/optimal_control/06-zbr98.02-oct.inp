@@ -1,5 +1,6 @@
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 FromScratch = yes
 Dimensions = 1
