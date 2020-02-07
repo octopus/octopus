@@ -126,7 +126,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
     ! count operations
     if(profile_ .and. .not. use_opencl) then
-      cop = fi%nst_linear*dble(imax(nri) - imin(1))*op%stencil%size*2*R_ADD
+      cop = fi%nst_linear*TOFLOAT(imax(nri) - imin(1))*op%stencil%size*2*R_ADD
       call profiling_count_operations(cop)
     end if
   end if
@@ -341,7 +341,7 @@ contains
       
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
-        localsize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+        localsize = int(TOFLOAT(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
         localsize = localsize - mod(localsize, eff_size)
         bsize = eff_size*localsize
         bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
@@ -390,7 +390,7 @@ contains
 
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
-        isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+        isize = int(TOFLOAT(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
         isize = isize - mod(isize, eff_size)
         bsize = eff_size*isize
         bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
@@ -424,11 +424,11 @@ contains
     if(profile_) then
       select case(points_)
       case(OP_INNER)
-        call profiling_count_operations(fi%nst_linear*dble(op%ninner)*op%stencil%size*2*R_ADD)
+        call profiling_count_operations(fi%nst_linear*TOFLOAT(op%ninner)*op%stencil%size*2*R_ADD)
       case(OP_OUTER)
-        call profiling_count_operations(fi%nst_linear*dble(op%nouter)*op%stencil%size*2*R_ADD)
+        call profiling_count_operations(fi%nst_linear*TOFLOAT(op%nouter)*op%stencil%size*2*R_ADD)
       case(OP_ALL)
-        call profiling_count_operations(fi%nst_linear*dble(op%mesh%np)*op%stencil%size*2*R_ADD)
+        call profiling_count_operations(fi%nst_linear*TOFLOAT(op%mesh%np)*op%stencil%size*2*R_ADD)
       case default
         ASSERT(.false.)
       end select

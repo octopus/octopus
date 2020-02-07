@@ -58,14 +58,15 @@ module alloc_cache_oct_m
     ! -------------------------------------------------
     
     subroutine alloc_cache_end(alloc_cache, hits, misses, vol_hits, vol_misses)
+      use iso_c_binding
       import :: alloc_cache_t
       implicit none
 
       type(alloc_cache_t),   intent(inout) :: alloc_cache
       integer(8),            intent(out)   :: hits
       integer(8),            intent(out)   :: misses
-      real(8),               intent(out)   :: vol_hits
-      real(8),               intent(out)   :: vol_misses
+      real(c_double),        intent(out)   :: vol_hits
+      real(c_double),        intent(out)   :: vol_misses
     end subroutine alloc_cache_end
 
   end interface

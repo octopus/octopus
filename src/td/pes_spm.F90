@@ -672,7 +672,7 @@ contains
    
                 do isp = 1, this%nspoints
                   vfu = units_from_atomic(sqrt(units_out%length**(-3)), this%wf(ist, isdim, ik, isp, ii-1))
-                  write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') real(vfu), aimag(vfu)
+                  write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') TOFLOAT(vfu), aimag(vfu)
                 end do
                 write(iunitone, '(1x)', advance='yes')
               end do

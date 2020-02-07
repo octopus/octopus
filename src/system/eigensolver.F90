@@ -125,7 +125,7 @@ contains
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
-    real(8) :: mem
+    FLOAT   :: mem
 
     PUSH_SUB(eigensolver_init)
 
@@ -373,7 +373,7 @@ contains
     select case(eigens%es_type)
     case(RS_RMMDIIS)
       call messages_write('Info: The rmmdiis eigensolver requires ')
-      mem = (2.0_8*eigens%es_maxiter - 1.0_8)*st%d%block_size*dble(gr%mesh%np_part)
+      mem = (M_TWO*eigens%es_maxiter - M_ONE)*st%d%block_size*TOFLOAT(gr%mesh%np_part)
       if(states_are_real(st)) then
         mem = mem*CNST(8.0)
       else

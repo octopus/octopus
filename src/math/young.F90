@@ -247,7 +247,7 @@ contains
     PUSH_SUB(young_write_allspins)
 
     call young_nullify (this)
-    do ndown = 0, floor(nparticles * 0.5)
+    do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
       call young_write (iunit, this)
@@ -268,7 +268,7 @@ contains
 
     ndiagrams = 0
     call young_nullify (this)
-    do ndown = 0, floor(nparticles * 0.5)
+    do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
       ndiagrams = ndiagrams + this%nyoung

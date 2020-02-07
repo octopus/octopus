@@ -969,7 +969,7 @@ contains
       do l = 1, ps%conf%p
         ll = ps%conf%l(l)
         x = ps%conf%occ(l, 1)
-        ps%conf%occ(l, 1) = min(x, real(2*ll+1, REAL_PRECISION))
+        ps%conf%occ(l, 1) = min(x, TOFLOAT(2*ll+1))
         ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
       end do
     end if

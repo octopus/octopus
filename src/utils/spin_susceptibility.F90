@@ -228,7 +228,7 @@ program spin_susceptibility
     do kk = 1, energy_steps
       ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
       write(out_file, '(13e15.6)') ww,                                   &
-               (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
+               (TOFLOAT(chi(kk,ii)), aimag(chi(kk,ii)), ii = 1, num_col/2)
     end do
     call io_close(out_file)
 

@@ -93,7 +93,7 @@ contains
 
     integer              :: idir, idir2, ierr, pdim, ispin
     character(len=100)   :: str_tmp
-    real(8)              :: errornorm
+    FLOAT                :: errornorm
     type(restart_t)      :: restart_load, restart_dump
 	
     type(pert_t)            :: pert2  ! for the second direction in second-order kdotp
@@ -263,14 +263,14 @@ contains
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, TOFLOAT(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin))))
         end do
       else
         call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, TOFLOAT(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin))))
         end do
       end if
 

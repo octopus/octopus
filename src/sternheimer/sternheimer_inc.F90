@@ -41,7 +41,7 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE, allocatable :: dl_rhoin(:, :, :), dl_rhonew(:, :, :), dl_rhotmp(:, :, :)
   R_TYPE, allocatable :: rhs(:, :, :), hvar(:, :, :), psi(:, :), rhs_full(:, :, :)
   R_TYPE, allocatable :: tmp(:), rhs_tmp(:, :, :)
-  real(8):: abs_dens, rel_dens
+  FLOAT  :: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
   type(wfs_elec_t) :: rhsb, dlpsib, orhsb
@@ -348,7 +348,7 @@ subroutine X(sternheimer_solve)(                           &
 
     do ispin = 1, st%d%nspin
       forall(ip = 1:mesh%np) tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)
-      abs_dens = hypot(abs_dens, real(X(mf_nrm2)(mesh, tmp), 8))
+      abs_dens = hypot(abs_dens, TOFLOAT(X(mf_nrm2)(mesh, tmp)))
     end do
     rel_dens = abs_dens / st%qtot
 

@@ -430,7 +430,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
                                         *abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
-          energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*TOFLOAT(this%X(n)(im, im, ispin, ios))
       end do
     end do
   end do
@@ -1098,7 +1098,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
 
         !$omp parallel do
         do ip=1,np_sphere
-          nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
+          nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
         end do
         !$omp end parallel do    
 
@@ -1114,7 +1114,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
 
             !$omp parallel do
             do ip=1,np_sphere
-              tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,kst))*real(os%X(orb)(ip,1,lst))
+              tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,kst))*TOFLOAT(os%X(orb)(ip,1,lst))
             end do
             !$omp end parallel do
 
@@ -1208,7 +1208,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
 
       !$omp parallel do
       do ip=1,np
-        nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
+        nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
       end do
       !$omp end parallel do    
 
@@ -1224,7 +1224,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
 
           !$omp parallel do
           do ip=1,np
-            tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
+            tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,lst))*TOFLOAT(os%X(orb)(ip,1,kst))
           end do
           !$omp end parallel do
 
@@ -1669,7 +1669,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
         ff(1:ndim) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ff(1:ndim))
       end if
 
-     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim))
+     force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*TOFLOAT(ff(1:ndim))
    end do !ios
 
    SAFE_DEALLOCATE_A(psi)

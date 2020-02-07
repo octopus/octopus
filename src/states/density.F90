@@ -162,7 +162,7 @@ contains
               !$omp parallel do schedule(static)
               do ip = 1, this%gr%mesh%np
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist), REAL_PRECISION)
+                  TOFLOAT(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist))
               end do
             end do
           end if
@@ -173,10 +173,10 @@ contains
             do ip = 1, this%gr%mesh%np          
               psi1 = psib%zff(ip, 1, ist)
               psi2 = psib%zff(ip, 2, ist)
-              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
-              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
               term = weight(ist)*psi1*conjg(psi2)
-              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
               this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
@@ -198,7 +198,7 @@ contains
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip), REAL_PRECISION)
+                  TOFLOAT(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip))
               end do
             end do
           end if
@@ -211,9 +211,9 @@ contains
               psi2 = psib%zff_pack(2*ist,     ip)
               term = weight(ist)*psi1*conjg(psi2)
 
-              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
-              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
-              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
+              this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
               this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
@@ -281,7 +281,7 @@ contains
 
         !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
-          sqpsi(ip) = real(conjg(fpsi(ip))*fpsi(ip), REAL_PRECISION)
+          sqpsi(ip) = TOFLOAT(conjg(fpsi(ip))*fpsi(ip))
         end do
 
         nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)

@@ -222,10 +222,9 @@ subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
       denomU = denomU + tmpU
     end do
     end do
-    this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - &
-                             real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
-    this%orbsets(ios)%Ubar = real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION)
-    this%orbsets(ios)%Jbar = real(numJ,REAL_PRECISION)/real(denomJ,REAL_PRECISION)
+    this%orbsets(ios)%Ueff = TOFLOAT(numU)/TOFLOAT(denomU) - TOFLOAT(numJ)/TOFLOAT(denomJ)
+    this%orbsets(ios)%Ubar = TOFLOAT(numU)/TOFLOAT(denomU)
+    this%orbsets(ios)%Jbar = TOFLOAT(numJ)/TOFLOAT(denomJ)
 
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
@@ -246,7 +245,7 @@ subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION))
+      this%orbsets(ios)%Ubar = (TOFLOAT(numU)/TOFLOAT(denomU))
     else
       write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
       write(message(2),'(a)')' U is set to zero '

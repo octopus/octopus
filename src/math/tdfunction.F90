@@ -564,9 +564,9 @@ contains
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
     SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-    f%valww(1) = real(tmp(1), REAL_PRECISION)
+    f%valww(1) = TOFLOAT(tmp(1))
     do j = 2, f%nfreqs
-      f%valww(j) = (sqrt(M_TWO)) * real(tmp(j))
+      f%valww(j) = (sqrt(M_TWO)) * TOFLOAT(tmp(j))
     end do
     do j = f%nfreqs+1, 2*f%nfreqs-1
       f%valww(j) = - (sqrt(M_TWO)) * aimag(tmp(j-f%nfreqs+1))

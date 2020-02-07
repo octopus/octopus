@@ -539,7 +539,7 @@ contains
     logical :: finish, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
-    real(8) :: etime, itime
+    FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof

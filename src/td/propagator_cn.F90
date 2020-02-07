@@ -207,7 +207,7 @@ contains
     call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
-      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) = real(zpsi(1:mesh_p%np, idim))
+      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) = TOFLOAT(zpsi(1:mesh_p%np, idim))
       yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = aimag(zpsi(1:mesh_p%np, idim))
     end forall
 
@@ -244,7 +244,7 @@ contains
     call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
-      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) =    real(zpsi(1:mesh_p%np, idim))
+      yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) =   TOFLOAT(zpsi(1:mesh_p%np, idim))
       yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = - aimag(zpsi(1:mesh_p%np, idim))
     end forall
 

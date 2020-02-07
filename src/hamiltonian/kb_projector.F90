@@ -106,8 +106,8 @@ contains
     if (.not. ps%hamann .and. n_c == 2) then
       ! We need to weight the projectors.
       ! The weights will be included in the KB energies
-      kb_p%e(1) = kb_p%e(1)*real(l+1, REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
-      kb_p%e(2) = kb_p%e(2)*real(l,   REAL_PRECISION)/real(2*l+1, REAL_PRECISION)
+      kb_p%e(1) = kb_p%e(1)*TOFLOAT(l+1)/TOFLOAT(2*l+1)
+      kb_p%e(2) = kb_p%e(2)*TOFLOAT(l)/TOFLOAT(2*l+1)
     end if
 
     nullify(ps)

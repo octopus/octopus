@@ -704,9 +704,9 @@ contains
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
-            call batch_scal(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
+            call batch_scal(sys%gr%mesh%np, TOCMPLX(M_HALF, M_ZERO), &
               st_ref%group%psib(ib, ik))
-            call batch_axpy(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
+            call batch_axpy(sys%gr%mesh%np, TOCMPLX(M_HALF, M_ZERO), &
               psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
           end do
         end do
@@ -1053,7 +1053,7 @@ contains
       pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
         d(1) = d(1) - species_zval(geo%atom(iatom)%species) * &
-          real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
+          TOFLOAT(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)))
       end do
     end if
 
@@ -1099,7 +1099,7 @@ contains
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
     do j = 1, prop%number_checkpoints
-      prop%iter(j+1) = nint( real(niter_)/(prop%number_checkpoints+1) * j)
+      prop%iter(j+1) = nint( TOFLOAT(niter_)/(prop%number_checkpoints+1) * j)
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 

@@ -83,7 +83,7 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part)
 
 !   volume element for the chosen particle
   SAFE_ALLOCATE(this%h_1part(1:ndim1part))
-  this%vol_elem_1part = 1.0d0
+  this%vol_elem_1part = M_ONE
   do idir = 1,ndim1part
     irealdir = (ikeeppart-1)*ndim1part + idir
     this%vol_elem_1part = this%vol_elem_1part*mesh%spacing(irealdir)

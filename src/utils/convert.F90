@@ -768,7 +768,7 @@ contains
     type(block_t)       :: blk
     type(restart_t)     :: restart 
     type(unit_t)        :: units
-    real(8)             :: f_re, f_im
+    FLOAT               :: f_re, f_im
     FLOAT, allocatable  :: tmp_ff(:), scalar_ff(:)
 
     character(len=200) :: var, scalar_expression
@@ -852,7 +852,7 @@ contains
       call parse_block_string(blk, i_op-1, 3, scalar_expression)
 
       do ip = 1, mesh%np
-        call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
+        call parse_expression(f_re, f_im, trim(var), TOFLOAT(tmp_ff(ip)), trim(scalar_expression))
         !TODO: implement use of complex functions. 
         scalar_ff(ip) = scalar_ff(ip) + f_re
       end do

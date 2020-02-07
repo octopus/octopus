@@ -168,7 +168,7 @@ contains
 
       call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
-      dt = Tcycle/real(nT)
+      dt = Tcycle/TOFLOAT(nT)
 
       call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
       if(Forder.ge.0) then
@@ -183,7 +183,7 @@ contains
         Fdim = 3
       endif
 
-      dt = Tcycle/real(nT)
+      dt = Tcycle/TOFLOAT(nT)
 
       POP_SUB(floquet_init)
 

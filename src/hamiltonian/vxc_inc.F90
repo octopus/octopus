@@ -775,7 +775,7 @@ contains
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
 
 
@@ -797,12 +797,12 @@ contains
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
       if(alpha < 0) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter smaller than zero (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
 
 #ifdef HAVE_LIBXC4
@@ -1034,7 +1034,7 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
 
       deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
 
-      if(.not. done .and. abs(qxc) >= 1.0_8) then
+      if(.not. done .and. abs(qxc) >= M_ONE) then
         find_root = .true.
         done = .true.
         ncutoff = x1
@@ -1057,14 +1057,14 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
       x1 = ncutoff
       x2 = ncutoff_old
       x3 = ncutoff
-      f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
-      f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
+      f1 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x1)
+      f2 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x2)
 
       do ip = 1, 20
-        if(abs(f1 - f2) < 1e-16_8) exit
+        if(abs(f1 - f2) < CNST(1.0e-16)) exit
         x3 = x2 - f2*(x2 - x1)/(f2 - f1)
-        f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
-        if(abs(f3) < 1e-6_8) exit
+        f3 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x3)
+        if(abs(f3) < CNST(1.0e-6)) exit
         x1 = x2
         f1 = f2
         x2 = x3

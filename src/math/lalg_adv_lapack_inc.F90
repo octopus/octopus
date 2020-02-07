@@ -262,7 +262,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
     SAFE_ALLOCATE(ind(1:n))
     SAFE_ALLOCATE(e_copy(1:n))
     SAFE_ALLOCATE(a_copy(1:n, 1:n))
-    re = real(e, REAL_PRECISION)
+    re = TOFLOAT(e)
     e_copy = e
     a_copy = a
     call sort(re, ind)

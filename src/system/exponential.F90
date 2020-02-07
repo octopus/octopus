@@ -358,7 +358,7 @@ contains
 
         if(zfact_is_real) then
           do idim = 1, hm%d%dim
-            call lalg_axpy(mesh%np, real(zfact, REAL_PRECISION), hzpsi1(:, idim), zpsi(:, idim))
+            call lalg_axpy(mesh%np, TOFLOAT(zfact), hzpsi1(:, idim), zpsi(:, idim))
           end do
         else
           do idim = 1, hm%d%dim
@@ -721,7 +721,7 @@ contains
       call batch_axpy(mesh%np, real(zfact), inh_psib, psib)
 
       zfact2 = zfact2*deltat2
-      if(present(psib2)) call batch_axpy(mesh%np, real(zfact2), inh_psib, psib2)
+      if(present(psib2)) call batch_axpy(mesh%np, TOFLOAT(zfact2), inh_psib, psib2)
     end if
 
     do iter = 1, te%exp_order
@@ -746,8 +746,8 @@ contains
       end if
 
       if(zfact_is_real) then
-        call batch_axpy(mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
-        if(present(psib2)) call batch_axpy(mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
+        call batch_axpy(mesh%np, TOFLOAT(zfact), hpsi1b, psib)
+        if(present(psib2)) call batch_axpy(mesh%np, TOFLOAT(zfact2), hpsi1b, psib2)
       else
         call batch_axpy(mesh%np, zfact, hpsi1b, psib)
         if(present(psib2)) call batch_axpy(mesh%np, zfact2, hpsi1b, psib2)
@@ -870,7 +870,7 @@ contains
     if (present(inh_psib)) then
       ! zpsi = zpsi + deltat * nrm * V * expo(1:iter, 1) = zpsi + deltat * nrm * V * expo * V^(T) * inh_zpsi
       do ii = 1, iter
-        call batch_axpy(mesh%np, real(deltat)*beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
+        call batch_axpy(mesh%np, TOFLOAT(deltat)*beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
       end do
     else
       ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi

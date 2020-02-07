@@ -171,7 +171,7 @@ module species_oct_m
   logical :: initialized = .false.
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
-  real(8) :: energy_tolerance
+  FLOAT   :: energy_tolerance
   logical :: automatic
   
 contains

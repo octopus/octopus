@@ -793,7 +793,7 @@ contains
     
     ! the rest is handled by log2
     if(mm /= 1) then
-      pad_pow2 = pad_pow2*2**(ceiling(log(dble(mm))/log(2.0_8)))
+      pad_pow2 = pad_pow2*2**(ceiling(log(TOFLOAT(mm))/log(2.0_8)))
     end if
 
   end function pad_pow2
@@ -811,7 +811,7 @@ contains
   integer pure function ilog2(xx)
     integer, intent(in) :: xx
 
-    ilog2 = nint(log2(real(xx, REAL_PRECISION)))
+    ilog2 = nint(log2(TOFLOAT(xx)))
   end function ilog2
 
   ! -------------------------------------------------------
@@ -832,7 +832,7 @@ contains
       POP_SUB(is_prime); return 
     end if
 
-    root = nint(sqrt(real(n)))
+    root = nint(sqrt(TOFLOAT(n)))
     do i = 2, root
       if (mod(n,i) == 0) then
         is_prime = .false.

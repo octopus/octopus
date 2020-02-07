@@ -296,7 +296,7 @@
           end do
         end do
 
-        vaf(itm) = vaf(itm)/real(ntime - itm + 1, REAL_PRECISION)
+        vaf(itm) = vaf(itm)/TOFLOAT(ntime - itm + 1)
 
       end do
 

@@ -1083,7 +1083,7 @@ contains
             ks%calc%energy%int_dft_u = denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
           else
             ctmp = zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_DFT_U)
-            ks%calc%energy%int_dft_u   = real(ctmp, REAL_PRECISION)
+            ks%calc%energy%int_dft_u   = TOFLOAT(ctmp)
           end if
         end if
 
@@ -1311,7 +1311,7 @@ contains
           if ( kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
-            kick_real = DREAL(kick)
+            kick_real = TOFLOAT(kick)
           end if
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, v_ext = potx, kick = -kick_real, &
             time_present = ks%calc%time_present, kick_time = kick_time )
@@ -1335,7 +1335,7 @@ contains
           if ( kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
-            kick_real = DREAL(kick)
+            kick_real = TOFLOAT(kick)
           end if
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, hm%psolver_fine, kick = -kick_real, &
             time_present = ks%calc%time_present, kick_time = kick_time)

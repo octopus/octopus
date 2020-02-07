@@ -249,8 +249,8 @@ contains
     FLOAT,                       intent(in)    :: rho(:)
     
     integer :: ip, iter
-    real(8) :: resnorm
-    real(8), allocatable :: res(:), cres(:), cor(:), ccor(:)
+    FLOAT   :: resnorm
+    FLOAT, allocatable :: res(:), cres(:), cor(:), ccor(:)
     
     PUSH_SUB(poisson_multigrid_cycle)
 

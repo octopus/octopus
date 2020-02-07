@@ -838,9 +838,9 @@ contains
         pml_b(:) = hm%bc%pml_b(ip_in, :)
         pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
+                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g(field_dir)) &
+                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g(field_dir)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
       end do
 
@@ -884,14 +884,14 @@ contains
         pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
         pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 1)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
         pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 2)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
 
@@ -932,31 +932,31 @@ contains
           ff_minus(1) = psi(ip, 4)
           ff_minus(2) = psi(ip, 5)
           ff_minus(3) = psi(ip, 6)
-          aux_ep      = dcross_product(aux_ep,real(ff_plus+ff_minus))
+          aux_ep      = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
           aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip, 1)*cc                                         &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip, 4)*cc                                         &
                        + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip, 2)*cc                                         &
                        - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
           oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip, 6)*cc                                         &
                        + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end if
@@ -998,31 +998,31 @@ contains
           ff_minus(1)  = psi(ip, 4)
           ff_minus(2)  = psi(ip, 5)
           ff_minus(3)  = psi(ip, 6)
-          aux_ep       = dcross_product(aux_ep,real(ff_plus+ff_minus))
+          aux_ep       = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
           aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip,4)*cc                                          &
                        + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip,2)*cc                                          &
                        - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip,5)*cc                                          &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
           oppsi(ip, 3) = oppsi(ip,3)*cc                                          &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip,6)*cc                                          &
                        + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end do

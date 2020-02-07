@@ -91,18 +91,18 @@ module profiling_oct_m
   type profile_t
     private
     character(LABEL_LENGTH)  :: label
-    real(8)                  :: entry_time
-    real(8)                  :: total_time
-    real(8)                  :: min_time
-    real(8)                  :: self_time
-    real(8)                  :: op_count_current
-    real(8)                  :: op_count
-    real(8)                  :: op_count_child
-    real(8)                  :: op_count_child_current
-    real(8)                  :: tr_count_current
-    real(8)                  :: tr_count
-    real(8)                  :: tr_count_child
-    real(8)                  :: tr_count_child_current
+    FLOAT                    :: entry_time
+    FLOAT                    :: total_time
+    FLOAT                    :: min_time
+    FLOAT                    :: self_time
+    FLOAT                    :: op_count_current
+    FLOAT                    :: op_count
+    FLOAT                    :: op_count_child
+    FLOAT                    :: op_count_child_current
+    FLOAT                    :: tr_count_current
+    FLOAT                    :: tr_count
+    FLOAT                    :: tr_count_child
+    FLOAT                    :: tr_count_child_current
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
@@ -159,7 +159,7 @@ module profiling_oct_m
     integer(8)               :: large_vars_size(MAX_MEMORY_VARS)
     character(len=256)       :: large_vars(MAX_MEMORY_VARS)
 
-    real(8)                  :: start_time
+    FLOAT                    :: start_time
     integer                  :: mem_iunit
 
     character(len=256)       :: output_dir
@@ -333,7 +333,7 @@ contains
   subroutine profiling_end(namespace)
     type(namespace_t), intent(in) :: namespace
     integer :: ii
-    real(8), parameter :: megabyte = 1048576.0_8
+    FLOAT, parameter :: megabyte = CNST(1048576.0)
     integer(8) :: io_open_count, io_close_count
 #ifdef HAVE_MPI
     integer(8) :: io_open_count_red, io_close_count_red
@@ -472,7 +472,7 @@ contains
     logical,         optional,  intent(in)    :: exclude !< .true. The time spent here is also excluded from the parent total_time.
                                                          !! Only use it for functions that otherwise would spoil statistics.
 
-    real(8) :: now
+    FLOAT :: now
 
     if(.not.in_profiling_mode) return
     if(.not. not_in_openmp()) return
@@ -528,7 +528,7 @@ contains
   subroutine profiling_out(this)
     type(profile_t),   intent(inout) :: this
 
-    real(8) :: now, time_spent
+    FLOAT :: now, time_spent
 
     if(.not.in_profiling_mode) return
     if(.not. not_in_openmp()) return
@@ -596,7 +596,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
-    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + TOFLOAT(ops)
   end subroutine iprofiling_count_operations
 
 
@@ -608,7 +608,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + TOFLOAT(ops)
   end subroutine rprofiling_count_operations
 
 
@@ -634,7 +634,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often    
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
   end subroutine profiling_count_tran_int
 
 
@@ -647,7 +647,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
 
   end subroutine profiling_count_tran_real_4
 
@@ -661,7 +661,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
 
   end subroutine profiling_count_tran_real_8
 
@@ -675,7 +675,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
 
   end subroutine profiling_count_tran_complex_4
 
@@ -689,7 +689,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(16*trf)
 
   end subroutine profiling_count_tran_complex_8
 
@@ -703,12 +703,12 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(trf)*types_get_size(type)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(trf)*types_get_size(type)
 
   end subroutine profiling_count_tran_type
   
   ! ---------------------------------------------------------
-  real(8) function profile_total_time(this)
+  FLOAT function profile_total_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_total_time)
@@ -719,7 +719,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_self_time(this)
+  FLOAT function profile_self_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time)
@@ -730,18 +730,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_total_time_per_call(this)
+  FLOAT function profile_total_time_per_call(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_total_time_per_call)
-    profile_total_time_per_call = this%total_time / dble(this%count)
+    profile_total_time_per_call = this%total_time / TOFLOAT(this%count)
 
     POP_SUB(profile_total_time_per_call)
   end function profile_total_time_per_call
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_min_time(this)
+  FLOAT function profile_min_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time)
@@ -752,11 +752,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_self_time_per_call(this)
+  FLOAT function profile_self_time_per_call(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time_per_call)
-    profile_self_time_per_call = this%self_time / dble(this%count)
+    profile_self_time_per_call = this%self_time / TOFLOAT(this%count)
 
     POP_SUB(profile_self_time_per_call)
   end function profile_self_time_per_call
@@ -780,7 +780,7 @@ contains
 
   ! ---------------------------------------------------------
   
-  real(8) function profile_total_bandwidth(this)
+  FLOAT function profile_total_bandwidth(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
@@ -796,7 +796,7 @@ contains
   
   ! ---------------------------------------------------------
   
-  real(8) function profile_self_throughput(this)
+  FLOAT function profile_self_throughput(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_throughput)
@@ -812,7 +812,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  real(8) function profile_self_bandwidth(this)
+  FLOAT function profile_self_bandwidth(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
@@ -861,7 +861,7 @@ contains
     
     integer          :: ii
     integer          :: iunit
-    real(8)          :: total_time
+    FLOAT            :: total_time
     type(profile_t), pointer :: prof
     character(len=256) :: filename
     FLOAT,   allocatable :: selftime(:)

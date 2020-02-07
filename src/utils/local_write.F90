@@ -740,8 +740,8 @@ contains
     write(out_bld,'(a)')'.color red'
     write(out_bld,'(a,3(f12.6,2x),a)')'.sphere ',(units_from_atomic(units_out%length,center(ll)), ll= 1, 3),' 0.2' 
     do ll = 1, 3
-      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll)/2.0d0)
-      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll)/2.0d0)
+      dipolearrow(ll,1) = units_from_atomic(units_out%length, center(ll) - multipoles(ll)/M_TWO)
+      dipolearrow(ll,2) = units_from_atomic(units_out%length, center(ll) + multipoles(ll)/M_TWO)
     end do
     write(out_bld,'(a,6(f12.6,2x),a)')'.arrow ',(dipolearrow(ll,1), ll= 1, 3), &
                                      (dipolearrow(ll,2), ll= 1, 3), ' 0.1 0.5 0.90'

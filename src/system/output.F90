@@ -860,7 +860,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
+        TOFLOAT(basins%map), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
