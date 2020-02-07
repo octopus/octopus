@@ -389,6 +389,7 @@ contains
     if(aux_fwd_propagation) then
       call states_elec_copy(psi2, psi)
       call controlfunction_copy(par_prev, par)
+      if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi2%pack()
     end if
 
     ! setup forward propagation
@@ -413,7 +414,6 @@ contains
     end if
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
-    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi2%pack()
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     do i = 1, td%max_iter
