@@ -708,7 +708,7 @@ contains
       end do
     end if
  
-    npath = SIZE(sb%kpoints%coord_along_path)*ns
+    npath = kpoints_nkpt_in_path(sb%kpoints)*ns
 
 
     !We need to compute the projections of each wavefunctions on the localized basis
