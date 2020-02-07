@@ -243,39 +243,46 @@ program dielectric_function
 
   SAFE_DEALLOCATE_A(fullmat)
 
-  write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
-
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  select case(space%dim)
+  case(1)
+    write(header, '(7a15)') '#        energy', 'Re x', 'Im x'
+  case(2)
+    write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y'
+  case(3)
+    write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
+  end select
+
+
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
-    write(out_file, '(7e15.6)') ww,                                         &
-         real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
-         real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
-         real(invdielectric(3, kk), REAL_PRECISION), aimag(invdielectric(3, kk))
+    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+    do idir = 1, space%dim
+      write(out_file, '(2e15.6)', advance='no') real(invdielectric(idir, kk), REAL_PRECISION), aimag(invdielectric(idir, kk))
+    end do
+    write(out_file, '()')
   end do
   call io_close(out_file)
  
   out_file = io_open('td.general/dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
-    write(out_file, '(7e15.6)') ww,                                         &
-         real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
-         real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
-         real(dielectric(3, kk), REAL_PRECISION), aimag(dielectric(3, kk))
+    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+    do idir = 1, space%dim
+      write(out_file, '(2e15.6)', advance='no') real(dielectric(idir, kk), REAL_PRECISION), aimag(dielectric(idir, kk))
+    end do
+    write(out_file, '()')
   end do
   call io_close(out_file)
 
   out_file = io_open('td.general/chi', action='write')
   write(out_file,'(a)') trim(header)
   do kk = 0, energy_steps
-    dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
-    ww = kk*spectrum%energy_step
-    write(out_file, '(7e15.6)') ww, &
-      real(chi(1, kk), REAL_PRECISION), aimag(chi(1, kk)), &
-      real(chi(2, kk), REAL_PRECISION), aimag(chi(2, kk)), &
-      real(chi(3, kk), REAL_PRECISION), aimag(chi(3, kk))
+    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+    do idir = 1, space%dim
+      write(out_file, '(2e15.6)', advance='no') real(chi(idir, kk), REAL_PRECISION), aimag(chi(idir, kk))
+    end do
+    write(out_file, '()')
   end do
   call io_close(out_file)
 

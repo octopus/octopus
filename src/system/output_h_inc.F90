@@ -161,7 +161,10 @@
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+      
       if(states_are_complex(st)) then
+        ASSERT(associated(st%current))
+
         do is = 1, hm%d%nspin
 
           if(st%d%nspin == 1) then
@@ -174,14 +177,16 @@
             st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
             geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
 
-        end do
-      else
+      end do
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
-      end if
+      else
+
+      endif
     end if
    
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+
       if(states_are_complex(st)) then
       
         SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
@@ -198,28 +203,34 @@
       else
         message(1) = 'No current density output for real states since it is identically zero.'
         call messages_warning(1)
-      end if
+      endif
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
+      
+      if(states_are_complex(st)) then
 
-      SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
       
-      call current_heat_calculate(der, hm, geo, st, heat_current)
+        call current_heat_calculate(der, hm, geo, st, heat_current)
       
-      do is = 1, hm%d%nspin
-        if(st%d%nspin == 1) then
-          write(fname, '(2a)') 'heat_current'
-        else
-          write(fname, '(a,i1)') 'heat_current-sp', is
-        end if
+        do is = 1, hm%d%nspin
+          if(st%d%nspin == 1) then
+            write(fname, '(2a)') 'heat_current'
+          else
+            write(fname, '(a,i1)') 'heat_current-sp', is
+          end if
         
-        call io_function_output_vector(outp%how, dir, fname, der%mesh, &
-          st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
-          geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+          call io_function_output_vector(outp%how, dir, fname, der%mesh, &
+            st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
         
-        SAFE_DEALLOCATE_A(heat_current)
-      end do
+          SAFE_DEALLOCATE_A(heat_current)
+        end do
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1)
+      endif
     end if
     
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then

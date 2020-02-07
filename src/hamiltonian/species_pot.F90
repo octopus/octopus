@@ -904,10 +904,11 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r, r2
-    integer :: ip, err, idim
+    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2
+    integer :: ip, err, idim, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
+    type(periodic_copy_t) :: pp
 
     type(profile_t), save :: prof
 
@@ -918,32 +919,43 @@ contains
       select case(species_type(species))
 
       case(SPECIES_SOFT_COULOMB)
-
-        do ip = 1, mesh%np
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r2 = sum(xx(1:mesh%sb%dim)**2)
-          vl(ip) = -species_zval(species)/sqrt(r2+species_sc_alpha(species))
+        !Assuming that we want to take the contribution from all replica that contributes up to 0.001
+        ! to the center of the cell, we arrive to a range of 1000 a.u.. 
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(1000.0) / species_zval(species))
+        vl = M_ZERO
+        do icell = 1, periodic_copy_num(pp)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
+            r2 = r*r
+            vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
+          end do
         end do
+        call periodic_copy_end(pp)
 
       case(SPECIES_USDEF)
+        !TODO: we should control the value of 10 by a variable. 
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+        vl = M_ZERO
+        do icell = 1, periodic_copy_num(pp)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
 
-        do ip = 1, mesh%np
-          
-          xx = M_ZERO
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          ! Note that as the spec%user_def is in input units, we have to convert
-          ! the units back and forth
-          forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
-          r = units_from_atomic(units_inp%length, r)
-          zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
-          vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
-
+            ! Note that as the spec%user_def is in input units, we have to convert
+            ! the units back and forth
+            forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            r = units_from_atomic(units_inp%length, r)
+            zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
+            vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, real(zpot))
+          end do
         end do
 
+        call periodic_copy_end(pp)
 
       case(SPECIES_FROM_FILE)
+
+        ASSERT(mesh%sb%periodic_dim == 0)
 
         call dio_function_input(trim(species_filename(species)), mesh, vl, err)
         if(err /= 0) then
@@ -953,6 +965,9 @@ contains
         end if
 
       case(SPECIES_JELLIUM)
+
+        ASSERT(mesh%sb%periodic_dim == 0)
+
         a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
         a2 = species_z(species)/species_jradius(species)
         Rb2= species_jradius(species)**2
@@ -987,6 +1002,8 @@ contains
 
       case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
+        ASSERT(mesh%sb%periodic_dim == 0)
+
         ps => species_ps(species)
 
         do ip = 1, mesh%np

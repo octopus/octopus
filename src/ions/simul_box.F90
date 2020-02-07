@@ -714,12 +714,9 @@ contains
         end if
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
-
-        if (.not. parse_is_defined('Lsize')) then
-          sb%lsize(:) = M_ZERO
-          sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-        end if
+        
       else  
+
         !%Variable LatticeVectors
         !%Type block
         !%Default simple cubic
@@ -746,12 +743,18 @@ contains
           end do
           call parse_block_end(blk)
 
-          if (.not. parse_is_defined('Lsize')) then
-            sb%lsize(:) = M_ZERO
-            sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if
         end if
       end if
+
+      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+      if (.not. parse_is_defined('Lsize') .and. sb%periodic_dim > 0) then
+        do idim = 1, sb%dim
+          if (sb%lsize(idim) == M_ZERO) then
+            sb%lsize(idim) = lparams(idim)*M_HALF
+          end if
+        end do
+      end if
+
     end if
 
     sb%rlattice = M_ZERO
@@ -856,7 +859,6 @@ contains
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
       end if
-
 
       xx(1:pd) = xx(1:pd) + M_HALF
       do idir = 1, pd
