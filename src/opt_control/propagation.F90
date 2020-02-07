@@ -162,6 +162,7 @@ contains
     gr => sys%gr
 
     psi => opt_control_point_qs(qcpsi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
     call opt_control_get_classical(sys%geo, qcpsi)
 
     if(write_iter_) then
@@ -264,6 +265,7 @@ contains
     call opt_control_set_classical(sys%geo, qcpsi)
 
     if(write_iter_) call td_write_end(write_handler)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     POP_SUB(propagate_forward)
   end subroutine propagate_forward
@@ -291,6 +293,7 @@ contains
 
     gr => sys%gr
     psi => opt_control_point_qs(qcpsi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
 
     call hamiltonian_elec_adjoint(sys%hm)
 
@@ -321,6 +324,7 @@ contains
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
 
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     POP_SUB(propagate_backward)
   end subroutine propagate_backward
@@ -385,6 +389,7 @@ contains
     if(aux_fwd_propagation) then
       call states_elec_copy(psi2, psi)
       call controlfunction_copy(par_prev, par)
+      if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi2%pack()
     end if
 
     ! setup forward propagation
@@ -407,6 +412,9 @@ contains
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
     end if
+
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -447,6 +455,7 @@ contains
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
     call states_elec_end(chi)
     call propagator_end(tr_chi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     nullify(chi)
     POP_SUB(fwd_step)
@@ -502,6 +511,8 @@ contains
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
     end if
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
@@ -543,6 +554,7 @@ contains
     call controlfunction_to_basis(par_chi)
     call states_elec_end(psi)
     call propagator_end(tr_chi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%unpack()
     nullify(chi)
     nullify(psi)
     POP_SUB(bwd_step)
@@ -626,6 +638,8 @@ contains
     end if
 
     call states_elec_copy(st_ref, psi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st_ref%pack()
 
     if(ion_dynamics_ions_move(td%ions)) &
       call forces_calculate(gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
