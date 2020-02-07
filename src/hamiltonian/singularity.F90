@@ -75,9 +75,11 @@ contains
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
 
+    integer :: default
+
     PUSH_SUB(singularity_init)
 
-    if(.not.allocated(this%Fk)) then
+    if(.not.allocated(this%Fk) .and. sb%periodic_dim > 0) then
       SAFE_ALLOCATE(this%Fk(st%d%kpt%start:st%d%kpt%end))
       this%Fk(st%d%kpt%start:st%d%kpt%end) = M_ZERO
       this%FF = M_ZERO
@@ -102,7 +104,11 @@ contains
       !%Option spherical_bz 3
       !% The divergence in q=0 is treated analytically assuming a spherical Brillouin zone
       !%End
-      call parse_variable(namespace, 'HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
+
+      default = SINGULARITY_NONE
+      if(sb%dim == 3) default = SINGULARITY_GENERAL
+      
+      call parse_variable(namespace, 'HFSingularity', default, this%coulomb_singularity)
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
