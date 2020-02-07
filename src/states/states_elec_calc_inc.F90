@@ -1747,7 +1747,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(psolver, namespace, qq, &
+        call poisson_kernel_reinit(psolver, namespace, qq, M_ZERO, &
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 

@@ -114,7 +114,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
       if(st_d%ispin /= SPIN_POLARIZED .or. st_d%nik > st_d%ispin .or. this%cam_omega > M_EPSILON) then
-        call poisson_kernel_reinit(psolver, namespace, qq, &
+        call poisson_kernel_reinit(psolver, namespace, qq, this%cam_omega, &
                   -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if

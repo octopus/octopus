@@ -60,11 +60,12 @@ module poisson_fft_oct_m
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
+    FLOAT                    :: mu     !< For the short-range Coulomb potential
     FLOAT                    :: singularity !< Value of the Coulomb potential at the singularity
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, qq, fullcube, singul)
+  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, qq, mu, fullcube, singul)
     type(poisson_fft_t), intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
@@ -72,6 +73,7 @@ contains
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
+    FLOAT, optional,     intent(in)    :: mu 
     type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kernel
     FLOAT, optional,     intent(in)    :: singul
 
@@ -79,6 +81,7 @@ contains
 
     this%kernel = kernel
     this%qq = M_ZERO
+    this%mu = M_ZERO
 
     !We must define the singularity if we specify a q vector
     this%singularity = optional_default(singul, M_ZERO)
@@ -88,6 +91,18 @@ contains
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
       this%qq(1:mesh%sb%periodic_dim) = qq(1:mesh%sb%periodic_dim)
     end if
+
+    if(present(mu)) then
+      if(mu > M_ZERO) then
+        if(mesh%sb%dim == 3 .and. kernel == POISSON_FFT_KERNEL_NOCUT) then
+          this%mu = mu
+        else
+          message(1) = "The screened Coulomb potential is only implemented in 3D for PoissonFFTKernel=fft_nocut."
+          call messages_fatal(1)
+        end if
+      end if
+    end if
+
 
     if(kernel == POISSON_FFT_KERNEL_HOCKNEY) then
       if (.not. present(fullcube)) then
@@ -210,13 +225,17 @@ contains
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), modg2
+    FLOAT :: temp(3), modg2, inv_four_mu2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
+
+    if(this%mu > M_ZERO) then
+      inv_four_mu2 = M_ONE/((M_TWO*this%mu)**2)
+    end if
 
     ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -236,19 +255,30 @@ contains
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 
-          if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-          else
-            !We use the user-defined value of the singularity
-            fft_Coulb_FS(ix, iy, iz) = this%singularity
-          end if
+         if(abs(modg2) > CNST(1e-6)) then
+           !Screened coulomb potential (erfc function)
+           if(this%mu > M_EPSILON) then
+             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
+           else
+             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
+           end if
+         else
+           !Screened coulomb potential (erfc function)
+           if(this%mu > M_EPSILON) then
+             !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
+             fft_Coulb_FS(ix, iy, iz) =  M_FOUR*M_PI*inv_four_mu2
+           else
+             !We use the user-defined value of the singularity
+             fft_Coulb_FS(ix, iy, iz) = this%singularity
+           end if
+         end if
         end do
       end do
 
     end do
 
     forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+      fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, iz)
     end forall
 
     call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)

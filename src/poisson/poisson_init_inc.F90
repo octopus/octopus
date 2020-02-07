@@ -174,7 +174,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, singul = M_ZERO)
+      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, mu = this%mu, singul = M_ZERO)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
@@ -193,10 +193,11 @@ end subroutine poisson_kernel_init
 
 
 !-----------------------------------------------------------------
-subroutine poisson_kernel_reinit(this, namespace, qq, singul)
+subroutine poisson_kernel_reinit(this, namespace, qq, mu, singul)
   type(poisson_t),   intent(inout) :: this
   type(namespace_t), intent(in)    :: namespace
   FLOAT,             intent(in)    :: qq(:)
+  FLOAT,             intent(in)    :: mu
   FLOAT,             intent(in)    :: singul
 
   type(profile_t), save :: prof
@@ -208,11 +209,13 @@ subroutine poisson_kernel_reinit(this, namespace, qq, singul)
   select case(this%method)
   case(POISSON_FFT)
     !We only reinitialize the poisson sover if needed
-    if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
+    if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON) &
+         .or. abs(this%mu -mu) > M_EPSILON) then
       this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
+      this%mu = mu
       call poisson_fft_end(this%fft_solver)
       call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
-        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, singul = singul)
+        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, mu = this%mu, singul = singul)
     end if
   case default
     call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
