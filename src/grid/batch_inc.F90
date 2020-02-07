@@ -111,13 +111,14 @@ subroutine X(batch_allocate_packed_host)(this)
 end subroutine X(batch_allocate_packed_host)
 
 !--------------------------------------------------------------
-subroutine X(batch_init)(this, dim, st_start, st_end, np, special)
+subroutine X(batch_init)(this, dim, st_start, st_end, np, special, packed)
   class(batch_t),    intent(inout) :: this
   integer,           intent(in)    :: dim
   integer,           intent(in)    :: st_start
   integer,           intent(in)    :: st_end
   integer,           intent(in)    :: np
   logical, optional, intent(in)    :: special    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
+  logical, optional, intent(in)    :: packed    !< If .true., the allocation will be handled in C (to use pinned memory for GPUs)
 
   PUSH_SUB(X(batch_init))
 
@@ -126,7 +127,15 @@ subroutine X(batch_init)(this, dim, st_start, st_end, np, special)
   this%type_of = R_TYPE_VAL
   call batch_build_indices(this, st_start, st_end)
 
-  call this%X(allocate_unpacked_host)()
+  if(optional_default(packed, .false.)) then
+    call this%X(allocate_packed_host)()
+    this%status_of = BATCH_PACKED
+    this%status_host = BATCH_PACKED
+    INCR(this%host_buffer_count, 1)
+  else
+    call this%X(allocate_unpacked_host)()
+  end if
+
   this%own_memory = .true.
 
   POP_SUB(X(batch_init))

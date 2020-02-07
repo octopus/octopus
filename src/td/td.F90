@@ -398,14 +398,14 @@ contains
       if(sys%hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(sys%hm%lda_u)
         !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
         call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%hm%psolver)
       else
         !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
       end if 
     else
-      call states_elec_allocate_wfns(st, gr%mesh)
+      call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
     end if
 
@@ -599,7 +599,7 @@ contains
           fromScratch = .false.
           call states_elec_deallocate_wfns(sys%st)
           call ground_state_run(sys, fromScratch)
-          call states_elec_allocate_wfns(sys%st, gr%mesh)
+          call states_elec_allocate_wfns(sys%st, gr%mesh, packed=.true.)
           call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."

@@ -130,9 +130,10 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   end select
 
-  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints))
+  call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
+    packed=v_local%status()==BATCH_PACKED)
 
-  if(v_local%is_packed()) call handle%ghost_send%do_pack(copy = .false.)
+  if(v_local%status()==BATCH_DEVICE_PACKED) call handle%ghost_send%do_pack(copy = .false.)
 
   !now collect the data for sending
   call X(subarray_gather_batch)(vp%ghost_spoints, v_local, handle%ghost_send)

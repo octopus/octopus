@@ -1073,13 +1073,15 @@ contains
 
     ! no push_sub, called too frequently
     
+    if(accel_is_enabled()) then
 #ifdef HAVE_OPENCL
-    call clFinish(accel%command_queue, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+      call clFinish(accel%command_queue, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish')
 #endif
 #ifdef HAVE_CUDA
-    call cuda_context_synchronize()
+      call cuda_context_synchronize()
 #endif
+    end if
   end subroutine accel_finish
 
   ! ------------------------------------------
@@ -1872,10 +1874,12 @@ contains
 
     PUSH_SUB(accel_set_stream)
 
+    if(accel_is_enabled()) then
 #ifdef HAVE_CUDA
-    call cuda_set_stream(accel%cuda_stream, stream_number)
-    call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+      call cuda_set_stream(accel%cuda_stream, stream_number)
+      call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
 #endif
+    end if
 
     POP_SUB(accel_set_stream)
   end subroutine accel_set_stream
