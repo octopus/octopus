@@ -105,7 +105,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
 
       ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
       !Down-sampling and q-grid
-      if(st_d%ispin /= SPIN_POLARIZED .or. st_d%nik > st_d%ispin) then
+      if(st_d%nik > st_d%spin_channels) then
         if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ikpoint2)) cycle
         qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
                       - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2, absolute_coordinates=.false.)
@@ -113,7 +113,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
       ! Updating of the poisson solver
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
-      if(st_d%ispin /= SPIN_POLARIZED .or. st_d%nik > st_d%ispin .or. this%cam_omega > M_EPSILON) then
+      if(st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON) then
         call poisson_kernel_reinit(psolver, namespace, qq, &
                   -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))

@@ -79,10 +79,14 @@ contains
 
     PUSH_SUB(singularity_init)
 
-    if(.not.allocated(this%Fk) .and. sb%periodic_dim > 0) then
+
+    if(.not.allocated(this%Fk)) then
       SAFE_ALLOCATE(this%Fk(st%d%kpt%start:st%d%kpt%end))
       this%Fk(st%d%kpt%start:st%d%kpt%end) = M_ZERO
       this%FF = M_ZERO
+    end if
+
+    if(.not.allocated(this%Fk) .and. sb%periodic_dim > 0) then
 
       !%Variable HFSingularity
       !%Type integer
