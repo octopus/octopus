@@ -1689,7 +1689,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint, ikpoint, jkpoint, ip, ibind
+  integer :: iint, ikpoint, jkpoint, ip, ibind, npath
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:), tmp(:)
   R_TYPE, pointer :: psii(:), psij(:), psil(:)
@@ -1714,6 +1714,8 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 #ifdef R_TCOMPLEX
   ASSERT(present(phase))
 #endif
+
+  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
 
   if(st%are_packed()) call st%unpack()
 
@@ -1753,7 +1755,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         call poisson_kernel_reinit(psolver, namespace, qq, &
-                  -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
 #ifndef R_TCOMPLEX
