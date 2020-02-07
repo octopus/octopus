@@ -1715,7 +1715,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   ASSERT(present(phase))
 #endif
 
-  npath = SIZE(gr%sb%kpoints%coord_along_path)
+  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
 
   if(st%are_packed()) call st%unpack()
 
