@@ -192,15 +192,9 @@ program dielectric_function
   SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
   SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
-  call batch_init(vecpotb, 1, space%dim)
-  call batch_init(ftrealb, 1, space%dim)
-  call batch_init(ftimagb, 1, space%dim)
-
-  do ii = 1, space%dim
-    call vecpotb%add_state(vecpot(:, space%dim + ii))
-    call ftrealb%add_state(ftreal(:, ii))
-    call ftimagb%add_state(ftimag(:, ii))
-  end do
+  call batch_init(vecpotb, 1, 1, space%dim, vecpot(:, space%dim+1:space%dim*2))
+  call batch_init(ftrealb, 1, 1, space%dim, ftreal)
+  call batch_init(ftimagb, 1, 1, space%dim, ftimag)
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
 

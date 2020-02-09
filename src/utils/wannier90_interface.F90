@@ -328,10 +328,7 @@ contains
       end if
 
       !In case the user used also a k-point path, we ignore it
-      npath = 0
-      if(associated(sb%kpoints%coord_along_path)) then
-        npath = SIZE(sb%kpoints%coord_along_path)
-      end if
+      npath = kpoints_nkpt_in_path(sb%kpoints)
 
       axis(1:3) = sb%kpoints%nik_axis(1:3)
       ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
@@ -806,7 +803,7 @@ contains
              do idim = 1, st%d%dim
                ibind = batch%inv_index((/ist, idim/))
                overlap(band_index(ist)) = overlap(band_index(ist)) + &
-                    zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+                    zmf_dotp(mesh, batch%zff_linear(:, ibind), psin(:,idim), reduce = .false.)
              end do
            !Not properly done at the moment
            case(BATCH_PACKED, BATCH_DEVICE_PACKED)
@@ -1317,7 +1314,7 @@ contains
     end do
     
     ! back interpolation                                                                                                                                                                         
-    npath = SIZE(sys%gr%sb%kpoints%coord_along_path)
+    npath = kpoints_nkpt_in_path(sys%gr%sb%kpoints)
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ik < st%d%nik-npath+1 ) cycle
       hk(:,:) = M_ZERO

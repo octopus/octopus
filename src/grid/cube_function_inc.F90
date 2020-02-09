@@ -536,6 +536,117 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   POP_SUB(X(cube_to_mesh_parallel))
 end subroutine X(cube_to_mesh_parallel)
 
+! ---------------------------------------------------------
+!> The next two subroutines convert a function between a
+!! submesh and the cube.
+! ---------------------------------------------------------
+
+subroutine X(submesh_to_cube)(sm, mf, cube, cf)
+  type(submesh_t),       intent(in)    :: sm
+  R_TYPE,  target,       intent(in)    :: mf(:) !< function defined on the submesh.
+  type(cube_t),          intent(in)    :: cube
+  type(cube_function_t), intent(inout) :: cf
+
+  integer :: ix, iy, iz, im
+  R_TYPE, pointer :: gmf(:)
+  type(profile_t), save :: prof_sm2c
+
+  PUSH_SUB(X(submesh_to_cube))
+  call profiling_in(prof_sm2c, "SUBMESH_TO_CUBE")
+
+  ASSERT(ubound(mf, dim = 1) == sm%np)
+  ASSERT(.not. sm%mesh%parallel_in_domains)
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(gmf(1:sm%np_global))
+  else
+    gmf => mf
+  end if
+
+  !Not implemented, but not reachable at the moment
+  ASSERT(.not.cf%in_device_memory)
+
+  ASSERT(associated(cf%X(rs)))
+
+  !$omp parallel workshare
+  cf%X(rs) = M_ZERO
+  !$omp end parallel workshare
+
+  ASSERT(associated(sm%cube_map%map))
+  ASSERT(sm%mesh%sb%dim <= 3)
+
+  do im = 1, sm%np
+    ix = sm%cube_map%map(1, im) + cube%center(1)
+    iy = sm%cube_map%map(2, im) + cube%center(2)
+    iz = sm%cube_map%map(3, im) + cube%center(3)
+    cf%X(rs)(ix, iy, iz) = gmf(im)
+  end do
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(gmf)
+    call profiling_count_transfers(sm%np_global, mf(1))
+  else
+    call profiling_count_transfers(sm%np, mf(1))
+  end if
+
+  call profiling_out(prof_sm2c)
+  POP_SUB(X(submesh_to_cube))
+end subroutine X(submesh_to_cube)
+
+! ---------------------------------------------------------
+subroutine X(cube_to_submesh) (cube, cf, sm, mf)
+  type(cube_t),          intent(in)  :: cube
+  type(cube_function_t), intent(in)  :: cf
+  type(submesh_t),       intent(in)  :: sm
+  R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the submesh. 
+
+  integer :: ix, iy, iz
+  integer :: im
+  R_TYPE, pointer :: gmf(:)
+  type(profile_t), save :: prof_c2sm
+
+  PUSH_SUB(X(cube_to_submesh))
+
+  call profiling_in(prof_c2sm, "CUBE_TO_SUBMESH")
+
+  ASSERT(ubound(mf, dim = 1) == sm%np)
+  ASSERT(.not. sm%mesh%parallel_in_domains)
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(gmf(1:sm%np_global))
+  else
+    gmf => mf
+  end if
+
+  !Not implemented, but not reachable at the moment
+  ASSERT(.not.cf%in_device_memory)
+
+  ASSERT(associated(cf%X(rs)))
+
+  ASSERT(associated(sm%cube_map%map))
+
+  do im = 1, sm%np
+    ix = sm%cube_map%map(1, im) + cube%center(1)
+    iy = sm%cube_map%map(2, im) + cube%center(2)
+    iz = sm%cube_map%map(3, im) + cube%center(3)
+    gmf(im) = cf%X(rs)(ix, iy, iz)
+  end do
+
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(gmf)
+    call profiling_count_transfers(sm%np_global, mf(1))
+  else
+    call profiling_count_transfers(sm%np, mf(1))
+  end if
+  
+  call profiling_out(prof_c2sm)
+
+  POP_SUB(X(cube_to_submesh))
+
+end subroutine X(cube_to_submesh)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

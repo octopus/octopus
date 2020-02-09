@@ -304,26 +304,16 @@
 
    SAFE_ALLOCATE(ftcurr(1:energy_steps, 1:space%dim, 1:2))
 
-   call batch_init(currb, 1, space%dim)
-   do ii = 1, space%dim
-     call currb%add_state(curr(:, ii))
-   end do
-
+   call batch_init(currb, 1, 1, space%dim, curr)
    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, deltat, currb)
 
-   call batch_init(ftcurrb, 1, space%dim)
-   do ii = 1, space%dim
-     call ftcurrb%add_state(ftcurr(:, ii, 1))
-   end do
+   call batch_init(ftcurrb, 1, 1, space%dim, ftcurr(:, :, 1))
    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
       spectrum%energy_step, ftcurrb)
    call ftcurrb%end()
 
-   call batch_init(ftcurrb, 1, space%dim)
-   do ii = 1, space%dim
-     call ftcurrb%add_state(ftcurr(:, ii, 2))
-   end do
+   call batch_init(ftcurrb, 1, 1, space%dim, ftcurr(:, :, 2))
    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
      istart, iend, spectrum%start_time, deltat, currb, spectrum%min_energy, spectrum%max_energy, &
      spectrum%energy_step, ftcurrb)

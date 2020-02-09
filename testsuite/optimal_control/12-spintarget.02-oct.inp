@@ -8,6 +8,7 @@ CalculationMode = opt_control
 #ExtraStates = 3
 
 fromScratch = yes
+StatesPack = yes
 
 TheoryLevel = independent_particles
 ExperimentalFeatures = yes

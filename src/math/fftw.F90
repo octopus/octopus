@@ -85,46 +85,9 @@ module fftw_oct_m
 
   public :: &
     fftw_prepare_plan,       &
-    fftw_prepare_plan_r2c,   &
     fftw_get_dims
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine fftw_prepare_plan_r2c(plan, dim, n, sign, flags)
-    type(c_ptr), intent(inout) :: plan
-    integer,     intent(in)   :: dim
-    integer,     intent(in)   :: n(:)
-    integer,     intent(in)   :: sign
-    integer,     intent(in)   :: flags
-
-    FLOAT, allocatable :: in(:,:,:)
-    CMPLX, allocatable :: out(:,:,:)
-    
-    PUSH_SUB(fftw_prepare_plan_r2c)
-
-    ASSERT(sign == FFTW_FORWARD)
-
-    SAFE_ALLOCATE(in(1:n(1), 1:n(2), 1:n(3)))
-    SAFE_ALLOCATE(out(1:n(1)/2+1, 1:n(2), 1:n(3)))
-
-    select case (dim)
-    case (1)
-       plan = fftw_plan_dft_r2c_1d(n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_1d)(plan, n(1), in(1,1,1), out(1,1,1), flags)
-    case (2)
-       plan = fftw_plan_dft_r2c_2d(n(2),n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), in(1,1,1), out(1,1,1), flags)
-    case (3)
-       plan = fftw_plan_dft_r2c_3d(n(3),n(2), n(1), in, out, flags)
-       !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), in(1,1,1), out(1,1,1), flags)
-    end select
-
-    SAFE_DEALLOCATE_A(in)
-    SAFE_DEALLOCATE_A(out)
-
-    POP_SUB(fftw_prepare_plan_r2c)
-  end subroutine fftw_prepare_plan_r2c
 
   ! ---------------------------------------------------------
   subroutine fftw_prepare_plan(plan, dim, n, is_real, sign, flags)

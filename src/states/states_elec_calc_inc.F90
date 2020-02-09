@@ -517,7 +517,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
         ibind = batch%inv_index((/ist, idim/)) 
-        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
+        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%X(ff_linear)(:, ibind), phi(:,idim), reduce = .false.)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -557,7 +557,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
         ibind = batch%inv_index((/ist, idim/))
-        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+        call blas_axpy(mesh%np, -ss(ist), batch%X(ff_linear)(1, ibind), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -1671,11 +1671,12 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
-  type(states_elec_t), intent(in)              :: st
+subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
+                                         jindex, kindex, lindex, twoint, phase, singularity, exc_k)
+  type(states_elec_t), intent(inout)           :: st
   type(namespace_t),   intent(in)              :: namespace
   type(grid_t),        intent(in)              :: gr
-  type(poisson_t),     intent(in)              :: psolver
+  type(poisson_t),     intent(inout)           :: psolver
   integer,             intent(in)              :: st_min, st_max
   integer,             intent(out)             :: iindex(:,:)
   integer,             intent(out)             :: jindex(:,:)
@@ -1683,26 +1684,40 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   integer,             intent(out)             :: lindex(:,:)
   R_TYPE,              intent(out)             :: twoint(:)  !
   CMPLX,     optional, intent(in)              :: phase(:,:)
+  type(singularity_t), optional,intent(in)  :: singularity
+  logical, optional, intent(in)             :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint
+  integer :: iint, ikpoint, jkpoint, ip, ibind, npath
   R_TYPE  :: me
-  R_TYPE, allocatable :: nn(:), vv(:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+  R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:), tmp(:)
+  R_TYPE, pointer :: psii(:), psij(:), psil(:)
+  R_TYPE, allocatable :: psik(:, :)
+  FLOAT :: qq(1:MAX_DIM)
+  logical :: exc_k_
+  class(wfs_elec_t), pointer :: wfs
 
   PUSH_SUB(X(states_elec_me_two_body))
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))
   SAFE_ALLOCATE(vv(1:gr%mesh%np))
-  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np))
+  SAFE_ALLOCATE(two_body_int(1:gr%mesh%np))
 
   if (st%d%ispin == SPINORS) then
     call messages_not_implemented("Two-body integrals with spinors.", namespace=namespace)
   end if
+
+  ASSERT(present(phase) .eqv. present(singularity))
+#ifdef R_TCOMPLEX
+  ASSERT(present(phase))
+#endif
+
+  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
+
+  if(st%are_packed()) call st%unpack()
 
   ijst = 0
   iint = 1
@@ -1710,40 +1725,68 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   nst_tot = (st_max-st_min+1)*st%d%nik
   nst = (st_max-st_min+1)
 
+  exc_k_ = .false.
+  if(present(exc_k)) exc_k_ = exc_k
+
   do ist_global = 1, nst_tot
-    ist = mod(ist_global-1, nst) +1
-    ikpt = (ist_global-ist)/nst+1
+    ist = mod(ist_global - 1, nst) + 1
+    ikpt = (ist_global - ist) / nst + 1
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
-    call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
-
-#ifdef R_TCOMPLEX
-    if(present(phase)) then
-       call states_elec_set_phase(st%d, psii, phase(1:gr%mesh%np, ikpt), gr%mesh%np, .false.)
+    wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
+    ASSERT(wfs%status() /= BATCH_DEVICE_PACKED)
+    ibind = wfs%inv_index((/ist+st_min-1, 1/))
+    if(wfs%status() == BATCH_NOT_PACKED) then
+      psii => wfs%X(ff_linear)(:, ibind)
+    else if(wfs%status() == BATCH_PACKED) then
+      psii => wfs%X(ff_pack)(ibind, :)
     end if
-#endif
 
     do jst_global = 1, nst_tot
-      jst = mod(jst_global-1, nst) +1
-      jkpt = (jst_global-jst)/nst+1
+      jst = mod(jst_global - 1, nst) + 1
+      jkpt = (jst_global - jst) / nst + 1
+      jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
 
-      if(jst_global > ist_global) cycle
-      ijst=ijst+1
+      if(exc_k_ .and. ist /= jst) cycle
 
-      call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
-#ifdef R_TCOMPLEX
-      if(present(phase)) then
-         call states_elec_set_phase(st%d, psij, phase(1:gr%mesh%np, jkpt), gr%mesh%np, .false.)
+      if(present(singularity)) then
+        qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                         - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
+        ! In case of k-points, the poisson solver must contains k-q 
+        ! in the Coulomb potential, and must be changed for each q point
+        call poisson_kernel_reinit(psolver, namespace, qq, &
+                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
+
+#ifndef R_TCOMPLEX
+      if(jst_global > ist_global) cycle
 #endif
+      ijst=ijst+1
+      
+      wfs => st%group%psib(st%group%iblock(jst+st_min-1, jkpt), jkpt)
+      ibind = wfs%inv_index((/jst+st_min-1, 1/))
+      if(wfs%status() == BATCH_NOT_PACKED) then
+        psij => wfs%X(ff_linear)(:, ibind)
+      else if(wfs%status() == BATCH_PACKED) then
+        psij => wfs%X(ff_pack)(ibind, :)
+      end if
 
-
-      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
+      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+
+      !We now put back the phase that we treated analytically using the Poisson solver
+#ifdef R_TCOMPLEX
+      do ip = 1, gr%mesh%np
+        vv(ip) = vv(ip) * exp(M_zI*sum(qq(1:gr%der%dim)*gr%mesh%x(ip, 1:gr%der%dim)))
+      end do
+#endif
 
       klst=0
       do kst_global = 1, nst_tot
-        kst = mod(kst_global-1, nst) +1
-        kkpt = (kst_global-kst)/nst+1
+        kst = mod(kst_global - 1, nst) + 1
+        kkpt = (kst_global - kst) / nst + 1
+
+        if(exc_k_ .and. kkpt /= jkpt) cycle
 
         call states_elec_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
 #ifdef R_TCOMPLEX
@@ -1752,24 +1795,45 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
         end if
 #endif
 
-        do lst_global = 1, nst_tot
-          lst = mod(lst_global-1, nst) +1
-          lkpt = (lst_global-lst)/nst+1
+        tmp(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))
 
+        do lst_global = 1, nst_tot
+          lst = mod(lst_global - 1, nst) + 1
+          lkpt = (lst_global - lst)/nst + 1
+
+#ifndef R_TCOMPLEX
           if(lst_global > kst_global) cycle
           klst=klst+1
           if(klst > ijst) cycle
-
-          call states_elec_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
-#ifdef R_TCOMPLEX
-          if(present(phase)) then
-            call states_elec_set_phase(st%d, psil, phase(1:gr%mesh%np, lkpt), gr%mesh%np, .false.)
-          end if
 #endif
 
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np, 1)
+          if(exc_k_ .and. kst /= lst) cycle
+          if(exc_k_ .and. lkpt /= ikpt) cycle
+          wfs => st%group%psib(st%group%iblock(lst+st_min-1, lkpt), lkpt)
+          ibind = wfs%inv_index((/lst+st_min-1, 1/))
+          if(wfs%status() == BATCH_NOT_PACKED) then
+            psil => wfs%X(ff_linear)(:, ibind)
+          else if(wfs%status() == BATCH_PACKED) then
+            psil => wfs%X(ff_pack)(ibind, :)
+          end if
 
-          me = X(mf_integrate)(gr%mesh, psil(:, 1))
+          if(present(phase)) then
+#ifdef R_TCOMPLEX
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)*phase(ip, lkpt)
+            end do
+            !$omp end parallel do
+#endif 
+          else
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)
+            end do
+            !$omp end parallel do
+          end if
+
+          me = X(mf_integrate)(gr%mesh, two_body_int(:), reduce = .false.)
 
           iindex(1,iint) =  ist+st_min-1
           iindex(2,iint) =  ikpt
@@ -1787,12 +1851,15 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
     end do
   end do
 
+  if(gr%mesh%parallel_in_domains) then
+    call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+  end if
+
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
-  SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(two_body_int)
   SAFE_DEALLOCATE_A(psik)
-  SAFE_DEALLOCATE_A(psil)
 
   POP_SUB(X(states_elec_me_two_body))
 end subroutine X(states_elec_me_two_body)

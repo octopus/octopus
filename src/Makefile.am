@@ -319,7 +319,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
-	grid/allocate_hardware_aware.c        \
+	grid/allocate_hardware_aware.cc       \
 	grid/hilbert.c                        \
 	grid/operate.c
 
@@ -448,6 +448,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
+	hamiltonian/singularity.F90                  \
 	hamiltonian/species_pot.F90                  \
 	hamiltonian/vdw_ts.F90                       \
 	hamiltonian/xc.F90

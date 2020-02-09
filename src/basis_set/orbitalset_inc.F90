@@ -264,7 +264,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             do ist = 1, psib%nst_linear
               idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%eorb_mesh(sp, 1, idim, psib%ik), &
-                os%sphere%mesh%np, weight(1,ist), 1, R_TOTYPE(M_ONE), psib%states_linear(ist)%zpsi(sp), 1)
+                os%sphere%mesh%np, weight(1,ist), 1, R_TOTYPE(M_ONE), psib%zff_linear(sp, ist), 1)
             end do
           end do
         else
@@ -281,8 +281,8 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end do
             end do
             do ip = 1,os%sphere%np
-              psib%states_linear(ist)%zpsi(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%zpsi(os%sphere%map(ip)) + sorb(ip)
+              psib%zff_linear(os%sphere%map(ip), ist) = &
+                    psib%zff_linear(os%sphere%map(ip), ist) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
@@ -296,7 +296,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               idim = min(psib%linear_to_idim(ist),os%ndim)
               call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%X(orb)(sp,idim,1), &
                     os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
-                       psib%states_linear(ist)%X(psi)(sp), 1)
+                       psib%X(ff_linear)(sp, ist), 1)
             end do
           end do 
         else
@@ -311,8 +311,8 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end forall
             end do
             do ip = 1,os%sphere%np
-              psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
-                    psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
+              psib%X(ff_linear)(os%sphere%map(ip), ist) = &
+                    psib%X(ff_linear)(os%sphere%map(ip), ist) + sorb(ip)
             end do
           end do
           SAFE_DEALLOCATE_A(sorb)
@@ -334,22 +334,22 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
                 idim4 = min(psib%linear_to_idim(ist+3), os%ndim)
 
                 do ip = sp,ep
-                  psib%pack%zpsi(ist, ip) = &
-                     psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim1, psib%ik)
-                  psib%pack%zpsi(ist + 1, ip) = &
-                     psib%pack%zpsi(ist + 1, ip) + weight(iorb, ist + 1)*os%eorb_mesh(ip, iorb, idim2, psib%ik)
-                  psib%pack%zpsi(ist + 2, ip) = &
-                     psib%pack%zpsi(ist + 2, ip) + weight(iorb, ist + 2)*os%eorb_mesh(ip, iorb, idim3, psib%ik)
-                  psib%pack%zpsi(ist + 3, ip) = &
-                    psib%pack%zpsi(ist + 3, ip) + weight(iorb, ist + 3)*os%eorb_mesh(ip, iorb, idim4, psib%ik)
+                  psib%zff_pack(ist, ip) = &
+                     psib%zff_pack(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim1, psib%ik)
+                  psib%zff_pack(ist + 1, ip) = &
+                     psib%zff_pack(ist + 1, ip) + weight(iorb, ist + 1)*os%eorb_mesh(ip, iorb, idim2, psib%ik)
+                  psib%zff_pack(ist + 2, ip) = &
+                     psib%zff_pack(ist + 2, ip) + weight(iorb, ist + 2)*os%eorb_mesh(ip, iorb, idim3, psib%ik)
+                  psib%zff_pack(ist + 3, ip) = &
+                    psib%zff_pack(ist + 3, ip) + weight(iorb, ist + 3)*os%eorb_mesh(ip, iorb, idim4, psib%ik)
                 end do
               end do
 
               do ist = ist, psib%nst_linear
                 idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip = sp, ep
-                  psib%pack%zpsi(ist, ip) = &
-                     psib%pack%zpsi(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim, psib%ik)
+                  psib%zff_pack(ist, ip) = &
+                     psib%zff_pack(ist, ip) + weight(iorb, ist)*os%eorb_mesh(ip, iorb, idim, psib%ik)
                 end do
               end do
             end do
@@ -367,7 +367,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end forall
             end do
             do ip = 1,os%sphere%np
-              psib%pack%zpsi(ist,os%sphere%map(ip)) = psib%pack%zpsi(ist,os%sphere%map(ip)) &
+              psib%zff_pack(ist,os%sphere%map(ip)) = psib%zff_pack(ist,os%sphere%map(ip)) &
                                 + sorb(ip)
             end do
           end do
@@ -386,22 +386,22 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
                 idim4 = min(psib%linear_to_idim(ist+3), os%ndim)
 
                 do ip = sp,ep
-                  psib%pack%X(psi)(ist,ip) = &
-                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim1,iorb)
-                  psib%pack%X(psi)(ist+1,ip) = &
-                     psib%pack%X(psi)(ist+1,ip) + weight(iorb,ist+1)*os%X(orb)(ip,idim2,iorb)
-                  psib%pack%X(psi)(ist+2,ip) = &
-                     psib%pack%X(psi)(ist+2,ip) + weight(iorb,ist+2)*os%X(orb)(ip,idim3,iorb)
-                  psib%pack%X(psi)(ist+3,ip) = &
-                    psib%pack%X(psi)(ist+3,ip) + weight(iorb,ist+3)*os%X(orb)(ip,idim4,iorb)
+                  psib%X(ff_pack)(ist,ip) = &
+                     psib%X(ff_pack)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim1,iorb)
+                  psib%X(ff_pack)(ist+1,ip) = &
+                     psib%X(ff_pack)(ist+1,ip) + weight(iorb,ist+1)*os%X(orb)(ip,idim2,iorb)
+                  psib%X(ff_pack)(ist+2,ip) = &
+                     psib%X(ff_pack)(ist+2,ip) + weight(iorb,ist+2)*os%X(orb)(ip,idim3,iorb)
+                  psib%X(ff_pack)(ist+3,ip) = &
+                    psib%X(ff_pack)(ist+3,ip) + weight(iorb,ist+3)*os%X(orb)(ip,idim4,iorb)
                 end do
               end do
 
               do ist = ist, psib%nst_linear
                 idim = min(psib%linear_to_idim(ist), os%ndim)
                 do ip=sp,ep
-                  psib%pack%X(psi)(ist,ip) = &
-                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
+                  psib%X(ff_pack)(ist,ip) = &
+                     psib%X(ff_pack)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
                 end do
               end do
             end do
@@ -418,7 +418,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
               end forall
             end do
             do ip = 1,os%sphere%np
-              psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
+              psib%X(ff_pack)(ist,os%sphere%map(ip)) = psib%X(ff_pack)(ist,os%sphere%map(ip)) &
                                 + sorb(ip)
             end do
           end do

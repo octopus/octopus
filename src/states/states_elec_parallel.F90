@@ -187,12 +187,13 @@ contains
       return
     else
       SAFE_ALLOCATE_TYPE(wfs_elec_t, psib)
-      call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
 
       if(states_are_real(this)) then
-        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call dwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       else
-        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call zwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       end if
 
       ASSERT(allocated(this%group%rma_win))      
@@ -203,12 +204,12 @@ contains
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
       if(states_are_real(this)) then
-        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+        call MPI_Get(psib%dff_pack(1, 1), product(psib%pack_size), MPI_FLOAT, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_FLOAT, &
           this%group%rma_win(ib, iqn), mpi_err)
       else
-        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+        call MPI_Get(psib%zff_pack(1, 1), product(psib%pack_size), MPI_CMPLX, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_CMPLX, &
           this%group%rma_win(ib, iqn), mpi_err)
       end if
         
