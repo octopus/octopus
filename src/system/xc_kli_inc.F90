@@ -60,8 +60,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
 
     if(.not. lr_is_allocated(oep%pt%lr)) then
       call lr_allocate(oep%pt%lr, st, gr%mesh)
-      ! initialize to something non-zero
-      oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO !M_ONE
+      oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
     end if
 
     if (.not. first) call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)

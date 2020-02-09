@@ -251,10 +251,10 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
           / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
       end if
 
-!      if(debug%info) then
-!        write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
-!        call messages_info(1)
-!      end if
+      if(debug%info) then
+        write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
+       call messages_info(1)
+      end if
 
       call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
       call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))

@@ -230,7 +230,7 @@ contains
       end if
       oep%vxc = M_ZERO
 
-      !%Variable KLIpt_coc
+      !%Variable KLIPhotonCOC
       !%Type logical
       !%Default .false.
       !%Section Hamiltonian::XC
@@ -245,7 +245,7 @@ contains
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%pt%lr)
-          call parse_variable(namespace, 'KLIpt_coc', .false., oep%coctranslation_logical)
+          call parse_variable(namespace, 'KLIPhotonCOC', .false., oep%coctranslation_logical)
         end if
       end if
 
@@ -281,10 +281,6 @@ contains
         call photon_mode_end(oep%pt)
       end if
       if (oep%level == XC_OEP_FULL .and. oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
-        SAFE_DEALLOCATE_P(oep%vxc_old)
-        SAFE_DEALLOCATE_P(oep%ss_old)
-      end if
-      if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
         SAFE_DEALLOCATE_P(oep%vxc_old)
         SAFE_DEALLOCATE_P(oep%ss_old)
       end if
