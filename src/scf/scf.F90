@@ -654,7 +654,7 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psioutb, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end

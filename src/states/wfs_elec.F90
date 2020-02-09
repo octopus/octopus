@@ -78,7 +78,7 @@ contains
     PUSH_SUB(wfs_elec_clone_to)
 
     if (.not. allocated(dest)) then
-      allocate(wfs_elec_t::dest)
+      SAFE_ALLOCATE_TYPE(wfs_elec_t, dest)
     else
       message(1) = "Internal error: destination batch in wfs_elec_clone_to has been previously allocated."
       call messages_fatal(1)
@@ -108,7 +108,7 @@ contains
     PUSH_SUB(wfs_elec_clone_to_array)
 
     if (.not. allocated(dest)) then
-      allocate(wfs_elec_t::dest(n_batches))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, dest, (1:n_batches))
     else
       message(1) = "Internal error: destination batch in wfs_elec_clone_to_array has been previously allocated."
       call messages_fatal(1)

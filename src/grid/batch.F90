@@ -345,7 +345,7 @@ contains
     PUSH_SUB(batch_clone_to)
 
     if (.not. allocated(dest)) then
-      allocate(batch_t::dest)
+      SAFE_ALLOCATE_TYPE(batch_t, dest)
     else
       message(1) = "Internal error: destination batch in batch_clone_to has been previously allocated."
       call messages_fatal(1)
@@ -370,7 +370,7 @@ contains
     PUSH_SUB(batch_clone_to_array)
 
     if (.not. allocated(dest)) then
-      allocate(batch_t::dest(n_batches))
+      SAFE_ALLOCATE_TYPE_ARRAY(batch_t, dest, (1:n_batches))
     else
       message(1) = "Internal error: destination batch in batch_clone_to_array has been previously allocated."
       call messages_fatal(1)
