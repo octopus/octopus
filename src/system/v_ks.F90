@@ -997,7 +997,7 @@ contains
               hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
           if (ks%oep%has_photons) then
-            ks%calc%energy%pt_exchange = ks%oep%pt%ex
+            ks%calc%energy%photon_exchange = ks%oep%pt%ex
           end if
         end if
 

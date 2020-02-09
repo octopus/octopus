@@ -62,7 +62,7 @@ module energy_oct_m
     FLOAT :: dft_u       !DFT+U contribution
     FLOAT :: int_dft_u !< Int[n v_U]
     FLOAT :: intnvstatic !< Int[n v_static} (static electric field)
-    FLOAT :: pt_exchange
+    FLOAT :: photon_exchange
 
   end type energy_t
 
@@ -99,7 +99,7 @@ contains
     this%dft_u        = M_ZERO
     this%int_dft_u    = M_ZERO
     this%intnvstatic  = M_ZERO
-    this%pt_exchange  = M_ZERO
+    this%photon_exchange  = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -136,7 +136,7 @@ contains
     eout%dft_u        = ein%dft_u
     eout%int_dft_u    = ein%int_dft_u
     eout%intnvstatic  = ein%intnvstatic
-    eout%pt_exchange  = ein%pt_exchange
+    eout%photon_exchange  = ein%photon_exchange
 
     POP_SUB(energy_copy)
   end subroutine energy_copy
