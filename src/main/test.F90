@@ -910,7 +910,7 @@ contains
 
     type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
     class(celestial_body_t), pointer :: sun, earth, moon
-    type(propagator_verlet_t) :: prop_sun, prop_earth, prop_moon
+    class(propagator_verlet_t), pointer :: prop_sun, prop_earth, prop_moon
     integer :: it, Nstep, internal_loop, iunit
     logical :: all_done
     FLOAT :: dt
@@ -940,16 +940,11 @@ contains
     call moon%add_interaction_partner(earth)
     call moon%add_interaction_partner(sun)
 
-    !Allocate receivers
-    call sun%allocate_receiv_structure()
-    call earth%allocate_receiv_structure()
-    call moon%allocate_receiv_structure()
-
     !Creates Verlet propagators
     call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
-    prop_sun = propagator_verlet_t(M_ZERO, dt)
-    prop_earth = propagator_verlet_t(M_ZERO, dt)
-    prop_moon = propagator_verlet_t(M_ZERO, dt)
+    prop_sun => propagator_verlet_t(M_ZERO, dt)
+    prop_earth => propagator_verlet_t(M_ZERO, dt)
+    prop_moon => propagator_verlet_t(M_ZERO, dt)
 
     !Associate them to subsystems
     call sun%set_propagator(prop_sun)
@@ -991,6 +986,9 @@ contains
     SAFE_DEALLOCATE_P(sun)
     SAFE_DEALLOCATE_P(earth)
     SAFE_DEALLOCATE_P(moon)
+    SAFE_DEALLOCATE_P(prop_sun)
+    SAFE_DEALLOCATE_P(prop_earth)
+    SAFE_DEALLOCATE_P(prop_moon)
 
     POP_SUB(test_celestial_dynamics)
   end subroutine test_celestial_dynamics

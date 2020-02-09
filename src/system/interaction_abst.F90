@@ -1,4 +1,4 @@
-!! Copyright (C) 2019 N. Tancogne-Dejean
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -16,36 +16,20 @@
 !! 02110-1301, USA.
 !!
 
-#include "global.h"
-
-module interaction_oct_m
-  use global_oct_m
-  use messages_oct_m
-  use profiling_oct_m
-  use propagator_abst_oct_m
-
+module interaction_abst_oct_m
   implicit none
 
   private
   public ::               &
-    interaction_t
+    interaction_abst_t
 
-  integer, public, parameter ::        &
-    TOTAL_CURRENT                = 1
-
-
-  type, abstract :: interaction_t
+  !> The only purpose of the following class is to act as a surrogate and
+  !> avoid circular dependencies between the interactions and the systems.
+  type, abstract :: interaction_abst_t
     private
+  end type interaction_abst_t
 
-    type(system_abst_t) :: partner
-    integer             :: quantity
-
-    contains
-  end type interaction_t
-
-contains
-
-end module interaction_oct_m
+end module interaction_abst_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -43,15 +43,18 @@ module propagator_verlet_oct_m
 contains
 
   ! ---------------------------------------------------------
-  type(propagator_verlet_t) function propagator_verlet_init(time, dt) result(this)
-    FLOAT, intent(in)    :: time
-    FLOAT, intent(in)    :: dt
+  function propagator_verlet_init(time, dt) result(this)
+    FLOAT,                     intent(in) :: time
+    FLOAT,                     intent(in) :: dt
+    type(propagator_verlet_t), pointer    :: this
 
     PUSH_SUB(propagator_verlet_init)
 
+    SAFE_ALLOCATE(this)
+
     call this%list%add_node(VERLET_UPDATE_POS)
     call this%list%add_node(VERLET_SYNC_DT)
-    call this%list%add_node(UPDATE_INTERACTION)
+    call this%list%add_node(UPDATE_INTERACTIONS)
     call this%list%add_node(VERLET_COMPUTE_ACC)
     call this%list%add_node(VERLET_COMPUTE_VEL)
     call this%list%add_node(FINISHED)

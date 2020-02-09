@@ -1,4 +1,5 @@
 !! Copyright (C) 2019 N. Tancogne-Dejean
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,6 +21,9 @@
 
 module celestial_body_oct_m
   use global_oct_m
+  use interaction_abst_oct_m
+  use interaction_gravity_oct_m
+  use linked_list_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -42,21 +46,20 @@ module celestial_body_oct_m
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
+    type(linked_list_t) :: interactions
 
-    FLOAT, allocatable :: forces(:,:)
     type(space_t) :: space
 
     class(propagator_abst_t), pointer :: prop
 
   contains
+    procedure :: add_interaction_partner => celestial_body_add_interaction_partner
+    procedure :: has_interaction => celestial_body_has_interaction
     procedure :: do_td_operation => celestial_body_do_td
-    procedure :: pull_interaction => celestial_body_pull
-    procedure :: get_needed_quantity => celestial_body_needed_quantity
+    procedure :: update_interactions => celestial_body_update_interactions
+    procedure :: update_interaction_as_partner => celestial_body_update_interaction_as_partner
     procedure :: set_propagator => celestial_body_set_prop
-    procedure :: allocate_receiv_structure => celestial_body_alloc_receiver
-    procedure :: gravitational_interaction => celestial_body_gravitational_interaction
     procedure :: write_td_info => celestial_body_write_td_info
-    procedure :: end => celestial_body_end
     final :: celestial_body_finalize
   end type celestial_body_t
 
@@ -66,6 +69,7 @@ module celestial_body_oct_m
 
 contains
 
+  ! ---------------------------------------------------------
   function celestial_body_init(namespace) result(sys)
     class(celestial_body_t), pointer    :: sys
     type(namespace_t),       intent(in) :: namespace
@@ -136,15 +140,39 @@ contains
   end function celestial_body_init
 
   ! ---------------------------------------------------------
-  integer function celestial_body_needed_quantity(this)
-    class(celestial_body_t),  intent(in) :: this
+  subroutine celestial_body_add_interaction_partner(this, partner)
+    class(celestial_body_t), intent(inout) :: this
+    class(system_abst_t),    intent(in)    :: partner
 
-    PUSH_SUB(celestial_body_needed_quantity)
+    class(interaction_gravity_t), pointer :: gravity
+    type(interaction_gravity_t) :: gravity_t
 
-    celestial_body_needed_quantity = FORCE
+    PUSH_SUB(celestial_body_add_interaction_partner)
 
-    POP_SUB(celestial_body_needed_quantity)
-  end function celestial_body_needed_quantity
+    if (partner%has_interaction(gravity_t)) then
+      gravity => interaction_gravity_t(this%space%dim, partner)
+      call this%interactions%add(gravity)
+    end if
+
+    POP_SUB(celestial_body_add_interaction_partner)
+  end subroutine celestial_body_add_interaction_partner
+
+  ! ---------------------------------------------------------
+  logical function celestial_body_has_interaction(this, interaction)
+    class(celestial_body_t),   intent(in) :: this
+    class(interaction_abst_t), intent(in) :: interaction
+
+    PUSH_SUB(celestial_body_has_interaction)
+
+    select type (interaction)
+    type is (interaction_gravity_t)
+      celestial_body_has_interaction = .true.
+    class default
+      celestial_body_has_interaction = .false.
+    end select
+
+    POP_SUB(celestial_body_has_interaction)
+  end function celestial_body_has_interaction
 
   ! ---------------------------------------------------------
   subroutine celestial_body_set_prop(this, prop)
@@ -159,24 +187,11 @@ contains
   end subroutine celestial_body_set_prop
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_alloc_receiver(this)
-    class(celestial_body_t),          intent(inout) :: this
-
-    PUSH_SUB(celestial_body_alloc_receiver)
-
-    SAFE_ALLOCATE(this%forces(1:this%space%dim, 1:this%nb_partners))
-    this%forces = M_ZERO
-
-    POP_SUB(celestial_body_alloc_receiver)
-  end subroutine celestial_body_alloc_receiver
-
-
-  ! ---------------------------------------------------------
   subroutine celestial_body_do_td(this, operation)
     class(celestial_body_t),  intent(inout) :: this
     integer,               intent(in)    :: operation
 
-    integer :: ip
+    class(*), pointer :: interaction
 
     PUSH_SUB(celestial_body_do_td)
 
@@ -209,8 +224,17 @@ contains
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
-      do ip = 1, this%nb_partners
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + this%forces(1:this%space%dim, ip)
+      call this%interactions%rewind()
+      do while (this%interactions%has_more_values())
+        interaction => this%interactions%current()
+        select type (interaction)
+        type is (interaction_gravity_t)
+          this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+        class default
+          message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+          call messages_fatal(1)
+        end select
+        call this%interactions%next()
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
       call this%prop%list%next()
@@ -235,51 +259,48 @@ contains
   end subroutine celestial_body_do_td
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_pull(this, remote, interaction, partner_index)
+  subroutine celestial_body_update_interactions(this)
     class(celestial_body_t), intent(inout) :: this
-    class(system_abst_t),    intent(inout) :: remote
-    integer,                 intent(in)    :: interaction
-    integer,                 intent(in)    :: partner_index
 
-    PUSH_SUB(celestial_body_pull)
+    class(*), pointer :: interaction
 
-    select case(interaction)
-    case(FORCE)
+    PUSH_SUB(celestial_body_update_interactions)
 
-      select type(remote)
-      class is(celestial_body_t)
-        call remote%gravitational_interaction(this%pos, this%mass, this%forces(1:this%space%dim, partner_index))
+    call this%interactions%rewind()
+    do while (this%interactions%has_more_values())
+      interaction => this%interactions%current()
+      select type (interaction)
+      type is (interaction_gravity_t)
+        call interaction%update(this%mass, this%pos)
       class default
-        message(1) = "Unsupported partner class for force interaction"
-        call messages_fatal(1, namespace=this%namespace)
+        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+        call messages_fatal(1)
       end select
+      call this%interactions%next()
+    end do
 
-    case default
-      message(1) = "Unsupported pull interaction."
-      call messages_fatal(1, namespace=this%namespace)
-    end select
-
-    POP_SUB(celestial_body_pull)
-  end subroutine celestial_body_pull
+    POP_SUB(celestial_body_update_interactions)
+  end subroutine celestial_body_update_interactions
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_gravitational_interaction(this, position, mass, force)
-    class(celestial_body_t), intent(in)  :: this
-    FLOAT,                   intent(in)  :: position(this%space%dim)
-    FLOAT,                   intent(in)  :: mass
-    FLOAT,                   intent(out) :: force(this%space%dim)
+  subroutine celestial_body_update_interaction_as_partner(this, interaction)
+    class(celestial_body_t),   intent(in)    :: this
+    class(interaction_abst_t), intent(inout) :: interaction
 
-    FLOAT, parameter :: GG = CNST(6.67430e-11)
-    FLOAT :: dist3
+    PUSH_SUB(celestial_body_update_interaction_as_partner)
 
-    PUSH_SUB(celestial_body_gravitational_interaction)
+    select type (interaction)
+    type is (interaction_gravity_t)
+      interaction%partner_mass = this%mass
+      interaction%partner_pos = this%pos
 
-    dist3 = sum((this%pos(1:this%space%dim) - position(1:this%space%dim))**2)**(M_THREE/M_TWO)
+    class default
+      message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+      call messages_fatal(1)
+    end select
 
-    force(1:this%space%dim) = (this%pos(1:this%space%dim) - position(1:this%space%dim)) / dist3 * (GG * mass * this%mass)
-
-    POP_SUB(celestial_body_force_interaction)
-  end subroutine celestial_body_gravitational_interaction
+    POP_SUB(celestial_body_update_interaction_as_partner)
+  end subroutine celestial_body_update_interaction_as_partner
 
   ! ---------------------------------------------------------
   subroutine celestial_body_write_td_info(this)
@@ -302,23 +323,19 @@ contains
   end subroutine celestial_body_write_td_info
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_end(this)
-    class(celestial_body_t), intent(inout) :: this
-
-    PUSH_SUB(celestial_body_end)
-
-    SAFE_DEALLOCATE_A(this%forces)
-
-    POP_SUB(celestial_body_end)
-  end subroutine celestial_body_end
-
-  ! ---------------------------------------------------------
   subroutine celestial_body_finalize(this)
     type(celestial_body_t), intent(inout) :: this
 
+    class(*), pointer :: interaction
+
     PUSH_SUB(celestial_body_finalize)
 
-    call this%end()
+    call this%interactions%rewind()
+    do while (this%interactions%has_more_values())
+      interaction => this%interactions%current()
+      SAFE_DEALLOCATE_P(interaction)
+      call this%interactions%next()
+    end do
 
     POP_SUB(celestial_body_finalize)
   end subroutine celestial_body_finalize
