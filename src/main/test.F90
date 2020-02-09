@@ -940,11 +940,6 @@ contains
     call moon%add_interaction_partner(earth)
     call moon%add_interaction_partner(sun)
 
-    !Allocate receivers
-    call sun%allocate_receiv_structure()
-    call earth%allocate_receiv_structure()
-    call moon%allocate_receiv_structure()
-
     !Creates Verlet propagators
     call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
     prop_sun = propagator_verlet_t(M_ZERO, dt)
@@ -988,6 +983,9 @@ contains
 
     call io_close(iunit)
 
+    call moon%end()
+    call earth%end()
+    call sun%end()
 
     POP_SUB(test_celestial_dynamics)
   end subroutine test_celestial_dynamics

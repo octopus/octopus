@@ -51,7 +51,7 @@ contains
 
     call this%list%add_node(VERLET_UPDATE_POS)
     call this%list%add_node(VERLET_SYNC_DT)
-    call this%list%add_node(UPDATE_INTERACTION)
+    call this%list%add_node(UPDATE_INTERACTIONS)
     call this%list%add_node(VERLET_COMPUTE_ACC)
     call this%list%add_node(VERLET_COMPUTE_VEL)
     call this%list%add_node(FINISHED)

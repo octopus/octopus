@@ -1,4 +1,5 @@
 !! Copyright (C) 2019 N. Tancogne-Dejean
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 
 module system_abst_oct_m
   use global_oct_m
+  use interaction_abst_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
@@ -38,7 +40,7 @@ module system_abst_oct_m
     VERLET_COMPUTE_ACC           = 2,  &
     VERLET_COMPUTE_VEL           = 3,  &
     VERLET_SYNC_DT               = 4,  &
-    UPDATE_INTERACTION           = 5
+    UPDATE_INTERACTIONS          = 5
 
   integer, public, parameter ::        &
     TOTAL_CURRENT                = 1,  &
@@ -47,39 +49,48 @@ module system_abst_oct_m
   type, abstract :: system_abst_t
     private
     type(namespace_t),   public :: namespace
-    type(linked_list_t), public :: interactions
-    integer,             public :: nb_partners = 0
-
   contains
-    procedure                                       :: system_dt
-    procedure                                       :: add_interaction_partner
-    procedure(system_do_td_op),            deferred :: do_td_operation
-    procedure(system_pull_interaction),    deferred :: pull_interaction
-    procedure(system_get_needed_quantity), deferred :: get_needed_quantity
-    procedure(system_set_propagator),      deferred :: set_propagator
-    procedure(system_alloc_receiver),      deferred :: allocate_receiv_structure
-    procedure(system_write_td_info),       deferred :: write_td_info
+    procedure                                                 :: system_dt
+    procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
+    procedure(system_has_interaction),               deferred :: has_interaction
+    procedure(system_do_td_op),                      deferred :: do_td_operation
+    procedure(system_update_interaction_as_partner), deferred :: update_interaction_as_partner
+    procedure(system_update_interactions),           deferred :: update_interactions
+    procedure(system_set_propagator),                deferred :: set_propagator
+    procedure(system_write_td_info),                 deferred :: write_td_info
   end type system_abst_t
 
   abstract interface
+    subroutine system_add_interaction_partner(this, partner)
+      import system_abst_t
+      class(system_abst_t),     intent(inout) :: this
+      class(system_abst_t),     intent(in)    :: partner
+    end subroutine system_add_interaction_partner
+
+    logical function system_has_interaction(this, interaction)
+      import system_abst_t
+      import interaction_abst_t
+      class(system_abst_t),      intent(in) :: this
+      class(interaction_abst_t), intent(in) :: interaction
+    end function system_has_interaction
+
     subroutine system_do_td_op(this, operation)
       import system_abst_t
       class(system_abst_t), intent(inout) :: this
       integer             , intent(in)    :: operation
     end subroutine system_do_td_op
 
-    subroutine system_pull_interaction(this, remote, interaction, partner_index)
+    subroutine system_update_interaction_as_partner(this, interaction)
       import system_abst_t
-      class(system_abst_t),     intent(inout) :: this
-      class(system_abst_t),     intent(inout) :: remote
-      integer,                  intent(in)    :: interaction
-      integer,                  intent(in)    :: partner_index
-    end subroutine system_pull_interaction
+      import interaction_abst_t
+      class(system_abst_t),      intent(in)    :: this
+      class(interaction_abst_t), intent(inout) :: interaction
+    end subroutine system_update_interaction_as_partner
 
-    integer function system_get_needed_quantity(this)
+    subroutine system_update_interactions(this)
       import system_abst_t
-      class(system_abst_t),     intent(in) :: this
-    end function system_get_needed_quantity
+      class(system_abst_t),      intent(inout) :: this
+    end subroutine system_update_interactions
 
     subroutine system_set_propagator(this, prop)
       import system_abst_t
@@ -87,11 +98,6 @@ module system_abst_oct_m
       class(system_abst_t),             intent(inout) :: this
       class(propagator_abst_t), target, intent(in)    :: prop
     end subroutine system_set_propagator
-
-    subroutine system_alloc_receiver(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-    end subroutine system_alloc_receiver
 
     subroutine system_write_td_info(this)
       import system_abst_t
@@ -102,24 +108,11 @@ module system_abst_oct_m
 
 contains
 
-  subroutine add_interaction_partner(this, remote)
-    class(system_abst_t),     intent(inout) :: this
-    class(system_abst_t),     intent(in)    :: remote
-
-    PUSH_SUB(add_interaction_partner)
-
-    call this%interactions%add_node(remote)
-    this%nb_partners = this%nb_partners+1
-
-    POP_SUB(add_interaction_partner)
-  end subroutine add_interaction_partner
-
   subroutine system_dt(this, prop)
     class(system_abst_t),     intent(inout) :: this
     class(propagator_abst_t), intent(inout) :: prop
 
-    integer :: tdop, inter, counter
-    class(*), pointer :: sys
+    integer :: tdop
 
     PUSH_SUB(system_dt)
 
@@ -134,29 +127,13 @@ contains
       !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
       !ONLY IF WE ARE NOT YET FINISHED
 
-    case(UPDATE_INTERACTION)
+    case(UPDATE_INTERACTIONS)
       if (debug%info) then
         message(1) = "Debug: Propagation step - Updating interactions for " + trim(this%namespace%get())
         call messages_info(1)
       end if
 
-      inter = this%get_needed_quantity()
-
-      ! Loop over systems
-      counter = 1
-      call this%interactions%rewind()
-      do while (this%interactions%has_more_values())
-        sys => this%interactions%current()
-        select type (sys)
-        class is (system_abst_t)
-          call this%pull_interaction(sys, inter, counter)
-        class default
-          message(1) = "Unknow system type."
-          call messages_fatal(1)
-        end select
-        call this%interactions%next()
-        counter = counter + 1
-      end do
+      call this%update_interactions()
 
       call prop%list%next()
 
