@@ -185,9 +185,9 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   end if
 
   if (oep%has_photons) then
-    if(.not. lr_is_allocated(oep%pt%lr)) then
-      call lr_allocate(oep%pt%lr, st, gr%mesh)
-      oep%pt%lr%X(dl_psi)(:, :, :, :) = M_ZERO
+    if(.not. lr_is_allocated(oep%photon_lr)) then
+      call lr_allocate(oep%photon_lr, st, gr%mesh)
+      oep%photon_lr%X(dl_psi)(:, :, :, :) = M_ZERO
     end if
     call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
   end if

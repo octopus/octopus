@@ -25,8 +25,6 @@ module photon_mode_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use lalg_adv_oct_m
-  use linear_response_oct_m
-  use linear_solver_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -58,9 +56,8 @@ module photon_mode_oct_m
     FLOAT, allocatable    :: pol_array(:,:)                   ! polarization of the photon field
     FLOAT, allocatable    :: pol_dipole_array(:,:)            ! polarization*dipole operator
     FLOAT                 :: ex                               ! photon exchange energy
-    FLOAT                 :: pt_number            ! number of photons in mode
-    FLOAT, allocatable    :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
-    type(lr_t)            :: lr                   !< to solve the equation H psi = b
+    FLOAT, allocatable    :: pt_number(:)                     ! number of photons in mode
+    FLOAT, allocatable    :: correlator(:,:)                  ! correlation function <n(r)(ad+a)>
   end type photon_mode_t
 
 contains
@@ -116,9 +113,10 @@ contains
     end if
 
     this%ex = M_ZERO
+    SAFE_ALLOCATE(this%pt_number(1:this%nmodes))
     this%pt_number = M_ZERO
 
-    SAFE_ALLOCATE(this%correlator(1:gr%mesh%np,1))
+    SAFE_ALLOCATE(this%correlator(1:gr%mesh%np,1:this%nmodes))
     this%correlator = M_ZERO
 
     POP_SUB(photon_mode_init)
@@ -135,6 +133,7 @@ contains
 
     SAFE_DEALLOCATE_A(this%omega_array)
     SAFE_DEALLOCATE_A(this%lambda_array)
+    SAFE_DEALLOCATE_A(this%pt_number)
 
     SAFE_DEALLOCATE_A(this%pol_array)
     SAFE_DEALLOCATE_A(this%pol_dipole_array)

@@ -1219,7 +1219,7 @@ contains
           if ((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) then
             if (ks%oep%has_photons) then
               write(iunit, '(a)') 'Photon observables:'
-              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number
+              write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number(1)
               write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
               write(iunit,'(1x)')
             end if

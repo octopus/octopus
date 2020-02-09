@@ -175,7 +175,7 @@ contains
       write(message(7), '(6x,a, f18.8)')'vanderWaals = ', units_from_atomic(units_out%energy, hm%energy%vdw)
       write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
-      write(message(10), '(6x,a, f18.8)')'-TS        = ', -units_from_atomic(units_out%energy, hm%energy%TS)
+      write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       write(message(11), '(6x,a, f18.8)')'Photon ex.  = ', units_from_atomic(units_out%energy, hm%energy%photon_exchange)
       call messages_info(11, iunit)
 

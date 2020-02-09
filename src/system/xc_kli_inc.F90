@@ -58,9 +58,9 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
     SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
     if (is == 1) oep%pt%ex = M_ZERO
 
-    if(.not. lr_is_allocated(oep%pt%lr)) then
-      call lr_allocate(oep%pt%lr, st, gr%mesh)
-      oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
+    if(.not. lr_is_allocated(oep%photon_lr)) then
+      call lr_allocate(oep%photon_lr, st, gr%mesh)
+      oep%photon_lr%X(dl_psi)(:,:, :, :) = M_ZERO
     end if
 
     if (.not. first) call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)

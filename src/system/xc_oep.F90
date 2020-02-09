@@ -88,6 +88,7 @@ module xc_oep_oct_m
     integer                     :: mixing_scheme
     logical,             public :: has_photons   ! one-photon OEP
     type(photon_mode_t), public :: pt
+    type(lr_t)                  :: photon_lr     !< to solve the equation H psi = b
     FLOAT,               public :: norm2ss
     FLOAT,   pointer            :: vxc_old(:,:), ss_old(:,:)
     integer                     :: noccst
@@ -244,7 +245,7 @@ contains
         call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
         call lr_init(oep%lr)
         if(oep%has_photons) then
-          call lr_init(oep%pt%lr)
+          call lr_init(oep%photon_lr)
           call parse_variable(namespace, 'KLIPhotonCOC', .false., oep%coctranslation_logical)
         end if
       end if
@@ -277,7 +278,7 @@ contains
         call linear_solver_end(oep%solver)
       end if
       if (oep%has_photons) then
-        call lr_dealloc(oep%pt%lr)
+        call lr_dealloc(oep%photon_lr)
         call photon_mode_end(oep%pt)
       end if
       if (oep%level == XC_OEP_FULL .and. oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
