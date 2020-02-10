@@ -30,5 +30,7 @@ Sun.CelestialBodyMass = 1.98855e30
  0.0 | 0.0
 %
 
-TDTimeStep = 5000
-TDMaxSteps = 10000
+sampling = 20 # Time-steps per day
+days = 365
+TDTimeStep = 24*3600/sampling
+TDMaxSteps = days*sampling
