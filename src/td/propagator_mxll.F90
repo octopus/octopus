@@ -637,9 +637,9 @@ contains
 
     select case (tr%op_method)
       case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
-        !call exponential_apply(tr%te, gr%mesh, gr%der, hm, ff, 1, 1, dt, time)
+!        call exponential_apply(tr%te, gr%mesh, gr%der, hm, ff, 1, 1, dt, time)
       case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT)
-        call exponential_mxll_fft_apply(hm, gr, st, tr, time, dt, ff)
+!        call exponential_mxll_fft_apply(hm, gr, st, tr, time, dt, ff)
     end select
 
     POP_SUB(exponential_mxll_apply)
@@ -647,152 +647,13 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine exponential_mxll_fft_apply(hm, gr, st, tr, time, dt, ff)
-    type(hamiltonian_mxll_t),        target, intent(in)    :: hm
-    type(grid_t),               target, intent(in)    :: gr
-    type(states_mxll_t),             target, intent(in)    :: st
-    type(propagator_mxll_t), target, intent(in)    :: tr
-    FLOAT,                              intent(in)    :: time, dt
-    CMPLX,                              intent(inout) :: ff(:,:)     ! real space function in before time volution
-
-    CMPLX, allocatable     :: fft_func_in(:,:,:,:), fft_func_out(:,:,:,:)
-    integer                :: ll(3), idim, ff_dim
-    type(cube_function_t)  :: cfs
-    FLOAT, pointer         :: k_vec(:,:)
-
-    PUSH_SUB(exponential_mxll_fft_apply)
-
-    ll(:) = gr%mesh%idx%ll(:)
-    ff_dim = size(ff(1,:))
-
-    do idim=1, st%d%dim
-      ASSERT(hm%cube%rs_n(idim) == ll(idim))
-      ASSERT(hm%cube%fs_n(idim) == ll(idim))
-    end do
-    SAFE_ALLOCATE(fft_func_in(1:ll(1),1:ll(2),1:ll(3),1:st%d%dim))
-    SAFE_ALLOCATE(fft_func_out(1:ll(1),1:ll(2),1:ll(3),1:st%d%dim))
-
-    k_vec => hm%cube%Lfs
-
-    call cube_function_null(cfs)
-    call zcube_function_alloc_rs(hm%cube, cfs)
-    call cube_function_alloc_fs(hm%cube, cfs)
-
-    do idim=1, st%d%dim
-      if (hm%cube%parallel_in_domains) then
-        call zmesh_to_cube_parallel(gr%mesh, ff(:,idim), hm%cube, cfs, hm%mesh_cube_map)
-      else
-        call zmesh_to_cube(gr%mesh, ff(:,idim), hm%cube, cfs, local=.true.)
-      end if
-      call zfft_forward(hm%cube%fft, cfs%zrs, cfs%fs)
-      fft_func_in(:,:,:,idim) = cfs%fs
-    end do
-
-    call exponential_fft_taylor_series(tr, gr%mesh, hm, st, dt, k_vec, hm%cube, &
-      st%d%dim, ff_dim, fft_func_in, fft_func_out)
-
-    do idim=1, st%d%dim
-      cfs%fs = fft_func_out(:,:,:,idim)
-      call zfft_backward(hm%cube%fft, cfs%fs, cfs%zrs)
-      if (hm%cube%parallel_in_domains) then
-        call zcube_to_mesh_parallel(hm%cube, cfs, gr%mesh, ff(:,idim), hm%mesh_cube_map)
-      else
-        call zcube_to_mesh(hm%cube, cfs, gr%mesh, ff(:,idim), local=.true.)
-      end if
-    end do
-
-    call zcube_function_free_rs(hm%cube, cfs)
-    call cube_function_free_fs(hm%cube, cfs)
-
-    SAFE_DEALLOCATE_A(fft_func_in)
-    SAFE_DEALLOCATE_A(fft_func_out)
-
-    POP_SUB(exponential_mxll_fft_apply)
-  end subroutine exponential_mxll_fft_apply
+ ! subroutine exponential_mxll_fft_apply(hm, gr, st, tr, time, dt, ff)
+ ! end subroutine exponential_mxll_fft_apply
 
 
   !----------------------------------------------------------
-  subroutine exponential_fft_taylor_series(tr, mesh, hm, st, dt, k_vec, cube, dim, ff_dim, fft_func_in, fft_func_out)
-    type(propagator_mxll_t), target, intent(in)    :: tr
-    type(mesh_t),                       intent(in)    :: mesh
-    type(hamiltonian_mxll_t),                intent(in)    :: hm
-    type(states_mxll_t),                     intent(in)    :: st
-    FLOAT,                              intent(in)    :: dt
-    FLOAT, pointer,                     intent(in)    :: k_vec(:,:)
-    type(cube_t),                       intent(in)    :: cube
-    integer,                            intent(in)    :: dim
-    integer,                            intent(in)    :: ff_dim
-    CMPLX,                              intent(inout) :: fft_func_in(:,:,:,:)
-    CMPLX,                              intent(inout) :: fft_func_out(:,:,:,:)
-
-    integer :: ipx, ipy, ipz, np(dim), idim, idim1, idim2, iter, ip, ip_global, ip_in
-    FLOAT   :: sigma(3)
-    CMPLX   :: hm_matrix(ff_dim,ff_dim), tmp_1(ff_dim,ff_dim), tmp_2(ff_dim,ff_dim), zfact
-    CMPLX, allocatable :: exp_matrix(:,:)
-    logical :: zfact_is_real
-
-    PUSH_SUB(exponential_fft_taylor_series)
-
-    do idim=1, dim
-      ASSERT(cube%rs_n(idim) == cube%fs_n(idim))
-      np(idim) = cube%rs_n(idim)
-    end do
-
-    SAFE_ALLOCATE(exp_matrix(1:ff_dim,1:ff_dim))
-
-    do ipx=1,np(1)
-      do ipy=1,np(2)
-        do ipz=1,np(3)
-
-          ip_global = st%rs_state_fft_map(ipx,ipy,ipz)
-          if(mesh%parallel_in_domains) then
-            ip = vec_global2local(mesh%vp, ip_global, mesh%vp%partno)
-          else
-            ip = ip_global
-          end if
-
-          if ((ip /= 0) .and. (ip <= mesh%np)) then
-
-            call maxwell_fft_hamiltonian(hm, k_vec, ipx, ipy, ipz, sigma, hm_matrix)
-
-            tmp_1(:,:) = M_z0
-            tmp_1(1,1) = M_z1
-            tmp_1(2,2) = M_z1
-            tmp_1(3,3) = M_z1
-
-            exp_matrix(:,:) = M_z0
-            exp_matrix(1,1) = M_z1
-            exp_matrix(2,2) = M_z1
-            exp_matrix(3,3) = M_z1
-
-            zfact         = M_z1
-            zfact_is_real = .true.
-
-            do iter=1, tr%te%exp_order
-              zfact = zfact*(-M_zI*dt)/iter
-              zfact_is_real = .not. zfact_is_real
-              call lalg_gemm(dim, dim, dim, M_z1, tmp_1, hm_matrix, M_z0, tmp_2)
-              tmp_1 = tmp_2
-              if (zfact_is_real) then
-                exp_matrix(:,:) = exp_matrix(:,:) + real(zfact, REAL_PRECISION) * tmp_2(:,:)
-              else
-                exp_matrix(:,:) = exp_matrix(:,:) + zfact * tmp_2(:,:)
-              end if
-            end do
-
-            call complex_matrix_vector_multiplication(dim ,dim, exp_matrix(:,:), & 
-                 fft_func_in(ipx,ipy,ipz,:), fft_func_out(ipx,ipy,ipz,:))
-
-          end if
-
-        end do
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(exp_matrix)
-
-    POP_SUB(exponential_fft_taylor_series)
-  end subroutine exponential_fft_taylor_series
+!  subroutine exponential_fft_taylor_series(tr, mesh, hm, st, dt, k_vec, cube, dim, ff_dim, fft_func_in, fft_func_out)
+!  end subroutine exponential_fft_taylor_series
 
 
   ! ---------------------------------------------------------

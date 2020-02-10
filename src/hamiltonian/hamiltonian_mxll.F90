@@ -20,10 +20,12 @@
 
 module hamiltonian_mxll_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use cube_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
+  use hamiltonian_abst_oct_m
   use hamiltonian_elec_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
@@ -47,22 +49,26 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_null,                      &
     hamiltonian_mxll_init,                      &
     hamiltonian_mxll_end,                       &
-    hamiltonian_mxll_apply,                     &
-    hamiltonian_mxll_apply_all,                 &
+    dhamiltonian_mxll_apply,                    &
+    zhamiltonian_mxll_apply,                    &
+    dhamiltonian_mxll_magnus_apply,             &
+    zhamiltonian_mxll_magnus_apply,             &
+!   !    hamiltonian_mxll_apply_all,                 &
     hamiltonian_mxll_apply_batch,               &
+    hamiltonian_mxll_span,                      &
     hamiltonian_mxll_adjoint,                   &
     hamiltonian_mxll_not_adjoint,               &
     hamiltonian_mxll_hermitian,                 &
     hamiltonian_mxll_update,                    &
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
-    maxwell_fft_hamiltonian,                    &
+ !   maxwell_fft_hamiltonian,                    &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field, &
     surface_integral_helmholtz_transverse
 
 
-  type hamiltonian_mxll_t
+   type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
     type(states_elec_dim_t)       :: d
@@ -81,7 +87,7 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
-!    type(grid_t), pointer          :: gr
+    type(derivatives_t), pointer   :: der !< pointer to derivatives
     type(states_mxll_t), pointer   :: st
 
     integer                        :: rs_sign
@@ -182,7 +188,16 @@ module hamiltonian_mxll_oct_m
     type(cube_t)                   :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
 
+  contains
+    procedure :: update_span => hamiltonian_mxll_span
+    procedure :: dapply => dhamiltonian_mxll_apply
+    procedure :: zapply => zhamiltonian_mxll_apply
+    procedure :: dmagnus_apply => dhamiltonian_mxll_magnus_apply
+    procedure :: zmagnus_apply => zhamiltonian_mxll_magnus_apply
+    procedure :: is_hermitian => hamiltonian_mxll_hermitian
   end type hamiltonian_mxll_t
+
+  type(profile_t), save :: prof_hamiltonian_mxll
 
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
@@ -233,7 +248,7 @@ contains
     ASSERT(associated(gr%der%lapl))
 
     hm%operators(1:3) => gr%der%grad(1:3) ! cross product for Maxwell calculation needs dimension >= 2
-
+    hm%der => gr%der
     hm%rs_sign = st%rs_sign
 
     SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
@@ -341,7 +356,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function hamiltonian_mxll_hermitian(hm)
-    type(hamiltonian_mxll_t), intent(in) :: hm
+    class(hamiltonian_mxll_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_mxll_hermitian)
 
@@ -349,6 +364,17 @@ contains
 
     POP_SUB(hamiltonian_mxll_hermitian)
   end function hamiltonian_mxll_hermitian
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_mxll_span(hm, delta, emin)
+    class(hamiltonian_mxll_t), intent(inout) :: hm
+    FLOAT,                     intent(in)    :: delta, emin
+
+    write(message(1),'(a)') 'hamiltonian_mxll_span is not needed and hence not implemented.'
+    call messages_fatal(1)
+
+  end subroutine hamiltonian_mxll_span
 
 
   ! ---------------------------------------------------------
@@ -424,12 +450,11 @@ contains
     integer, optional,         intent(in)    :: terms
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-    type(profile_t), save :: prof_hamiltonian
     logical :: pack
     integer :: terms_
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
+    call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
 
     ASSERT(psib%status() == hpsib%status())
 
@@ -440,15 +465,6 @@ contains
     !Not implemented at the moment
     ASSERT(.not.present(terms))
     ASSERT(.not.present(set_bc))
-
-!    pack = hamiltonian_mxll_apply_packed(hm, der%mesh) &
-!      .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
-!      .and. terms_ == TERM_ALL
-
-!    if(pack) then
-!      call psib%do_pack()
-!      call hpsib%do_pack(copy = .false.)
-!    end if
 
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
@@ -461,35 +477,42 @@ contains
     call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
     hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
   
-!    if(pack) then
-!      call psib%do_unpack(copy = .false.)
-!      call hpsib%do_unpack()
-!    end if
-
-    call profiling_out(prof_hamiltonian)
+    call profiling_out(prof_hamiltonian_mxll)
     POP_SUB(hamiltonian_mxll_apply_batch)
   end subroutine hamiltonian_mxll_apply_batch
 
+  
+  ! --------------------------------------------------------
+  !> Apply hamiltonian to real states (not possible)
+  subroutine dhamiltonian_mxll_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),      target, intent(inout) :: psib
+    class(batch_t),      target, intent(inout) :: hpsib
+    integer,           optional, intent(in)    :: terms
+    logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+    write(message(1),'(a)') 'dhamiltonian_mxll_apply not implemented (states are complex).'
+    call messages_fatal(1, namespace=namespace)
+    
+  end subroutine dhamiltonian_mxll_apply
+
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states
-  subroutine hamiltonian_mxll_apply(hm, namespace, der, psi, oppsi, ist, ik, time, terms, set_bc)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(namespace_t),        intent(in)    :: namespace
-    type(derivatives_t),      intent(in)    :: der
-    integer,                  intent(in)    :: ist       !< the index of the state
-    integer,                  intent(in)    :: ik        !< the index of the k-point
-    !R_TYPE,   target,         intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    !R_TYPE,   target,         intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-    CMPLX,    target,          intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,    target,         intent(inout) :: oppsi(:,:) !< (gr%mesh%np, hm%d%dim)
-    FLOAT,    optional,       intent(in)    :: time
-    integer,  optional,       intent(in)    :: terms
-    logical,  optional,       intent(in)    :: set_bc
+  subroutine zhamiltonian_mxll_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),      target, intent(inout) :: psib
+    class(batch_t),      target, intent(inout) :: hpsib
+    integer,           optional, intent(in)    :: terms
+    logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+    
+    CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
+    integer :: ii
 
-!    type(batch_t) :: psib, hpsib
-    type(profile_t), save :: prof_hamiltonian
-
-    PUSH_SUB(hamiltonian_mxll_apply)
+    PUSH_SUB(zhamiltonian_mxll_apply)
 
 !    call batch_init(psib, hm%d%dim, 1)
 !    call psib%add_state(ist, psi)
@@ -501,60 +524,39 @@ contains
 !    call psib%end()
 !    call hpsib%end()
 
-    call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
+    call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
 
-    if (present(time)) then
-      if (abs(time - hm%current_time) > CNST(1e-10)) then
-        write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-        call messages_fatal(2, namespace=namespace)
-      end if
-    end if
+!    if (present(time)) then
+!      if (abs(time - hm%current_time) > CNST(1e-10)) then
+!        write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
+!        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
+!        call messages_fatal(2, namespace=namespace)
+!      end if
+!    end if
 
-!    select case (hm%op_method) 
-!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
-        call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
-!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT) ! For reviews: seems that this option is no longer needed, should we leave it?
-!        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
-!     end select
+    SAFE_ALLOCATE(rs_aux_in(1:mesh%np, 1:3))
+    SAFE_ALLOCATE(rs_aux_out(1:mesh%np, 1:3))
 
-    call profiling_out(prof_hamiltonian)
+    do ii = 1, 3
+      call batch_get_state(psib, mesh%np, ii, rs_aux_in(:, ii))
+    end do
 
-    POP_SUB(hamiltonian_mxll_apply)
-  end subroutine hamiltonian_mxll_apply
+    call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
+    !    call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
+
+    do ii = 1, 3
+      call batch_set_state(hpsib, ii, mesh%np, rs_aux_out)
+    end do
+
+    call profiling_out(prof_hamiltonian_mxll)
+
+    POP_SUB(zhamiltonian_mxll_apply)
+  end subroutine zhamiltonian_mxll_apply
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_apply_all(hm, namespace, der, st, hst, time)
-    type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(namespace_t),        intent(in)    :: namespace
-    type(derivatives_t),      intent(inout) :: der
-    type(states_mxll_t),      intent(inout) :: st
-    type(states_mxll_t),      intent(inout) :: hst
-    FLOAT, optional,          intent(in)    :: time
-
-    integer :: ik, ib
-    FLOAT, allocatable :: psi(:, :)
-  
-    PUSH_SUB(X(hamiltonian_mxll_apply_all))
-
-!    if(present(Imtime)) then
-!      do ik = st%d%kpt%start, st%d%kpt%end
-!        do ib = st%group%block_start, st%group%block_end
-!          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
-!      end do
-!    end do
-  !  else
-!    if (present(time)) then 
-!      do ik = st%d%kpt%start, st%d%kpt%end
-!        do ib = st%group%block_start, st%group%block_end
-!          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
-!        end do
-!      end do
-!    end if
-
-    POP_SUB(hamiltonian_mxll_apply_all)
-  end subroutine hamiltonian_mxll_apply_all
+!  subroutine hamiltonian_mxll_apply_all(hm, namespace, der, st, hst, time) removed
+!  end subroutine hamiltonian_mxll_apply_all
 
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states with finite difference
@@ -576,7 +578,7 @@ contains
     rs_sign = hm%rs_sign
 
 
-    !==============================================================================================================================
+    !===========================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
@@ -589,7 +591,7 @@ contains
         kappa_psi => hm%st%kappa_psi 
       end if
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !----------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
@@ -776,7 +778,7 @@ contains
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
 
-  ! ---------------------------------------------------------
+
   !> Maxwell Hamiltonian is updated for the PML calculation
   subroutine maxwell_pml_hamiltonian(hm, der, psi, dir1, dir2, tmp)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -1048,102 +1050,6 @@ contains
     POP_SUB(maxwell_medium_boxes_calculation)
   end subroutine maxwell_medium_boxes_calculation
 
-  ! ---------------------------------------------------------
-  !> Maxwell Hamiltonian as FFT
-  subroutine maxwell_fft_hamiltonian(hm, k_vec, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    FLOAT,                    intent(in)    :: k_vec(:,:)
-    integer,                  intent(in)    :: k_index_x
-    integer,                  intent(in)    :: k_index_y
-    integer,                  intent(in)    :: k_index_z
-    FLOAT,                    intent(in)    :: sigma(:)
-    CMPLX,                    intent(inout) :: hm_matrix(:,:)
-
-    FLOAT :: omega
-    CMPLX :: ss(3)
-
-    PUSH_SUB(maxwell_fft_hamiltonian)
-
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
-      hm_matrix(:,:) = M_z0
-      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
-        if (omega /= M_ZERO) then
-          ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
-        else
-          ss(:) = M_ONE
-        end if
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 3)   =   M_z0
-      else
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 3)   =   M_z0
-      end if
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
-        if (omega /= M_ZERO) then
-          ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
-        else
-          ss(:) = M_ONE
-        end if
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 3)   =   M_z0
-        hm_matrix(4, 4)   =   M_z0
-        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(5, 5)   =   M_z0
-        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(6, 6)   =   M_z0
-      else
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 3)   =   M_z0
-        hm_matrix(4, 4)   =   M_z0
-        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(5, 5)   =   M_z0
-        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(6, 6)   =   M_z0
-      end if
-    end if
-
-    POP_SUB(maxwell_fft_hamiltonian)
-  end subroutine maxwell_fft_hamiltonian
-
   !----------------------------------------------------------
   !>  Helmholtz decomposition to calculate a transverse field (maybe should be a general math function)
   subroutine maxwell_helmholtz_decomposition_trans_field(poisson, gr, hm_mxll, hm_elec, st, transverse_field)
@@ -1362,6 +1268,39 @@ contains
     end do
 
   end subroutine surface_integral_helmholtz_transverse
+
+
+  ! ---------------------------------------------------------
+  !> Maxwell hamiltonian Magnus (not implemeted)
+  subroutine dhamiltonian_mxll_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),              intent(inout) :: psib
+    class(batch_t),              intent(inout) :: hpsib
+    FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+    logical,           optional, intent(in)    :: set_phase
+    
+    write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
+    call messages_fatal(1, namespace=namespace)
+    
+  end subroutine dhamiltonian_mxll_magnus_apply
+
+  ! ---------------------------------------------------------
+  !> Maxwell hamiltonian Magnus (not implemeted)
+  subroutine zhamiltonian_mxll_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),              intent(inout) :: psib
+    class(batch_t),              intent(inout) :: hpsib
+    FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+    logical,           optional, intent(in)    :: set_phase
+    
+    write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
+    call messages_fatal(1, namespace=namespace)
+    
+  end subroutine zhamiltonian_mxll_magnus_apply
 
 end module hamiltonian_mxll_oct_m
 
