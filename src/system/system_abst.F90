@@ -49,6 +49,8 @@ module system_abst_oct_m
   type, abstract :: system_abst_t
     private
     type(namespace_t),   public :: namespace
+
+    class(propagator_abst_t), pointer, public :: prop
   contains
     procedure                                                 :: system_dt
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
@@ -108,22 +110,21 @@ module system_abst_oct_m
 
 contains
 
-  subroutine system_dt(this, prop)
+  subroutine system_dt(this)
     class(system_abst_t),     intent(inout) :: this
-    class(propagator_abst_t), intent(inout) :: prop
 
     integer :: tdop
 
     PUSH_SUB(system_dt)
 
-    tdop = prop%get_td_operation()
+    tdop = this%prop%get_td_operation()
     select case(tdop)
     case(FINISHED)
       if (debug%info) then
         message(1) = "Debug: Propagation step finished for " + trim(this%namespace%get())
         call messages_info(1)
       end if
-      call prop%finished()
+      call this%prop%finished()
       !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
       !ONLY IF WE ARE NOT YET FINISHED
 
@@ -135,7 +136,7 @@ contains
 
       call this%update_interactions()
 
-      call prop%list%next()
+      call this%prop%list%next()
 
     case default
       call this%do_td_operation(tdop)

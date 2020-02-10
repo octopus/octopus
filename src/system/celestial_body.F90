@@ -54,8 +54,6 @@ module celestial_body_oct_m
 
     type(space_t) :: space
 
-    class(propagator_abst_t), pointer :: prop
-
     type(c_ptr) :: output_handle
   contains
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
