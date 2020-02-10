@@ -61,7 +61,6 @@ module celestial_body_oct_m
     procedure :: do_td_operation => celestial_body_do_td
     procedure :: update_interactions => celestial_body_update_interactions
     procedure :: update_interaction_as_partner => celestial_body_update_interaction_as_partner
-    procedure :: set_propagator => celestial_body_set_prop
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
     procedure :: td_write_iter => celestial_body_td_write_iter
@@ -179,18 +178,6 @@ contains
 
     POP_SUB(celestial_body_has_interaction)
   end function celestial_body_has_interaction
-
-  ! ---------------------------------------------------------
-  subroutine celestial_body_set_prop(this, prop)
-    class(celestial_body_t),          intent(inout) :: this
-    class(propagator_abst_t), target, intent(in)    :: prop
-
-    PUSH_SUB(celestial_body_set_prop)
-
-    this%prop => prop
-
-    POP_SUB(celestial_body_set_prop)
-  end subroutine celestial_body_set_prop
 
   ! ---------------------------------------------------------
   subroutine celestial_body_do_td(this, operation)
