@@ -23,7 +23,6 @@ module propagator_verlet_celestial_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
   use propagator_verlet_oct_m
 
   implicit none
@@ -34,7 +33,7 @@ module propagator_verlet_celestial_oct_m
 
   type, extends(propagator_verlet_t) :: propagator_verlet_celestial_t
     private
-    type(celestial_body_t), pointer :: system
+    type(celestial_body_t), pointer :: celestial_body
   contains
     procedure :: sync_dt => celestial_body_sync_dt
     procedure :: update_pos => celestial_body_update_pos
@@ -56,11 +55,10 @@ contains
 
     PUSH_SUB(propagator_verlet_celestial_init)
 
-    call this%init_steps()
+    call this%init(time, dt, system)
 
-    this%internal_time = time
-    this%dt = dt
-    this%system => system
+    ! also save a pointer to the subclass to avoid many type select statements
+    this%celestial_body => system
 
     POP_SUB(propagator_verlet_celestial_init)
   end function propagator_verlet_celestial_init
@@ -71,10 +69,6 @@ contains
 
     PUSH_SUB(celestial_body_sync_dt)
 
-    if (debug%info) then
-      message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%system%namespace%get())
-      call messages_info(1)
-    end if
     this%internal_time = this%internal_time + this%dt
 
     POP_SUB(celestial_body_sync_dt)
@@ -86,12 +80,7 @@ contains
 
     PUSH_SUB(celestial_body_update_pos)
 
-    if (debug%info) then
-      message(1) = "Debug: Propagation step - Updating positions for " + trim(this%system%namespace%get())
-      call messages_info(1)
-    end if
-
-    associate(system => this%system)
+    associate(system => this%celestial_body)
       system%acc(1:system%space%dim) = system%tot_force(1:system%space%dim)
       system%pos(1:system%space%dim) = system%pos(1:system%space%dim) + this%dt * system%vel(1:system%space%dim) &
                                    + M_HALF * this%dt**2 * system%tot_force(1:system%space%dim)
@@ -106,12 +95,7 @@ contains
 
     PUSH_SUB(celestial_body_compute_acc)
 
-    if (debug%info) then
-      message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%system%namespace%get())
-      call messages_info(1)
-    end if
-
-    call this%system%compute_total_force()
+    call this%celestial_body%compute_total_force()
 
     POP_SUB(celestial_body_compute_acc)
   end subroutine celestial_body_compute_acc
@@ -122,12 +106,7 @@ contains
 
     PUSH_SUB(celestial_body_compute_vel)
 
-    if (debug%info) then
-      message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%system%namespace%get())
-      call messages_info(1)
-    end if
-
-    associate(system => this%system)
+    associate(system => this%celestial_body)
       system%vel(1:system%space%dim) = system%vel(1:system%space%dim) + &
          M_HALF * this%dt * (system%acc(1:system%space%dim) + system%tot_force(1:system%space%dim))
     end associate

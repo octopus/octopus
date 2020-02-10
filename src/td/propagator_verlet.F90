@@ -34,9 +34,9 @@ module propagator_verlet_oct_m
 
   type, abstract, extends(propagator_abst_t) :: propagator_verlet_t
     private
-    type(system_abst_t), pointer :: system
+    class(system_abst_t), pointer, public :: system
   contains
-    procedure :: init_steps => propagator_verlet_init_steps
+    procedure :: init => propagator_verlet_init
     procedure :: do_td_op => propagator_verlet_do_td
     procedure(system_sync_dt), deferred :: sync_dt
     procedure(system_update_pos), deferred :: update_pos
@@ -69,10 +69,13 @@ module propagator_verlet_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagator_verlet_init_steps(this)
+  subroutine propagator_verlet_init(this, time, dt, system)
     class(propagator_verlet_t), intent(inout) :: this
+    FLOAT, intent(in)    :: time
+    FLOAT, intent(in)    :: dt
+    class(system_abst_t), target, intent(inout) :: system
 
-    PUSH_SUB(propagator_verlet_init_steps)
+    PUSH_SUB(propagator_verlet_init)
 
     call this%list%add_node(VERLET_UPDATE_POS)
     call this%list%add_node(VERLET_SYNC_DT)
@@ -81,8 +84,12 @@ contains
     call this%list%add_node(VERLET_COMPUTE_VEL)
     call this%list%add_node(FINISHED)
 
-    POP_SUB(propagator_verlet_init_steps)
-  end subroutine propagator_verlet_init_steps
+    this%internal_time = time
+    this%dt = dt
+    this%system => system
+
+    POP_SUB(propagator_verlet_init)
+  end subroutine propagator_verlet_init
 
   ! ---------------------------------------------------------
   subroutine propagator_verlet_do_td(this, tdop)
@@ -95,24 +102,44 @@ contains
 
     select case(tdop)
     case(VERLET_SYNC_DT)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+
       call this%sync_dt()
       call this%list%next()
 
     case(VERLET_UPDATE_POS)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Updating positions for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+
       call this%update_pos()
       call this%list%next()
 
     case(VERLET_COMPUTE_ACC)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+
       call this%compute_acc()
       call this%list%next()
 
     case(VERLET_COMPUTE_VEL)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+
       call this%compute_vel()
       call this%list%next()
 
     case default
       message(1) = "Unsupported TD tdop."
-      call messages_fatal(1, namespace=this%system%namespace%get())
+      call messages_fatal(1, namespace=this%system%namespace)
     end select
 
     POP_SUB(propagator_verlet_do_td)
