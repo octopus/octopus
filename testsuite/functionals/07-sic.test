@@ -3,7 +3,7 @@
 Test       : LDA+SIC/OEP-KLI Functional
 Program    : octopus
 TestGroups : long-run, functionals
-Enabled    : Yes
+Enabled    : No
 
 # This test performs the calculation of an argon atom making
 # use of the local-density approximation (LDA) plus the self-interaction 

@@ -3,7 +3,7 @@
 Test       : LiH vibrational frequency
 Program    : octopus
 TestGroups : short-run, linear_response
-Enabled    : Yes
+Enabled    : No
 
 Processors : 4
 
