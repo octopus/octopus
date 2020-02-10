@@ -971,9 +971,9 @@ contains
 
       do while(.not. all_done .and. internal_loop < 1000)
 
-        call sun%system_dt()
-        call earth%system_dt()
-        call moon%system_dt()
+        call sun%dt_operation()
+        call earth%dt_operation()
+        call moon%dt_operation()
 
         !We check the exit condition
         all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
