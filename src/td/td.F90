@@ -165,8 +165,6 @@ contains
     end if
 
     call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
-
-    td%dt = td%dt/td%mu
     
     if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
@@ -257,6 +255,8 @@ contains
       end if
 
       call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
+
+      td%dt = td%dt/td%mu
 
       ! now the photoelectron stuff
       call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, &
@@ -559,7 +559,6 @@ contains
       call end_()
 
     type is (system_mxll_t)
-      print *, 'Everything ok 1'
 
       SAFE_ALLOCATE(sys%st%energy_rate(1:td%max_iter)) 
       SAFE_ALLOCATE(sys%st%delta_energy(1:td%max_iter))
@@ -588,9 +587,6 @@ contains
       rs_state_init(:,:) = M_z0
       ! here there would a a call  maxwell_td_init, but no need
       ! td%energy_update_iter = 1
-
-      print *, 'Everything ok 2'
-
       
       call propagator_mxll_init(sys%gr, sys%namespace, sys%st, sys%hm, td%tr_mxll)
 
@@ -636,8 +632,8 @@ contains
       ! end if
 
       ! if (fromScratch) then
-      call restart_init(restart_mxll, sys%namespace, RESTART_MAXWELL, RESTART_TYPE_LOAD, sys%mc, ierr, &
-        mesh=sys%gr%mesh, exact=.true.)          
+!      call restart_init(restart_mxll, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
+!        mesh=sys%gr%mesh, exact=.true.)          
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         call states_mxll_read_user_def(sys%gr%mesh, sys%st, rs_state_init, sys%namespace)
         sys%st%rs_state = sys%st%rs_state + rs_state_init
@@ -648,7 +644,7 @@ contains
           sys%st%rs_state_const(:) = rs_state_init(sys%gr%mesh%idx%lxyz_inv(0,0,0),:)
         call constant_boundaries_calculation(td%tr_mxll%bc_constant, sys%hm%bc, sys%hm, sys%st, sys%st%rs_state)
       end if
-      call restart_end(restart_mxll)
+!      call restart_end(restart_mxll)
       !end if
 
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
@@ -680,8 +676,8 @@ contains
       !call td_check_trotter(td, sys, h)
       td%iter = td%iter + 1
 
-      call restart_init(restart_mxll_dump, sys%namespace, RESTART_TD_MAXWELL, RESTART_TYPE_DUMP, sys%mc, ierr, &
-        mesh=sys%gr%mesh)
+      !call restart_init(restart_mxll_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
+      !  mesh=sys%gr%mesh)
 
       call messages_print_stress(stdout, "Time-Dependent Simulation")
 

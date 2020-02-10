@@ -109,7 +109,7 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, allocatable               :: energy_rate(:)
+    FLOAT, pointer               :: energy_rate(:)
     FLOAT, pointer               :: delta_energy(:)
     FLOAT, pointer               :: energy_via_flux_calc(:)
 
@@ -646,7 +646,6 @@ contains
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    CMPLX, allocatable :: rs_aux(:,:)
     integer :: ip, ii, np_
 
     PUSH_SUB(get_magnetic_field_state)
@@ -655,9 +654,9 @@ contains
     
     do ip = 1, np_
       if (present(mu_field)) then
-        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
+        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_state(ip, :))
       else
-        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
+        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(ip, :))
       end if
    end do
    
