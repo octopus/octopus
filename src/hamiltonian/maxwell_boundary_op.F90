@@ -1752,7 +1752,6 @@ contains
           bc%plane_waves_v_vector(:,il) = vv(:)
 
         else if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-
           call parse_block_float( blk, il - 1, 1, e_field(1))
           call parse_block_float( blk, il - 1, 2, e_field(2))
           call parse_block_float( blk, il - 1, 3, e_field(3))

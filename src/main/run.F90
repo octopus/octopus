@@ -179,16 +179,13 @@ contains
     do while (systems%has_more_values())
       sys => systems%current()
       select type (sys)
+
       type is (system_mxll_t)
         select case(calc_mode_id)
-        case (CM_MAXWELL_FREE)
-           !call td_run(sys, fromScratch)
-           call system_mxll_init(sys, namespace)
-           ! initialization of Maxwell Hamiltonian "maxwell_hm"
-           call hamiltonian_mxll_init(sys%hm, namespace, sys%gr, sys%st)
-
+        case (CM_TD)
+           call td_run(sys, fromScratch)
         case default
-           message(1) = "Maxwell systems currently support only Maxwell free propagation"
+           message(1) = "Maxwell systems currently support only TD propagation"
            call messages_info(1)
         end select
         

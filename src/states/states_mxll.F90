@@ -88,9 +88,9 @@ module states_mxll_oct_m
     integer, public              :: nst                   !< Number of states in each irreducible subspace
     logical, public              :: packed
 
-!    type(batch_t), pointer       :: rsb
-!    type(batch_t), pointer       :: rs_transb
-!    type(batch_t), pointer       :: rs_longb
+    type(batch_t), pointer       :: rsb
+    type(batch_t), pointer       :: rs_transb
+    type(batch_t), pointer       :: rs_longb
 !    type(batch_t), pointer       :: rs_curr_dens_rest1b
 !    type(batch_t), pointer       :: rs_curr_dens_rest2b
     
@@ -109,7 +109,7 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, pointer               :: energy_rate(:)
+    FLOAT, allocatable               :: energy_rate(:)
     FLOAT, pointer               :: delta_energy(:)
     FLOAT, pointer               :: energy_via_flux_calc(:)
 
