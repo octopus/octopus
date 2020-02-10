@@ -36,7 +36,10 @@ module propagator_verlet_celestial_oct_m
     private
     type(celestial_body_t), pointer :: system
   contains
-    procedure :: do_td_op => celestial_body_do_td
+    procedure :: sync_dt => celestial_body_sync_dt
+    procedure :: update_pos => celestial_body_update_pos
+    procedure :: compute_acc => celestial_body_compute_acc
+    procedure :: compute_vel => celestial_body_compute_vel
   end type propagator_verlet_celestial_t
 
   interface propagator_verlet_celestial_t
@@ -63,64 +66,74 @@ contains
   end function propagator_verlet_celestial_init
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_do_td(this, tdop)
-    class(propagator_verlet_celestial_t),  intent(inout) :: this
-    integer,               intent(in)    :: tdop
+  subroutine celestial_body_sync_dt(this)
+    class(propagator_verlet_celestial_t), intent(inout) :: this
 
-    integer :: iint
+    PUSH_SUB(celestial_body_sync_dt)
 
-    PUSH_SUB(celestial_body_do_td)
+    if (debug%info) then
+      message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%system%namespace%get())
+      call messages_info(1)
+    end if
+    this%internal_time = this%internal_time + this%dt
+
+    POP_SUB(celestial_body_sync_dt)
+  end subroutine celestial_body_sync_dt
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_update_pos(this)
+    class(propagator_verlet_celestial_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_update_pos)
+
+    if (debug%info) then
+      message(1) = "Debug: Propagation step - Updating positions for " + trim(this%system%namespace%get())
+      call messages_info(1)
+    end if
 
     associate(system => this%system)
-
-    select case(tdop)
-    case(VERLET_SYNC_DT)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(system%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%internal_time = this%internal_time + this%dt
-      call this%list%next()
-
-    case(VERLET_UPDATE_POS)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Updating positions for " + trim(system%namespace%get())
-        call messages_info(1)
-      end if
-
       system%acc(1:system%space%dim) = system%tot_force(1:system%space%dim)
       system%pos(1:system%space%dim) = system%pos(1:system%space%dim) + this%dt * system%vel(1:system%space%dim) &
                                    + M_HALF * this%dt**2 * system%tot_force(1:system%space%dim)
-      call this%list%next()
-
-    case(VERLET_COMPUTE_ACC)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(system%namespace%get())
-        call messages_info(1)
-      end if
-
-      call system%compute_total_force()
-      call this%list%next()
-
-    case(VERLET_COMPUTE_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing velocity for " + trim(system%namespace%get())
-        call messages_info(1)
-      end if
-
-      system%vel(1:system%space%dim) = system%vel(1:system%space%dim) + &
-         M_HALF * this%dt * (system%acc(1:system%space%dim) + system%tot_force(1:system%space%dim))
-      call this%list%next()
-
-    case default
-      message(1) = "Unsupported TD tdop."
-      call messages_fatal(1, namespace=system%namespace)
-    end select
     end associate
 
-    POP_SUB(celestial_body_do_td)
-  end subroutine celestial_body_do_td
+    POP_SUB(celestial_body_update_pos)
+  end subroutine celestial_body_update_pos
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_compute_acc(this)
+    class(propagator_verlet_celestial_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_compute_acc)
+
+    if (debug%info) then
+      message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%system%namespace%get())
+      call messages_info(1)
+    end if
+
+    call this%system%compute_total_force()
+
+    POP_SUB(celestial_body_compute_acc)
+  end subroutine celestial_body_compute_acc
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_compute_vel(this)
+    class(propagator_verlet_celestial_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_compute_vel)
+
+    if (debug%info) then
+      message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%system%namespace%get())
+      call messages_info(1)
+    end if
+
+    associate(system => this%system)
+      system%vel(1:system%space%dim) = system%vel(1:system%space%dim) + &
+         M_HALF * this%dt * (system%acc(1:system%space%dim) + system%tot_force(1:system%space%dim))
+    end associate
+
+    POP_SUB(celestial_body_compute_vel)
+  end subroutine celestial_body_compute_vel
 
 end module propagator_verlet_celestial_oct_m
 

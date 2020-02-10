@@ -34,9 +34,37 @@ module propagator_verlet_oct_m
 
   type, abstract, extends(propagator_abst_t) :: propagator_verlet_t
     private
+    type(system_abst_t), pointer :: system
   contains
     procedure :: init_steps => propagator_verlet_init_steps
+    procedure :: do_td_op => propagator_verlet_do_td
+    procedure(system_sync_dt), deferred :: sync_dt
+    procedure(system_update_pos), deferred :: update_pos
+    procedure(system_compute_acc), deferred :: compute_acc
+    procedure(system_compute_vel), deferred :: compute_vel
   end type propagator_verlet_t
+
+  abstract interface
+    subroutine system_sync_dt(this)
+      import propagator_verlet_t
+      class(propagator_verlet_t), intent(inout) :: this
+    end subroutine system_sync_dt
+
+    subroutine system_update_pos(this)
+      import propagator_verlet_t
+      class(propagator_verlet_t), intent(inout) :: this
+    end subroutine system_update_pos
+
+    subroutine system_compute_acc(this)
+      import propagator_verlet_t
+      class(propagator_verlet_t), intent(inout) :: this
+    end subroutine system_compute_acc
+
+    subroutine system_compute_vel(this)
+      import propagator_verlet_t
+      class(propagator_verlet_t), intent(inout) :: this
+    end subroutine system_compute_vel
+  end interface
 
 contains
 
@@ -56,6 +84,39 @@ contains
     POP_SUB(propagator_verlet_init_steps)
   end subroutine propagator_verlet_init_steps
 
+  ! ---------------------------------------------------------
+  subroutine propagator_verlet_do_td(this, tdop)
+    class(propagator_verlet_t),  intent(inout) :: this
+    integer,               intent(in)    :: tdop
+
+    integer :: iint
+
+    PUSH_SUB(propagator_verlet_do_td)
+
+    select case(tdop)
+    case(VERLET_SYNC_DT)
+      call this%sync_dt()
+      call this%list%next()
+
+    case(VERLET_UPDATE_POS)
+      call this%update_pos()
+      call this%list%next()
+
+    case(VERLET_COMPUTE_ACC)
+      call this%compute_acc()
+      call this%list%next()
+
+    case(VERLET_COMPUTE_VEL)
+      call this%compute_vel()
+      call this%list%next()
+
+    case default
+      message(1) = "Unsupported TD tdop."
+      call messages_fatal(1, namespace=this%system%namespace%get())
+    end select
+
+    POP_SUB(propagator_verlet_do_td)
+  end subroutine propagator_verlet_do_td
 end module propagator_verlet_oct_m
 
 
