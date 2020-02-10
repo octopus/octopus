@@ -99,7 +99,7 @@ contains
     !%Type float
     !%Section CelestialDynamics
     !%Description
-    !% Mass of celestial body.
+    !% Mass of celestial body in Kg.
     !%End
     call parse_variable(namespace, 'CelestialBodyMass', M_ONE, sys%mass)
     call messages_print_var_value(stdout, 'CelestialBodyMass', sys%mass)
@@ -108,7 +108,7 @@ contains
     !%Type block
     !%Section CelestialDynamics
     !%Description
-    !% Initial position of celestial body.
+    !% Initial position of celestial body, in Km.
     !%End
     sys%pos = M_ZERO
     if (parse_block(namespace, 'CelestialBodyInitialPosition', blk) == 0) then
@@ -126,7 +126,7 @@ contains
     !%Type block
     !%Section CelestialDynamics
     !%Description
-    !% Initial velocity of celestial body.
+    !% Initial velocity of celestial body in Km/s.
     !%End
     sys%vel = M_ZERO
     if (parse_block(namespace, 'CelestialBodyInitialVelocity', blk) == 0) then
