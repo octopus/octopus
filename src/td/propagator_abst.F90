@@ -47,6 +47,15 @@ module propagator_abst_oct_m
     procedure :: finished => propagator_finished
   end type propagator_abst_t
 
+  ! Known propagation operations
+  integer, public, parameter ::        &
+    FINISHED                     = 0,  &
+    VERLET_UPDATE_POS            = 1,  &
+    VERLET_COMPUTE_ACC           = 2,  &
+    VERLET_COMPUTE_VEL           = 3,  &
+    VERLET_SYNC_DT               = 4,  &
+    UPDATE_INTERACTIONS          = 5
+
 contains
 
   subroutine propagator_rewind(this)
