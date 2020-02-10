@@ -44,7 +44,7 @@ module system_abst_oct_m
 
     class(propagator_abst_t), pointer, public :: prop
   contains
-    procedure                                                 :: system_dt
+    procedure :: dt_operation =>  system_dt_operation
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
     procedure(system_has_interaction),               deferred :: has_interaction
     procedure(system_do_td_op),                      deferred :: do_td_operation
@@ -102,12 +102,12 @@ module system_abst_oct_m
 
 contains
 
-  subroutine system_dt(this)
+  subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
     integer :: tdop
 
-    PUSH_SUB(system_dt)
+    PUSH_SUB(system_dt_operation)
 
     tdop = this%prop%get_td_operation()
     select case(tdop)
@@ -134,8 +134,8 @@ contains
       call this%do_td_operation(tdop)
     end select
 
-    POP_SUB(system_dt)
-  end subroutine system_dt
+    POP_SUB(system_dt_operation)
+  end subroutine system_dt_operation
 
 end module system_abst_oct_m
 
