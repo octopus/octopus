@@ -32,22 +32,19 @@ module propagator_verlet_oct_m
   public ::                            &
     propagator_verlet_t
 
-  type, extends(propagator_abst_t) :: propagator_verlet_t
+  type, abstract, extends(propagator_abst_t) :: propagator_verlet_t
     private
+  contains
+    procedure :: init_steps => propagator_verlet_init_steps
   end type propagator_verlet_t
-
-  interface propagator_verlet_t
-    procedure propagator_verlet_init
-  end interface propagator_verlet_t
 
 contains
 
   ! ---------------------------------------------------------
-  type(propagator_verlet_t) function propagator_verlet_init(time, dt) result(this)
-    FLOAT, intent(in)    :: time
-    FLOAT, intent(in)    :: dt
+  subroutine propagator_verlet_init_steps(this)
+    class(propagator_verlet_t), intent(inout) :: this
 
-    PUSH_SUB(propagator_verlet_init)
+    PUSH_SUB(propagator_verlet_init_steps)
 
     call this%list%add_node(VERLET_UPDATE_POS)
     call this%list%add_node(VERLET_SYNC_DT)
@@ -56,11 +53,8 @@ contains
     call this%list%add_node(VERLET_COMPUTE_VEL)
     call this%list%add_node(FINISHED)
 
-    this%internal_time = time
-    this%dt = dt
-
-    POP_SUB(propagator_verlet_init)
-  end function propagator_verlet_init
+    POP_SUB(propagator_verlet_init_steps)
+  end subroutine propagator_verlet_init_steps
 
 end module propagator_verlet_oct_m
 

@@ -48,7 +48,7 @@ module system_abst_oct_m
     procedure :: set_propagator => system_set_propagator
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
     procedure(system_has_interaction),               deferred :: has_interaction
-    procedure(system_do_td_op),                      deferred :: do_td_operation
+    !procedure(system_do_td_op),                      deferred :: do_td_operation
     procedure(system_update_interaction_as_partner), deferred :: update_interaction_as_partner
     procedure(system_update_interactions),           deferred :: update_interactions
     procedure(system_write_td_info),                 deferred :: write_td_info
@@ -125,7 +125,7 @@ contains
       call this%prop%list%next()
 
     case default
-      call this%do_td_operation(tdop)
+      call this%prop%do_td_op(tdop)
     end select
 
     POP_SUB(system_dt_operation)

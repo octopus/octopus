@@ -52,15 +52,16 @@ module celestial_body_oct_m
     integer :: n_interactions
     type(interaction_gravity_t) :: interactions(10)
 
-    type(space_t) :: space
+    type(space_t), public :: space
 
     type(c_ptr) :: output_handle
   contains
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
     procedure :: has_interaction => celestial_body_has_interaction
-    procedure :: do_td_operation => celestial_body_do_td
+    !procedure :: do_td_operation => celestial_body_do_td
     procedure :: update_interactions => celestial_body_update_interactions
     procedure :: update_interaction_as_partner => celestial_body_update_interaction_as_partner
+    procedure :: compute_total_force => celestial_body_compute_total_force
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
     procedure :: td_write_iter => celestial_body_td_write_iter
@@ -177,69 +178,6 @@ contains
   end function celestial_body_has_interaction
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_do_td(this, operation)
-    class(celestial_body_t),  intent(inout) :: this
-    integer,               intent(in)    :: operation
-
-    integer :: iint
-
-    PUSH_SUB(celestial_body_do_td)
-
-    select case(operation)
-    case(VERLET_SYNC_DT)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%prop%internal_time = this%prop%internal_time + this%prop%dt
-      call this%prop%list%next()
-
-    case(VERLET_UPDATE_POS)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Updating positions for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
-      this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                   + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
-      call this%prop%list%next()
-
-    case(VERLET_COMPUTE_ACC)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      !We sum the forces from the different partners
-      this%tot_force(1:this%space%dim) = M_ZERO
-      do iint = 1, this%n_interactions
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + this%interactions(iint)%force(1:this%space%dim)
-      end do
-      this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      call this%prop%list%next()
-
-    case(VERLET_COMPUTE_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
-         M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%list%next()
-
-    case default
-      message(1) = "Unsupported TD operation."
-      call messages_fatal(1, namespace=this%namespace)
-    end select
-
-   POP_SUB(celestial_body_do_td)
-
-  end subroutine celestial_body_do_td
-
-  ! ---------------------------------------------------------
   subroutine celestial_body_update_interactions(this)
     class(celestial_body_t), intent(inout) :: this
 
@@ -273,6 +211,25 @@ contains
 
     POP_SUB(celestial_body_update_interaction_as_partner)
   end subroutine celestial_body_update_interaction_as_partner
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_compute_total_force(this)
+    class(celestial_body_t), intent(inout) :: this
+
+    integer :: iint
+
+    PUSH_SUB(celestial_body_compute_total_force)
+
+    !We sum the forces from the different partners
+    this%tot_force(1:this%space%dim) = M_ZERO
+    do iint = 1, this%n_interactions
+      this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + this%interactions(iint)%force(1:this%space%dim)
+    end do
+    this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+
+    POP_SUB(celestial_body_compute_total_force)
+  end subroutine celestial_body_compute_total_force
+
 
   ! ---------------------------------------------------------
   subroutine celestial_body_write_td_info(this)

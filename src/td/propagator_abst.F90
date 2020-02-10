@@ -45,7 +45,16 @@ module propagator_abst_oct_m
     procedure :: step_is_done => propagator_step_is_done
     procedure :: rewind => propagator_rewind
     procedure :: finished => propagator_finished
+    procedure(propagator_do_td_op), deferred :: do_td_op
   end type propagator_abst_t
+
+  abstract interface
+    subroutine propagator_do_td_op(this, tdop)
+      import propagator_abst_t
+      class(propagator_abst_t), intent(inout) :: this
+      integer,                  intent(in)    :: tdop
+    end subroutine propagator_do_td_op
+  end interface
 
   ! Known propagation operations
   integer, public, parameter ::        &

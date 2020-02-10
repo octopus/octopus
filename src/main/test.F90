@@ -45,7 +45,7 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use propagator_verlet_oct_m
+  use propagator_verlet_celestial_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -910,7 +910,7 @@ contains
 
     type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
     type(celestial_body_t) :: sun, earth, moon
-    type(propagator_verlet_t) :: prop_sun, prop_earth, prop_moon
+    type(propagator_verlet_celestial_t) :: prop_sun, prop_earth, prop_moon
     integer :: it, Nstep, internal_loop
     logical :: all_done
     FLOAT :: dt
@@ -942,9 +942,9 @@ contains
 
     !Creates Verlet propagators
     call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
-    prop_sun = propagator_verlet_t(M_ZERO, dt)
-    prop_earth = propagator_verlet_t(M_ZERO, dt)
-    prop_moon = propagator_verlet_t(M_ZERO, dt)
+    prop_sun = propagator_verlet_celestial_t(M_ZERO, dt, sun)
+    prop_earth = propagator_verlet_celestial_t(M_ZERO, dt, earth)
+    prop_moon = propagator_verlet_celestial_t(M_ZERO, dt, moon)
 
     !Associate them to subsystems
     call sun%set_propagator(prop_sun)
