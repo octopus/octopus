@@ -7,4 +7,26 @@ Enabled    : Yes
 
 Processors: 1
 Input: 27-celestial_dynamics.01-three_body.inp
-match ; Sun pos x ; LINEFIELD(celestial_dynamics.dat, -1, 2) ; 0.225356E+08
+
+# Check initial positions
+match ; Sun pos x   (t=0) ; LINEFIELD(Sun/td.general/coordinates, 6, 3) ; 0.0
+match ; Sun pos y   (t=0) ; LINEFIELD(Sun/td.general/coordinates, 6, 4) ; 0.0
+match ; Earth pos x (t=0) ; LINEFIELD(Earth/td.general/coordinates, 6, 3) ; 149598023000.0
+match ; Earth pos y (t=0) ; LINEFIELD(Earth/td.general/coordinates, 6, 4) ; 0.0
+match ; Moon pos x  (t=0) ; LINEFIELD(Moon/td.general/coordinates, 6, 3) ; 149982422000.0
+match ; Moon pos y  (t=0) ; LINEFIELD(Moon/td.general/coordinates, 6, 4) ; 0.0
+
+# Check final positions and velocities
+match ; Sun pos x   (t=365 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; 2.358763695318e+01
+match ; Sun pos y   (t=365 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; 2.861013715050e+06
+match ; Earth pos x (t=365 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; 1.496000752131e+11
+match ; Earth pos y (t=365 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ;  -1.454343216477e+09
+match ; Moon pos x  (t=365 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 3) ; 1.491766228775e+11
+match ; Moon pos y  (t=365 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 4) ; -1.761138422989e+09
+
+match ; Sun vel x   (t=365 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ; -9.230137100506e-04
+match ; Sun vel y   (t=365 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; 4.317748055984e-06
+match ; Earth vel x (t=365 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ; 2.983003778167e+02
+match ; Earth vel y (t=365 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ; 2.980090972913e+04
+match ; Moon vel x  (t=365 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 5) ; 7.341144873332e+02
+match ; Moon vel y  (t=365 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 6) ; 2.908414795857e+04
