@@ -965,18 +965,20 @@ contains
       all_done = .false.
       internal_loop = 1
 
-      call prop_sun%rewind()
-      call prop_earth%rewind()
-      call prop_moon%rewind()
+      call sun%prop%rewind()
+      call earth%prop%rewind()
+      call moon%prop%rewind()
 
       do while(.not. all_done .and. internal_loop < 1000)
 
-        call sun%dt_operation()
-        call earth%dt_operation()
-        call moon%dt_operation()
+        call sun%prop%do_td_op()
+        call earth%prop%do_td_op()
+        call moon%prop%do_td_op()
 
         !We check the exit condition
-        all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
+        all_done = sun%prop%step_is_done() &
+          .and. earth%prop%step_is_done() &
+          .and. moon%prop%step_is_done()
         INCR(internal_loop, 1)
       end do
 

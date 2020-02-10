@@ -49,21 +49,11 @@ module propagator_abst_oct_m
   end type propagator_abst_t
 
   abstract interface
-    subroutine propagator_do_td_op(this, tdop)
+    subroutine propagator_do_td_op(this)
       import propagator_abst_t
       class(propagator_abst_t), intent(inout) :: this
-      integer,                  intent(in)    :: tdop
     end subroutine propagator_do_td_op
   end interface
-
-  ! Known propagation operations
-  integer, public, parameter ::        &
-    FINISHED                     = 0,  &
-    VERLET_UPDATE_POS            = 1,  &
-    VERLET_COMPUTE_ACC           = 2,  &
-    VERLET_COMPUTE_VEL           = 3,  &
-    VERLET_SYNC_DT               = 4,  &
-    UPDATE_INTERACTIONS          = 5
 
 contains
 

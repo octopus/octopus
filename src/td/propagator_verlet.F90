@@ -28,6 +28,15 @@ module propagator_verlet_oct_m
 
   implicit none
 
+  ! Known propagation operations
+  integer, public, parameter ::        &
+    FINISHED                     = 0,  &
+    VERLET_UPDATE_POS            = 1,  &
+    VERLET_COMPUTE_ACC           = 2,  &
+    VERLET_COMPUTE_VEL           = 3,  &
+    VERLET_SYNC_DT               = 4,  &
+    UPDATE_INTERACTIONS          = 5
+
   private
   public ::                            &
     propagator_verlet_t
@@ -92,15 +101,32 @@ contains
   end subroutine propagator_verlet_init
 
   ! ---------------------------------------------------------
-  subroutine propagator_verlet_do_td(this, tdop)
+  subroutine propagator_verlet_do_td(this)
     class(propagator_verlet_t),  intent(inout) :: this
-    integer,               intent(in)    :: tdop
 
     integer :: iint
 
     PUSH_SUB(propagator_verlet_do_td)
 
-    select case(tdop)
+    select case(this%get_td_operation())
+    case(FINISHED)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step finished for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+      call this%finished()
+      !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
+      !ONLY IF WE ARE NOT YET FINISHED
+
+    case(UPDATE_INTERACTIONS)
+      if (debug%info) then
+        message(1) = "Debug: Propagation step - Updating interactions for " + trim(this%system%namespace%get())
+        call messages_info(1)
+      end if
+
+      call this%system%update_interactions()
+      call this%list%next()
+
     case(VERLET_SYNC_DT)
       if (debug%info) then
         message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%system%namespace%get())

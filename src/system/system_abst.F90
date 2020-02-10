@@ -44,11 +44,9 @@ module system_abst_oct_m
 
     class(propagator_abst_t), pointer, public :: prop
   contains
-    procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
     procedure(system_has_interaction),               deferred :: has_interaction
-    !procedure(system_do_td_op),                      deferred :: do_td_operation
     procedure(system_update_interaction_as_partner), deferred :: update_interaction_as_partner
     procedure(system_update_interactions),           deferred :: update_interactions
     procedure(system_write_td_info),                 deferred :: write_td_info
@@ -94,42 +92,6 @@ module system_abst_oct_m
   end interface
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine system_dt_operation(this)
-    class(system_abst_t),     intent(inout) :: this
-
-    integer :: tdop
-
-    PUSH_SUB(system_dt_operation)
-
-    tdop = this%prop%get_td_operation()
-    select case(tdop)
-    case(FINISHED)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step finished for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-      call this%prop%finished()
-      !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
-      !ONLY IF WE ARE NOT YET FINISHED
-
-    case(UPDATE_INTERACTIONS)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Updating interactions for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      call this%update_interactions()
-
-      call this%prop%list%next()
-
-    case default
-      call this%prop%do_td_op(tdop)
-    end select
-
-    POP_SUB(system_dt_operation)
-  end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
   subroutine system_set_propagator(this, propagator)
