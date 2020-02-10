@@ -7,8 +7,8 @@ Enabled    : Yes
 
 Processors: 1
 Input: 25-subspace.01-jellium.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.180278E+01
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.499285E+00
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.500738E+00
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.499963E+00
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.499716E+00
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.499719E+00
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.501654E+00
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.180247E+01
 

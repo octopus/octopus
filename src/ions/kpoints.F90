@@ -642,7 +642,7 @@ contains
         !Sanity check
         ncols = parse_block_cols(blk, ik)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
+          write(message(1),'(a,i3,a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
           call messages_fatal(1, namespace=namespace)
         end if
 

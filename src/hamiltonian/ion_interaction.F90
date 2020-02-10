@@ -493,8 +493,9 @@ contains
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
+      if( rcut * dz_max >= 718 ) exit  !Maximum double precision numbber
       erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
-      if(erfc1*exp(rcut*dz_max) < CNST(1e-10))exit
+      if( erfc1 * exp(rcut*dz_max) < CNST(1e-10) ) exit
       rcut = rcut * CNST(1.414)
     end do
 
