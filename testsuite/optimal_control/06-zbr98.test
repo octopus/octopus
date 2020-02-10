@@ -3,7 +3,7 @@
 Test       : ZBR98
 Program    : octopus
 TestGroups : long-run, optimal_control
-Enabled    : Yes
+Enabled    : No
 
 # This test demonstrates how the code [svn revision #4473] permits to replicate
 # the QOCT results presented in [W. Zhu, J. Botina, and H. Rabitz, J. Chem. Phys.

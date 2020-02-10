@@ -3,7 +3,7 @@
 Test       : Spin Precession
 Program    : octopus
 TestGroups : short-run, finite_systems_2d
-Enabled    : Yes
+Enabled    : No
 
 # This test demonstrates the precession of the spin of one single
 # electron around the axis determined by a static magnetic field.

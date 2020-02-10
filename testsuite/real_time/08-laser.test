@@ -3,7 +3,7 @@
 Test       : Lasers
 Program    : octopus
 TestGroups : short-run, real_time
-Enabled    : Yes
+Enabled    : No
 
 # This test obtains the electronic ground state of a Na_2^+ molecule (the
 # nuclei are not in their minimum configuration). Note that there is only

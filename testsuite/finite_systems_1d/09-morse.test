@@ -3,7 +3,7 @@
 Test       : Morse potential
 Program    : octopus
 TestGroups : short-run, finite_systems_1d
-Enabled    : Yes
+Enabled    : No
 
 # This test replicates one of the calculations reported in the paper:
 # [G. K. Paramonov, Chem. Phys. 177, 169 (1993)]

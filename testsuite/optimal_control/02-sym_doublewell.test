@@ -3,7 +3,7 @@
 Test       : Symmetric Double Well
 Program    : octopus
 TestGroups : long-run, optimal_control
-Enabled    : Yes
+Enabled    : No
 
 # The test ensures the optimal control algorithm ZBR98. 
 # It calculates the optimal laser field that transfers one particle

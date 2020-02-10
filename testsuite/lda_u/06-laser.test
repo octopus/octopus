@@ -3,7 +3,7 @@
 Test       : Lasers
 Program    : octopus
 TestGroups : short-run, real_time, lda_u
-Enabled    : Yes
+Enabled    : No
 
 #So far no domain parallelization
 Processors: 1

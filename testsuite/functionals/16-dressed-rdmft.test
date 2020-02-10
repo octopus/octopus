@@ -3,7 +3,7 @@
 Test       : Dressed RDMFT
 Program    : octopus
 TestGroups : short-run, functionals
-Enabled    : Yes
+Enabled    : No
 
 
 Input: 16-dressed-rdmft.01-ip.inp

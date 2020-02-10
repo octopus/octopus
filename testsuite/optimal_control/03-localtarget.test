@@ -3,7 +3,7 @@
 Test       : OCT with local target
 Program    : octopus
 TestGroups : long-run, optimal_control
-Enabled    : Yes
+Enabled    : No
 
 # The test ensures that the OCT with local target works.
 # 

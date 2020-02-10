@@ -3,7 +3,7 @@
 Test       : Magnons with generalized Bloch theorem
 Program    : octopus
 TestGroups : long-run, periodic_systems
-Enabled    : Yes
+Enabled    : No
 
 Processors : 4
 

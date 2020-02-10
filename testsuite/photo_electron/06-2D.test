@@ -1,7 +1,7 @@
 Test       : Photoelectron in 2D
 Program    : octopus
 TestGroups : long-run, photo_electron
-Enabled    : Yes
+Enabled    : No
 
 
 # Na ground state

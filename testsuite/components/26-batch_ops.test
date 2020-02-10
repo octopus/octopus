@@ -3,7 +3,7 @@
 Test       : Oct-test subspace diagonalization
 Program    : octopus
 TestGroups : short-run, components
-Enabled    : Yes
+Enabled    : No
 
 Processors: 1
 Input: 26-batch_ops.01-jellium.inp

@@ -3,7 +3,7 @@
 Test       : Time-dependent magnetic field
 Program    : octopus
 TestGroups : long-run, real_time
-Enabled    : Yes
+Enabled    : No
 
 # This test demonstrates the possibility of using time-dependent
 # magnetic fields (the test works on a 2D system; in principle one could

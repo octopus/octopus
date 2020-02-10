@@ -3,7 +3,7 @@
 Test       : Localized basis from LDA states and ACBN0 functional
 Program    : octopus
 TestGroups : long-run, periodic_systems, lda_u
-Enabled    : Yes
+Enabled    : No
 
 ExtraFile: 09-basis_from_states.fhi
 

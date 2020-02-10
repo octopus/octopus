@@ -3,7 +3,7 @@
 Test       : Hartree direct 3D
 Program    : octopus
 TestGroups : long-run, components
-Enabled    : Yes
+Enabled    : No
 
 Precision : 0.005
 Input: 12-hartree_direct_3d.01.inp
