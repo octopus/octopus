@@ -45,12 +45,12 @@ module system_abst_oct_m
     class(propagator_abst_t), pointer, public :: prop
   contains
     procedure :: dt_operation =>  system_dt_operation
+    procedure :: set_propagator => system_set_propagator
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
     procedure(system_has_interaction),               deferred :: has_interaction
     procedure(system_do_td_op),                      deferred :: do_td_operation
     procedure(system_update_interaction_as_partner), deferred :: update_interaction_as_partner
     procedure(system_update_interactions),           deferred :: update_interactions
-    procedure(system_set_propagator),                deferred :: set_propagator
     procedure(system_write_td_info),                 deferred :: write_td_info
   end type system_abst_t
 
@@ -86,13 +86,6 @@ module system_abst_oct_m
       class(system_abst_t),      intent(inout) :: this
     end subroutine system_update_interactions
 
-    subroutine system_set_propagator(this, prop)
-      import system_abst_t
-      import propagator_abst_t
-      class(system_abst_t),             intent(inout) :: this
-      class(propagator_abst_t), target, intent(in)    :: prop
-    end subroutine system_set_propagator
-
     subroutine system_write_td_info(this)
       import system_abst_t
       class(system_abst_t), intent(in) :: this
@@ -102,6 +95,7 @@ module system_abst_oct_m
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
@@ -136,6 +130,18 @@ contains
 
     POP_SUB(system_dt_operation)
   end subroutine system_dt_operation
+
+  ! ---------------------------------------------------------
+  subroutine system_set_propagator(this, propagator)
+    class(system_abst_t),             intent(inout) :: this
+    class(propagator_abst_t), target, intent(in)    :: propagator
+
+    PUSH_SUB(system_set_propagator)
+
+    this%prop => propagator
+
+    POP_SUB(system_set_propagator)
+  end subroutine system_set_propagator
 
 end module system_abst_oct_m
 
