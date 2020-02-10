@@ -3,7 +3,7 @@
 Test       : LiH vibrational frequency finite differences
 Program    : octopus
 TestGroups : long-run, linear_response
-Enabled    : Yes
+Enabled    : No
 
 Processors : 4
 
