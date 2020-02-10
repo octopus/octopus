@@ -35,14 +35,6 @@ module system_abst_oct_m
     system_abst_t
 
   integer, public, parameter ::        &
-    FINISHED                     = 0,  &
-    VERLET_UPDATE_POS            = 1,  &
-    VERLET_COMPUTE_ACC           = 2,  &
-    VERLET_COMPUTE_VEL           = 3,  &
-    VERLET_SYNC_DT               = 4,  &
-    UPDATE_INTERACTIONS          = 5
-
-  integer, public, parameter ::        &
     TOTAL_CURRENT                = 1,  &
     FORCE                        = 2
 
