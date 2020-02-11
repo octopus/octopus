@@ -31,6 +31,9 @@ module fftw_params_oct_m
             fftw_execute_dft_c2r, &
             fftw_execute_dft_r2c, &
             fftw_destroy_plan,    &
+            fftw_alloc_real,      &
+            fftw_alloc_complex,   &
+            fftw_free,            &
             fftw_plan_dft_1d,     &
             fftw_plan_dft_2d,     &
             fftw_plan_dft_3d,     &
@@ -85,84 +88,121 @@ module fftw_oct_m
 
   public :: &
     fftw_prepare_plan,       &
-    fftw_get_dims
+    fftw_get_dims,           &
+    fftw_alloc_memory,       &
+    fftw_free_memory
+
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine fftw_prepare_plan(plan, dim, n, is_real, sign, flags)
+  subroutine fftw_prepare_plan(plan, dim, n, is_real, sign, flags, din_, cin_, cout_)
     type(c_ptr), intent(inout) :: plan
     integer,     intent(in)    :: dim
     integer,     intent(in)    :: n(:)
     logical,     intent(in)    :: is_real
     integer,     intent(in)    :: sign
     integer,     intent(in)    :: flags
+    FLOAT, optional, target, intent(in) :: din_(:,:,:)
+    CMPLX, optional, target, intent(in) :: cin_(:,:,:)
+    CMPLX, optional, target, intent(in) :: cout_(:,:,:)
 
-    FLOAT, allocatable :: rin(:,:,:)
-    FLOAT, allocatable :: rout(:,:,:)
-    CMPLX, allocatable :: cin(:,:,:)
-    CMPLX, allocatable :: cout(:,:,:)
+    FLOAT, pointer :: rin(:,:,:)
+    FLOAT, pointer :: rout(:,:,:)
+    CMPLX, pointer :: cin(:,:,:)
+    CMPLX, pointer :: cout(:,:,:)
+    logical :: aligned_memory
     
     PUSH_SUB(fftw_prepare_plan)
 
     ASSERT(sign == FFTW_FORWARD .or. sign == FFTW_BACKWARD)
 
+    aligned_memory = .false.
+    if(present(din_) .or. present(cin_)) then
+      ASSERT(present(cout_))
+      ASSERT(present(din_) .ne. present(cin_))
+      aligned_memory = .true.
+    end if
+
     if (is_real) then
       if (sign == FFTW_FORWARD) then
-        SAFE_ALLOCATE(rin(1:n(1), 1:n(2), 1:n(3)))
-        SAFE_ALLOCATE(cout(1:n(1)/2+1, 1:n(2), 1:n(3)))
+        if(.not.aligned_memory) then
+          SAFE_ALLOCATE(rin(1:n(1), 1:n(2), 1:n(3)))
+          SAFE_ALLOCATE(cout(1:n(1)/2+1, 1:n(2), 1:n(3)))
+        else
+          rin => din_
+          cout => cout_
+        end if
 
         select case (dim)
         case (1)
            plan = fftw_plan_dft_r2c_1d(n(1), rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_1d)(plan, n(1), rin(1,1,1), cout(1,1,1), flags)
         case (2)
            plan = fftw_plan_dft_r2c_2d(n(2), n(1),rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_2d)(plan, n(1), n(2), rin(1,1,1), cout(1,1,1), flags)
         case (3)
            plan = fftw_plan_dft_r2c_3d(n(3), n(2), n(1), rin, cout, flags)
-           !call DFFTW(plan_dft_r2c_3d)(plan, n(1), n(2), n(3), rin(1,1,1), cout(1,1,1), flags)
         end select
 
-        SAFE_DEALLOCATE_A(rin)
-        SAFE_DEALLOCATE_A(cout)
+        if(.not.aligned_memory) then
+          SAFE_DEALLOCATE_P(rin)
+          SAFE_DEALLOCATE_P(cout)
+        else
+          nullify(rin, cout)
+        end if
       else
-        SAFE_ALLOCATE(cin(1:n(1)/2+1, 1:n(2), 1:n(3)))
-        SAFE_ALLOCATE(rout(1:n(1), 1:n(2), 1:n(3)))
+        if(.not.aligned_memory) then
+          SAFE_ALLOCATE(cin(1:n(1)/2+1, 1:n(2), 1:n(3)))
+          SAFE_ALLOCATE(rout(1:n(1), 1:n(2), 1:n(3)))
+        else
+          cin => cout_
+          rout => din_
+        end if
 
         select case (dim)
         case (1)
            plan = fftw_plan_dft_c2r_1d(n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_1d)(plan, n(1), cin(1,1,1), rout(1,1,1), flags)
         case (2)
            plan = fftw_plan_dft_c2r_2d(n(2), n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_2d)(plan, n(1), n(2), cin(1,1,1), rout(1,1,1), flags)
         case (3)
            plan = fftw_plan_dft_c2r_3d(n(3), n(2), n(1), cin, rout, flags)
-           !call DFFTW(plan_dft_c2r_3d)(plan, n(1), n(2), n(3), cin(1,1,1), rout(1,1,1), flags)
         end select
 
-        SAFE_DEALLOCATE_A(cin)
-        SAFE_DEALLOCATE_A(rout)
+        if(.not.aligned_memory) then
+          SAFE_DEALLOCATE_P(cin)
+          SAFE_DEALLOCATE_P(rout)
+        else
+          nullify(cin,rout)
+        end if
       end if
     else
-      SAFE_ALLOCATE(cin(1:n(1), 1:n(2), 1:n(3)))
-      SAFE_ALLOCATE(cout(1:n(1), 1:n(2), 1:n(3)))
+      if(.not.aligned_memory) then
+        SAFE_ALLOCATE(cin(1:n(1), 1:n(2), 1:n(3)))
+        SAFE_ALLOCATE(cout(1:n(1), 1:n(2), 1:n(3)))
+      else
+        if (sign == FFTW_FORWARD) then
+          cin => cin_
+          cout => cout_
+        else
+          cout => cin_
+          cin => cout_
+        end if
+      end if
 
       select case (dim)
       case (1)
          plan = fftw_plan_dft_1d(n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_1d)(plan, n(1), cin(1,1,1), cout(1,1,1), sign, flags)
       case (2)
          plan = fftw_plan_dft_2d(n(2), n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_2d)(plan, n(1), n(2), cin(1,1,1), cout(1,1,1), sign, flags)
       case (3)
          plan = fftw_plan_dft_3d(n(3), n(2), n(1), cin, cout, sign, flags)
-         !call DFFTW(plan_dft_3d)(plan, n(1), n(2), n(3), cin(1,1,1), cout(1,1,1), sign, flags)
       end select
 
-      SAFE_DEALLOCATE_A(cin)
-      SAFE_DEALLOCATE_A(cout)
+      if(.not.aligned_memory) then
+        SAFE_DEALLOCATE_P(cin)
+        SAFE_DEALLOCATE_P(cout)
+      else
+        nullify(cin, cout)
+      end if
     end if
 
     POP_SUB(fftw_prepare_plan)
@@ -181,6 +221,47 @@ contains
 
     POP_SUB(fftw_get_dims)
   end subroutine fftw_get_dims
+
+  ! ---------------------------------------------------------
+  subroutine fftw_alloc_memory(rs_n, is_real, fs_n, p_din, p_zin, p_cout)
+    integer, intent(in)    :: rs_n(:)
+    logical, intent(in)    :: is_real
+    integer, intent(in)    :: fs_n(:)
+    type(C_PTR),   intent(inout) :: p_din
+    type(C_PTR),   intent(inout) :: p_zin
+    type(C_PTR),   intent(inout) :: p_cout
+
+
+    PUSH_SUB(fftw_alloc_memory)
+
+    if(is_real) then
+      p_din  = fftw_alloc_real(int(product(rs_n(1:3)), C_SIZE_T))
+    else
+      p_zin = fftw_alloc_complex(int(product(rs_n(1:3)), C_SIZE_T))
+    end if 
+    p_cout = fftw_alloc_complex(int(product(fs_n(1:3)), C_SIZE_T))
+
+    POP_SUB(fftw_alloc_memory)
+  end subroutine fftw_alloc_memory
+
+  ! ---------------------------------------------------------
+  subroutine fftw_free_memory(is_real, p_din, p_zin, p_cout)
+    logical, intent(in)    :: is_real
+    type(C_PTR),   intent(inout) :: p_din
+    type(C_PTR),   intent(inout) :: p_zin
+    type(C_PTR),   intent(inout) :: p_cout
+
+    PUSH_SUB(fftw_free_memory)
+
+    if(is_real) then
+      call fftw_free(p_din)
+    else
+      call fftw_free(p_zin)
+    end if
+    call fftw_free(p_cout)
+
+    POP_SUB(fftw_free_memory)
+  end subroutine fftw_free_memory
 
 end module fftw_oct_m
 
