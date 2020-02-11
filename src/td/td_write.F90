@@ -3179,14 +3179,14 @@ contains
     !% details of the TD run. 
     !%Option maxwell_energy 1
     !% Output of the electromagnetic field energy into the folder <tt>td.general/maxwell</tt>.
-    !%Option fields 4
+    !%Option fields 2
     !% Output of the electromagnetic field at the origin of the simulation box into the 
     !% folder <tt>td.general/fields</tt>
-    !%Option mean_poynting 8
+    !%Option mean_poynting 4
     !% Output of the mean Poynting vector 
-    !%Option e_field_surface 16
+    !%Option e_field_surface 8
     !% Output of the E field sliced along the planes x=0, y=0, z=0 for each field component
-    !%Option b_field_surface 32
+    !%Option b_field_surface 16
     !% Output of the B field sliced along the planes x=0, y=0, z=0 for each field component
     !%End
 

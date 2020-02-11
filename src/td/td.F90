@@ -112,6 +112,8 @@ module td_oct_m
 
     logical                      :: freeze_occ
     logical                      :: freeze_u
+    integer :: mxll_td_relax_iter
+    integer :: mxll_ks_relax_iter
   end type td_t
 
 
@@ -210,13 +212,12 @@ contains
       call messages_fatal(2, namespace=sys%namespace)
     end if
 
+    td%iter = 0
 
     select type (sys)
     type is (system_t)
       
       call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
-
-      td%iter = 0
 
       !%Variable TDIonicTimeScale
       !%Type float
@@ -342,6 +343,60 @@ contains
 
       if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
         call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
+      end if
+
+    type is (system_mxll_t)
+      
+      !%Variable TDMaxwellTDRelaxationSteps
+      !%Type integer
+      !%Default 100
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% follwos ...
+      !%End
+      default = 0
+      call parse_variable(sys%namespace, 'TDMaxwellTDRelaxationSteps', default, td%mxll_td_relax_iter)
+
+      !%Variable TDMaxwellKSRelaxationSteps
+      !%Type integer
+      !%Default 100
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% follwos ...
+      !%End
+      default = 0
+      call parse_variable(sys%namespace, 'TDMaxwellKSRelaxationSteps', default, td%mxll_ks_relax_iter)
+
+      ! maxwell delay time
+      td%tr_mxll%delay_time = td%mxll_ks_relax_iter * td%dt
+
+      if ( (td%mxll_td_relax_iter /= 0) .and. (td%mxll_ks_relax_iter /= 0) ) then
+        if ( .not. ( (td%mxll_td_relax_iter < td%mxll_ks_relax_iter) ) ) then
+          call messages_write('TDMaxwellTDRelaxationSteps ')
+          call messages_write(' has to be smaller than ')
+          call messages_write(' TDMaxwellKSRelaxationSteps. ')
+          call messages_write(' TDMaxwellTDRelaxationSteps ')
+          call messages_write(' and ') 
+          call messages_write(' TDMaxwellKSRelaxationSteps ')
+          call messages_write(' have to be smaller than TDMaxSteps.')
+          call messages_fatal()
+        end if
+      end if
+
+      !%Variable MaxwellTDIntervalSteps
+      !%Type integer
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% This variable determines how many intervall steps the Maxwell field propagation
+      !% does until it reaches the matter time step. In case that MaxwellTDIntervalSteps is
+      !% equal to one, the Maxwell time step is equal to the matter one. The default value is 1.
+      !%End
+      default = 1
+      call parse_variable(sys%namespace, 'MaxwellTDIntervalSteps', default, td%tr_mxll%inter_steps)
+
+      if (td%tr_mxll%inter_steps < 1) then
+        call messages_write('MaxwellTDIntervalSteps hast to be larger than 0 !')
+        call messages_fatal()
       end if
 
     end select
@@ -564,7 +619,7 @@ contains
       SAFE_ALLOCATE(sys%st%delta_energy(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%energy_via_flux_calc(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%trans_energy_rate(1:td%max_iter))
-       SAFE_ALLOCATE(sys%st%trans_delta_energy(1:td%max_iter))
+      SAFE_ALLOCATE(sys%st%trans_delta_energy(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%trans_energy_via_flux_calc(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%plane_waves_energy_rate(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%plane_waves_delta_energy(1:td%max_iter))
@@ -586,15 +641,15 @@ contains
       SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%d%dim)) 
       rs_state_init(:,:) = M_z0
       ! here there would a a call  maxwell_td_init, but no need
-      ! td%energy_update_iter = 1
+      td%energy_update_iter = 1
       
       call propagator_mxll_init(sys%gr, sys%namespace, sys%st, sys%hm, td%tr_mxll)
-
       call states_mxll_allocate(sys%st, sys%gr%mesh)
       call external_current_init(sys%st, sys%namespace, sys%gr%mesh) 
       sys%hm%propagation_apply = .true.
 
       if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
+        print *,'Setting plane waves'
         SAFE_ALLOCATE(sys%st%rs_state_plane_waves(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
         sys%st%rs_state_plane_waves = M_z0
       end if
@@ -636,6 +691,7 @@ contains
 !        mesh=sys%gr%mesh, exact=.true.)          
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         call states_mxll_read_user_def(sys%gr%mesh, sys%st, rs_state_init, sys%namespace)
+        print *,'Setting initial EM field inside box'
         sys%st%rs_state = sys%st%rs_state + rs_state_init
         if (td%tr_mxll%bc_plane_waves) then
           sys%st%rs_state_plane_waves = rs_state_init
@@ -690,7 +746,7 @@ contains
         units_from_atomic(units_out%energy, sys%hm%energy),    &
         M_ZERO
       call messages_info(1)
-
+      
       etime = loct_clock()
       propagation_mxll: do iter = td%iter, td%max_iter
 

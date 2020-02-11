@@ -282,7 +282,7 @@ contains
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
     call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
-
+    
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       hm%d%dim = hm%d%dim+1
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
@@ -534,18 +534,17 @@ contains
 !      end if
 !    end if
 
-    SAFE_ALLOCATE(rs_aux_in(1:mesh%np, 1:3))
-    SAFE_ALLOCATE(rs_aux_out(1:mesh%np, 1:3))
+    SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
+    SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
 
     do ii = 1, 3
-      call batch_get_state(psib, mesh%np, ii, rs_aux_in(:, ii))
+      call batch_get_state(psib, ii, mesh%np_part, rs_aux_in(:, ii))
     end do
 
     call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
-    !    call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
-    do ii = 1, 3
-      call batch_set_state(hpsib, ii, mesh%np, rs_aux_out)
+    do ii = 1, 3 
+      call batch_set_state(hpsib, ii, mesh%np_part, rs_aux_out(:, ii))
     end do
 
     call profiling_out(prof_hamiltonian_mxll)

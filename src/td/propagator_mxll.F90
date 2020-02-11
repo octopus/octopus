@@ -411,11 +411,13 @@ contains
 
     PUSH_SUB(propagation_mxll_etrs)
 
-!    if (tr%plane_waves_in_box) then
-!      call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
-!      POP_SUB(propagation_mxll_etrs)
-!      return
-!    end if
+
+            
+    if (tr%plane_waves_in_box) then
+      call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
+      POP_SUB(propagation_mxll_etrs)
+      return
+    end if
 
     do idim=1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
@@ -486,10 +488,6 @@ contains
 
       ! transformation of RS state into 3x3 or 4x4 representation
       ! call transform_rs_state_forward(hm, gr, st, rs_state, ff_rs_state)
-      do istate = 1, ff_dim
-        call batch_set_state(st%rsb, istate, gr%mesh%np, st%rs_state)
-      end do
-
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
@@ -583,8 +581,22 @@ contains
           call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
           hm%cpml_hamiltonian = .true.
         end if
+
+        call batch_init(st%rsb, 1, st%d%dim)
+        call st%rsb%zallocate(1, st%d%dim, gr%mesh%np_part)
+
+        do istate = 1, st%d%dim
+          call batch_set_state(st%rsb, istate, gr%mesh%np_part, st%rs_state(:, istate))
+        end do
+
         call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%rsb, inter_dt)
-        ! (hm, gr, st, tr, inter_dt, ff_rs_state)
+
+        do istate = 1, st%d%dim
+          call batch_get_state(st%rsb, istate, gr%mesh%np_part, st%rs_state(:, istate))
+        end do
+
+        call st%rsb%end()
+
         if (pml_check) then
           hm%cpml_hamiltonian = .false.
           call pml_propagation_stage_2(hm, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
@@ -596,10 +608,9 @@ contains
         call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
       end if
 
-      do istate = 1, 3
-        call batch_get_state(st%rsb, gr%mesh%np, istate, st%rs_state(:, istate))
-      end do
-
+!      do istate = 1, 3
+!        call batch_get_state(st%rsb, gr%mesh%np, istate, st%rs_state(:, istate))
+!      end do
 
       ! back tranformation of RS state representation
 !      call transform_rs_state_backward(hm, gr, st, ff_rs_state, rs_state)
@@ -3663,71 +3674,29 @@ contains
     CMPLX                      :: rs_state_add(MAX_DIM), unit_sigma(3), unit_z(3), unit_plus(3), unit_minus(3)
     CMPLX                      :: e0cmplx(MAX_DIM), b0cmplx(MAX_DIM)
 
-!    integer, parameter :: MXF_BESSEL_E_FIELD   =  10014,  &  !< Number has to be equivalent to the one in maxwell_function.F90
-!                          MXF_BESSEL_B_FIELD   =  10015      !< Number has to be equivaletn to the one in maxwell_function.F90
-
-
     PUSH_SUB(plane_waves_boundaries_calculation)
 
     test_limit = 10**(-9)
 
     if (hm%plane_waves_apply) then
       do wn=1, hm%bc%plane_waves_number
-        vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
-        k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)
-        k_vector_abs = sqrt(sum(k_vector(:)**2))
-        e0(:)      = hm%bc%plane_waves_e_field(:,wn)
-        ! if (hm%bc%bessel_beam) then
-        !   do ip_in=1, hm%bc%plane_waves_points_number
-        !     ip           = hm%bc%plane_waves_points_map(ip_in)
-        !     if (wn==1) rs_state(ip,:) = M_Z0
-        !     nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-        !     !x_prop       = M_ZERO
-        !     !x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
-        !     if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_E_FIELD) then
-        !       e_field(1) = e0(1)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
-        !       e_field(2) = e0(2)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
-        !       e_field(3) = e0(3)*mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
-        !       b_field(:) = M_ZERO
-        !     end if
-        !     if (hm%bc%plane_waves_mx_function(wn)%mode == MXF_BESSEL_B_FIELD) then
-        !       b_field(1) = e0(1)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 1, mesh%x(ip,:), time-time_delay)
-        !       b_field(2) = e0(2)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 2, mesh%x(ip,:), time-time_delay)
-        !       b_field(3) = e0(3)*k_vector(2)/(P_c*sqrt(k_vector(1)**2+k_vector(2)**2)) &
-        !                    * mxf(hm%bc%plane_waves_mx_function(wn), mesh%x(ip,:), 3, mesh%x(ip,:), time-time_delay)
-        !       e_field(:) = M_ZERO
-        !     end if
-        !     call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, &
-        !                                  st%ep(ip), st%mu(ip))
-        !     rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
-        !   end do
-        !else
-          test_perp = ddot_product(k_vector, e0(:))
-          if (abs(test_perp) > test_limit) then
-            message(1) = 'The wave vector k(:) or its electric field E-field(:) '
-            message(2) = 'is not perpendicular enough.'
-            call messages_fatal(2)
-          end if
-          if (Sqrt(sum(k_vector(:)**2)) < 1e-10) then
-            message(1) = 'The k vector is not defined correctly.'
-            call messages_fatal(1)
-          end if
-          do ip_in=1, hm%bc%plane_waves_points_number
-            ip           = hm%bc%plane_waves_points_map(ip_in)
-            if (wn==1) rs_state(ip,:) = M_z0
+        ip = hm%bc%plane_waves_points_map(ip_in)
+            if (wn == 1) rs_state(ip,:) = M_Z0
             nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-            x_prop       = M_ZERO
-            x_prop(3)    = mesh%x(ip,3) - vv(3) * (time - time_delay)
+            vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
+            k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)
+            k_vector_abs = sqrt(sum(k_vector(:)**2))
+            x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
             rr           = sqrt(sum(x_prop(:)**2))
-            e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:)) 
-            b_field(:) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
+            if (hm%bc%plane_waves_modus(wn) == & 
+                OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+              e0(:)      = hm%bc%plane_waves_e_field(:,wn)
+              e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:)) 
+            end if
+            b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
             rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
-          end do
-        !end if
-      end do
+       end do
     else
       do ip_in=1, hm%bc%plane_waves_points_number
         ip             = hm%bc%plane_waves_points_map(ip_in)
