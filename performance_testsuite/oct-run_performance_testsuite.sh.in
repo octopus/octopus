@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2020 S. Ohlmann
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA.
+#
+
+# Paths.
+prefix=@prefix@
+datarootdir=@datarootdir@
+pkgdatadir=@datadir@/@PACKAGE@
+testsuite="$pkgdatadir/testsuite"
+
+# Usage.
+function usage() {
+    cat <<EOF
+
+ Copyright (C) 2020 by Sebastian Ohlmann
+ (based on script by H. Appel and others)
+
+Usage: oct-run_testsuite.sh [options]
+    
+     -h            this message
+     -s            use slurm
+     -l            local run
+     -t TESTS      tests to run [default: all]
+     -d DIRECTORY  directory where to look for testsuite files
+     -p PREFIX     installation prefix [default: $prefix]
+
+Report bugs to <octopus-devel@tddft.org>.
+EOF
+ exit 0;
+}
+
+
+# Parse command line.
+
+# Some default settings.
+local_run="no"
+SLURM=${SLURM:-false}
+TESTS=${TESTS:-all}
+NODES=${NODES:-1}
+JOBS=${JOBS:-1}
+
+while getopts "hlsp:d:t:" opt ; do
+    case "$opt" in
+        h) usage;;
+        l) local_run="yes";;
+        s) SLURM=true;;
+        p) prefix="$OPTARG";;
+        d) directory="$OPTARG";;
+        t) TESTS="$OPTARG";;
+        ?) echo "Error parsing arguments" 1>&2; exit 1;;
+    esac
+done
+shift $[ OPTIND - 1 ]
+
+echo "*****************************************"
+echo "  Running octopus performance testsuite  "
+echo "*****************************************"
+
+if [ "${local_run}" == "yes" ]; then
+    bin_directory=$(pwd)/../src
+    if [ -n "$directory" ]; then
+        testsuite="$directory"
+    else
+        testsuite=$(pwd)
+    fi
+    run_testsuite=$testsuite
+else
+    bin_directory=$prefix/bin
+    if [ -n "$directory" ]; then
+        testsuite="$directory"
+    else
+        testsuite=$prefix/share/octopus/performance_testsuite
+    fi
+    run_testsuite=$bin_directory
+fi
+
+
+if [ ! -d "${bin_directory}" ]; then
+    echo "Specified binary directory '$bin_directory' does not exist." 1>&2
+    exit 1
+fi
+
+if [[ "$SLURM" == "true" ]]; then
+  salloc -N $NODES -n $JOBS make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory run_directory=$run_testsuite testsuite_dir=$testsuite
+else
+  make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory run_directory=$run_testsuite testsuite_dir=$testsuite
+fi

@@ -26,7 +26,7 @@ endif
 
 SUBDIRS =        \
 	build external_libs liboct_parser \
-	src share doc testsuite $(PERL_DIR)
+	src share doc testsuite performance_testsuite $(PERL_DIR)
 
 EXTRA_DIST =     \
 	ChangeLog PACKAGING \
@@ -56,6 +56,10 @@ check-long:
 	$(MAKE) -C share check
 	$(MAKE) -C doc check
 	$(MAKE) -C testsuite check-long
+
+check-performance:
+	$(MAKE) -C share check
+	$(MAKE) -C performance_testsuite check-performance
 
 rpm: dist
 	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \

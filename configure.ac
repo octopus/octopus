@@ -448,8 +448,11 @@ AC_CONFIG_FILES([Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
   testsuite/tutorials/Makefile
-  testsuite/symmetries/Makefile])
+  testsuite/symmetries/Makefile
+  performance_testsuite/Makefile
+  performance_testsuite/tests/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
+AC_CONFIG_FILES([performance_testsuite/oct-run_performance_testsuite.sh], [chmod +x performance_testsuite/oct-run_performance_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 
 AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
