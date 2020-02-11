@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Propagators
+Program    : octopus
+TestGroups : short-run, maxwell
+Enabled    : Yes
+
+#This test checks the time propagation, for various propagators
+
+# ground state
+Input      : 01-free-propagation.01-td.inp
+match ; Tot. Maxwell energy [step   0] ; LINEFIELD(Maxwell/td.general/maxwell_energy, -200, 3) ; 0.000000000000e+00
+match ; Tot. Maxwell energy [step 100] ; LINEFIELD(Maxwell/td.general/maxwell_energy, -100, 3) ; 4.173892185760e-01
+match ; Tot. Maxwell energy [step 200] ; LINEFIELD(Maxwell/td.general/maxwell_energy,   -1, 3) ; 5.384857667274e-05
