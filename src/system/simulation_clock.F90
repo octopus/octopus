@@ -40,8 +40,8 @@ module simulation_clock_oct_m
     procedure :: get_sim_time => simulation_clock_get_sim_time
     procedure :: increment => simulation_clock_increment
     procedure :: reset => simulation_clock_reset
-    procedure :: is_smaller => simulation_clock_is_smaller
-    procedure :: is_larger => simulation_clock_is_larger
+    procedure :: is_earlier => simulation_clock_is_earlier
+    procedure :: is_later => simulation_clock_is_later
     procedure :: is_equal => simulation_clock_is_equal
 
   end type simulation_clock_t
@@ -111,30 +111,30 @@ contains
   end subroutine simulation_clock_reset
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_smaller(clock_a, clock_b) result(is_smaller)
+  logical function simulation_clock_is_earlier(clock_a, clock_b) result(is_earlier)
     class(simulation_clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_smaller)
+    PUSH_SUB(simulation_clock_is_earlier)
 
     if(clock_a%get_tick() < clock_b%get_tick()) then
-        is_smaller = .true.
+        is_earlier = .true.
     else
-        is_smaller = .false.
+        is_earlier = .false.
     end if
 
-    POP_SUB(simulation_clock_is_smaller)
-  end function simulation_clock_is_smaller
+    POP_SUB(simulation_clock_is_earlier)
+  end function simulation_clock_is_earlier
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_larger(clock_a, clock_b) result(is_smaller)
+  logical function simulation_clock_is_later(clock_a, clock_b) result(is_earlier)
     class(simulation_clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_larger)
+    PUSH_SUB(simulation_clock_is_later)
 
-    is_smaller = simulation_clock_is_smaller(clock_b, clock_a)
+    is_earlier = simulation_clock_is_earlier(clock_b, clock_a)
 
-    POP_SUB(simulation_clock_is_larger)
-  end function simulation_clock_is_larger
+    POP_SUB(simulation_clock_is_later)
+  end function simulation_clock_is_later
 
   ! ---------------------------------------------------------
   logical function simulation_clock_is_equal(clock_a, clock_b) result(are_equal)
