@@ -433,7 +433,7 @@ contains
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
              .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
              .and. library_ /= FFTLIB_PNFFT &
-             .and. this%aligned_memory == fft_array(ii)%aligned_memory) then
+             .and. this%aligned_memory .eqv. fft_array(ii)%aligned_memory) then
              ! NFFT and PNFFT plans are always allocated from scratch since they 
              ! are very likely to be different
           this = fft_array(ii)              ! return a copy
