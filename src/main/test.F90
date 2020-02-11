@@ -962,6 +962,9 @@ contains
     call sun%set_propagator(prop_sun)
     call earth%set_propagator(prop_earth)
     call moon%set_propagator(prop_moon)
+    smallest_algo_dt = min(prop_sun%dt/prop_sun%algo_steps,     &
+                           prop_earth%dt/prop_earth%algo_steps, &
+                           prop_moon%dt/prop_moon%algo_steps)
 
     ! 'Loop' over systems and initialize simulation clocks
 !    clock_sun = simulation_clock_t(sun_dt)
@@ -969,9 +972,9 @@ contains
 !    clock_moon = simulation_clock_t(moon_dt)
 
     !Associate them to subsystems
-    call sun%init_clock(sun_dt)
-    call earth%init_clock(earth_dt)
-    call moon%init_clock(moon_dt)
+    call sun%init_clock(sun_dt, smallest_algo_dt)
+    call earth%init_clock(earth_dt, smallest_algo_dt)
+    call moon%init_clock(moon_dt, smallest_algo_dt)
 
     !Initialize output and write data at time zero
     call sun%td_write_init(dt)
