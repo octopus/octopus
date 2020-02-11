@@ -120,7 +120,7 @@ contains
     aligned_memory = .false.
     if(present(din_) .or. present(cin_)) then
       ASSERT(present(cout_))
-      ASSERT(present(din_) .ne. present(cin_))
+      ASSERT(present(din_) .neqv. present(cin_))
       aligned_memory = .true.
     end if
 
