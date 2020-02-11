@@ -3,7 +3,7 @@ CalculationMode = test
 TestMode = exp_apply
 TestRepetitions = 5
 
-PeriodicDimensions = 3
+BoxShape = parallelepiped
 
 aCell = 5
 bCell = 4

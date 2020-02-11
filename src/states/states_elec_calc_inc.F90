@@ -1689,7 +1689,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint, ikpoint, jkpoint, ip, ibind
+  integer :: iint, ikpoint, jkpoint, ip, ibind, npath
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:), tmp(:)
   R_TYPE, pointer :: psii(:), psij(:), psil(:)
@@ -1715,6 +1715,8 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   ASSERT(present(phase))
 #endif
 
+  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
+
   if(st%are_packed()) call st%unpack()
 
   ijst = 0
@@ -1732,8 +1734,13 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
     ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
     wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
+    ASSERT(wfs%status() /= BATCH_DEVICE_PACKED)
     ibind = wfs%inv_index((/ist+st_min-1, 1/))
-    psii => wfs%X(ff_linear)(:, ibind)
+    if(wfs%status() == BATCH_NOT_PACKED) then
+      psii => wfs%X(ff_linear)(:, ibind)
+    else if(wfs%status() == BATCH_PACKED) then
+      psii => wfs%X(ff_pack)(ibind, :)
+    end if
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global - 1, nst) + 1
@@ -1748,7 +1755,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         call poisson_kernel_reinit(psolver, namespace, qq, &
-                  -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
 #ifndef R_TCOMPLEX
@@ -1758,7 +1765,11 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
       
       wfs => st%group%psib(st%group%iblock(jst+st_min-1, jkpt), jkpt)
       ibind = wfs%inv_index((/jst+st_min-1, 1/))
-      psij => wfs%X(ff_linear)(:, ibind)
+      if(wfs%status() == BATCH_NOT_PACKED) then
+        psij => wfs%X(ff_linear)(:, ibind)
+      else if(wfs%status() == BATCH_PACKED) then
+        psij => wfs%X(ff_pack)(ibind, :)
+      end if
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
@@ -1800,7 +1811,11 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
           if(exc_k_ .and. lkpt /= ikpt) cycle
           wfs => st%group%psib(st%group%iblock(lst+st_min-1, lkpt), lkpt)
           ibind = wfs%inv_index((/lst+st_min-1, 1/))
-          psil => wfs%X(ff_linear)(:, ibind)
+          if(wfs%status() == BATCH_NOT_PACKED) then
+            psil => wfs%X(ff_linear)(:, ibind)
+          else if(wfs%status() == BATCH_PACKED) then
+            psil => wfs%X(ff_pack)(ibind, :)
+          end if
 
           if(present(phase)) then
 #ifdef R_TCOMPLEX

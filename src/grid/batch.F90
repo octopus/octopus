@@ -60,22 +60,23 @@ module batch_oct_m
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
     integer                                :: device_buffer_count !< whether there is a copy in the opencl buffer
     integer                                :: host_buffer_count !< whether the batch was packed on the cpu
-    logical :: special_memory
+    logical                                :: special_memory
+    logical                                :: needs_finish_unpack
 
 
     !> unpacked variables; linear variables are pointers with different shapes
-    FLOAT, pointer, contiguous, public :: dff(:, :, :)
-    CMPLX, pointer, contiguous, public :: zff(:, :, :)
-    FLOAT, pointer, contiguous, public :: dff_linear(:, :)
-    CMPLX, pointer, contiguous, public :: zff_linear(:, :)
+    FLOAT, pointer, contiguous,     public :: dff(:, :, :)
+    CMPLX, pointer, contiguous,     public :: zff(:, :, :)
+    FLOAT, pointer, contiguous,     public :: dff_linear(:, :)
+    CMPLX, pointer, contiguous,     public :: zff_linear(:, :)
     !> packed variables; only rank-2 arrays due to padding to powers of 2
-    FLOAT, pointer, contiguous, public :: dff_pack(:, :)
-    CMPLX, pointer, contiguous, public :: zff_pack(:, :)
+    FLOAT, pointer, contiguous,     public :: dff_pack(:, :)
+    CMPLX, pointer, contiguous,     public :: zff_pack(:, :)
 
-    integer                   , public :: pack_size(1:2)
-    integer                   , public :: pack_size_real(1:2)
+    integer,                        public :: pack_size(1:2)
+    integer,                        public :: pack_size_real(1:2)
 
-    type(accel_mem_t)         , public    :: ff_device
+    type(accel_mem_t),              public :: ff_device
 
   contains
     procedure :: check_compatibility_with => batch_check_compatibility_with
@@ -85,6 +86,7 @@ module batch_oct_m
     procedure :: copy_data_to => batch_copy_data_to
     procedure :: do_pack => batch_do_pack
     procedure :: do_unpack => batch_do_unpack
+    procedure :: finish_unpack => batch_finish_unpack
     procedure :: end => batch_end
     procedure :: inv_index => batch_inv_index
     procedure :: is_packed => batch_is_packed
@@ -138,16 +140,15 @@ contains
 
     if(this%own_memory .and. this%is_packed()) then
       !deallocate directly to avoid unnecessary copies
+      if(this%status() == BATCH_DEVICE_PACKED) then
+        call this%deallocate_packed_device()
+      else if(this%status() == BATCH_PACKED) then
+        call this%deallocate_packed_host()
+      end if
       this%status_of = BATCH_NOT_PACKED
       this%status_host = BATCH_NOT_PACKED
       this%host_buffer_count = 0
       this%device_buffer_count = 0
-
-      if(accel_is_enabled()) then
-        call this%deallocate_packed_device()
-      else
-        call this%deallocate_packed_host()
-      end if
     else if(this%is_packed()) then
       call this%do_unpack(copy, force = .true.)
       if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
@@ -277,6 +278,7 @@ contains
     this%is_allocated = .false.
     this%own_memory = .false.
     this%special_memory = .false.
+    this%needs_finish_unpack = .false.
     this%nst = nst
     this%dim = dim
     this%type_of = TYPE_NONE
@@ -356,18 +358,21 @@ contains
     logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(this)
     logical,       optional, intent(in)    :: copy_data  !< If .true. the batch data will be copied to the destination batch. Default: .false.
 
+    logical :: host_packed
+
     PUSH_SUB(batch_copy_to)
 
+    host_packed = this%host_buffer_count > 0
     if(this%type() == TYPE_FLOAT) then
-      call dbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
+      call dbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
     else if(this%type() == TYPE_CMPLX) then
-      call zbatch_init(dest, this%dim, 1, this%nst, this%np, special=this%special_memory)
+      call zbatch_init(dest, this%dim, 1, this%nst, this%np, packed=host_packed)
     else
       message(1) = "Internal error: unknown batch type in batch_copy_to."
       call messages_fatal(1)
     end if
 
-    if(optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
+    if(this%status() /= dest%status() .and. optional_default(pack, this%is_packed())) call dest%do_pack(copy = .false.)
 
     dest%ist_idim_index(1:this%nst_linear, 1:this%ndims) = this%ist_idim_index(1:this%nst_linear, 1:this%ndims)
     dest%ist(1:this%nst) = this%ist(1:this%nst)
@@ -429,11 +434,13 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_do_pack(this, copy)
+  subroutine batch_do_pack(this, copy, async)
     class(batch_t),      intent(inout) :: this
     logical,   optional, intent(in)    :: copy
+    logical,   optional, intent(in)    :: async
 
     logical               :: copy_
+    logical               :: async_
     type(profile_t), save :: prof
     integer               :: source, target
 
@@ -442,6 +449,8 @@ contains
     call profiling_in(prof, "BATCH_DO_PACK")
 
     copy_ = optional_default(copy, .true.)
+
+    async_ = optional_default(async, .false.)
 
     ! get source and target states for this batch
     source = this%status()
@@ -470,7 +479,7 @@ contains
             call batch_write_unpacked_to_device(this)
           case(BATCH_PACKED)
             ! copy from packed host array to device
-            call batch_write_packed_to_device(this)
+            call batch_write_packed_to_device(this, async_)
           end select
         end if
       case(BATCH_PACKED)
@@ -501,12 +510,13 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_do_unpack(this, copy, force)
+  subroutine batch_do_unpack(this, copy, force, async)
     class(batch_t),     intent(inout) :: this
     logical, optional,  intent(in)    :: copy
     logical, optional,  intent(in)    :: force  !< if force = .true., unpack independently of the counter
+    logical, optional,  intent(in)    :: async
 
-    logical :: copy_, force_
+    logical :: copy_, force_, async_
     type(profile_t), save :: prof
     integer               :: source, target
 
@@ -515,9 +525,10 @@ contains
     call profiling_in(prof, "BATCH_DO_UNPACK")
 
     copy_ = optional_default(copy, .true.)
-    if(this%own_memory) copy_ = .true.
 
     force_ = optional_default(force, .false.)
+
+    async_ = optional_default(async, .false.)
 
     ! get source and target states for this batch
     source = this%status()
@@ -537,7 +548,7 @@ contains
         if(this%host_buffer_count == 1 .or. force_) then
           if(this%own_memory) call this%allocate_unpacked_host()
           ! unpack from packed_host to unpacked_host
-          if(copy_) then
+          if(copy_ .or. this%own_memory) then
             if(this%type() == TYPE_FLOAT) then
               call dbatch_unpack_copy(this)
             else if(this%type() == TYPE_CMPLX) then
@@ -559,10 +570,14 @@ contains
               call batch_read_device_to_unpacked(this)
             ! unpack from packed_device to packed_host
             case(BATCH_PACKED)
-              call batch_read_device_to_packed(this)
+              call batch_read_device_to_packed(this, async_)
             end select
           end if
-          call this%deallocate_packed_device()
+          if(async_) then
+            this%needs_finish_unpack = .true.
+          else
+            call this%deallocate_packed_device()
+          end if
           this%status_of = target
           this%device_buffer_count = 1
         end if
@@ -574,6 +589,19 @@ contains
 
     POP_SUB(batch_do_unpack)
   end subroutine batch_do_unpack
+
+  ! ----------------------------------------------------
+  subroutine batch_finish_unpack(this)
+    class(batch_t),      intent(inout)  :: this
+
+    PUSH_SUB(batch_finish_unpack)
+    if(this%needs_finish_unpack) then
+      call accel_finish()
+      call this%deallocate_packed_device()
+      this%needs_finish_unpack = .false.
+    end if
+    POP_SUB(batch_finish_unpack)
+  end subroutine batch_finish_unpack
 
   ! ----------------------------------------------------
 
@@ -728,8 +756,9 @@ contains
   end subroutine batch_read_device_to_unpacked
 
   ! ------------------------------------------------------------------
-  subroutine batch_write_packed_to_device(this)
+  subroutine batch_write_packed_to_device(this, async)
     class(batch_t),      intent(inout)  :: this
+    logical,   optional, intent(in)     :: async
 
     type(profile_t), save :: prof_pack
 
@@ -737,9 +766,9 @@ contains
 
     call profiling_in(prof_pack, "BATCH_PACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
-      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
-      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+      call accel_write_buffer(this%ff_device, product(this%pack_size), this%zff_pack, async=async)
     end if
     call profiling_out(prof_pack)
 
@@ -747,8 +776,9 @@ contains
   end subroutine batch_write_packed_to_device
 
   ! ------------------------------------------------------------------
-  subroutine batch_read_device_to_packed(this)
+  subroutine batch_read_device_to_packed(this, async)
     class(batch_t),      intent(inout) :: this
+    logical,   optional, intent(in)    :: async
 
     type(profile_t), save :: prof_unpack
 
@@ -756,9 +786,9 @@ contains
 
     call profiling_in(prof_unpack, "BATCH_UNPACK_COPY_CL")
     if(this%type() == TYPE_FLOAT) then
-      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack)
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%dff_pack, async=async)
     else
-      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack)
+      call accel_read_buffer(this%ff_device, product(this%pack_size), this%zff_pack, async=async)
     end if
     call profiling_out(prof_unpack)
 

@@ -191,9 +191,7 @@ contains
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call st%group%psib(ib, ik)%copy_to(psi2(ib, ik))
-        if(st%group%psib(ib, ik)%is_packed()) call psi2(ib, ik)%do_pack(copy = .false.)
-        call st%group%psib(ib, ik)%copy_data_to(gr%mesh%np, psi2(ib, ik))
+        call st%group%psib(ib, ik)%copy_to(psi2(ib, ik), copy_data=.true.)
       end do
     end do
 

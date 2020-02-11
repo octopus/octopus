@@ -181,9 +181,9 @@ contains
  
         if(all(abs(qpoint(1:sb%dim))< CNST(1e-6))) cycle
 
-        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint)
+        this%Fk(ik) = this%Fk(ik) + aux_funct(qpoint) * sb%kpoints%full%weight(ik2)
       end do
-      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume/sb%kpoints%full%npoints
+      this%Fk(ik) = this%Fk(ik)*CNST(4.0)*M_PI/sb%rcell_volume
     end do
 
     if(dist_kpt%parallel) then
