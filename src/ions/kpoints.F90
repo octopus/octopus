@@ -61,14 +61,10 @@ module kpoints_oct_m
     kpoints_path_generate,        &
     kpoints_to_reduced,           & 
     kpoints_fold_to_1BZ,          &
-<<<<<<< HEAD
     kpoints_is_compatible_downsampling, &
     kpoints_is_valid_symmetry,    &
-    kpoints_grid_end
-=======
     kpoints_grid_end,             & 
     kpoints_nkpt_in_path
->>>>>>> develop
 
   type kpoints_grid_t
     ! Components are public by default
