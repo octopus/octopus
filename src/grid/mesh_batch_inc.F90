@@ -458,14 +458,15 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof, profcomm
-  R_TYPE, allocatable :: tmp(:), phi(:, :), tmp_dot(:,:)
+  R_TYPE, allocatable :: tmp(:), phi(:, :)
   R_TYPE :: temp
 
   ! Variables related to the GPU:
   type(accel_mem_t) :: phi_buffer
   type(accel_mem_t) :: dot_buffer
-  type(accel_mem_t) :: tmp_dot_buffer
-  integer :: wgsize
+  integer :: wgsize, np_padded
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
 
   PUSH_SUB(X(mesh_batch_mf_dotp))
   call profiling_in(prof, "DOTPV_MF_BATCH")
@@ -521,63 +522,12 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
       ! Note: curvilinear coordinates are handled inside the ml_dotp function!
   
-      ! Old code:
-
-!!      dot(1:nst_) = M_ZERO
-!!      do ist = 1, nst_
-!!        call batch_get_state(aa, ist, mesh%np, phi)
-!!        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
-!!               reduce = .false.)
-!!      end do
-
-      ! Alternative code:
-      !
-      ! The new code avoids the batch_get_state calls, which might involve costly memory copies, 
-      ! and also serves as prototype for the GPU code.
-      ! The current version with the interleaved memory layout of packed patches (up, down, up, down, ...) 
-      ! requires ab artificially enlarged matrix to deploy the GEMM routine.
-      ! If, in future, the memory layout of packed states will be changed to (up, up, ..., down, down, ...)
-      ! this will no longer be necessary
-
-      if(mesh%use_curvilinear) then
-        !$omp parallel do
-        do idim=1, aa%dim
-          do ip = 1, mesh%np
-            phi(ip, idim) = mesh%vol_pp(ip)*R_CONJ(psi(ip, idim))
-          end do
-        end do
-      else
-        !$omp parallel do
-        do idim=1, aa%dim
-          do ip = 1, mesh%np
-            phi(ip, idim) = R_CONJ(psi(ip, idim))
-          end do
-        end do
-      end if
-
-      SAFE_ALLOCATE(tmp_dot(1:aa%nst*aa%dim, aa%dim))
-      ! tmp_dot(:,:) = M_ZERO
-      ! dot(:) = M_ZERO
-
-      call blas_gemm( 'N',                                 & !< transpose A
-                      'N',                                 & !< transpose B     
-                      aa%dim*nst_,                         & !< M: number of states to process 
-                      aa%dim,                              & !< N: aa%sim
-                      mesh%np,                             & !< K: number of mesh points (np)
-                      R_TOTYPE(mesh%volume_element),       & !< alpha: volume element
-                      aa%pack%X(psi)(1,1),                 & !< matrix A(LDA, K)
-                      ubound(aa%pack%X(psi), dim=1),       & !< leading dimension of matrix
-                      phi(1,1),                            & !< matrix B(K, M): 
-                      mesh%np,                             & !< LDB
-                      R_TOTYPE(M_ZERO),                    & !< beta: 0
-                      tmp_dot(1,1),                        & !< matrix C(M, N)
-                      aa%dim * aa%nst)                       !< LDC 
-
+      dot(1:nst_) = M_ZERO
       do ist = 1, nst_
-        dot(ist) = R_CONJ(tmp_dot(2*ist-1, 1) + tmp_dot(2*ist, 2))
+        call batch_get_state(aa, ist, mesh%np, phi)
+        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
+               reduce = .false.)
       end do
-
-      SAFE_DEALLOCATE_A(tmp_dot)
 
     end if
 
@@ -591,57 +541,36 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     ! - create buffers
     !   * single state phi:
  
-    call accel_create_buffer(phi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, mesh%np * aa%dim)
-    call accel_write_buffer(phi_buffer, mesh%np * aa%dim, psi)
- 
+    np_padded = pad_pow2(mesh%np)
+
+    call accel_create_buffer(phi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
+
+    do idim=1, aa%dim
+      call accel_write_buffer(phi_buffer, mesh%np, psi, offset=(idim-1)*np_padded)
+    end do
+
     !   * result:
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst)
+       
+    ! Prepare and run the kernel:
 
-    if(aa%dim>1) then
-      call accel_create_buffer(tmp_dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*aa%dim * aa%dim)
-    endif
-        
-    ! Take the complex conjugate of the state
-    ! use kernel: complex_conj
-    call accel_set_kernel_arg(kernel_complex_conj, 0, mesh%np * aa%dim)
-    call accel_set_kernel_arg(kernel_complex_conj, 1, phi_buffer)
+    wgsize = accel_kernel_workgroup_size(X(kernel_batch_dotp))
 
-    wgsize = accel_kernel_workgroup_size(kernel_complex_conj)
+    global_sizes = (/ pad(mesh%np, wgsize/aa%dim), aa%dim, 1 /)
+    local_sizes  = (/ wgsize/aa%dim,               aa%dim, 1 /)
+    
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 0, mesh%np)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 1, nst_)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 2, aa%dim)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 3, aa%pack%buffer)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 3, log2(aa%pack%size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 5, phi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 6, log2(np_padded))
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 7, dot_buffer)
 
-    call accel_kernel_run(kernel_complex_conj, (/pad(mesh%np * aa%dim, wgsize)/), (/wgsize/))
-    call accel_finish()
-
-    ! call the gemm kernel
-
-    call X(accel_gemm)( ACCEL_BLAS_N,                           & !< transpose A
-                        ACCEL_BLAS_N,                           & !< transpose B 
-                        int(aa%dim*nst_, 8),                    & !< M: number of states to process 
-                        int(aa%dim, 8),                         & !< N: aa%sim
-                        int(mesh%np, 8),                        & !< K: number of mesh points (np)
-                        R_TOTYPE(mesh%volume_element),          & !< alpha: volume element
-                        aa%pack%buffer,                         & !< matrix A(LDA, K)
-                        int(0, 8),                              & !< offset
-                        int(ubound(aa%pack%X(psi), dim=1), 8),  & !< leading dimension of matrix
-                        phi_buffer,                             & !< matrix B(K, M): 
-                        int(0, 8),                              & !< offset
-                        int(mesh%np, 8),                        & !< LDB
-                        R_TOTYPE(M_ZERO),                       & !< beta: 0
-                        tmp_dot_buffer,                         & !< matrix C(M, N)
-                        int(0, 8),                              & !< offset
-                        int(aa%dim * aa%nst, 8) )                 !< LDC 
-
-
-    call accel_finish() ! we might be able to remove this barrier
-
-    ! Take the complex conjugate of the result
-    call accel_set_kernel_arg(kernel_complex_conj, 0, nst)
-    call accel_set_kernel_arg(kernel_complex_conj, 1, tmp_dot_buffer)
-    call accel_set_kernel_arg(kernel_complex_conj, 2, dot_buffer)
-
-    call accel_kernel_run(kernel_complex_conj_combine, (/pad(nst, wgsize)/), (/wgsize/))
-    call accel_finish()
-
+    call accel_kernel_run(X(kernel_batch_dotp), local_sizes, global_sizes)
+    call accel_finish() 
 
     ! Move the result back to the CPU
     call accel_read_buffer(dot_buffer, nst_, dot)
@@ -649,8 +578,6 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     ! Release accel buffers:
     call accel_release_buffer(phi_buffer)
     call accel_release_buffer(dot_buffer)
-    call accel_release_buffer(tmp_dot_buffer)
-
 
   end select
 
@@ -679,10 +606,13 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof
   R_TYPE, allocatable :: phi(:,:)
-  R_TYPE, allocatable :: aa_tmp(:,:)
 
-  type(accel_mem_t) :: aa_tmp_buffer
+  ! GPU related variables
+  type(accel_mem_t) :: aa_buffer
   type(accel_mem_t) :: psi_buffer
+  integer :: wgsize, np_padded
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
 
   PUSH_SUB(X(mesh_batch_mf_axpy))
   call profiling_in(prof, "AXPY_MF_BATCH")
@@ -707,25 +637,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
     if(xx%dim == 1) then 
 
-!!      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
-!!                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
-
-      ! For testing: write the gemv in terms of a gemm call:
-
-      call blas_gemm( 'T',                                 & !< transpose A: we transpose xx%pack
-                      'N',                                 & !< transpose B: we don't transpose aa_tmp     
-                      mesh%np,                             & !< M: mesh%np 
-                      1,                                   & !< N: xx%dim
-                      nst_,                                & !< K: number of states to process (xx%dim * nst_)
-                      R_TOTYPE(M_ONE),                     & !< alpha: 1
-                      xx%pack%X(psi)(1,1),                 & !< A(K, M) ( A^T(M,K) ) : xx%pack%X(psi)(xx%dim%xx%nst, mesh%np)
-                      ubound(xx%pack%X(psi), dim=1),       & !< LDA
-                      aa(1),                               & !< B(K, N): aa_tmp(xx%nst*xx%dim, xx%dim)
-                      xx%nst,                              & !< LDB
-                      R_TOTYPE(M_ONE),                     & !< beta: 1 (accumulating the result)
-                      psi(1,1),                            & !< C(M, N): psi(mesh%np, xx%dim)
-                      mesh%np)                               !< LDC 
-
+      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
+                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
 
     else !Spinor case
 
@@ -743,49 +656,51 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
       SAFE_DEALLOCATE_A(phi)
 
-      ! Alternative code:
-      !
-      ! The new code avoids the batch_get_state calls, which might involve costly memory copies, 
-      ! and also serves as prototype for the GPU code.
-      ! The current version with the interleaved memory layout of packed patches (up, down, up, down, ...) 
-      ! requires ab artificially enlarged matrix to deploy the GEMM routine.
-      ! If, in future, the memory layout of packed states will be changed to (up, up, ..., down, down, ...)
-      ! this will no longer be necessary
-
-      ! Unfold aa(1:nst) into aa_tmp(1:xx%nst*xx*dim, xx%dim) and set up mask to eliminate wrong cross terms:
-
-      SAFE_ALLOCATE(aa_tmp(1:xx%dim*xx%nst, 1:xx%dim)) ! cannot be commented out
-!!
-!!      do ist=1, xx%nst
-!!        aa_tmp(2*ist-1, 1) = aa(ist)
-!!        aa_tmp(2*ist  , 1) = R_TOTYPE(M_ZERO)
-!!        aa_tmp(2*ist-1, 2) = R_TOTYPE(M_ZERO)
-!!        aa_tmp(2*ist  , 2) = aa(ist)
-!!      end do
-!!
-!!     ! Apply GEMM to perform vector-vector products and sum over states:
-!!            
-!!      call blas_gemm( 'T',                                 & !< transpose A: we transpose xx%pack
-!!                      'N',                                 & !< transpose B: we don't transpose aa_tmp     
-!!                      mesh%np,                             & !< M: mesh%np 
-!!                      xx%dim,                              & !< N: xx%dim
-!!                      xx%dim*nst_,                         & !< K: number of states to process (xx%dim * nst_)
-!!                      R_TOTYPE(M_ONE),                     & !< alpha: 1
-!!                      xx%pack%X(psi)(1,1),                 & !< A(K, M) ( A^T(M,K) ) : xx%pack%X(psi)(xx%dim%xx%nst, mesh%np)
-!!                      ubound(xx%pack%X(psi), dim=1),       & !< LDA
-!!                      aa_tmp(1,1),                         & !< B(K, N): aa_tmp(xx%nst*xx%dim, xx%dim)
-!!                      xx%dim*xx%nst,                       & !< LDB
-!!                      R_TOTYPE(M_ONE),                     & !< beta: 1 (accumulating the result)
-!!                      psi(1,1),                            & !< C(M, N): psi(mesh%np, xx%dim)
-!!                      mesh%np)                               !< LDC 
-!!
-      SAFE_DEALLOCATE_A(aa_tmp) ! cannot be commented out
-!!
     end if
 
   case(BATCH_DEVICE_PACKED)
 
     ASSERT(xx%status() /= BATCH_DEVICE_PACKED)
+
+    ! Create a buffer for aa(nst)
+    call accel_create_buffer(aa_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, xx%nst) 
+    call accel_write_buffer(aa_buffer, xx%nst, aa)
+
+    ! Craete a buffer for the result psi
+    np_padded = pad_pow2(mesh%np)
+
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
+    do idim=1, xx%dim
+      call accel_write_buffer(psi_buffer, mesh%np, psi, offset=(idim-1)*np_padded)
+    end do
+
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 0, mesh%np)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 1, nst_)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 2, xx%dim)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 3, xx%pack%buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 4, log2(xx%pack%size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 5, aa_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 6, psi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 7, log2(np_padded))
+
+    ! set local and global sizes:
+    ! to be done!
+
+    wgsize = accel_kernel_workgroup_size(X(kernel_batch_axpy))
+
+    global_sizes = (/ pad(mesh%np, wgsize/xx%dim), xx%dim, 1 /)
+    local_sizes  = (/ wgsize/xx%dim,               xx%dim, 1 /)
+
+    call accel_kernel_run(X(kernel_batch_axpy), global_sizes, local_sizes)
+    call accel_finish()
+
+    do idim=1, xx%dim
+      call accel_read_buffer(psi_buffer, mesh%np, psi, offset=(idim-1)*np_padded)
+    end do
+
+    call accel_release_buffer(aa_buffer)
+    call accel_release_buffer(psi_buffer)
+    
 
   end select
 

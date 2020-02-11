@@ -177,8 +177,6 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_daxpy
   type(accel_kernel_t), public, target, save :: kernel_zaxpy
   type(accel_kernel_t), public, target, save :: kernel_copy
-  type(accel_kernel_t), public, target, save :: kernel_complex_conj
-  type(accel_kernel_t), public, target, save :: kernel_complex_conj_combine
   type(accel_kernel_t), public, target, save :: dpack
   type(accel_kernel_t), public, target, save :: zpack
   type(accel_kernel_t), public, target, save :: dunpack
@@ -191,6 +189,10 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: zkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: dkernel_batch_dotp
+  type(accel_kernel_t), public, target, save :: zkernel_batch_dotp
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
   type(accel_kernel_t), public, target, save :: set_one
@@ -586,8 +588,6 @@ contains
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
     call accel_kernel_start_call(zunpack, 'pack.cl', "zunpack")
     call accel_kernel_start_call(kernel_copy, 'copy.cl', "copy")
-    call accel_kernel_start_call(kernel_complex_conj, 'complex_conj.cl', "complex_conj")
-    call accel_kernel_start_call(kernel_complex_conj_combine, 'complex_conj_combine.cl', "complex_conj_combine")
     call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
@@ -596,6 +596,12 @@ contains
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+
+    call accel_kernel_start_call(dkernel_batch_axpy, 'mesh_batch_single.cl', "dbatch_ml_axpy")
+    call accel_kernel_start_call(zkernel_batch_axpy, 'mesh_batch_single.cl', "zbatch_ml_axpy")
+    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_ml_dotp")
+    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_ml_dotp")
+    
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
