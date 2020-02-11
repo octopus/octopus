@@ -500,6 +500,7 @@ system_f_srcs =                                 \
 	system/pert.F90                         \
 	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
+	system/simulation_clock.F90             \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
