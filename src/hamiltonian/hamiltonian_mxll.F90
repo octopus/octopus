@@ -225,7 +225,7 @@ contains
     POP_SUB(hamiltonian_mxll_null)
   end subroutine hamiltonian_mxll_null
 
-
+  
   ! ---------------------------------------------------------
   !> Initializing the Maxwell Hamiltonian
   subroutine hamiltonian_mxll_init(hm, namespace, gr, st)

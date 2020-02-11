@@ -638,9 +638,10 @@ contains
       SAFE_ALLOCATE(rs_current_density_ext_t2(1:sys%gr%mesh%np_part,1:sys%st%d%dim))
       SAFE_ALLOCATE(rs_charge_density_ext_t1(1:sys%gr%mesh%np_part))
       SAFE_ALLOCATE(rs_charge_density_ext_t2(1:sys%gr%mesh%np_part))
+
       SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%d%dim)) 
       rs_state_init(:,:) = M_z0
-      ! here there would a a call  maxwell_td_init, but no need
+
       td%energy_update_iter = 1
       
       call propagator_mxll_init(sys%gr, sys%namespace, sys%st, sys%hm, td%tr_mxll)
@@ -649,7 +650,6 @@ contains
       sys%hm%propagation_apply = .true.
 
       if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
-        print *,'Setting plane waves'
         SAFE_ALLOCATE(sys%st%rs_state_plane_waves(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
         sys%st%rs_state_plane_waves = M_z0
       end if

@@ -586,13 +586,13 @@ contains
         call st%rsb%zallocate(1, st%d%dim, gr%mesh%np_part)
 
         do istate = 1, st%d%dim
-          call batch_set_state(st%rsb, istate, gr%mesh%np_part, st%rs_state(:, istate))
+          call batch_set_state(st%rsb, istate, gr%mesh%np_part, rs_state(:, istate))
         end do
 
         call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%rsb, inter_dt)
 
         do istate = 1, st%d%dim
-          call batch_get_state(st%rsb, istate, gr%mesh%np_part, st%rs_state(:, istate))
+          call batch_get_state(st%rsb, istate, gr%mesh%np_part, rs_state(:, istate))
         end do
 
         call st%rsb%end()
@@ -607,10 +607,6 @@ contains
       if (pml_check) then
         call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
       end if
-
-!      do istate = 1, 3
-!        call batch_get_state(st%rsb, gr%mesh%np, istate, st%rs_state(:, istate))
-!      end do
 
       ! back tranformation of RS state representation
 !      call transform_rs_state_backward(hm, gr, st, ff_rs_state, rs_state)
@@ -3679,8 +3675,9 @@ contains
     test_limit = 10**(-9)
 
     if (hm%plane_waves_apply) then
-      do wn=1, hm%bc%plane_waves_number
-        ip = hm%bc%plane_waves_points_map(ip_in)
+      do wn = 1, hm%bc%plane_waves_number
+        do ip_in = 1, hm%bc%plane_waves_points_number
+          ip = hm%bc%plane_waves_points_map(ip_in)
             if (wn == 1) rs_state(ip,:) = M_Z0
             nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
             vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
@@ -3696,13 +3693,14 @@ contains
             b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
             rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
-       end do
-    else
-      do ip_in=1, hm%bc%plane_waves_points_number
-        ip             = hm%bc%plane_waves_points_map(ip_in)
-        rs_state(ip,:) = M_z0
-      end do
-    end if
+          end do
+        end do
+      else
+        do ip_in = 1, hm%bc%plane_waves_points_number
+          ip             = hm%bc%plane_waves_points_map(ip_in)
+          rs_state(ip,:) = M_z0
+        end do
+      end if
 
     POP_SUB(plane_waves_boundaries_calculation)
   end subroutine plane_waves_boundaries_calculation
