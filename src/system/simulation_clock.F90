@@ -39,6 +39,7 @@ module simulation_clock_oct_m
     procedure :: get_tick => simulation_clock_get_tick
     procedure :: get_sim_time => simulation_clock_get_sim_time
     procedure :: increment => simulation_clock_increment
+    procedure :: decrement => simulation_clock_decrement
     procedure :: reset => simulation_clock_reset
     procedure :: is_earlier => simulation_clock_is_earlier
     procedure :: is_later => simulation_clock_is_later
@@ -98,6 +99,17 @@ contains
 
     POP_SUB(simulation_clock_update)
   end subroutine simulation_clock_increment
+
+  ! ---------------------------------------------------------
+  subroutine simulation_clock_decrement(this)
+    class(simulation_clock_t), intent(inout) :: this
+
+    PUSH_SUB(simulation_clock_update)
+
+    this%clock_tick = this%clock_tick - 1
+
+    POP_SUB(simulation_clock_update)
+  end subroutine simulation_clock_decrement
 
   ! ---------------------------------------------------------
   subroutine simulation_clock_reset(this)
