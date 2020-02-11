@@ -36,6 +36,9 @@ match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);  0.121384
 match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);  0.186893
 match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);  0.666684
 
+match ; Angle alpha       ; GREPFIELD(out, 'alpha =', 3) ; 60
+match ; Angle beta        ; GREPFIELD(out, 'beta  =', 3) ; 60
+match ; Angle gamma       ; GREPFIELD(out, 'gamma =', 3) ; 60
 
 Input      : 15-bandstructure.02-unocc.inp
 

@@ -49,6 +49,7 @@ basic_f_srcs =                                 \
 	basic/cuda.F90                         \
 	basic/debug.F90                        \
 	basic/distributed.F90                  \
+	basic/gdlib.F90                        \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
 	basic/iihash.F90                       \
@@ -90,7 +91,7 @@ basic_c_srcs =                                 \
 	basic/io_csv.c                         \
 	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
-	basic/oct_gdlib_f.c                    \
+	basic/gdlib_f.c                        \
 	basic/recipes.c                        \
 	basic/signals.c                        \
 	basic/sort_low.cc                      \
@@ -318,7 +319,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
-	grid/allocate_hardware_aware.c        \
+	grid/allocate_hardware_aware.cc       \
 	grid/hilbert.c                        \
 	grid/operate.c
 
@@ -447,6 +448,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
+	hamiltonian/singularity.F90                  \
 	hamiltonian/species_pot.F90                  \
 	hamiltonian/vdw_ts.F90                       \
 	hamiltonian/xc.F90

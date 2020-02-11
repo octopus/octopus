@@ -198,6 +198,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       maxst = states_elec_block_max(st, ib)
 
       call st%group%psib(ib, iq)%copy_to(psib, copy_data = .true.)
+      if(hamiltonian_elec_apply_packed(hm)) call psib%do_pack()
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)

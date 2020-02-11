@@ -106,6 +106,7 @@ module output_oct_m
     output_kick,         &
     output_scalar_pot,   &
     output_needs_current, &
+    output_need_exchange,&
     output_mxll_init,    &
     output_mxll
 
@@ -471,6 +472,8 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, namespace, sb, st, nst)
+    else
+      outp%me%what = 0
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -1470,6 +1473,18 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+
+ 
+  !--------------------------------------------------------------
+
+  logical function output_need_exchange(outp) result(need_exx)
+    type(output_t),         intent(in)    :: outp
+
+    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+  end function output_need_exchange
+
 
    ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, geo, has_phase)

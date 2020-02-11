@@ -421,8 +421,6 @@ contains
 
     ASSERT(psib%status() == hpsib%status())
 
-    ASSERT(psib%is_ok())
-    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment
@@ -446,8 +444,8 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
-    hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
+    call zderivatives_curl(der, psib%zff(:, :, 1), hpsib%zff(:, :, 1))
+    hpsib%zff(:,:,1) = P_c * hpsib%zff(:,:,1)
   
 !    if(pack) then
 !      call psib%do_unpack(copy = .false.)
@@ -479,10 +477,8 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_apply)
 
-!    call batch_init(psib, hm%d%dim, 1)
-!    call psib%add_state(ist, psi)
-!    call batch_init(hpsib, hm%d%dim, 1)
-!    call hpsib%add_state(ist, hpsi)
+!    call batch_init(psib, hm%d%dim, ist, ist, psi)
+!    call batch_init(hpsib, hm%d%dim, ist, ist, hpsi)
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !

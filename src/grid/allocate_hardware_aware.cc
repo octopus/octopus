@@ -21,23 +21,26 @@
 #include <config.h>
 #include <stdio.h>
 #include "vectors.h"
+#include <iostream>
 
 #ifdef HAVE_CUDA
-#include <cuda_runtime.h>
+#include <cuda.h>
 
-inline
-cudaError_t checkCuda(cudaError_t result)
-{
-#if defined(DEBUG_ALLOC)
-  if (result != cudaSuccess) {
-    fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
-    assert(result == cudaSuccess);
-  }
-#endif
-  return result;
-}
+#define CUDA_SAFE_CALL(x)                                         \
+  do {                                                            \
+    CUresult result = x;                                          \
+    if (result != CUDA_SUCCESS) {                                 \
+      const char *msg;                                            \
+      cuGetErrorName(result, &msg);                               \
+      std::cerr << "\nerror: " #x " failed with error "           \
+                << msg << '\n';                                   \
+      exit(1);                                                    \
+    }                                                             \
+  } while(0)
 
 #endif
+
+using namespace std;
 
 void *allocate_aligned(int size_bytes) {
 #ifdef DEBUG_ALLOC
@@ -54,23 +57,23 @@ void *allocate_aligned(int size_bytes) {
   return aligned;
 }
 
-void *dallocate_aligned(int size) {
+extern "C" void *dallocate_aligned(int size) {
   return allocate_aligned(sizeof(double)*size);
 }
 
-void *zallocate_aligned(int size) {
+extern "C" void *zallocate_aligned(int size) {
   return allocate_aligned(sizeof(double)*2*size);
 }
 
-void *sallocate_aligned(int size) {
+extern "C" void *sallocate_aligned(int size) {
   return allocate_aligned(sizeof(float)*size);
 }
 
-void *callocate_aligned(int size) {
+extern "C" void *callocate_aligned(int size) {
   return allocate_aligned(sizeof(float)*2*size);
 }
 
-void deallocate_aligned(void *array) {
+extern "C" void deallocate_aligned(void *array) {
 #ifdef DEBUG_ALLOC
   printf("Deallocating unpinned.\n");
 #endif
@@ -83,7 +86,7 @@ void *allocate_pinned(int size_bytes) {
   printf("Allocating %d bytes, pinned.\n", (unsigned int)size_bytes);
 #endif
   void *pinned;
-  checkCuda(cudaMallocHost(&pinned, (unsigned int)size_bytes));
+  CUDA_SAFE_CALL(cuMemAllocHost(&pinned, (unsigned int)size_bytes));
   return pinned;
 #else
   printf("Error! Pinned memory requested, although CUDA not available. Returning aligned memory.");
@@ -91,27 +94,27 @@ void *allocate_pinned(int size_bytes) {
 #endif
 }
 
-void *dallocate_pinned(int size) {
+extern "C" void *dallocate_pinned(int size) {
   return allocate_pinned(sizeof(double)*size);
 }
 
-void *zallocate_pinned(int size) {
+extern "C" void *zallocate_pinned(int size) {
   return allocate_pinned(sizeof(double)*2*size);
 }
 
-void *sallocate_pinned(int size) {
+extern "C" void *sallocate_pinned(int size) {
   return allocate_pinned(sizeof(float)*size);
 }
 
-void *callocate_pinned(int size) {
+extern "C" void *callocate_pinned(int size) {
   return allocate_pinned(sizeof(float)*2*size);
 }
 
-void deallocate_pinned(void *array) {
+extern "C" void deallocate_pinned(void *array) {
 #ifdef HAVE_CUDA
 #ifdef DEBUG_ALLOC
   printf("Deallocating pinned.\n");
 #endif
-  checkCuda(cudaFreeHost(array));
+  CUDA_SAFE_CALL(cuMemFreeHost(array));
 #endif
 }

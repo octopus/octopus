@@ -815,11 +815,11 @@ contains
 
     if(potb%type() == TYPE_FLOAT) then
       do ii = 1, potb%nst_linear
-        call dpoisson_solve(this, potb%states_linear(ii)%dpsi, rhob%states_linear(ii)%dpsi, all_nodes)
+        call dpoisson_solve(this, potb%dff_linear(:, ii), rhob%dff_linear(:, ii), all_nodes)
       end do
     else
       do ii = 1, potb%nst_linear
-        call zpoisson_solve(this, potb%states_linear(ii)%zpsi, rhob%states_linear(ii)%zpsi, all_nodes)
+        call zpoisson_solve(this, potb%zff_linear(:, ii), rhob%zff_linear(:, ii), all_nodes)
       end do
     end if
 
@@ -949,14 +949,16 @@ contains
     !-----------------------------------------------------------------
 
     !-----------------------------------------------------------------
-  subroutine poisson_init_sm(this, main, der, sm)
-    type(poisson_t),             intent(out) :: this
-    type(poisson_t),             intent(in)  :: main
-    type(derivatives_t), target, intent(in)  :: der
-    type(submesh_t),           intent(in)    :: sm
+  subroutine poisson_init_sm(this, namespace, main, der, sm, method)
+    type(poisson_t),             intent(out)   :: this
+    type(namespace_t),           intent(in)    :: namespace
+    type(poisson_t),             intent(in)    :: main
+    type(derivatives_t), target, intent(in)    :: der
+    type(submesh_t),             intent(inout) :: sm
+    integer, optional,           intent(in)    :: method
 
-    logical :: need_cube
     integer :: default_solver
+    integer :: box(MAX_DIM)
 
     if(this%method /= POISSON_NULL) return ! already initialized
 
@@ -976,15 +978,28 @@ contains
 
     default_solver = POISSON_DIRECT_SUM 
     this%method = default_solver
+    if(present(method)) this%method = method
 
     if(der%mesh%use_curvilinear) then
-      call messages_not_implemented("lda+u with curvilinear mesh")    
+      call messages_not_implemented("Submesh Poisson solver with curvilinear mesh")    
     end if
 
     this%kernel = POISSON_FFT_KERNEL_NONE
 
-    ! Now that we know the method, we check if we need a cube and its dimentions
-    need_cube = .false.
+    nullify(sm%cube_map%map)
+
+    select case(this%method)
+    case(POISSON_DIRECT_SUM)
+      !Nothing to be done
+    case(POISSON_ISF)    
+      !TODO: Add support for domain parrallelization
+      ASSERT(.not. der%mesh%parallel_in_domains)
+      call submesh_get_cube_dim(sm, box, der%dim)
+      call submesh_init_cube_map(sm, box, der%dim)
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, verbose = .false., &
+                     need_partition=.not.der%mesh%parallel_in_domains)
+      call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
+    end select
 
     POP_SUB(poisson_init_sm)
   end subroutine poisson_init_sm

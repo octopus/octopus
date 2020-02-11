@@ -79,7 +79,7 @@ contains
       call messages_experimental('State parallelization for ground state calculations')
     end if
     
-    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, packed=.true.)
 
 #ifdef HAVE_MPI
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)

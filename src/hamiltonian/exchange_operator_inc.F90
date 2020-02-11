@@ -33,10 +33,8 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
 
   PUSH_SUB(X(exchange_operator_single))
 
-  call wfs_elec_init(psib, st_d%dim, 1, ik)
-  call psib%add_state(ist, psi)
-  call wfs_elec_init(hpsib, st_d%dim, 1, ik)
-  call hpsib%add_state(ist, hpsi)
+  call wfs_elec_init(psib, st_d%dim, ist, ist, psi, ik)
+  call wfs_elec_init(hpsib, st_d%dim, ist, ist, hpsi, ik)
 
   call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
 
@@ -102,7 +100,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   qq(1:der%dim) = M_ZERO
 
   do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
+    ist = psib%ist(ibatch)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
@@ -115,7 +113,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
 
         do ii = 1, psi2b%nst
 
-          jst = psi2b%states(ii)%ist
+          jst = psi2b%ist(ii)
 
           if ( .not. rdmft ) then
             ff = this%st%occ(jst, ik2)
@@ -204,7 +202,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
   do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
+    ist = psib%ist(ibatch)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
     
@@ -287,7 +285,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
   SAFE_ALLOCATE(pot_l(1:this%scdm%full_box))
   
   do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
+    ist = psib%ist(ibatch)
     
     call batch_get_state(psib, ibatch, der%mesh%np, psil)
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsil)

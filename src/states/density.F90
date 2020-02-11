@@ -140,7 +140,7 @@ contains
     ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%states(ist)%ist, psib%ik)
+    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
 
     if (.not. this%gr%have_fine_mesh) then 
 
@@ -153,7 +153,7 @@ contains
               if(abs(weight(ist)) <= M_EPSILON) cycle
               !$omp parallel do simd schedule(static)
               do ip = 1, this%gr%mesh%np
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff(ip, 1, ist)**2
               end do
             end do
           else
@@ -162,7 +162,7 @@ contains
               !$omp parallel do schedule(static)
               do ip = 1, this%gr%mesh%np
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
+                  real(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist), REAL_PRECISION)
               end do
             end do
           end if
@@ -171,8 +171,8 @@ contains
             if(abs(weight(ist)) <= M_EPSILON) cycle
             !$omp parallel do schedule(static) private(psi1, psi2, term)
             do ip = 1, this%gr%mesh%np          
-              psi1 = psib%states(ist)%zpsi(ip, 1)
-              psi2 = psib%states(ist)%zpsi(ip, 2)
+              psi1 = psib%zff(ip, 1, ist)
+              psi2 = psib%zff(ip, 2, ist)
               this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
               this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
               term = weight(ist)*psi1*conjg(psi2)
@@ -190,7 +190,7 @@ contains
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff_pack(ist, ip)**2
               end do
             end do
           else
@@ -198,7 +198,7 @@ contains
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
+                  real(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip), REAL_PRECISION)
               end do
             end do
           end if
@@ -207,8 +207,8 @@ contains
           !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              psi1 = psib%pack%zpsi(2*ist - 1, ip)
-              psi2 = psib%pack%zpsi(2*ist,     ip)
+              psi1 = psib%zff_pack(2*ist - 1, ip)
+              psi2 = psib%zff_pack(2*ist,     ip)
               term = weight(ist)*psi1*conjg(psi2)
 
               this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
@@ -237,8 +237,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         
         case (SPINORS)
@@ -248,8 +248,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp)
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         end select
 

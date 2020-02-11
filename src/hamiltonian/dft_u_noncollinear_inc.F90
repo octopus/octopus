@@ -67,7 +67,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
 
     call submesh_build_global(os%sphere)
 
-    call poisson_init_sm(os%poisson, psolver, der, os%sphere)
+    call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere)
 
     ijst=0
     do ist = 1, norbs
