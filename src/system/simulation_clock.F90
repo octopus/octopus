@@ -31,6 +31,7 @@ module simulation_clock_oct_m
 
   type simulation_clock_t
     integer :: clock_tick
+    integer :: granularity
     FLOAT   :: time_step
     integer :: time_since_epoch
 
@@ -52,12 +53,13 @@ module simulation_clock_oct_m
 contains
 
   ! ---------------------------------------------------------
-  type(simulation_clock_t) function simulation_clock_init(time_step) result(this)
-    FLOAT, intent(in)   :: time_step
+  type(simulation_clock_t) function simulation_clock_init(time_step, smallest_algo_dt) result(this)
+    FLOAT, intent(in)   :: time_step, smallest_algo_dt
 
     PUSH_SUB(simulation_clock_init)
 
     this%clock_tick = 0
+    this%granularity = ceiling(time_step/smallest_algo_dt)
     this%time_step = time_step
     this%time_since_epoch = 0 ! Fixme: get time since epoch here from OS
 
@@ -65,12 +67,12 @@ contains
   end function simulation_clock_init
 
   ! ---------------------------------------------------------
-  integer function simulation_clock_get_tick(this) result(current_tick)
+  integer function simulation_clock_get_tick(this) result(current_global_tick)
     class(simulation_clock_t), intent(in) :: this
 
     PUSH_SUB(simulation_clock_get_tick)
 
-    current_tick = this%clock_tick
+    current_global_tick = this%clock_tick*this%granularity
 
     POP_SUB(simulation_clock_get_tick)
   end function simulation_clock_get_tick
