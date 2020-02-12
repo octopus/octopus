@@ -41,16 +41,32 @@ module simulation_clock_oct_m
     procedure :: increment => simulation_clock_increment
     procedure :: decrement => simulation_clock_decrement
     procedure :: reset => simulation_clock_reset
+    procedure :: set => simulation_clock_set
     procedure :: is_earlier => simulation_clock_is_earlier
     procedure :: is_later => simulation_clock_is_later
     procedure :: is_equal => simulation_clock_is_equal
     procedure :: is_later_with_step => simulation_clock_is_later_with_step
-
   end type simulation_clock_t
 
   interface simulation_clock_t
     module procedure simulation_clock_init
   end interface simulation_clock_t
+
+  interface operator(==)
+    procedure simulation_clock_is_equal
+  end interface
+
+  interface assignment(=)
+    procedure simulation_clock_set
+  end interface
+
+  interface operator(<)
+    procedure simulation_clock_is_earlier
+  end interface
+
+  interface operator(>)
+    procedure simulation_clock_is_later
+  end interface
 
 contains
 
@@ -69,6 +85,21 @@ contains
   end function simulation_clock_init
 
   ! ---------------------------------------------------------
+  subroutine simulation_clock_set(clock_out, clock_in)
+    class(simulation_clock_t), intent(in) :: clock_in
+    class(simulation_clock_t), intent(out) :: clock_out
+    
+    PUSH_SUB(simulation_clock_set)
+
+    clock_out%clock_tick = clock_in%clock_tick
+    clock_out%granularity = clock_in%granularity
+    clock_out%time_step = clock_in%time_step
+    clock_out%time_since_epoch = clock_in%time_since_epoch
+
+    POP_SUB(simulation_clock_set)
+  end subroutine simulation_clock_set
+
+  ! ---------------------------------------------------------
   integer function simulation_clock_get_tick(this) result(current_global_tick)
     class(simulation_clock_t), intent(in) :: this
 
@@ -83,33 +114,33 @@ contains
   FLOAT function simulation_clock_get_sim_time(this) result(current_time)
     class(simulation_clock_t), intent(in) :: this
 
-    PUSH_SUB(simulation_clock_get_tick)
+    PUSH_SUB(simulation_clock_get_sim_time)
 
     current_time = this%clock_tick*this%time_step
 
-    POP_SUB(simulation_clock_get_tick)
+    POP_SUB(simulation_clock_get_sim_time)
   end function simulation_clock_get_sim_time
 
   ! ---------------------------------------------------------
   subroutine simulation_clock_increment(this)
     class(simulation_clock_t), intent(inout) :: this
 
-    PUSH_SUB(simulation_clock_update)
+    PUSH_SUB(simulation_clock_increment)
 
     this%clock_tick = this%clock_tick + 1
 
-    POP_SUB(simulation_clock_update)
+    POP_SUB(simulation_clock_increment)
   end subroutine simulation_clock_increment
 
   ! ---------------------------------------------------------
   subroutine simulation_clock_decrement(this)
     class(simulation_clock_t), intent(inout) :: this
 
-    PUSH_SUB(simulation_clock_update)
+    PUSH_SUB(simulation_clock_decrement)
 
     this%clock_tick = this%clock_tick - 1
 
-    POP_SUB(simulation_clock_update)
+    POP_SUB(simulation_clock_decrement)
   end subroutine simulation_clock_decrement
 
   ! ---------------------------------------------------------
@@ -168,7 +199,7 @@ contains
   logical function simulation_clock_is_later_with_step(clock_a, clock_b) result(is_later_with_step)
     class(simulation_clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_later)
+    PUSH_SUB(simulation_clock_is_later_with_step)
 
     if(clock_a%get_tick() + clock_a%granularity > clock_b%get_tick()) then
         is_later_with_step = .true.
@@ -176,7 +207,7 @@ contains
         is_later_with_step = .false.
     end if
 
-    POP_SUB(simulation_clock_is_later)
+    POP_SUB(simulation_clock_is_later_with_step)
   end function simulation_clock_is_later_with_step
 
 end module simulation_clock_oct_m
