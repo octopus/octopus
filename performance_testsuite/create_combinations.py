@@ -63,6 +63,13 @@ def get_combinations(test_name, path='tests'):
     with open(os.path.join(path, filename), 'r') as f_in:
         data = yaml.safe_load(f_in)
     combinations_dict = data['parameters']
+    for parameter in combinations_dict:
+        # check environment variable to override
+        variable = 'OPRT_' + parameter
+        if variable in os.environ:
+            print("Information: {} is overridden by environment variable"
+                  .format(parameter))
+            combinations_dict[parameter] = yaml.safe_load(os.environ[variable])
     combinations_list = modify_combinations(
         outer_product_from_dict(combinations_dict), test_name)
     combinations = {}
