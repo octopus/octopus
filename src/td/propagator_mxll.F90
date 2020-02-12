@@ -582,8 +582,7 @@ contains
           hm%cpml_hamiltonian = .true.
         end if
 
-        call batch_init(st%rsb, 1, st%d%dim)
-        call st%rsb%zallocate(1, st%d%dim, gr%mesh%np_part)
+        call zbatch_init(st%rsb, 1, 1, st%d%dim, gr%mesh%np_part)
 
         do istate = 1, st%d%dim
           call batch_set_state(st%rsb, istate, gr%mesh%np_part, rs_state(:, istate))
@@ -3674,7 +3673,7 @@ contains
 
     PUSH_SUB(plane_waves_boundaries_calculation)
 
-    test_limit = 10**(-9)
+    test_limit = CNST(1e-9)
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_waves_number

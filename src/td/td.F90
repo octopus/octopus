@@ -347,6 +347,17 @@ contains
         call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
       end if
 
+      if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
+        message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+        call messages_fatal(1, namespace=sys%namespace)
+      end if
+
+      if(sys%gr%der%boundaries%spiralBC .and. &
+            any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
+        message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
+        call messages_fatal(1, namespace=sys%namespace)
+      end if
+
     type is (system_mxll_t)
       
       !%Variable TDMaxwellTDRelaxationSteps
@@ -400,19 +411,7 @@ contains
         call messages_write('MaxwellTDIntervalSteps hast to be larger than 0 !')
         call messages_fatal()
       end if
-
     end select
-  
-    if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
-      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
-      call messages_fatal(1, namespace=sys%namespace)
-    end if
-
-    if(sys%gr%der%boundaries%spiralBC .and. &
-          any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then 
-      message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
-      call messages_fatal(1, namespace=sys%namespace)
-    end if
 
     POP_SUB(td_init)
   end subroutine td_init
@@ -584,6 +583,7 @@ contains
             !We activate the sprial BC only after the kick, 
             !to be sure that the first iteration corresponds to the ground state
             if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
+          end if
         end if
 
         ! in case use scdm localized states for exact exchange and request a new localization             
