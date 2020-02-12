@@ -500,7 +500,8 @@ contains
     !Cam parameters are irrelevant here and are updated later
     call exchange_operator_nullify(hm%exxop)
     need_exchange_ = optional_default(need_exchange, .false.)
-    if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE .or. need_exchange_) then
+    if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
+          .or. hm%theory_level == RDMFT .or. need_exchange_) then
       call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
     end if
 
