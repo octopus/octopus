@@ -44,6 +44,7 @@ module simulation_clock_oct_m
     procedure :: is_earlier => simulation_clock_is_earlier
     procedure :: is_later => simulation_clock_is_later
     procedure :: is_equal => simulation_clock_is_equal
+    procedure :: is_later_with_step => simulation_clock_is_later_with_step
 
   end type simulation_clock_t
 
@@ -162,6 +163,21 @@ contains
 
     POP_SUB(simulation_clock_is_equal)
   end function simulation_clock_is_equal
+
+  ! ---------------------------------------------------------
+  logical function simulation_clock_is_later_with_step(clock_a, clock_b) result(is_later_with_step)
+    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+
+    PUSH_SUB(simulation_clock_is_later)
+
+    if(clock_a%get_tick() + clock_a%granularity > clock_b%get_tick()) then
+        is_later_with_step = .true.
+    else
+        is_later_with_step = .false.
+    end if
+
+    POP_SUB(simulation_clock_is_later)
+  end function simulation_clock_is_later_with_step
 
 end module simulation_clock_oct_m
 
