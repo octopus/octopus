@@ -444,7 +444,7 @@ contains
     CMPLX, allocatable         :: rs_current_density_ext_t1(:,:), rs_current_density_ext_t2(:,:)
     CMPLX, allocatable         :: rs_charge_density_ext_t1(:), rs_charge_density_ext_t2(:)
     CMPLX, allocatable         :: rs_state_init(:,:), rs_state_vac_fluc(:,:)
-    FLOAT                      :: bc_bounds(2,3), dt_bounds(2,3)
+    FLOAT                      :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
     
     PUSH_SUB(td_run)
 
@@ -1259,7 +1259,7 @@ contains
 
     if (td%tr_mxll%bc_plane_waves) then
       zff(1:gr%mesh%np,         1:st%d%dim)   = st%rs_state(1:gr%mesh%np,1:st%d%dim)
-      zff(1:gr%mesh%np,st%d%dim+1:st%d%dim+3) = st%rs_state_plane_waves(1:gr%mesh%np,1:st%d%dim)
+      zff(1:gr%mesh%np,st%d%dim+1:st%d%dim+st%d%dim) = st%rs_state_plane_waves(1:gr%mesh%np,1:st%d%dim)
       if (pml_check) then
         id = 0
         do id1=1, 3

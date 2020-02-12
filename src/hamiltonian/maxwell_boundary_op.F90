@@ -52,15 +52,15 @@ module maxwell_boundary_op_oct_m
     bc_mxll_t
 
   type bc_mxll_t
-    integer           :: bc_type(3)
-    integer           :: bc_ab_type(3)
-    FLOAT             :: bc_bounds(2,3)
+    integer           :: bc_type(MAX_DIM)
+    integer           :: bc_ab_type(MAX_DIM)
+    FLOAT             :: bc_bounds(2,MAX_DIM)
     logical           :: ab_user_def
     FLOAT,   pointer  :: ab_ufn(:)
 
     FLOAT             :: mask_width
     FLOAT             :: mask_alpha
-    integer           :: mask_points_number(3)
+    integer           :: mask_points_number(MAX_DIM)
     integer, pointer  :: mask_points_map(:,:)
     FLOAT,   pointer  :: mask(:,:)
 
@@ -125,15 +125,15 @@ module maxwell_boundary_op_oct_m
     FLOAT,   pointer  :: medium_sigma_e(:,:)
     FLOAT,   pointer  :: medium_sigma_m(:,:)
     FLOAT,   pointer  :: medium_c(:,:)
-    integer           :: medium_points_number(3)
+    integer           :: medium_points_number(MAX_DIM)
     integer, pointer  :: medium_points_map(:,:)
     FLOAT,   pointer  :: medium_aux_ep(:,:,:)
     FLOAT,   pointer  :: medium_aux_mu(:,:,:)
-    integer           :: medium_bdry_number(3)
+    integer           :: medium_bdry_number(MAX_DIM)
     integer, pointer  :: medium_bdry_map(:,:)
 
     FLOAT             :: zero_width
-    integer           :: zero_points_number(3)
+    integer           :: zero_points_number(MAX_DIM)
     integer, pointer  :: zero_points_map(:,:)
     FLOAT,   pointer  :: zero(:,:)
 
@@ -161,7 +161,7 @@ contains
     FLOAT, optional,          intent(in)    :: dt
 
     integer             :: idim, ab_shape_dim, nlines, icol, ncols 
-    FLOAT               :: bounds(1:2,3), ab_bounds(1:2,3)
+    FLOAT               :: bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
     FLOAT               :: mask_width, pml_width, zero_width
     type(block_t)       :: blk
     character(len=1024) :: string
@@ -1641,8 +1641,8 @@ contains
     type(block_t)        :: blk
     integer              :: il, nlines, ncols, ierr
     integer              :: oam, sam
-    FLOAT                :: k_vector(3), e_field(3), vv(3), xx(3), rr, dummy(3), test, test_limit!, angle, sigma
-    character(len=1024)  :: k_string(3)
+    FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
+    character(len=1024)  :: k_string(MAX_DIM)
     character(len=1024)  :: mxf_expression
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
@@ -1687,10 +1687,10 @@ contains
 
       bc%plane_waves_number = nlines
       SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field_string(3, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(3, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(3, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(3, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field_string(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
       SAFE_ALLOCATE(bc%plane_waves(nlines))
@@ -1949,7 +1949,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     integer,             intent(out)   :: point_info
  
-    FLOAT   :: rr, dd, xx(3), width(3)
+    FLOAT   :: rr, dd, xx(MAX_DIM), width(MAX_DIM)
     
     point_info = 0
     

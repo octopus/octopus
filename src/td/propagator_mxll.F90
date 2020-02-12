@@ -1256,7 +1256,7 @@ contains
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     integer :: ip, ip_in, point_info, idim
-    FLOAT   :: bounds(2,3), xx(3)
+    FLOAT   :: bounds(2,MAX_DIM), xx(MAX_DIM)
     FLOAT   :: ddv(MAX_DIM), tmp(MAX_DIM), width(MAX_DIM)
     FLOAT, allocatable :: mask(:)
 
@@ -3690,7 +3690,7 @@ contains
               e0(:)      = hm%bc%plane_waves_e_field(:,wn)
               e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:)) 
             end if
-            b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
+            b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
             rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
           end do
