@@ -748,8 +748,8 @@ contains
       !call td_check_trotter(td, sys, h)
       td%iter = td%iter + 1
 
-      !call restart_init(restart_mxll_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
-      !  mesh=sys%gr%mesh)
+      call restart_init(restart_mxll_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
+        mesh=sys%gr%mesh)
 
       call messages_print_stress(stdout, "Time-Dependent Simulation")
 
