@@ -121,20 +121,20 @@ module states_mxll_oct_m
     FLOAT, pointer               :: plane_waves_delta_energy(:)
     FLOAT, pointer               :: plane_waves_energy_via_flux_calc(:)
 
-    FLOAT                        :: poynting_vector_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: electric_field_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: electric_field_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: magnetic_field_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: magnetic_field_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
+    FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: electric_field_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: electric_field_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: magnetic_field_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: magnetic_field_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
 
     logical                      :: rs_state_const_external = .false.
     CMPLX, pointer               :: rs_state_const(:)
     CMPLX, pointer               :: rs_state_const_amp(:,:)
     type(tdf_t), pointer         :: rs_state_const_td_function(:)
 
-    FLOAT                        :: poynting_mean(3)
-    FLOAT                        :: poynting_mean_plane_waves(3)
+    FLOAT                        :: poynting_mean(MAX_DIM)
+    FLOAT                        :: poynting_mean_plane_waves(MAX_DIM)
 
     integer                      :: inner_points_number
     integer, pointer             :: inner_points_map(:)
@@ -151,7 +151,7 @@ module states_mxll_oct_m
     integer, pointer             :: surface_grid_center(:,:,:,:)
     FLOAT                        :: surface_grid_element(MAX_DIM)
 
-    type(mesh_plane_t)           :: surface(2,3)
+    type(mesh_plane_t)           :: surface(2,MAX_DIM)
 
     integer                      :: selected_points_number
     FLOAT, pointer               :: selected_points_coordinate(:,:)
@@ -293,7 +293,7 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
     
-    st%d%dim = 3
+    st%d%dim = MAX_DIM
     st%nst   = 1
     st%d%ispin = UNPOLARIZED
     st%d%nspin = 1

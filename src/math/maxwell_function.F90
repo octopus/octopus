@@ -66,17 +66,17 @@ module maxwell_function_oct_m
     MXF_ZERO_FOURIER     =  10013
 
   type mxf_t
-    integer :: mode        = MXF_EMPTY
-    FLOAT   :: k_vector(3) = M_ZERO
-    FLOAT   :: r0(3)       = M_ZERO  !< vector at the maximum of the pulse
-    FLOAT   :: width       = M_ZERO  !< the width of the pulse
-    FLOAT   :: a0          = M_ZERO
-    FLOAT   :: dx          = M_ZERO !< the space-discretization value.
-    FLOAT   :: init_x      = M_ZERO
-    FLOAT   :: final_x     = M_ZERO
-    FLOAT   :: gr          = M_ZERO
-    integer :: niter       = 0
-    integer :: nfreqs      = 0
+    integer :: mode              = MXF_EMPTY
+    FLOAT   :: k_vector(MAX_DIM) = M_ZERO
+    FLOAT   :: r0(MAX_DIM)       = M_ZERO  !< vector at the maximum of the pulse
+    FLOAT   :: width             = M_ZERO  !< the width of the pulse
+    FLOAT   :: a0                = M_ZERO
+    FLOAT   :: dx                = M_ZERO !< the space-discretization value.
+    FLOAT   :: init_x            = M_ZERO
+    FLOAT   :: final_x           = M_ZERO
+    FLOAT   :: gr                = M_ZERO
+    integer :: niter             = 0
+    integer :: nfreqs            = 0
 
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
@@ -310,7 +310,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_const_wave(f, a0, k_vector, r0)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3)
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM)
 
     PUSH_SUB(mxf_init_const_wave)
 
@@ -329,7 +329,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_const_phase(f, a0, k_vector, r0)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3)
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM)
 
     PUSH_SUB(mxf_init_const_phase)
 
@@ -348,7 +348,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_gaussian_wave(f, a0, k_vector, r0, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), width
 
     PUSH_SUB(mxf_init_gaussian_wave)
 
@@ -368,7 +368,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_cosinoidal_wave(f, a0, k_vector, r0, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), width
 
     PUSH_SUB(mxf_init_cosinoidal_wave)
 
@@ -388,7 +388,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), gr, width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), gr, width
 
     PUSH_SUB(mxf_init_logistic_wave)
 
@@ -410,7 +410,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), gr, width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), gr, width
 
     PUSH_SUB(mxf_init_trapezoidal_wave)
 
