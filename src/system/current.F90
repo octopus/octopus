@@ -153,7 +153,7 @@ contains
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
+    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
  
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
@@ -204,12 +204,12 @@ contains
       call accel_set_kernel_arg(kernel, 0, psib%nst)
       call accel_set_kernel_arg(kernel, 1, der%mesh%np)
       call accel_set_kernel_arg(kernel, 2, buff_weight)
-      call accel_set_kernel_arg(kernel, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
-      call accel_set_kernel_arg(kernel, 5, gpsib(1)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 6, gpsib(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 7, gpsib(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack%size(1)))
+      call accel_set_kernel_arg(kernel, 3, psib%ff_device)
+      call accel_set_kernel_arg(kernel, 4, log2(psib%pack_size(1)))
+      call accel_set_kernel_arg(kernel, 5, gpsib(1)%ff_device)
+      call accel_set_kernel_arg(kernel, 6, gpsib(2)%ff_device)
+      call accel_set_kernel_arg(kernel, 7, gpsib(3)%ff_device)
+      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack_size(1)))
       call accel_set_kernel_arg(kernel, 9, buff_current)
       
       wgsize = accel_kernel_workgroup_size(kernel)
@@ -245,7 +245,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+                + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
           end do
@@ -254,7 +254,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%states(ii)%zpsi(ip, 1))*gpsib(idir)%states(ii)%zpsi(ip, 1))
+                + ww*aimag(conjg(psib%zff(ip, 1, ii))*gpsib(idir)%zff(ip, 1, ii))
             end do
             !$omp end parallel do
           end do          
@@ -287,7 +287,6 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     class(wfs_elec_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -305,7 +304,7 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    allocate(wfs_elec_t::commpsib(1:der%mesh%sb%dim))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%mesh%sb%dim))
 
     current = M_ZERO
     current_kpt = M_ZERO
@@ -408,10 +407,11 @@ contains
             !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
             !along the Cartesian axis.
             ASSERT(.not.der%mesh%sb%nonorthogonal)
+            ! this should now take non-orthogonal axis into account, but needs more testing
             do idir = 1, der%mesh%sb%dim
               call epsib%copy_to(commpsib(idir))
-              call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
+            call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
@@ -888,8 +888,8 @@ contains
     FLOAT,          intent(in)    :: time
     FLOAT,          intent(inout) :: current(:,:)
 
-    integer :: ip, jn, idir, il
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), omega, shift, width, amp(MAX_DIM)
+    integer :: ip, jn, idir
+    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
 
     PUSH_SUB(external_current_calculation)

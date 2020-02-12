@@ -285,8 +285,7 @@ contains
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
     integer :: idim, nlines, ncols, il
-    FLOAT   :: zero_dummy(MAX_DIM), pos(MAX_DIM)
-    character(len=1024)  :: string(MAX_DIM)
+    FLOAT   :: pos(MAX_DIM)
 
     PUSH_SUB(states_mxll_init)
 
@@ -399,26 +398,25 @@ contains
     SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%d%dim))
     st%rs_current_density_restart_t2 = M_z0
 
-!    call batch_init(st%rsb, st%d%dim, 1)
-    !call st%rsb%zallocate(1, 1, mesh%np_part)
+    !call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part)
     !call batch_set_zero(st%rsb)
 
-!    call batch_init(st%rs_transb, st%d%dim, 1)
-!    call st%rs_transb%zallocate(1, 1, mesh%np_part)
-!    call batch_set_zero(st%rs_transb)
+    !call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part)
+    !call batch_set_zero(st%rs_transb)
  
-!    call batch_init(st%rs_longb, st%d%dim, 1)
-!    call st%rs_longb%zallocate(1, 1, mesh%np_part)
-!    call batch_set_zero(st%rs_longb)
+    !call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part)
+    !call batch_set_zero(st%rs_longb)
 
-    ! call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
-    ! call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    ! call batch_set_zero(st%rs_curr_dens_rest1b)
-    
-    ! call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
-    ! call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    ! call batch_set_zero(st%rs_curr_dens_rest2b)
+    !call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part)
+    !call batch_set_zero(st%rs_curr_dens_rest1b)
+    !
+    !call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part)
+    !call batch_set_zero(st%rs_curr_dens_rest2b)
    
+!    Another alternative
+!    call batch_init(st%rs_state_transb, hm%d%dim, 1, 1, st%rs_state_trans)
+!    call st%rs_state_transb%end()
+
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
 
@@ -735,7 +733,7 @@ contains
     type(states_mxll_t), intent(in)      :: st
     type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, mpi_err, pos_index_local, pos_index_global, rankmin, ip_global
+    integer :: ip, pos_index_local, pos_index_global, rankmin
     FLOAT   :: dmin
     CMPLX   :: ztmp(MAX_DIM)
     CMPLX, allocatable :: ztmp_global(:)

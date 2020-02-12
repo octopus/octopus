@@ -119,34 +119,41 @@ contains
 
     select case(this%status())
     case(BATCH_DEVICE_PACKED)
-      call accel_set_buffer_to_zero(this%pack%buffer, this%type(), product(this%pack%size))
+      call accel_set_buffer_to_zero(this%ff_device, this%type(), product(this%pack_size))
 
     case(BATCH_PACKED)
       if(this%type() == TYPE_FLOAT) then
         !$omp parallel do schedule(static)
-        do ip = 1, this%pack%size(2)
-          do ist = 1, this%pack%size(1)
-            this%pack%dpsi(ist, ip) = M_ZERO
+        do ip = 1, this%pack_size(2)
+          do ist = 1, this%pack_size(1)
+            this%dff_pack(ist, ip) = M_ZERO
           end do
         end do
       else
         !$omp parallel do schedule(static)
-        do ip = 1, this%pack%size(2)
-          do ist = 1, this%pack%size(1)
-            this%pack%zpsi(ist, ip) = M_z0
+        do ip = 1, this%pack_size(2)
+          do ist = 1, this%pack_size(1)
+            this%zff_pack(ist, ip) = M_z0
           end do
         end do
       end if
 
     case(BATCH_NOT_PACKED)
-      !$omp parallel do schedule(static)
-      do ist_linear = 1, this%nst_linear
-        if(associated(this%states_linear(ist_linear)%dpsi)) then
-          this%states_linear(ist_linear)%dpsi = M_ZERO
-        else
-          this%states_linear(ist_linear)%zpsi = M_z0
-        end if
-      end do
+      if(this%type() == TYPE_FLOAT) then
+        do ist_linear = 1, this%nst_linear
+          !$omp parallel do schedule(static)
+          do ip = 1, ubound(this%dff_linear, dim=1)
+            this%dff_linear(ip, ist_linear) = M_ZERO
+          end do
+        end do
+      else
+        do ist_linear = 1, this%nst_linear
+          !$omp parallel do schedule(static)
+          do ip = 1, ubound(this%zff_linear, dim=1)
+            this%zff_linear(ip, ist_linear) = M_z0
+          end do
+        end do
+      end if
 
     case default
       ASSERT(.false.)
@@ -188,12 +195,12 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     call accel_set_kernel_arg(kernel, 1, ep)
     call accel_set_kernel_arg(kernel, 2, offset*tsize)
     call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
-    call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
-    call accel_set_kernel_arg(kernel, 5, this%pack%size_real(1))
+    call accel_set_kernel_arg(kernel, 4, this%ff_device)
+    call accel_set_kernel_arg(kernel, 5, this%pack_size_real(1))
     call accel_set_kernel_arg(kernel, 6, psi)
     call accel_set_kernel_arg(kernel, 7, ldpsi*tsize)
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
+    call accel_kernel_run(kernel, (/this%pack_size_real(1), ep - sp + 1/), (/this%pack_size_real(1), 1/))
 
   end select
 
@@ -235,10 +242,10 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
     call accel_set_kernel_arg(kernel, 3, this%nst_linear*tsize)
     call accel_set_kernel_arg(kernel, 4, psi)
     call accel_set_kernel_arg(kernel, 5, ldpsi*tsize)
-    call accel_set_kernel_arg(kernel, 6, this%pack%buffer)
-    call accel_set_kernel_arg(kernel, 7, this%pack%size_real(1))
+    call accel_set_kernel_arg(kernel, 6, this%ff_device)
+    call accel_set_kernel_arg(kernel, 7, this%pack_size_real(1))
 
-    call accel_kernel_run(kernel, (/this%pack%size_real(1), ep - sp + 1/), (/this%pack%size_real(1), 1/))
+    call accel_kernel_run(kernel, (/this%pack_size_real(1), ep - sp + 1/), (/this%pack_size_real(1), 1/))
 
   end select
 

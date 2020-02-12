@@ -681,6 +681,31 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   POP_SUB(X(mf_multipoles))
 end subroutine X(mf_multipoles)
 
+! -----------------------------------------------------------------------------
+!> This routine calculates the dipole of a function ff, for arbitrary dimensions
+subroutine X(mf_dipole) (mesh, ff, dipole, inside)
+  type(mesh_t),      intent(in)  :: mesh
+  R_TYPE,            intent(in)  :: ff(:)
+  R_TYPE,            intent(out) :: dipole(:) !< (mesh%sb%dim)
+  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+
+  integer :: idim
+  R_TYPE, allocatable :: ff2(:)
+
+  PUSH_SUB(X(mf_dipole))
+
+  ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
+
+  SAFE_ALLOCATE(ff2(1:mesh%np))
+
+  do idim = 1, mesh%sb%dim
+    ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = inside)
+  end do
+
+  SAFE_DEALLOCATE_A(ff2)
+  POP_SUB(X(mf_dipole))
+end subroutine X(mf_dipole)
 
 !--------------------------------------------------------------
 subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)

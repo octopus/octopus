@@ -127,7 +127,7 @@ contains
     integer :: ist, ip, ispin
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    CMPLX, allocatable :: psi(:), fpsi(:), zpsi(:, :)
+    CMPLX, allocatable :: psi(:), fpsi(:)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     integer            :: wgsize
@@ -140,7 +140,7 @@ contains
     ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%states(ist)%ist, psib%ik)
+    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
 
     if (.not. this%gr%have_fine_mesh) then 
 
@@ -153,7 +153,7 @@ contains
               if(abs(weight(ist)) <= M_EPSILON) cycle
               !$omp parallel do simd schedule(static)
               do ip = 1, this%gr%mesh%np
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff(ip, 1, ist)**2
               end do
             end do
           else
@@ -162,7 +162,7 @@ contains
               !$omp parallel do schedule(static)
               do ip = 1, this%gr%mesh%np
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
+                  real(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist), REAL_PRECISION)
               end do
             end do
           end if
@@ -171,8 +171,8 @@ contains
             if(abs(weight(ist)) <= M_EPSILON) cycle
             !$omp parallel do schedule(static) private(psi1, psi2, term)
             do ip = 1, this%gr%mesh%np          
-              psi1 = psib%states(ist)%zpsi(ip, 1)
-              psi2 = psib%states(ist)%zpsi(ip, 2)
+              psi1 = psib%zff(ip, 1, ist)
+              psi2 = psib%zff(ip, 2, ist)
               this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
               this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
               term = weight(ist)*psi1*conjg(psi2)
@@ -190,7 +190,7 @@ contains
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff_pack(ist, ip)**2
               end do
             end do
           else
@@ -198,7 +198,7 @@ contains
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
+                  real(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip), REAL_PRECISION)
               end do
             end do
           end if
@@ -207,8 +207,8 @@ contains
           !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              psi1 = psib%pack%zpsi(2*ist - 1, ip)
-              psi2 = psib%pack%zpsi(2*ist,     ip)
+              psi1 = psib%zff_pack(2*ist - 1, ip)
+              psi2 = psib%zff_pack(2*ist,     ip)
               term = weight(ist)*psi1*conjg(psi2)
 
               this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
@@ -237,8 +237,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         
         case (SPINORS)
@@ -248,8 +248,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp)
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         end select
 
@@ -294,7 +294,7 @@ contains
       end do
 
 
-      ! For this to work again, a namespace has to be available. I don't make
+      ! For this to work again, a namespace has to be available. I don`t make
       ! the change now because this debugging output has been commented out for
       ! 4 years. - SO
       ! some debugging output that I will keep here for the moment, XA
@@ -503,7 +503,6 @@ contains
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
-#if defined(HAVE_MPI) 
 
       do ik = st%d%kpt%start, st%d%kpt%end
         !We cound how many states we have to send, and how many we  will receive
@@ -530,14 +529,18 @@ contains
           else
             if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
               call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+#if defined(HAVE_MPI)
               call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
                     st%mpi_grp%comm, mpi_err)
+#endif
               nsend = nsend -1
-            end if          
+            end if
 
             if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
+#if defined(HAVE_MPI)
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
                  ist, st%mpi_grp%comm, status, mpi_err)
+#endif
               call states_elec_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
               nreceiv= nreceiv-1
             end if
@@ -546,6 +549,7 @@ contains
       end do
 
       ! Add a barrier to ensure that the process are synchronized
+#if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
    

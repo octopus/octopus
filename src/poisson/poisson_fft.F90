@@ -60,10 +60,11 @@ module poisson_fft_oct_m
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
+    FLOAT                    :: singularity !< Value of the Coulomb potential at the singularity
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
+  subroutine poisson_fft_init(this, namespace, mesh, cube, kernel, soft_coulb_param, qq, fullcube, singul)
     type(poisson_fft_t), intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
@@ -71,12 +72,17 @@ contains
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
-    type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kerenl
+    type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kernel
+    FLOAT, optional,     intent(in)    :: singul
 
     PUSH_SUB(poisson_fft_init)
 
     this%kernel = kernel
     this%qq = M_ZERO
+
+    !We must define the singularity if we specify a q vector
+    this%singularity = optional_default(singul, M_ZERO)
+    ASSERT(present(qq) .eqv. present(singul))
 
     if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
@@ -233,7 +239,8 @@ contains
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
           else
-            fft_Coulb_FS(ix, iy, iz) = M_ZERO
+            !We use the user-defined value of the singularity
+            fft_Coulb_FS(ix, iy, iz) = this%singularity
           end if
         end do
       end do
@@ -780,7 +787,7 @@ contains
     type(cube_t),        intent(inout) :: cube
     FLOAT,               intent(in)    :: poisson_soft_coulomb_param
 
-    integer            :: ix
+    integer            :: ix, ixx
     FLOAT              :: g
     FLOAT, allocatable :: fft_coulb_fs(:, :, :)
 
@@ -791,8 +798,11 @@ contains
 
     ! Fourier transform of Soft Coulomb interaction.
     do ix = 1, cube%fs_n_global(1)
-      g = ix*M_PI/mesh%sb%lsize(1) ! note that g is always positive with this definition
-      fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*g)
+      ixx = pad_feq(ix, cube%rs_n_global(1), .true.)
+      g = (ixx + this%qq(1))*M_PI/mesh%sb%lsize(1)
+      if(abs(g) > CNST(1e-6)) then
+        fft_coulb_fs(ix, 1, 1) = M_TWO * loct_bessel_k0(poisson_soft_coulomb_param*abs(g))
+      end if
     end do
 
     call dfourier_space_op_init(this%coulb, cube, fft_coulb_fs)

@@ -271,7 +271,6 @@
     type(geometry_t),          intent(in)    :: geo
     type(output_t),            intent(in)    :: outp
 
-    character(len=MAX_PATH_LEN) :: fname
     integer :: ierr
 
     PUSH_SUB(output_energy_density_mxll)
@@ -416,7 +415,6 @@
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
 
-    character(len=MAX_PATH_LEN) :: fname
     integer :: ierr
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: dtmp_1(:,:), dtmp_2(:)
@@ -492,11 +490,6 @@
     type(grid_t),              intent(in)    :: gr
     type(geometry_t),          intent(in)    :: geo
 
-    character(len=MAX_PATH_LEN) :: fname
-    integer :: ierr
-    type(unit_t) :: fn_unit
-    FLOAT, allocatable :: dtmp(:)
-
     message(1) = "Maxwell-matter coupling potentials not implemented yet."
     call messages_fatal(1, namespace=namespace)
 
@@ -517,13 +510,6 @@
     type(geometry_t),          intent(in)    :: geo
     FLOAT,                     intent(in)    :: time
 
-    character(len=MAX_PATH_LEN) :: fname
-    integer                     :: ierr, idim
-    CMPLX, allocatable          :: rs_density_ext(:,:)
-    CMPLX, allocatable          :: ztmp_1(:,:), ztmp_2(:), ztmp_3(:,:)
-    FLOAT, allocatable          :: dtmp_1(:,:)
-    type(unit_t)                :: fn_unit
-
     message(1) = "Current density can not yet be calculated in a Maxwell propagation."
     call messages_fatal(1, namespace=namespace)
 
@@ -543,7 +529,6 @@
 
     character(len=MAX_PATH_LEN) :: fname
     integer                     :: ierr, idim
-    CMPLX, allocatable          :: rs_density_ext(:,:)
     CMPLX, allocatable          :: ztmp(:,:)
     FLOAT, allocatable          :: dtmp(:,:)
     type(unit_t)                :: fn_unit
@@ -582,13 +567,11 @@
     type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(geometry_t),              intent(in)    :: geo
 
-    character(len=MAX_PATH_LEN) :: fname
     integer :: ierr
     type(unit_t) :: fn_unit
-    FLOAT              :: density_diff_sum
     FLOAT, allocatable :: dtmp_1(:,:), dtmp_2(:)
 
-     PUSH_SUB(output_charge_density_mxll)
+    PUSH_SUB(output_charge_density_mxll)
 
     ! charge density calculated by the divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
@@ -619,7 +602,7 @@
     type(states_elec_t),      optional, intent(in)    :: st_elec
     type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
 
-    integer                     :: is, idim, ip, ierr
+    integer                     :: idim, ip, ierr
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t)                :: fn_unit
     FLOAT, allocatable          :: polarization_ma_gr(:,:), polarization_mx_gr(:,:), E_field(:,:), D_field(:,:), e_susceptibility(:)
@@ -670,12 +653,10 @@
     type(states_elec_t),      optional, intent(inout) :: st_elec
     type(hamiltonian_elec_t), optional, intent(in)    :: hm_elec
 
-    integer                     :: is, idim, ip, ierr
+    integer                     :: idim, ip, ierr
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t)                :: fn_unit
-    type(current_t)             :: current_calc
     FLOAT, allocatable          :: magnetization_ma_gr(:,:), magnetization_mx_gr(:,:), B_field(:,:), H_field(:,:), b_susceptibility(:)
-    FLOAT, allocatable          :: current(:,:,:)
 
     PUSH_SUB(output_medium_variables_magnetic)
 

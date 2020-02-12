@@ -62,10 +62,9 @@ contains
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
 
-    integer :: j, is, ib, ik, i
+    integer :: j, is, i
     FLOAT :: atime(2)
     FLOAT, allocatable :: vaux(:, :, :), pot(:)
-    CMPLX, allocatable :: psi(:, :)
 
     PUSH_SUB(propagator_dt.td_magnus)
 
@@ -129,7 +128,6 @@ contains
     type(geometry_t),                 intent(inout) :: geo
     integer,                          intent(in)    :: iter
 
-    integer :: ik, ib
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
 

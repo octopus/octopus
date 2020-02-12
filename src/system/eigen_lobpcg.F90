@@ -20,6 +20,7 @@
 
 module eigen_lobpcg_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m

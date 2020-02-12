@@ -89,7 +89,7 @@ module orbitalset_oct_m
 
     logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
 
-    type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
+    type(poisson_t)     :: poisson            !> For computing the Coulomb integrals
   end type orbitalset_t
 
 contains

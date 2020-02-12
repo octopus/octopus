@@ -536,7 +536,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv, forced_finish_tmp
+    logical :: finish, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -547,6 +547,9 @@ contains
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
+#ifdef HAVE_MPI
+    logical :: forced_finish_tmp    
+#endif
 
     PUSH_SUB(scf_run)
 
@@ -651,7 +654,7 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psioutb, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
@@ -1031,8 +1034,8 @@ contains
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb, geo, gr%mesh, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
+          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
@@ -1051,10 +1054,6 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1090,7 +1089,7 @@ contains
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
+          call write_magnetic_moments(stdout, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         end if
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
@@ -1185,7 +1184,7 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
+        call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 

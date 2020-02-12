@@ -245,6 +245,7 @@ contains
     type(system_t) :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
+    CMPLX, allocatable :: psi(:, :)
 
     PUSH_SUB(test_projector)
 
@@ -271,13 +272,17 @@ contains
     call batch_set_zero(epsib)
 
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
+      call zproject_psi_batch(sys%gr%mesh, sys%gr%der%boundaries, sys%hm%ep%proj,  &
+                              sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
     end do
 
+    SAFE_ALLOCATE(psi(sys%gr%mesh%np, sys%st%d%dim))
     do itime = 1, epsib%nst
-      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
+      call batch_get_state(epsib, itime, sys%gr%mesh%np, psi)
+      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, psi)
       call messages_info(1)
     end do
+    SAFE_DEALLOCATE_A(psi)
 
     call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
@@ -320,13 +325,11 @@ contains
     !Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace)
     if (states_are_real(sys%st)) then
-      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
+      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
       SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
-      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
+      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
       SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
@@ -860,23 +863,33 @@ contains
     class(batch_t),      intent(inout) :: psib
 
     integer :: itime
+    CMPLX, allocatable :: zpsi(:, :)
+    FLOAT, allocatable :: dpsi(:, :)
 
     PUSH_SUB(test_prints_info_batch)
 
-    if (psib%is_packed()) then
-      call psib%do_unpack(force = .true.)
+    if(states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%dim))
+    else
+      SAFE_ALLOCATE(zpsi(gr%mesh%np, st%d%dim))
     end if
 
     do itime = 1, psib%nst
       if(states_are_real(st)) then
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%dpsi)
+        call batch_get_state(psib, itime, gr%mesh%np, dpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
       else
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%zpsi)
+        call batch_get_state(psib, itime, gr%mesh%np, zpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
       end if
       call messages_info(1)
     end do
+
+    if(states_are_real(st)) then
+      SAFE_DEALLOCATE_A(dpsi)
+    else
+      SAFE_DEALLOCATE_A(zpsi)
+    end if
 
     POP_SUB(test_prints_info_batch)
 

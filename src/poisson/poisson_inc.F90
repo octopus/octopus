@@ -62,47 +62,75 @@ subroutine X(poisson_solve_finish)(this, pot)
 end subroutine X(poisson_solve_finish)
 
 
-  !> Calculates the Poisson equation.
-  !! Given the density returns the corresponding potential.
-  !!
-  !! Different solvers are available that can be chosen in the input file
-  !! with the "PoissonSolver" parameter
-  subroutine X(poisson_solve_sm)(this, sm, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    type(submesh_t),      intent(in)    :: sm
-    R_TYPE,               intent(inout) :: pot(:) !< Local size of the \b potential vector. 
-    R_TYPE,               intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
-    !> Is the Poisson solver allowed to utilise
-    !! all nodes or only the domain nodes for
-    !! its calculations? (Defaults to .true.)
-    logical, optional,    intent(in)    :: all_nodes
-    type(derivatives_t), pointer :: der
+!> Calculates the Poisson equation.
+!! Given the density returns the corresponding potential.
+!!
+!! Different solvers are available that can be chosen in the input file
+!! with the "PoissonSolver" parameter
+subroutine X(poisson_solve_sm)(this, sm, pot, rho, all_nodes)
+  type(poisson_t),      intent(in)    :: this
+  type(submesh_t),      intent(in)    :: sm
+  R_TYPE,               intent(inout) :: pot(:) !< Local size of the \b potential vector. 
+  R_TYPE,               intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
+  !> Is the Poisson solver allowed to utilise
+  !! all nodes or only the domain nodes for
+  !! its calculations? (Defaults to .true.)
+  logical, optional,    intent(in)    :: all_nodes
+  type(derivatives_t), pointer :: der
 
-    logical               :: all_nodes_value
-    type(profile_t), save :: prof
+  logical               :: all_nodes_value
+  type(profile_t), save :: prof
+#ifdef R_TCOMPLEX
+  FLOAT, allocatable :: aux1(:), aux2(:)
+#endif
 
-    call profiling_in(prof, 'POISSON_SOLVE_SM')
-    PUSH_SUB(X(poisson_solve_sm))
+  call profiling_in(prof, 'POISSON_SOLVE_SM')
+  PUSH_SUB(X(poisson_solve_sm))
 
-    der => this%der
+  der => this%der
 
-    ASSERT(ubound(pot, dim = 1) == sm%np_part .or. ubound(pot, dim = 1) == sm%np)
-    ASSERT(ubound(rho, dim = 1) == sm%np_part .or. ubound(rho, dim = 1) == sm%np)
+  ASSERT(ubound(pot, dim = 1) == sm%np_part .or. ubound(pot, dim = 1) == sm%np)
+  ASSERT(ubound(rho, dim = 1) == sm%np_part .or. ubound(rho, dim = 1) == sm%np)
 
-    ! Check optional argument and set to default if necessary.
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+  ! Check optional argument and set to default if necessary.
+  if(present(all_nodes)) then
+    all_nodes_value = all_nodes
+  else
+    all_nodes_value = this%all_nodes_default
+  end if
 
-    ASSERT(this%method /= POISSON_NULL)
-    ASSERT(this%der%mesh%sb%dim /= 1)
+  ASSERT(this%method /= POISSON_NULL)
+  ASSERT(this%der%mesh%sb%dim /= 1)
+
+  select case(this%method)
+  case(POISSON_DIRECT_SUM)
     call X(poisson_solve_direct_sm)(this, sm, pot, rho)
+  case(POISSON_ISF)
+#ifdef R_TREAL
+    call poisson_isf_solve(this%isf_solver, sm%mesh, this%cube, pot, rho, all_nodes_value, sm) 
+#else
+    SAFE_ALLOCATE(aux1(1:sm%np))
+    SAFE_ALLOCATE(aux2(1:sm%np))
+    ! first the real part
+    aux1(1:sm%np) = real(rho(1:sm%np))
+    aux2(1:sm%np) = real(pot(1:sm%np))
+    call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, aux2, aux1, all_nodes_value, sm)
+    pot(1:sm%np)  = aux2(1:sm%np)
 
-    POP_SUB(X(poisson_solve_sm))
-    call profiling_out(prof)
-  end subroutine X(poisson_solve_sm)
+    ! now the imaginary part
+    aux1(1:sm%np) = aimag(rho(1:sm%np))
+    aux2(1:sm%np) = aimag(pot(1:sm%np))
+    call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, aux2, aux1, all_nodes_value, sm)
+    pot(1:sm%np) = pot(1:sm%np) + M_zI*aux2(1:sm%np)
+
+    SAFE_DEALLOCATE_A(aux1)
+    SAFE_DEALLOCATE_A(aux2)
+#endif
+  end select
+
+  POP_SUB(X(poisson_solve_sm))
+  call profiling_out(prof)
+end subroutine X(poisson_solve_sm)
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

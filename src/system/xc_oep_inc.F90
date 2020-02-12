@@ -28,7 +28,7 @@
 subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_oep_t),           intent(inout) :: oep
   type(namespace_t),        intent(in)    :: namespace
-  type(xc_t),               intent(in)    :: xcs
+  type(xc_t),               intent(inout) :: xcs
   logical,                  intent(in)    :: apply_sic_pz
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -74,7 +74,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       select case(xcs%functional(ixc,1)%id)
       case(XC_OEP_X)
         sum_comp: do jdm = 1, st%d%dim
-          call X(oep_x) (namespace, gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%exx_coef)
+          call X(oep_x) (namespace, gr%der, hm%psolver, st, is, jdm, oep%X(lxc), eig, xcs%cam_alpha)
         end do sum_comp
         ex = ex + eig
       end select
@@ -82,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec, hm%exxop)
     end if
     ! calculate uxc_bar for the occupied states
 

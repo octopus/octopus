@@ -111,6 +111,11 @@ contains
 
     ASSERT(associated(this%group%psib))
 
+    if(this%mpi_grp%size == 1) then 
+      POP_SUB(states_elec_parallel_remote_access_start)
+      return
+    end if
+
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
     
     do iqn = this%d%kpt%start, this%d%kpt%end
@@ -136,6 +141,8 @@ contains
     type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
+
+    if(.not.allocated(this%group%rma_win)) return
     
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
@@ -175,28 +182,34 @@ contains
     
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
+      call profiling_out(prof)
+      POP_SUB(states_elec_parallel_get_block)
+      return
     else
-      allocate(wfs_elec_t::psib)
-      call wfs_elec_init(psib, this%d%dim, this%group%block_size(ib), iqn)
+      SAFE_ALLOCATE_TYPE(wfs_elec_t, psib)
 
       if(states_are_real(this)) then
-        call psib%dallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call dwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       else
-        call psib%zallocate(this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call zwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       end if
-      
+
+      ASSERT(allocated(this%group%rma_win))      
+
       call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
       if(states_are_real(this)) then
-        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+        call MPI_Get(psib%dff_pack(1, 1), product(psib%pack_size), MPI_FLOAT, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_FLOAT, &
           this%group%rma_win(ib, iqn), mpi_err)
       else
-        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+        call MPI_Get(psib%zff_pack(1, 1), product(psib%pack_size), MPI_CMPLX, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_CMPLX, &
           this%group%rma_win(ib, iqn), mpi_err)
       end if
         

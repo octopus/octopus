@@ -129,7 +129,7 @@ contains
 
     dim4syms = min(3,dim)
 
-    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = (geo%natoms < 100) .or. periodic_dim > 0
     def_sym_comp = def_sym_comp .and. dim == 3
     
     !%Variable SymmetriesCompute
@@ -141,6 +141,7 @@ contains
     !%
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
+    !% For periodic systems, the default is always true, irrespective of the number of atoms.
     !%End
     call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 

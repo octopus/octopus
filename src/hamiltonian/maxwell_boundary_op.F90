@@ -1647,7 +1647,7 @@ contains
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
 
-    test_limit = 10**(-9)
+    test_limit = CNST(10.0e-9)
 
     !%Variable UserDefinedMaxwellIncidentWaves
     !%Type block
@@ -1768,8 +1768,8 @@ contains
           call messages_info(4)
           call mxf_read(bc%plane_waves_mx_function(il), namespace, trim(mxf_expression), ierr)
           if (ierr /= 0) then            
-            write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), '"" field defined in the &
-                                      UserDefinedMaxwellIncidentWaves block'
+            write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), &
+              '"" field defined in the UserDefinedMaxwellIncidentWaves block'
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
@@ -1813,8 +1813,8 @@ contains
           call messages_info(3)
           !call mxf_read(bc%plane_waves_mx_function(il), trim(mxf_expression), ierr)
           !if (ierr /= 0) then            
-          !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), '" field defined in the &
-          !                            UserDefinedMaxwellIncidentWaves block'
+          !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), &
+          !    '" field defined in the UserDefinedMaxwellIncidentWaves block'
           !  call messages_fatal(1, namespace=namespace)
           !end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)

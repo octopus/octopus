@@ -72,9 +72,9 @@ contains
         call parse_block_integer(blk, isys - 1, 1, system_type)
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
-          allocate(system_t::system)
+          SAFE_ALLOCATE_TYPE(system_t, system)
         case (SYSTEM_MAXWELL)
-          allocate(system_mxll_t::system)
+          SAFE_ALLOCATE_TYPE(system_mxll_t, system)
         case default
           call messages_input_error('Systems')
         end select

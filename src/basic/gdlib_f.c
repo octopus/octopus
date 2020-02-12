@@ -27,29 +27,22 @@
 #include <assert.h>
 #include <gd.h>
 
-#include "string_f.h" /* Fortran <-> C string compatibility issues */
-
 /* ---------------------- Interface to GD functions ------------------------ */
-gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
-  (STR_F_TYPE name STR_ARG1)
+gdImagePtr gdlib_image_create_from(char * name)
 {
-  char *name_c, *ext;
+  char *ext;
   FILE *in;
   gdImagePtr im;
 
-  TO_C_STR1(name, name_c);
-
-  if((in = fopen(name_c, "rb")) == NULL) {
-    free(name_c);
+  if((in = fopen(name, "rb")) == NULL) {
     return NULL; /* could not open file */
   }
 
   /* get extension of filename */
-  for(ext=name_c+strlen(name_c); *ext!='.' && ext>=name_c; ext--){
+  for(ext=name+strlen(name); *ext!='.' && ext>=name; ext--){
     *ext = tolower(*ext);
   }
-  if(ext < name_c || ext == name_c+strlen(name_c)) {
-    free(name_c);
+  if(ext < name || ext == name+strlen(name)) {
     fclose(in);
     return NULL; /* could not find file type */
   }
@@ -77,28 +70,24 @@ gdImagePtr FC_FUNC_(oct_gdimage_create_from, OCT_GDIMAGE_CREATE_FROM)
 
   fclose(in);
 
-  free(name_c);
   return im;
 }
 
-int FC_FUNC_(oct_gdimage_sx, OCT_GDIMAGE_SX)
-  (const gdImagePtr *im)
+int gdlib_image_sx(const gdImagePtr *im)
 {
   assert(*im != NULL);
 
   return gdImageSX(*im);
 }
 
-int FC_FUNC_(oct_gdimage_sy, OCT_GDIMAGE_SY)
-  (const gdImagePtr *im)
+int gdlib_image_sy(const gdImagePtr *im)
 {
   assert(*im != NULL);
 
   return gdImageSY(*im);
 }
 
-void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
-  (const gdImagePtr *im, const int *x, const int *y, int *r, int *g, int *b)
+void gdlib_image_get_pixel_rgb(const gdImagePtr *im, const int *x, const int *y, int *r, int *g, int *b)
 {
   int color;
 
@@ -114,14 +103,6 @@ void FC_FUNC_(oct_gdimage_get_pixel_rgb, OCT_GDIMAGE_GET_PIXEL_RGB)
     //    fprintf(stderr, "Illegal pixel coordinate %d %d\n", *x, *y);
     *r = 0; *g = 0; *b = 0;
   }
-}
-
-void FC_FUNC_(oct_gdimagedestroy, OCT_GDIMAGEDESTROY)
-  (const gdImagePtr *im)
-{
-  assert(*im != NULL);
-
-  gdImageDestroy(*im);
 }
 
 #else

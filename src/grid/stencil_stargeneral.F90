@@ -45,9 +45,9 @@ contains
     
     integer :: dim
     FLOAT   :: vec1(1:3), vec2(1:3), theta(3)
-    integer :: arm(1:3), order(27)
+    integer :: arm(1:3)
     integer :: ii, jj, kk
-    FLOAT   :: norm, min_norm(3), norms(27)
+    FLOAT   :: norm, min_norm(3)
     
     PUSH_SUB(stencil_stargeneral_get_arms)  
 

@@ -16,9 +16,10 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(accel_write_buffer_0)(this, data)
+subroutine X(accel_write_buffer_0)(this, data, async)
   type(accel_mem_t),               intent(inout) :: this
   R_TYPE,                          intent(in)    :: data
+  logical,               optional, intent(in)    :: async
 
   R_TYPE, allocatable :: data_vec(:)
   
@@ -28,7 +29,7 @@ subroutine X(accel_write_buffer_0)(this, data)
 
   data_vec(1:1) = data
 
-  call X(accel_write_buffer_1)(this, 1, data_vec)
+  call X(accel_write_buffer_1)(this, 1, data_vec, async=async)
   
   SAFE_DEALLOCATE_A(data_vec)
   
@@ -37,13 +38,15 @@ end subroutine X(accel_write_buffer_0)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(accel_write_buffer_1)(this, size, data, offset)
+subroutine X(accel_write_buffer_1)(this, size, data, offset, async)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -58,6 +61,8 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
     
 #ifdef HAVE_OPENCL
@@ -65,11 +70,11 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%mem, data(1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
 
   end if
   
@@ -80,13 +85,15 @@ end subroutine X(accel_write_buffer_1)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(accel_write_buffer_2)(this, size, data, offset)
+subroutine X(accel_write_buffer_2)(this, size, data, offset, async)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -101,6 +108,8 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
     
 #ifdef HAVE_OPENCL
@@ -108,11 +117,11 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%mem, data(1, 1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1, 1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
     
   end if
     
@@ -123,13 +132,15 @@ end subroutine X(accel_write_buffer_2)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(accel_write_buffer_3)(this, size, data, offset)
+subroutine X(accel_write_buffer_3)(this, size, data, offset, async)
   type(accel_mem_t),               intent(inout) :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(in)    :: data(:, :, :)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -144,6 +155,8 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = int(offset, 8)*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
   
 #ifdef HAVE_OPENCL
@@ -151,11 +164,11 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1, 1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
 
   end if
   
@@ -166,13 +179,15 @@ end subroutine X(accel_write_buffer_3)
 
 ! -----------------------------------------------------------------------------
 
-subroutine X(accel_read_buffer_1)(this, size, data, offset)
+subroutine X(accel_read_buffer_1)(this, size, data, offset, async)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -187,6 +202,8 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
     
 #ifdef HAVE_OPENCL
@@ -194,11 +211,11 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%mem, data(1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
 
   end if
     
@@ -209,13 +226,15 @@ end subroutine X(accel_read_buffer_1)
 
 ! ---------------------------------------------------------------------------
 
-subroutine X(accel_read_buffer_2)(this, size, data, offset)
+subroutine X(accel_read_buffer_2)(this, size, data, offset, async)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -230,6 +249,8 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
     
 #ifdef HAVE_OPENCL
@@ -237,11 +258,11 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%mem, data(1, 1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1, 1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
 
   end if
   
@@ -252,13 +273,15 @@ end subroutine X(accel_read_buffer_2)
 
 ! ---------------------------------------------------------------------------
 
-subroutine X(accel_read_buffer_3)(this, size, data, offset)
+subroutine X(accel_read_buffer_3)(this, size, data, offset, async)
   type(accel_mem_t),               intent(in)    :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
   integer,                optional, intent(in)    :: offset
+  logical,                optional, intent(in)    :: async
 
   integer(8) :: fsize, offset_
+  logical :: async_
 #ifdef HAVE_OPENCL
   integer :: ierr
 #endif
@@ -273,6 +296,8 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
   offset_ = 0
   if(present(offset)) offset_ = offset*R_SIZEOF
 
+  async_ = optional_default(async, .false.)
+
   if(fsize > 0) then
     
 #ifdef HAVE_OPENCL
@@ -280,11 +305,11 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%mem, data(1, 1, 1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1, 1, 1), fsize, offset_, async_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1, 1))
-    call accel_finish()
+    if (.not. async_) call accel_finish()
 
   end if
   

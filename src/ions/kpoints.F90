@@ -61,7 +61,8 @@ module kpoints_oct_m
     kpoints_path_generate,        &
     kpoints_to_reduced,           & 
     kpoints_fold_to_1BZ,          &
-    kpoints_grid_end
+    kpoints_grid_end,             & 
+    kpoints_nkpt_in_path
 
   type kpoints_grid_t
     ! Components are public by default
@@ -641,7 +642,7 @@ contains
         !Sanity check
         ncols = parse_block_cols(blk, ik)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
+          write(message(1),'(a,i3,a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
           call messages_fatal(1, namespace=namespace)
         end if
 
@@ -1557,6 +1558,14 @@ contains
  
     POP_SUB(kpoints_check_symmetries)
   end subroutine kpoints_check_symmetries
+
+  integer function kpoints_nkpt_in_path(this) result(npath)
+    type(kpoints_t), intent(in) :: this
+
+    npath = 0
+    if(associated(this%coord_along_path)) npath = SIZE(this%coord_along_path)
+
+  end function kpoints_nkpt_in_path
 
 end module kpoints_oct_m
 

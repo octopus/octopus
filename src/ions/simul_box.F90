@@ -22,12 +22,13 @@
 module simul_box_oct_m
   use atom_oct_m
   use iso_c_binding
+  use gdlib_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use loct_oct_m
+!  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -121,6 +122,8 @@ module simul_box_oct_m
     FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
+    FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
+    FLOAT :: rmetric            (MAX_DIM,MAX_DIM) !< metric for the real space lattice vectors
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
@@ -507,13 +510,13 @@ contains
           if(.not. found) call messages_fatal(1, namespace=namespace)
         end if
 
-        sb%image = loct_gdimage_create_from(sb%filename)
+        sb%image = gdlib_image_create_from(sb%filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
           call messages_fatal(1, namespace=namespace)
         end if
-        sb%image_size(1) = loct_gdImage_SX(sb%image)
-        sb%image_size(2) = loct_gdImage_SY(sb%image)
+        sb%image_size(1) = gdlib_image_sx(sb%image)
+        sb%image_size(2) = gdlib_image_sy(sb%image)
 
         ! adjust Lsize if necessary to ensure that one grid point = one pixel
         do idir = 1, 2
@@ -640,6 +643,10 @@ contains
 
     PUSH_SUB(simul_box_build_lattice)
 
+    sb%alpha = CNST(90.0)
+    sb%beta  = CNST(90.0)
+    sb%gamma = CNST(90.0)
+
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
       sb%nonorthogonal = .false.
@@ -687,6 +694,10 @@ contains
       end if
 
       if( has_angles ) then
+        sb%alpha = angles(1)
+        sb%beta  = angles(2)
+        sb%gamma = angles(3)
+
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
@@ -725,12 +736,9 @@ contains
         end if
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
-
-        if (.not. parse_is_defined(namespace, 'Lsize')) then
-          sb%lsize(:) = M_ZERO
-          sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-        end if
+        
       else  
+
         !%Variable LatticeVectors
         !%Type block
         !%Default simple cubic
@@ -757,12 +765,18 @@ contains
           end do
           call parse_block_end(blk)
 
-          if (.not. parse_is_defined(namespace, 'Lsize')) then
-            sb%lsize(:) = M_ZERO
-            sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if
         end if
       end if
+
+      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+      if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
+        do idim = 1, sb%dim
+          if (sb%lsize(idim) == M_ZERO) then
+            sb%lsize(idim) = lparams(idim)*M_HALF
+          end if
+        end do
+      end if
+
     end if
 
     sb%rlattice = M_ZERO
@@ -790,7 +804,13 @@ contains
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-
+    sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
+    if(.not. has_angles) then
+      !We compute the angles from the lattice vectors
+      sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%gamma=acos(sb%rmetric(1,2)/sqrt(sb%rmetric(1,1)*sb%rmetric(2,2)))/M_PI*CNST(180.0)
+    end if
 
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
@@ -868,7 +888,6 @@ contains
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
       end if
-
 
       xx(1:pd) = xx(1:pd) + M_HALF
       do idir = 1, pd
@@ -958,7 +977,7 @@ contains
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
-      call loct_gdImageDestroy(sb%image)
+      call gdlib_imagedestroy(sb%image)
 #endif
 
     POP_SUB(simul_box_end)
@@ -1048,6 +1067,12 @@ contains
           idir2 = 1, sb%dim)
       end do
       call messages_info(1+sb%dim, iunit)
+
+      write(message(1),'(a)') '  Cell angles [degree]'
+      write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
+      write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
+      write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+      call messages_info(4, iunit)
     end if
 
     POP_SUB(simul_box_write_info)
@@ -1106,7 +1131,6 @@ contains
     FLOAT,              intent(in) :: yy(:)
     type(namespace_t),  intent(in) :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
     logical :: in_box2(1)
 
@@ -1238,7 +1262,7 @@ contains
       do ip = 1, npoints
         ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
         iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+        call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
 #endif

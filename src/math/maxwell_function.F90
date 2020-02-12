@@ -100,7 +100,8 @@ contains
     integer,           intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
-    integer :: nrows, ncols, i, function_type, idim, oam, sam
+    integer :: nrows, ncols, i, function_type, idim
+!    integer :: oam, sam
     character(len=100) :: row_name, function_expression
     FLOAT :: a0, r0(3), gr, width, k_vector(3)
 
@@ -474,7 +475,8 @@ contains
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
-    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4, phi, rad
+    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4
+!    FLOAT :: phi, rad
 
     ! no push_sub because it is called too frequently
 

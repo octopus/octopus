@@ -186,6 +186,7 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_density_complex
   type(accel_kernel_t), public, target, save :: kernel_density_spinors
   type(accel_kernel_t), public, target, save :: kernel_phase
+  type(accel_kernel_t), public, target, save :: kernel_phase_spiral
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
@@ -1072,13 +1073,15 @@ contains
 
     ! no push_sub, called too frequently
     
+    if(accel_is_enabled()) then
 #ifdef HAVE_OPENCL
-    call clFinish(accel%command_queue, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+      call clFinish(accel%command_queue, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish')
 #endif
 #ifdef HAVE_CUDA
-    call cuda_context_synchronize()
+      call cuda_context_synchronize()
 #endif
+    end if
   end subroutine accel_finish
 
   ! ------------------------------------------
@@ -1854,6 +1857,7 @@ contains
   integer pure function accel_max_size_per_dim(dim) result(size)
     integer, intent(in) :: dim
 
+    size = 0
 #ifdef HAVE_OPENCL
     size = 2**30
 #endif
@@ -1870,10 +1874,12 @@ contains
 
     PUSH_SUB(accel_set_stream)
 
+    if(accel_is_enabled()) then
 #ifdef HAVE_CUDA
-    call cuda_set_stream(accel%cuda_stream, stream_number)
-    call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+      call cuda_set_stream(accel%cuda_stream, stream_number)
+      call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
 #endif
+    end if
 
     POP_SUB(accel_set_stream)
   end subroutine accel_set_stream
