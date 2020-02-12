@@ -46,6 +46,7 @@ module system_oct_m
   use states_elec_dim_oct_m
   use v_ks_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
 
   implicit none
 
@@ -116,7 +117,7 @@ contains
     call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp))
+      sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp) .or. sys%ks%oep%level /= XC_OEP_NONE)
     
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
   
