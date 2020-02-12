@@ -1,6 +1,7 @@
 # ----- Calculation mode and parallelization ------------------------------------------------------
  
  CalculationMode   = td
+ RestartWrite = no
 
 %Systems
   'Maxwell' | maxwell
@@ -56,7 +57,7 @@
 
  MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
 
- MaxwellOutputInterval = 1
+ MaxwellOutputInterval = 10
  MaxwellTDOutput       = maxwell_energy + fields
 
  %MaxwellFieldsCoordinate
