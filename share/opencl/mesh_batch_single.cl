@@ -21,50 +21,51 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
-// The X(batch_mf_axpy) kernels should be called on a global grid of (np, ndim, 1)
+/* The X(batch_mf_axpy) kernels should be called on a global grid of (np, ndim, 1) */
 
 __kernel void dbatch_mf_axpy(
     const int np,  //< number of mesh points
     const int nst, //< number of states
-    const int dim, //< number of spin components
-    __global const double2* __restrict xx_buffer, const int ldxx, //< batch of states
-    __global const double2* __restrict aa_buffer, const int ldaa, //< buffer of weights
-    __global double2* __restrict psi_buffer, const int ldpsi      //< single state accumulating the result
+    const int ndim, //< number of spin components
+    __global const double* __restrict xx_buffer, const int ldxx, //< batch of states
+    __global const double* __restrict aa_buffer,                 //< buffer of weights
+    __global double* __restrict psi_buffer, const int ldpsi      //< single state accumulating the result
 ) {
-  int ip   = get_global_id(0)
-  int idim = get_global_id(1)
+
+  int ip   = get_global_id(0);
+  int idim = get_global_id(1);
 
   double tmp = 0.0;
 
   if(ip   >= np) return;
   if(idim >= ndim) return;
 
-  for(int ist=0, ist<nst, ist++) {
-     tmp += aa_buffer(ist) * xx_buffer(ist + ip<<ldxx)
+  for(int ist=0; ist<nst; ist++) {
+     tmp += aa_buffer[ist] * xx_buffer[ist + ip<<ldxx];
   }
-  psi(ip + idim<<ldpsi) += tmp;
+  psi_buffer[ip + idim<<ldpsi] += tmp;
 }
 
 __kernel void zbatch_mf_axpy(
-    const int np,  //< number of mesh points
-    const int nst, //< number of states
-    const int dim, //< number of spin components
-    __global const double2* __restrict xx_buffer, const int ldxx, //< batch of states
-    __global const double2* __restrict aa_buffer, const int ldaa, //< buffer of weights
-    __global double2* __restrict psi_buffer, const int ldpsi      //< single state accumulating the result
-) {
-  int ip   = get_global_id(0)
-  int idim = get_global_id(1)
+    const int np,   // number of mesh points
+    const int nst,  // number of states
+    const int ndim, // number of spin components
+    __global const double2* __restrict xx_buffer, const int ldxx, // batch of states
+    __global const double2* __restrict aa_buffer,                 // buffer of weights
+    __global double2* __restrict psi_buffer, const int ldpsi)     // single state accumulating the result
+{
+  int ip   = get_global_id(0);
+  int idim = get_global_id(1);
 
   double2 tmp = double2(0.0, 0.0);
 
   if(ip   >= np) return;
   if(idim >= ndim) return;
 
-  for(int ist=0, ist<nst, ist++) {
-     tmp += aa_buffer(ist) * xx_buffer(ist + ip<<ldxx)
+  for(int ist=0; ist<nst; ist++) {
+     tmp += aa_buffer[ist] * xx_buffer[ist + ip<<ldxx];
   }
-  psi(ip + idim<<ldpsi) += tmp;
+  psi_buffer[ip + idim<<ldpsi] += tmp;
 }
 
 // The X(batch_mf_dotp) kernels should be called on a global grid of (nst, ndim, 1)
@@ -74,21 +75,21 @@ __kernel void zbatch_mf_dotp(
       const int nst,   //< number of states
       const int ndim,  //< number of spin components (2 for srinors)
       __global const double2* __restrict xx_buffer, const int ldxx,   //< batch of states
-      __global const double2* __restrict psi_buffer, const int ldpsi  //< single state
+      __global const double2* __restrict psi_buffer, const int ldpsi, //< single state
       __global double2* __restrict dot_buffer                         //< vector of dot products
 ) {
-  int ist  = get_global_id(0)
-  int idim = get_global_id(1)
+  int ist  = get_global_id(0);
+  int idim = get_global_id(1);
 
   double2 tmp_dot = double2(0.0, 0.0);
 
   if(ist  >= nst) return;
   if(idim >= ndim) return;
 
-  for(int ip=0, ip<np, ip++) {
-    tmp_dot += complex_mul(complex_conj(xx_buffer(idim + (ndim-1)*ist + ip<<ldxx)),psi_buffer(ip + idim<<ldpsi))
+  for(int ip=0; ip<np; ip++) {
+    tmp_dot += complex_mul( complex_conj(xx_buffer[idim + (ndim-1)*ist + ip<<ldxx]), psi_buffer[ip + idim<<ldpsi]);
   }
-  dot(ist) += tmp_dot;
+  dot_buffer[ist] += tmp_dot;
 }
 
 __kernel void dbatch_mf_dotp(
@@ -96,21 +97,21 @@ __kernel void dbatch_mf_dotp(
       const int nst,  //< number of states
       const int ndim, //< number of spin components (2 for srinors)
       __global const double* __restrict xx_buffer, const int ldxx,   //< batch of states
-      __global const double* __restrict psi_buffer, const int ldpsi  //< single state
+      __global const double* __restrict psi_buffer, const int ldpsi, //< single state
       __global double* __restrict dot_buffer                         //< vector of dot products
 ) {
-  int ist  = get_global_id(0)
-  int idim = get_global_id(1)
+  int ist  = get_global_id(0);
+  int idim = get_global_id(1);
 
   double tmp_dot = 0.0;
 
   if(ist  >= nst) return;
   if(idim >= ndim) return;
 
-  for(int ip=0, ip<np, ip++) {
-    tmp_dot += xx_buffer(idim + (ndim-1)*ist + ip<<ldxx) * psi_buffer(ip + idim<<ldpsi) 
+  for(int ip=0; ip<np; ip++) {
+    tmp_dot += xx_buffer[idim + (ndim-1)*ist + ip<<ldxx] * psi_buffer[ip + idim<<ldpsi];
   }
-  dot(ist) = tmp_dot;
+  dot_buffer[ist] = tmp_dot;
 }
 
 /*
