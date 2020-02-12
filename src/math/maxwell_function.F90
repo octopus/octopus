@@ -103,7 +103,7 @@ contains
     integer :: nrows, ncols, i, function_type, idim
 !    integer :: oam, sam
     character(len=100) :: row_name, function_expression
-    FLOAT :: a0, r0(3), gr, width, k_vector(3)
+    FLOAT :: a0, r0(MAX_DIM), gr, width, k_vector(MAX_DIM)
 
     PUSH_SUB(mxf_read)
 
