@@ -35,15 +35,12 @@ electrons_per_state = $electrons_per_state
 number_states = $number_states
 N_electrons = electrons_per_state*number_states
 
-r_s = 4.0
-jradius = r_s * (N_electrons)^(1.0/3.0)
-
 %Species
-"jellium" | species_jellium | jellium_radius | jradius | valence | N_electrons
+"foo" | species_soft_coulomb | softening | 1.0 | valence | N_electrons
 %
 
 %Coordinates
-"jellium" | 0 | 0 | 0
+"foo" | 0 | 0 | 0
 %
 
 StatesPack = $states_pack
