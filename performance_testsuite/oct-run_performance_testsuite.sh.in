@@ -22,7 +22,7 @@
 prefix=@prefix@
 datarootdir=@datarootdir@
 pkgdatadir=@datadir@/@PACKAGE@
-testsuite="$pkgdatadir/testsuite"
+testsuite="$pkgdatadir/performance_testsuite"
 
 # Usage.
 function usage() {
@@ -31,7 +31,7 @@ function usage() {
  Copyright (C) 2020 by Sebastian Ohlmann
  (based on script by H. Appel and others)
 
-Usage: oct-run_testsuite.sh [options]
+Usage: oct-run_testsuite.sh [options] [arguments]
     
      -h            this message
      -s            use slurm
@@ -39,6 +39,8 @@ Usage: oct-run_testsuite.sh [options]
      -t TESTS      tests to run [default: all]
      -d DIRECTORY  directory where to look for testsuite files
      -p PREFIX     installation prefix [default: $prefix]
+     -c            do comparison; two arguments are needed:
+                     the reference file and the current file with performance data
 
 Report bugs to <octopus-devel@tddft.org>.
 EOF
@@ -54,12 +56,14 @@ SLURM=${SLURM:-false}
 TESTS=${TESTS:-all}
 NODES=${NODES:-1}
 JOBS=${JOBS:-1}
+comparison="no"
 
-while getopts "hlsp:d:t:" opt ; do
+while getopts "hlscp:d:t:" opt ; do
     case "$opt" in
         h) usage;;
         l) local_run="yes";;
         s) SLURM=true;;
+        c) comparison="yes";;
         p) prefix="$OPTARG";;
         d) directory="$OPTARG";;
         t) TESTS="$OPTARG";;
@@ -67,10 +71,6 @@ while getopts "hlsp:d:t:" opt ; do
     esac
 done
 shift $[ OPTIND - 1 ]
-
-echo "*****************************************"
-echo "  Running octopus performance testsuite  "
-echo "*****************************************"
 
 if [ "${local_run}" == "yes" ]; then
     bin_directory=$(pwd)/../src
@@ -90,11 +90,20 @@ else
     run_testsuite=$bin_directory
 fi
 
+# run comparison script?
+if [ "${comparison}" == "yes" ]; then
+    exec python $testsuite/compare_results.py $@
+fi
 
+# check for binary dir
 if [ ! -d "${bin_directory}" ]; then
     echo "Specified binary directory '$bin_directory' does not exist." 1>&2
     exit 1
 fi
+
+echo "*****************************************"
+echo "  Running octopus performance testsuite  "
+echo "*****************************************"
 
 if [[ "$SLURM" == "true" ]]; then
   salloc -N $NODES -n $JOBS make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory run_directory=$run_testsuite testsuite_dir=$testsuite

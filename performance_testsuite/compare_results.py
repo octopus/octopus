@@ -12,21 +12,29 @@ with open(sys.argv[1]) as reference_file:
 with open(sys.argv[2]) as current_file:
     current_data = list(yaml.safe_load_all(current_file))
 
-times = {}
+time_data = {}
 for reference_test, current_test in zip(reference_data, current_data):
     index = reference_test['schema'].index('total_time')
-    reference_time = reference_test['data']['COMPLETE_RUN'][index]
-    current_time = current_test['data']['COMPLETE_RUN'][index]
-    times[reference_test['run']] = {'reference': reference_time,
-                                    'current': current_time}
+    time_data[reference_test['run']] = {}
+    for key in reference_test['data'].keys():
+        reference_time = reference_test['data'][key][index]
+        current_time = current_test['data'][key][index]
+        time_data[reference_test['run']][key] = {
+                'reference': reference_time, 'current': current_time}
 
-any_test_slower = False
-for run, time in times.items():
-    if time['current'] < time['reference']:
-        print("Run {} is slower than reference ({} vs {}).".format(
-            run, time['current'], time['reference']))
-        any_test_slower = True
+num_slower_tests = 0
+num_tests = 0
+for run, times in time_data.items():
+    for key, time in times.items():
+        num_tests += 1
+        if time['current'] < time['reference']:
+            print("Run {}, key {} is slower than reference "
+                  "(by {:.1%}, {} s vs {} s).".format(
+                      run, key, 1-time['current']/time['reference'],
+                      time['current'], time['reference']))
+            num_slower_tests += 1
 
-if any_test_slower:
-    print("Error: some runs are slower than the reference.")
+if num_slower_tests > 0:
+    print("Error: {:d} runs of {:d} are slower than the reference.".format(
+        num_slower_tests, num_tests))
     sys.exit(1)
