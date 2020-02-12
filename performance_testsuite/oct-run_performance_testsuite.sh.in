@@ -80,7 +80,7 @@ if [ "${local_run}" == "yes" ]; then
     else
         testsuite=$(pwd)
     fi
-    run_testsuite=$testsuite
+    bin_testsuite=$testsuite
 else
     bin_directory=$prefix/bin
     if [ -n "$directory" ]; then
@@ -88,8 +88,10 @@ else
     else
         testsuite=$prefix/share/octopus/performance_testsuite
     fi
-    run_testsuite=$bin_directory
+    bin_testsuite=$bin_directory
 fi
+
+run_directory=${run_directory:-.}
 
 # run comparison script?
 if [ "${comparison}" == "yes" ]; then
@@ -107,7 +109,9 @@ echo "  Running octopus performance testsuite  "
 echo "*****************************************"
 
 if [[ "$SLURM" == "true" && "$SALLOC" == "true" ]]; then
-  salloc -N $NODES -n $JOBS make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory run_directory=$run_testsuite testsuite_dir=$testsuite
+  cd $run_directory
+  salloc -N $NODES -n $JOBS make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory bin_testsuite=$bin_testsuite testsuite_dir=$testsuite
 else
-  make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory run_directory=$run_testsuite testsuite_dir=$testsuite
+  cd $run_directory
+  make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory bin_testsuite=$bin_testsuite testsuite_dir=$testsuite
 fi

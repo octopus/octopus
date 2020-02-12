@@ -11,7 +11,7 @@ else
   MPIEXEC ?= mpiexec -n $(NPROCS)
 endif
 OCTOPUS ?= ${bin_directory}/octopus
-run_directory ?= ./
+bin_testsuite ?= ./
 
 TESTS ?= all
 
@@ -23,7 +23,7 @@ all: testsuite timings.yaml combinations.yaml
 testsuite: $(targets)
 
 targets.inc:
-	testsuite=${testsuite_dir} python3 ${run_directory}/create_combinations.py $(TESTS)
+	testsuite=${testsuite_dir} python3 ${bin_testsuite}/create_combinations.py $(TESTS)
 
 %/profiling/time.yaml:
 	@mkdir -p $(@D)
@@ -42,7 +42,7 @@ combinations.yaml: timings.yaml
 
 comparison: $(REFERENCE_FILE) timings.yaml
 	@echo Comparing results to $(REFERENCE_FILE).
-	@python3 ${run_directory}/compare_results.py $(REFERENCE_FILE) timings.yaml
+	@python3 ${bin_testsuite}/compare_results.py $(REFERENCE_FILE) timings.yaml
 
 clean:
 	rm -rf runs targets.inc timings.yaml combinations.yaml
