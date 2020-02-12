@@ -714,7 +714,8 @@ contains
         sys%hm%b_energy_density(:), sys%hm%plane_waves, sys%st%rs_state_plane_waves, sys%hm%energy_density_plane_waves(:))
 
       ! calculate Maxwell energy
-      call energy_mxll_calc(sys%gr, sys%st, sys%hm, sys%st%rs_state, sys%hm%energy, sys%hm%e_energy, sys%hm%b_energy, sys%hm%energy_boundaries, &
+      call energy_mxll_calc(sys%gr, sys%st, sys%hm, sys%st%rs_state, &
+        sys%hm%energy, sys%hm%e_energy, sys%hm%b_energy, sys%hm%energy_boundaries, &
         sys%st%rs_state_plane_waves, sys%hm%energy_plane_waves)
 
       sys%st%rs_state_trans(:,:) = sys%st%rs_state

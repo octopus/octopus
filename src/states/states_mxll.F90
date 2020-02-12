@@ -229,7 +229,7 @@ contains
   ! subroutine states_mxll_write_info(st)
   !   class(states_mxll_t),    intent(in) :: st
 
-  !   PUSH_SUB(states_mxll_write_info)
+  !   !USH_SUB(states_mxll_write_info)
 
   !   call messages_print_stress(stdout, "Maxwell States")
   !   write(message(2), '(a,i8)')    'Number of states         = ', st%nst
@@ -237,14 +237,14 @@ contains
 
   !   call messages_print_stress(stdout)
 
-  !   POP_SUB(states_mxll_write_info)
+  !   !OP_SUB(states_mxll_write_info)
   ! end subroutine states_mxll_write_info
 
   ! ! ------------------------------------------------------------
   ! subroutine states_mxll_set_zero(st)
   !   class(states_mxll_t),    intent(inout) :: st
 
-  !   PUSH_SUB(states_mxll_set_zero)
+  !   !USH_SUB(states_mxll_set_zero)
 
   !   st%rs_state(:,:) = M_z0
   !   st%rs_state_trans(:,:) = M_z0
@@ -252,7 +252,7 @@ contains
   !   st%rs_current_density_restart_t1 = M_z0
   !   st%rs_current_density_restart_t2 = M_z0
     
-  !   POP_SUB(states_mxll_set_zero)
+  !   !OP_SUB(states_mxll_set_zero)
   ! end subroutine states_mxll_set_zero
 
   ! ! ---------------------------------------------------------
@@ -260,10 +260,10 @@ contains
   !   class(states_mxll_t),    intent(inout) :: st
   !   logical,      optional, intent(in)    :: copy
 
-  !   PUSH_SUB(states_mxll_pack)
+  !   !USH_SUB(states_mxll_pack)
   !   ! Nothing done here for the moment
 
-  !   POP_SUB(states_mxll_pack)
+  !   !OP_SUB(states_mxll_pack)
   ! end subroutine states_mxll_pack
 
   ! ! ------------------------------------------------------------
@@ -271,10 +271,10 @@ contains
   !   class(states_mxll_t),    intent(inout) :: st
   !   logical,      optional, intent(in)    :: copy
 
-  !   PUSH_SUB(states_mxll_unpack)
+  !   !USH_SUB(states_mxll_unpack)
   !   ! Nothing done here for the moment
     
-  !   POP_SUB(states_mxll_unpack)
+  !   !OP_SUB(states_mxll_unpack)
   ! end subroutine states_mxll_unpack
   
   ! ---------------------------------------------------------

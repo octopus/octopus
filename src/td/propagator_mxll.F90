@@ -453,9 +453,9 @@ contains
       message(1) = "Maxwell-matter coupling or external current not implemented yet"
       call messages_fatal(1)
       
-!       SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
-!       SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
-!       SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part,ff_dim))
+!       !AFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
+!       !AFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
+!       !AFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part,ff_dim))
 !       ! inhomogeneity propagation
 ! 4      call transform_rs_densities_forward(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1)
 !       call transform_rs_densities_forward(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2)
@@ -477,8 +477,8 @@ contains
 !       call exponential_mxll_apply(hm, gr, st, tr, time, -inter_dt/M_TWO, ff_rs_inhom_2)
 !       ! add term U(time,time+dt/2)J(time)
 !       ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
-!       SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-!       SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+!       !AFE_DEALLOCATE_A(ff_rs_inhom_2)
+!       !AFE_DEALLOCATE_A(ff_rs_inhom_mean)
     end if
 
     do ii=1, inter_steps
@@ -496,8 +496,8 @@ contains
 
       ! ! Maxwell etrs propagation without any approximations
       !   if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
-      !     SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
-      !     SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
+      !     !AFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
+      !     !AFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
       !     ! RS state propagation
       !     call hamiltonian_mxll_update(hm, time=inter_time)
       !     if (pml_check) then
@@ -526,13 +526,13 @@ contains
       !     call exponential_mxll_apply(hm, gr, st, tr, inter_time, -inter_dt/M_TWO, ff_rs_inhom_2)
       !     ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
       !     ff_rs_state = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
-      !     SAFE_DEALLOCATE_A(ff_rs_inhom_1)
-      !     SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+      !     !AFE_DEALLOCATE_A(ff_rs_inhom_1)
+      !     !AFE_DEALLOCATE_A(ff_rs_inhom_2)
 
       !   ! Maxwell no etrs propagation, just straight forward with the time evolution operator
       !   else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO_ETRS) then
-      !     SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
-      !     SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
+      !     !AFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part,ff_dim))
+      !     !AFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part,ff_dim))
       !     call transform_rs_densities_forward(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1)
       !     call transform_rs_densities_forward(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2)
       !     ! RS state propagation
@@ -552,8 +552,8 @@ contains
       !     call exponential_mxll_apply(hm, gr, st, tr, inter_time, inter_dt, ff_rs_inhom_1)
       !     ! add terms U(time+dt,time)J(time) and J(time+dt)
       !     ff_rs_state = ff_rs_state + M_HALF * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
-      !     SAFE_DEALLOCATE_A(ff_rs_inhom_1)
-      !     SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+      !     !AFE_DEALLOCATE_A(ff_rs_inhom_1)
+      !     !AFE_DEALLOCATE_A(ff_rs_inhom_2)
 
       !   ! Maxwell etrs propagation for small current density changes in matter time to assume them as constant
       !   else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
@@ -768,13 +768,13 @@ contains
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       message(1) = "Maxwell solver in linear media not yet implemented"
       call messages_fatal(1)
-      ! SAFE_ALLOCATE(rs_state_plus(1:gr%mesh%np_part,1:st%d%dim))
-      ! SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%d%dim))
+      ! !AFE_ALLOCATE(rs_state_plus(1:gr%mesh%np_part,1:st%d%dim))
+      ! !AFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%d%dim))
       ! rs_state_plus  = rs_state
       ! rs_state_minus = real(rs_state) - M_zI * aimag(rs_state)
       ! call transform_rs_state_to_6x6_rs_state_forward(rs_state_plus, rs_state_minus, ff_rs_state)
-      ! SAFE_DEALLOCATE_A(rs_state_plus)
-      ! SAFE_DEALLOCATE_A(rs_state_minus)
+      ! !AFE_DEALLOCATE_A(rs_state_plus)
+      ! !AFE_DEALLOCATE_A(rs_state_minus)
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
     else 
@@ -976,7 +976,7 @@ contains
     FLOAT              :: dd, width
     CMPLX, allocatable :: tmp_pot_ma_gr(:,:), tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
-!    SAFE_ALLOCATE(tmp_pot_ma_gr(1:gr_elec%mesh%np_part,1))
+!    !AFE_ALLOCATE(tmp_pot_ma_gr(1:gr_elec%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_pot_mx_gr(1:gr_mxll%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_grad_mx_gr(1:gr_mxll%mesh%np,1:gr_mxll%sb%dim))
 
@@ -1081,12 +1081,12 @@ contains
     if (hm_mxll%ma_mx_coupling) then
 
       ! if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_MATTER) then
-      !   SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
+      !   !AFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
       !   if (hm_mxll%ma_mx_coupling_apply .and. (tr%current_prop_test == 0)) then
       !     call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field)
       !   end if
       !   transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
-      !   SAFE_DEALLOCATE_A(tmp_field)
+      !   !AFE_DEALLOCATE_A(tmp_field)
 
 !      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
         ! plane waves subtraction
@@ -1134,7 +1134,7 @@ contains
       !   end if
 
       ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG_CORR) then
-      !   SAFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np,1:st_mxll%d%dim))
+      !   !AFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np,1:st_mxll%d%dim))
       !   ! longitudinal matter field subtraction to get almost transverse field (1st time)
       !   call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field, geo)
       !   ! plane waves subtraction
@@ -1150,7 +1150,7 @@ contains
       !   if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
       !     transverse_field(1:np,:) = transverse_field(1:np,:) + st%rs_state_plane_waves(1:np,:)
       !   end if
-      !   SAFE_DEALLOCATE_A(tmp_field)
+      !   !AFE_DEALLOCATE_A(tmp_field)
 
       ! else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
       !   transverse_field(1:np,:) = field(1:np,:)
@@ -1167,8 +1167,8 @@ contains
 
     ! if (trans_test) then
 
-    !   SAFE_ALLOCATE(tmp_field(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
-    !   SAFE_ALLOCATE(tmp_field_2(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
+    !   !AFE_ALLOCATE(tmp_field(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
+    !   !AFE_ALLOCATE(tmp_field_2(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
 
     !   tmp_field = M_z0
     !   tmp_field_2 = M_z0
@@ -1180,8 +1180,8 @@ contains
     !   call zderivatives_curl(maxwell_gr%der, tmp_field(:,:), tmp_field_2(:,:), set_bc = .false.)
     !   maxwell_st%maxwell_test_output(:,:) = real(maxwell_st%maxwell_test_output(:,:)) + M_zI*sqrt(M_TWO/P_ep)*real(tmp_field_2(:,:))
 
-    !   SAFE_DEALLOCATE_A(tmp_field)
-    !   SAFE_DEALLOCATE_A(tmp_field_2)
+    !   !AFE_DEALLOCATE_A(tmp_field)
+    !   !AFE_DEALLOCATE_A(tmp_field_2)
 
     ! end if
 
@@ -1204,13 +1204,13 @@ contains
 
     ! if (vec_pot_test) then
 
-    !   SAFE_ALLOCATE(tmp_field(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
+    !   !AFE_ALLOCATE(tmp_field(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
 
     !   tmp_field = M_z0
     !   field = M_zI * vector_potential
     !   call zderivatives_curl(maxwell_gr%der, field(:,:), tmp_field(:,:), set_bc = .false.)
 
-    !   SAFE_DEALLOCATE_A(tmp_field)
+    !   !AFE_DEALLOCATE_A(tmp_field)
 
     ! end if
 
@@ -2318,7 +2318,8 @@ contains
     FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
 
     integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max, ip_in, ip
-    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), b_field_global(:,:)
+    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
+      e_field_global(:,:), b_field(:,:), b_field_global(:,:)
 
     PUSH_SUB(fields_through_box_surfaces)
 
@@ -2465,7 +2466,8 @@ contains
     FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
 
     integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
-    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), b_field_global(:,:)
+    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
+      e_field_global(:,:), b_field(:,:), b_field_global(:,:)
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
 
@@ -3307,25 +3309,25 @@ contains
   !   FLOAT   :: dmin_ma, dmin_mx, xx(3)
   !   type(mpi_grp_t) :: ma_grp, mx_grp
 
-  !   PUSH_SUB(maxwell_matter_mesh_mapping)
+  !   !USH_SUB(maxwell_matter_mesh_mapping)
 
   !   ma_np_part = gr%mesh%np_part
   !   ma_npart   = gr%mesh%vp%npart
   !   mx_np_part = gr_mxll%mesh%np_part
   !   mx_npart   = gr_mxll%mesh%vp%npart
 
-  !   SAFE_ALLOCATE(ip_mx_local_vec(gr_mxll%mesh%vp%npart))
-  !   SAFE_ALLOCATE(ip_ma_local_vec(gr%mesh%vp%npart))
-  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(1:gr%mesh%np_part_global))
-  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_overlap(1:gr%mesh%np_part))
-  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global2_overlap(1:gr%mesh%np_part))
-  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%rank_map(1:gr%mesh%np_part))
-  !   SAFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_to_local2_map(1:ma_np_part,1:ma_npart))
-  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(1:gr_mxll%mesh%np_part_global))
-  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(1:gr_mxll%mesh%np_part))
-  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(1:gr_mxll%mesh%np_part))
-  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%rank_map(1:gr_mxll%mesh%np_part))
-  !   SAFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_to_local2_map(1:mx_np_part,1:mx_npart))
+  !   !AFE_ALLOCATE(ip_mx_local_vec(gr_mxll%mesh%vp%npart))
+  !   !AFE_ALLOCATE(ip_ma_local_vec(gr%mesh%vp%npart))
+  !   !AFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global1_to_global2_map(1:gr%mesh%np_part_global))
+  !   !AFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_overlap(1:gr%mesh%np_part))
+  !   !AFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%global2_overlap(1:gr%mesh%np_part))
+  !   !AFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%rank_map(1:gr%mesh%np_part))
+  !   !AFE_ALLOCATE(gr%mesh%ma_mx_mesh_mapping%local1_to_local2_map(1:ma_np_part,1:ma_npart))
+  !   !AFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global1_to_global2_map(1:gr_mxll%mesh%np_part_global))
+  !   !AFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap(1:gr_mxll%mesh%np_part))
+  !   !AFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%global2_overlap(1:gr_mxll%mesh%np_part))
+  !   !AFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%rank_map(1:gr_mxll%mesh%np_part))
+  !   !AFE_ALLOCATE(gr_mxll%mesh%mx_ma_mesh_mapping%local1_to_local2_map(1:mx_np_part,1:mx_npart))
 
   !   ! mapping global points from global matter mesh to global Maxwell mesh
   !   do ip_ma_global=1, gr%mesh%np_part_global
@@ -3393,7 +3395,7 @@ contains
   !   end do
   !   gr_mxll%mesh%mx_ma_mesh_mapping%local1_overlap_number = idx
 
-  !   POP_SUB(maxwell_matter_mesh_mapping)
+  !   !OP_SUB(maxwell_matter_mesh_mapping)
 
   !   contains
 
@@ -3426,7 +3428,7 @@ contains
 
   !   integer :: iatom
 
-  !   PUSH_SUB(get_mx_ma_coupling_points)
+  !   !USH_SUB(get_mx_ma_coupling_points)
 
   !   if (hm%mx_ma_coupling_type == OPTION__MAXWELLCOUPLINGMETHOD__MULTIPOLE_EXPANSION_CENTER_OF_MASS) then
   !     call find_center_of_mass(geo, mx_ma_coupling_points(:,1), .false.)
@@ -3436,7 +3438,7 @@ contains
   !     end do
   !   end if
 
-  !   POP_SUB(get_mx_ma_coupling_points)
+  !   !OP_SUB(get_mx_ma_coupling_points)
   ! end subroutine get_mx_ma_coupling_points
 
 
@@ -3451,7 +3453,7 @@ contains
   !   integer :: ip_global, ic, idim, ic_no
   !   FLOAT   :: dd, dd_min, xx(MAX_DIM)
 
-  !   PUSH_SUB(maxwell_grid_points_coupling_points_mapping)
+  !   !USH_SUB(maxwell_grid_points_coupling_points_mapping)
 
   !   do ip_global=1, gr%mesh%np_global
   !     do ic=1, mx_ma_coupling_points_number
@@ -3474,7 +3476,7 @@ contains
   !     mx_ma_coupling_map(ip_global) = ic_no
   !   end do
 
-  !   POP_SUB(maxwell_grid_points_coupling_points_mapping)
+  !   !OP_SUB(maxwell_grid_points_coupling_points_mapping)
   ! end subroutine maxwell_grid_points_coupling_points_mapping
 
 
