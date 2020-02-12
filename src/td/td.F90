@@ -141,6 +141,51 @@ contains
 
     PUSH_SUB(td_init)
 
+    select type (sys)
+    type is (system_t)
+      
+      call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
+
+      !%Variable TDIonicTimeScale
+      !%Type float
+      !%Default 1.0
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% This variable defines the factor between the timescale of ionic
+      !% and electronic movement. It allows reasonably fast
+      !% Born-Oppenheimer molecular-dynamics simulations based on
+      !% Ehrenfest dynamics. The value of this variable is equivalent to
+      !% the role of <math>\mu</math> in Car-Parrinello. Increasing it
+      !% linearly accelerates the time step of the ion
+      !% dynamics, but also increases the deviation of the system from the
+      !% Born-Oppenheimer surface. The default is 1, which means that both
+      !% timescales are the same. Note that a value different than 1
+      !% implies that the electrons will not follow physical behaviour.
+      !%
+      !% According to our tests, values around 10 are reasonable, but it
+      !% will depend on your system, mainly on the width of the gap.
+      !%
+      !% Important: The electronic time step will be the value of
+      !% <tt>TDTimeStep</tt> divided by this variable, so if you have determined an
+      !% optimal electronic time step (that we can call <i>dte</i>), it is
+      !% recommended that you define your time step as:
+      !%
+      !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
+      !%
+      !% so you will always use the optimal electronic time step
+      !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
+      !%End
+      call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
+
+      if (td%mu <= M_ZERO) then
+        write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
+        call messages_fatal(1)
+      end if
+
+      call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
+
+    end select
+
     !%Variable TDTimeStep
     !%Type float
     !%Section Time-Dependent::Propagation
@@ -219,46 +264,6 @@ contains
     select type (sys)
     type is (system_t)
       
-      call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
-
-      !%Variable TDIonicTimeScale
-      !%Type float
-      !%Default 1.0
-      !%Section Time-Dependent::Propagation
-      !%Description
-      !% This variable defines the factor between the timescale of ionic
-      !% and electronic movement. It allows reasonably fast
-      !% Born-Oppenheimer molecular-dynamics simulations based on
-      !% Ehrenfest dynamics. The value of this variable is equivalent to
-      !% the role of <math>\mu</math> in Car-Parrinello. Increasing it
-      !% linearly accelerates the time step of the ion
-      !% dynamics, but also increases the deviation of the system from the
-      !% Born-Oppenheimer surface. The default is 1, which means that both
-      !% timescales are the same. Note that a value different than 1
-      !% implies that the electrons will not follow physical behaviour.
-      !%
-      !% According to our tests, values around 10 are reasonable, but it
-      !% will depend on your system, mainly on the width of the gap.
-      !%
-      !% Important: The electronic time step will be the value of
-      !% <tt>TDTimeStep</tt> divided by this variable, so if you have determined an
-      !% optimal electronic time step (that we can call <i>dte</i>), it is
-      !% recommended that you define your time step as:
-      !%
-      !% <tt>TDTimeStep</tt> = <i>dte</i> * <tt>TDIonicTimeScale</tt>
-      !%
-      !% so you will always use the optimal electronic time step
-      !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
-      !%End
-      call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
-
-      if (td%mu <= M_ZERO) then
-        write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
-        call messages_fatal(1)
-      end if
-
-      call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
-
       td%dt = td%dt/td%mu
 
       ! now the photoelectron stuff
