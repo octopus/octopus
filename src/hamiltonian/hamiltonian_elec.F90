@@ -196,7 +196,7 @@ module hamiltonian_elec_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc)
+  subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
     type(namespace_t),                  target, intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
@@ -205,6 +205,7 @@ contains
     integer,                                    intent(in)    :: theory_level
     type(xc_t),                         target, intent(in)    :: xc
     type(multicomm_t),                          intent(in)    :: mc
+    logical, optional,                          intent(in)    :: need_exchange
 
     integer :: iline, icol, il
     integer :: ncols
@@ -212,7 +213,7 @@ contains
     type(profile_t), save :: prof
 
     logical :: external_potentials_present
-    logical :: kick_present
+    logical :: kick_present, need_exchange_
     FLOAT :: rashba_coupling
 
 
@@ -498,7 +499,10 @@ contains
 
     !Cam parameters are irrelevant here and are updated later
     call exchange_operator_nullify(hm%exxop)
-    call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+    need_exchange_ = optional_default(need_exchange, .false.)
+    if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE .or. need_exchange_) then
+      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+    end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
       ! Check if we can actually apply the hamiltonian packed
