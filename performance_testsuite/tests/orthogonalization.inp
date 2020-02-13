@@ -3,7 +3,7 @@ CalculationMode = test
 ExperimentalFeatures = yes
 
 TestMode = orthogonalization
-TestRepetitions = 3000
+TestRepetitions = 300
 TestType = $test_type
 StatesOrthogonalization = $states_orthogonalization
 
