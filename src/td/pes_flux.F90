@@ -961,20 +961,10 @@ contains
       else 
         !planar or cubic surface
         
-        ! we do not split the k-mesh
-        if (.not. post) then
-          call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-          if((this%nkpnts_end - this%nkpnts_start + 1) < this%nkpnts) this%parallel_in_momentum = .true.
-        end if
+        ! no distribution
+        this%nkpnts_start = 1 
+        this%nkpnts_end   = this%nkpnts
 
-        if(debug%info) then
-  #if defined(HAVE_MPI)
-          call MPI_Barrier(mpi_world%comm, mpi_err)
-          write(*,*) &
-            'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nkpnts_start, this%nkpnts_end
-          call MPI_Barrier(mpi_world%comm, mpi_err)
-  #endif
-        end if
 
         ! store in the additional kpoint dim the gauge independent grid for final 
         ! momentum representation (i.e. the one at the Gamma point)
@@ -1319,7 +1309,7 @@ contains
 
       ! integrate over time
       do itstep = 1, this%itstep
-        
+
         do ikp = ikp_start, ikp_end
           vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
           conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) & 
