@@ -143,11 +143,11 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(ist > 1) then
-      if(accel_is_enabled()) then
-        call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-      else
+      ! if(accel_is_enabled()) then
+      !   call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+      ! else
         call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-      end if
+      ! end if
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>

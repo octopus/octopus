@@ -41,9 +41,9 @@ __kernel void dbatch_mf_axpy(
   if(idim >= ndim) return;
 
   for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + ip<<ldxx];
+     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
   }
-  psi_buffer[ip + idim<<ldpsi] += tmp;
+  psi_buffer[ip + (idim<<ldpsi)] += tmp;
 }
 
 __kernel void zbatch_mf_axpy(
@@ -63,9 +63,9 @@ __kernel void zbatch_mf_axpy(
   if(idim >= ndim) return;
 
   for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + ip<<ldxx];
+     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
   }
-  psi_buffer[ip + idim<<ldpsi] += tmp;
+  psi_buffer[ip + (idim<<ldpsi)] += tmp;
 }
 
 // The X(batch_mf_dotp) kernels should be called on a global grid of (nst, ndim, 1)
@@ -87,7 +87,7 @@ __kernel void zbatch_mf_dotp(
   if(idim >= ndim) return;
 
   for(int ip=0; ip<np; ip++) {
-    tmp_dot += complex_mul( complex_conj(xx_buffer[idim + (ndim-1)*ist + ip<<ldxx]), psi_buffer[ip + idim<<ldpsi]);
+    tmp_dot += complex_mul( complex_conj(xx_buffer[idim + (ndim-1)*ist + (ip<<ldxx)]), psi_buffer[ip + (idim<<ldpsi)]);
   }
   dot_buffer[ist] += tmp_dot;
 }
@@ -100,8 +100,8 @@ __kernel void dbatch_mf_dotp(
       __global const double* __restrict psi_buffer, const int ldpsi, //< single state
       __global double* __restrict dot_buffer                         //< vector of dot products
 ) {
-  int ist  = get_global_id(0);
-  int idim = get_global_id(1);
+  int ist  = get_global_id(0); // [0:nst-1]
+  int idim = get_global_id(1); // [0:ndim-1]
 
   double tmp_dot = 0.0;
 
@@ -109,7 +109,8 @@ __kernel void dbatch_mf_dotp(
   if(idim >= ndim) return;
 
   for(int ip=0; ip<np; ip++) {
-    tmp_dot += xx_buffer[idim + (ndim-1)*ist + ip<<ldxx] * psi_buffer[ip + idim<<ldpsi];
+//    tmp_dot += xx_buffer[idim + (ndim-1)*ist + (ip<<ldxx)] * psi_buffer[ip + (idim<<ldpsi)];
+    tmp_dot += psi_buffer[ip + (idim<<ldpsi)];
   }
   dot_buffer[ist] = tmp_dot;
 }
