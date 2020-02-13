@@ -33,22 +33,21 @@ module multisystem_oct_m
     multisystem_init, &
     multisystem_end
 
-  integer, parameter ::     &
+  integer, parameter, public ::     &
     SYSTEM_ELECTRONIC = 1,  &
     SYSTEM_MAXWELL    = 2
+
   
 contains
 
   subroutine multisystem_init(systems, global_namespace)
-    type(linked_list_t), intent(out) :: systems
+    type(linked_list_t), intent(inout) :: systems
     type(namespace_t),   intent(in)  :: global_namespace
 
     integer :: isys, system_type
     character(len=128) :: system_name
     type(block_t) :: blk
-    type(system_t) :: system_elec
-    class(*), allocatable :: system
-    class(*), pointer :: sys_ptr
+    class(*), pointer :: sys
     
     PUSH_SUB(multisystem_init)
 
@@ -66,37 +65,23 @@ contains
     !% A maxwell system.
     !%End
     if(parse_block(global_namespace, 'Systems', blk) == 0) then
+
       do isys = 1, parse_block_n(blk)
+        call parse_block_string(blk, isys - 1, 0, system_name)
         call parse_block_integer(blk, isys - 1, 1, system_type)
+
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
-          SAFE_ALLOCATE_TYPE(system_t, system)
+          sys => system_init(namespace_t(system_name))
+          call systems%add(sys)
         case default
           call messages_input_error('Systems')
         end select
-        call systems%add(system)
-        deallocate(system)
-      end do
-
-      call systems%rewind()
-      do isys = 1, parse_block_n(blk)
-        call parse_block_string(blk, isys - 1, 0, system_name)
-        sys_ptr => systems%current()
-        select type (sys_ptr)
-        type is (system_t)
-          call system_init(sys_ptr, namespace_t(system_name))
-        end select
-        call systems%next()
       end do
       call parse_block_end(blk)
     else
-      call systems%add(system_elec)
-      call systems%rewind()
-      sys_ptr => systems%current()
-      select type (sys_ptr)
-      type is (system_t)
-        call system_init(sys_ptr, global_namespace)
-      end select
+      sys => system_init(global_namespace)
+      call systems%add(sys)
     end if
 
     POP_SUB(multisystem_init)
@@ -112,14 +97,11 @@ contains
     call systems%rewind()
     do while (systems%has_more_values())
       sys => systems%current()
-      select type (sys)
-      type is (system_t)
-        call system_end(sys)
-      end select
+      SAFE_DEALLOCATE_P(sys)
       call systems%next()
     end do
 
     POP_SUB(multisystem_end)
   end subroutine multisystem_end
-  
+
 end module multisystem_oct_m

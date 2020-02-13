@@ -46,8 +46,8 @@ module linked_list_oct_m
 contains
 
   subroutine add_node(this, value)
-    class(linked_list_t), intent(inout) :: this
-    class(*),             intent(in)    :: value
+    class(linked_list_t) :: this
+    class(*),             target        :: value
 
     class(list_node_t), pointer :: new_node
 

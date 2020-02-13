@@ -224,15 +224,15 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
@@ -242,7 +242,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
@@ -256,7 +256,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -287,7 +287,7 @@ contains
     call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_projector)
   end subroutine test_projector
@@ -297,7 +297,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
@@ -313,7 +313,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -365,7 +365,7 @@ contains
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_dft_u)
   end subroutine test_dft_u
@@ -375,7 +375,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
     type(simul_box_t) :: sb
@@ -408,7 +408,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -450,7 +450,7 @@ contains
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hamiltonian)
   end subroutine test_hamiltonian
@@ -461,7 +461,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -473,7 +473,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -487,7 +487,7 @@ contains
     call messages_info(1)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_density_calc
@@ -498,7 +498,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -510,7 +510,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -523,7 +523,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_boundaries
@@ -534,7 +534,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -547,7 +547,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -573,7 +573,7 @@ contains
     call exponential_end(te)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_exponential)
   end subroutine test_exponential
@@ -584,7 +584,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -597,7 +597,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -620,7 +620,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_subspace_diagonalization)
   end subroutine test_subspace_diagonalization
@@ -631,7 +631,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime, ops
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
@@ -663,7 +663,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -725,7 +725,7 @@ contains
     end if
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_batch_ops
@@ -736,11 +736,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -754,7 +754,7 @@ contains
       call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_derivatives)
   end subroutine test_derivatives
@@ -765,7 +765,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -773,7 +773,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -795,7 +795,7 @@ contains
       end do
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
@@ -806,11 +806,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -831,7 +831,7 @@ contains
       call zmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_interpolation)
   end subroutine test_interpolation
@@ -842,15 +842,15 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
