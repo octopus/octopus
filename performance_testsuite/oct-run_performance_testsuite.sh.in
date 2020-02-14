@@ -110,7 +110,7 @@ echo "*****************************************"
 
 if [[ "$SLURM" == "true" && "$SALLOC" == "true" ]]; then
   cd $run_directory
-  salloc -N $NODES -n $JOBS make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory bin_testsuite=$bin_testsuite testsuite_dir=$testsuite
+  salloc -N $NODES -n $JOBS -K15 make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory bin_testsuite=$bin_testsuite testsuite_dir=$testsuite
 else
   cd $run_directory
   make -f $testsuite/Makefile.performance -j $JOBS TESTS=$TESTS SLURM=$SLURM bin_directory=$bin_directory bin_testsuite=$bin_testsuite testsuite_dir=$testsuite

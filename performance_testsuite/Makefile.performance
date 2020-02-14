@@ -6,7 +6,7 @@ include targets.inc
 NPROCS ?= 1
 SLURM ?= false
 ifeq ($(SLURM),true)
-  MPIEXEC ?= srun --mem 2200M -N1 -c1 -n$(NPROCS) --exclusive
+  MPIEXEC ?= srun --mem 2200M -N1 -c1 -n$(NPROCS) --exclusive --export=ALL
 else
   MPIEXEC ?= mpiexec -n $(NPROCS)
 endif
