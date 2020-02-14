@@ -1215,6 +1215,15 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
+            write(iunit, '(a)') 'Photon observables:'
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number(1)
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
+            write(iunit,'(1x)')
+          end if
+        end if
+
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
 
         if(scf%calc_stress) then

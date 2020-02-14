@@ -36,10 +36,12 @@ module xc_oep_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
+  use states_elec_calc_oct_m
   use states_elec_dim_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
@@ -72,20 +74,25 @@ module xc_oep_oct_m
 
   type xc_oep_t
     private
-    integer,       public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
-    FLOAT                 :: mixing     !< how much of the function S(r) to add to vxc in every iteration
-    type(lr_t)            :: lr         !< to solve the equation H psi = b
-    type(linear_solver_t) :: solver
-    type(scf_tol_t)       :: scftol
-    integer               :: eigen_n
-    integer, pointer      :: eigen_type(:), eigen_index(:)
-    FLOAT                 :: socc, sfact
-    FLOAT,pointer, public :: vxc(:,:), uxc_bar(:,:)
-    FLOAT,   pointer      :: dlxc(:, :, :)
-    CMPLX,   pointer      :: zlxc(:, :, :)
-    integer               :: mixing_scheme
-    FLOAT,         public :: norm2ss
-    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
+    integer,             public :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
+    FLOAT                       :: mixing     !< how much of the function S(r) to add to vxc in every iteration
+    type(lr_t)                  :: lr         !< to solve the equation H psi = b
+    type(linear_solver_t)       :: solver
+    type(scf_tol_t)             :: scftol
+    integer                     :: eigen_n
+    integer, pointer            :: eigen_type(:), eigen_index(:)
+    FLOAT                       :: socc, sfact
+    FLOAT,   pointer,    public :: vxc(:,:), uxc_bar(:,:)
+    FLOAT,   pointer            :: dlxc(:, :, :)
+    CMPLX,   pointer            :: zlxc(:, :, :)
+    integer                     :: mixing_scheme
+    logical,             public :: has_photons   ! one-photon OEP
+    type(photon_mode_t), public :: pt
+    type(lr_t)                  :: photon_lr     !< to solve the equation H psi = b
+    FLOAT,               public :: norm2ss
+    FLOAT,   pointer            :: vxc_old(:,:), ss_old(:,:)
+    integer                     :: noccst
+    logical                     :: coctranslation_logical
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -139,6 +146,30 @@ contains
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
+
+      !%Variable Photons
+      !%Type logical
+      !%Default .false.
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Activate the one-photon OEP
+      !%End
+      call messages_obsolete_variable(namespace, 'OEPPtX', 'Photons')
+      call parse_variable(namespace, 'Photons', .false., oep%has_photons)
+      if (oep%has_photons) then
+        call messages_experimental("Photons = yes")
+        call photon_mode_init(oep%pt, namespace, gr)
+        if (oep%pt%nmodes > 1) then
+          call messages_not_implemented('Photon OEP for more than one photon mode.')
+        end if
+        if (st%d%nspin /= UNPOLARIZED) then
+          call messages_not_implemented('Spin-polarized calculations with photon OEP.')
+        end if
+        if (oep%level == XC_OEP_SLATER) then
+          call messages_not_implemented('Slater approximation with photons.')
+        end if
+      end if
+
       if(oep%level == XC_OEP_FULL) then
 
         if(st%d%nspin == SPINORS) &
@@ -200,11 +231,23 @@ contains
       end if
       oep%vxc = M_ZERO
 
+      !%Variable KLIPhotonCOC
+      !%Type logical
+      !%Default .false.
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Activate the center of charge translation of the electric dipole operator which should avoid the dependence of the photon KLI on an permanent dipole.
+      !%End
+
       ! when performing full OEP, we need to solve a linear equation
-      if(oep%level == XC_OEP_FULL) then 
+      if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
         call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
         call lr_init(oep%lr)
+        if(oep%has_photons) then
+          call lr_init(oep%photon_lr)
+          call parse_variable(namespace, 'KLIPhotonCOC', .false., oep%coctranslation_logical)
+        end if
       end if
 
       ! the linear equation has to be more converged if we are to attain the required precision
@@ -230,12 +273,15 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
-
-      if(oep%level == XC_OEP_FULL) then 
+      if (oep%level == XC_OEP_FULL .or. oep%has_photons) then
         call lr_dealloc(oep%lr)
         call linear_solver_end(oep%solver)
       end if
-      if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
+      if (oep%has_photons) then
+        call lr_dealloc(oep%photon_lr)
+        call photon_mode_end(oep%pt)
+      end if
+      if (oep%level == XC_OEP_FULL .and. oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
         SAFE_DEALLOCATE_P(oep%vxc_old)
         SAFE_DEALLOCATE_P(oep%ss_old)
       end if
@@ -341,6 +387,12 @@ contains
     end do
     oep%eigen_n = oep%eigen_n - 1
 
+    ! find how many states are occupied.
+    oep%noccst = 0
+    do ist = 1, st%nst
+      if(st%occ(ist, is) > M_EPSILON) oep%noccst = ist
+    end do    
+    
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)
     POP_SUB(xc_oep_AnalyzeEigen)
@@ -355,6 +407,7 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -362,6 +415,7 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 
