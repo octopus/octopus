@@ -533,7 +533,7 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   
   
   do ikk = 1, this%nk 
-    kact = ikk * this%dk
+    kact = this%krad(ikk)
     iomk = 0
 
     do ith = 0, this%nstepsthetak
@@ -1000,7 +1000,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
     if (this%surf_shape==M_SPHERICAL) then
       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
       do ikk = 1, this%nk 
-        kact = ikk * this%dk
+        kact = this%krad(ikk)
         iomk = 0
 
         do ith = 0, this%nstepsthetak
@@ -1072,7 +1072,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
         kmin = minval(sqrt(sum(this%kcoords_cub(1:2, :, kptend+1)**2, dim=1)))
         ikp = 0
         do ikk = 1, this%nk
-          kact = ikk * this%dk +kmin
+          kact = this%krad(ikk)
           
           do iph = 0, this%nstepsphik - 1
             ikp = ikp + 1
@@ -1102,7 +1102,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
         kmin = minval(sqrt(sum(this%kcoords_cub(1:3, :, kptend+1)**2, dim=1)))
         ikp    = 0
         do ikk = 1, this%nk
-          kact = ikk * this%dk + kmin
+          kact = this%krad(ikk)
           spctrsum = M_ZERO
 
           do ith = 0, this%nstepsthetak

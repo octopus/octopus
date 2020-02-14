@@ -80,6 +80,7 @@ module pes_flux_oct_m
     integer          :: nstepsomegak
     integer          :: nstepsomegak_start, nstepsomegak_end
     FLOAT            :: dk                             !< parameters for k-mesh
+    FLOAT, pointer   :: krad(:)                        !< the grid for the radial part of the k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
     integer          :: kgrid                          !< how is the grid in k: polar/cartesian
@@ -532,6 +533,7 @@ contains
       SAFE_DEALLOCATE_P(this%ylm_r)
       SAFE_DEALLOCATE_P(this%conjgphase_prev_sph)
       SAFE_DEALLOCATE_P(this%spctramp_sph)
+      SAFE_DEALLOCATE_P(this%krad)
     else
       SAFE_DEALLOCATE_P(this%kcoords_cub)
       SAFE_DEALLOCATE_P(this%conjgphase_prev_cub)
@@ -567,7 +569,7 @@ contains
     integer           :: kptst, kptend  
     integer           :: isp, ikp, ikpt, ibz1, ibz2
     integer           :: il, ll, mm, idim
-    integer           :: ikk, ith, iph, iomk
+    integer           :: ikk, ith, iph, iomk,ie
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk
       
@@ -577,6 +579,7 @@ contains
     integer             :: ig
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
     FLOAT               :: dk(1:3), kpoint(1:3)
+    logical             :: use_enegy_grid
       
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
 
@@ -620,7 +623,48 @@ contains
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
 
+    !%Variable PES_Flux_EnergyGrid
+    !%Type block
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
+    !% be used. Only for <tt> PES_Flux_Shape = pln</tt>.
+    !% <tt><br>%PES_Flux_EnergyGrid
+    !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
+    !% <br>%</tt>
+    !%End
+    
+    Emin = 0
+    Emax = 10 
+    De   = CNST(0.1)
+    use_enegy_grid = .false.
+    
+    if(parse_block(namespace, 'PES_Flux_EnergyGrid', blk) == 0) then
 
+      call parse_block_float(blk, 0, 0, Emin)
+      call parse_block_float(blk, 0, 1, Emax)
+      call parse_block_float(blk, 0, 2, DE)
+      
+      Emin = units_to_atomic(units_inp%energy, Emin)
+      Emax = units_to_atomic(units_inp%energy, Emax)
+      DE   = units_to_atomic(units_inp%energy, DE)
+      
+      call parse_block_end(blk)
+      use_enegy_grid = .true.
+      
+    
+      call messages_write("Energy grid (Emin, Emax, DE) [") 
+      call messages_write(trim(units_abbrev(units_out%energy)))
+      call messages_write("]:  (")
+      call messages_write(Emin,fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(Emax, fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(DE, fmt = '(e9.2)')
+      call messages_write(")")
+      call messages_info()
+    
+    end if 
 
     
 !     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
@@ -629,39 +673,43 @@ contains
       ! Setting up k-mesh
       ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
       ! -----------------------------------------------------------------
-      !%Variable PES_Flux_Kmax
-      !%Type float
-      !%Default 1.0
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% The maximum value of |k|.
-      !%End
-      call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
-      call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+      if (.not. use_enegy_grid) then
+        
+        !%Variable PES_Flux_Kmax
+        !%Type float
+        !%Default 1.0
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% The maximum value of |k|.
+        !%End
+        call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
+        call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
+        if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
 
-      !%Variable PES_Flux_Kmin
-      !%Type float
-      !%Default 1.0
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% The minimum value of |k|.
-      !%End
-      call parse_variable(namespace, 'PES_Flux_Kmin', M_ONE, kmin)
-      call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
+        !%Variable PES_Flux_Kmin
+        !%Type float
+        !%Default 1.0
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% The minimum value of |k|.
+        !%End
+        call parse_variable(namespace, 'PES_Flux_Kmin', M_ONE, kmin)
+        call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
+        if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
 
 
-      !%Variable PES_Flux_DeltaK
-      !%Type float
-      !%Default 0.002
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% Spacing of the k-mesh in |k| (equidistant).
-      !%End
-      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
-      if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
-      call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
+        !%Variable PES_Flux_DeltaK
+        !%Type float
+        !%Default 0.002
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% Spacing of the k-mesh in |k| (equidistant).
+        !%End
+        call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
+        if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
+        call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
+
+      endif
 
       !%Variable PES_Flux_StepsThetaK
       !%Type integer
@@ -706,13 +754,20 @@ contains
       if(mdim == 3) call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
 
-      this%nk     = nint(abs(kmax-kmin)/this%dk)
+      if(use_enegy_grid) then
+        this%nk     = nint(abs(Emax-Emin)/DE)
+      else  
+        this%nk     = nint(abs(kmax-kmin)/this%dk)
+      end if
       this%nkpnts = this%nstepsomegak * this%nk
 
       this%ll(1)      = this%nk  
       this%ll(2)      = this%nstepsphik
       this%ll(3)      = this%nstepsthetak - 1
       this%ll(mdim+1:3) = 1
+      
+      SAFE_ALLOCATE(this%krad(1:this%nk))
+      
 
     else 
       ! Cartesian
@@ -755,47 +810,7 @@ contains
       call parse_variable(namespace, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
       call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       
-      
-      !%Variable PES_Flux_EnergyGrid
-      !%Type block
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
-      !% be used. Only for <tt> PES_Flux_Shape = pln</tt>.
-      !% <tt><br>%PES_Flux_EnergyGrid
-      !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
-      !% <br>%</tt>
-      !%End
-      
-      Emin = 0
-      Emax = 10 
-      De   = CNST(0.1)
-    
-      if(parse_block(namespace, 'PES_Flux_EnergyGrid', blk) == 0) then
-
-        call parse_block_float(blk, 0, 0, Emin)
-        call parse_block_float(blk, 0, 1, Emax)
-        call parse_block_float(blk, 0, 2, DE)
-        
-        Emin = units_to_atomic(units_inp%energy, Emin)
-        Emax = units_to_atomic(units_inp%energy, Emax)
-        DE   = units_to_atomic(units_inp%energy, DE)
-        
-        call parse_block_end(blk)
-        
-      end if 
-      
-      call messages_write("Energy grid (Emin, Emax, DE) [") 
-      call messages_write(trim(units_abbrev(units_out%energy)))
-      call messages_write("]:  (")
-      call messages_write(Emin,fmt = '(f8.3)')
-      call messages_write(", ")
-      call messages_write(Emax, fmt = '(f8.3)')
-      call messages_write(", ")
-      call messages_write(DE, fmt = '(e9.2)')
-      call messages_write(")")
-      call messages_info()
-            
+                
       
       if (this%arpes_grid) then
   
@@ -888,6 +903,17 @@ contains
     select case (this%kgrid)
 
     case (M_POLAR)
+    
+      if(use_enegy_grid) then
+        do ie = 1, this%nk  
+          this%krad(ie) = sqrt(M_TWO*(ie * DE + Emin))
+        end do
+      else  
+        do ikk = 1, this%nk  
+          this%krad(ikk) = ikk * this%dk + kmin
+        end do
+      end if
+      
 
       if (this%surf_shape == M_SPHERICAL) then
 
@@ -949,7 +975,8 @@ contains
         if(this%nk_start > 0) then
           ! Bessel functions & kcoords_sph
           do ikk = this%nk_start, this%nk_end
-            kact = ikk * this%dk + kmin
+            kact = this%krad(ikk)
+!             kact = ikk * this%dk + kmin
             do ll = 0, this%lmax
               this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
                                   M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
@@ -978,7 +1005,7 @@ contains
           do ikk = -this%nk, this%nk
             if(ikk == 0) cycle
             ikp = ikp + 1
-            kact = ikk * this%dk + kmin
+            kact = this%krad(ikk)
             this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
           end do
 
@@ -997,7 +1024,7 @@ contains
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
                   phik = iph * M_TWO * M_PI / this%nstepsphik
-                  kact = ikk * this%dk + kmin
+                  kact = this%krad(ikk)
                                 this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
                                 this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
                   if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
