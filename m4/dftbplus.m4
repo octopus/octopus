@@ -21,17 +21,19 @@ AC_DEFUN([ACX_DFTBPLUS], [
 acx_dftbplus_ok=no
 
 dnl Check if the library was given in the command line
-AC_ARG_WITH(dftbplus-prefix, [AS_HELP_STRING([--with-dftbplus-prefix=<lib>], [https://www.dftbplus.org/])])
+AC_ARG_WITH(dftbplus-prefix, [AS_HELP_STRING([--with-dftbplus-prefix=<path>], [https://www.dftbplus.org/])])
 
 case $with_dftbplus_prefix in
   yes | "") ;;
   no) acx_dftbplus_ok=disable ;;
-  *.a | *.so | *.so.* | *.o) LIBS_DFTBPLUS=$with_dftbplus_prefix ;
-     xpath=${with_dftbplus_prefix%/lib/*}
-     FCFLAGS_DFTBPLUS="$ax_cv_f90_modflag$xpath/include/dftb+/modfiles";;
   *) LIBS_DFTBPLUS="-L$with_dftbplus_prefix/lib -ldftbplus";
      FCFLAGS_DFTBPLUS="$ax_cv_f90_modflag$with_dftbplus_prefix/include/dftb+/modfiles" ;;
 esac
+
+dnl additional libraries for mpi
+if test "x$acx_mpi_ok" == xyes; then
+  LIBS_DFTBPLUS="$LIBS_DFTBPLUS -lmpifx -lscalapackfx"
+fi
 
 dnl Backup LIBS and FCFLAGS
 acx_dftbplus_save_LIBS="$LIBS"
@@ -50,7 +52,11 @@ testprogram="AC_LANG_PROGRAM([],[
 
 if test $acx_dftbplus_ok = no; then
   AC_MSG_CHECKING([for dftbplus library])
-  LIBS="$LIBS_DFTBPLUS $LIBS_BLAS $LIBS_LAPACK $acx_dftbplus_save_LIB"
+  LIBS="$LIBS_DFTBPLUS"
+  if test "x$acx_mpi_ok" == xyes; then
+    LIBS="$LIBS $LIBS_SCALAPACK"
+  fi
+  LIBS="$LIBS $LIBS_LAPACK $LIBS_BLAS $acx_dftbplus_save_LIB"
   AC_LINK_IFELSE($testprogram, [acx_dftbplus_ok=yes], [])
 
   if test $acx_dftbplus_ok = no; then
