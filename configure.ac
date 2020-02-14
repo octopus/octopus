@@ -354,6 +354,8 @@ AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
 
+ACX_DFTBPLUS
+
 AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
