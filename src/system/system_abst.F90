@@ -155,7 +155,7 @@ contains
 
     PUSH_SUB(system_set_propagator)
 
-    this%clock = simulation_clock_t(dt, smallest_algo_dt)
+    this%clock = simulation_clock_t(this%namespace, dt, smallest_algo_dt)
 
     POP_SUB(system_set_propagator)
   end subroutine system_init_clock

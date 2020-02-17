@@ -22,6 +22,7 @@ module simulation_clock_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -41,6 +42,8 @@ module simulation_clock_oct_m
     FLOAT   :: time_step
     integer :: sec_since_epoch
     integer :: usec_since_epoch
+    type(namespace_t) :: namespace
+
 
   contains
     procedure :: print => simulation_clock_print
@@ -82,17 +85,18 @@ module simulation_clock_oct_m
   end interface
 
 
-
 contains
 
   ! ---------------------------------------------------------
-  type(simulation_clock_t) function simulation_clock_init(time_step, smallest_algo_dt) result(this)
-    FLOAT, intent(in)   :: time_step, smallest_algo_dt
+  type(simulation_clock_t) function simulation_clock_init(namespace, time_step, smallest_algo_dt) result(this)
+    type(namespace_t), intent(in)  :: namespace
+    FLOAT, intent(in)              :: time_step, smallest_algo_dt
 
     integer :: epoch_sec, epoch_usec
 
     PUSH_SUB(simulation_clock_init)
 
+    this%namespace = namespace
     this%clock_tick = 0
     this%granularity = ceiling(time_step/smallest_algo_dt)
     this%time_step = time_step
@@ -110,12 +114,20 @@ contains
     
     PUSH_SUB(simulation_clock_print)
 
-    write(message(1),'(I8,I8,F15.10,x,I10,I10)') &
-        this%clock_tick,                         &
-        this%granularity,                        &
-        this%time_step,                          &
-        this%sec_since_epoch,                    &
-        this%usec_since_epoch
+    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,F8.6,A,I10.10,A,I6.6,A)') &
+        '[Clock:',                                 &
+        trim(this%namespace%get()),                &
+        '|',                                       &
+        this%clock_tick,                           &
+        '|',                                       &
+        this%granularity,                          &
+        '|',                                       &
+        this%time_step,                            &
+        '|',                                       &
+        this%sec_since_epoch,                      &
+        '|',                                       &
+        this%usec_since_epoch,                     &
+        ']'
     call messages_info(1)
 
     POP_SUB(simulation_clock_print)
