@@ -228,42 +228,48 @@ contains
   end subroutine fftw_get_dims
 
   ! ---------------------------------------------------------
-  subroutine fftw_alloc_memory(rs_n, is_real, fs_n, p_din, p_zin, p_cout)
+  subroutine fftw_alloc_memory(rs_n, is_real, fs_n, drs_data, zrs_data, fs_data)
     integer, intent(in)    :: rs_n(:)
     logical, intent(in)    :: is_real
     integer, intent(in)    :: fs_n(:)
-    type(C_PTR),   intent(inout) :: p_din
-    type(C_PTR),   intent(inout) :: p_zin
-    type(C_PTR),   intent(inout) :: p_cout
-
+    FLOAT, pointer, intent(inout) :: drs_data(:,:,:)
+    CMPLX, pointer, intent(inout) :: zrs_data(:,:,:)
+    CMPLX, pointer, intent(inout) ::  fs_data(:,:,:)
+    type(C_PTR) :: address
 
     PUSH_SUB(fftw_alloc_memory)
 
     if(is_real) then
-      p_din  = fftw_alloc_real(int(product(rs_n(1:3)), C_SIZE_T))
+      address  = fftw_alloc_real(int(product(rs_n(1:3)), C_SIZE_T))
+      call c_f_pointer(address, drs_data, rs_n)
     else
-      p_zin = fftw_alloc_complex(int(product(rs_n(1:3)), C_SIZE_T))
+      address = fftw_alloc_complex(int(product(rs_n(1:3)), C_SIZE_T))
+      call c_f_pointer(address, zrs_data, rs_n)
     end if 
-    p_cout = fftw_alloc_complex(int(product(fs_n(1:3)), C_SIZE_T))
+    address = fftw_alloc_complex(int(product(fs_n(1:3)), C_SIZE_T))
+    call c_f_pointer(address, fs_data, fs_n)
 
     POP_SUB(fftw_alloc_memory)
   end subroutine fftw_alloc_memory
 
   ! ---------------------------------------------------------
-  subroutine fftw_free_memory(is_real, p_din, p_zin, p_cout)
+  subroutine fftw_free_memory(is_real, drs_data, zrs_data, fs_data)
     logical, intent(in)    :: is_real
-    type(C_PTR),   intent(inout) :: p_din
-    type(C_PTR),   intent(inout) :: p_zin
-    type(C_PTR),   intent(inout) :: p_cout
+    FLOAT, pointer, intent(inout) :: drs_data(:,:,:)
+    CMPLX, pointer, intent(inout) :: zrs_data(:,:,:)
+    CMPLX, pointer, intent(inout) ::  fs_data(:,:,:)
 
     PUSH_SUB(fftw_free_memory)
 
     if(is_real) then
-      call fftw_free(p_din)
+      call fftw_free(c_loc(drs_data))
+      nullify(drs_data)
     else
-      call fftw_free(p_zin)
+      call fftw_free(c_loc(zrs_data))
+      nullify(zrs_data)
     end if
-    call fftw_free(p_cout)
+    call fftw_free(c_loc(fs_data))
+    nullify(fs_data)
 
     POP_SUB(fftw_free_memory)
   end subroutine fftw_free_memory

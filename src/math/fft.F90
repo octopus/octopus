@@ -137,10 +137,6 @@ module fft_oct_m
     type(pnfft_t), public :: pnfft
 
     logical, public :: aligned_memory
-    type(c_ptr) :: p_din
-    type(c_ptr) :: p_zin
-    type(c_ptr) :: p_cout
-
   end type fft_t
 
   logical, save, public :: fft_initialized = .false.
@@ -505,16 +501,7 @@ contains
 
       if(this%aligned_memory) then
         call fftw_alloc_memory(fft_array(jj)%rs_n_global, type == FFT_REAL, fft_array(jj)%fs_n_global, &
-                                 this%p_din, this%p_zin, this%p_cout)
-        if(type == FFT_REAL) then
-          call c_f_pointer(this%p_din, fft_array(jj)%drs_data, &
-              [fft_array(jj)%rs_n_global(1),fft_array(jj)%rs_n_global(2),fft_array(jj)%rs_n_global(3)])
-        else
-          call c_f_pointer(this%p_zin, fft_array(jj)%zrs_data, &
-              [fft_array(jj)%rs_n_global(1),fft_array(jj)%rs_n_global(2),fft_array(jj)%rs_n_global(3)])
-        end if
-        call c_f_pointer(this%p_cout, fft_array(jj)%fs_data, &
-            [fft_array(jj)%fs_n_global(1),fft_array(jj)%fs_n_global(2),fft_array(jj)%fs_n_global(3)])
+                               fft_array(jj)%drs_data, fft_array(jj)%zrs_data, fft_array(jj)%fs_data)
       end if
 
     case (FFTLIB_PFFT)
@@ -899,7 +886,8 @@ contains
           call fftw_destroy_plan(fft_array(ii)%planb)
 
           if(this%aligned_memory) then
-            call fftw_free_memory(this%type == FFT_REAL, this%p_din, this%p_zin, this%p_cout)
+            call fftw_free_memory(this%type == FFT_REAL, &
+              fft_array(ii)%drs_data, fft_array(ii)%zrs_data, fft_array(ii)%fs_data)
           end if
 
         case (FFTLIB_PFFT)
