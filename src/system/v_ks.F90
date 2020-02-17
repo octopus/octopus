@@ -396,6 +396,8 @@ contains
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
         call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+      else
+        ks%oep%level = XC_OEP_NONE
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
