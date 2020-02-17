@@ -687,10 +687,7 @@ contains
 
       ! ! Restart stuff
 
-      ! ! initialization of fft variables -- not used from the moment
-      !fft_check = .false. 
-
-      !! We need to have Renes FFT routines for the CPML
+      !! We need the following FFT initialization for the CPML
       ! if (sys%hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) fft_check = .true.
 
       ! if (fft_check) then
@@ -706,12 +703,9 @@ contains
       !   end if
       ! end if
 
-      ! if (fromScratch) then
-!      call restart_init(restart_mxll, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
-!        mesh=sys%gr%mesh, exact=.true.)          
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         call states_mxll_read_user_def(sys%gr%mesh, sys%st, rs_state_init, sys%namespace)
-        print *,'Setting initial EM field inside box'
+        call messages_print_stress(stdout, "Setting initial EM field inside box")
         sys%st%rs_state = sys%st%rs_state + rs_state_init
         if (td%tr_mxll%bc_plane_waves) then
           sys%st%rs_state_plane_waves = rs_state_init
@@ -720,8 +714,6 @@ contains
           sys%st%rs_state_const(:) = rs_state_init(sys%gr%mesh%idx%lxyz_inv(0,0,0),:)
         call constant_boundaries_calculation(td%tr_mxll%bc_constant, sys%hm%bc, sys%hm, sys%st, sys%st%rs_state)
       end if
-!      call restart_end(restart_mxll)
-      !end if
 
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         SAFE_DEALLOCATE_A(rs_state_init)
@@ -753,8 +745,8 @@ contains
       !call td_check_trotter(td, sys, h)
       td%iter = td%iter + 1
 
-      call restart_init(restart_mxll_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, &
-        mesh=sys%gr%mesh)
+!      call restart_init(restart_mxll_dump, sys%namespace, RESTART_MAXWELL, RESTART_TYPE_DUMP, sys%mc, ierr, &
+!        mesh=sys%gr%mesh)
 
       call messages_print_stress(stdout, "Time-Dependent Simulation")
 
@@ -793,8 +785,7 @@ contains
 
         ! Propagation dt with H_maxwell
         call propagation_mxll_etrs(sys%hm, sys%namespace, sys%gr, sys%st, td%tr_mxll, sys%st%rs_state, &
-          rs_current_density_ext_t1, rs_current_density_ext_t2, rs_charge_density_ext_t1, &
-          rs_charge_density_ext_t2, iter*td%dt-td%dt, td%dt, sys%st%rs_state)
+          iter*td%dt-td%dt, td%dt)
 
         sys%st%rs_state_trans(:,:) = sys%st%rs_state
 
@@ -831,7 +822,7 @@ contains
         end if
 
         if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
-          call td_dump_mxll(restart_mxll_dump, sys%gr, sys%st, sys%hm, td, iter, ierr)
+!          call td_dump_mxll(restart_mxll_dump, sys%gr, sys%st, sys%hm, td, iter, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to write time-dependent restart information."
             call messages_warning(1)
@@ -845,7 +836,7 @@ contains
 
       ! if(st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(st)
 
-      call restart_end(restart_dump)
+!      call restart_end(restart_dump)
 
       ! free memory
       call states_mxll_end(sys%st)
