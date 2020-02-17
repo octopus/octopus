@@ -20,6 +20,7 @@
 
 module simulation_clock_oct_m
   use global_oct_m
+  use loct_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -27,13 +28,19 @@ module simulation_clock_oct_m
 
   private
   public ::                &
-    simulation_clock_t
+    simulation_clock_t,    &
+    operator(.eq.),        &
+    operator(.lt.),        &
+    operator(.gt.),        &
+    operator(.le.),        &
+    operator(.ge.)
 
   type simulation_clock_t
     integer :: clock_tick
     integer :: granularity
     FLOAT   :: time_step
-    integer :: time_since_epoch
+    integer :: sec_since_epoch
+    integer :: usec_since_epoch
 
   contains
     procedure :: print => simulation_clock_print
@@ -43,9 +50,6 @@ module simulation_clock_oct_m
     procedure :: increment => simulation_clock_increment
     procedure :: decrement => simulation_clock_decrement
     procedure :: reset => simulation_clock_reset
-    procedure :: is_earlier => simulation_clock_is_earlier
-    procedure :: is_later => simulation_clock_is_later
-    procedure :: is_equal => simulation_clock_is_equal
     procedure :: is_later_with_step => simulation_clock_is_later_with_step
   end type simulation_clock_t
 
@@ -53,21 +57,31 @@ module simulation_clock_oct_m
     module procedure simulation_clock_init
   end interface simulation_clock_t
 
-  interface operator(==)
-    procedure simulation_clock_is_equal
-  end interface
-
   interface assignment(=)
     procedure simulation_clock_set
   end interface
 
-  interface operator(<)
+  interface operator(.eq.)
+    procedure simulation_clock_is_equal
+  end interface
+
+  interface operator(.lt.)
     procedure simulation_clock_is_earlier
   end interface
 
-  interface operator(>)
+  interface operator(.gt.)
     procedure simulation_clock_is_later
   end interface
+
+  interface operator(.le.)
+    procedure simulation_clock_is_equal_or_earlier
+  end interface
+
+  interface operator(.ge.)
+    procedure simulation_clock_is_equal_or_later
+  end interface
+
+
 
 contains
 
@@ -75,12 +89,17 @@ contains
   type(simulation_clock_t) function simulation_clock_init(time_step, smallest_algo_dt) result(this)
     FLOAT, intent(in)   :: time_step, smallest_algo_dt
 
+    integer :: epoch_sec, epoch_usec
+
     PUSH_SUB(simulation_clock_init)
 
     this%clock_tick = 0
     this%granularity = ceiling(time_step/smallest_algo_dt)
     this%time_step = time_step
-    this%time_since_epoch = 0 ! Fixme: get time since epoch here from OS
+
+    call loct_gettimeofday(epoch_sec, epoch_usec)
+    this%sec_since_epoch = epoch_sec
+    this%usec_since_epoch = epoch_usec
 
     POP_SUB(simulation_clock_init)
   end function simulation_clock_init
@@ -91,16 +110,16 @@ contains
     
     PUSH_SUB(simulation_clock_print)
 
-    write(message(1),'(I8,I8,F15.10,I8)') this%clock_tick,    &
-                                          this%granularity,   &
-                                          this%time_step,     &
-                                          this%time_since_epoch
+    write(message(1),'(I8,I8,F15.10,x,I10,I10)') &
+        this%clock_tick,                         &
+        this%granularity,                        &
+        this%time_step,                          &
+        this%sec_since_epoch,                    &
+        this%usec_since_epoch
     call messages_info(1)
 
     POP_SUB(simulation_clock_print)
   end subroutine simulation_clock_print
-
-
 
   ! ---------------------------------------------------------
   subroutine simulation_clock_set(this, clock_in)
@@ -112,7 +131,8 @@ contains
     this%clock_tick = clock_in%clock_tick
     this%granularity = clock_in%granularity
     this%time_step = clock_in%time_step
-    this%time_since_epoch = clock_in%time_since_epoch
+    this%sec_since_epoch = clock_in%sec_since_epoch
+    this%usec_since_epoch = clock_in%usec_since_epoch
 
     POP_SUB(simulation_clock_set)
   end subroutine simulation_clock_set
@@ -174,7 +194,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function simulation_clock_is_earlier(clock_a, clock_b) result(is_earlier)
-    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+    type(simulation_clock_t), intent(in) :: clock_a, clock_b
 
     PUSH_SUB(simulation_clock_is_earlier)
 
@@ -197,6 +217,32 @@ contains
 
     POP_SUB(simulation_clock_is_later)
   end function simulation_clock_is_later
+
+  ! ---------------------------------------------------------
+  logical function simulation_clock_is_equal_or_earlier(clock_a, clock_b) result(is_earlier)
+    type(simulation_clock_t), intent(in) :: clock_a, clock_b
+
+    PUSH_SUB(simulation_clock_is_earlier)
+
+    if(clock_a%get_tick() <= clock_b%get_tick()) then
+        is_earlier = .true.
+    else
+        is_earlier = .false.
+    end if
+
+    POP_SUB(simulation_clock_is_earlier)
+  end function simulation_clock_is_equal_or_earlier
+
+  ! ---------------------------------------------------------
+  logical function simulation_clock_is_equal_or_later(clock_a, clock_b) result(is_earlier)
+    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+
+    PUSH_SUB(simulation_clock_is_later)
+
+    is_earlier = simulation_clock_is_earlier(clock_b, clock_a)
+
+    POP_SUB(simulation_clock_is_later)
+  end function simulation_clock_is_equal_or_later
 
   ! ---------------------------------------------------------
   logical function simulation_clock_is_equal(clock_a, clock_b) result(are_equal)
