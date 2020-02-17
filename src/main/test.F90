@@ -970,11 +970,6 @@ contains
                            prop_earth%dt/prop_earth%algo_steps, &
                            prop_moon%dt/prop_moon%algo_steps)
 
-    ! 'Loop' over systems and initialize simulation clocks
-!    clock_sun = simulation_clock_t(sun_dt)
-!    clock_earth = simulation_clock_t(earth_dt)
-!    clock_moon = simulation_clock_t(moon_dt)
-
     !Associate them to subsystems
     call sun%init_clock(sun_dt, smallest_algo_dt)
     call earth%init_clock(earth_dt, smallest_algo_dt)
