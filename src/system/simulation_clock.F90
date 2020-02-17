@@ -114,19 +114,21 @@ contains
     
     PUSH_SUB(simulation_clock_print)
 
-    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,F8.6,A,I10.10,A,I6.6,A)') &
-        '[Clock:',                                 &
-        trim(this%namespace%get()),                &
-        '|',                                       &
-        this%clock_tick,                           &
-        '|',                                       &
-        this%granularity,                          &
-        '|',                                       &
-        this%time_step,                            &
-        '|',                                       &
-        this%sec_since_epoch,                      &
-        '|',                                       &
-        this%usec_since_epoch,                     &
+    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,I8.8,A,F8.6,A,I10.10,A,I6.6,A)') &
+        '[Clock:',                         &
+        trim(this%namespace%get()),        &
+        '|',                               &
+        this%clock_tick,                   &
+        '|',                               &
+        this%granularity,                  &
+        '|',                               &
+        this%clock_tick*this%granularity,  &
+        '|',                               &
+        this%time_step,                    &
+        '|',                               &
+        this%sec_since_epoch,              &
+        '|',                               &
+        this%usec_since_epoch,             &
         ']'
     call messages_info(1)
 
