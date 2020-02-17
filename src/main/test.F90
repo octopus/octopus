@@ -1057,12 +1057,12 @@ contains
 
     write(message(1),'(A,x,I10.10)') 'simulation_clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') 'simulation_clock_get_sim_time', test_clock_a%get_sim_time()
-    write(message(3),'(A,x,L1)')     'simulation_clock_is_earlier', (test_clock_a .lt. test_clock_b)
-    write(message(4),'(A,x,L1)')     'simulation_clock_is_equal_or_earlier', (test_clock_a .le. test_clock_b)
-    write(message(5),'(A,x,L1)')     'simulation_clock_is_later', (test_clock_a .gt. test_clock_b)
-    write(message(6),'(A,x,L1)')     'simulation_clock_is_equal_or_later', (test_clock_a .ge. test_clock_b)
-    write(message(7),'(A,x,L1)')     'simulation_clock_is_equal', (test_clock_a .eq. test_clock_b)
-    write(message(8),'(A,x,L1)')     'simulation_clock_is_later_with_step', test_clock_a%is_later_with_step(test_clock_b)
+    write(message(3),'(A,x,I1)')     'simulation_clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+    write(message(4),'(A,x,I1)')     'simulation_clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+    write(message(5),'(A,x,I1)')     'simulation_clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+    write(message(6),'(A,x,I1)')     'simulation_clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+    write(message(7),'(A,x,I1)')     'simulation_clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    write(message(8),'(A,x,I1)')     'simulation_clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
     call messages_info(8)
 
     POP_SUB(test_simulation_clock)
