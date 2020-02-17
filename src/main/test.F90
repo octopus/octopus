@@ -1048,10 +1048,17 @@ contains
     test_clock_b = simulation_clock_t(namespace_t('test_clock_b'), CNST(1.0), CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
+
     call test_clock_a%set(test_clock_b)
+    call test_clock_a%print()
     call test_clock_a%increment()
+    call test_clock_a%print()
     call test_clock_a%decrement()
+    call test_clock_a%print()
+    call test_clock_a%increment()
+    call test_clock_a%print()
     call test_clock_a%reset()
+    call test_clock_a%print()
     call test_clock_a%increment()
     call test_clock_a%print()
 
