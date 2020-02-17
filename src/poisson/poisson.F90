@@ -893,13 +893,13 @@ contains
 
     case(POISSON_FFT)
       if(this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       else
         SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
         SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
         
         call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
-        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
+        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
           average_to_zero = .true.)
         
         pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)

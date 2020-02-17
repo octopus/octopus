@@ -44,7 +44,7 @@ module poisson_fft_oct_m
     poisson_fft_t,           &
     poisson_fft_init,        &
     poisson_fft_end,         &
-    poisson_fft_solve,       &
+    dpoisson_fft_solve,      &
     zpoisson_fft_solve
 
   integer, public, parameter ::                &
@@ -863,126 +863,12 @@ contains
     POP_SUB(poisson_fft_end)
   end subroutine poisson_fft_end
 
-  !-----------------------------------------------------------------
-
-  subroutine poisson_fft_solve(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
-    type(poisson_fft_t),            intent(in)    :: this
-    type(mesh_t),                   intent(in)    :: mesh
-    type(cube_t),                   intent(in)    :: cube
-    FLOAT,                          intent(out)   :: pot(:)
-    FLOAT,                          intent(in)    :: rho(:)
-    type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
-    logical,              optional, intent(in)    :: average_to_zero !< default is false
-
-    logical :: average_to_zero_
-    FLOAT :: average
-    type(cube_function_t) :: cf
-
-    PUSH_SUB(poisson_fft_solve)
-
-    average_to_zero_ = .false.
-    if (present(average_to_zero)) average_to_zero_ = average_to_zero
-    average = M_ZERO !this avoids a non-initialized warning
-
-    call cube_function_null(cf)
-    call dcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
-
-    ! put the density in the cube
-    if (cube%parallel_in_domains) then
-      call dmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call dmesh_to_cube(mesh, rho, cube, cf, local = .true.)
-      else
-        call dmesh_to_cube(mesh, rho, cube, cf)
-      end if
-    end if
-
-    ! apply the Couloumb term in Fourier space
-    call dfourier_space_op_apply(this%coulb, cube, cf)
-
-    !now the cube has the potential
-    if(average_to_zero_) average = dcube_function_surface_average(cube, cf)
-
-    ! move the potential back to the mesh
-    if (cube%parallel_in_domains) then
-      call dcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
-      else
-        call dcube_to_mesh(cube, cf, mesh, pot)
-      end if
-    end if
-
-    if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
-
-    call dcube_function_free_RS(cube, cf) ! memory is no longer needed
-
-    POP_SUB(poisson_fft_solve)
-  end subroutine poisson_fft_solve
-
-  !-----------------------------------------------------------------
-
-  subroutine zpoisson_fft_solve(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
-    type(poisson_fft_t),            intent(in)    :: this
-    type(mesh_t),                   intent(in)    :: mesh
-    type(cube_t),                   intent(in)    :: cube
-    CMPLX,                          intent(out)   :: pot(:)
-    CMPLX,                          intent(in)    :: rho(:)
-    type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
-    logical,              optional, intent(in)    :: average_to_zero !< default is false
-
-    logical :: average_to_zero_
-    CMPLX :: average
-    type(cube_function_t) :: cf
-
-    PUSH_SUB(zpoisson_fft_solve)
-
-    average_to_zero_ = .false.
-    if (present(average_to_zero)) average_to_zero_ = average_to_zero
-    average = M_z0 !this avoids a non-initialized warning
-
-    !If we perform complex ffts, the full cube need to be allocated
-    ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
-
-    call cube_function_null(cf)
-    call zcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
-
-    ! put the density in the cube
-    if (cube%parallel_in_domains) then
-      call zmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call zmesh_to_cube(mesh, rho, cube, cf, local = .true.)
-      else
-        call zmesh_to_cube(mesh, rho, cube, cf)
-      end if
-    end if
-
-    ! apply the Couloumb term in Fourier space
-    call zfourier_space_op_apply(this%coulb, cube, cf)
-
-    !now the cube has the potential
-    if(average_to_zero_) average = zcube_function_surface_average(cube, cf)
-
-    ! move the potential back to the mesh
-    if (cube%parallel_in_domains) then
-      call zcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call zcube_to_mesh(cube, cf, mesh, pot, local=.true.)
-      else
-        call zcube_to_mesh(cube, cf, mesh, pot)
-      end if
-    end if
-
-    if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
-
-    call zcube_function_free_RS(cube, cf) ! memory is no longer needed
-
-    POP_SUB(zpoisson_fft_solve)
-  end subroutine zpoisson_fft_solve
+#include "undef.F90"
+#include "real.F90"
+#include "poisson_fft_inc.F90"
+#include "undef.F90"
+#include "complex.F90"
+#include "poisson_fft_inc.F90"
 
 
 end module poisson_fft_oct_m
