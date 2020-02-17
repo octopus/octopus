@@ -122,6 +122,11 @@ contains
       ASSERT(present(cout_))
       ASSERT(present(din_) .neqv. present(cin_))
       aligned_memory = .true.
+      if (is_real) then
+        ASSERT(present(din_))
+      else
+        ASSERT(present(cin_))
+      end if
     end if
 
     if (is_real) then

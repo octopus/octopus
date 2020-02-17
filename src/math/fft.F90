@@ -588,14 +588,18 @@ contains
       else
         if(type == FFT_REAL) then
           call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
-             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, din_ = this%drs_data, cout_ = this%fs_data)
+             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, &
+             din_=fft_array(jj)%drs_data, cout_=fft_array(jj)%fs_data)
           call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
-             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, din_ = this%drs_data, cout_ = this%fs_data)
+             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, &
+             din_=fft_array(jj)%drs_data, cout_=fft_array(jj)%fs_data)
         else
           call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
-             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, cin_ = this%zrs_data, cout_ = this%fs_data)
+             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, &
+             cin_=fft_array(jj)%zrs_data, cout_=fft_array(jj)%fs_data)
           call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
-             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, cin_ = this%zrs_data, cout_ = this%fs_data)
+             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, &
+             cin_=fft_array(jj)%zrs_data, cout_=fft_array(jj)%fs_data)
         end if
       end if
 
