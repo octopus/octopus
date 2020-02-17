@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use celestial_body_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -31,6 +32,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
@@ -43,6 +45,7 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use propagator_verlet_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -114,6 +117,9 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
+    !%Calculation of the density.
+    !%Option celestial_dynamics 17
+    !% Test of celestial dynamics using multisystems
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -214,6 +220,8 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
+    case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
+      call test_celestial_dynamics(param)
     end select
 
     POP_SUB(test_run)
@@ -894,6 +902,107 @@ contains
     POP_SUB(test_prints_info_batch)
 
   end subroutine test_prints_info_batch
+
+  ! ---------------------------------------------------------
+
+  subroutine test_celestial_dynamics(param)
+    type(test_parameters_t), intent(in) :: param
+
+    type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
+    class(celestial_body_t), pointer :: sun, earth, moon
+    class(propagator_verlet_t), pointer :: prop_sun, prop_earth, prop_moon
+    integer :: it, Nstep, internal_loop
+    logical :: all_done
+    FLOAT :: dt
+
+    PUSH_SUB(test_celestial_dynamics)
+
+    call messages_write('Info: Testing celestial dynamics using multisystems')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    global_namespace = namespace_t("")
+    earth_namespace = namespace_t("Earth")
+    moon_namespace = namespace_t("Moon")
+    sun_namespace = namespace_t("Sun")
+
+    !Initialize subsystems
+    sun => celestial_body_t(sun_namespace)
+    earth => celestial_body_t(earth_namespace)
+    moon => celestial_body_t(moon_namespace)
+
+    !Define interactions manually
+    call sun%add_interaction_partner(earth)
+    call sun%add_interaction_partner(moon)
+    call earth%add_interaction_partner(moon)
+    call earth%add_interaction_partner(sun)
+    call moon%add_interaction_partner(earth)
+    call moon%add_interaction_partner(sun)
+
+    !Creates Verlet propagators
+    call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
+    prop_sun => propagator_verlet_t(M_ZERO, dt)
+    prop_earth => propagator_verlet_t(M_ZERO, dt)
+    prop_moon => propagator_verlet_t(M_ZERO, dt)
+
+    !Associate them to subsystems
+    call sun%set_propagator(prop_sun)
+    call earth%set_propagator(prop_earth)
+    call moon%set_propagator(prop_moon)
+
+    !Initialize output and write data at time zero
+    call sun%td_write_init(dt)
+    call earth%td_write_init(dt)
+    call moon%td_write_init(dt)
+    call sun%td_write_iter(0)
+    call earth%td_write_iter(0)
+    call moon%td_write_iter(0)
+
+    call parse_variable(global_namespace, 'TDMaxSteps', 1000, Nstep)
+    do it = 1, Nstep
+
+      all_done = .false.
+      internal_loop = 1
+
+      call prop_sun%rewind()
+      call prop_earth%rewind()
+      call prop_moon%rewind()
+
+      do while(.not. all_done .and. internal_loop < 1000)
+
+        call sun%dt_operation()
+        call earth%dt_operation()
+        call moon%dt_operation()
+
+        !We check the exit condition
+        all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
+        INCR(internal_loop, 1)
+      end do
+
+      !Output
+      call sun%write_td_info()
+      call earth%write_td_info()
+      call moon%write_td_info()
+
+      call sun%td_write_iter(it)
+      call earth%td_write_iter(it)
+      call moon%td_write_iter(it)
+    end do
+
+    call sun%td_write_end()
+    call earth%td_write_end()
+    call moon%td_write_end()
+
+    SAFE_DEALLOCATE_P(sun)
+    SAFE_DEALLOCATE_P(earth)
+    SAFE_DEALLOCATE_P(moon)
+    SAFE_DEALLOCATE_P(prop_sun)
+    SAFE_DEALLOCATE_P(prop_earth)
+    SAFE_DEALLOCATE_P(prop_moon)
+
+    POP_SUB(test_celestial_dynamics)
+  end subroutine test_celestial_dynamics
 
 end module test_oct_m
 
