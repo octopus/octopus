@@ -1018,7 +1018,9 @@ contains
       call moon%td_write_iter(it)
 
       ! Fixme: should be changed to final propagation time
-      all_done_max_td_steps = (sun%clock%get_tick().ge.sun_Nstep) .and. (earth%clock%get_tick().ge.earth_Nstep) .and. (moon%clock%get_tick().ge.moon_Nstep)
+      all_done_max_td_steps = (sun%clock%get_tick().ge.sun_Nstep)             &
+				.and. (earth%clock%get_tick().ge.earth_Nstep) &
+				.and. (moon%clock%get_tick().ge.moon_Nstep)
     end do
 
     call sun%td_write_end()
@@ -1062,14 +1064,22 @@ contains
     call test_clock_a%increment()
     call test_clock_a%print()
 
-    write(message(1),'(A,x,I10.10)') 'simulation_clock_get_tick', test_clock_a%get_tick()
-    write(message(2),'(A,x,F15.10)') 'simulation_clock_get_sim_time', test_clock_a%get_sim_time()
-    write(message(3),'(A,x,I1)')     'simulation_clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
-    write(message(4),'(A,x,I1)')     'simulation_clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
-    write(message(5),'(A,x,I1)')     'simulation_clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
-    write(message(6),'(A,x,I1)')     'simulation_clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
-    write(message(7),'(A,x,I1)')     'simulation_clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
-    write(message(8),'(A,x,I1)')     'simulation_clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
+    write(message(1),'(A,x,I10.10)') &
+	'simulation_clock_get_tick', test_clock_a%get_tick()
+    write(message(2),'(A,x,F15.10)') &
+	'simulation_clock_get_sim_time', test_clock_a%get_sim_time()
+    write(message(3),'(A,x,I1)')     &
+	'simulation_clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+    write(message(4),'(A,x,I1)')     &
+	'simulation_clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+    write(message(5),'(A,x,I1)')     &
+	'simulation_clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+    write(message(6),'(A,x,I1)')     &
+	'simulation_clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+    write(message(7),'(A,x,I1)')     &
+	'simulation_clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    write(message(8),'(A,x,I1)')     &
+	'simulation_clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
     call messages_info(8)
 
     POP_SUB(test_simulation_clock)
