@@ -36,12 +36,13 @@ module simulation_clock_oct_m
     integer :: time_since_epoch
 
   contains
+    procedure :: print => simulation_clock_print
+    procedure :: set => simulation_clock_set
     procedure :: get_tick => simulation_clock_get_tick
     procedure :: get_sim_time => simulation_clock_get_sim_time
     procedure :: increment => simulation_clock_increment
     procedure :: decrement => simulation_clock_decrement
     procedure :: reset => simulation_clock_reset
-    procedure :: set => simulation_clock_set
     procedure :: is_earlier => simulation_clock_is_earlier
     procedure :: is_later => simulation_clock_is_later
     procedure :: is_equal => simulation_clock_is_equal
@@ -85,16 +86,33 @@ contains
   end function simulation_clock_init
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_set(clock_out, clock_in)
+  subroutine simulation_clock_print(this)
+    class(simulation_clock_t), intent(inout) :: this
+    
+    PUSH_SUB(simulation_clock_print)
+
+    write(message(1),'(I8,I8,F15.10,I8)') this%clock_tick,    &
+                                          this%granularity,   &
+                                          this%time_step,     &
+                                          this%time_since_epoch
+    call messages_info(1)
+
+    POP_SUB(simulation_clock_print)
+  end subroutine simulation_clock_print
+
+
+
+  ! ---------------------------------------------------------
+  subroutine simulation_clock_set(this, clock_in)
     class(simulation_clock_t), intent(in) :: clock_in
-    class(simulation_clock_t), intent(out) :: clock_out
+    class(simulation_clock_t), intent(inout) :: this
     
     PUSH_SUB(simulation_clock_set)
 
-    clock_out%clock_tick = clock_in%clock_tick
-    clock_out%granularity = clock_in%granularity
-    clock_out%time_step = clock_in%time_step
-    clock_out%time_since_epoch = clock_in%time_since_epoch
+    this%clock_tick = clock_in%clock_tick
+    this%granularity = clock_in%granularity
+    this%time_step = clock_in%time_step
+    this%time_since_epoch = clock_in%time_since_epoch
 
     POP_SUB(simulation_clock_set)
   end subroutine simulation_clock_set
