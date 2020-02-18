@@ -86,6 +86,8 @@ module output_oct_m
 #endif
   use young_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -298,6 +300,9 @@ contains
     !%Option heat_current bit(33)
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator bit(34)
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -734,6 +739,18 @@ contains
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
+    end if
+    
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+      if (ks%oep%level == XC_OEP_FULL) then
+        if (ks%oep%has_photons) then
+          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+            write(fname, '(a)') 'photon_correlator'
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+              units_out%length, ierr, geo = geo)
+          end if
+        end if
+      end if
     end if
 
     call profiling_out(prof)

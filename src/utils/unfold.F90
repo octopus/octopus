@@ -69,7 +69,7 @@ program oct_unfold
 
   implicit none
 
-  type(system_t)        :: sys
+  type(system_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer               :: ik, idim, nkpoints
   type(restart_t)       :: restart
@@ -110,7 +110,7 @@ program oct_unfold
   call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, default_namespace)
+  sys => system_init(default_namespace)
   call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then
@@ -302,7 +302,7 @@ program oct_unfold
 
   call simul_box_end(sb)
   call fft_all_end()
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")

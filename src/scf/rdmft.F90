@@ -328,7 +328,7 @@ contains
       write(message(2),'(a)') '--this may take a while--'
       call messages_info(2)
 
-      call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
+      call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
         rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm, namespace, hm, st, gr%mesh)
       call sum_integrals(rdm)

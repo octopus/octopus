@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use celestial_body_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -31,6 +32,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
@@ -43,6 +45,7 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use propagator_verlet_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -114,6 +117,9 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
+    !%Calculation of the density.
+    !%Option celestial_dynamics 17
+    !% Test of celestial dynamics using multisystems
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -214,6 +220,8 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
+    case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
+      call test_celestial_dynamics(param)
     end select
 
     POP_SUB(test_run)
@@ -224,15 +232,15 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
@@ -242,7 +250,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
@@ -256,7 +264,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -287,7 +295,7 @@ contains
     call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_projector)
   end subroutine test_projector
@@ -297,7 +305,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
@@ -313,7 +321,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -365,7 +373,7 @@ contains
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_dft_u)
   end subroutine test_dft_u
@@ -375,7 +383,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
     type(simul_box_t) :: sb
@@ -408,7 +416,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -450,7 +458,7 @@ contains
     SAFE_DEALLOCATE_P(hpsib)
     call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hamiltonian)
   end subroutine test_hamiltonian
@@ -461,7 +469,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -473,7 +481,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -487,7 +495,7 @@ contains
     call messages_info(1)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_density_calc
@@ -498,7 +506,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -510,7 +518,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -523,7 +531,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_boundaries
@@ -534,7 +542,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -547,7 +555,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -573,7 +581,7 @@ contains
     call exponential_end(te)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_exponential)
   end subroutine test_exponential
@@ -584,7 +592,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -597,7 +605,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -620,7 +628,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_subspace_diagonalization)
   end subroutine test_subspace_diagonalization
@@ -631,7 +639,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime, ops
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
@@ -663,7 +671,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -725,7 +733,7 @@ contains
     end if
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_batch_ops
@@ -736,11 +744,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -754,7 +762,7 @@ contains
       call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_derivatives)
   end subroutine test_derivatives
@@ -765,7 +773,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -773,7 +781,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -795,7 +803,7 @@ contains
       end do
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
@@ -806,11 +814,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -831,7 +839,7 @@ contains
       call zmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_interpolation)
   end subroutine test_interpolation
@@ -842,15 +850,15 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
@@ -894,6 +902,107 @@ contains
     POP_SUB(test_prints_info_batch)
 
   end subroutine test_prints_info_batch
+
+  ! ---------------------------------------------------------
+
+  subroutine test_celestial_dynamics(param)
+    type(test_parameters_t), intent(in) :: param
+
+    type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
+    class(celestial_body_t), pointer :: sun, earth, moon
+    class(propagator_verlet_t), pointer :: prop_sun, prop_earth, prop_moon
+    integer :: it, Nstep, internal_loop
+    logical :: all_done
+    FLOAT :: dt
+
+    PUSH_SUB(test_celestial_dynamics)
+
+    call messages_write('Info: Testing celestial dynamics using multisystems')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    global_namespace = namespace_t("")
+    earth_namespace = namespace_t("Earth")
+    moon_namespace = namespace_t("Moon")
+    sun_namespace = namespace_t("Sun")
+
+    !Initialize subsystems
+    sun => celestial_body_t(sun_namespace)
+    earth => celestial_body_t(earth_namespace)
+    moon => celestial_body_t(moon_namespace)
+
+    !Define interactions manually
+    call sun%add_interaction_partner(earth)
+    call sun%add_interaction_partner(moon)
+    call earth%add_interaction_partner(moon)
+    call earth%add_interaction_partner(sun)
+    call moon%add_interaction_partner(earth)
+    call moon%add_interaction_partner(sun)
+
+    !Creates Verlet propagators
+    call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
+    prop_sun => propagator_verlet_t(M_ZERO, dt)
+    prop_earth => propagator_verlet_t(M_ZERO, dt)
+    prop_moon => propagator_verlet_t(M_ZERO, dt)
+
+    !Associate them to subsystems
+    call sun%set_propagator(prop_sun)
+    call earth%set_propagator(prop_earth)
+    call moon%set_propagator(prop_moon)
+
+    !Initialize output and write data at time zero
+    call sun%td_write_init(dt)
+    call earth%td_write_init(dt)
+    call moon%td_write_init(dt)
+    call sun%td_write_iter(0)
+    call earth%td_write_iter(0)
+    call moon%td_write_iter(0)
+
+    call parse_variable(global_namespace, 'TDMaxSteps', 1000, Nstep)
+    do it = 1, Nstep
+
+      all_done = .false.
+      internal_loop = 1
+
+      call prop_sun%rewind()
+      call prop_earth%rewind()
+      call prop_moon%rewind()
+
+      do while(.not. all_done .and. internal_loop < 1000)
+
+        call sun%dt_operation()
+        call earth%dt_operation()
+        call moon%dt_operation()
+
+        !We check the exit condition
+        all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
+        INCR(internal_loop, 1)
+      end do
+
+      !Output
+      call sun%write_td_info()
+      call earth%write_td_info()
+      call moon%write_td_info()
+
+      call sun%td_write_iter(it)
+      call earth%td_write_iter(it)
+      call moon%td_write_iter(it)
+    end do
+
+    call sun%td_write_end()
+    call earth%td_write_end()
+    call moon%td_write_end()
+
+    SAFE_DEALLOCATE_P(sun)
+    SAFE_DEALLOCATE_P(earth)
+    SAFE_DEALLOCATE_P(moon)
+    SAFE_DEALLOCATE_P(prop_sun)
+    SAFE_DEALLOCATE_P(prop_earth)
+    SAFE_DEALLOCATE_P(prop_moon)
+
+    POP_SUB(test_celestial_dynamics)
+  end subroutine test_celestial_dynamics
 
 end module test_oct_m
 

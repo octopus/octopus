@@ -1,0 +1,33 @@
+ExperimentalFeatures = yes
+FromScratch = yes
+CalculationMode = gs
+
+Dimensions = 1
+DerivativesOrder = 1
+
+BoxShape = parallelepiped
+lsize = 5
+spacing = 0.1
+
+%Species
+ "Al3P" | species_user_defined | potential_formula  |  "-13/sqrt(x^2+1)" | valence | 10
+%
+
+%Coordinates
+"Al3P" | 0 
+%
+
+XCFunctional = oep_x
+OEPLevel = oep_kli
+
+ParKPoints = no
+ConvAbsEv = 5e-7
+ConvAbsDens = 5e-7
+
+Photons = yes
+
+%PhotonModes
+  1.1 | 0.06741998624 | 1 | 0 | 0
+%
+
+

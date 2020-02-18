@@ -212,6 +212,7 @@ contains
     
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
+    ks%oep%level = XC_OEP_NONE
    
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
@@ -396,6 +397,8 @@ contains
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
         call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+      else
+        ks%oep%level = XC_OEP_NONE
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
@@ -995,6 +998,9 @@ contains
           else
             call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
               hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+          end if
+          if (ks%oep%has_photons) then
+            ks%calc%energy%photon_exchange = ks%oep%pt%ex
           end if
         end if
 

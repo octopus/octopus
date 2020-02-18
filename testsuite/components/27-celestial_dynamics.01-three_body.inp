@@ -1,0 +1,36 @@
+CalculationMode = test
+
+TestMode = celestial_dynamics
+
+Dimensions = 2
+
+#Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
+
+Earth.CelestialBodyMass = 5.97237e24
+%Earth.CelestialBodyInitialPosition
+ 149598023000.0 | 0.0
+%
+%Earth.CelestialBodyInitialVelocity
+ 0.0 | 29780.0
+%
+
+Moon.CelestialBodyMass = 7.342e22
+%Moon.CelestialBodyInitialPosition
+ 149982422000.0 | 0.0
+%
+%Moon.CelestialBodyInitialVelocity
+ 0.0 | 30902.0
+%
+
+Sun.CelestialBodyMass = 1.98855e30
+%Sun.CelestialBodyInitialPosition
+ 0.0 | 0.0
+%
+%Sun.CelestialBodyInitialVelocity
+ 0.0 | 0.0
+%
+
+sampling = 20 # Time-steps per day
+days = 365
+TDTimeStep = 24*3600/sampling
+TDMaxSteps = days*sampling

@@ -102,7 +102,7 @@ module fft_oct_m
     private
     integer         :: slot    !< in which slot do we have this fft
 
-    integer         :: type    !< is the fft real or complex
+    integer, public :: type    !< is the fft real or complex
     integer, public :: library !< what library are we using
 
     integer         :: comm           !< MPI communicator

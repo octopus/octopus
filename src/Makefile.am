@@ -374,7 +374,8 @@ noinst_HEADERS +=                                \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
 	poisson/poisson_init_inc.F90             \
-	poisson/poisson_direct_inc.F90
+	poisson/poisson_direct_inc.F90           \
+        poisson/poisson_fft_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \
@@ -479,6 +480,7 @@ noinst_HEADERS +=                                    \
 # Sources in system
 system_f_srcs =                                 \
 	system/current.F90                      \
+	system/celestial_body.F90               \
 	system/dos.F90                          \
 	system/eigen_cg.F90                     \
 	system/eigen_lobpcg.F90                 \
@@ -488,6 +490,8 @@ system_f_srcs =                                 \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
+	system/interaction_abst.F90             \
+	system/interaction_gravity.F90          \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
 	system/multisystem.F90                  \
@@ -495,10 +499,12 @@ system_f_srcs =                                 \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
+	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
+	system/system_abst.F90                  \
 	system/system_mxll.F90                  \
 	system/v_ks.F90                         \
 	system/xc_ks_inversion.F90              \
@@ -529,6 +535,7 @@ noinst_HEADERS +=                               \
 	system/xc_kli_inc.F90                   \
 	system/xc_kli_pauli_inc.F90             \
 	system/xc_oep_inc.F90                   \
+	system/xc_oep_qed_inc.F90               \
 	system/xc_oep_sic_inc.F90               \
 	system/xc_oep_x_inc.F90
 
@@ -558,6 +565,7 @@ td_f_srcs =                                 \
 	td/pes_out.F90                      \
 	td/pes_spm.F90                      \
 	td/potential_interpolation.F90      \
+	td/propagator_abst.F90              \
 	td/propagator_base.F90              \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
@@ -565,6 +573,7 @@ td_f_srcs =                                 \
 	td/propagator.F90                   \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
+	td/propagator_verlet.F90            \
 	td/propagator_rk.F90                \
 	td/spectrum.F90                     \
 	td/td_calc.F90                      \
