@@ -212,6 +212,7 @@ contains
     
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
+    ks%oep%level = XC_OEP_NONE
    
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
