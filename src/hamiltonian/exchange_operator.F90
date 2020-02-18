@@ -32,6 +32,7 @@ module exchange_operator_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -41,6 +42,7 @@ module exchange_operator_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
+  use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_parallel_oct_m
@@ -73,6 +75,8 @@ module exchange_operator_oct_m
     FLOAT :: cam_alpha
     FLOAT :: cam_beta
 
+    type(poisson_t) :: psolver      !< Poisson solver
+
     type(scdm_t)  :: scdm
   end type exchange_operator_t
  
@@ -92,11 +96,13 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, st_d, sb, mesh, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, st, sb, der, mc, mesh, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
     type(namespace_t), target, intent(in)    :: namespace
-    type(states_elec_dim_t),   intent(in)    :: st_d
+    type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
+    type(derivatives_t),       intent(in)    :: der
+    type(multicomm_t),         intent(in)    :: mc
     type(mesh_t),              intent(in)    :: mesh
     FLOAT,                     intent(in)    :: omega, alpha, beta
 
@@ -105,6 +111,14 @@ contains
     this%cam_omega = omega
     this%cam_alpha = alpha
     this%cam_beta  = beta
+
+    if(states_are_real(st)) then
+      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+             force_serial = .true., verbose = .false.)
+    else
+      call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
+             force_serial = .true., verbose = .false., force_cmplx = .true.)
+    end if
 
     POP_SUB(exchange_operator_init)
   end subroutine exchange_operator_init
@@ -136,6 +150,8 @@ contains
       SAFE_DEALLOCATE_P(this%st)
     end if
     nullify(this%st)
+
+    call poisson_end(this%psolver)
 
     POP_SUB(exchange_operator_end)
   end subroutine exchange_operator_end
