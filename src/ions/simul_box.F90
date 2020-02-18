@@ -805,7 +805,7 @@ contains
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
     sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
-    if(.not. has_angles) then
+    if(.not. has_angles .and. sb%dim == 3) then
       !We compute the angles from the lattice vectors
       sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
       sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
@@ -1068,11 +1068,13 @@ contains
       end do
       call messages_info(1+sb%dim, iunit)
 
-      write(message(1),'(a)') '  Cell angles [degree]'
-      write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
-      write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
-      write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
-      call messages_info(4, iunit)
+      if(sb%dim == 3) then
+        write(message(1),'(a)') '  Cell angles [degree]'
+        write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
+        write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
+        write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+        call messages_info(4, iunit)
+      end if
     end if
 
     POP_SUB(simul_box_write_info)
