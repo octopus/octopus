@@ -183,23 +183,25 @@ contains
   end function simulation_clock_get_sim_time
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_increment(this)
+  subroutine simulation_clock_increment(this, steps)
     class(simulation_clock_t), intent(inout) :: this
+    integer, optional,         intent(in)    :: steps
 
     PUSH_SUB(simulation_clock_increment)
 
-    this%clock_tick = this%clock_tick + 1
+    this%clock_tick = this%clock_tick + optional_default(steps, 1)
 
     POP_SUB(simulation_clock_increment)
   end subroutine simulation_clock_increment
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_decrement(this)
+  subroutine simulation_clock_decrement(this, steps)
     class(simulation_clock_t), intent(inout) :: this
+    integer, optional,         intent(in)    :: steps
 
     PUSH_SUB(simulation_clock_decrement)
 
-    this%clock_tick = this%clock_tick - 1
+    this%clock_tick = this%clock_tick - optional_default(steps, 1)
 
     POP_SUB(simulation_clock_decrement)
   end subroutine simulation_clock_decrement

@@ -1033,7 +1033,9 @@ contains
     call test_clock_a%print()
     call test_clock_a%reset()
     call test_clock_a%print()
-    call test_clock_a%increment()
+    call test_clock_a%increment(3)
+    call test_clock_a%print()
+    call test_clock_a%decrement(2)
     call test_clock_a%print()
 
     write(message(1),'(A,x,I10.10)') &
