@@ -151,13 +151,13 @@ contains
   ! ---------------------------------------------------------
   subroutine system_init_clock(this, dt, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
-    FLOAT                               :: dt, smallest_algo_dt
+    FLOAT, intent(in)                   :: dt, smallest_algo_dt
 
-    PUSH_SUB(system_set_propagator)
+    PUSH_SUB(system_init_clock)
 
     this%clock = simulation_clock_t(this%namespace, dt, smallest_algo_dt)
 
-    POP_SUB(system_set_propagator)
+    POP_SUB(system_init_clock)
   end subroutine system_init_clock
 
 end module system_abst_oct_m

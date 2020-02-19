@@ -1018,7 +1018,7 @@ contains
 
     PUSH_SUB(test_simulation_clock)
 
-    test_clock_a = simulation_clock_t(namespace_t('test_clock_a'), CNST(2.0), CNST(1.0))
+    test_clock_a = simulation_clock_t(namespace_t('test_clock_a'), CNST(2.0), CNST(1.0), 100)
     test_clock_b = simulation_clock_t(namespace_t('test_clock_b'), CNST(1.0), CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
@@ -1053,6 +1053,7 @@ contains
     write(message(8),'(A,x,I1)')     &
 	'simulation_clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
     call messages_info(8)
+
 
     POP_SUB(test_simulation_clock)
   end subroutine test_simulation_clock
