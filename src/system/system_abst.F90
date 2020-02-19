@@ -1,5 +1,5 @@
 !! Copyright (C) 2019 N. Tancogne-Dejean
-!! Copyright (C) 2020 M. Oliveira
+!! Copyright (C) 2020 M. Oliveira, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -151,7 +151,7 @@ contains
   ! ---------------------------------------------------------
   subroutine system_init_clock(this, dt, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
-    FLOAT, intent(in)                   :: dt, smallest_algo_dt
+    FLOAT,                intent(in)    :: dt, smallest_algo_dt
 
     PUSH_SUB(system_init_clock)
 

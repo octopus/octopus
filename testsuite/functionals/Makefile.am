@@ -148,7 +148,7 @@ dist_share_DATA =                                  \
 	16-dressed-rdmft.02-hf.inp                 \
 	16-dressed-rdmft.03-rdmft.inp              \
         17-oep-photons.01-kli.inp                  \
-        17-oep-photons.02-oep.inp                  \            
+        17-oep-photons.02-oep.inp                  \
         17-oep-photons.test
 
 CLEANFILES = *~ *.bak

@@ -89,28 +89,24 @@ contains
 
   ! ---------------------------------------------------------
   type(simulation_clock_t) function simulation_clock_init(namespace, time_step, smallest_algo_dt, initial_tick) result(this)
-    type(namespace_t), intent(in)  :: namespace
-    FLOAT, intent(in)              :: time_step, smallest_algo_dt
-    integer, optional              :: initial_tick
+    type(namespace_t), intent(in) :: namespace
+    FLOAT,             intent(in) :: time_step, smallest_algo_dt
+    integer, optional             :: initial_tick
 
     integer :: epoch_sec, epoch_usec
 
     PUSH_SUB(simulation_clock_init)
 
+    ! this needs to be adapted later on for a more sophisticated handling of the clock namespace
     this%namespace = namespace
+    this%clock_tick = optional_default(initial_tick, 0)
 
-    if (present(initial_tick)) then
-      this%clock_tick = initial_tick
-    else
-      this%clock_tick = 0
-    end if
-
-    if (ceiling(time_step/smallest_algo_dt).eq.floor(time_step/smallest_algo_dt)) then
+    if (ceiling(time_step/smallest_algo_dt) == floor(time_step/smallest_algo_dt)) then
       this%granularity = ceiling(time_step/smallest_algo_dt)
     else
-      message(1) = 'Timesteps of the clocks are not comensurate. &
-                    Please adapt the time steps of your subsystems to make them compatible.'
-      call messages_fatal(1)
+      message(1) = 'Timesteps of the clocks are not comensurate.'
+      message(2) = 'Please adapt the time steps of your subsystems to make them compatible.'
+      call messages_fatal(2)
     endif
 
     this%time_step = time_step
@@ -225,22 +221,18 @@ contains
 
     PUSH_SUB(simulation_clock_is_earlier)
 
-    if(clock_a%get_tick() < clock_b%get_tick()) then
-        is_earlier = .true.
-    else
-        is_earlier = .false.
-    end if
+    is_earlier = clock_a%get_tick() < clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_earlier)
   end function simulation_clock_is_earlier
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_later(clock_a, clock_b) result(is_earlier)
+  logical function simulation_clock_is_later(clock_a, clock_b) result(is_later)
     class(simulation_clock_t), intent(in) :: clock_a, clock_b
 
     PUSH_SUB(simulation_clock_is_later)
 
-    is_earlier = simulation_clock_is_earlier(clock_b, clock_a)
+    is_later = clock_a%get_tick() > clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_later)
   end function simulation_clock_is_later
@@ -251,22 +243,18 @@ contains
 
     PUSH_SUB(simulation_clock_is_equal_or_earlier)
 
-    if(clock_a%get_tick() <= clock_b%get_tick()) then
-        is_earlier = .true.
-    else
-        is_earlier = .false.
-    end if
+    is_earlier = clock_a%get_tick() <= clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_equal_or_earlier)
   end function simulation_clock_is_equal_or_earlier
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_equal_or_later(clock_a, clock_b) result(is_earlier)
+  logical function simulation_clock_is_equal_or_later(clock_a, clock_b) result(is_later)
     class(simulation_clock_t), intent(in) :: clock_a, clock_b
 
     PUSH_SUB(simulation_clock_is_equal_or_later)
 
-    is_earlier = simulation_clock_is_earlier(clock_b, clock_a)
+    is_later = clock_a%get_tick() >= clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_equal_or_later)
   end function simulation_clock_is_equal_or_later
@@ -277,11 +265,7 @@ contains
 
     PUSH_SUB(simulation_clock_is_equal)
 
-    if(clock_a%get_tick() == clock_b%get_tick()) then
-        are_equal = .true.
-    else
-        are_equal = .false.
-    end if
+    are_equal = clock_a%get_tick() == clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_equal)
   end function simulation_clock_is_equal
@@ -292,11 +276,7 @@ contains
 
     PUSH_SUB(simulation_clock_is_later_with_step)
 
-    if(clock_a%get_tick() + clock_a%granularity > clock_b%get_tick()) then
-        is_later_with_step = .true.
-    else
-        is_later_with_step = .false.
-    end if
+    is_later_with_step = (clock_a%get_tick() + clock_a%granularity) > clock_b%get_tick()
 
     POP_SUB(simulation_clock_is_later_with_step)
   end function simulation_clock_is_later_with_step
