@@ -22,6 +22,7 @@ module interaction_gravity_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use messages_oct_m
+  use observable_oct_m
   use profiling_oct_m
   use system_abst_oct_m
 
@@ -37,11 +38,16 @@ module interaction_gravity_oct_m
     FLOAT :: force(MAX_DIM)
 
     class(system_abst_t), pointer :: partner
-    FLOAT :: partner_mass
-    FLOAT :: partner_pos(MAX_DIM)
+
+    FLOAT, pointer :: system_mass
+    FLOAT, pointer :: system_pos(:)
+
+    FLOAT, pointer :: partner_mass
+    FLOAT, pointer :: partner_pos(:)
 
   contains
     procedure :: update => interaction_gravity_update
+    procedure :: end => interaction_gravity_end
     final :: interaction_gravity_finalize
   end type interaction_gravity_t
 
@@ -65,30 +71,59 @@ contains
     this%dim = dim
     this%partner => partner
 
+    !Gravity interaction needs only one observable from each system, which is the position
+    this%n_system_observables = 1
+    this%n_partner_observables = 1
+    SAFE_ALLOCATE(this%system_observables(this%n_system_observables))
+    SAFE_ALLOCATE(this%partner_observables(this%n_partner_observables))
+    this%system_observables(1) = POSITION
+    this%partner_observables(1) = POSITION
+
+    call partner%set_pointers_to_interaction(this)
+
     POP_SUB(interaction_gravity_init)
   end function interaction_gravity_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_update(this, mass, position)
+  subroutine interaction_gravity_update(this)
     class(interaction_gravity_t), intent(inout) :: this
-    FLOAT,                        intent(in)    :: mass
-    FLOAT,                        intent(in)    :: position(:)
 
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
 
     PUSH_SUB(interaction_gravity_update)
 
-    ! Update information from partner
-    call this%partner%update_interaction_as_partner(this)
+    ASSERT(associated(this%partner_pos))
+    ASSERT(associated(this%system_pos))
+    ASSERT(associated(this%partner_mass))
+    ASSERT(associated(this%system_mass))
 
     ! Now calculate the gravitational force
-    dist3 = sum((this%partner_pos(1:this%dim) - position(1:this%dim))**2)**(M_THREE/M_TWO)
+    dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
-    this%force(1:this%dim) = (this%partner_pos(1:this%dim) - position(1:this%dim)) / dist3 * (GG * mass * this%partner_mass)
+    this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
+                                      / dist3 * (GG * this%system_mass * this%partner_mass)
 
     POP_SUB(interaction_gravity_update)
   end subroutine interaction_gravity_update
+
+  ! ---------------------------------------------------------
+  subroutine interaction_gravity_end(this)
+    class(interaction_gravity_t), intent(inout) :: this
+
+    PUSH_SUB(interaction_gravity_end)
+
+    nullify(this%partner)
+    this%force = M_ZERO
+    nullify(this%system_mass)
+    nullify(this%system_pos)
+    nullify(this%partner_mass)
+    nullify(this%partner_pos)
+
+    call interaction_abst_end(this)
+
+    POP_SUB(interaction_gravity_end)
+  end subroutine interaction_gravity_end
 
   ! ---------------------------------------------------------
   subroutine interaction_gravity_finalize(this)
@@ -96,10 +131,7 @@ contains
 
     PUSH_SUB(interaction_gravity_finalize)
 
-    nullify(this%partner)
-    this%force = M_ZERO
-    this%partner_mass = M_ZERO
-    this%partner_pos = M_ZERO
+    call this%end()
 
     POP_SUB(interaction_gravity_finalize)
   end subroutine interaction_gravity_finalize

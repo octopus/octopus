@@ -15,24 +15,36 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
+#include "global.h"
 
 #include "global.h"
 
 module interaction_abst_oct_m
+  use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use profiling_oct_m
   implicit none
 
   private
   public ::               &
     interaction_abst_t,   &
+    interaction_abst_end, &
     interaction_iterator_t
 
   !> The only purpose of the following class is to act as a surrogate and
   !> avoid circular dependencies between the interactions and the systems.
   type, abstract :: interaction_abst_t
     private
+
+    integer, public :: n_system_observables
+    integer, public :: n_partner_observables
+    integer, allocatable, public :: system_observables(:)
+    integer, allocatable, public :: partner_observables(:)
+
+    type(clock_t), public :: clock
+    
   end type interaction_abst_t
 
   !> This class extends the list iterator and adds one method to get the
@@ -44,6 +56,19 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine interaction_abst_end(this)
+    class(interaction_abst_t), intent(inout) :: this
+
+    PUSH_SUB(interaction_abst_end)
+
+    SAFE_DEALLOCATE_A(this%system_observables)
+    SAFE_DEALLOCATE_A(this%partner_observables)
+
+    POP_SUB(interaction_abst_end)
+
+  end subroutine interaction_abst_end
 
   ! ---------------------------------------------------------
   function interaction_iterator_get_next(this) result(value)
@@ -64,7 +89,7 @@ contains
 
     POP_SUB(interaction_iterator_get_next)
   end function interaction_iterator_get_next
-
+   
 end module interaction_abst_oct_m
 
 !! Local Variables:

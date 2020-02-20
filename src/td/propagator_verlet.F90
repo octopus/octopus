@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_verlet_oct_m
+  use clock_oct_m
   use global_oct_m
   use gauge_field_oct_m
   use messages_oct_m
@@ -43,8 +44,7 @@ module propagator_verlet_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_verlet_init(time, dt) result(this)
-    FLOAT,                     intent(in) :: time
+  function propagator_verlet_init(dt) result(this)
     FLOAT,                     intent(in) :: dt
     type(propagator_verlet_t), pointer    :: this
 
@@ -53,17 +53,15 @@ contains
     SAFE_ALLOCATE(this)
 
     call this%add(VERLET_UPDATE_POS)
-    call this%add(VERLET_SYNC_DT)
     call this%add(UPDATE_INTERACTIONS)
     call this%add(VERLET_COMPUTE_ACC)
     call this%add(VERLET_COMPUTE_VEL)
     call this%add(FINISHED)
 
-    this%internal_time = time
-    this%dt = dt
-
-    ! verlet has only one algorithmic step
+    ! Verlet has only one algorithmic step
     this%algo_steps = 1
+
+    this%dt = dt
 
     POP_SUB(propagator_verlet_init)
   end function propagator_verlet_init

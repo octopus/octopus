@@ -496,6 +496,7 @@ system_f_srcs =                                 \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
 	system/multisystem.F90                  \
+	system/observable.F90                   \
 	system/output.F90                       \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
@@ -568,6 +569,7 @@ td_f_srcs =                                 \
 	td/potential_interpolation.F90      \
 	td/propagator_abst.F90              \
 	td/propagator_base.F90              \
+        td/propagator_beeman.F90            \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \

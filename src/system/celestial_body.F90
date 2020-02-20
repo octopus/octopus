@@ -20,6 +20,7 @@
 #include "global.h"
 
 module celestial_body_oct_m
+  use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
@@ -29,6 +30,7 @@ module celestial_body_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
+  use observable_oct_m
   use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
@@ -49,7 +51,11 @@ module celestial_body_oct_m
     FLOAT, public :: pos(1:MAX_DIM)
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
+    FLOAT, public :: prev_acc(1:MAX_DIM)
+    FLOAT, public :: save_pos(1:MAX_DIM)
+    FLOAT, public :: save_vel(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
+    FLOAT, public :: prev_tot_force(1:MAX_DIM)
     type(linked_list_t) :: interactions
 
     type(space_t) :: space
@@ -60,11 +66,17 @@ module celestial_body_oct_m
     procedure :: has_interaction => celestial_body_has_interaction
     procedure :: do_td_operation => celestial_body_do_td
     procedure :: update_interactions => celestial_body_update_interactions
-    procedure :: update_interaction_as_partner => celestial_body_update_interaction_as_partner
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
     procedure :: td_write_iter => celestial_body_td_write_iter
     procedure :: td_write_end => celestial_body_td_write_end
+    procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
+    procedure :: store_current_status => celestial_body_store_current_status
+    procedure :: update_observables_as_system => celestial_body_update_observables_as_system
+    procedure :: update_observables_as_partner => celestial_body_update_observables_as_partner
+    procedure :: reset_clocks => celestial_body_reset_clocks
+    procedure :: init_interaction_clocks => celestial_body_init_interaction_clocks
+    procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
     final :: celestial_body_finalize
   end type celestial_body_t
 
@@ -137,6 +149,7 @@ contains
     call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', sys%vel(1:sys%space%dim))
 
     sys%acc = M_ZERO
+    sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
 
     call messages_print_stress(stdout, namespace=namespace)
@@ -146,8 +159,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine celestial_body_add_interaction_partner(this, partner)
-    class(celestial_body_t), intent(inout) :: this
-    class(system_abst_t),    intent(in)    :: partner
+    class(celestial_body_t), target, intent(inout) :: this
+    class(system_abst_t),            intent(in)    :: partner
 
     class(interaction_gravity_t), pointer :: gravity
     type(interaction_gravity_t) :: gravity_t
@@ -156,6 +169,8 @@ contains
 
     if (partner%has_interaction(gravity_t)) then
       gravity => interaction_gravity_t(this%space%dim, partner)
+      gravity%system_mass => this%mass
+      gravity%system_pos  => this%pos
       call this%interactions%add(gravity)
     end if
 
@@ -181,23 +196,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine celestial_body_do_td(this, operation)
-    class(celestial_body_t),  intent(inout) :: this
-    integer,               intent(in)    :: operation
+    class(celestial_body_t), intent(inout) :: this
+    integer,                 intent(in)    :: operation
 
     type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_do_td)
 
     select case(operation)
-    case(VERLET_SYNC_DT)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%prop%internal_time = this%prop%internal_time + this%prop%dt
-      call this%prop%next()
-
     case(VERLET_UPDATE_POS)
       if (debug%info) then
         message(1) = "Debug: Propagation step - Updating positions for " + trim(this%namespace%get())
@@ -209,11 +215,16 @@ contains
                                    + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
       call this%prop%next()
 
+      call this%observables(POSITION)%clock%increment()
+
     case(VERLET_COMPUTE_ACC)
       if (debug%info) then
         message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%namespace%get())
         call messages_info(1)
       end if
+
+      !Use as SCF criterium
+      this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
@@ -240,30 +251,137 @@ contains
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
       call this%prop%next()
 
+      call this%observables(VELOCITY)%clock%increment()
+
+    case(BEEMAN_PREDICT_POS)
+      if (debug%info) then
+        message(1) = "Debug: Prediction step - Computing position for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
+
+      this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
+                       + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                             * ( M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+      this%prev_acc(1:this%space%dim) = this%acc(1:this%space%dim)
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
+      call this%prop%next()
+
+      if(.not. this%prop%predictor_corrector) then
+        call this%observables(POSITION)%clock%increment()
+      end if
+
+    case(BEEMAN_PREDICT_VEL)
+      if (debug%info) then
+        message(1) = "Debug: Prediction step - Computing velocity for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
+      this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
+                       + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
+                         + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+      call this%prop%next()
+
+      call this%observables(VELOCITY)%clock%increment()
+
+
+    case(BEEMAN_CORRECT_POS)
+      if (debug%info) then
+        message(1) = "Debug: Correction step - Computing position for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
+ 
+      this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
+                       + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                             * ( M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+      call this%prop%next()
+
+      !We set it to the propagation time to avoid double increment
+      call this%observables(POSITION)%clock%set_time(this%prop%clock)
+
+    case(BEEMAN_CORRECT_VEL)
+      if (debug%info) then
+        message(1) = "Debug: Correction step - Computing velocity for " + trim(this%namespace%get())
+        call messages_info(1)
+      end if
+
+      this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) + &
+         M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+      call this%prop%next()
+
+      !We set it to the propagation time to avoid double increment
+      call this%observables(VELOCITY)%clock%set_time(this%prop%clock)
+
     case default
       message(1) = "Unsupported TD operation."
       call messages_fatal(1, namespace=this%namespace)
     end select
 
    POP_SUB(celestial_body_do_td)
-
   end subroutine celestial_body_do_td
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interactions(this)
+  logical function celestial_body_update_interactions(this) result(all_updated)
     class(celestial_body_t), intent(inout) :: this
 
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
+    logical :: obs_updated
 
     PUSH_SUB(celestial_body_update_interactions)
+
+    all_updated = .true.
+
+    !I update my oservables that will be needed for computing the interaction
+    all_updated = this%update_observables_as_system(this%prop%clock)
+
+    if (debug%info) then
+      write(message(1), '(a)') "Debug: Updating interactions for  " // trim(this%namespace%get())
+      call messages_info(1)
+    end if
 
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
       select type (interaction)
       type is (interaction_gravity_t)
-        call interaction%update(this%mass, this%pos)
+      
+        !I am already updated to the desired time
+        if(interaction%clock == this%prop%clock) then
+          cycle
+        end if
+
+        !I am earlier and won`t become equal or be ahead after a step
+        !therefore this is not a good time to update the interaction
+        !You (system) need to wait for partner to reach a further point in time
+        if(interaction%partner%clock < this%prop%clock &
+           .and. interaction%partner%clock%is_earlier_with_step(this%prop%clock)) then
+          all_updated = .false.
+        else !That the best moment to update the interaction
+          !We first update the observables from target if needed
+          !The observables from system have already been updated
+
+          !We request the partner to update its observables
+          !This might not be possible if the partner has a predictor corrector propagator
+          obs_updated = interaction%partner%update_observables_as_partner(interaction, this%prop%clock)
+          if(obs_updated) then
+
+           if (debug%info) then
+              write(message(1), '(a)') " -- Update interaction with " // trim(interaction%partner%namespace%get())
+              write(message(2), '(a,i3,a,i3)') " --- clocks are ", this%prop%clock%get_tick(), " and ", interaction%clock%get_tick()
+              call messages_info(2)
+            end if
+
+            !We can now compute the interaction from the updated pointers
+            call interaction%update()
+            call interaction%clock%set_time(this%prop%clock)
+          else
+            if (debug%info) then
+              write(message(1), '(a)') " -- Cannot update interaction with " // trim(interaction%partner%namespace%get())
+              call messages_info(1)
+            end if
+            all_updated = .false.
+          end if
+        end if
+
       class default
         message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
         call messages_fatal(1)
@@ -271,27 +389,41 @@ contains
     end do
 
     POP_SUB(celestial_body_update_interactions)
-  end subroutine celestial_body_update_interactions
+  end function celestial_body_update_interactions
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interaction_as_partner(this, interaction)
+  logical function celestial_body_is_tolerance_reached(this, tol) result(converged)
     class(celestial_body_t),   intent(in)    :: this
-    class(interaction_abst_t), intent(inout) :: interaction
+    FLOAT,                     intent(in)    :: tol
 
-    PUSH_SUB(celestial_body_update_interaction_as_partner)
+    PUSH_SUB(celestial_body_is_tolerance_reached)
 
-    select type (interaction)
-    type is (interaction_gravity_t)
-      interaction%partner_mass = this%mass
-      interaction%partner_pos = this%pos
+    !Here we put the criterium that acceleration change is below the tolerance
+    converged = .false.
+    if(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2) < tol**2) then
+      converged = .true.
+    end if 
 
-    class default
-      message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-      call messages_fatal(1)
-    end select
+    if (debug%info) then
+      write(message(1), '(a, e12.6, a, e12.6)') "Debug: Change in acceleration  ", &
+          sqrt(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2)), " and tolerance ", tol
+      call messages_info(1)
+    end if
 
-    POP_SUB(celestial_body_update_interaction_as_partner)
-  end subroutine celestial_body_update_interaction_as_partner
+    POP_SUB(celestial_body_is_tolerance_reached)
+   end function celestial_body_is_tolerance_reached
+
+   ! ---------------------------------------------------------
+   subroutine celestial_body_store_current_status(this)
+     class(celestial_body_t),   intent(inout)    :: this
+
+     PUSH_SUB(celestial_body_store_current_status) 
+
+     this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
+     this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
+
+     POP_SUB(celestial_body_store_current_status)
+   end subroutine celestial_body_store_current_status
 
   ! ---------------------------------------------------------
   subroutine celestial_body_write_td_info(this)
@@ -373,7 +505,6 @@ contains
     end if
 
     call write_iter_start(this%output_handle)
-
     call write_iter_double(this%output_handle, this%pos, this%space%dim)
     call write_iter_double(this%output_handle, this%vel, this%space%dim)
     call write_iter_nl(this%output_handle)
@@ -393,6 +524,173 @@ contains
 
     POP_SUB(celestial_body_td_write_end)
   end subroutine celestial_body_td_write_end
+
+  ! ---------------------------------------------------------
+  logical function celestial_body_update_observables_as_system(this, clock) result(all_updated)
+    class(celestial_body_t),   intent(inout) :: this
+    class(clock_t),            intent(inout) :: clock
+
+    class(interaction_abst_t), pointer :: interaction
+    type(interaction_iterator_t) :: iter
+    integer :: iobs, obs_index
+
+    PUSH_SUB(celestial_body_update_observables_as_system)
+
+    all_updated = .true.
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+      select type (interaction)
+      type is (interaction_gravity_t)
+
+      do iobs = 1, interaction%n_system_observables
+        obs_index = interaction%system_observables(iobs)
+        if(this%observables(obs_index)%clock > clock) then
+          message(1) = "The system observable is in advance compared to the requested clock."
+          call messages_fatal(1)
+        end if
+
+        select case(obs_index)
+        case(POSITION)
+          !Don`t do anything, this is a protected quantity. The propagator update it
+          !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+        case(VELOCITY)
+          !Don`t do anything, this is a protected quantity. The propagator update it
+          !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+        case default
+          message(1) = "Incompatible observable."
+          call messages_fatal(1)
+        end select
+      end do
+
+      class default
+        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+        call messages_fatal(1)
+      end select
+    end do
+
+    POP_SUB(celestial_body_update_observables_as_system)
+  end function celestial_body_update_observables_as_system
+
+ ! ---------------------------------------------------------
+ logical function celestial_body_update_observables_as_partner(this, interaction, clock) result(all_updated)
+    class(celestial_body_t),   intent(inout) :: this
+    class(interaction_abst_t), intent(inout) :: interaction
+    class(clock_t),            intent(inout) :: clock
+
+    integer :: iobs, obs_index
+
+    PUSH_SUB(celestial_body_update_observables_as_partner)
+
+    all_updated = .true.
+
+    do iobs = 1, interaction%n_partner_observables
+      obs_index = interaction%partner_observables(iobs)
+      if(this%observables(obs_index)%clock > clock) then
+        message(1) = "The partner observable is in advance compared to the requested clock."
+        call messages_fatal(1)
+      end if
+
+      select case(obs_index)
+      case(POSITION)
+        !Don`t do anything, this is a protected quantity. The propagator update it.
+        !However, it can only be used if the predictor-corrector step is done.
+        if(this%prop%predictor_corrector) then
+          all_updated = all_updated .and. this%prop%last_step_done_tick == clock%get_tick()
+        end if
+      case(VELOCITY)
+        !Don`t do anything, this is a protected quantity. The propagator update it
+        !However, it can only be used if the predictor-corrector step is done.
+        if(this%prop%predictor_corrector) then
+          all_updated = all_updated .and. this%prop%last_step_done_tick == clock%get_tick()
+        end if
+      case default
+        message(1) = "Incompatible observable."
+        call messages_fatal(1)
+      end select
+    end do
+
+    POP_SUB(celestial_body_update_observables_as_partner)
+  end function celestial_body_update_observables_as_partner
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_reset_clocks(this, accumulated_ticks)
+    class(celestial_body_t),      intent(inout) :: this
+    integer,                      intent(in)    :: accumulated_ticks
+
+    integer :: it
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(celestial_body_reset_clocks)
+
+    do it = 1, accumulated_ticks
+      call this%observables(POSITION)%clock%decrement()
+      call this%observables(VELOCITY)%clock%decrement()
+
+      call iter%start(this%interactions)
+      do while (iter%has_next())
+        interaction => iter%get_next_interaction()
+        select type (interaction)
+        type is (interaction_gravity_t)
+          call interaction%clock%decrement()
+        class default
+          message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+          call messages_fatal(1)
+        end select
+      end do
+    end do
+
+    POP_SUB(celestial_body_reset_clocks)
+  end subroutine celestial_body_reset_clocks
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_init_interaction_clocks(this, dt, smallest_algo_dt)
+    class(celestial_body_t),  intent(inout)    :: this
+    FLOAT                                      :: dt, smallest_algo_dt
+
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(celestial_body_init_interaction_clocks)
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+      select type (interaction)
+      type is (interaction_gravity_t)
+        interaction%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+      class default
+        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+        call messages_fatal(1)
+      end select
+    end do
+
+    this%observables(POSITION)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    this%observables(VELOCITY)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+
+    POP_SUB(celestial_body_init_interaction_clocks)
+  end subroutine celestial_body_init_interaction_clocks
+
+  ! ---------------------------------------------------------
+  subroutine celestial_set_pointers_to_interaction(this, inter)
+    class(celestial_body_t), target,  intent(in)   :: this
+    class(interaction_abst_t),       intent(inout) :: inter
+
+    PUSH_SUB(celestial_set_pointers_to_interaction)
+
+    select type(inter)
+    type is(interaction_gravity_t)
+      inter%partner_mass => this%mass
+      inter%partner_pos => this%pos
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(celestial_set_pointers_to_interaction)
+  end subroutine celestial_set_pointers_to_interaction
 
   ! ---------------------------------------------------------
   subroutine celestial_body_finalize(this)

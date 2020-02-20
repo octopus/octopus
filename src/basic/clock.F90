@@ -52,6 +52,7 @@ module clock_oct_m
     procedure :: reset => clock_reset                 !< set the internal clock counter back to zero
     procedure :: is_later_with_step => clock_is_later_with_step !< compare two clocks and indicate if the first clock plus
                                                                 !! one step is later than the second clock
+    procedure :: is_earlier_with_step => clock_is_earlier_with_step
     procedure :: clock_is_equal
     generic   :: operator(.eq.) => clock_is_equal
     procedure :: clock_is_earlier
@@ -299,6 +300,20 @@ contains
 
     POP_SUB(clock_is_later_with_step)
   end function clock_is_later_with_step
+
+  ! ---------------------------------------------------------
+  !> This function returns true if taking clock_a and adding one
+  !! time step is earlier in time than the current time of clock_b
+  logical function clock_is_earlier_with_step(clock_a, clock_b) result(is_earlier_with_step)
+    class(clock_t), intent(in) :: clock_a, clock_b
+
+    PUSH_SUB(clock_is_earlier_with_step)
+
+    is_earlier_with_step = (clock_a%get_tick() + clock_a%granularity) < clock_b%get_tick()
+
+    POP_SUB(clock_is_earlier_with_step)
+  end function clock_is_earlier_with_step
+
 
 end module clock_oct_m
 

@@ -19,8 +19,10 @@
 #include "global.h"
 
 module propagator_abst_oct_m
+  use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
+  use list_node_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -34,12 +36,22 @@ module propagator_abst_oct_m
     private
 
     type(list_iterator_t) :: iter
+    type(list_iterator_t) :: scf_start
     integer               :: current_ops
 
-    FLOAT, public   :: internal_time
-    FLOAT, public   :: dt
     integer, public :: algo_steps
+    FLOAT, public   :: dt
+
+    !< Options related to predictor-corrector propagators
+    logical, public :: predictor_corrector = .false.
+    integer, public :: scf_count
+    integer, public :: max_scf_count
+    FLOAT, public   :: scf_tol
+
     logical :: step_done
+    integer, public :: last_step_done_tick = -1
+
+    type(clock_t), public :: clock
 
   contains
     !Below are the list of operations that needs to be implemented
@@ -48,16 +60,25 @@ module propagator_abst_oct_m
     procedure :: next => propagator_next
     procedure :: rewind => propagator_rewind
     procedure :: finished => propagator_finished
+    procedure :: save_scf_start => propagator_save_scf_start
+    procedure :: rewind_scf_loop => propagator_rewind_scf_loop
   end type propagator_abst_t
 
   ! Known propagation operations
   integer, public, parameter ::        &
-    FINISHED                     = 0,  &
-    VERLET_UPDATE_POS            = 1,  &
-    VERLET_COMPUTE_ACC           = 2,  &
-    VERLET_COMPUTE_VEL           = 3,  &
-    VERLET_SYNC_DT               = 4,  &
-    UPDATE_INTERACTIONS          = 5
+    FINISHED                     =  0,  &
+    VERLET_UPDATE_POS            =  1,  &
+    VERLET_COMPUTE_ACC           =  2,  &
+    VERLET_COMPUTE_VEL           =  3,  &
+    SYNC                         =  4,  &
+    UPDATE_INTERACTIONS          =  5,  &
+    START_SCF_LOOP               =  6,  &
+    END_SCF_LOOP                 =  7,  &
+    STORE_CURRENT_STATUS         =  8,  &
+    BEEMAN_PREDICT_POS           =  9,  &
+    BEEMAN_PREDICT_VEL           = 10,  &
+    BEEMAN_CORRECT_POS           = 11,  &
+    BEEMAN_CORRECT_VEL           = 12
 
 contains
 
@@ -79,6 +100,7 @@ contains
     PUSH_SUB(propagator_finished)
 
     this%step_done = .true.
+    this%last_step_done_tick = this%clock%get_tick()
 
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
@@ -115,6 +137,34 @@ contains
     step_is_done = this%step_done
 
   end function propagator_step_is_done
+
+  subroutine propagator_save_scf_start(this)
+    class(propagator_abst_t), intent(inout) :: this
+    
+    PUSH_SUB(propagator_save_scf_start)
+
+    !Save the current iteration state (START_SCF_LOOP) and move to next step
+    this%scf_start = this%iter
+    call this%next()
+    this%scf_count = 0
+
+    POP_SUB(propagator_save_scf_start) 
+
+  end subroutine propagator_save_scf_start
+
+  subroutine propagator_rewind_scf_loop(this)
+    class(propagator_abst_t), intent(inout) :: this
+
+    PUSH_SUB(propagator_rewind_scf_loop)
+
+    !Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
+    this%iter = this%scf_start
+    call this%next()
+    this%scf_count = this%scf_count + 1
+
+    POP_SUB(propagator_rewind_scf_loop)
+
+  end subroutine propagator_rewind_scf_loop
 
 end module propagator_abst_oct_m
 
