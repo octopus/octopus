@@ -31,7 +31,7 @@ module poisson_psolver_oct_m
   use parser_oct_m
   use profiling_oct_m
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
   !! From BigDFT
   use poisson_solver
   use dynamic_memory
@@ -51,7 +51,7 @@ module poisson_psolver_oct_m
   type poisson_psolver_t
     private
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
 #endif
     !> Indicates the boundary conditions (BC) of the problem:
@@ -93,7 +93,7 @@ contains
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     logical data_is_parallel
  
     PUSH_SUB(poisson_psolver_init)
@@ -139,7 +139,7 @@ contains
 
     PUSH_SUB(poisson_psolver_end)
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     call pkernel_free(this%kernel)
     call f_lib_finalize()
 #endif
@@ -155,7 +155,7 @@ contains
     FLOAT,               intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
     double precision :: hartree_energy !<  Hartree energy 
@@ -201,7 +201,7 @@ contains
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     type(cube_function_t) :: cf
     double precision :: hartree_energy !<  Hartree energy
     
@@ -250,7 +250,7 @@ contains
     type(poisson_psolver_t), intent(inout) :: this
     type(cube_t), intent(inout) :: cube
 
-#ifdef HAVE_PSOLVER_1_7
+#ifdef HAVE_LIBISF
     !>    ixc         eXchange-Correlation code. Indicates the XC functional to be used 
     !!                for calculating XC energies and potential. 
     !!                ixc=0 indicates that no XC terms are computed. The XC functional codes follow

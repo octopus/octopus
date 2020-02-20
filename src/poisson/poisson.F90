@@ -501,7 +501,7 @@ contains
     end if
 
     if (this%method == POISSON_PSOLVER) then
-#ifndef HAVE_PSOLVER_1_7
+#ifndef HAVE_LIBISF
       message(1)="The PSOLVER Poisson solver cannot be used since the code was not compiled with the PSOLVER libary."
       call messages_fatal(1)
 #endif
