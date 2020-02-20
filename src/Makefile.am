@@ -70,7 +70,7 @@ basic_f_srcs =                                 \
 	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
-	basic/simulation_clock.F90             \
+	basic/clock.F90             \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \

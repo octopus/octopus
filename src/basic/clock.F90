@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module simulation_clock_oct_m
+module clock_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
@@ -29,14 +29,14 @@ module simulation_clock_oct_m
 
   private
   public ::                &
-    simulation_clock_t,    &
+    clock_t,    &
     operator(.eq.),        &
     operator(.lt.),        &
     operator(.gt.),        &
     operator(.le.),        &
     operator(.ge.)
 
-  type simulation_clock_t
+  type clock_t
     private
     integer :: clock_tick
     integer :: granularity
@@ -46,56 +46,56 @@ module simulation_clock_oct_m
     type(namespace_t) :: namespace
 
   contains
-    procedure :: print => simulation_clock_print
-    procedure :: set => simulation_clock_set
-    procedure :: get_tick => simulation_clock_get_tick
-    procedure :: get_sim_time => simulation_clock_get_sim_time
-    procedure :: increment => simulation_clock_increment
-    procedure :: decrement => simulation_clock_decrement
-    procedure :: reset => simulation_clock_reset
-    procedure :: is_later_with_step => simulation_clock_is_later_with_step
-  end type simulation_clock_t
+    procedure :: print => clock_print
+    procedure :: set => clock_set
+    procedure :: get_tick => clock_get_tick
+    procedure :: get_sim_time => clock_get_sim_time
+    procedure :: increment => clock_increment
+    procedure :: decrement => clock_decrement
+    procedure :: reset => clock_reset
+    procedure :: is_later_with_step => clock_is_later_with_step
+  end type clock_t
 
-  interface simulation_clock_t
-    module procedure simulation_clock_init
-  end interface simulation_clock_t
+  interface clock_t
+    module procedure clock_init
+  end interface clock_t
 
   interface assignment(=)
-    procedure simulation_clock_set
+    procedure clock_set
   end interface
 
   interface operator(.eq.)
-    procedure simulation_clock_is_equal
+    procedure clock_is_equal
   end interface
 
   interface operator(.lt.)
-    procedure simulation_clock_is_earlier
+    procedure clock_is_earlier
   end interface
 
   interface operator(.gt.)
-    procedure simulation_clock_is_later
+    procedure clock_is_later
   end interface
 
   interface operator(.le.)
-    procedure simulation_clock_is_equal_or_earlier
+    procedure clock_is_equal_or_earlier
   end interface
 
   interface operator(.ge.)
-    procedure simulation_clock_is_equal_or_later
+    procedure clock_is_equal_or_later
   end interface
 
 
 contains
 
   ! ---------------------------------------------------------
-  type(simulation_clock_t) function simulation_clock_init(namespace, time_step, smallest_algo_dt, initial_tick) result(this)
+  type(clock_t) function clock_init(namespace, time_step, smallest_algo_dt, initial_tick) result(this)
     type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: time_step, smallest_algo_dt
     integer, optional             :: initial_tick
 
     integer :: epoch_sec, epoch_usec
 
-    PUSH_SUB(simulation_clock_init)
+    PUSH_SUB(clock_init)
 
     ! this needs to be adapted later on for a more sophisticated handling of the clock namespace
     this%namespace = namespace
@@ -114,14 +114,14 @@ contains
     this%sec_since_epoch = epoch_sec
     this%usec_since_epoch = epoch_usec
 
-    POP_SUB(simulation_clock_init)
-  end function simulation_clock_init
+    POP_SUB(clock_init)
+  end function clock_init
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_print(this)
-    class(simulation_clock_t), intent(in) :: this
+  subroutine clock_print(this)
+    class(clock_t), intent(in) :: this
     
-    PUSH_SUB(simulation_clock_print)
+    PUSH_SUB(clock_print)
 
     write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,I8.8,A,F8.6,A,I10.10,A,I6.6,A)') &
         '[Clock:',                         &
@@ -141,15 +141,15 @@ contains
         ']'
     call messages_info(1)
 
-    POP_SUB(simulation_clock_print)
-  end subroutine simulation_clock_print
+    POP_SUB(clock_print)
+  end subroutine clock_print
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_set(this, clock_in)
-    class(simulation_clock_t), intent(in) :: clock_in
-    class(simulation_clock_t), intent(inout) :: this
+  subroutine clock_set(this, clock_in)
+    class(clock_t), intent(in) :: clock_in
+    class(clock_t), intent(inout) :: this
     
-    PUSH_SUB(simulation_clock_set)
+    PUSH_SUB(clock_set)
 
     this%clock_tick = clock_in%clock_tick
     this%granularity = clock_in%granularity
@@ -157,133 +157,133 @@ contains
     this%sec_since_epoch = clock_in%sec_since_epoch
     this%usec_since_epoch = clock_in%usec_since_epoch
 
-    POP_SUB(simulation_clock_set)
-  end subroutine simulation_clock_set
+    POP_SUB(clock_set)
+  end subroutine clock_set
 
   ! ---------------------------------------------------------
-  integer function simulation_clock_get_tick(this) result(current_global_tick)
-    class(simulation_clock_t), intent(in) :: this
+  integer function clock_get_tick(this) result(current_global_tick)
+    class(clock_t), intent(in) :: this
 
-    PUSH_SUB(simulation_clock_get_tick)
+    PUSH_SUB(clock_get_tick)
 
     current_global_tick = this%clock_tick * this%granularity
 
-    POP_SUB(simulation_clock_get_tick)
-  end function simulation_clock_get_tick
+    POP_SUB(clock_get_tick)
+  end function clock_get_tick
 
   ! ---------------------------------------------------------
-  FLOAT function simulation_clock_get_sim_time(this) result(current_time)
-    class(simulation_clock_t), intent(in) :: this
+  FLOAT function clock_get_sim_time(this) result(current_time)
+    class(clock_t), intent(in) :: this
 
-    PUSH_SUB(simulation_clock_get_sim_time)
+    PUSH_SUB(clock_get_sim_time)
 
     current_time = this%clock_tick * this%time_step
 
-    POP_SUB(simulation_clock_get_sim_time)
-  end function simulation_clock_get_sim_time
+    POP_SUB(clock_get_sim_time)
+  end function clock_get_sim_time
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_increment(this, steps)
-    class(simulation_clock_t), intent(inout) :: this
+  subroutine clock_increment(this, steps)
+    class(clock_t), intent(inout) :: this
     integer, optional,         intent(in)    :: steps
 
-    PUSH_SUB(simulation_clock_increment)
+    PUSH_SUB(clock_increment)
 
     this%clock_tick = this%clock_tick + optional_default(steps, 1)
 
-    POP_SUB(simulation_clock_increment)
-  end subroutine simulation_clock_increment
+    POP_SUB(clock_increment)
+  end subroutine clock_increment
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_decrement(this, steps)
-    class(simulation_clock_t), intent(inout) :: this
+  subroutine clock_decrement(this, steps)
+    class(clock_t), intent(inout) :: this
     integer, optional,         intent(in)    :: steps
 
-    PUSH_SUB(simulation_clock_decrement)
+    PUSH_SUB(clock_decrement)
 
     this%clock_tick = this%clock_tick - optional_default(steps, 1)
 
-    POP_SUB(simulation_clock_decrement)
-  end subroutine simulation_clock_decrement
+    POP_SUB(clock_decrement)
+  end subroutine clock_decrement
 
   ! ---------------------------------------------------------
-  subroutine simulation_clock_reset(this)
-    class(simulation_clock_t), intent(inout) :: this
+  subroutine clock_reset(this)
+    class(clock_t), intent(inout) :: this
 
-    PUSH_SUB(simulation_clock_reset)
+    PUSH_SUB(clock_reset)
 
     this%clock_tick = 0
 
-    POP_SUB(simulation_clock_reset)
-  end subroutine simulation_clock_reset
+    POP_SUB(clock_reset)
+  end subroutine clock_reset
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_earlier(clock_a, clock_b) result(is_earlier)
-    type(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_earlier(clock_a, clock_b) result(is_earlier)
+    type(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_earlier)
+    PUSH_SUB(clock_is_earlier)
 
     is_earlier = clock_a%get_tick() < clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_earlier)
-  end function simulation_clock_is_earlier
+    POP_SUB(clock_is_earlier)
+  end function clock_is_earlier
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_later(clock_a, clock_b) result(is_later)
-    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_later(clock_a, clock_b) result(is_later)
+    class(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_later)
+    PUSH_SUB(clock_is_later)
 
     is_later = clock_a%get_tick() > clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_later)
-  end function simulation_clock_is_later
+    POP_SUB(clock_is_later)
+  end function clock_is_later
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_equal_or_earlier(clock_a, clock_b) result(is_earlier)
-    type(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_equal_or_earlier(clock_a, clock_b) result(is_earlier)
+    type(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_equal_or_earlier)
+    PUSH_SUB(clock_is_equal_or_earlier)
 
     is_earlier = clock_a%get_tick() <= clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_equal_or_earlier)
-  end function simulation_clock_is_equal_or_earlier
+    POP_SUB(clock_is_equal_or_earlier)
+  end function clock_is_equal_or_earlier
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_equal_or_later(clock_a, clock_b) result(is_later)
-    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_equal_or_later(clock_a, clock_b) result(is_later)
+    class(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_equal_or_later)
+    PUSH_SUB(clock_is_equal_or_later)
 
     is_later = clock_a%get_tick() >= clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_equal_or_later)
-  end function simulation_clock_is_equal_or_later
+    POP_SUB(clock_is_equal_or_later)
+  end function clock_is_equal_or_later
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_equal(clock_a, clock_b) result(are_equal)
-    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_equal(clock_a, clock_b) result(are_equal)
+    class(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_equal)
+    PUSH_SUB(clock_is_equal)
 
     are_equal = clock_a%get_tick() == clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_equal)
-  end function simulation_clock_is_equal
+    POP_SUB(clock_is_equal)
+  end function clock_is_equal
 
   ! ---------------------------------------------------------
-  logical function simulation_clock_is_later_with_step(clock_a, clock_b) result(is_later_with_step)
-    class(simulation_clock_t), intent(in) :: clock_a, clock_b
+  logical function clock_is_later_with_step(clock_a, clock_b) result(is_later_with_step)
+    class(clock_t), intent(in) :: clock_a, clock_b
 
-    PUSH_SUB(simulation_clock_is_later_with_step)
+    PUSH_SUB(clock_is_later_with_step)
 
     is_later_with_step = (clock_a%get_tick() + clock_a%granularity) > clock_b%get_tick()
 
-    POP_SUB(simulation_clock_is_later_with_step)
-  end function simulation_clock_is_later_with_step
+    POP_SUB(clock_is_later_with_step)
+  end function clock_is_later_with_step
 
-end module simulation_clock_oct_m
+end module clock_oct_m
 
 !! Local Variables:
 !! mode: f90

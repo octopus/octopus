@@ -27,7 +27,7 @@ module system_abst_oct_m
   use linked_list_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use simulation_clock_oct_m
+  use clock_oct_m
 
   implicit none
 
@@ -44,7 +44,7 @@ module system_abst_oct_m
     type(namespace_t),   public :: namespace
 
     class(propagator_abst_t), pointer, public :: prop
-    type(simulation_clock_t),          public :: clock
+    type(clock_t),          public :: clock
 
   contains
     procedure :: dt_operation =>  system_dt_operation
@@ -155,7 +155,7 @@ contains
 
     PUSH_SUB(system_init_clock)
 
-    this%clock = simulation_clock_t(this%namespace, dt, smallest_algo_dt)
+    this%clock = clock_t(this%namespace, dt, smallest_algo_dt)
 
     POP_SUB(system_init_clock)
   end subroutine system_init_clock
