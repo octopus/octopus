@@ -411,14 +411,8 @@ contains
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
-            if(associated(hm%hm_base%phase)) then
-              do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, conjugate = .true., &
-                  psib = commpsib(idir))
-              end do
-            end if
-            
-            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
+
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
               call commpsib(idir)%end()
