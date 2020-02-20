@@ -188,6 +188,7 @@ contains
 
     PUSH_SUB(celestial_body_do_td)
 
+
     select case(operation)
     case(VERLET_SYNC_DT)
       if (debug%info) then
@@ -310,7 +311,8 @@ contains
     write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
     write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
     write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
-    call messages_info(4)
+    write(message(5),'(4x,A,I8.7)') 'Clock tick: ', this%clock%get_tick()
+    call messages_info(5)
 
     POP_SUB(celestial_body_write_td_info)
   end subroutine celestial_body_write_td_info

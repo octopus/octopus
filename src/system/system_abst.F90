@@ -1,5 +1,5 @@
 !! Copyright (C) 2019 N. Tancogne-Dejean
-!! Copyright (C) 2020 M. Oliveira
+!! Copyright (C) 2020 M. Oliveira, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ module system_abst_oct_m
   use linked_list_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use clock_oct_m
 
   implicit none
 
@@ -43,9 +44,12 @@ module system_abst_oct_m
     type(namespace_t),   public :: namespace
 
     class(propagator_abst_t), pointer, public :: prop
+    type(clock_t),          public :: clock
+
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
+    procedure :: init_clock => system_init_clock
     procedure(system_add_interaction_partner),       deferred :: add_interaction_partner
     procedure(system_has_interaction),               deferred :: has_interaction
     procedure(system_do_td_op),                      deferred :: do_td_operation
@@ -111,6 +115,7 @@ contains
         call messages_info(1)
       end if
       call this%prop%finished()
+      call this%clock%increment()
       !DO OUTPUT HERE AND BROADCAST NEEDED QUANTITIES
       !ONLY IF WE ARE NOT YET FINISHED
 
@@ -142,6 +147,18 @@ contains
 
     POP_SUB(system_set_propagator)
   end subroutine system_set_propagator
+
+  ! ---------------------------------------------------------
+  subroutine system_init_clock(this, dt, smallest_algo_dt)
+    class(system_abst_t), intent(inout) :: this
+    FLOAT,                intent(in)    :: dt, smallest_algo_dt
+
+    PUSH_SUB(system_init_clock)
+
+    this%clock = clock_t(this%namespace, dt, smallest_algo_dt)
+
+    POP_SUB(system_init_clock)
+  end subroutine system_init_clock
 
 end module system_abst_oct_m
 

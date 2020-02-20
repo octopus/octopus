@@ -47,6 +47,7 @@ module test_oct_m
   use projector_oct_m
   use propagator_verlet_oct_m
   use simul_box_oct_m
+  use clock_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -120,6 +121,8 @@ contains
     !%Calculation of the density.
     !%Option celestial_dynamics 17
     !% Test of celestial dynamics using multisystems
+    !%Option clock 18
+    !% Tests for clock
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -222,6 +225,8 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
       call test_celestial_dynamics(param)
+    case(OPTION__TESTMODE__CLOCK)
+      call test_clock(param)
     end select
 
     POP_SUB(test_run)
@@ -1003,6 +1008,57 @@ contains
 
     POP_SUB(test_celestial_dynamics)
   end subroutine test_celestial_dynamics
+
+
+  ! ---------------------------------------------------------
+  subroutine test_clock(param)
+    type(test_parameters_t), intent(in) :: param
+
+    type(clock_t) test_clock_a, test_clock_b
+
+    PUSH_SUB(test_clock)
+
+    test_clock_a = clock_t(namespace_t('test_clock_a'), CNST(2.0), CNST(1.0), 100)
+    test_clock_b = clock_t(namespace_t('test_clock_b'), CNST(1.0), CNST(1.0))
+    call test_clock_a%print()
+    call test_clock_b%print()
+
+    call test_clock_a%set(test_clock_b)
+    call test_clock_a%print()
+    call test_clock_a%increment()
+    call test_clock_a%print()
+    call test_clock_a%decrement()
+    call test_clock_a%print()
+    call test_clock_a%increment()
+    call test_clock_a%print()
+    call test_clock_a%reset()
+    call test_clock_a%print()
+    call test_clock_a%increment(3)
+    call test_clock_a%print()
+    call test_clock_a%decrement(2)
+    call test_clock_a%print()
+
+    write(message(1),'(A,x,I10.10)') &
+	'clock_get_tick', test_clock_a%get_tick()
+    write(message(2),'(A,x,F15.10)') &
+	'clock_get_sim_time', test_clock_a%get_sim_time()
+    write(message(3),'(A,x,I1)')     &
+	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+    write(message(4),'(A,x,I1)')     &
+	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+    write(message(5),'(A,x,I1)')     &
+	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+    write(message(6),'(A,x,I1)')     &
+	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+    write(message(7),'(A,x,I1)')     &
+	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    write(message(8),'(A,x,I1)')     &
+	'clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
+    call messages_info(8)
+
+
+    POP_SUB(test_clock)
+  end subroutine test_clock
 
 end module test_oct_m
 
