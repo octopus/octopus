@@ -238,6 +238,8 @@ contains
       
     else
 
+      ASSERT(psib%is_packed() .eqv. gpsib(1)%is_packed())
+
       do ii = 1, psib%nst
         ist = states_elec_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
