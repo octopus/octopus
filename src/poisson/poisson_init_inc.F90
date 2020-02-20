@@ -30,7 +30,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   select case(this%method)
   case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF, POISSON_POKE)
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_PSOLVER, POISSON_POKE)
     valid_solver = .true.
   case(POISSON_NO)
     write(message(1),'(a)')'Info: you have elected to not use a Poisson solver.'
@@ -160,7 +160,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, namespace, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
     
-  case(POISSON_LIBISF)
+  case(POISSON_PSOLVER)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
     if(this%all_nodes_default) then
@@ -168,9 +168,9 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
     else
       this%cube%mpi_grp = this%der%mesh%mpi_grp
     end if
-    call poisson_libisf_init(this%libisf_solver, namespace, this%der%mesh, this%cube)
-    call poisson_libisf_get_dims(this%libisf_solver, this%cube)
-    this%cube%parallel_in_domains = this%libisf_solver%datacode == "D" .and. mpi_world%size > 1
+    call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube)
+    call poisson_psolver_get_dims(this%psolver_solver, this%cube)
+    this%cube%parallel_in_domains = this%psolver_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then
       call mesh_cube_parallel_map_init(this%mesh_cube_map, this%der%mesh, this%cube)
     end if

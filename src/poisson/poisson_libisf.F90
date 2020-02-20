@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module poisson_libisf_oct_m
+module poisson_psolver_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use fourier_space_oct_m
@@ -31,7 +31,7 @@ module poisson_libisf_oct_m
   use parser_oct_m
   use profiling_oct_m
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
   !! From BigDFT
   use poisson_solver
   use dynamic_memory
@@ -41,17 +41,17 @@ module poisson_libisf_oct_m
 
   private
   public ::                        &
-    poisson_libisf_t,              &
-    poisson_libisf_init,           &
-    poisson_libisf_end,            &
-    poisson_libisf_global_solve,   &
-    poisson_libisf_parallel_solve, &
-    poisson_libisf_get_dims
+    poisson_psolver_t,              &
+    poisson_psolver_init,           &
+    poisson_psolver_end,            &
+    poisson_psolver_global_solve,   &
+    poisson_psolver_parallel_solve, &
+    poisson_psolver_get_dims
 
-  type poisson_libisf_t
+  type poisson_psolver_t
     private
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
 #endif
     !> Indicates the boundary conditions (BC) of the problem:
@@ -83,20 +83,20 @@ module poisson_libisf_oct_m
     integer :: rs_n_global(3)      !< total size of the fft in each direction in real space
     integer :: rs_istart(1:3)      !< where does the local portion of the function start in real space
 
-  end type poisson_libisf_t
+  end type poisson_psolver_t
 
 contains
 
-  subroutine poisson_libisf_init(this, namespace, mesh, cube)
-    type(poisson_libisf_t), intent(out)   :: this
+  subroutine poisson_psolver_init(this, namespace, mesh, cube)
+    type(poisson_psolver_t), intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     logical data_is_parallel
  
-    PUSH_SUB(poisson_libisf_init)
+    PUSH_SUB(poisson_psolver_init)
     
     call f_lib_initialize()
 
@@ -128,34 +128,34 @@ contains
         this%geocode,cube%rs_n_global,mesh%spacing, this%isf_order)
     call pkernel_set(this%kernel,.false.)
 
-    POP_SUB(poisson_libisf_init)
+    POP_SUB(poisson_psolver_init)
 #endif
-  end subroutine poisson_libisf_init
+  end subroutine poisson_psolver_init
 
   
   !-----------------------------------------------------------------
-  subroutine poisson_libisf_end(this)
-    type(poisson_libisf_t), intent(inout) :: this
+  subroutine poisson_psolver_end(this)
+    type(poisson_psolver_t), intent(inout) :: this
 
-    PUSH_SUB(poisson_libisf_end)
+    PUSH_SUB(poisson_psolver_end)
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     call pkernel_free(this%kernel)
     call f_lib_finalize()
 #endif
     
-    POP_SUB(poisson_libisf_end)
-  end subroutine poisson_libisf_end
+    POP_SUB(poisson_psolver_end)
+  end subroutine poisson_psolver_end
 
-  subroutine poisson_libisf_parallel_solve(this, mesh, cube, pot, rho,  mesh_cube_map)
-    type(poisson_libisf_t), intent(in) :: this
+  subroutine poisson_psolver_parallel_solve(this, mesh, cube, pot, rho,  mesh_cube_map)
+    type(poisson_psolver_t), intent(in) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
     double precision :: hartree_energy !<  Hartree energy 
@@ -170,7 +170,7 @@ contains
     double precision, allocatable :: pot_ion(:,:,:) 
 
     double precision :: strten(6)
-    PUSH_SUB(poisson_libisf_parallel_solve)
+    PUSH_SUB(poisson_psolver_parallel_solve)
 
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
@@ -189,19 +189,19 @@ contains
 
     call dcube_function_free_RS(cube, cf)
 
-    POP_SUB(poisson_libisf_parallel_solve)
+    POP_SUB(poisson_psolver_parallel_solve)
 #endif
-  end subroutine poisson_libisf_parallel_solve
+  end subroutine poisson_psolver_parallel_solve
 
   !-----------------------------------------------------------------
-  subroutine poisson_libisf_global_solve(this, mesh, cube, pot, rho)
-    type(poisson_libisf_t), intent(in) :: this
+  subroutine poisson_psolver_global_solve(this, mesh, cube, pot, rho)
+    type(poisson_psolver_t), intent(in) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     type(cube_function_t) :: cf
     double precision :: hartree_energy !<  Hartree energy
     
@@ -217,7 +217,7 @@ contains
 
     double precision :: strten(6)
 
-    PUSH_SUB(poisson_libisf_global_solve)
+    PUSH_SUB(poisson_psolver_global_solve)
     
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
@@ -242,15 +242,15 @@ contains
 
     call dcube_function_free_RS(cube, cf)
 
-    POP_SUB(poisson_libisf_global_solve)
+    POP_SUB(poisson_psolver_global_solve)
 #endif
-  end subroutine poisson_libisf_global_solve
+  end subroutine poisson_psolver_global_solve
 
-  subroutine poisson_libisf_get_dims(this, cube) 
-    type(poisson_libisf_t), intent(inout) :: this
+  subroutine poisson_psolver_get_dims(this, cube) 
+    type(poisson_psolver_t), intent(inout) :: this
     type(cube_t), intent(inout) :: cube
 
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     !>    ixc         eXchange-Correlation code. Indicates the XC functional to be used 
     !!                for calculating XC energies and potential. 
     !!                ixc=0 indicates that no XC terms are computed. The XC functional codes follow
@@ -286,7 +286,7 @@ contains
     !> use_wb_corr:  .true. if functional is using WB corrections.
     logical :: use_wb_corr = .false.
 
-    PUSH_SUB(poisson_libisf_get_dims)
+    PUSH_SUB(poisson_psolver_get_dims)
 
     !! Get the dimensions of the cube
     call PS_dim4allocation(this%geocode, this%datacode, cube%mpi_grp%rank, cube%mpi_grp%size, &
@@ -310,11 +310,11 @@ contains
     cube%fs_istart(1:2) = 1
     cube%fs_istart(3)   = this%localnscatterarr(5)
 
-    POP_SUB(poisson_libisf_get_dims)
+    POP_SUB(poisson_psolver_get_dims)
 #endif
-  end subroutine poisson_libisf_get_dims
+  end subroutine poisson_psolver_get_dims
   
-end module poisson_libisf_oct_m
+end module poisson_psolver_oct_m
 
 !! Local Variables:
 !! mode: f90

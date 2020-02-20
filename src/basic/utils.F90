@@ -309,7 +309,7 @@ contains
 #ifdef HAVE_LIBFM
     get_optional_libraries = trim(get_optional_libraries)//' libfm'
 #endif
-#ifdef HAVE_LIBISF
+#ifdef HAVE_PSOLVER_1_7
     get_optional_libraries = trim(get_optional_libraries)//' libisf'
 #endif
 #ifdef HAVE_LIBVDWXC

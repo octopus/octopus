@@ -102,7 +102,7 @@ fi
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
 if test x"$acx_isf_ok" = xyes; then
-  AC_DEFINE(HAVE_LIBISF,1,[Defined if you have ISF library.])
+  AC_DEFINE(HAVE_PSOLVER_1_7,1,[Defined if you have ISF library.])
 
 else
   AC_MSG_WARN([Could not find ISF library. 
