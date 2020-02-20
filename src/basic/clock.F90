@@ -41,8 +41,6 @@ module clock_oct_m
     integer :: clock_tick
     integer :: granularity
     FLOAT   :: time_step
-    integer :: sec_since_epoch
-    integer :: usec_since_epoch
     type(namespace_t) :: namespace
 
   contains
@@ -93,8 +91,6 @@ contains
     FLOAT,             intent(in) :: time_step, smallest_algo_dt
     integer, optional             :: initial_tick
 
-    integer :: epoch_sec, epoch_usec
-
     PUSH_SUB(clock_init)
 
     ! this needs to be adapted later on for a more sophisticated handling of the clock namespace
@@ -110,9 +106,6 @@ contains
     endif
 
     this%time_step = time_step
-    call loct_gettimeofday(epoch_sec, epoch_usec)
-    this%sec_since_epoch = epoch_sec
-    this%usec_since_epoch = epoch_usec
 
     POP_SUB(clock_init)
   end function clock_init
@@ -123,7 +116,7 @@ contains
     
     PUSH_SUB(clock_print)
 
-    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,I8.8,A,F8.6,A,I10.10,A,I6.6,A)') &
+    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,I8.8,A,F8.6,A)') &
         '[Clock:',                         &
         trim(this%namespace%get()),        &
         '|',                               &
@@ -134,10 +127,6 @@ contains
         this%clock_tick*this%granularity,  &
         '|',                               &
         this%time_step,                    &
-        '|',                               &
-        this%sec_since_epoch,              &
-        '|',                               &
-        this%usec_since_epoch,             &
         ']'
     call messages_info(1)
 
@@ -154,8 +143,6 @@ contains
     this%clock_tick = clock_in%clock_tick
     this%granularity = clock_in%granularity
     this%time_step = clock_in%time_step
-    this%sec_since_epoch = clock_in%sec_since_epoch
-    this%usec_since_epoch = clock_in%usec_since_epoch
 
     POP_SUB(clock_set)
   end subroutine clock_set
