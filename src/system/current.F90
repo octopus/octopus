@@ -152,9 +152,6 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
- 
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
@@ -193,6 +190,10 @@ contains
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
+
+      SAFE_ALLOCATE(weight(1:psib%nst))
+      forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+
       
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
@@ -232,6 +233,8 @@ contains
       
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
+
+      SAFE_DEALLOCATE_A(weight)
       
     else
 
