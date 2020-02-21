@@ -48,7 +48,7 @@ module clock_oct_m
     procedure :: print_str => clock_print_str         !< print internal state of the clock to a string
     procedure :: print_message => clock_print_message !< print internal state of the clock together with a given message
     procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
-    procedure :: set_all => clock_set_all             !< set the clock and the namespace to the state of a given input clock
+    procedure :: copy => clock_copy                   !< set the clock and the namespace to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
     procedure :: get_sim_time => clock_get_sim_time   !< get the current physical simulation time of the clock
     procedure :: increment => clock_increment         !< increment the internal clock counter by one or several steps
@@ -63,7 +63,7 @@ module clock_oct_m
   end interface clock_t
 
   interface assignment(=)
-    procedure clock_set_all
+    procedure clock_copy
   end interface
 
   interface operator(.eq.)
@@ -188,17 +188,17 @@ contains
   end subroutine clock_set_time
 
   ! ---------------------------------------------------------
-  subroutine clock_set_all(this, clock_in)
+  subroutine clock_copy(this, clock_in)
     class(clock_t), intent(in)    :: clock_in
     class(clock_t), intent(inout) :: this
 
-    PUSH_SUB(clock_set_all)
+    PUSH_SUB(clock_copy)
 
     call this%set_time(clock_in)
     this%namespace = clock_in%namespace
 
-    POP_SUB(clock_set_all)
-  end subroutine clock_set_all
+    POP_SUB(clock_copy)
+  end subroutine clock_copy
 
   ! ---------------------------------------------------------
   integer function clock_get_tick(this) result(current_global_tick)
