@@ -4,6 +4,12 @@ TestMode = celestial_dynamics
 
 Dimensions = 2
 
+%Systems
+ "Sun"   | celestial_body
+ "Earth" | celestial_body
+ "Moon"  | celestial_body
+%
+
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
 
 Earth.CelestialBodyMass = 5.97237e24

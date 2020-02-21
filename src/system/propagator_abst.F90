@@ -23,6 +23,8 @@ module propagator_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -41,6 +43,7 @@ module propagator_abst_oct_m
 
     integer, public :: algo_steps
     FLOAT, public   :: dt
+    integer, public :: max_td_steps
 
     !< Options related to predictor-corrector propagators
     logical, public :: predictor_corrector = .false.
@@ -62,6 +65,7 @@ module propagator_abst_oct_m
     procedure :: finished => propagator_finished
     procedure :: save_scf_start => propagator_save_scf_start
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
+    procedure :: parse_td_variables => propagator_parse_td_variables
   end type propagator_abst_t
 
   ! Known propagation operations
@@ -203,6 +207,20 @@ contains
 
     PUSH_SUB(propagator_step_debug_message)
   end function propagator_step_debug_message
+
+  !--------------------------------------------------------
+  subroutine propagator_parse_td_variables(this, namespace)
+    class(propagator_abst_t), intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+
+    PUSH_SUB(propagator_parse_td_variables)
+
+    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
+
+    call parse_variable(namespace, 'TDMaxSteps', 1000, this%max_td_steps)
+
+    POP_SUB(propagator_parse_td_variables)
+  end subroutine propagator_parse_td_variables
 
 end module propagator_abst_oct_m
 

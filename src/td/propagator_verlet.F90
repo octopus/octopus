@@ -23,6 +23,7 @@ module propagator_verlet_oct_m
   use global_oct_m
   use gauge_field_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
   use system_abst_oct_m
@@ -44,8 +45,8 @@ module propagator_verlet_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_verlet_init(dt) result(this)
-    FLOAT,                     intent(in) :: dt
+  function propagator_verlet_init(namespace) result(this)
+    type(namespace_t),         intent(in) :: namespace
     type(propagator_verlet_t), pointer    :: this
 
     PUSH_SUB(propagator_verlet_init)
@@ -61,7 +62,7 @@ contains
     ! Verlet has only one algorithmic step
     this%algo_steps = 1
 
-    this%dt = dt
+    call this%parse_td_variables(namespace)
 
     POP_SUB(propagator_verlet_init)
   end function propagator_verlet_init

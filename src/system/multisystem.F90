@@ -77,6 +77,9 @@ contains
         case (SYSTEM_ELECTRONIC)
           sys => system_init(namespace_t(system_name))
           call systems%add(sys)
+        case (SYSTEM_CELESTIAL_BODY)
+          sys => celestial_body_t(namespace_t(system_name))
+          call systems%add(sys)
         case default
           call messages_input_error('Systems')
         end select

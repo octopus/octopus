@@ -24,6 +24,7 @@ module test_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
   use celestial_body_oct_m
+  use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -33,11 +34,13 @@ module test_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
   use io_oct_m
+  use linked_list_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
@@ -48,7 +51,6 @@ module test_oct_m
   use propagator_beeman_oct_m
   use propagator_verlet_oct_m
   use simul_box_oct_m
-  use clock_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -914,14 +916,17 @@ contains
   subroutine test_celestial_dynamics(param)
     type(test_parameters_t), intent(in) :: param
 
-    type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
+    type(namespace_t) :: global_namespace
     class(celestial_body_t), pointer :: sun, earth, moon
     class(propagator_verlet_t), pointer :: prop_sun, prop_earth
     class(propagator_beeman_t), pointer :: prop_moon
     integer :: it, internal_loop
-    integer :: earth_Nstep, moon_Nstep, sun_Nstep
     logical :: any_td_step_done, all_done_max_td_steps
-    FLOAT :: sun_dt, earth_dt, moon_dt, smallest_algo_dt
+    FLOAT :: smallest_algo_dt
+    
+    type(linked_list_t) :: systems
+    type(list_iterator_t) :: iter
+    class(*), pointer :: sys
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -931,14 +936,26 @@ contains
     call messages_info()
 
     global_namespace = namespace_t("")
-    earth_namespace = namespace_t("Earth")
-    moon_namespace = namespace_t("Moon")
-    sun_namespace = namespace_t("Sun")
 
-    !Initialize subsystems
-    sun => celestial_body_t(sun_namespace)
-    earth => celestial_body_t(earth_namespace)
-    moon => celestial_body_t(moon_namespace)
+    ! Initialize systems
+    call multisystem_init(systems, global_namespace)
+
+    ! Loop over systems
+    call iter%start(systems)
+
+    !Here we need to do this, because we do not specify the interactions in the input file
+    select type (sys => iter%get_next())
+    type is (celestial_body_t)
+      sun => sys
+    end select
+    select type (sys => iter%get_next())
+      type is (celestial_body_t)
+        earth => sys
+    end select
+    select type (sys => iter%get_next())
+    type is (celestial_body_t)
+      moon => sys
+    end select
 
     !Define interactions manually
     call sun%add_interaction_partner(earth)
@@ -948,23 +965,17 @@ contains
     call moon%add_interaction_partner(earth)
     call moon%add_interaction_partner(sun)
 
-    ! 'Loop' over systems and get (potentially) different time-steps and propagation times
-    call parse_variable(sun_namespace, 'TDTimeStep', CNST(10.0), sun_dt)
-    call parse_variable(earth_namespace, 'TDTimeStep', CNST(10.0), earth_dt)
-    call parse_variable(moon_namespace, 'TDTimeStep', CNST(10.0), moon_dt)
-
-    call parse_variable(sun_namespace, 'TDMaxSteps', 1000, sun_Nstep)
-    call parse_variable(earth_namespace, 'TDMaxSteps', 1000, earth_Nstep)
-    call parse_variable(moon_namespace, 'TDMaxSteps', 1000, moon_Nstep)
-
     all_done_max_td_steps = .false.
 
-    !Creates Verlet propagators
-    prop_sun => propagator_verlet_t(sun_dt)
-    prop_earth => propagator_verlet_t(earth_dt)
-    prop_moon => propagator_beeman_t(moon_dt, .true.)
+    !Creates Verlet and Beeman propagators
+    !This should be read from the input file
+    prop_sun => propagator_verlet_t(sun%namespace)
+    prop_earth => propagator_verlet_t(earth%namespace)
+    prop_moon => propagator_beeman_t(moon%namespace, .true.)
 
     !Associate them to subsystems
+    !This will be done automatically once we have a variable 
+    !TDPropagator that will be parsed for the system    
     call sun%set_propagator(prop_sun)
     call earth%set_propagator(prop_earth)
     call moon%set_propagator(prop_moon)
@@ -973,23 +984,41 @@ contains
                            prop_moon%dt/prop_moon%algo_steps)
 
     !Associate them to subsystems
-    call sun%init_clocks(sun_dt, smallest_algo_dt)
-    call earth%init_clocks(earth_dt, smallest_algo_dt)
-    call moon%init_clocks(moon_dt, smallest_algo_dt)
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      select type (sys)
+      type is (celestial_body_t)
 
-    !Initialize output and write data at time zero
-    call sun%td_write_init(sun_dt)
-    call earth%td_write_init(earth_dt)
-    call moon%td_write_init(moon_dt)
-    call sun%td_write_iter(0)
-    call earth%td_write_iter(0)
-    call moon%td_write_iter(0)
+        !Associate them to subsystems
+        call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+
+        !Initialize output and write data at time zero
+        call sys%td_write_init(sys%prop%dt)
+        call sys%td_write_iter(0)
+
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
+      end select
+    end do
 
     it = 0
 
-    call prop_sun%rewind()
-    call prop_earth%rewind()
-    call prop_moon%rewind()
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      select type (sys)
+      type is (celestial_body_t)
+
+        call sys%prop%rewind()
+
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
+      end select
+    end do
+
 
     do while(.not. all_done_max_td_steps)
 
@@ -1000,49 +1029,75 @@ contains
 
       do while(.not. any_td_step_done .and. internal_loop < 1000)
 
-        call sun%dt_operation()
-        call earth%dt_operation()
-        call moon%dt_operation()
+        any_td_step_done = .false.
 
-        !We check the exit condition
-        any_td_step_done = prop_sun%step_is_done() .or. prop_earth%step_is_done() .or. prop_moon%step_is_done()
+        call iter%start(systems)
+        do while (iter%has_next())
+          sys => iter%get_next()
+          select type (sys)
+          type is (celestial_body_t)
+
+            call sys%dt_operation()
+
+            !We check the exit condition
+            any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
+
+          class default
+            message(1) = "Unknow system type."
+            call messages_fatal(1)
+          end select
+        end do
+
         INCR(internal_loop, 1)
       end do
 
-      if(prop_sun%step_is_done()) then
-        call prop_sun%rewind() 
-        call sun%write_td_info()
-        call sun%td_write_iter(it)
-      end if
 
-      if(prop_earth%step_is_done()) then
-        call prop_earth%rewind()
-        call earth%write_td_info()
-        call earth%td_write_iter(it)
-      end if
+      all_done_max_td_steps = .true.
 
-      if(prop_moon%step_is_done()) then
-        call prop_moon%rewind()
-        call moon%write_td_info()
-        call moon%td_write_iter(it)
-      end if
+      call iter%start(systems)
+      do while (iter%has_next())
+        sys => iter%get_next()
 
-      ! Fixme: should be changed to final propagation time
-      all_done_max_td_steps = (sun%clock%get_tick().ge.sun_Nstep) &
-                        .and. (earth%clock%get_tick().ge.earth_Nstep) &
-                        .and. (moon%clock%get_tick().ge.moon_Nstep)
+        select type (sys)
+        type is (celestial_body_t)
+
+          if(sys%prop%step_is_done()) then
+            call sys%prop%rewind()
+            call sys%write_td_info()
+            call sys%td_write_iter(it)
+          end if
+
+          ! Fixme: should be changed to final propagation time
+          all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
+
+       class default
+          message(1) = "Unknow system type."
+          call messages_fatal(1)
+        end select
+      end do
+
     end do
 
-    call sun%td_write_end()
-    call earth%td_write_end()
-    call moon%td_write_end()
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      select type (sys)
+      type is (celestial_body_t)
 
-    SAFE_DEALLOCATE_P(sun)
-    SAFE_DEALLOCATE_P(earth)
-    SAFE_DEALLOCATE_P(moon)
-    SAFE_DEALLOCATE_P(prop_sun)
-    SAFE_DEALLOCATE_P(prop_earth)
+        call sys%td_write_end()
+
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
+      end select
+    end do
+
     SAFE_DEALLOCATE_P(prop_moon)
+    SAFE_DEALLOCATE_P(prop_earth)
+    SAFE_DEALLOCATE_P(prop_sun)
+
+    ! Finalize systems
+    call multisystem_end(systems)
 
     POP_SUB(test_celestial_dynamics)
   end subroutine test_celestial_dynamics
