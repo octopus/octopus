@@ -83,7 +83,7 @@ module propagator_mxll_oct_m
     inner_and_outer_points_mapping,          &
     surface_grid_points_mapping,             &
     energy_density_calc,                     &
-    energy_mxll_calc,                             &
+    energy_mxll_calc,                        &
     energy_rate_calc,                        &
     poynting_vector_through_box_surfaces,    &
     poynting_vector_through_box_surfaces_plane_waves, &
@@ -93,9 +93,6 @@ module propagator_mxll_oct_m
     maxwell_mask,                            &
     td_function_mxll_init,                   &
     plane_waves_in_box_calculation
-    ! maxwell_matter_mesh_mapping,                     &
-    ! maxwell_grid_points_coupling_points_mapping,     &
-    ! get_mx_ma_coupling_points
     
 contains
 
@@ -187,7 +184,7 @@ contains
           hm%bc_add_ab_region = .true.
           SAFE_ALLOCATE(st%rs_state_const(1:st%d%dim))
           st%rs_state_const = M_z0
-          call td_function_mxll_init(st, namespace, gr, hm)
+          call td_function_mxll_init(st, namespace, hm)
         else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
@@ -453,7 +450,7 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      ! call transform_rs_state_forward(hm, gr, st, rs_state, ff_rs_state)
+      ! call transform_rs_state_forward(hm, rs_state, ff_rs_state)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
@@ -483,7 +480,7 @@ contains
       end if
 
       ! back tranformation of RS state representation
-!      call transform_rs_state_backward(hm, gr, st, ff_rs_state, rs_state)
+!      call transform_rs_state_backward(hm, ff_rs_state, rs_state)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -504,7 +501,7 @@ contains
 
       if (tr%bc_plane_waves) then
         ! Propagation dt with H(inter_time+inter_dt) for plane waves boundaries
-        call plane_waves_boundaries_calculation(hm, tr, st, gr%mesh, inter_time+inter_dt, delay ,rs_state)
+        call plane_waves_boundaries_calculation(hm, st, gr%mesh, inter_time+inter_dt, delay ,rs_state)
       end if
 
     end do
@@ -626,10 +623,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_state_forward(hm, gr, st, rs_state, ff_rs_state)
+  subroutine transform_rs_state_forward(hm, rs_state, ff_rs_state)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
     CMPLX,               intent(in)    :: rs_state(:,:)
     CMPLX,               intent(inout) :: ff_rs_state(:,:)
 
@@ -648,10 +643,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_state_backward(hm, gr, st, ff_rs_state, rs_state)
+  subroutine transform_rs_state_backward(hm, ff_rs_state, rs_state)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
     CMPLX,               intent(in)    :: ff_rs_state(:,:)
     CMPLX,               intent(inout) :: rs_state(:,:)
 
@@ -870,13 +863,12 @@ contains
 
   !----------------------------------------------------------
   subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, &
-    gr, hm, st, tr, poisson_solver, time, field, transverse_field, vector_potential, geo)
+    hm, st, tr, poisson_solver, time, field, transverse_field, vector_potential, geo)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
     type(hamiltonian_mxll_t),        intent(in)    :: hm_mxll
     type(states_mxll_t),             intent(in)    :: st_mxll
     type(propagator_mxll_t), intent(in)    :: tr_mxll
-    type(grid_t),               intent(in)    :: gr
     type(hamiltonian_elec_t),        intent(in)    :: hm
     type(states_elec_t),             intent(in)    :: st
     type(propagator_t),         intent(in)    :: tr
@@ -887,7 +879,7 @@ contains
     FLOAT,                      intent(inout) :: vector_potential(:,:)
     type(geometry_t), optional, intent(in)    :: geo
 
-    integer            :: idim, ip, ip_in, np
+    integer            :: ip, ip_in, np
     FLOAT              :: abs_r
     CMPLX, allocatable :: tmp_field(:,:), tmp_field_2(:,:)
     logical            :: trans_test, vec_pot_test
@@ -1510,7 +1502,7 @@ contains
     CMPLX, optional,     intent(in)  :: rs_field_plane_waves(:,:)
     FLOAT, optional,     intent(out) :: mx_energy_plane_waves
 
-    integer            :: ip, ip_in, ip_bd, idim, dim
+    integer            :: ip, ip_in, ip_bd, dim
     FLOAT              :: dd_energy, dd_e_energy, dd_b_energy
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
@@ -2341,7 +2333,7 @@ contains
       if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
         call plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
         rs_state = rs_state - st%rs_state_plane_waves
-        call maxwell_mask(gr, hm, st, rs_state)
+        call maxwell_mask(hm, rs_state)
         rs_state = rs_state + st%rs_state_plane_waves
       else if (tr%bc_constant .and. hm%spatial_constant_apply) then
         !call constant_at_absorbing_boundaries_calculation(st, hm%bc)
@@ -2350,13 +2342,13 @@ contains
           ip = hm%bc%constant_points_map(ip_in)
           rs_state(ip,:) = rs_state(ip,:) - st%rs_state_const(:)
         end do
-        call maxwell_mask(gr, hm, st, rs_state)
+        call maxwell_mask(hm, rs_state)
         do ip_in=1, hm%bc%constant_points_number
           ip = hm%bc%constant_points_map(ip_in)
           rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const(:)
         end do
       else
-        call maxwell_mask(gr, hm, st, rs_state)
+        call maxwell_mask(hm, rs_state)
       end if
     end if
 
@@ -2365,17 +2357,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_mask(gr, hm, st, rs_state)
-    type(grid_t),        intent(in)    :: gr
+  subroutine maxwell_mask(hm, rs_state)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(states_mxll_t),      intent(in)    :: st
     CMPLX,               intent(inout) :: rs_state(:,:)
 
     integer :: ip, ip_in, idim
 
     PUSH_SUB(maxwell_mask)
 
-    do idim=1, 3
+    do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
         do ip_in=1, hm%bc%mask_points_number(idim)
           ip = hm%bc%mask_points_map(ip_in,idim)
@@ -2406,7 +2396,7 @@ contains
       ff_points = size(ff_rs_state(:,1))
       ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state_forward(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves)
+      call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
@@ -2414,7 +2404,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state_forward(hm, gr, st, rs_state_constant, ff_rs_state_constant)
+      call transform_rs_state_forward(hm, rs_state_constant, ff_rs_state_constant)
       do ip=1, gr%mesh%np_part
         ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
       end do
@@ -2454,7 +2444,7 @@ contains
       hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state_forward(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves)
+      call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves)
       do ip_in=1, hm%bc%plane_waves_points_number
         ip = hm%bc%plane_waves_points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_plane_waves(ip,:)
@@ -2468,7 +2458,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state_forward(hm, gr, st, rs_state_constant, ff_rs_state_constant)
+      call transform_rs_state_forward(hm, rs_state_constant, ff_rs_state_constant)
       do ip_in=1, hm%bc%constant_points_number
         ip = hm%bc%constant_points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_constant(1,:)
@@ -2828,7 +2818,6 @@ contains
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim, point_info, err
     FLOAT   :: bounds(2,3), xx(MAX_DIM), xxp(MAX_DIM), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
-    character(len=256)  :: string
 
     PUSH_SUB(generate_medium_boxes)
  
@@ -3016,10 +3005,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_function_mxll_init(st, namespace, gr, hm)
+  subroutine td_function_mxll_init(st, namespace, hm)
     type(states_mxll_t),      intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     type(block_t)        :: blk
@@ -3192,9 +3180,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine plane_waves_boundaries_calculation(hm, tr, st, mesh, time, time_delay, rs_state)
+  subroutine plane_waves_boundaries_calculation(hm, st, mesh, time, time_delay, rs_state)
     type(hamiltonian_mxll_t)   :: hm
-    type(propagator_mxll_t)    :: tr
     type(states_mxll_t)        :: st
     type(mesh_t)               :: mesh
     FLOAT                      :: time
@@ -3268,13 +3255,13 @@ contains
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
 
-    call transform_rs_state_forward(hm, gr, st, st%rs_state_plane_waves, ff_rs_state)
+    call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
     !call exponential_apply(tr%te, gr%mesh, hm, ff_rs_state, 1, 1, dt, time)
-    call transform_rs_state_backward(hm, gr, st, ff_rs_state, st%rs_state_plane_waves)
-    call plane_waves_boundaries_calculation(hm, tr, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
+    call transform_rs_state_backward(hm, ff_rs_state, st%rs_state_plane_waves)
+    call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
     SAFE_DEALLOCATE_A(ff_rs_state)
 
@@ -3291,11 +3278,10 @@ contains
     type(hamiltonian_mxll_t),  intent(in)    :: hm
     CMPLX,                intent(inout) :: rs_state(:,:)
 
-    integer                    :: ip, ip_global, ip_in, wn, oam, sam, idim, np
-    FLOAT                      :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi
-    FLOAT                      :: width, shift, e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b0(MAX_DIM), b_field(MAX_DIM)
-    CMPLX                      :: rs_state_add(MAX_DIM), unit_sigma(3), unit_z(3), unit_plus(3), unit_minus(3)
-    CMPLX                      :: e0cmplx(MAX_DIM), b0cmplx(MAX_DIM)
+    integer              :: ip, ip_global, ip_in, wn, oam, sam, idim, np
+    FLOAT                :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi
+    FLOAT                :: width, shift, e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b0(MAX_DIM), b_field(MAX_DIM)
+    CMPLX                :: rs_state_add(MAX_DIM)
 
     PUSH_SUB(plane_waves_in_box_calculation)
     
@@ -3317,8 +3303,7 @@ contains
         do ip = 1, gr%mesh%np
           if (wn==1) rs_state(ip,:) = M_Z0
           nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-          x_prop       = M_ZERO
-          !x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
+          x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
           rr           = sqrt(sum(x_prop(:)**2))
           if (bc%plane_waves_modus(wn) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
             do idim=1, gr%mesh%sb%dim
@@ -3331,7 +3316,7 @@ contains
             e0(:)      = bc%plane_waves_e_field(:,wn)
             e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:)) 
           end if
-          b_field = 1/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
+          b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector, e_field)
           call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
           rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
         end do
