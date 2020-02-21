@@ -1023,7 +1023,7 @@ contains
     call test_clock_a%print()
     call test_clock_b%print()
 
-    call test_clock_a%set(test_clock_b)
+    call test_clock_a%set_time(test_clock_b)
     call test_clock_a%print()
     call test_clock_a%increment()
     call test_clock_a%print()

@@ -45,7 +45,8 @@ module clock_oct_m
 
   contains
     procedure :: print => clock_print                 !< print internal state of the clock
-    procedure :: set => clock_set                     !< set the clock to the state of a given input clock
+    procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
+    procedure :: set_all => clock_set_all             !< set the clock and the namespace to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
     procedure :: get_sim_time => clock_get_sim_time   !< get the current physical simulation time of the clock
     procedure :: increment => clock_increment         !< increment the internal clock counter by one or several steps
@@ -60,7 +61,7 @@ module clock_oct_m
   end interface clock_t
 
   interface assignment(=)
-    procedure clock_set
+    procedure clock_set_all
   end interface
 
   interface operator(.eq.)
@@ -146,18 +147,31 @@ contains
   end subroutine clock_print
 
   ! ---------------------------------------------------------
-  subroutine clock_set(this, clock_in)
+  subroutine clock_set_time(this, clock_in)
     class(clock_t), intent(in)    :: clock_in
     class(clock_t), intent(inout) :: this
-    
-    PUSH_SUB(clock_set)
+
+    PUSH_SUB(clock_set_time)
 
     this%clock_tick = clock_in%clock_tick
     this%granularity = clock_in%granularity
     this%time_step = clock_in%time_step
 
-    POP_SUB(clock_set)
-  end subroutine clock_set
+    POP_SUB(clock_set_time)
+  end subroutine clock_set_time
+
+  ! ---------------------------------------------------------
+  subroutine clock_set_all(this, clock_in)
+    class(clock_t), intent(in)    :: clock_in
+    class(clock_t), intent(inout) :: this
+
+    PUSH_SUB(clock_set_all)
+
+    call this%set_time(clock_in)
+    this%namespace = clock_in%namespace
+
+    POP_SUB(clock_set_all)
+  end subroutine clock_set_all
 
   ! ---------------------------------------------------------
   integer function clock_get_tick(this) result(current_global_tick)
