@@ -103,7 +103,7 @@ module poisson_oct_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_PSOLVER        = 10,         &
+    POISSON_PSOLVER       = 10,         &
     POISSON_POKE          = 11,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
@@ -502,7 +502,7 @@ contains
 
     if (this%method == POISSON_PSOLVER) then
 #ifndef HAVE_LIBISF
-      message(1)="The PSOLVER Poisson solver cannot be used since the code was not compiled with the PSOLVER libary."
+      message(1)="The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
       call messages_fatal(1)
 #endif
     end if
