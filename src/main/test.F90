@@ -1037,6 +1037,9 @@ contains
     call test_clock_a%print()
     call test_clock_a%decrement(2)
     call test_clock_a%print()
+    message(1) = test_clock_a%print_str()
+    message(2) = test_clock_a%print_message("Debug")
+    call messages_info(2)
 
     write(message(1),'(A,x,I10.10)') &
 	'clock_get_tick', test_clock_a%get_tick()

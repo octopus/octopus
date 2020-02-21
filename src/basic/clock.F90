@@ -45,6 +45,8 @@ module clock_oct_m
 
   contains
     procedure :: print => clock_print                 !< print internal state of the clock
+    procedure :: print_str => clock_print_str         !< print internal state of the clock to a string
+    procedure :: print_message => clock_print_message !< print internal state of the clock together with a given message
     procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
     procedure :: set_all => clock_set_all             !< set the clock and the namespace to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
@@ -124,23 +126,48 @@ contains
   end function clock_init
 
   ! ---------------------------------------------------------
-  subroutine clock_print(this)
+  function clock_print_str(this) result(clock_string)
     class(clock_t), intent(in) :: this
-    
-    PUSH_SUB(clock_print)
+    character(len=64)          :: clock_string
 
-    write(message(1),'(A7,A16,A,I8.8,A,I8.8,A,I8.8,A,F8.6,A)') &
+    PUSH_SUB(clock_print_str)
+
+    write(clock_string,'(A7,A11,A,F16.6,A,I8.8,A,I8.8,A,I8.8,A)') &
         '[Clock:',                         &
         trim(this%namespace%get()),        &
+        '|',                               &
+        this%time_step*this%clock_tick,    &
         '|',                               &
         this%clock_tick,                   &
         '|',                               &
         this%granularity,                  &
         '|',                               &
         this%clock_tick*this%granularity,  &
-        '|',                               &
-        this%time_step,                    &
         ']'
+
+    POP_SUB(clock_print_str)
+  end function clock_print_str
+
+  ! ---------------------------------------------------------
+  function clock_print_message(this, message) result(clock_message)
+    class(clock_t), intent(in)   :: this
+    character(len=*), intent(in) :: message
+    character(len=256)           :: clock_message
+
+    PUSH_SUB(clock_print_message)
+
+    clock_message = trim(trim(this%print_str()) // trim(message))
+
+    POP_SUB(clock_print_message)
+  end function clock_print_message
+
+  ! ---------------------------------------------------------
+  subroutine clock_print(this)
+    class(clock_t), intent(in) :: this
+
+    PUSH_SUB(clock_print)
+
+    message(1) = this%print_str()
     call messages_info(1)
 
     POP_SUB(clock_print)
