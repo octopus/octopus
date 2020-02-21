@@ -150,13 +150,13 @@ contains
 
   ! ---------------------------------------------------------
   function clock_print_message(this, message) result(clock_message)
-    class(clock_t), intent(in)   :: this
+    class(clock_t),   intent(in) :: this
     character(len=*), intent(in) :: message
     character(len=256)           :: clock_message
 
     PUSH_SUB(clock_print_message)
 
-    clock_message = trim(trim(this%print_str()) // trim(message))
+    clock_message = trim(this%print_str()) // trim(message)
 
     POP_SUB(clock_print_message)
   end function clock_print_message
