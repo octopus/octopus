@@ -62,6 +62,8 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   R_TYPE, allocatable :: rho(:), pot(:)
   FLOAT :: qq(1:MAX_DIM) 
   integer :: ikpoint, ikpoint2, npath
+  type(fourier_space_op_t) :: coulb
+  logical :: use_external_kernel
 
   type(profile_t), save :: prof, prof2
 
@@ -93,6 +95,8 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
   qq(1:der%dim) = M_ZERO
 
+  use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
+
   do ibatch = 1, psib%nst
     ist = psib%ist(ibatch)
     call batch_get_state(psib, ibatch, der%mesh%np, psi)
@@ -111,8 +115,8 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
       ! Updating of the poisson solver
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
-      if(st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON) then
-        call poisson_kernel_reinit(this%psolver, namespace, qq, &
+      if(use_external_kernel) then
+        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, &
                   -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if
@@ -150,7 +154,11 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
           call profiling_out(prof)
 
           !and V_ij
-          call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
+          if(use_external_kernel) then
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false., kernel=coulb)
+          else
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
+          end if
 
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
@@ -170,6 +178,10 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
   end do
+
+  if(use_external_kernel) then
+    call fourier_space_op_end(coulb)
+  end if
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)

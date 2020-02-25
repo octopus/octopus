@@ -265,10 +265,10 @@ contains
       type(fourier_space_op_t), pointer    :: coulb
       integer :: db(3)
       integer :: ix,iy,iz, ixx(3)
-      FLOAT :: gg(3), modg2, temp(3)
+      FLOAT :: gg(3), modg2, temp(3), qq(1:MAX_DIM)
 
-
-
+      qq(1:MAX_DIM) = M_ZERO
+ 
       cube => this%cube
       coulb => this%fft_solver%coulb
 
@@ -294,7 +294,7 @@ contains
                do iz = 1, cube%rs_n_global(3)
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
-                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
+                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, qq, gg, modg2)
 
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2

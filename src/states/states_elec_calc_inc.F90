@@ -1697,6 +1697,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   FLOAT :: qq(1:MAX_DIM)
   logical :: exc_k_
   class(wfs_elec_t), pointer :: wfs
+  type(fourier_space_op_t) :: coulb
 
   PUSH_SUB(X(states_elec_me_two_body))
 
@@ -1754,7 +1755,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(psolver, namespace, qq, &
+        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, &
                   -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
@@ -1772,7 +1773,11 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
       end if
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
-      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      if(present(singularity)) then
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false., kernel=coulb)
+      else
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      end if
 
       !We now put back the phase that we treated analytically using the Poisson solver
 #ifdef R_TCOMPLEX
@@ -1853,6 +1858,10 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   if(gr%mesh%parallel_in_domains) then
     call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+  end if
+
+  if(present(singularity)) then
+    call fourier_space_op_end(coulb)
   end if
 
   SAFE_DEALLOCATE_A(nn)
