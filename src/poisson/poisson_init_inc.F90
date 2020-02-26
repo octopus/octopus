@@ -168,7 +168,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
     else
       this%cube%mpi_grp = this%der%mesh%mpi_grp
     end if
-    call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube)
+    call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube, M_ZERO, this%qq)
     call poisson_psolver_get_dims(this%psolver_solver, this%cube)
     this%cube%parallel_in_domains = this%psolver_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then
