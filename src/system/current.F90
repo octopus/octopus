@@ -152,9 +152,6 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
- 
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
@@ -193,6 +190,10 @@ contains
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
+
+      SAFE_ALLOCATE(weight(1:psib%nst))
+      forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+
       
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
@@ -232,8 +233,12 @@ contains
       
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
+
+      SAFE_DEALLOCATE_A(weight)
       
     else
+
+      ASSERT(psib%is_packed() .eqv. gpsib(1)%is_packed())
 
       do ii = 1, psib%nst
         ist = states_elec_block_min(st, ib) + ii - 1
@@ -384,7 +389,7 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
+        .and. hm%lda_u_level == DFT_U_NONE) then
 
         ! we can use the packed version
         
@@ -403,11 +408,7 @@ contains
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
-            !The call to individual derivatives_perfom routines returns the derivatives along
-            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-            !along the Cartesian axis.
-            ASSERT(.not.der%mesh%sb%nonorthogonal)
-            ! this should now take non-orthogonal axis into account, but needs more testing
+            ! this now takes non-orthogonal axis into account
             do idir = 1, der%mesh%sb%dim
               call epsib%copy_to(commpsib(idir))
             end do
@@ -415,14 +416,8 @@ contains
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
-            if(associated(hm%hm_base%phase)) then
-              do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, conjugate = .true., &
-                  psib = commpsib(idir))
-              end do
-            end if
-            
-            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
+
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
               call commpsib(idir)%end()
