@@ -56,8 +56,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a                  \
 	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
-	$(top_builddir)/external_libs/dftd3/libdftd3.a                  \
-	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+	$(top_builddir)/external_libs/dftd3/libdftd3.a
 # we should not have libyaml here if we used an external one...
 
 FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_LIBVDWXC@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_POKE@ @FCFLAGS_LIKWID@
@@ -71,6 +70,10 @@ if COMPILE_METIS
   external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis.a
   external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.a
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
+endif
+
+if COMPILE_LIBYAML
+  external_LIBS += $(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 endif
 
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.

@@ -340,6 +340,7 @@ ACX_LIBFM
 dnl check for ISF included from version 1.7.6 of BigDFT
 ACX_ISF
 AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
+AM_CONDITIONAL(COMPILE_LIBYAML, test "x${HAVE_ISF}" == "x1")
 
 dnl check for PSPIO
 ACX_PSPIO
