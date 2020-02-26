@@ -1729,6 +1729,12 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   exc_k_ = .false.
   if(present(exc_k)) exc_k_ = exc_k
 
+  if(present(singularity)) then
+    !We just set a very large q to guaranty that the kernel is initialized
+    coulb%qq = CNST(1e5)
+    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq)
+  end if
+
   do ist_global = 1, nst_tot
     ist = mod(ist_global - 1, nst) + 1
     ikpt = (ist_global - ist) / nst + 1

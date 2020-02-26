@@ -93,9 +93,14 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
   ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
-  qq(1:der%dim) = M_ZERO
 
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
+  if(use_external_kernel) then
+    !We just set a very large q to guaranty that the kernel is reinitialized even if the first k-kp=0
+    coulb%qq = CNST(1e5)
+    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
+  end if
+
 
   do ibatch = 1, psib%nst
     ist = psib%ist(ibatch)

@@ -1351,7 +1351,7 @@ contains
           this%poisson_soft_coulomb_param)
       end if
     case default
-      call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
+      call messages_not_implemented("poisson_build_kernel with other methods than FFT")
     end select
     
 

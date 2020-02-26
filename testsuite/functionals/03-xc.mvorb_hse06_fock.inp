@@ -1,5 +1,9 @@
 CalculationMode = gs
 
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+LSize = 5
+
 %Coordinates
  'H' |  0.717157 | 0 | 0
  'H' | -0.717157 | 0 | 0
@@ -21,6 +25,7 @@ XCFunctional = hyb_gga_xc_mvorb_hse06
 0.8
 0.2
 %
+RestartWrite = no
 
 FilterPotentials = filter_none
 
