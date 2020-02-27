@@ -501,6 +501,11 @@ contains
       message(1) = "The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
       call messages_fatal(1)
 #endif
+#ifdef HAVE_LIBISF
+      message(1) = "The use of versions older than 1.8 of the PSolver library (previously known as LibISF)"
+      message(2) = "are deprecated and will be removed in the next major release."
+      call messages_warning(2)
+#endif
     end if
 
     if(optional_default(verbose,.true.)) &
