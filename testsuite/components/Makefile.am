@@ -62,9 +62,9 @@ dist_share_DATA =                                  \
 	15-cholesky_parallel.test                  \
 	15-cholesky_parallel.01-real.inp           \
 	15-cholesky_parallel.02-complex.inp        \
-	16-hartree_3d_libisf.test                  \
-	16-hartree_3d_libisf.01-libisf.inp         \
-	16-hartree_3d_libisf.02-libisf.inp         \
+	16-hartree_3d_psolver.test                 \
+	16-hartree_3d_psolver.01-psolver.inp       \
+	16-hartree_3d_psolver.02-psolver.inp       \
 	17-recipe.inp                              \
         17-recipe.test                             \
 	18-interpolation.01-1d.inp                 \
