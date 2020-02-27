@@ -325,7 +325,9 @@ contains
 
     type(profile_t), save :: prof
     type(cube_function_t) :: cf   
-    double precision :: hartree_energy !<  Hartree energy 
+#if (defined HAVE_LIBISF) || (defined HAVE_PSOLVER)    
+    double precision :: hartree_energy !<  Hartree energy
+#endif 
     !> offset:  Total integral on the supercell of the final potential on output.
     !! To be used only in the periodic case, ignored for other boundary conditions.
 #ifdef HAVE_PSOLVER
