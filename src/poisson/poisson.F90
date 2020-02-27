@@ -262,14 +262,10 @@ contains
     !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
-    !%Option libisf 10
-    !% Meant to be exactly the same as Interpolating
-    !% Scaling Functions (isf) Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.6. Only for finite systems.
-    !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
-    !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
-    !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
+    !%Option psolver 10
+    !% Solver based on Interpolating Scaling Functions as implemented in the PSolver library.
+    !% Parallelization in k-points requires <tt>PoissonSolverPSolverParallelData</tt> = no.
+    !% Requires the PSolver external library.
     !%Option poke 11
     !% (Experimental) Solver from the Poke library.
     !%End
@@ -527,9 +523,9 @@ contains
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
       ! Documentation in poisson_libisf.F90
-      call parse_variable(namespace, 'PoissonSolverISFParallelData', .true., isf_data_is_parallel)
+      call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., isf_data_is_parallel)
       if ( this%method == POISSON_PSOLVER .and. isf_data_is_parallel ) then
-        call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
+        call messages_not_implemented("k-point parallelization with PSolver library and PoissonSolverPSolverParallelData = yes")
       end if
       if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
         call messages_not_implemented("k-point parallelization with PFFT library for Poisson solver")

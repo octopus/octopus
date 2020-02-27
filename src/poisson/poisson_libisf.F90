@@ -144,15 +144,15 @@ contains
     case(1)
       ! Wire BC
       this%geocode = "W"
-      call messages_not_implemented("LibISF with 1D periodic boundary conditions.")
+      call messages_not_implemented("PSolver support for 1D periodic boundary conditions.")
     case(2)
       ! Surface BC
       this%geocode = "S"
-      call messages_not_implemented("LibISF with 2D periodic boundary conditions.")
+      call messages_not_implemented("PSolver support for 2D periodic boundary conditions.")
     case(3)
       ! Periodic BC
       this%geocode = "P"
-      call messages_experimental("LibISF with 3D periodic boundary conditions.")
+      call messages_experimental("PSolver support for 3D periodic boundary conditions.")
     end select
 
 
@@ -169,12 +169,12 @@ contains
     this%isf_order = 16
 #endif
 
-    !%Variable PoissonSolverISFParallelData
+    !%Variable PoissonSolverPSolverParallelData
     !%Type logical
-    !%Section Hamiltonian::Poisson::ISF
+    !%Section Hamiltonian::Poisson::PSolver
     !%Default yes
     !%Description
-    !% Indicates whether data is partitioned within the ISF library.
+    !% Indicates whether data is partitioned within the PSolver library.
     !% If data is distributed among processes, Octopus uses parallel data-structures 
     !% and, thus, less memory.
     !% If "yes", data is parallelized. The <i>z</i>-axis of the input vector
@@ -182,7 +182,10 @@ contains
     !% If "no", entire input and output vector is saved in all the MPI processes.
     !% If k-points parallelization is used, "no" must be selected.
     !%End
-    call parse_variable(namespace, 'PoissonSolverISFParallelData', .true., data_is_parallel)
+    call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., data_is_parallel)
+
+    call messages_obsolete_variable(namespace, 'PoissonSolverISFParallelData', 'PoissonSolverPSolverParallelData')
+
     if (data_is_parallel) then
 #ifdef HAVE_PSOLVER
       call dict_set(this%inputs//'setup'//'global_data', .false.)
