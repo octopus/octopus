@@ -46,7 +46,6 @@ module fourier_space_oct_m
     dcube_function_fs2rs,       &
     zcube_function_fs2rs,       &
     fourier_space_op_t,         &
-    fourier_space_op_copy,      &
     dfourier_space_op_init,     &
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
@@ -176,26 +175,6 @@ contains
 
     POP_SUB(fourier_space_op_end)
   end subroutine fourier_space_op_end
-
-  ! ---------------------------------------------------------
-  subroutine fourier_space_op_copy(op_in, op_out)
-    type(fourier_space_op_t), intent(in)    :: op_in
-    type(fourier_space_op_t), intent(inout) :: op_out
-
-    PUSH_SUB(fourier_space_op_copy)
-
-    call loct_pointer_copy(op_out%dop, op_in%dop)  
-    call loct_pointer_copy(op_out%zop, op_in%zop)
-
-    op_out%in_device_memory = op_in%in_device_memory
-    op_out%op_buffer = op_in%op_buffer
-    op_out%real_op = op_in%real_op
-
-    op_out%qq(1:MAX_DIM) = op_in%qq(1:MAX_DIM)
-    op_out%singularity = op_in%singularity
-
-    POP_SUB(fourier_space_op_copy)
-  end subroutine fourier_space_op_copy
 
 #include "undef.F90"
 #include "real.F90"

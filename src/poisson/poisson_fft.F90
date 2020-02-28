@@ -74,22 +74,17 @@ contains
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kernel
 
-    type(fourier_space_op_t) :: coulb
-
     PUSH_SUB(poisson_fft_init)
 
     this%kernel = kernel
     this%soft_coulb_param = optional_default(soft_coulb_param, M_ZERO)
 
-    coulb%qq(1:mesh%sb%periodic_dim) = M_ZERO
-    coulb%singularity = M_ZERO
+    this%coulb%qq(1:mesh%sb%periodic_dim) = M_ZERO
+    this%coulb%singularity = M_ZERO
 
-    call poisson_fft_get_kernel(this, namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube) 
+    call poisson_fft_get_kernel(this, namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
 
-    call fourier_space_op_copy(coulb, this%coulb)
-    call fourier_space_op_end(coulb)
-
-   POP_SUB(poisson_fft_init)
+    POP_SUB(poisson_fft_init)
   end subroutine poisson_fft_init
 
   subroutine poisson_fft_get_kernel(this, namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
