@@ -47,7 +47,9 @@ module interaction_abst_oct_m
     type(clock_t), public :: clock
   contains
     procedure :: init_clock => interaction_init_clock
+    procedure(interaction_update), deferred :: update
   end type interaction_abst_t
+
 
   !> This class extends the list iterator and adds one method to get the
   !> interaction as a pointer of type class(interaction_abst_t).
@@ -56,6 +58,13 @@ module interaction_abst_oct_m
   contains
     procedure :: get_next_interaction => interaction_iterator_get_next
   end type interaction_iterator_t
+
+  abstract interface
+    subroutine interaction_update(this)
+      import interaction_abst_t
+      class(interaction_abst_t), intent(inout) :: this
+    end subroutine interaction_update
+  end interface
 
 contains
 
