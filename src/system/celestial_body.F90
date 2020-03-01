@@ -659,7 +659,7 @@ contains
       interaction => iter%get_next_interaction()
       select type (interaction)
       type is (interaction_gravity_t)
-        interaction%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+        call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
       class default
         message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
         call messages_fatal(1)

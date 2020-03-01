@@ -24,6 +24,7 @@ module interaction_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   implicit none
 
@@ -44,7 +45,8 @@ module interaction_abst_oct_m
     integer, allocatable, public :: partner_observables(:)
 
     type(clock_t), public :: clock
-    
+  contains
+    procedure :: init_clock => interaction_init_clock
   end type interaction_abst_t
 
   !> This class extends the list iterator and adds one method to get the
@@ -56,6 +58,20 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine interaction_init_clock(this, namespace, dt, algo_dt)
+    class(interaction_abst_t), intent(inout) :: this
+    type(namespace_t),         intent(in)    :: namespace
+    FLOAT,                     intent(in)    :: dt
+    FLOAT,                     intent(in)    :: algo_dt
+
+    PUSH_SUB(interaction_init_clock)
+
+    this%clock = clock_t(namespace%get(), dt, algo_dt)
+
+    POP_SUB(interaction_init_clock)
+  end subroutine interaction_init_clock
 
   ! ---------------------------------------------------------
   subroutine interaction_abst_end(this)
@@ -89,7 +105,7 @@ contains
 
     POP_SUB(interaction_iterator_get_next)
   end function interaction_iterator_get_next
-   
+
 end module interaction_abst_oct_m
 
 !! Local Variables:
