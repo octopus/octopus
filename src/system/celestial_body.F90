@@ -56,7 +56,6 @@ module celestial_body_oct_m
     FLOAT, public :: save_vel(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
     FLOAT, public :: prev_tot_force(1:MAX_DIM)
-    type(linked_list_t) :: interactions
 
     type(space_t) :: space
 

@@ -46,6 +46,8 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
+    type(linked_list_t), public :: interactions
+
     type(observable_t), public :: observables(MAX_OBSERVABLES)
 
   contains
