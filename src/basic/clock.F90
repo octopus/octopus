@@ -112,8 +112,9 @@ contains
     if (len(label) <= MAX_LABEL_LEN) then
       this%label = label
     else
-      write(stderr,'(a)') '*** Fatal Error (description follows)'
-      write(stderr,'(a,i4,a)') 'Clock labels are limited to ', MAX_LABEL_LEN, ' characters'
+      write(message(1),'(a)') '*** Fatal Error (description follows)'
+      write(message(2),'(a,i4,a)') 'Clock labels are limited to ', MAX_LABEL_LEN, ' characters'
+      call messages_fatal(2)
     end if
 
     if (ceiling(time_step/smallest_dt) == floor(time_step/smallest_dt)) then
