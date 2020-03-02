@@ -25,7 +25,6 @@ module celestial_body_oct_m
   use interaction_gravity_oct_m
   use io_oct_m
   use iso_c_binding  
-  use linked_list_oct_m
   use list_node_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -51,7 +50,7 @@ module celestial_body_oct_m
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
-    type(linked_list_t) :: interactions
+    type(interaction_list_t) :: interactions
 
     type(space_t) :: space
 
@@ -186,7 +185,7 @@ contains
     integer,               intent(in)    :: operation
 
     type(list_node_t), pointer :: iint
-    class(*), pointer :: interaction
+    class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(celestial_body_do_td)
 
@@ -255,7 +254,7 @@ contains
   subroutine celestial_body_update_interactions(this)
     class(celestial_body_t), intent(inout) :: this
 
-    class(*), pointer :: interaction
+    class(interaction_abst_t), pointer :: interaction
     type(list_node_t), pointer :: iint
 
     PUSH_SUB(celestial_body_update_interactions)
@@ -400,7 +399,7 @@ contains
     type(celestial_body_t), intent(inout) :: this
 
     type(list_node_t), pointer :: iint
-    class(*), pointer :: interaction
+    class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(celestial_body_finalize)
 
