@@ -113,6 +113,12 @@ contains
         call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
       end if
 
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        allocated = .true.
+        ASSERT(associated(cube%fft))
+        cf%fs => cube%fft%fs_data(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3))
+      end if
     end select
 
     if(.not. allocated) then
@@ -147,6 +153,11 @@ contains
       if(cf%in_device_memory) then
         deallocated = .true.
         call accel_release_buffer(cf%fourier_space_buffer)
+      end if
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        deallocated = .true.
+        nullify(cf%fs)
       end if
     end select
 

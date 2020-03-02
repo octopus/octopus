@@ -70,6 +70,7 @@ basic_f_srcs =                                 \
 	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
+	basic/clock.F90             \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
@@ -359,9 +360,9 @@ poisson_f_srcs =                                 \
 	poisson/poisson_fft.F90                  \
 	poisson/poisson_fmm.F90                  \
 	poisson/poisson_isf.F90                  \
-	poisson/poisson_libisf.F90               \
 	poisson/poisson_multigrid.F90            \
 	poisson/poisson_no.F90                   \
+	poisson/poisson_psolver.F90              \
 	poisson/scaling_function.F90
 
 poisson_c_srcs =                                 \

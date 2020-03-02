@@ -35,8 +35,9 @@ module propagator_abst_oct_m
 
     type(linked_list_t), public :: list
 
-    FLOAT, public :: internal_time
-    FLOAT, public :: dt
+    FLOAT, public   :: internal_time
+    FLOAT, public   :: dt
+    integer, public :: algo_steps
     logical :: step_done
 
   contains

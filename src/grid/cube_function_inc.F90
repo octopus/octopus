@@ -43,7 +43,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
     case(FFTLIB_PFFT)
 
       ASSERT(associated(cube%fft))
-      if(.not. cf%forced_alloc) then  
+      if(.not. cf%forced_alloc) then 
         allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
@@ -52,6 +52,14 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
         allocated = .true.
         cf%in_device_memory = .true.
         call accel_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
+      end if
+    !We use aligned memory for FFTW
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        ASSERT(associated(cube%fft))
+        ASSERT(cube%fft%aligned_memory)
+        allocated = .true.
+        cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     end select
   end if
@@ -90,6 +98,11 @@ subroutine X(cube_function_free_rs)(cube, cf)
            call accel_release_buffer(cf%real_space_buffer)
            cf%in_device_memory = .false.
         end if
+     case(FFTLIB_FFTW) 
+       if(.not. cf%forced_alloc) then
+         deallocated = .true.
+         nullify(cf%X(rs))
+       end if
      end select
   end if
 
