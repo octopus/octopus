@@ -96,8 +96,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
 
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
-    !We just set a very large q to guaranty that the kernel is reinitialized even if the first k-kp=0
-    coulb%qq = CNST(1e5)
+    call fourier_space_op_nullify(coulb)
     call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
   end if
 
