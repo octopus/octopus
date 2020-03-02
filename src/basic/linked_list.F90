@@ -29,15 +29,10 @@ module linked_list_oct_m
 
   type :: linked_list_t
     private
-    class(list_node_t), pointer :: first_node => null()
+    class(list_node_t), pointer, public :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
-    class(list_node_t), pointer :: current_node => null()
   contains
     procedure :: add => linked_list_add_node
-    procedure :: next => linked_list_next
-    procedure :: current => linked_list_current
-    procedure :: rewind => linked_list_rewind
-    procedure :: has_more_values => linked_list_has_more_values
     procedure :: iterate => linked_list_iterate
     final     :: linked_list_finalize
   end type linked_list_t
@@ -64,51 +59,6 @@ contains
 
     POP_SUB(linked_list_add_node)
   end subroutine linked_list_add_node
-
-  ! ---------------------------------------------------------
-  function linked_list_current(this)
-    class(linked_list_t), intent(in) :: this
-    class(*),             pointer    :: linked_list_current
-
-    PUSH_SUB(linked_list_current)
-
-    linked_list_current => this%current_node%get()
-
-    POP_SUB(linked_list_current)
-  end function linked_list_current
-
-  ! ---------------------------------------------------------
-  subroutine linked_list_next(this)
-    class(linked_list_t), intent(inout) :: this
-
-    PUSH_SUB(linked_list_next)
-
-    this%current_node => this%current_node%next()
-
-    POP_SUB(linked_list_next)
-  end subroutine linked_list_next
-
-  ! ---------------------------------------------------------
-  logical function linked_list_has_more_values(this)
-    class(linked_list_t), intent(in) :: this
-
-    PUSH_SUB(linked_list_has_more_values)
-
-    linked_list_has_more_values = associated(this%current_node)
-
-    POP_SUB(linked_list_has_more_values)
-  end function linked_list_has_more_values
-
-  ! ---------------------------------------------------------
-  subroutine linked_list_rewind(this)
-    class(linked_list_t), intent(inout) :: this
-
-    PUSH_SUB(linked_list_rewind)
-
-    this%current_node => this%first_node
-
-    POP_SUB(linked_list_rewind)
-  end subroutine linked_list_rewind
 
   ! ---------------------------------------------------------
   logical function linked_list_iterate(this, iteration_counter, value)
@@ -140,15 +90,15 @@ contains
   subroutine linked_list_finalize(this)
     type(linked_list_t), intent(inout) :: this
 
-    class(list_node_t), pointer :: next
+    class(list_node_t), pointer :: current, next
 
     PUSH_SUB(linked_list_finalize)
 
-    call this%rewind()
-    do while (associated(this%current_node))
-      next => this%current_node%next()
-      deallocate(this%current_node)
-      this%current_node => next
+    current => this%first_node
+    do while (associated(current))
+      next => current%next()
+      deallocate(current)
+      current => next
     end do
 
     POP_SUB(linked_list_finalize)
