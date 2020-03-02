@@ -48,7 +48,6 @@ module clock_oct_m
   contains
     procedure :: print => clock_print                 !< print internal state of the clock
     procedure :: print_str => clock_print_str         !< print internal state of the clock to a string
-    procedure :: print_message => clock_print_message !< print internal state of the clock together with a given message
     procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
     procedure :: copy => clock_copy                   !< set the clock to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
@@ -153,19 +152,6 @@ contains
 
     POP_SUB(clock_print_str)
   end function clock_print_str
-
-  ! ---------------------------------------------------------
-  function clock_print_message(this, message) result(clock_message)
-    class(clock_t),   intent(in) :: this
-    character(len=*), intent(in) :: message
-    character(len=256)           :: clock_message
-
-    PUSH_SUB(clock_print_message)
-
-    clock_message = trim(this%print_str()) // trim(message)
-
-    POP_SUB(clock_print_message)
-  end function clock_print_message
 
   ! ---------------------------------------------------------
   subroutine clock_print(this)
