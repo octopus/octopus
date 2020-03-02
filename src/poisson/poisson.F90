@@ -50,7 +50,7 @@ module poisson_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
   use poisson_fmm_oct_m
-  use poisson_libisf_oct_m
+  use poisson_psolver_oct_m
   use poisson_multigrid_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
@@ -103,7 +103,7 @@ module poisson_oct_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_LIBISF        = 10,         &
+    POISSON_PSOLVER       = 10,         &
     POISSON_POKE          = 11,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
@@ -121,7 +121,7 @@ module poisson_oct_m
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
-    type(poisson_libisf_t) :: libisf_solver
+    type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
@@ -262,14 +262,10 @@ contains
     !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
-    !%Option libisf 10
-    !% Meant to be exactly the same as Interpolating
-    !% Scaling Functions (isf) Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.6. Only for finite systems.
-    !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
-    !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
-    !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
+    !%Option psolver 10
+    !% Solver based on Interpolating Scaling Functions as implemented in the PSolver library.
+    !% Parallelization in k-points requires <tt>PoissonSolverPSolverParallelData</tt> = no.
+    !% Requires the PSolver external library.
     !%Option poke 11
     !% (Experimental) Solver from the Poke library.
     !%End
@@ -323,7 +319,7 @@ contains
         str = "multigrid"
       case (POISSON_ISF)
         str = "interpolating scaling functions"
-      case (POISSON_LIBISF)
+      case (POISSON_PSOLVER)
         str = "interpolating scaling functions (from BigDFT)"
       case (POISSON_NO)
         str = "no Poisson solver - Hartree set to 0"
@@ -500,10 +496,15 @@ contains
       end select
     end if
 
-    if (this%method == POISSON_LIBISF) then
-#ifndef HAVE_LIBISF
-      message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
+    if (this%method == POISSON_PSOLVER) then
+#if !((defined HAVE_LIBISF) || (defined HAVE_PSOLVER))
+      message(1) = "The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
       call messages_fatal(1)
+#endif
+#ifdef HAVE_LIBISF
+      message(1) = "The use of versions older than 1.8 of the PSolver library (previously known as LibISF)"
+      message(2) = "are deprecated and will be removed in the next major release."
+      call messages_warning(2)
 #endif
     end if
 
@@ -515,21 +516,21 @@ contains
     fft_type = FFT_REAL
     if(optional_default(force_cmplx, .false.)) fft_type = FFT_COMPLEX
 
-    if (this%method == POISSON_ISF .or. this%method == POISSON_LIBISF) then
+    if (this%method == POISSON_ISF .or. this%method == POISSON_PSOLVER) then
       fft_type = FFT_NONE
       box(:) = der%mesh%idx%ll(:)
       need_cube = .true.
     end if
 
-    if (this%method == POISSON_LIBISF .and. multicomm_have_slaves(mc)) then
+    if (this%method == POISSON_PSOLVER .and. multicomm_have_slaves(mc)) then
       call messages_not_implemented('Task parallelization with LibISF Poisson solver')
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
       ! Documentation in poisson_libisf.F90
-      call parse_variable(namespace, 'PoissonSolverISFParallelData', .true., isf_data_is_parallel)
-      if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
-        call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
+      call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., isf_data_is_parallel)
+      if ( this%method == POISSON_PSOLVER .and. isf_data_is_parallel ) then
+        call messages_not_implemented("k-point parallelization with PSolver library and PoissonSolverPSolverParallelData = yes")
       end if
       if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
         call messages_not_implemented("k-point parallelization with PFFT library for Poisson solver")
@@ -681,8 +682,8 @@ contains
       call poisson_isf_end(this%isf_solver)
       has_cube = .true.
 
-    case(POISSON_LIBISF)
-      call poisson_libisf_end(this%libisf_solver)
+    case(POISSON_PSOLVER)
+      call poisson_psolver_end(this%psolver_solver)
       has_cube = .true.
 
     case(POISSON_FMM)
@@ -911,12 +912,12 @@ contains
       call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
 
-    case(POISSON_LIBISF)
-      if (this%libisf_solver%datacode == "G") then
+    case(POISSON_PSOLVER)
+      if (this%psolver_solver%datacode == "G") then
         ! Global version
-        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho)
+        call poisson_psolver_global_solve(this%psolver_solver, der%mesh, this%cube, pot, rho)
       else ! "D" Distributed version
-        call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call poisson_psolver_parallel_solve(this%psolver_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
 
     case(POISSON_POKE)
