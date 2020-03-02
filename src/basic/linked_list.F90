@@ -33,24 +33,25 @@ module linked_list_oct_m
     class(list_node_t), pointer :: last_node => null()
     class(list_node_t), pointer :: current_node => null()
   contains
-    procedure :: add => add_node
-    procedure :: next
-    procedure :: current
-    procedure :: rewind
-    procedure :: has_more_values
-    procedure :: iterate
-    final     :: finalize
+    procedure :: add => linked_list_add_node
+    procedure :: next => linked_list_next
+    procedure :: current => linked_list_current
+    procedure :: rewind => linked_list_rewind
+    procedure :: has_more_values => linked_list_has_more_values
+    procedure :: iterate => linked_list_iterate
+    final     :: linked_list_finalize
   end type linked_list_t
 
 contains
 
-  subroutine add_node(this, value)
+  ! ---------------------------------------------------------
+  subroutine linked_list_add_node(this, value)
     class(linked_list_t) :: this
     class(*),             target        :: value
 
     class(list_node_t), pointer :: new_node
 
-    PUSH_SUB(add_node)
+    PUSH_SUB(linked_list_add_node)
 
     if (.not. associated(this%first_node)) then
       this%first_node => list_node(value, this%first_node)
@@ -61,56 +62,61 @@ contains
       this%last_node => new_node
     end if
 
-    POP_SUB(add_node)
-  end subroutine add_node
+    POP_SUB(linked_list_add_node)
+  end subroutine linked_list_add_node
 
-  function current(this)
+  ! ---------------------------------------------------------
+  function linked_list_current(this)
     class(linked_list_t), intent(in) :: this
-    class(*),             pointer    :: current
+    class(*),             pointer    :: linked_list_current
 
-    PUSH_SUB(current)
+    PUSH_SUB(linked_list_current)
 
-    current => this%current_node%get()
+    linked_list_current => this%current_node%get()
 
-    POP_SUB(current)
-  end function current
+    POP_SUB(linked_list_current)
+  end function linked_list_current
 
-  subroutine next(this)
+  ! ---------------------------------------------------------
+  subroutine linked_list_next(this)
     class(linked_list_t), intent(inout) :: this
 
-    PUSH_SUB(next)
+    PUSH_SUB(linked_list_next)
 
     this%current_node => this%current_node%next()
 
-    POP_SUB(next)
-  end subroutine next
+    POP_SUB(linked_list_next)
+  end subroutine linked_list_next
 
-  logical function has_more_values(this)
+  ! ---------------------------------------------------------
+  logical function linked_list_has_more_values(this)
     class(linked_list_t), intent(in) :: this
 
-    PUSH_SUB(has_more_values)
+    PUSH_SUB(linked_list_has_more_values)
 
-    has_more_values = associated(this%current_node)
+    linked_list_has_more_values = associated(this%current_node)
 
-    POP_SUB(has_more_values)
-  end function has_more_values
+    POP_SUB(linked_list_has_more_values)
+  end function linked_list_has_more_values
 
-  subroutine rewind(this)
+  ! ---------------------------------------------------------
+  subroutine linked_list_rewind(this)
     class(linked_list_t), intent(inout) :: this
 
-    PUSH_SUB(rewind)
+    PUSH_SUB(linked_list_rewind)
 
     this%current_node => this%first_node
 
-    POP_SUB(rewind)
-  end subroutine rewind
+    POP_SUB(linked_list_rewind)
+  end subroutine linked_list_rewind
 
-  logical function iterate(this, iteration_counter, value)
+  ! ---------------------------------------------------------
+  logical function linked_list_iterate(this, iteration_counter, value)
     class(linked_list_t), intent(in)        :: this
     type(list_node_t),    pointer           :: iteration_counter
     class(*),             pointer, optional :: value
 
-    PUSH_SUB(iterate)
+    PUSH_SUB(linked_list_iterate)
 
     ! Get the next node in the list
     if (associated(iteration_counter)) then
@@ -125,17 +131,18 @@ contains
     end if
 
     ! Are we done?
-    iterate = associated(iteration_counter%next())
+    linked_list_iterate = associated(iteration_counter%next())
 
-    POP_SUB(iterate)
-  end function iterate
+    POP_SUB(linked_list_iterate)
+  end function linked_list_iterate
 
-  subroutine finalize(this)
+  ! ---------------------------------------------------------
+  subroutine linked_list_finalize(this)
     type(linked_list_t), intent(inout) :: this
 
     class(list_node_t), pointer :: next
 
-    PUSH_SUB(finalize)
+    PUSH_SUB(linked_list_finalize)
 
     call this%rewind()
     do while (associated(this%current_node))
@@ -144,7 +151,7 @@ contains
       this%current_node => next
     end do
 
-    POP_SUB(finalize)
-  end subroutine finalize
+    POP_SUB(linked_list_finalize)
+  end subroutine linked_list_finalize
 
 end module linked_list_oct_m
