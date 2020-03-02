@@ -38,6 +38,7 @@ module linked_list_oct_m
     procedure :: current
     procedure :: rewind
     procedure :: has_more_values
+    procedure :: iterate
     final     :: finalize
   end type linked_list_t
 
@@ -103,6 +104,31 @@ contains
 
     POP_SUB(rewind)
   end subroutine rewind
+
+  logical function iterate(this, iteration_counter, value)
+    class(linked_list_t), intent(in)        :: this
+    type(list_node_t),    pointer           :: iteration_counter
+    class(*),             pointer, optional :: value
+
+    PUSH_SUB(iterate)
+
+    ! Get the next node in the list
+    if (associated(iteration_counter)) then
+      iteration_counter => iteration_counter%next()
+    else
+      iteration_counter => this%first_node
+    end if
+
+    ! Get a pointer to the value stored in the list
+    if (present(value)) then
+      value => iteration_counter%get()
+    end if
+
+    ! Are we done?
+    iterate = associated(iteration_counter%next())
+
+    POP_SUB(iterate)
+  end function iterate
 
   subroutine finalize(this)
     type(linked_list_t), intent(inout) :: this
