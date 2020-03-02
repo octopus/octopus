@@ -198,7 +198,7 @@ contains
       end if
 
       this%prop%internal_time = this%prop%internal_time + this%prop%dt
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_UPDATE_POS)
       if (debug%info) then
@@ -209,7 +209,7 @@ contains
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                    + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_COMPUTE_ACC)
       if (debug%info) then
@@ -230,7 +230,7 @@ contains
         end select
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_COMPUTE_VEL)
       if (debug%info) then
@@ -240,7 +240,7 @@ contains
 
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%list%next()
+      call this%prop%next()
 
     case default
       message(1) = "Unsupported TD operation."

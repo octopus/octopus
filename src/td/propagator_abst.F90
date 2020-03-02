@@ -21,6 +21,7 @@
 module propagator_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
+  use list_node_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -30,10 +31,10 @@ module propagator_abst_oct_m
   public ::                            &
     propagator_abst_t
 
-  type, abstract :: propagator_abst_t
+  type, extends(linked_list_t) :: propagator_abst_t
     private
 
-    type(linked_list_t), public :: list
+    type(list_node_t), pointer :: current_ops => null()
 
     FLOAT, public   :: internal_time
     FLOAT, public   :: dt
@@ -44,6 +45,7 @@ module propagator_abst_oct_m
     !Below are the list of operations that needs to be implemented
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
+    procedure :: next => propagator_next
     procedure :: rewind => propagator_rewind
     procedure :: finished => propagator_finished
   end type propagator_abst_t
@@ -64,7 +66,7 @@ contains
 
     PUSH_SUB(propagator_rewind)
 
-    call this%list%rewind()
+    this%current_ops => this%first_node
     this%step_done = .false.
 
     POP_SUB(propagator_rewind)
@@ -80,6 +82,16 @@ contains
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
 
+  subroutine propagator_next(this)
+    class(propagator_abst_t), intent(inout) :: this
+
+    PUSH_SUB(propagator_next)
+
+    this%current_ops => this%current_ops%next()
+
+    POP_SUB(propagator_next)
+  end subroutine propagator_next
+
   integer function propagator_get_tdop(this) result(tdop)
     class(propagator_abst_t), intent(in) :: this
 
@@ -87,7 +99,7 @@ contains
 
     PUSH_SUB(propagator_get_tdop)
 
-    current_ops => this%list%current()
+    current_ops => this%current_ops%get()
 
     select type(current_ops)
     type is (integer)
