@@ -52,12 +52,12 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    call this%list%add_node(VERLET_UPDATE_POS)
-    call this%list%add_node(VERLET_SYNC_DT)
-    call this%list%add_node(UPDATE_INTERACTIONS)
-    call this%list%add_node(VERLET_COMPUTE_ACC)
-    call this%list%add_node(VERLET_COMPUTE_VEL)
-    call this%list%add_node(FINISHED)
+    call this%list%add(VERLET_UPDATE_POS)
+    call this%list%add(VERLET_SYNC_DT)
+    call this%list%add(UPDATE_INTERACTIONS)
+    call this%list%add(VERLET_COMPUTE_ACC)
+    call this%list%add(VERLET_COMPUTE_VEL)
+    call this%list%add(FINISHED)
 
     this%internal_time = time
     this%dt = dt

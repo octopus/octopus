@@ -33,13 +33,11 @@ module linked_list_oct_m
     class(list_node_t), pointer :: last_node => null()
     class(list_node_t), pointer :: current_node => null()
   contains
-    procedure :: add_node
-    procedure :: first
+    procedure :: add => add_node
     procedure :: next
     procedure :: current
     procedure :: rewind
     procedure :: has_more_values
-    generic   :: add => add_node
     final     :: finalize
   end type linked_list_t
 
@@ -64,17 +62,6 @@ contains
 
     POP_SUB(add_node)
   end subroutine add_node
-
-  function first(this)
-    class(linked_list_t), intent(in) :: this
-    class(*),             pointer    :: first
-
-    PUSH_SUB(first)
-
-    first => this%first_node%get()
-
-    POP_SUB(first)
-  end function first
 
   function current(this)
     class(linked_list_t), intent(in) :: this
