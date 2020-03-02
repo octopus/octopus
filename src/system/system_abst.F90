@@ -155,7 +155,7 @@ contains
 
     PUSH_SUB(system_init_clock)
 
-    this%clock = clock_t(this%namespace, dt, smallest_algo_dt)
+    this%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
 
     POP_SUB(system_init_clock)
   end subroutine system_init_clock

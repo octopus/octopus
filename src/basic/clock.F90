@@ -22,12 +22,14 @@ module clock_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
-  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
 
   private
+
+  integer, parameter :: MAX_LABEL_LEN = 128
+
   public ::                &
     clock_t,               &
     operator(.eq.),        &
@@ -41,14 +43,14 @@ module clock_oct_m
     integer :: clock_tick  !< internal clock counter which is incremented by one when the clock is advanced
     integer :: granularity !< one clock tick corresponds to an advancement of 'granularity' steps on the finest scale in the system
     FLOAT   :: time_step   !< physical simulation time increment which corresponds to a single clock tick
-    type(namespace_t) :: namespace !< namespace for labeling the clock
+    character(len=MAX_LABEL_LEN) :: label !< string used for printing and labelling the clock
 
   contains
     procedure :: print => clock_print                 !< print internal state of the clock
     procedure :: print_str => clock_print_str         !< print internal state of the clock to a string
     procedure :: print_message => clock_print_message !< print internal state of the clock together with a given message
     procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
-    procedure :: copy => clock_copy                   !< set the clock and the namespace to the state of a given input clock
+    procedure :: copy => clock_copy                   !< set the clock to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
     procedure :: get_sim_time => clock_get_sim_time   !< get the current physical simulation time of the clock
     procedure :: increment => clock_increment         !< increment the internal clock counter by one or several steps
@@ -90,7 +92,7 @@ module clock_oct_m
 contains
 
   ! ---------------------------------------------------------
-  !> Initialize the clock with the given namespace and associated physical time step.
+  !> Initialize the clock with a given label and associated physical time step.
   !! The internal clock counter starts at zero or if the optional argument initial_tick is given
   !! at the value of initial_tick.
   !! When several clocks are used simultaneously, then smallest_dt is the smallest time step of
@@ -101,16 +103,19 @@ contains
   !! scale an increase of the clock tick corresponds to. In other words, it tells in which 'units'
   !! an increment of the internal clock counter is counting the time on the finest scale.
   !! So far the implementation assumes that all clocks in the system have commensurable time steps.
-  type(clock_t) function clock_init(namespace, time_step, smallest_dt, initial_tick) result(this)
-    type(namespace_t), intent(in) :: namespace
-    FLOAT,             intent(in) :: time_step, smallest_dt
-    integer, optional             :: initial_tick
+  type(clock_t) function clock_init(label, time_step, smallest_dt, initial_tick) result(this)
+    character(len=*), intent(in) :: label
+    FLOAT,            intent(in) :: time_step, smallest_dt
+    integer, optional            :: initial_tick
 
     PUSH_SUB(clock_init)
 
-    ! this needs to be adapted later on for a more sophisticated handling of the clock namespace
-    this%namespace = namespace
-    this%clock_tick = optional_default(initial_tick, 0)
+    if (len(label) <= MAX_LABEL_LEN) then
+      this%label = label
+    else
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a,i4,a)') 'Clock labels are limited to ', MAX_LABEL_LEN, ' characters'
+    end if
 
     if (ceiling(time_step/smallest_dt) == floor(time_step/smallest_dt)) then
       this%granularity = ceiling(time_step/smallest_dt)
@@ -120,6 +125,7 @@ contains
       call messages_fatal(2)
     endif
 
+    this%clock_tick = optional_default(initial_tick, 0)
     this%time_step = time_step
 
     POP_SUB(clock_init)
@@ -127,14 +133,14 @@ contains
 
   ! ---------------------------------------------------------
   function clock_print_str(this) result(clock_string)
-    class(clock_t), intent(in) :: this
-    character(len=64)          :: clock_string
+    class(clock_t), intent(in)    :: this
+    character(len=65)             :: clock_string
 
     PUSH_SUB(clock_print_str)
 
-    write(clock_string,'(A7,A11,A,F16.6,A,I8.8,A,I8.8,A,I8.8,A)') &
+    write(clock_string,'(A7,A12,A,F16.6,A,I8.8,A,I8.8,A,I8.8,A)') &
         '[Clock:',                         &
-        trim(this%namespace%get()),        &
+        trim(this%label),                  &
         '|',                               &
         this%time_step*this%clock_tick,    &
         '|',                               &
@@ -195,7 +201,7 @@ contains
     PUSH_SUB(clock_copy)
 
     call this%set_time(clock_in)
-    this%namespace = clock_in%namespace
+    this%label = clock_in%label
 
     POP_SUB(clock_copy)
   end subroutine clock_copy
