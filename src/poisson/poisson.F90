@@ -527,7 +527,7 @@ contains
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
-      ! Documentation in poisson_libisf.F90
+      ! Documentation in poisson_psolver.F90
       call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., isf_data_is_parallel)
       if ( this%method == POISSON_PSOLVER .and. isf_data_is_parallel ) then
         call messages_not_implemented("k-point parallelization with PSolver library and PoissonSolverPSolverParallelData = yes")

@@ -46,6 +46,7 @@ module poisson_psolver_oct_m
   use poisson_solver
   use dictionaries, dict_set => set
   use yaml_output, only: yaml_map
+  use wrapper_MPI
 #endif
 
 
@@ -122,6 +123,7 @@ contains
 #ifdef HAVE_PSOLVER
     FLOAT :: alpha, beta, gamma
     FLOAT :: modq2
+    type(mpi_environment) mpi_env
 #endif
  
     PUSH_SUB(poisson_psolver_init)
@@ -205,8 +207,21 @@ contains
     beta  = mesh%sb%beta*M_PI/(CNST(180.0))
     gamma = mesh%sb%gamma*M_PI/(CNST(180.0))
 
+    ! Currently, pkernel_init sets the communicator used within PSolver to comm_world.
+    ! This can be overwritten by passing an optional argument of type(mpi_environment)
+    ! to pkernel_init(). This data type is defined within the wrapper_MPI module of 
+    ! the Futile library. Futile is a prerequisit for PSolver.
+    ! 
+    ! Add:
+    !   use wrapper_MPI
+    !   type(mpi_environment) mpi_env
+    !   mpi_environment_set(mpi_env, rank, size, comm, groupsize)
+    !   pkernel_init(..., mpi_env=mpi_env)
+
+    call mpi_environment_set(mpi_env, cube%mpi_grp%rank, cube%mpi_grp%size, cube%mpi_grp%comm, cube%mpi_grp%size )
+
     this%kernel = pkernel_init(cube%mpi_grp%rank, cube%mpi_grp%size, this%inputs, this%geocode, cube%rs_n_global, &
-      mesh%spacing, alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma)
+      mesh%spacing, alpha_bc = alpha, beta_ac = beta, gamma_ab = gamma, mpi_env = mpi_env)
     call pkernel_set(this%kernel, verbose=debug%info)
 
     !G=0 component
