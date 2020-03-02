@@ -22,6 +22,7 @@ module multisystem_oct_m
   use celestial_body_oct_m
   use global_oct_m
   use linked_list_oct_m
+  use list_node_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -93,15 +94,14 @@ contains
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 
+    type(list_node_t), pointer :: isys
     class(*), pointer :: sys
 
     PUSH_SUB(multisystem_end)
 
-    call systems%rewind()
-    do while (systems%has_more_values())
-      sys => systems%current()
+    nullify(isys)
+    do while (systems%iterate(isys, sys))
       SAFE_DEALLOCATE_P(sys)
-      call systems%next()
     end do
 
     POP_SUB(multisystem_end)

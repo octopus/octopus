@@ -29,6 +29,7 @@ module run_oct_m
   use hamiltonian_elec_oct_m
   use invert_ks_oct_m
   use linked_list_oct_m
+  use list_node_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
@@ -129,6 +130,7 @@ contains
     integer,           intent(in) :: cm
 
     type(linked_list_t) :: systems
+    type(list_node_t), pointer :: isys
     class(*), pointer :: sys
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
@@ -172,9 +174,8 @@ contains
     call multisystem_init(systems, namespace)
 
     ! Loop over systems
-    call systems%rewind()
-    do while (systems%has_more_values())
-      sys => systems%current()
+    nullify(isys)
+    do while (systems%iterate(isys, sys))
       select type (sys)
       type is (system_t)
 
@@ -308,7 +309,6 @@ contains
         message(1) = "Unknow system type."
         call messages_fatal(1)
       end select
-      call systems%next()
     end do
 
     ! Finalize systems

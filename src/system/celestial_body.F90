@@ -26,6 +26,7 @@ module celestial_body_oct_m
   use io_oct_m
   use iso_c_binding  
   use linked_list_oct_m
+  use list_node_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -184,10 +185,10 @@ contains
     class(celestial_body_t),  intent(inout) :: this
     integer,               intent(in)    :: operation
 
+    type(list_node_t), pointer :: iint
     class(*), pointer :: interaction
 
     PUSH_SUB(celestial_body_do_td)
-
 
     select case(operation)
     case(VERLET_SYNC_DT)
@@ -218,9 +219,8 @@ contains
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
-      call this%interactions%rewind()
-      do while (this%interactions%has_more_values())
-        interaction => this%interactions%current()
+      nullify(iint)
+      do while (this%interactions%iterate(iint, interaction))
         select type (interaction)
         type is (interaction_gravity_t)
           this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
@@ -228,7 +228,6 @@ contains
           message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
           call messages_fatal(1)
         end select
-        call this%interactions%next()
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
       call this%prop%list%next()
@@ -257,12 +256,12 @@ contains
     class(celestial_body_t), intent(inout) :: this
 
     class(*), pointer :: interaction
+    type(list_node_t), pointer :: iint
 
     PUSH_SUB(celestial_body_update_interactions)
 
-    call this%interactions%rewind()
-    do while (this%interactions%has_more_values())
-      interaction => this%interactions%current()
+    nullify(iint)
+    do while (this%interactions%iterate(iint, interaction))
       select type (interaction)
       type is (interaction_gravity_t)
         call interaction%update(this%mass, this%pos)
@@ -270,7 +269,6 @@ contains
         message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
         call messages_fatal(1)
       end select
-      call this%interactions%next()
     end do
 
     POP_SUB(celestial_body_update_interactions)
@@ -401,15 +399,14 @@ contains
   subroutine celestial_body_finalize(this)
     type(celestial_body_t), intent(inout) :: this
 
+    type(list_node_t), pointer :: iint
     class(*), pointer :: interaction
 
     PUSH_SUB(celestial_body_finalize)
 
-    call this%interactions%rewind()
-    do while (this%interactions%has_more_values())
-      interaction => this%interactions%current()
+    nullify(iint)
+    do while (this%interactions%iterate(iint, interaction))
       SAFE_DEALLOCATE_P(interaction)
-      call this%interactions%next()
     end do
 
     POP_SUB(celestial_body_finalize)

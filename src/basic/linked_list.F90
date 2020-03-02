@@ -125,13 +125,13 @@ contains
       iteration_counter => this%first_node
     end if
 
+    ! Are we done?
+    linked_list_iterate = associated(iteration_counter)
+
     ! Get a pointer to the value stored in the list
-    if (present(value)) then
+    if (present(value) .and. linked_list_iterate) then
       value => iteration_counter%get()
     end if
-
-    ! Are we done?
-    linked_list_iterate = associated(iteration_counter%next())
 
     POP_SUB(linked_list_iterate)
   end function linked_list_iterate
