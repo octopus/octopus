@@ -211,12 +211,6 @@ contains
     ! This can be overwritten by passing an optional argument of type(mpi_environment)
     ! to pkernel_init(). This data type is defined within the wrapper_MPI module of 
     ! the Futile library. Futile is a prerequisit for PSolver.
-    ! 
-    ! Add:
-    !   use wrapper_MPI
-    !   type(mpi_environment) mpi_env
-    !   mpi_environment_set(mpi_env, rank, size, comm, groupsize)
-    !   pkernel_init(..., mpi_env=mpi_env)
 
     call mpi_environment_set(mpi_env, cube%mpi_grp%rank, cube%mpi_grp%size, cube%mpi_grp%comm, cube%mpi_grp%size )
 
@@ -272,10 +266,10 @@ contains
   !-----------------------------------------------------------------
   subroutine poisson_psolver_reinit(this, mesh, cube, mu, qq_in)
     type(poisson_psolver_t), intent(inout) :: this
-    type(cube_t),           intent(inout) :: cube
-    type(mesh_t),           intent(inout) :: mesh
-    FLOAT,                  intent(in)    :: mu
-    FLOAT,                  intent(in)    :: qq_in(1:MAX_DIM)
+    type(cube_t),            intent(inout) :: cube
+    type(mesh_t),            intent(inout) :: mesh
+    FLOAT,                   intent(in)    :: mu
+    FLOAT,                   intent(in)    :: qq_in(1:MAX_DIM)
 
     FLOAT :: alpha, beta, gamma
     FLOAT :: qq_abs(1:MAX_DIM), qq(1:MAX_DIM)
