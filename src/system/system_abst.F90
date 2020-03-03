@@ -244,6 +244,7 @@ contains
 
     case default
       call this%do_td_operation(tdop)
+      call this%prop%next()
     end select
 
     POP_SUB(system_dt_operation)

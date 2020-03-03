@@ -212,7 +212,6 @@ contains
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                    + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
-      call this%prop%next()
 
       call this%observables(POSITION)%clock%increment()
 
@@ -238,7 +237,6 @@ contains
         end select
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      call this%prop%next()
 
     case(VERLET_COMPUTE_VEL)
       if (debug%info) then
@@ -248,7 +246,6 @@ contains
 
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%next()
 
       call this%observables(VELOCITY)%clock%increment()
 
@@ -263,7 +260,6 @@ contains
                              * ( M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
       this%prev_acc(1:this%space%dim) = this%acc(1:this%space%dim)
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
-      call this%prop%next()
 
       if(.not. this%prop%predictor_corrector) then
         call this%observables(POSITION)%clock%increment()
@@ -277,7 +273,6 @@ contains
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
                        + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
                          + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
-      call this%prop%next()
 
       call this%observables(VELOCITY)%clock%increment()
 
@@ -291,7 +286,6 @@ contains
       this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
                        + M_ONE/CNST(6.0) * this%prop%dt**2  &
                              * ( M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%next()
 
       !We set it to the propagation time to avoid double increment
       call this%observables(POSITION)%clock%set_time(this%prop%clock)
@@ -304,7 +298,7 @@ contains
 
       this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%next()
+
 
       !We set it to the propagation time to avoid double increment
       call this%observables(VELOCITY)%clock%set_time(this%prop%clock)
