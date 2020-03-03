@@ -21,7 +21,6 @@
 module propagator_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
-  use list_node_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -34,7 +33,7 @@ module propagator_abst_oct_m
   type, extends(linked_list_t) :: propagator_abst_t
     private
 
-    type(list_node_t), pointer :: current_ops => null()
+    type(list_counter_t) :: current_ops
 
     FLOAT, public   :: internal_time
     FLOAT, public   :: dt
@@ -66,7 +65,8 @@ contains
 
     PUSH_SUB(propagator_rewind)
 
-    this%current_ops => this%first_node
+    this%current_ops = this%start_counter()
+    call this%current_ops%increment()
     this%step_done = .false.
 
     POP_SUB(propagator_rewind)
@@ -87,7 +87,7 @@ contains
 
     PUSH_SUB(propagator_next)
 
-    this%current_ops => this%current_ops%next()
+    call this%current_ops%increment()
 
     POP_SUB(propagator_next)
   end subroutine propagator_next
@@ -95,13 +95,9 @@ contains
   integer function propagator_get_tdop(this) result(tdop)
     class(propagator_abst_t), intent(in) :: this
 
-    class(*), pointer :: current_ops
-
     PUSH_SUB(propagator_get_tdop)
 
-    current_ops => this%current_ops%get()
-
-    select type(current_ops)
+    select type(current_ops => this%get(this%current_ops))
     type is (integer)
       tdop = current_ops
     class default

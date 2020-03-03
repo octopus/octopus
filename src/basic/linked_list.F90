@@ -53,7 +53,7 @@ module linked_list_oct_m
   !>
   type :: linked_list_t
     private
-    class(list_node_t), pointer, public :: first_node => null()
+    class(list_node_t), pointer :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
   contains
     procedure :: add => linked_list_add_node
