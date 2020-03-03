@@ -21,7 +21,6 @@
 module interaction_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
-  use list_node_oct_m
   use messages_oct_m
   implicit none
 
@@ -36,55 +35,52 @@ module interaction_abst_oct_m
     private
   end type interaction_abst_t
 
-  !> Wrapper class for linked lists to guarantee that only interactions are
-  !> stored in the list. Note that we cannot simply make this class an extension
-  !> of linked_list_t, as in that case we would no be able to change the
-  !> interface of the methods, which is exactly what we want here.
-  type interaction_list_t
+  type, extends(linked_list_t) :: interaction_list_t
     private
-    type(linked_list_t) :: list
   contains
     procedure :: add => interaction_list_add_node
-    procedure :: iterate => interaction_list_iterate
+    procedure :: get_interaction => interaction_list_get
   end type interaction_list_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine interaction_list_add_node(this, value)
-    class(interaction_list_t)         :: this
-    class(interaction_abst_t), target :: value
+    class(interaction_list_t)        :: this
+    class(*),                 target :: value
 
     PUSH_SUB(interaction_list_add_node)
 
-    call this%list%add(value)
+    select type (value)
+    class is (interaction_abst_t)
+      call this%linked_list_t%add(value)
+    class default
+      ASSERT(.false.)
+    end select
 
     POP_SUB(interaction_list_add_node)
   end subroutine interaction_list_add_node
 
   ! ---------------------------------------------------------
-  logical function interaction_list_iterate(this, iteration_counter, value)
-    class(interaction_list_t), intent(in)        :: this
-    type(list_node_t),         pointer           :: iteration_counter
-    class(interaction_abst_t), pointer, optional :: value
+  function interaction_list_get(this, counter) result(value)
+    class(interaction_list_t), intent(in) :: this
+    type(list_counter_t),      intent(in) :: counter
+    class(interaction_abst_t), pointer    :: value
 
     class(*), pointer :: ptr
 
-    PUSH_SUB(interaction_list_iterate)
+    PUSH_SUB(interaction_list_get)
 
-    interaction_list_iterate = this%list%iterate(iteration_counter, ptr)
+    ptr => this%get(counter)
+    select type (ptr)
+    class is (interaction_abst_t)
+      value => ptr
+    class default
+      ASSERT(.false.)
+    end select
 
-    if (present(value) .and. interaction_list_iterate) then
-      select type (ptr)
-      class is (interaction_abst_t)
-        value => ptr
-      class default
-        ASSERT(.false.)
-      end select
-    end if
-
-    POP_SUB(interaction_list_iterate)
-  end function interaction_list_iterate
+    POP_SUB(interaction_list_get)
+  end function interaction_list_get
 
 end module interaction_abst_oct_m
 

@@ -24,8 +24,8 @@ module celestial_body_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
   use io_oct_m
-  use iso_c_binding  
-  use list_node_oct_m
+  use iso_c_binding
+  use linked_list_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -184,8 +184,7 @@ contains
     class(celestial_body_t),  intent(inout) :: this
     integer,               intent(in)    :: operation
 
-    type(list_node_t), pointer :: iint
-    class(interaction_abst_t), pointer :: interaction
+    type(list_counter_t) :: iint
 
     PUSH_SUB(celestial_body_do_td)
 
@@ -218,9 +217,9 @@ contains
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
-      nullify(iint)
-      do while (this%interactions%iterate(iint, interaction))
-        select type (interaction)
+      iint = this%interactions%start_counter()
+      do while (iint%iterate())
+        select type (interaction => this%interactions%get_interaction(iint))
         type is (interaction_gravity_t)
           this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
         class default
@@ -255,12 +254,13 @@ contains
     class(celestial_body_t), intent(inout) :: this
 
     class(interaction_abst_t), pointer :: interaction
-    type(list_node_t), pointer :: iint
+    type(list_counter_t) :: iint
 
     PUSH_SUB(celestial_body_update_interactions)
 
-    nullify(iint)
-    do while (this%interactions%iterate(iint, interaction))
+    iint = this%interactions%start_counter()
+    do while (iint%iterate())
+      interaction => this%interactions%get_interaction(iint)
       select type (interaction)
       type is (interaction_gravity_t)
         call interaction%update(this%mass, this%pos)
@@ -398,13 +398,14 @@ contains
   subroutine celestial_body_finalize(this)
     type(celestial_body_t), intent(inout) :: this
 
-    type(list_node_t), pointer :: iint
+    type(list_counter_t) :: iint
     class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(celestial_body_finalize)
 
-    nullify(iint)
-    do while (this%interactions%iterate(iint, interaction))
+    iint = this%interactions%start_counter()
+    do while (iint%iterate())
+      interaction => this%interactions%get_interaction(iint)
       SAFE_DEALLOCATE_P(interaction)
     end do
 
