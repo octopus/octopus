@@ -42,6 +42,8 @@ subroutine X(batch_init_with_memory_3)(this, dim, st_start, st_end, psi)
   POP_SUB(X(batch_init_with_memory_3))
 end subroutine X(batch_init_with_memory_3)
 
+
+!--------------------------------------------------------------
 subroutine X(batch_init_with_memory_2)(this, dim, st_start, st_end, psi)
   class(batch_t),  intent(out)   :: this
   integer,        intent(in)    :: dim
@@ -62,6 +64,37 @@ subroutine X(batch_init_with_memory_2)(this, dim, st_start, st_end, psi)
   POP_SUB(X(batch_init_with_memory_2))
 end subroutine X(batch_init_with_memory_2)
 
+
+!--------------------------------------------------------------
+subroutine X(batch_init_with_memory_2_packed)(this, dim, st_start, st_end, psi, packed)
+  class(batch_t),  intent(out)   :: this
+  integer,        intent(in)    :: dim
+  integer,        intent(in)    :: st_start
+  integer,        intent(in)    :: st_end
+  R_TYPE, target, contiguous, intent(in)    :: psi(:, :)
+  logical,        intent(in)    :: packed
+
+  PUSH_SUB(X(batch_init_with_memory_2_packed))
+
+  call batch_init_empty(this, dim, st_end - st_start + 1, ubound(psi, dim=2))
+  this%type_of = R_TYPE_VAL
+  call batch_build_indices(this, st_start, st_end)
+
+  ASSERT(ubound(psi, dim=1) == this%pack_size(1))
+  ASSERT(ubound(psi, dim=2) == this%pack_size(2))
+
+  this%X(ff_pack) => psi
+
+  this%status_of = BATCH_PACKED
+  this%status_host = BATCH_PACKED
+  this%initial_status = BATCH_PACKED
+  INCR(this%host_buffer_count, 1)
+
+  POP_SUB(X(batch_init_with_memory_2_packed))
+end subroutine X(batch_init_with_memory_2_packed)
+
+
+!--------------------------------------------------------------
 subroutine X(batch_init_with_memory_1)(this, psi)
   class(batch_t),             intent(out)   :: this
   R_TYPE, target, contiguous, intent(in)    :: psi(:)

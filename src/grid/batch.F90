@@ -57,6 +57,7 @@ module batch_oct_m
 
     integer                                :: status_of
     integer                                :: status_host
+    integer                                :: initial_status
     type(type_t)                           :: type_of !< either TYPE_FLOAT or TYPE_COMPLEX
     integer                                :: device_buffer_count !< whether there is a copy in the opencl buffer
     integer                                :: host_buffer_count !< whether the batch was packed on the cpu
@@ -117,6 +118,8 @@ module batch_oct_m
     module procedure zbatch_init_with_memory_3
     module procedure dbatch_init_with_memory_2
     module procedure zbatch_init_with_memory_2
+    module procedure dbatch_init_with_memory_2_packed
+    module procedure zbatch_init_with_memory_2_packed
     module procedure dbatch_init_with_memory_1
     module procedure zbatch_init_with_memory_1
   end interface batch_init
@@ -151,6 +154,7 @@ contains
       this%host_buffer_count = 0
       this%device_buffer_count = 0
     end if
+    ! get the batch data if it is on the GPU
     if(this%status() == BATCH_DEVICE_PACKED) call this%do_unpack(copy, force = .true.)
     if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
 
@@ -290,6 +294,7 @@ contains
     this%host_buffer_count = 0
     this%status_of = BATCH_NOT_PACKED
     this%status_host = BATCH_NOT_PACKED
+    this%initial_status = BATCH_NOT_PACKED
 
     this%ndims = 2
     SAFE_ALLOCATE(this%ist_idim_index(1:this%nst_linear, 1:this%ndims))

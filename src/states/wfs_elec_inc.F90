@@ -40,7 +40,7 @@ subroutine X(wfs_elec_init_with_memory_2)(this, dim, st_start, st_end, psi, ik)
   integer,          intent(in)    :: st_start
   integer,          intent(in)    :: st_end
   integer,          intent(in)    :: ik
-  R_TYPE,   target, intent(in)    :: psi(:, :)
+  R_TYPE, contiguous, target, intent(in)    :: psi(:, :)
 
   PUSH_SUB(X(wfs_elec_init_with_memory_2))
 
@@ -50,6 +50,24 @@ subroutine X(wfs_elec_init_with_memory_2)(this, dim, st_start, st_end, psi, ik)
 
   POP_SUB(X(wfs_elec_init_with_memory_2))
 end subroutine X(wfs_elec_init_with_memory_2)
+
+subroutine X(wfs_elec_init_with_memory_2_packed)(this, dim, st_start, st_end, psi, ik, packed)
+  type(wfs_elec_t), intent(out)   :: this
+  integer,          intent(in)    :: dim
+  integer,          intent(in)    :: st_start
+  integer,          intent(in)    :: st_end
+  integer,          intent(in)    :: ik
+  R_TYPE, contiguous, target, intent(in)    :: psi(:, :)
+  logical,          intent(in)   :: packed
+
+  PUSH_SUB(X(wfs_elec_init_with_memory_2_packed))
+
+  this%ik = ik
+  this%has_phase = .false.
+  call batch_init(this%batch_t, dim,  st_start, st_end, psi, packed)
+
+  POP_SUB(X(wfs_elec_init_with_memory_2_packed))
+end subroutine X(wfs_elec_init_with_memory_2_packed)
 
 subroutine X(wfs_elec_init)(this, dim, st_start, st_end, np, ik, special, packed)
   type(wfs_elec_t),  intent(inout) :: this

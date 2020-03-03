@@ -51,6 +51,8 @@ module wfs_elec_oct_m
     module procedure zwfs_elec_init_with_memory_3
     module procedure dwfs_elec_init_with_memory_2
     module procedure zwfs_elec_init_with_memory_2
+    module procedure dwfs_elec_init_with_memory_2_packed
+    module procedure zwfs_elec_init_with_memory_2_packed
   end interface wfs_elec_init
 
 contains
