@@ -912,7 +912,7 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2
+    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2, threshold
     integer :: ip, err, idim, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
@@ -927,9 +927,12 @@ contains
       select case(species_type(species))
 
       case(SPECIES_SOFT_COULOMB)
+
+        call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), threshold)
+
         !Assuming that we want to take the contribution from all replica that contributes up to 0.001
         ! to the center of the cell, we arrive to a range of 1000 a.u.. 
-        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(1000.0) / species_zval(species))
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = species_zval(species) / threshold)
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
           x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
