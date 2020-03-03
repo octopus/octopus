@@ -48,7 +48,7 @@ module linked_list_oct_m
   !>     call counter%increment()
   !>     value => list%get(counter)
   !>     ...
-  !>     if (counter%end_of_list()) exit
+  !>     if (counter%has_next()) exit
   !>  end do
   !>
   type :: linked_list_t
@@ -69,7 +69,7 @@ module linked_list_oct_m
   contains
     procedure :: iterate => counter_iterate
     procedure :: increment => counter_increment
-    procedure :: end_of_list => counter_end_of_list
+    procedure :: has_next => counter_has_next
   end type list_counter_t
 
 contains
@@ -144,7 +144,7 @@ contains
     call this%increment()
 
     ! Are we done?
-    counter_iterate = this%end_of_list()
+    counter_iterate = this%has_next()
 
     POP_SUB(counter_iterate)
   end function counter_iterate
@@ -165,14 +165,14 @@ contains
   end subroutine counter_increment
 
   ! ---------------------------------------------------------
-  logical function counter_end_of_list(this)
+  logical function counter_has_next(this)
     class(list_counter_t), intent(in) :: this
 
-    PUSH_SUB(counter_end_of_list)
+    PUSH_SUB(counter_has_next)
 
-    counter_end_of_list = associated(this%current_node)
+    counter_has_next = associated(this%current_node)
 
-    POP_SUB(counter_end_of_list)
-  end function counter_end_of_list
+    POP_SUB(counter_has_next)
+  end function counter_has_next
 
 end module linked_list_oct_m
