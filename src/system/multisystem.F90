@@ -93,15 +93,15 @@ contains
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 
+    type(list_iterator_t) :: iter
     class(*), pointer :: sys
 
     PUSH_SUB(multisystem_end)
 
-    call systems%rewind()
-    do while (systems%has_more_values())
-      sys => systems%current()
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
       SAFE_DEALLOCATE_P(sys)
-      call systems%next()
     end do
 
     POP_SUB(multisystem_end)

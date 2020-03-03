@@ -127,7 +127,7 @@ contains
 
       call this%update_interactions()
 
-      call this%prop%list%next()
+      call this%prop%next()
 
     case default
       call this%do_td_operation(tdop)

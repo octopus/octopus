@@ -24,7 +24,7 @@ module celestial_body_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
   use io_oct_m
-  use iso_c_binding  
+  use iso_c_binding
   use linked_list_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -184,10 +184,9 @@ contains
     class(celestial_body_t),  intent(inout) :: this
     integer,               intent(in)    :: operation
 
-    class(*), pointer :: interaction
+    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_do_td)
-
 
     select case(operation)
     case(VERLET_SYNC_DT)
@@ -197,7 +196,7 @@ contains
       end if
 
       this%prop%internal_time = this%prop%internal_time + this%prop%dt
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_UPDATE_POS)
       if (debug%info) then
@@ -208,7 +207,7 @@ contains
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                    + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_COMPUTE_ACC)
       if (debug%info) then
@@ -218,20 +217,18 @@ contains
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
-      call this%interactions%rewind()
-      do while (this%interactions%has_more_values())
-        interaction => this%interactions%current()
-        select type (interaction)
+      call iter%start(this%interactions)
+      do while (iter%has_next())
+        select type (interaction => iter%get_next_interaction())
         type is (interaction_gravity_t)
           this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
         class default
           message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
           call messages_fatal(1)
         end select
-        call this%interactions%next()
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      call this%prop%list%next()
+      call this%prop%next()
 
     case(VERLET_COMPUTE_VEL)
       if (debug%info) then
@@ -241,7 +238,7 @@ contains
 
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%list%next()
+      call this%prop%next()
 
     case default
       message(1) = "Unsupported TD operation."
@@ -256,13 +253,14 @@ contains
   subroutine celestial_body_update_interactions(this)
     class(celestial_body_t), intent(inout) :: this
 
-    class(*), pointer :: interaction
+    class(interaction_abst_t), pointer :: interaction
+    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_update_interactions)
 
-    call this%interactions%rewind()
-    do while (this%interactions%has_more_values())
-      interaction => this%interactions%current()
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
       select type (interaction)
       type is (interaction_gravity_t)
         call interaction%update(this%mass, this%pos)
@@ -270,7 +268,6 @@ contains
         message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
         call messages_fatal(1)
       end select
-      call this%interactions%next()
     end do
 
     POP_SUB(celestial_body_update_interactions)
@@ -401,15 +398,15 @@ contains
   subroutine celestial_body_finalize(this)
     type(celestial_body_t), intent(inout) :: this
 
-    class(*), pointer :: interaction
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(celestial_body_finalize)
 
-    call this%interactions%rewind()
-    do while (this%interactions%has_more_values())
-      interaction => this%interactions%current()
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
       SAFE_DEALLOCATE_P(interaction)
-      call this%interactions%next()
     end do
 
     POP_SUB(celestial_body_finalize)

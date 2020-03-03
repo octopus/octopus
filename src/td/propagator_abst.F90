@@ -30,10 +30,11 @@ module propagator_abst_oct_m
   public ::                            &
     propagator_abst_t
 
-  type, abstract :: propagator_abst_t
+  type, extends(linked_list_t) :: propagator_abst_t
     private
 
-    type(linked_list_t), public :: list
+    type(list_iterator_t) :: iter
+    integer               :: current_ops
 
     FLOAT, public   :: internal_time
     FLOAT, public   :: dt
@@ -44,6 +45,7 @@ module propagator_abst_oct_m
     !Below are the list of operations that needs to be implemented
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
+    procedure :: next => propagator_next
     procedure :: rewind => propagator_rewind
     procedure :: finished => propagator_finished
   end type propagator_abst_t
@@ -64,7 +66,8 @@ contains
 
     PUSH_SUB(propagator_rewind)
 
-    call this%list%rewind()
+    call this%iter%start(this)
+    call this%next()
     this%step_done = .false.
 
     POP_SUB(propagator_rewind)
@@ -80,22 +83,28 @@ contains
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
 
-  integer function propagator_get_tdop(this) result(tdop)
-    class(propagator_abst_t), intent(in) :: this
+  subroutine propagator_next(this)
+    class(propagator_abst_t), intent(inout) :: this
 
-    class(*), pointer :: current_ops
+    PUSH_SUB(propagator_next)
 
-    PUSH_SUB(propagator_get_tdop)
-
-    current_ops => this%list%current()
-
-    select type(current_ops)
+    select type(next_ops => this%iter%get_next())
     type is (integer)
-      tdop = current_ops
+      this%current_ops = next_ops
     class default
       message(1) = "Corrupted list."
       call messages_fatal(1)
     end select
+
+    POP_SUB(propagator_next)
+  end subroutine propagator_next
+
+  integer function propagator_get_tdop(this) result(tdop)
+    class(propagator_abst_t), intent(in) :: this
+
+    PUSH_SUB(propagator_get_tdop)
+
+    tdop = this%current_ops
 
     POP_SUB(propagator_get_tdop)
   end function propagator_get_tdop
