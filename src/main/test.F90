@@ -1018,12 +1018,12 @@ contains
 
     PUSH_SUB(test_clock)
 
-    test_clock_a = clock_t(namespace_t('test_clock_a'), CNST(2.0), CNST(1.0), 100)
-    test_clock_b = clock_t(namespace_t('test_clock_b'), CNST(1.0), CNST(1.0))
+    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
+    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
 
-    call test_clock_a%set(test_clock_b)
+    call test_clock_a%set_time(test_clock_b)
     call test_clock_a%print()
     call test_clock_a%increment()
     call test_clock_a%print()
@@ -1037,6 +1037,8 @@ contains
     call test_clock_a%print()
     call test_clock_a%decrement(2)
     call test_clock_a%print()
+    message(1) = test_clock_a%print_str()
+    call messages_info(1)
 
     write(message(1),'(A,x,I10.10)') &
 	'clock_get_tick', test_clock_a%get_tick()
