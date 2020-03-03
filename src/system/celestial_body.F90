@@ -534,8 +534,6 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
-      select type (interaction)
-      type is (interaction_gravity_t)
 
       do iobs = 1, interaction%n_system_observables
         obs_index = interaction%system_observables(iobs)
@@ -556,11 +554,6 @@ contains
           call messages_fatal(1)
         end select
       end do
-
-      class default
-        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-        call messages_fatal(1)
-      end select
     end do
 
     POP_SUB(celestial_body_update_observables_as_system)
@@ -625,13 +618,7 @@ contains
       call iter%start(this%interactions)
       do while (iter%has_next())
         interaction => iter%get_next_interaction()
-        select type (interaction)
-        type is (interaction_gravity_t)
-          call interaction%clock%decrement()
-        class default
-          message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-          call messages_fatal(1)
-        end select
+        call interaction%clock%decrement()
       end do
     end do
 
@@ -651,13 +638,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
-      select type (interaction)
-      type is (interaction_gravity_t)
-        call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
-      class default
-        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-        call messages_fatal(1)
-      end select
+      call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
     end do
 
     this%observables(POSITION)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
