@@ -1009,7 +1009,7 @@ contains
     logical, optional,             intent(in)    :: skip(:)
     logical, optional,             intent(in)    :: packed
 
-    integer :: ib, iqn, ist, istmin, istmax
+    integer :: ib, iqn, ist, istmin, istmax, size1
     logical :: same_node, verbose_, packed_
     integer, allocatable :: bstart(:), bend(:)
 
@@ -1090,17 +1090,31 @@ contains
         st%group%block_end = ib
         do iqn = st%d%kpt%start, st%d%kpt%end
           st%group%block_is_local(ib, iqn) = .true.
-
-          if (states_are_real(st)) then
-            call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true., packed=packed_)
-          else
-            call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
-              special=.true., packed=packed_)
-          end if
-          
         end do
       end if
+    end do
+
+    ! allocate one big chunk of memory for all states
+    size1 = pad_pow2(st%d%dim*st%d%block_size)
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(st%group%dpsi(size1, mesh%np_part, st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      nullify(st%group%zpsi)
+    else
+      SAFE_ALLOCATE(st%group%zpsi(size1, mesh%np_part, st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      nullify(st%group%dpsi)
+    end if
+
+
+    do ib = st%group%block_start, st%group%block_end
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        if (states_are_real(st)) then
+          call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
+            st%group%dpsi(:, :, ib, iqn), iqn, packed=.true.)
+        else
+          call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
+            st%group%zpsi(:, :, ib, iqn), iqn, packed=.true.)
+        end if
+      end do
     end do
 
     SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))

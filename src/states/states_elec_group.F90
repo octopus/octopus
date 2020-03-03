@@ -50,6 +50,8 @@ module states_elec_group_oct_m
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
+    FLOAT, pointer, contiguous :: dpsi(:, :, :, :) !< large contiguous storage for the wavefunctions
+    CMPLX, pointer, contiguous :: zpsi(:, :, :, :) !< large contiguous storage for the wavefunctions
   end type states_elec_group_t
 
 contains
@@ -65,6 +67,8 @@ contains
     nullify(this%block_range)
     nullify(this%block_size)
     nullify(this%block_is_local)
+    nullify(this%dpsi)
+    nullify(this%zpsi)
 
     this%block_initialized = .false.
 
@@ -90,6 +94,9 @@ contains
       end do
 
       SAFE_DEALLOCATE_P(this%psib)
+
+      SAFE_DEALLOCATE_P(this%dpsi)
+      SAFE_DEALLOCATE_P(this%zpsi)
 
       SAFE_DEALLOCATE_P(this%iblock)
       SAFE_DEALLOCATE_P(this%block_range)
@@ -121,6 +128,8 @@ contains
     group_out%block_start       = group_in%block_start
     group_out%block_end         = group_in%block_end
     group_out%block_initialized = group_in%block_initialized
+    nullify(group_out%dpsi)
+    nullify(group_out%zpsi)
 
     if(group_out%block_initialized) then
 
