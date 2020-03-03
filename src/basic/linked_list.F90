@@ -129,9 +129,12 @@ contains
   type(list_counter_t) function linked_list_start_counter(this) result(counter)
     class(linked_list_t), intent(in), target :: this
 
+    PUSH_SUB(linked_list_start_counter)
+
     counter%first_node => this%first_node
     nullify(counter%current_node)
 
+    POP_SUB(linked_list_start_counter)
   end function linked_list_start_counter
 
   ! ---------------------------------------------------------
