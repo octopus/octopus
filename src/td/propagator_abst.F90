@@ -33,7 +33,8 @@ module propagator_abst_oct_m
   type, extends(linked_list_t) :: propagator_abst_t
     private
 
-    type(list_counter_t) :: current_ops
+    type(list_iterator_t) :: iter
+    integer               :: current_ops
 
     FLOAT, public   :: internal_time
     FLOAT, public   :: dt
@@ -65,8 +66,8 @@ contains
 
     PUSH_SUB(propagator_rewind)
 
-    this%current_ops = this%start_counter()
-    call this%current_ops%increment()
+    call this%iter%start(this)
+    call this%next()
     this%step_done = .false.
 
     POP_SUB(propagator_rewind)
@@ -87,7 +88,13 @@ contains
 
     PUSH_SUB(propagator_next)
 
-    call this%current_ops%increment()
+    select type(next_ops => this%iter%get_next())
+    type is (integer)
+      this%current_ops = next_ops
+    class default
+      message(1) = "Corrupted list."
+      call messages_fatal(1)
+    end select
 
     POP_SUB(propagator_next)
   end subroutine propagator_next
@@ -97,13 +104,7 @@ contains
 
     PUSH_SUB(propagator_get_tdop)
 
-    select type(current_ops => this%get(this%current_ops))
-    type is (integer)
-      tdop = current_ops
-    class default
-      message(1) = "Corrupted list."
-      call messages_fatal(1)
-    end select
+    tdop = this%current_ops
 
     POP_SUB(propagator_get_tdop)
   end function propagator_get_tdop

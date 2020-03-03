@@ -25,8 +25,8 @@ module linked_list_oct_m
   implicit none
 
   private
-  public :: linked_list_t, &
-            list_counter_t
+  public :: linked_list_t,  &
+            list_iterator_t
 
 
   !---------------------------------------------------------------------------
@@ -35,20 +35,19 @@ module linked_list_oct_m
   !> using the associated list_counter_t. There are two ways of iterating. The
   !> first is by using a "do while" construct:
   !>
-  !>  counter = list%counter_start()
-  !>  do while (counter%iterate())
-  !>     value => list%get(counter)
+  !>  call iter%start(list)
+  !>  do while (iter%has_next())
+  !>     value => iter%get_next()
   !>     ...
   !>  end do
   !>
   !> The second method is with a simple "do":
   !>
-  !>  counter = list%counter_start()
+  !>  call iter%start(list)
   !>  do
-  !>     call counter%increment()
-  !>     value => list%get(counter)
+  !>     if (.not. iter%has_next()) exit
+  !>     value => iter%get_next()
   !>     ...
-  !>     if (counter%has_next()) exit
   !>  end do
   !>
   type :: linked_list_t
@@ -56,21 +55,18 @@ module linked_list_oct_m
     class(list_node_t), pointer :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
   contains
-    procedure :: add => linked_list_add_node
-    procedure :: start_counter => linked_list_start_counter
-    procedure, nopass :: get => linked_list_get
+    procedure         :: add => linked_list_add_node
     final     :: linked_list_finalize
   end type linked_list_t
 
-  type :: list_counter_t
+  type :: list_iterator_t
     private
-    class(list_node_t), pointer :: current_node => null()
-    class(list_node_t), pointer :: first_node => null()
+    class(list_node_t), pointer :: next_node => null()
   contains
-    procedure :: iterate => counter_iterate
-    procedure :: increment => counter_increment
-    procedure :: has_next => counter_has_next
-  end type list_counter_t
+    procedure :: start    => list_iterator_start
+    procedure :: has_next => list_iterator_has_next
+    procedure :: get_next => list_iterator_get_next
+  end type list_iterator_t
 
 contains
 
@@ -114,68 +110,39 @@ contains
   end subroutine linked_list_finalize
 
   ! ---------------------------------------------------------
-  function linked_list_get(counter) result(value)
-    type(list_counter_t), intent(in) :: counter
-    class(*),             pointer    :: value
+  subroutine list_iterator_start(this, list)
+    class(list_iterator_t), intent(inout)      :: this
+    class(linked_list_t),   intent(in), target :: list
 
-    PUSH_SUB(linked_list_get)
+    PUSH_SUB(list_iterator_start)
 
-    value => counter%current_node%get()
+    this%next_node => list%first_node
 
-    POP_SUB(linked_list_get)
-  end function linked_list_get
-
-  ! ---------------------------------------------------------
-  type(list_counter_t) function linked_list_start_counter(this) result(counter)
-    class(linked_list_t), intent(in), target :: this
-
-    PUSH_SUB(linked_list_start_counter)
-
-    counter%first_node => this%first_node
-    nullify(counter%current_node)
-
-    POP_SUB(linked_list_start_counter)
-  end function linked_list_start_counter
+    POP_SUB(list_iterator_start)
+  end subroutine list_iterator_start
 
   ! ---------------------------------------------------------
-  logical function counter_iterate(this)
-    class(list_counter_t), intent(inout) :: this
+  logical function list_iterator_has_next(this)
+    class(list_iterator_t), intent(in) :: this
 
-    PUSH_SUB(counter_iterate)
+    PUSH_SUB(list_iterator_has_next)
 
-    ! Get the next node in the list
-    call this%increment()
+    list_iterator_has_next = associated(this%next_node)
 
-    ! Are we done?
-    counter_iterate = this%has_next()
-
-    POP_SUB(counter_iterate)
-  end function counter_iterate
+    POP_SUB(list_iterator_has_next)
+  end function list_iterator_has_next
 
   ! ---------------------------------------------------------
-  subroutine counter_increment(this)
-    class(list_counter_t), intent(inout) :: this
+  function list_iterator_get_next(this) result(value)
+    class(list_iterator_t), intent(inout) :: this
+    class(*),              pointer        :: value
 
-    PUSH_SUB(counter_increment)
+    PUSH_SUB(list_iterator_get_next)
 
-    if (associated(this%current_node)) then
-      this%current_node => this%current_node%next()
-    else
-      this%current_node => this%first_node
-    end if
+    value => this%next_node%get()
+    this%next_node => this%next_node%next()
 
-    POP_SUB(counter_increment)
-  end subroutine counter_increment
-
-  ! ---------------------------------------------------------
-  logical function counter_has_next(this)
-    class(list_counter_t), intent(in) :: this
-
-    PUSH_SUB(counter_has_next)
-
-    counter_has_next = associated(this%current_node)
-
-    POP_SUB(counter_has_next)
-  end function counter_has_next
+    POP_SUB(list_iterator_get_next)
+  end function list_iterator_get_next
 
 end module linked_list_oct_m

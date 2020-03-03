@@ -129,7 +129,7 @@ contains
     integer,           intent(in) :: cm
 
     type(linked_list_t) :: systems
-    type(list_counter_t) :: isys
+    type(list_iterator_t) :: iter
     class(*), pointer :: sys
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
@@ -173,9 +173,9 @@ contains
     call multisystem_init(systems, namespace)
 
     ! Loop over systems
-    isys = systems%start_counter()
-    do while (isys%iterate())
-      sys => systems%get(isys)
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
       select type (sys)
       type is (system_t)
 

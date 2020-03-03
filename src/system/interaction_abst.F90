@@ -27,7 +27,7 @@ module interaction_abst_oct_m
   private
   public ::               &
     interaction_abst_t,   &
-    interaction_list_t
+    interaction_iterator_t
 
   !> The only purpose of the following class is to act as a surrogate and
   !> avoid circular dependencies between the interactions and the systems.
@@ -35,43 +35,26 @@ module interaction_abst_oct_m
     private
   end type interaction_abst_t
 
-  type, extends(linked_list_t) :: interaction_list_t
+  !> This class extends the list iterator and adds one method to get the
+  !> interaction as a pointer of type class(interaction_abst_t).
+  type, extends(list_iterator_t) :: interaction_iterator_t
     private
   contains
-    procedure :: add => interaction_list_add_node
-    procedure :: get_interaction => interaction_list_get
-  end type interaction_list_t
+    procedure :: get_next_interaction => interaction_iterator_get_next
+  end type interaction_iterator_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine interaction_list_add_node(this, value)
-    class(interaction_list_t)        :: this
-    class(*),                 target :: value
-
-    PUSH_SUB(interaction_list_add_node)
-
-    select type (value)
-    class is (interaction_abst_t)
-      call this%linked_list_t%add(value)
-    class default
-      ASSERT(.false.)
-    end select
-
-    POP_SUB(interaction_list_add_node)
-  end subroutine interaction_list_add_node
-
-  ! ---------------------------------------------------------
-  function interaction_list_get(this, counter) result(value)
-    class(interaction_list_t), intent(in) :: this
-    type(list_counter_t),      intent(in) :: counter
-    class(interaction_abst_t), pointer    :: value
+  function interaction_iterator_get_next(this) result(value)
+    class(interaction_iterator_t), intent(inout) :: this
+    class(interaction_abst_t),     pointer       :: value
 
     class(*), pointer :: ptr
 
-    PUSH_SUB(interaction_list_get)
+    PUSH_SUB(interaction_iterator_get_next)
 
-    ptr => this%get(counter)
+    ptr => this%get_next()
     select type (ptr)
     class is (interaction_abst_t)
       value => ptr
@@ -79,8 +62,8 @@ contains
       ASSERT(.false.)
     end select
 
-    POP_SUB(interaction_list_get)
-  end function interaction_list_get
+    POP_SUB(interaction_iterator_get_next)
+  end function interaction_iterator_get_next
 
 end module interaction_abst_oct_m
 

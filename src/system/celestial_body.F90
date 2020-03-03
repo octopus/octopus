@@ -50,7 +50,7 @@ module celestial_body_oct_m
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
-    type(interaction_list_t) :: interactions
+    type(linked_list_t) :: interactions
 
     type(space_t) :: space
 
@@ -184,7 +184,7 @@ contains
     class(celestial_body_t),  intent(inout) :: this
     integer,               intent(in)    :: operation
 
-    type(list_counter_t) :: iint
+    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_do_td)
 
@@ -217,9 +217,9 @@ contains
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
-      iint = this%interactions%start_counter()
-      do while (iint%iterate())
-        select type (interaction => this%interactions%get_interaction(iint))
+      call iter%start(this%interactions)
+      do while (iter%has_next())
+        select type (interaction => iter%get_next_interaction())
         type is (interaction_gravity_t)
           this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
         class default
@@ -254,13 +254,13 @@ contains
     class(celestial_body_t), intent(inout) :: this
 
     class(interaction_abst_t), pointer :: interaction
-    type(list_counter_t) :: iint
+    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_update_interactions)
 
-    iint = this%interactions%start_counter()
-    do while (iint%iterate())
-      interaction => this%interactions%get_interaction(iint)
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
       select type (interaction)
       type is (interaction_gravity_t)
         call interaction%update(this%mass, this%pos)
@@ -398,14 +398,14 @@ contains
   subroutine celestial_body_finalize(this)
     type(celestial_body_t), intent(inout) :: this
 
-    type(list_counter_t) :: iint
+    type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(celestial_body_finalize)
 
-    iint = this%interactions%start_counter()
-    do while (iint%iterate())
-      interaction => this%interactions%get_interaction(iint)
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
       SAFE_DEALLOCATE_P(interaction)
     end do
 
