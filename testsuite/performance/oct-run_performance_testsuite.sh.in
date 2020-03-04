@@ -74,7 +74,7 @@ done
 shift $[ OPTIND - 1 ]
 
 if [ "${local_run}" == "yes" ]; then
-    bin_directory=$(pwd)/../src
+    bin_directory=$(pwd)/../../src
     if [ -n "$directory" ]; then
         testsuite="$directory"
     else
@@ -86,7 +86,7 @@ else
     if [ -n "$directory" ]; then
         testsuite="$directory"
     else
-        testsuite=$prefix/share/octopus/performance_testsuite
+        testsuite=$prefix/share/octopus/testsuite/performance
     fi
     bin_testsuite=$bin_directory
 fi

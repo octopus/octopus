@@ -20,7 +20,7 @@
 
 SUBDIRS = tests
 
-sharedir = $(pkgdatadir)/performance_testsuite
+sharedir = $(pkgdatadir)/testsuite/performance
 
 dist_share_DATA = compare_results.py Makefile.performance
 
