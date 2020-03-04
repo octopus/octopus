@@ -31,12 +31,7 @@ module clock_oct_m
   integer, parameter :: MAX_LABEL_LEN = 128
 
   public ::                &
-    clock_t,               &
-    operator(.eq.),        &
-    operator(.lt.),        &
-    operator(.gt.),        &
-    operator(.le.),        &
-    operator(.ge.)
+    clock_t
 
   type clock_t
     private
@@ -57,36 +52,23 @@ module clock_oct_m
     procedure :: reset => clock_reset                 !< set the internal clock counter back to zero
     procedure :: is_later_with_step => clock_is_later_with_step !< compare two clocks and indicate if the first clock plus
                                                                 !! one step is later than the second clock
+    procedure :: clock_is_equal
+    generic   :: operator(.eq.) => clock_is_equal
+    procedure :: clock_is_earlier
+    generic   :: operator(.lt.) => clock_is_earlier
+    procedure :: clock_is_later
+    generic   :: operator(.gt.) => clock_is_later
+    procedure :: clock_is_equal_or_earlier
+    generic   :: operator(.le.) => clock_is_equal_or_earlier
+    procedure :: clock_is_equal_or_later
+    generic   :: operator(.ge.) => clock_is_equal_or_later
+    procedure :: clock_copy
+    generic   :: assignment(=) => clock_copy
   end type clock_t
 
   interface clock_t
     module procedure clock_init
   end interface clock_t
-
-  interface assignment(=)
-    procedure clock_copy
-  end interface
-
-  interface operator(.eq.)
-    procedure clock_is_equal
-  end interface
-
-  interface operator(.lt.)
-    procedure clock_is_earlier
-  end interface
-
-  interface operator(.gt.)
-    procedure clock_is_later
-  end interface
-
-  interface operator(.le.)
-    procedure clock_is_equal_or_earlier
-  end interface
-
-  interface operator(.ge.)
-    procedure clock_is_equal_or_later
-  end interface
-
 
 contains
 
@@ -252,7 +234,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function clock_is_earlier(clock_a, clock_b) result(is_earlier)
-    type(clock_t), intent(in) :: clock_a, clock_b
+    class(clock_t), intent(in) :: clock_a, clock_b
 
     PUSH_SUB(clock_is_earlier)
 
@@ -274,7 +256,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function clock_is_equal_or_earlier(clock_a, clock_b) result(is_earlier)
-    type(clock_t), intent(in) :: clock_a, clock_b
+    class(clock_t), intent(in) :: clock_a, clock_b
 
     PUSH_SUB(clock_is_equal_or_earlier)
 
