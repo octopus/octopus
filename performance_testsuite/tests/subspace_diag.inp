@@ -38,6 +38,7 @@ N_electrons = electrons_per_state*number_states
 %Species
 "foo" | species_soft_coulomb | softening | 1.0 | valence | N_electrons
 %
+SpeciesProjectorSphereThreshold = 1.0
 
 %Coordinates
 "foo" | 0 | 0 | 0
