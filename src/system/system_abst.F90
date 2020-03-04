@@ -61,8 +61,8 @@ module system_abst_oct_m
     procedure(system_write_td_info),                  deferred :: write_td_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
-    procedure(system_update_observables_as_system),   deferred :: update_observables_as_system
-    procedure(system_update_observables_as_partner),  deferred :: update_observables_as_partner
+    procedure(system_update_observable_as_system),    deferred :: update_observable_as_system
+    procedure(system_update_observable_as_partner),   deferred :: update_observable_as_partner
     procedure(system_reset_clocks),                   deferred :: reset_clocks
     procedure(system_init_interaction_clocks),        deferred :: init_interaction_clocks
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
@@ -109,21 +109,21 @@ module system_abst_oct_m
       class(system_abst_t), intent(inout) :: this
     end subroutine system_store_current_status
 
-    logical function system_update_observables_as_system(this, clock) result(all_updated)
+    logical function system_update_observable_as_system(this, obs_index, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
-      class(clock_t),            intent(inout) :: clock
-    end function system_update_observables_as_system
+      integer,                   intent(in)    :: obs_index
+      class(clock_t),            intent(in)    :: clock
+    end function system_update_observable_as_system
 
-    logical function system_update_observables_as_partner(this, interaction, clock) result(all_updated)
+    logical function system_update_observable_as_partner(this, obs_index, clock)
       import system_abst_t
-      import interaction_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
-      class(interaction_abst_t), intent(inout) :: interaction
-      class(clock_t),            intent(inout) :: clock
-    end function system_update_observables_as_partner
+      integer,                   intent(in)    :: obs_index
+      class(clock_t),            intent(in)    :: clock
+    end function system_update_observable_as_partner
 
     subroutine system_reset_clocks(this, accumulated_ticks)
       import system_abst_t

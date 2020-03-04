@@ -71,8 +71,8 @@ module celestial_body_oct_m
     procedure :: td_write_end => celestial_body_td_write_end
     procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
     procedure :: store_current_status => celestial_body_store_current_status
-    procedure :: update_observables_as_system => celestial_body_update_observables_as_system
-    procedure :: update_observables_as_partner => celestial_body_update_observables_as_partner
+    procedure :: update_observable_as_system => celestial_body_update_observable_as_system
+    procedure :: update_observable_as_partner => celestial_body_update_observable_as_partner
     procedure :: reset_clocks => celestial_body_reset_clocks
     procedure :: init_interaction_clocks => celestial_body_init_interaction_clocks
     procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
@@ -317,31 +317,35 @@ contains
 
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
-    logical :: obs_updated
+    integer :: iobs, obs_index
+    logical :: obs_updated, int_updated
 
     PUSH_SUB(celestial_body_update_interactions)
-
-    all_updated = .true.
-
-    !I update my oservables that will be needed for computing the interaction
-    all_updated = this%update_observables_as_system(this%prop%clock)
 
     if (debug%info) then
       write(message(1), '(a)') "Debug: Updating interactions for  " // trim(this%namespace%get())
       call messages_info(1)
     end if
 
+    all_updated = .true.
+
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
+
+      !I am already updated to the desired time
+      if(interaction%clock == this%prop%clock) then
+        cycle
+      end if
+
+      !I update my observables that will be needed for computing the interaction
+      do iobs = 1, interaction%n_system_observables
+        obs_index = interaction%system_observables(iobs)
+        all_updated = all_updated .and. this%update_observable_as_system(obs_index, this%prop%clock)
+      end do
+
       select type (interaction)
       type is (interaction_gravity_t)
-      
-        !I am already updated to the desired time
-        if(interaction%clock == this%prop%clock) then
-          cycle
-        end if
-
         !I am earlier and won`t become equal or be ahead after a step
         !therefore this is not a good time to update the interaction
         !You (system) need to wait for partner to reach a further point in time
@@ -354,7 +358,13 @@ contains
 
           !We request the partner to update its observables
           !This might not be possible if the partner has a predictor corrector propagator
-          obs_updated = interaction%partner%update_observables_as_partner(interaction, this%prop%clock)
+          !obs_updated = interaction%partner%update_observables_as_partner(interaction, this%prop%clock)
+          obs_updated = .true.
+          do iobs = 1, interaction%n_partner_observables
+            obs_index = interaction%partner_observables(iobs)
+            obs_updated = obs_updated .and. interaction%partner%update_observable_as_partner(obs_index, this%prop%clock)
+          end do
+
           if(obs_updated) then
 
            if (debug%info) then
@@ -519,86 +529,72 @@ contains
   end subroutine celestial_body_td_write_end
 
   ! ---------------------------------------------------------
-  logical function celestial_body_update_observables_as_system(this, clock) result(all_updated)
+  logical function celestial_body_update_observable_as_system(this, obs_index, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
-    class(clock_t),            intent(inout) :: clock
+    integer,                   intent(in)    :: obs_index
+    class(clock_t),            intent(in)    :: clock
 
-    class(interaction_abst_t), pointer :: interaction
-    type(interaction_iterator_t) :: iter
-    integer :: iobs, obs_index
+    PUSH_SUB(celestial_body_update_observable_as_system)
 
-    PUSH_SUB(celestial_body_update_observables_as_system)
+    updated = .true.
 
-    all_updated = .true.
+    if(this%observables(obs_index)%clock > clock) then
+      message(1) = "The system observable is in advance compared to the requested clock."
+      call messages_fatal(1)
+    end if
 
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+    select case(obs_index)
+    case(POSITION)
+      !Don`t do anything, this is a protected quantity. The propagator update it
+      !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+    case(VELOCITY)
+      !Don`t do anything, this is a protected quantity. The propagator update it
+      !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+    case default
+      message(1) = "Incompatible observable."
+      call messages_fatal(1)
+    end select
 
-      do iobs = 1, interaction%n_system_observables
-        obs_index = interaction%system_observables(iobs)
-        if(this%observables(obs_index)%clock > clock) then
-          message(1) = "The system observable is in advance compared to the requested clock."
-          call messages_fatal(1)
-        end if
-
-        select case(obs_index)
-        case(POSITION)
-          !Don`t do anything, this is a protected quantity. The propagator update it
-          !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
-        case(VELOCITY)
-          !Don`t do anything, this is a protected quantity. The propagator update it
-          !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
-        case default
-          message(1) = "Incompatible observable."
-          call messages_fatal(1)
-        end select
-      end do
-    end do
-
-    POP_SUB(celestial_body_update_observables_as_system)
-  end function celestial_body_update_observables_as_system
+    POP_SUB(celestial_body_update_observable_as_system)
+  end function celestial_body_update_observable_as_system
 
  ! ---------------------------------------------------------
- logical function celestial_body_update_observables_as_partner(this, interaction, clock) result(all_updated)
+ logical function celestial_body_update_observable_as_partner(this, obs_index, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
-    class(interaction_abst_t), intent(inout) :: interaction
-    class(clock_t),            intent(inout) :: clock
+    integer,                   intent(in)    :: obs_index
+    class(clock_t),            intent(in)    :: clock
 
-    integer :: iobs, obs_index
+    PUSH_SUB(celestial_body_update_observable_as_partner)
 
-    PUSH_SUB(celestial_body_update_observables_as_partner)
+    if (this%observables(obs_index)%clock > clock) then
+      message(1) = "The partner observable is in advance compared to the requested clock."
+      call messages_fatal(1)
+    end if
 
-    all_updated = .true.
-
-    do iobs = 1, interaction%n_partner_observables
-      obs_index = interaction%partner_observables(iobs)
-      if(this%observables(obs_index)%clock > clock) then
-        message(1) = "The partner observable is in advance compared to the requested clock."
-        call messages_fatal(1)
+    select case(obs_index)
+    case(POSITION)
+      !Don`t do anything, this is a protected quantity. The propagator update it.
+      !However, it can only be used if the predictor-corrector step is done.
+      if (this%prop%predictor_corrector) then
+        updated = this%prop%last_step_done_tick == clock%get_tick()
+      else
+        updated = .true.
       end if
+    case(VELOCITY)
+      !Don`t do anything, this is a protected quantity. The propagator update it
+      !However, it can only be used if the predictor-corrector step is done.
+      if (this%prop%predictor_corrector) then
+        updated = this%prop%last_step_done_tick == clock%get_tick()
+      else
+        updated = .true.
+      end if
+    case default
+      message(1) = "Incompatible observable."
+      call messages_fatal(1)
+    end select
 
-      select case(obs_index)
-      case(POSITION)
-        !Don`t do anything, this is a protected quantity. The propagator update it.
-        !However, it can only be used if the predictor-corrector step is done.
-        if(this%prop%predictor_corrector) then
-          all_updated = all_updated .and. this%prop%last_step_done_tick == clock%get_tick()
-        end if
-      case(VELOCITY)
-        !Don`t do anything, this is a protected quantity. The propagator update it
-        !However, it can only be used if the predictor-corrector step is done.
-        if(this%prop%predictor_corrector) then
-          all_updated = all_updated .and. this%prop%last_step_done_tick == clock%get_tick()
-        end if
-      case default
-        message(1) = "Incompatible observable."
-        call messages_fatal(1)
-      end select
-    end do
-
-    POP_SUB(celestial_body_update_observables_as_partner)
-  end function celestial_body_update_observables_as_partner
+    POP_SUB(celestial_body_update_observable_as_partner)
+  end function celestial_body_update_observable_as_partner
 
   ! ---------------------------------------------------------
   subroutine celestial_body_reset_clocks(this, accumulated_ticks)
