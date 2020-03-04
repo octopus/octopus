@@ -61,7 +61,9 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
   R_TYPE, allocatable :: rho(:), pot(:)
   FLOAT :: qq(1:MAX_DIM) 
-  integer :: ikpoint
+  integer :: ikpoint, ikpoint2, npath
+  type(fourier_space_op_t) :: coulb
+  logical :: use_external_kernel
 
   type(profile_t), save :: prof, prof2
 
@@ -73,13 +75,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   ! in the Coulomb potential, and must be changed for each q point
   exx_coef = max(this%cam_alpha,this%cam_beta)
 
-  if(this%cam_omega <= M_EPSILON) then
-    if(st_d%nik > st_d%ispin) then
-      call messages_not_implemented("unscreened exchange operator without k-points", namespace=namespace)
-    end if
-  end if
-
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  npath = SIZE(der%mesh%sb%kpoints%coord_along_path)
 
   if(this%cam_beta > M_EPSILON) then
     ASSERT(this%cam_alpha < M_EPSILON)
@@ -97,7 +93,13 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
   ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
-  qq(1:der%dim) = M_ZERO
+
+  use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
+  if(use_external_kernel) then
+    call fourier_space_op_nullify(coulb)
+    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
+  end if
+
 
   do ibatch = 1, psib%nst
     ist = psib%ist(ibatch)
@@ -106,6 +108,23 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
 
     do ik2 = 1, st_d%nik
       if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+
+      ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
+      !Down-sampling and q-grid
+      if(st_d%nik > st_d%spin_channels) then
+        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ikpoint2)) cycle
+        qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                      - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2, absolute_coordinates=.false.)
+      end if
+      ! Updating of the poisson solver
+      ! In case of k-points, the poisson solver must contains k-q
+      ! in the Coulomb potential, and must be changed for each q point
+      if(use_external_kernel) then
+        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, &
+                  -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
+                     *(this%singul%Fk(ik2)-this%singul%FF))
+      end if
+
       
       do ib = 1, this%st%group%nblocks
         !We copy data into psi2b from the corresponding MPI task
@@ -139,7 +158,11 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
           call profiling_out(prof)
 
           !and V_ij
-          call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
+          if(use_external_kernel) then
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false., kernel=coulb)
+          else
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
+          end if
 
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
@@ -159,6 +182,10 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
   end do
+
+  if(use_external_kernel) then
+    call fourier_space_op_end(coulb)
+  end if
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)

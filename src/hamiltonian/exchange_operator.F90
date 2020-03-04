@@ -23,6 +23,7 @@ module exchange_operator_oct_m
   use batch_ops_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use fourier_space_oct_m
   use global_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
@@ -40,6 +41,7 @@ module exchange_operator_oct_m
   use profiling_oct_m
   use scdm_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
   use states_abst_oct_m
@@ -78,6 +80,8 @@ module exchange_operator_oct_m
     type(poisson_t) :: psolver      !< Poisson solver
 
     type(scdm_t)  :: scdm
+
+    type(singularity_t) :: singul !< Coulomb singularity
   end type exchange_operator_t
  
 contains
@@ -112,6 +116,7 @@ contains
     this%cam_alpha = alpha
     this%cam_beta  = beta
 
+    call singularity_init(this%singul, namespace, st, sb)
     if(states_are_real(st)) then
       call poisson_init(this%psolver, namespace, der, mc, st%qtot, &
              force_serial = .true., verbose = .false.)
@@ -151,6 +156,7 @@ contains
     end if
     nullify(this%st)
 
+    call singularity_end(this%singul)
     call poisson_end(this%psolver)
 
     POP_SUB(exchange_operator_end)

@@ -357,7 +357,7 @@ contains
 
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree-Fock with k-points", namespace=namespace)
+        call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE
 

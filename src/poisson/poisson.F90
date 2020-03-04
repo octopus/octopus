@@ -27,6 +27,7 @@ module poisson_oct_m
   use derivatives_oct_m
   use dressed_interaction_oct_m
   use fft_oct_m
+  use fourier_space_oct_m
   use global_oct_m
   use index_oct_m
   use io_oct_m
@@ -72,10 +73,8 @@ module poisson_oct_m
     poisson_t,                   &
     poisson_fmm_t,               &
     poisson_get_solver,          &
-    poisson_get_qpoint,          &
     poisson_init,                &
     poisson_init_sm,             &
-    poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
     dpoisson_solve_sm,           &
@@ -93,6 +92,7 @@ module poisson_oct_m
     dpoisson_solve_finish,       &
     zpoisson_solve_start,        &
     zpoisson_solve_finish,       &
+    poisson_build_kernel,        &
     poisson_is_async
 
   integer, public, parameter ::         &
@@ -125,7 +125,6 @@ module poisson_oct_m
     type(poisson_no_t) :: no_solver
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
-    FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
     logical, public :: is_dressed
     type(dressed_interaction_t), public :: dressed
     type(poisson_fmm_t)  :: params_fmm
@@ -147,7 +146,7 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, qq, solver, verbose, force_serial, force_cmplx)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, solver, verbose, force_serial, force_cmplx)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
@@ -155,7 +154,6 @@ contains
     FLOAT,                       intent(in)  :: qtot !< total charge
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
-    FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     integer,           optional, intent(in)  :: solver
     logical,           optional, intent(in)  :: verbose
     logical,           optional, intent(in)  :: force_serial
@@ -180,13 +178,6 @@ contains
 
     this%nslaves = 0
     this%der => der
-
-    this%qq = M_ZERO
-    if(present(qq)  .and. simul_box_is_periodic(der%mesh%sb)) then
-      ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
-      ASSERT(this%method == POISSON_FFT)
-      this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
-    end if
 
     !%Variable DressedOrbitals
     !%Type logical
@@ -714,11 +705,12 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    CMPLX,                              intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                              intent(in)    :: rho(:)  !< rho(mesh%np)
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     FLOAT, allocatable :: aux1(:), aux2(:)
     type(derivatives_t), pointer :: der
@@ -732,7 +724,9 @@ contains
 
     call profiling_in(prof, 'POISSON_RE_IM_SOLVE')
 
-    ASSERT(.not. any(abs(this%qq(:))>CNST(1e-8)))
+    if(present(kernel)) then
+      ASSERT(.not. any(abs(kernel%qq(:))>CNST(1e-8)))
+    end if
 
     all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
@@ -741,13 +735,13 @@ contains
     ! first the real part
     aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value, kernel=kernel)
     pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
     
     ! now the imaginary part
     aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value, kernel=kernel)
     pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
     
     SAFE_DEALLOCATE_A(aux1)
@@ -760,11 +754,12 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine zpoisson_solve(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    CMPLX,                              intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                              intent(in)    :: rho(:)  !< rho(mesh%np)
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     logical :: all_nodes_value
     type(profile_t), save :: prof
@@ -785,13 +780,13 @@ contains
       if(this%cube%fft%type == FFT_COMPLEX) then
         !We add the profiling here, as the other path uses dpoisson_solve
         call profiling_in(prof, 'ZPOISSON_SOLVE')
-        call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map, kernel=kernel)
         call profiling_out(prof)
       else 
-        call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+        call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel=kernel)
       end if
     else
-      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel = kernel)
     end if
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
@@ -801,11 +796,12 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine poisson_solve_batch(this, potb, rhob, all_nodes)
-    type(poisson_t),      intent(inout) :: this
-    type(batch_t),        intent(inout) :: potb 
-    type(batch_t),        intent(inout) :: rhob 
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine poisson_solve_batch(this, potb, rhob, all_nodes, kernel)
+    type(poisson_t),                    intent(inout) :: this
+    type(batch_t),                      intent(inout) :: potb 
+    type(batch_t),                      intent(inout) :: rhob 
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     integer :: ii
 
@@ -816,11 +812,11 @@ contains
 
     if(potb%type() == TYPE_FLOAT) then
       do ii = 1, potb%nst_linear
-        call dpoisson_solve(this, potb%dff_linear(:, ii), rhob%dff_linear(:, ii), all_nodes)
+        call dpoisson_solve(this, potb%dff_linear(:, ii), rhob%dff_linear(:, ii), all_nodes, kernel=kernel)
       end do
     else
       do ii = 1, potb%nst_linear
-        call zpoisson_solve(this, potb%zff_linear(:, ii), rhob%zff_linear(:, ii), all_nodes)
+        call zpoisson_solve(this, potb%zff_linear(:, ii), rhob%zff_linear(:, ii), all_nodes, kernel=kernel)
       end do
     end if
 
@@ -834,14 +830,15 @@ contains
   !!
   !! Different solvers are available that can be chosen in the input file
   !! with the "PoissonSolver" parameter
-  subroutine dpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    FLOAT,                intent(inout) :: pot(:) !< Local size of the \b potential vector. 
-    FLOAT,                intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
+  subroutine dpoisson_solve(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    FLOAT,                              intent(inout) :: pot(:) !< Local size of the \b potential vector. 
+    FLOAT,                              intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
     !> Is the Poisson solver allowed to utilise
     !! all nodes or only the domain nodes for
     !! its calculations? (Defaults to .true.)
-    logical, optional,    intent(in)    :: all_nodes 
+    logical, optional,                  intent(in)    :: all_nodes 
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     type(derivatives_t), pointer :: der
     type(cube_function_t) :: crho, cpot
@@ -861,6 +858,10 @@ contains
     all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     ASSERT(this%method /= POISSON_NULL)
+
+    if(present(kernel)) then
+      ASSERT(this%method == POISSON_FFT)
+    end if
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
@@ -894,14 +895,14 @@ contains
 
     case(POISSON_FFT)
       if(this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map, kernel=kernel)
       else
         SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
         SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
         
         call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
         call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
-          average_to_zero = .true.)
+          average_to_zero = .true., kernel=kernel)
         
         pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
         SAFE_DEALLOCATE_A(rho_corrected)
@@ -947,9 +948,7 @@ contains
     call profiling_out(prof)
   end subroutine dpoisson_solve
 
-    !-----------------------------------------------------------------
-
-    !-----------------------------------------------------------------
+  !-----------------------------------------------------------------
   subroutine poisson_init_sm(this, namespace, main, der, sm, method)
     type(poisson_t),             intent(out)   :: this
     type(namespace_t),           intent(in)    :: namespace
@@ -970,8 +969,6 @@ contains
 
     this%nslaves = 0
     this%der => der
-
-    this%qq = M_ZERO
 
 #ifdef HAVE_MPI
     this%all_nodes_default = main%all_nodes_default
@@ -1212,15 +1209,6 @@ contains
   end function poisson_get_solver
 
   !-----------------------------------------------------------------
-
-  pure subroutine poisson_get_qpoint(this, qq)
-    type(poisson_t), intent(in)  :: this
-    FLOAT,           intent(out) :: qq(:)
-
-    qq = this%qq
-  end subroutine poisson_get_qpoint
-
-  !-----------------------------------------------------------------
   
   subroutine poisson_async_init(this, mc)
     type(poisson_t), intent(inout) :: this
@@ -1332,6 +1320,44 @@ contains
     async = (this%nslaves > 0)
 
   end function poisson_is_async
+
+  !----------------------------------------------------------------
+
+  subroutine poisson_build_kernel(this, namespace, sb, coulb, qq, singul)
+    type(poisson_t),  intent(in) :: this
+    type(namespace_t),intent(in) :: namespace
+    type(simul_box_t),intent(in) :: sb
+    type(fourier_space_op_t), intent(inout) :: coulb
+    FLOAT,            intent(in) :: qq(:)
+    FLOAT, optional,  intent(in) :: singul
+
+    PUSH_SUB(poisson_build_kernel)
+
+    if(simul_box_is_periodic(sb)) then
+      ASSERT(ubound(qq, 1) >= sb%periodic_dim)
+      ASSERT(this%method == POISSON_FFT)
+    end if
+
+    !TODO: this should be a select case supporting other kernels.
+    ! This means that we need an abstract object for kernels.
+    select case(this%method)
+    case(POISSON_FFT)
+      !We only reinitialize the poisson sover if needed
+      if(any(abs(coulb%qq(1:sb%periodic_dim) - qq(1:sb%periodic_dim)) > M_EPSILON)) then
+        call fourier_space_op_end(coulb) 
+        coulb%qq(1:sb%periodic_dim) = qq(1:sb%periodic_dim)
+        !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
+        coulb%singularity = optional_default(singul, M_ZERO)
+        call poisson_fft_get_kernel(this%fft_solver, namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+          this%poisson_soft_coulomb_param)
+      end if
+    case default
+      call messages_not_implemented("poisson_build_kernel with other methods than FFT")
+    end select
+    
+
+    POP_SUB(poisson_build_kernel)
+  end subroutine poisson_build_kernel
 
 #include "poisson_init_inc.F90"
 #include "poisson_direct_inc.F90"
