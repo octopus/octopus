@@ -338,10 +338,15 @@ contains
         cycle
       end if
 
+      ! We will keep track of the status of all the observables that need to be
+      ! updated, both from the system and from the partner, as all are needed
+      ! for updating the interaction
+      obs_updated = .true.
+
       !I update my observables that will be needed for computing the interaction
       do iobs = 1, interaction%n_system_observables
         obs_index = interaction%system_observables(iobs)
-        all_updated = all_updated .and. this%update_observable_as_system(obs_index, this%prop%clock)
+        obs_updated = obs_updated .and. this%update_observable_as_system(obs_index, this%prop%clock)
       end do
 
       select type (interaction)
@@ -359,7 +364,6 @@ contains
           !We request the partner to update its observables
           !This might not be possible if the partner has a predictor corrector propagator
           !obs_updated = interaction%partner%update_observables_as_partner(interaction, this%prop%clock)
-          obs_updated = .true.
           do iobs = 1, interaction%n_partner_observables
             obs_index = interaction%partner_observables(iobs)
             obs_updated = obs_updated .and. interaction%partner%update_observable_as_partner(obs_index, this%prop%clock)
