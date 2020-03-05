@@ -104,6 +104,10 @@ contains
 
     !The interaction has already been updated to the desired time
     if (this%clock == clock) then
+      if (debug%info) then
+        write(message(1), '(a)') " -- Interaction already up-to-date with " // trim(this%partner%namespace%get())
+        call messages_info(1)
+      end if
       updated = .true.
       POP_SUB(interaction_gravity_update)
       return
@@ -111,6 +115,11 @@ contains
 
     if (this%partner%clock < clock .and. this%partner%clock%is_earlier_with_step(clock)) then
       !This is not the best moment to update the interaction
+      if (debug%info) then
+        write(message(1), '(a)') " -- Cannot update interaction with " // trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
+        call messages_info(2)
+      end if
       updated = .false.
     else
       !This is the best moment to update the interaction
@@ -140,7 +149,8 @@ contains
         call this%clock%set_time(clock)
       else
         if (debug%info) then
-          write(message(1), '(a)') " -- Cannot update interaction with " // trim(this%partner%namespace%get())
+          write(message(1), '(a)') " -- Partner observables are not up-to-date, so cannot update interaction with " // &
+            trim(this%partner%namespace%get())
           call messages_info(1)
         end if
         updated = .false.

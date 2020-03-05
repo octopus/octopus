@@ -181,6 +181,11 @@ contains
         else
           ! We are not able to update the interaction
           all_updated = .false.
+          if (debug%info) then
+            write(message(1), '(a)') " -- Internal observables are not up-to-date, so could not update interactions for  " // &
+              trim(this%namespace%get())
+            call messages_info(1)
+          end if
         end if
       end do
 
