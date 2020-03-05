@@ -27,11 +27,13 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
+  use system_abst_oct_m
   implicit none
 
   private
-  public ::           &
-    multisystem_init, &
+  public ::                        &
+    multisystem_init,              &
+    multisystem_init_interactions, &
     multisystem_end
 
   integer, parameter ::         &
@@ -41,6 +43,7 @@ module multisystem_oct_m
   
 contains
 
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_init(systems, global_namespace)
     type(linked_list_t), intent(inout) :: systems
     type(namespace_t),   intent(in)  :: global_namespace
@@ -93,6 +96,51 @@ contains
     POP_SUB(multisystem_init)
   end subroutine multisystem_init
 
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine multisystem_init_interactions(systems)
+    type(linked_list_t), intent(inout) :: systems
+
+    type(list_iterator_t) :: iter, iter2
+    class(*), pointer :: sys, sys2
+
+    PUSH_SUB(multisystem_init_interactions)
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      call iter2%start(systems)
+      do while (iter2%has_next())
+        select type (sys)
+        !At the moment we are doing all system interacting with all of the other systems, 
+        !irrespective of their type.
+        class is (system_abst_t)
+
+          select type (sys2 => iter2%get_next())
+          class is (system_abst_t)
+
+            !No self interaction
+            if(.not.associated(sys, sys2)) then
+              call sys%add_interaction_partner(sys2)
+            end if
+    
+          class default
+            message(1) = "Unsupported system type."
+            call messages_fatal(1)
+          end select
+       
+        class default
+          message(1) = "Unsupported system type."
+          call messages_fatal(1)
+        end select
+      end do
+    end do
+
+    POP_SUB(multisystem_init_interactions)
+
+  end subroutine multisystem_init_interactions
+
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 

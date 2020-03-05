@@ -940,10 +940,12 @@ contains
     ! Initialize systems
     call multisystem_init(systems, global_namespace)
 
+    call multisystem_init_interactions(systems)
+
     ! Loop over systems
     call iter%start(systems)
 
-    !Here we need to do this, because we do not specify the interactions in the input file
+    !Here we need to do this, because we do not specify the propagators in the input file
     select type (sys => iter%get_next())
     type is (celestial_body_t)
       sun => sys
@@ -956,15 +958,6 @@ contains
     type is (celestial_body_t)
       moon => sys
     end select
-
-    !Define interactions manually
-    call sun%add_interaction_partner(earth)
-    call sun%add_interaction_partner(moon)
-    call earth%add_interaction_partner(moon)
-    call earth%add_interaction_partner(sun)
-    call moon%add_interaction_partner(earth)
-    call moon%add_interaction_partner(sun)
-
     all_done_max_td_steps = .false.
 
     !Creates Verlet and Beeman propagators
