@@ -146,10 +146,8 @@ contains
     sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
 
-    sys%n_internal_observables = 2
-    SAFE_ALLOCATE(sys%internal_observables(2))
-    sys%internal_observables(1) = POSITION
-    sys%internal_observables(2) = VELOCITY
+    sys%observables(POSITION)%internal = .true.
+    sys%observables(VELOCITY)%internal = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -460,17 +458,14 @@ contains
       call messages_fatal(1)
     end if
 
-    select case(obs_index)
-    case(POSITION)
+    if (this%observables(obs_index)%internal) then
       !Don`t do anything, this is a protected quantity. The propagator update it
       !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
-    case(VELOCITY)
-      !Don`t do anything, this is a protected quantity. The propagator update it
-      !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
-    case default
+    else
+      !Currently the celestial body does not expose any quantity that is not internal.
       message(1) = "Incompatible observable."
       call messages_fatal(1)
-    end select
+    end if
 
     POP_SUB(celestial_body_update_observable_as_system)
   end function celestial_body_update_observable_as_system
@@ -488,8 +483,7 @@ contains
       call messages_fatal(1)
     end if
 
-    select case(obs_index)
-    case(POSITION)
+    if (this%observables(obs_index)%internal) then
       !Don`t do anything, this is a protected quantity. The propagator update it.
       !However, it can only be used if the predictor-corrector step is done.
       if (this%prop%predictor_corrector) then
@@ -497,18 +491,11 @@ contains
       else
         updated = .true.
       end if
-    case(VELOCITY)
-      !Don`t do anything, this is a protected quantity. The propagator update it
-      !However, it can only be used if the predictor-corrector step is done.
-      if (this%prop%predictor_corrector) then
-        updated = this%prop%last_step_done_tick == clock%get_tick()
-      else
-        updated = .true.
-      end if
-    case default
+    else
+      !Currently the celestial body does not expose any quantity that is not internal.
       message(1) = "Incompatible observable."
       call messages_fatal(1)
-    end select
+    end if
 
     POP_SUB(celestial_body_update_observable_as_partner)
   end function celestial_body_update_observable_as_partner
@@ -546,8 +533,6 @@ contains
       interaction => iter%get_next_interaction()
       SAFE_DEALLOCATE_P(interaction)
     end do
-
-    SAFE_DEALLOCATE_A(this%internal_observables)
 
     POP_SUB(celestial_body_finalize)
   end subroutine celestial_body_finalize

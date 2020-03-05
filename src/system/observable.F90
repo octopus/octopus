@@ -37,9 +37,17 @@ module observable_oct_m
     B_FIELD                      =  8,  &
     MAX_OBSERVABLES              =  8
 
+  !> Observables are quantities that can be exposed by a system and used to
+  !! calculate interactions with other systems.
+  !!
+  !! Observables that determine the state of the system are called
+  !! "internal" and should have the corresponding flag set to yes.
+  !! Such observables are usually updated by the propagation algorithm and
+  !! cannot simply be calculated on-demand.
   type observable_t
     private
-    type(clock_t), public :: clock !< Clock storing the time at which the observable was last updated.
+    type(clock_t), public :: clock              !< Clock storing the time at which the observable was last updated.
+    logical,       public :: internal = .false. !< Is this observable internal to the system?
   end type observable_t
 
 contains

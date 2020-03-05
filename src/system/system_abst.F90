@@ -48,16 +48,10 @@ module system_abst_oct_m
 
     type(linked_list_t), public :: interactions !< List we all the interactions of this system with other systems
 
-    !> Variables related to observables.
-    !! Observables that determine the state of the system are called
-    !! "internal". These are usually updated by the propagation algorithm.
-    !! Some information about the observables is stored within the obervable_t
-    !! class, while each observable has an unique interger identifier associated
-    !! to it. This identifier can be used to access the instances of the class
-    !! in the observables arrray.
-    type(observable_t),   public :: observables(MAX_OBSERVABLES) !< Array of all possible observables
-    integer,              public :: n_internal_observables       !< How many observables are internal to this system
-    integer, allocatable, public :: internal_observables(:)      !< Array storing the identifiers of the internal observables
+
+    type(observable_t),   public :: observables(MAX_OBSERVABLES) !< Array of all possible observables.
+                                                                 !< The elements of the array are accsessed using the
+                                                                 !< observable`s identifiers.
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
@@ -310,9 +304,9 @@ contains
     end do
 
     ! Internal observables clocks
-    do iobs = 1, this%n_internal_observables
-      this%observables(this%internal_observables(iobs))%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
-    end do
+    where (this%observables%internal)
+      this%observables%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    end where
 
     POP_SUB(system_init_clocks)
   end subroutine system_init_clocks
@@ -340,8 +334,8 @@ contains
       end do
 
       ! Internal observables clocks
-      do iobs = 1, this%n_internal_observables
-        call this%observables(this%internal_observables(iobs))%clock%decrement()
+      do iobs = 1, MAX_OBSERVABLES
+        if (this%observables(iobs)%internal) call this%observables(iobs)%clock%decrement()
       end do
     end do
 
