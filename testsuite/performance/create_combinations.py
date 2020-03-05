@@ -156,6 +156,9 @@ if __name__ == '__main__':
         test_path = os.path.join(os.environ["testsuite"], "tests")
     else:
         test_path = "tests"
+    if not os.path.exists(test_path):
+        raise FileNotFoundError("Directory containing tests not found. Please "
+                                "set the testsuite environment variable.")
     if len(sys.argv) == 1:
         test_names = get_test_names(path=test_path)
     elif sys.argv[1] == 'all':
