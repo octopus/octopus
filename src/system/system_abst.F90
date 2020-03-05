@@ -48,12 +48,15 @@ module system_abst_oct_m
 
     type(linked_list_t), public :: interactions
 
+    integer, public :: n_internal_observables
+    integer, allocatable, public :: internal_observables(:)
     type(observable_t), public :: observables(MAX_OBSERVABLES)
 
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
-    procedure :: init_clock => system_init_clock
+    procedure :: init_clocks => system_init_clocks
+    procedure :: reset_clocks => system_reset_clocks
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -62,8 +65,6 @@ module system_abst_oct_m
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_observable_as_system),    deferred :: update_observable_as_system
     procedure(system_update_observable_as_partner),   deferred :: update_observable_as_partner
-    procedure(system_reset_clocks),                   deferred :: reset_clocks
-    procedure(system_init_interaction_clocks),        deferred :: init_interaction_clocks
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
   end type system_abst_t
 
@@ -119,18 +120,6 @@ module system_abst_oct_m
       class(clock_t),            intent(in)    :: clock
     end function system_update_observable_as_partner
 
-    subroutine system_reset_clocks(this, accumulated_ticks)
-      import system_abst_t
-      class(system_abst_t),      intent(inout) :: this
-      integer,                   intent(in)    :: accumulated_ticks
-    end subroutine system_reset_clocks
-
-    subroutine system_init_interaction_clocks(this, dt, smallest_algo_dt)
-      import system_abst_t
-      class(system_abst_t),      intent(inout) :: this
-      FLOAT                                    :: dt, smallest_algo_dt
-    end subroutine system_init_interaction_clocks
-
     subroutine system_set_pointers_to_interaction(this, inter)
       import system_abst_t
       import interaction_abst_t
@@ -146,7 +135,7 @@ contains
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
-    integer :: tdop, ii, iobs
+    integer :: tdop, iobs
     logical :: all_updated, obs_updated
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
@@ -236,11 +225,8 @@ contains
           !We rewind the intrusction stack
           call this%prop%rewind_scf_loop()
 
-          !We reset the clock
+          !We reset the clocks
           call this%reset_clocks(this%accumulated_loop_ticks)
-          do ii = 1, this%accumulated_loop_ticks
-            call this%prop%clock%decrement()
-          end do
           this%accumulated_loop_ticks = 0
           if (debug%info) then
             write(message(1), '(a,i3,a)') "Debug: SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
@@ -280,18 +266,67 @@ contains
   end subroutine system_set_propagator
 
   ! ---------------------------------------------------------
-  subroutine system_init_clock(this, dt, smallest_algo_dt)
+  subroutine system_init_clocks(this, dt, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
     FLOAT,                intent(in)    :: dt, smallest_algo_dt
 
-    PUSH_SUB(system_init_clock)
+    integer :: iobs
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
 
+    PUSH_SUB(system_init_clocks)
+
+    ! Internal clock
     this%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
-    this%prop%clock = clock_t(this%namespace%get(), dt/this%prop%algo_steps, smallest_algo_dt)
-    call this%init_interaction_clocks(dt, smallest_algo_dt)
 
-    POP_SUB(system_init_clock)
-  end subroutine system_init_clock
+    ! Propagator clock
+    this%prop%clock = clock_t(this%namespace%get(), dt/this%prop%algo_steps, smallest_algo_dt)
+
+    ! Interaction clocks
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+      call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
+    end do
+
+    ! Internal observables clocks
+    do iobs = 1, this%n_internal_observables
+      this%observables(this%internal_observables(iobs))%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    end do
+
+    POP_SUB(system_init_clocks)
+  end subroutine system_init_clocks
+
+  ! ---------------------------------------------------------
+  subroutine system_reset_clocks(this, accumulated_ticks)
+    class(system_abst_t),      intent(inout) :: this
+    integer,                   intent(in)    :: accumulated_ticks
+
+    integer :: it, iobs
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(system_reset_clocks)
+
+    do it = 1, accumulated_ticks
+      ! Propagator clock
+      call this%prop%clock%decrement()
+
+      ! Interaction clocks
+      call iter%start(this%interactions)
+      do while (iter%has_next())
+        interaction => iter%get_next_interaction()
+        call interaction%clock%decrement()
+      end do
+
+      ! Internal observables clocks
+      do iobs = 1, this%n_internal_observables
+        call this%observables(this%internal_observables(iobs))%clock%decrement()
+      end do
+    end do
+
+    POP_SUB(system_reset_clocks)
+  end subroutine system_reset_clocks
 
 end module system_abst_oct_m
 

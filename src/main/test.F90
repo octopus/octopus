@@ -973,9 +973,9 @@ contains
                            prop_moon%dt/prop_moon%algo_steps)
 
     !Associate them to subsystems
-    call sun%init_clock(sun_dt, smallest_algo_dt)
-    call earth%init_clock(earth_dt, smallest_algo_dt)
-    call moon%init_clock(moon_dt, smallest_algo_dt)
+    call sun%init_clocks(sun_dt, smallest_algo_dt)
+    call earth%init_clocks(earth_dt, smallest_algo_dt)
+    call moon%init_clocks(moon_dt, smallest_algo_dt)
 
     !Initialize output and write data at time zero
     call sun%td_write_init(sun_dt)

@@ -72,8 +72,6 @@ module celestial_body_oct_m
     procedure :: store_current_status => celestial_body_store_current_status
     procedure :: update_observable_as_system => celestial_body_update_observable_as_system
     procedure :: update_observable_as_partner => celestial_body_update_observable_as_partner
-    procedure :: reset_clocks => celestial_body_reset_clocks
-    procedure :: init_interaction_clocks => celestial_body_init_interaction_clocks
     procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
     final :: celestial_body_finalize
   end type celestial_body_t
@@ -149,6 +147,11 @@ contains
     sys%acc = M_ZERO
     sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
+
+    sys%n_internal_observables = 2
+    SAFE_ALLOCATE(sys%internal_observables(2))
+    sys%internal_observables(1) = POSITION
+    sys%internal_observables(2) = VELOCITY
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -513,53 +516,6 @@ contains
   end function celestial_body_update_observable_as_partner
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_reset_clocks(this, accumulated_ticks)
-    class(celestial_body_t),      intent(inout) :: this
-    integer,                      intent(in)    :: accumulated_ticks
-
-    integer :: it
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
-    PUSH_SUB(celestial_body_reset_clocks)
-
-    do it = 1, accumulated_ticks
-      call this%observables(POSITION)%clock%decrement()
-      call this%observables(VELOCITY)%clock%decrement()
-
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        interaction => iter%get_next_interaction()
-        call interaction%clock%decrement()
-      end do
-    end do
-
-    POP_SUB(celestial_body_reset_clocks)
-  end subroutine celestial_body_reset_clocks
-
-  ! ---------------------------------------------------------
-  subroutine celestial_body_init_interaction_clocks(this, dt, smallest_algo_dt)
-    class(celestial_body_t),  intent(inout)    :: this
-    FLOAT                                      :: dt, smallest_algo_dt
-
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
-    PUSH_SUB(celestial_body_init_interaction_clocks)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-      call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
-    end do
-
-    this%observables(POSITION)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
-    this%observables(VELOCITY)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
-
-    POP_SUB(celestial_body_init_interaction_clocks)
-  end subroutine celestial_body_init_interaction_clocks
-
-  ! ---------------------------------------------------------
   subroutine celestial_set_pointers_to_interaction(this, inter)
     class(celestial_body_t), target,  intent(in)   :: this
     class(interaction_abst_t),       intent(inout) :: inter
@@ -592,6 +548,8 @@ contains
       interaction => iter%get_next_interaction()
       SAFE_DEALLOCATE_P(interaction)
     end do
+
+    SAFE_DEALLOCATE_A(this%internal_observables)
 
     POP_SUB(celestial_body_finalize)
   end subroutine celestial_body_finalize
