@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-sharedir = $(pkgdatadir)/performance_testsuite/tests
+sharedir = $(pkgdatadir)/testsuite/performance/tests
 
 dist_share_DATA = \
 	batch_ops.inp \
