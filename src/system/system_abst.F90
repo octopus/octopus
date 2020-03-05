@@ -172,12 +172,12 @@ contains
         ! Update the system observables that will be needed for computing the interaction
         obs_updated = .true.
         do iobs = 1, interaction%n_system_observables
-          obs_updated = obs_updated .and. this%update_observable_as_system(interaction%system_observables(iobs), this%prop%clock)
+          obs_updated = this%update_observable_as_system(interaction%system_observables(iobs), this%prop%clock) .and. obs_updated
         end do
 
         if (obs_updated) then
           ! Try to update the interaction
-          all_updated = all_updated .and. interaction%update(this%prop%clock)
+          all_updated = interaction%update(this%prop%clock) .and. all_updated
         else
           ! We are not able to update the interaction
           all_updated = .false.

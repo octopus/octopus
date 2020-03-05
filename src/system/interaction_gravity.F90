@@ -127,8 +127,9 @@ contains
       !We first request the partner to update its observables. The observables
       !from system have already been updated. This might not be possible if the
       !partner has a predictor corrector propagator
+      obs_updated = .true.
       do iobs = 1, this%n_partner_observables
-        obs_updated = obs_updated .and. this%partner%update_observable_as_partner(this%partner_observables(iobs), clock)
+        obs_updated = this%partner%update_observable_as_partner(this%partner_observables(iobs), clock) .and. obs_updated
       end do
 
       if(obs_updated) then
