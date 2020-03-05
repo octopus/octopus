@@ -29,8 +29,7 @@ module system_abst_oct_m
   use observable_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-
-
+  use space_oct_m
   implicit none
 
   private
@@ -40,6 +39,7 @@ module system_abst_oct_m
   type, abstract :: system_abst_t
     private
     type(namespace_t),   public :: namespace
+    type(space_t), public :: space
 
     class(propagator_abst_t), pointer, public :: prop
     type(clock_t), public :: clock

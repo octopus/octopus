@@ -57,8 +57,6 @@ module celestial_body_oct_m
     FLOAT, public :: tot_force(1:MAX_DIM)
     FLOAT, public :: prev_tot_force(1:MAX_DIM)
 
-    type(space_t) :: space
-
     type(c_ptr) :: output_handle
   contains
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
