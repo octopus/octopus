@@ -73,12 +73,14 @@ contains
     this%partner => partner
 
     !Gravity interaction needs only one observable from each system, which is the position
-    this%n_system_observables = 1
-    this%n_partner_observables = 1
+    this%n_system_observables = 2
+    this%n_partner_observables = 2
     SAFE_ALLOCATE(this%system_observables(this%n_system_observables))
     SAFE_ALLOCATE(this%partner_observables(this%n_partner_observables))
     this%system_observables(1) = POSITION
+    this%system_observables(2) = MASS
     this%partner_observables(1) = POSITION
+    this%partner_observables(2) = MASS
 
     call partner%set_pointers_to_interaction(this)
 

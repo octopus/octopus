@@ -451,8 +451,6 @@ contains
 
     PUSH_SUB(celestial_body_update_observable_as_system)
 
-    updated = .true.
-
     if(this%observables(obs_index)%clock > clock) then
       message(1) = "The system observable is in advance compared to the requested clock."
       call messages_fatal(1)
@@ -461,10 +459,16 @@ contains
     if (this%observables(obs_index)%internal) then
       !Don`t do anything, this is a protected quantity. The propagator update it
       !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+      updated = .true.
     else
-      !Currently the celestial body does not expose any quantity that is not internal.
-      message(1) = "Incompatible observable."
-      call messages_fatal(1)
+      select case (obs_index)
+      case (MASS)
+        !The celestial body has a mass, but it does not require any update, as it does not change with time.
+        updated = .true.
+      case default
+        message(1) = "Incompatible observable."
+        call messages_fatal(1)
+      end select
     end if
 
     POP_SUB(celestial_body_update_observable_as_system)
@@ -492,9 +496,14 @@ contains
         updated = .true.
       end if
     else
-      !Currently the celestial body does not expose any quantity that is not internal.
-      message(1) = "Incompatible observable."
-      call messages_fatal(1)
+      select case (obs_index)
+      case (MASS)
+        !The celestial body has a mass, but it does not require any update, as it does not change with time.
+        updated = .true.
+      case default
+        message(1) = "Incompatible observable."
+        call messages_fatal(1)
+      end select
     end if
 
     POP_SUB(celestial_body_update_observable_as_partner)

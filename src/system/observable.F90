@@ -35,7 +35,8 @@ module observable_oct_m
     VECTOR_POTENTIAL             =  6,  &
     E_FIELD                      =  7,  &
     B_FIELD                      =  8,  &
-    MAX_OBSERVABLES              =  8
+    MASS                         =  9,  &
+    MAX_OBSERVABLES              =  9
 
   !> Observables are quantities that can be exposed by a system and used to
   !! calculate interactions with other systems.
