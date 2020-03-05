@@ -19,6 +19,7 @@
 #include "global.h"
 
 module interaction_gravity_oct_m
+  use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use messages_oct_m
@@ -85,9 +86,12 @@ contains
   end function interaction_gravity_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_update(this)
+  logical function interaction_gravity_update(this, clock) result(updated)
     class(interaction_gravity_t), intent(inout) :: this
+    class(clock_t),               intent(in)    :: clock
 
+    logical :: obs_updated
+    integer :: iobs
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
 
@@ -98,14 +102,53 @@ contains
     ASSERT(associated(this%partner_mass))
     ASSERT(associated(this%system_mass))
 
-    ! Now calculate the gravitational force
-    dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
+    !The interaction has already been updated to the desired time
+    if (this%clock == clock) then
+      updated = .true.
+      POP_SUB(interaction_gravity_update)
+      return
+    end if
 
-    this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-                                      / dist3 * (GG * this%system_mass * this%partner_mass)
+    if (this%partner%clock < clock .and. this%partner%clock%is_earlier_with_step(clock)) then
+      !This is not the best moment to update the interaction
+      updated = .false.
+    else
+      !This is the best moment to update the interaction
+
+      !We first request the partner to update its observables. The observables
+      !from system have already been updated. This might not be possible if the
+      !partner has a predictor corrector propagator
+      do iobs = 1, this%n_partner_observables
+        obs_updated = obs_updated .and. this%partner%update_observable_as_partner(this%partner_observables(iobs), clock)
+      end do
+
+      if(obs_updated) then
+        if (debug%info) then
+          write(message(1), '(a)') " -- Update interaction with " // trim(this%partner%namespace%get())
+          write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
+          call messages_info(2)
+        end if
+
+        !We can now compute the interaction from the updated pointers
+        dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
+
+        this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
+          / dist3 * (GG * this%system_mass * this%partner_mass)
+
+        ! Update was successful, so set new interaction time
+        updated = .true.
+        call this%clock%set_time(clock)
+      else
+        if (debug%info) then
+          write(message(1), '(a)') " -- Cannot update interaction with " // trim(this%partner%namespace%get())
+          call messages_info(1)
+        end if
+        updated = .false.
+      end if
+    end if
 
     POP_SUB(interaction_gravity_update)
-  end subroutine interaction_gravity_update
+  end function interaction_gravity_update
 
   ! ---------------------------------------------------------
   subroutine interaction_gravity_end(this)

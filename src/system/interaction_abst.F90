@@ -60,10 +60,12 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
   abstract interface
-    subroutine interaction_update(this)
+    logical function interaction_update(this, clock)
       import interaction_abst_t
+      import clock_t
       class(interaction_abst_t), intent(inout) :: this
-    end subroutine interaction_update
+      class(clock_t),            intent(in)    :: clock
+    end function interaction_update
   end interface
 
 contains

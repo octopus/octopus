@@ -64,7 +64,6 @@ module celestial_body_oct_m
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
     procedure :: has_interaction => celestial_body_has_interaction
     procedure :: do_td_operation => celestial_body_do_td
-    procedure :: update_interactions => celestial_body_update_interactions
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
     procedure :: td_write_iter => celestial_body_td_write_iter
@@ -310,93 +309,6 @@ contains
 
    POP_SUB(celestial_body_do_td)
   end subroutine celestial_body_do_td
-
-  ! ---------------------------------------------------------
-  logical function celestial_body_update_interactions(this) result(all_updated)
-    class(celestial_body_t), intent(inout) :: this
-
-    class(interaction_abst_t), pointer :: interaction
-    type(interaction_iterator_t) :: iter
-    integer :: iobs, obs_index
-    logical :: obs_updated, int_updated
-
-    PUSH_SUB(celestial_body_update_interactions)
-
-    if (debug%info) then
-      write(message(1), '(a)') "Debug: Updating interactions for  " // trim(this%namespace%get())
-      call messages_info(1)
-    end if
-
-    all_updated = .true.
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-
-      !I am already updated to the desired time
-      if(interaction%clock == this%prop%clock) then
-        cycle
-      end if
-
-      ! We will keep track of the status of all the observables that need to be
-      ! updated, both from the system and from the partner, as all are needed
-      ! for updating the interaction
-      obs_updated = .true.
-
-      !I update my observables that will be needed for computing the interaction
-      do iobs = 1, interaction%n_system_observables
-        obs_index = interaction%system_observables(iobs)
-        obs_updated = obs_updated .and. this%update_observable_as_system(obs_index, this%prop%clock)
-      end do
-
-      select type (interaction)
-      type is (interaction_gravity_t)
-        !I am earlier and won`t become equal or be ahead after a step
-        !therefore this is not a good time to update the interaction
-        !You (system) need to wait for partner to reach a further point in time
-        if(interaction%partner%clock < this%prop%clock &
-           .and. interaction%partner%clock%is_earlier_with_step(this%prop%clock)) then
-          all_updated = .false.
-        else !That the best moment to update the interaction
-          !We first update the observables from target if needed
-          !The observables from system have already been updated
-
-          !We request the partner to update its observables
-          !This might not be possible if the partner has a predictor corrector propagator
-          !obs_updated = interaction%partner%update_observables_as_partner(interaction, this%prop%clock)
-          do iobs = 1, interaction%n_partner_observables
-            obs_index = interaction%partner_observables(iobs)
-            obs_updated = obs_updated .and. interaction%partner%update_observable_as_partner(obs_index, this%prop%clock)
-          end do
-
-          if(obs_updated) then
-
-           if (debug%info) then
-              write(message(1), '(a)') " -- Update interaction with " // trim(interaction%partner%namespace%get())
-              write(message(2), '(a,i3,a,i3)') " --- clocks are ", this%prop%clock%get_tick(), " and ", interaction%clock%get_tick()
-              call messages_info(2)
-            end if
-
-            !We can now compute the interaction from the updated pointers
-            call interaction%update()
-            call interaction%clock%set_time(this%prop%clock)
-          else
-            if (debug%info) then
-              write(message(1), '(a)') " -- Cannot update interaction with " // trim(interaction%partner%namespace%get())
-              call messages_info(1)
-            end if
-            all_updated = .false.
-          end if
-        end if
-
-      class default
-        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-        call messages_fatal(1)
-      end select
-    end do
-
-    POP_SUB(celestial_body_update_interactions)
-  end function celestial_body_update_interactions
 
   ! ---------------------------------------------------------
   logical function celestial_body_is_tolerance_reached(this, tol) result(converged)

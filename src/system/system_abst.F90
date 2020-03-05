@@ -57,7 +57,6 @@ module system_abst_oct_m
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
-    procedure(system_update_interactions),            deferred :: update_interactions
     procedure(system_write_td_info),                  deferred :: write_td_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
@@ -87,11 +86,6 @@ module system_abst_oct_m
       class(system_abst_t), intent(inout) :: this
       integer             , intent(in)    :: operation
     end subroutine system_do_td_op
-
-    logical function system_update_interactions(this)
-      import system_abst_t
-      class(system_abst_t),      intent(inout) :: this
-    end function system_update_interactions
 
     subroutine system_write_td_info(this)
       import system_abst_t
@@ -152,8 +146,10 @@ contains
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
-    integer :: tdop, ii
-    logical :: all_updated
+    integer :: tdop, ii, iobs
+    logical :: all_updated, obs_updated
+    class(interaction_abst_t), pointer :: interaction
+    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(system_dt_operation)
 
@@ -171,15 +167,36 @@ contains
 
     case(UPDATE_INTERACTIONS)
       if (debug%info) then
-        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%namespace%get())
+        write(message(1), '(a)') "Debug: Updating interactions for  " // trim(this%namespace%get())
         call messages_info(1)
       end if
 
       !We increment by one algorithmic step
       call this%prop%clock%increment()
 
-      all_updated = this%update_interactions()
+      !Loop over all interactions
+      all_updated = .true.
+      call iter%start(this%interactions)
+      do while (iter%has_next())
+        interaction => iter%get_next_interaction()
 
+        ! Update the system observables that will be needed for computing the interaction
+        obs_updated = .true.
+        do iobs = 1, interaction%n_system_observables
+          obs_updated = obs_updated .and. this%update_observable_as_system(interaction%system_observables(iobs), this%prop%clock)
+        end do
+
+        if (obs_updated) then
+          ! Try to update the interaction
+          all_updated = all_updated .and. interaction%update(this%prop%clock)
+        else
+          ! We are not able to update the interaction
+          all_updated = .false.
+        end if
+      end do
+
+      !Move to next propagator step if all interactions have been
+      !updated. Otherwise try again later.
       if(all_updated) then
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
         call this%prop%next()
