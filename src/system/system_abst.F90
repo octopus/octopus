@@ -46,12 +46,18 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
-    type(linked_list_t), public :: interactions
+    type(linked_list_t), public :: interactions !< List we all the interactions of this system with other systems
 
-    integer, public :: n_internal_observables
-    integer, allocatable, public :: internal_observables(:)
-    type(observable_t), public :: observables(MAX_OBSERVABLES)
-
+    !> Variables related to observables.
+    !! Observables that determine the state of the system are called
+    !! "internal". These are usually updated by the propagation algorithm.
+    !! Some information about the observables is stored within the obervable_t
+    !! class, while each observable has an unique interger identifier associated
+    !! to it. This identifier can be used to access the instances of the class
+    !! in the observables arrray.
+    type(observable_t),   public :: observables(MAX_OBSERVABLES) !< Array of all possible observables
+    integer,              public :: n_internal_observables       !< How many observables are internal to this system
+    integer, allocatable, public :: internal_observables(:)      !< Array storing the identifiers of the internal observables
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
@@ -69,12 +75,14 @@ module system_abst_oct_m
   end type system_abst_t
 
   abstract interface
+    ! ---------------------------------------------------------
     subroutine system_add_interaction_partner(this, partner)
       import system_abst_t
       class(system_abst_t), target,    intent(inout) :: this
       class(system_abst_t),            intent(in)    :: partner
     end subroutine system_add_interaction_partner
 
+    ! ---------------------------------------------------------
     logical function system_has_interaction(this, interaction)
       import system_abst_t
       import interaction_abst_t
@@ -82,28 +90,33 @@ module system_abst_oct_m
       class(interaction_abst_t), intent(in) :: interaction
     end function system_has_interaction
 
+    ! ---------------------------------------------------------
     subroutine system_do_td_op(this, operation)
       import system_abst_t
       class(system_abst_t), intent(inout) :: this
       integer             , intent(in)    :: operation
     end subroutine system_do_td_op
 
+    ! ---------------------------------------------------------
     subroutine system_write_td_info(this)
       import system_abst_t
       class(system_abst_t), intent(in) :: this
     end subroutine system_write_td_info
 
+    ! ---------------------------------------------------------
     logical function system_is_tolerance_reached(this, tol)
       import system_abst_t
       class(system_abst_t), intent(in) :: this
       FLOAT,                intent(in) :: tol
     end function system_is_tolerance_reached
 
+    ! ---------------------------------------------------------
     subroutine system_store_current_status(this)
       import system_abst_t
       class(system_abst_t), intent(inout) :: this
     end subroutine system_store_current_status
 
+    ! ---------------------------------------------------------
     logical function system_update_observable_as_system(this, obs_index, clock)
       import system_abst_t
       import clock_t
@@ -112,6 +125,7 @@ module system_abst_oct_m
       class(clock_t),            intent(in)    :: clock
     end function system_update_observable_as_system
 
+    ! ---------------------------------------------------------
     logical function system_update_observable_as_partner(this, obs_index, clock)
       import system_abst_t
       import clock_t
@@ -120,6 +134,7 @@ module system_abst_oct_m
       class(clock_t),            intent(in)    :: clock
     end function system_update_observable_as_partner
 
+    ! ---------------------------------------------------------
     subroutine system_set_pointers_to_interaction(this, inter)
       import system_abst_t
       import interaction_abst_t

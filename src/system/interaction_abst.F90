@@ -34,25 +34,27 @@ module interaction_abst_oct_m
     interaction_abst_end, &
     interaction_iterator_t
 
-  !> The only purpose of the following class is to act as a surrogate and
-  !> avoid circular dependencies between the interactions and the systems.
+  !> An interaction is a unidirectional relationship beween two systems. One of the
+  !! systems owns the interaction and feels it`s effects. The other system is
+  !! refered to as the interaction partner.
   type, abstract :: interaction_abst_t
     private
+    !> The interaction requires access to some observables to be evaluated, both
+    !> form the system and form the partner.
+    integer,              public :: n_system_observables  !< Number of observables needed from the system
+    integer, allocatable, public :: system_observables(:) !< Identifiers of the observables needed from the system
 
-    integer, public :: n_system_observables
-    integer, public :: n_partner_observables
-    integer, allocatable, public :: system_observables(:)
-    integer, allocatable, public :: partner_observables(:)
+    integer,              public :: n_partner_observables !< Number of observables needed from the partner
+    integer, allocatable, public :: partner_observables(:)!< Identifiers of the observables needed from the parner
 
-    type(clock_t), public :: clock
+    type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
   contains
     procedure :: init_clock => interaction_init_clock
     procedure(interaction_update), deferred :: update
   end type interaction_abst_t
 
-
   !> This class extends the list iterator and adds one method to get the
-  !> interaction as a pointer of type class(interaction_abst_t).
+  !! interaction as a pointer of type class(interaction_abst_t).
   type, extends(list_iterator_t) :: interaction_iterator_t
     private
   contains

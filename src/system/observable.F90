@@ -37,11 +37,9 @@ module observable_oct_m
     B_FIELD                      =  8,  &
     MAX_OBSERVABLES              =  8
 
-
   type observable_t
     private
-
-    type(clock_t), public :: clock
+    type(clock_t), public :: clock !< Clock storing the time at which the observable was last updated.
   end type observable_t
 
 contains

@@ -121,6 +121,7 @@ contains
         call messages_info(2)
       end if
       updated = .false.
+
     else
       !This is the best moment to update the interaction
 
