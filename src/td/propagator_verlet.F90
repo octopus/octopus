@@ -26,7 +26,6 @@ module propagator_verlet_oct_m
   use namespace_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use system_abst_oct_m
 
   implicit none
 

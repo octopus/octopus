@@ -84,6 +84,12 @@ module propagator_abst_oct_m
     BEEMAN_CORRECT_POS           = 11,  &
     BEEMAN_CORRECT_VEL           = 12
 
+  ! Known multisystem propagators
+  integer, public, parameter ::        &
+    PROP_VERLET                  = 1,  &
+    PROP_BEEMAN                  = 2,  &
+    PROP_BEEMAN_SCF              = 3
+
 contains
 
   subroutine propagator_rewind(this)

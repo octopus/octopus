@@ -26,10 +26,14 @@ module system_abst_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use propagator_verlet_oct_m
+  use propagator_beeman_oct_m
   use quantity_oct_m
   use space_oct_m
+  use varinfo_oct_m
   implicit none
 
   private
@@ -58,6 +62,7 @@ module system_abst_oct_m
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
+    procedure :: init_propagator => system_init_propagator
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -355,6 +360,42 @@ contains
     end if
 
   end function system_update_exposed_quantities
+
+
+  subroutine system_init_propagator(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    integer :: prop
+
+    PUSH_SUB(system_init_propagator) 
+
+    !%Variable TDSystemPropagator
+    !%Type integer
+    !%Default etrs
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% A temporary variable to set the propagator in the multisystem framework
+    !%Option verlet 1
+    !% Verlet propagator.
+    !%Option beeman 2
+    !% Beeman propagator without predictor-corrector.
+    !%Option beeman_scf 3
+    !% Beeman propagator with predictor-corrector scheme.
+    !%End
+    call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
+    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')
+
+    select case(prop)
+    case(PROP_VERLET)
+      call this%set_propagator(propagator_verlet_t(this%namespace))
+    case(PROP_BEEMAN)
+      call this%set_propagator(propagator_beeman_t(this%namespace, .false.))
+    case(PROP_BEEMAN_SCF)
+      call this%set_propagator(propagator_beeman_t(this%namespace, .true.))
+    end select
+
+    POP_SUB(system_init_propagator)
+  end subroutine system_init_propagator
 
 end module system_abst_oct_m
 

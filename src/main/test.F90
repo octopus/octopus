@@ -57,6 +57,7 @@ module test_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
   use system_oct_m
+  use system_abst_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
@@ -942,49 +943,38 @@ contains
 
     call multisystem_init_interactions(systems)
 
-    ! Loop over systems
-    call iter%start(systems)
-
-    !Here we need to do this, because we do not specify the propagators in the input file
-    select type (sys => iter%get_next())
-    type is (celestial_body_t)
-      sun => sys
-    end select
-    select type (sys => iter%get_next())
-      type is (celestial_body_t)
-        earth => sys
-    end select
-    select type (sys => iter%get_next())
-    type is (celestial_body_t)
-      moon => sys
-    end select
     all_done_max_td_steps = .false.
+    it = 0
+    smallest_algo_dt = CNST(1e10)
 
-    !Creates Verlet and Beeman propagators
-    !This should be read from the input file
-    prop_sun => propagator_verlet_t(sun%namespace)
-    prop_earth => propagator_verlet_t(earth%namespace)
-    prop_moon => propagator_beeman_t(moon%namespace, .true.)
-
-    !Associate them to subsystems
-    !This will be done automatically once we have a variable 
-    !TDPropagator that will be parsed for the system    
-    call sun%set_propagator(prop_sun)
-    call earth%set_propagator(prop_earth)
-    call moon%set_propagator(prop_moon)
-    smallest_algo_dt = min(prop_sun%dt/prop_sun%algo_steps,     &
-                           prop_earth%dt/prop_earth%algo_steps, &
-                           prop_moon%dt/prop_moon%algo_steps)
-
-    !Associate them to subsystems
+    ! Loop over systems
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next()
-      select type (sys)
-      type is (celestial_body_t)
+      select type(sys)
+      class is (system_abst_t)
+        !Initialize the propagator
+        call sys%init_propagator()
+
+        !Find the smallest dt
+        smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
 
         !Associate them to subsystems
         call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+
+        call sys%prop%rewind()
+
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
+      end select
+    end do
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      select type(sys)
+      type is (celestial_body_t)
 
         !Initialize output and write data at time zero
         call sys%td_write_init(sys%prop%dt)
@@ -996,23 +986,7 @@ contains
       end select
     end do
 
-    it = 0
-
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next()
-      select type (sys)
-      type is (celestial_body_t)
-
-        call sys%prop%rewind()
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-    end do
-
-
+    !The full TD loop
     do while(.not. all_done_max_td_steps)
 
       it = it + 1
