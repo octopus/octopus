@@ -276,7 +276,6 @@ contains
     class(system_abst_t), intent(inout) :: this
     FLOAT,                intent(in)    :: dt, smallest_algo_dt
 
-    integer :: iq
     type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
 
