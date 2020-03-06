@@ -63,8 +63,8 @@ module system_abst_oct_m
     procedure(system_write_td_info),                  deferred :: write_td_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
-    procedure(system_update_quantity_as_system),      deferred :: update_quantity_as_system
-    procedure(system_update_quantity_as_partner),     deferred :: update_quantity_as_partner
+    procedure(system_update_quantity),                deferred :: update_quantity
+    procedure(system_update_exposed_quantity),        deferred :: update_exposed_quantity
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
   end type system_abst_t
 
@@ -111,22 +111,22 @@ module system_abst_oct_m
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
-    logical function system_update_quantity_as_system(this, iq, clock)
+    logical function system_update_quantity(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_quantity_as_system
+    end function system_update_quantity
 
     ! ---------------------------------------------------------
-    logical function system_update_quantity_as_partner(this, iq, clock)
+    logical function system_update_exposed_quantity(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_quantity_as_partner
+    end function system_update_exposed_quantity
 
     ! ---------------------------------------------------------
     subroutine system_set_pointers_to_interaction(this, inter)
@@ -181,7 +181,7 @@ contains
         ! Update the system quantities that will be needed for computing the interaction
         obs_updated = .true.
         do iq = 1, interaction%n_system_quantities
-          obs_updated = this%update_quantity_as_system(interaction%system_quantities(iq), this%prop%clock) .and. obs_updated
+          obs_updated = this%update_quantity(interaction%system_quantities(iq), this%prop%clock) .and. obs_updated
         end do
 
         if (obs_updated) then

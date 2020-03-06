@@ -68,8 +68,8 @@ module celestial_body_oct_m
     procedure :: td_write_end => celestial_body_td_write_end
     procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
     procedure :: store_current_status => celestial_body_store_current_status
-    procedure :: update_quantity_as_system => celestial_body_update_quantity_as_system
-    procedure :: update_quantity_as_partner => celestial_body_update_quantity_as_partner
+    procedure :: update_quantity => celestial_body_update_quantity
+    procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
     procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
     final :: celestial_body_finalize
   end type celestial_body_t
@@ -444,12 +444,12 @@ contains
   end subroutine celestial_body_td_write_end
 
   ! ---------------------------------------------------------
-  logical function celestial_body_update_quantity_as_system(this, iq, clock) result(updated)
+  logical function celestial_body_update_quantity(this, iq, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
-    PUSH_SUB(celestial_body_update_quantity_as_system)
+    PUSH_SUB(celestial_body_update_quantity)
 
     if(this%quantities(iq)%clock > clock) then
       message(1) = "The system quantity is in advance compared to the requested clock."
@@ -471,16 +471,16 @@ contains
       end select
     end if
 
-    POP_SUB(celestial_body_update_quantity_as_system)
-  end function celestial_body_update_quantity_as_system
+    POP_SUB(celestial_body_update_quantity)
+  end function celestial_body_update_quantity
 
  ! ---------------------------------------------------------
- logical function celestial_body_update_quantity_as_partner(this, iq, clock) result(updated)
+ logical function celestial_body_update_exposed_quantity(this, iq, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
-    PUSH_SUB(celestial_body_update_quantity_as_partner)
+    PUSH_SUB(celestial_body_update_exposed_quantity)
 
     if (this%quantities(iq)%clock > clock) then
       message(1) = "The partner quantity is in advance compared to the requested clock."
@@ -506,8 +506,8 @@ contains
       end select
     end if
 
-    POP_SUB(celestial_body_update_quantity_as_partner)
-  end function celestial_body_update_quantity_as_partner
+    POP_SUB(celestial_body_update_exposed_quantity)
+  end function celestial_body_update_exposed_quantity
 
   ! ---------------------------------------------------------
   subroutine celestial_set_pointers_to_interaction(this, inter)

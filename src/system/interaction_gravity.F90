@@ -132,7 +132,7 @@ contains
       !partner has a predictor corrector propagator
       obs_updated = .true.
       do iq = 1, this%n_partner_quantities
-        obs_updated = this%partner%update_quantity_as_partner(this%partner_quantities(iq), clock) .and. obs_updated
+        obs_updated = this%partner%update_exposed_quantity(this%partner_quantities(iq), clock) .and. obs_updated
       end do
 
       if(obs_updated) then
