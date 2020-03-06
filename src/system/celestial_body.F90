@@ -201,24 +201,14 @@ contains
     PUSH_SUB(celestial_body_do_td)
 
     select case(operation)
-    case(VERLET_UPDATE_POS)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Updating positions for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (VERLET_UPDATE_POS)
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                   + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
+                                 + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
 
       call this%quantities(POSITION)%clock%increment()
 
-    case(VERLET_COMPUTE_ACC)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (VERLET_COMPUTE_ACC)
       !Use as SCF criterium
       this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
@@ -236,67 +226,41 @@ contains
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
 
-    case(VERLET_COMPUTE_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
-         M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+    case (VERLET_COMPUTE_VEL)
+      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
       call this%quantities(VELOCITY)%clock%increment()
 
-    case(BEEMAN_PREDICT_POS)
-      if (debug%info) then
-        message(1) = "Debug: Prediction step - Computing position for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (BEEMAN_PREDICT_POS)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                       + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                             * ( M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                                 * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
       this%prev_acc(1:this%space%dim) = this%acc(1:this%space%dim)
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
-      if(.not. this%prop%predictor_corrector) then
+      if (.not. this%prop%predictor_corrector) then
         call this%quantities(POSITION)%clock%increment()
       end if
 
-    case(BEEMAN_PREDICT_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Prediction step - Computing velocity for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
+    case (BEEMAN_PREDICT_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
-                       + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
-                         + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+                                 + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
+                                 + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
 
       call this%quantities(VELOCITY)%clock%increment()
 
-
-    case(BEEMAN_CORRECT_POS)
-      if (debug%info) then
-        message(1) = "Debug: Correction step - Computing position for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
- 
+    case( BEEMAN_CORRECT_POS)
       this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
-                       + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                             * ( M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                                 * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
       !We set it to the propagation time to avoid double increment
       call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
-    case(BEEMAN_CORRECT_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Correction step - Computing velocity for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) + &
-         M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-
+    case (BEEMAN_CORRECT_VEL)
+      this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
       !We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
@@ -323,8 +287,8 @@ contains
     end if 
 
     if (debug%info) then
-      write(message(1), '(a, e12.6, a, e12.6)') "Debug: Change in acceleration  ", &
-          sqrt(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2)), " and tolerance ", tol
+      write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
+          sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)), " and tolerance ", tol
       call messages_info(1)
     end if
 

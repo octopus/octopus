@@ -22,7 +22,6 @@ module propagator_abst_oct_m
   use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
-  use list_node_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -30,7 +29,8 @@ module propagator_abst_oct_m
 
   private
   public ::                            &
-    propagator_abst_t
+    propagator_abst_t,                 &
+    propagator_step_debug_message
 
   type, extends(linked_list_t) :: propagator_abst_t
     private
@@ -165,6 +165,44 @@ contains
     POP_SUB(propagator_rewind_scf_loop)
 
   end subroutine propagator_rewind_scf_loop
+
+  function propagator_step_debug_message(tdop) result(description)
+    integer, intent(in) :: tdop
+    character(len=100) :: description
+
+    PUSH_SUB(propagator_step_debug_message)
+
+    select case (tdop)
+    case (FINISHED)
+      description = "Propagation step finished for"
+    case (UPDATE_INTERACTIONS)
+      description = "Updating interactions for"
+    case (START_SCF_LOOP)
+      description = "Starting SCF loop for"
+    case (END_SCF_LOOP)
+      description = "End of SCF iteration for"
+    case (STORE_CURRENT_STATUS)
+      description = "Storing the current status for"
+    case (VERLET_UPDATE_POS)
+      description = "Propagation step - Updating positions for"
+    case (VERLET_COMPUTE_ACC)
+      description = "Propagation step - Computing acceleration for"
+    case (VERLET_COMPUTE_VEL)
+      description = "Propagation step - Computing velocity for"
+    case (BEEMAN_PREDICT_POS)
+      description = "Prediction step  - Computing position for"
+    case (BEEMAN_PREDICT_VEL)
+      description = "Prediction step  - Computing velocity for"
+    case (BEEMAN_CORRECT_POS)
+      description = "Correction step  - Computing position for"
+    case (BEEMAN_CORRECT_VEL)
+      description = "Correction step  - Computing velocity for"
+    case default
+      description = "Unknown step for "
+    end select
+
+    PUSH_SUB(propagator_step_debug_message)
+  end function propagator_step_debug_message
 
 end module propagator_abst_oct_m
 

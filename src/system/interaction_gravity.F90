@@ -101,7 +101,7 @@ contains
     !The interaction has already been updated to the desired time
     if (this%clock == clock) then
       if (debug%info) then
-        write(message(1), '(a)') " -- Interaction already up-to-date with " // trim(this%partner%namespace%get())
+        write(message(1), '(a,a)') "Debug: -- Interaction already up-to-date with ", trim(this%partner%namespace%get())
         call messages_info(1)
       end if
       updated = .true.
@@ -112,12 +112,6 @@ contains
     allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
 
     if (allowed_to_update) then
-      if (debug%info) then
-        write(message(1), '(a)') " -- Update interaction with " // trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
-        call messages_info(2)
-      end if
-
       !We can now compute the interaction from the updated pointers
       ASSERT(associated(this%partner_pos))
       ASSERT(associated(this%system_pos))
@@ -132,10 +126,16 @@ contains
       ! Update was successful, so set new interaction time
       updated = .true.
       call this%clock%set_time(clock)
+
+      if (debug%info) then
+        write(message(1), '(a,a)') "Debug: -- Updated interaction with ", trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
+        call messages_info(2)
+      end if
     else
       if (debug%info) then
-        write(message(1), '(a)') " -- Cannot update yet the interaction with " // trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
+        write(message(1), '(a,a)') "Debug: -- Cannot update yet the interaction with ", trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
         call messages_info(2)
       end if
       updated = .false.

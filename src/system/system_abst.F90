@@ -153,23 +153,20 @@ contains
     PUSH_SUB(system_dt_operation)
 
     tdop = this%prop%get_td_operation()
-    select case(tdop)
-    case(FINISHED)
-      if (debug%info .and. .not. this%prop%step_is_done()) then
-        message(1) = "Debug: Propagation step finished for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if  
-      if(.not.this%prop%step_is_done()) then
+
+    if (debug%info) then
+      write(message(1), '(a,a,1X,a)') "Debug: ", trim(propagator_step_debug_message(tdop)), trim(this%namespace%get())
+      call messages_info(1)
+    end if
+
+    select case (tdop)
+    case (FINISHED)
+      if (.not. this%prop%step_is_done()) then
         call this%clock%increment()
       end if
       call this%prop%finished()
 
-    case(UPDATE_INTERACTIONS)
-      if (debug%info) then
-        write(message(1), '(a)') "Debug: Updating interactions for  " // trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (UPDATE_INTERACTIONS)
       !We increment by one algorithmic step
       call this%prop%clock%increment()
 
@@ -192,7 +189,7 @@ contains
           ! We are not able to update the interaction
           all_updated = .false.
           if (debug%info) then
-            write(message(1), '(a)') " -- Internal quantities are not up-to-date, so could not update interactions for  " // &
+            write(message(1), '(a,a)') "Debug: -- Internal quantities are not up-to-date, so could not update interactions for ", &
               trim(this%namespace%get())
             call messages_info(1)
           end if
@@ -208,23 +205,23 @@ contains
         call this%prop%clock%decrement()
       end if
 
-    case(START_SCF_LOOP)
+    case (START_SCF_LOOP)
       ASSERT(this%prop%predictor_corrector)
  
       call this%prop%save_scf_start()
       this%accumulated_loop_ticks = 0
 
       if (debug%info) then
-        write(message(1), '(a,i3,a)') "Debug: SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
+        write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
         call messages_info(1)
       end if
 
-    case(END_SCF_LOOP)
+    case (END_SCF_LOOP)
       !Here we first check if we did the maximum number of steps.
       !Otherwise, we need check the tolerance 
       if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
-          message(1) = "Debug: Max SCF Iter reached for " + trim(this%namespace%get())
+          message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
           call messages_info(1)
         end if
         call this%prop%next()
@@ -232,31 +229,25 @@ contains
         !We reset the pointer to the begining of the scf loop
         if(this%is_tolerance_reached(this%prop%scf_tol)) then
           if (debug%info) then
-            message(1) = "Debug: SCF tolerance reached for " + trim(this%namespace%get())
+            message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
             call messages_info(1)
           end if
           call this%prop%next()
         else
-          !We rewind the intrusction stack
+          !We rewind the instruction stack
           call this%prop%rewind_scf_loop()
 
           !We reset the clocks
           call this%reset_clocks(this%accumulated_loop_ticks)
           this%accumulated_loop_ticks = 0
           if (debug%info) then
-            write(message(1), '(a,i3,a)') "Debug: SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
+            write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
            call messages_info(1)
          end if 
         end if
       end if
 
-    case(STORE_CURRENT_STATUS)
- 
-      if (debug%info) then
-        message(1) = "Debug: Storing the current status for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (STORE_CURRENT_STATUS)
       call this%store_current_status()
       call this%prop%next()
 
@@ -353,10 +344,10 @@ contains
     integer :: iq
 
     if (this%clock < clock .and. this%clock%is_earlier_with_step(clock)) then
-      !This is not the best moment to update the interaction
+      !This is not the best moment to update the quantities
       updated = .false.
     else
-      !This is the best moment to update the interaction
+      !This is the best moment to update the quantities
       updated = .true.
       do iq = 1, n_quantities
         updated = this%update_exposed_quantity(quantities(iq), clock) .and. updated
