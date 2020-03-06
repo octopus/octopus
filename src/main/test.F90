@@ -922,6 +922,7 @@ contains
     integer :: earth_Nstep, moon_Nstep, sun_Nstep
     logical :: any_td_step_done, all_done_max_td_steps
     FLOAT :: sun_dt, earth_dt, moon_dt, smallest_algo_dt
+    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -998,7 +999,7 @@ contains
       any_td_step_done = .false.
       internal_loop = 1
 
-      do while(.not. any_td_step_done .and. internal_loop < 1000)
+      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
 
         call sun%dt_operation()
         call earth%dt_operation()
