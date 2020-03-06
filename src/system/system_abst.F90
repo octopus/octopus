@@ -301,7 +301,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
-      call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
+      call interaction%init_clock(this%namespace%get(), dt, smallest_algo_dt)
     end do
 
     ! Internal quantities clocks

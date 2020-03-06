@@ -22,7 +22,6 @@ module interaction_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
-  use namespace_oct_m
   use profiling_oct_m
   implicit none
 
@@ -71,15 +70,15 @@ module interaction_abst_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine interaction_init_clock(this, namespace, dt, algo_dt)
+  subroutine interaction_init_clock(this, label, dt, algo_dt)
     class(interaction_abst_t), intent(inout) :: this
-    type(namespace_t),         intent(in)    :: namespace
+    character(len=*),          intent(in)    :: label
     FLOAT,                     intent(in)    :: dt
     FLOAT,                     intent(in)    :: algo_dt
 
     PUSH_SUB(interaction_init_clock)
 
-    this%clock = clock_t(namespace%get(), dt, algo_dt)
+    this%clock = clock_t(label, dt, algo_dt)
 
     POP_SUB(interaction_init_clock)
   end subroutine interaction_init_clock
