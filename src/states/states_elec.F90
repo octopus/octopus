@@ -1009,9 +1009,11 @@ contains
     logical, optional,             intent(in)    :: skip(:)
     logical, optional,             intent(in)    :: packed
 
-    integer :: ib, iqn, ist, istmin, istmax, rank, size1
+    integer :: ib, iqn, ist, istmin, istmax, rank, total_size, size1, offset
     logical :: same_node, verbose_, packed_
     integer, allocatable :: bstart(:), bend(:), blocks_per_rank(:), block_offsets(:)
+    FLOAT, pointer :: dpsi(:, :)
+    CMPLX, pointer :: zpsi(:, :)
 
     PUSH_SUB(states_elec_init_block)
 
@@ -1111,25 +1113,36 @@ contains
       ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
     end do
 
-    ! allocate one big chunk of memory for all states
-    size1 = pad_pow2(st%d%dim*st%d%block_size)
+    ! total size of array needed
+    total_size = 0
+    do ib = st%group%block_start, st%group%block_end
+      total_size = total_size + pad_pow2(st%group%block_size(ib) * st%d%dim) * mesh%np_part * st%d%kpt%nlocal
+    end do
+
     if (states_are_real(st)) then
-      SAFE_ALLOCATE(st%group%dpsi(size1, mesh%np_part, st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%group%dpsi(total_size))
       nullify(st%group%zpsi)
     else
-      SAFE_ALLOCATE(st%group%zpsi(size1, mesh%np_part, st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%group%zpsi(total_size))
       nullify(st%group%dpsi)
     end if
 
     ! initialize batches
+    offset = 1
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if (states_are_real(st)) then
+          size1 = pad_pow2(st%group%block_size(ib) * st%d%dim)
+          dpsi(1:size1, 1:mesh%np_part) => st%group%dpsi(offset:offset+size1*mesh%np_part)
+          offset = offset + size1*mesh%np_part
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
-            st%group%dpsi(:, :, ib, iqn), iqn, packed=.true.)
+            dpsi, iqn, packed=.true.)
         else
+          size1 = pad_pow2(st%group%block_size(ib) * st%d%dim)
+          zpsi(1:size1, 1:mesh%np_part) => st%group%zpsi(offset:offset+size1*mesh%np_part-1)
+          offset = offset + size1*mesh%np_part
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
-            st%group%zpsi(:, :, ib, iqn), iqn, packed=.true.)
+            zpsi, iqn, packed=.true.)
         end if
       end do
     end do

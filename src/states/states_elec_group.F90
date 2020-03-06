@@ -50,8 +50,8 @@ module states_elec_group_oct_m
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
     logical                  :: block_initialized     !< For keeping track of the blocks to avoid memory leaks
-    FLOAT, pointer, contiguous :: dpsi(:, :, :, :) !< large contiguous storage for the wavefunctions
-    CMPLX, pointer, contiguous :: zpsi(:, :, :, :) !< large contiguous storage for the wavefunctions
+    FLOAT, pointer, contiguous :: dpsi(:) !< large contiguous storage for the wavefunctions
+    CMPLX, pointer, contiguous :: zpsi(:) !< large contiguous storage for the wavefunctions
   end type states_elec_group_t
 
 contains
