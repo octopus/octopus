@@ -18,13 +18,13 @@
 
 #include "global.h"
 
-module observable_oct_m
+module quantity_oct_m
   use clock_oct_m
   implicit none
 
   private
   public ::                   &
-     observable_t 
+     quantity_t
 
   integer, public, parameter ::         &
     POSITION                     =  1,  &
@@ -36,24 +36,24 @@ module observable_oct_m
     E_FIELD                      =  7,  &
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
-    MAX_OBSERVABLES              =  9
+    MAX_QUANTITIES               =  9
 
-  !> Observables are quantities that can be exposed by a system and used to
+  !> Quantities are quantities that can be exposed by a system and used to
   !! calculate interactions with other systems.
   !!
-  !! Observables that determine the state of the system are called
+  !! Quantities that determine the state of the system are called
   !! "internal" and should have the corresponding flag set to yes.
-  !! Such observables are usually updated by the propagation algorithm and
+  !! Such quantities are usually updated by the propagation algorithm and
   !! cannot simply be calculated on-demand.
-  type observable_t
+  type quantity_t
     private
-    type(clock_t), public :: clock              !< Clock storing the time at which the observable was last updated.
-    logical,       public :: internal = .false. !< Is this observable internal to the system?
-  end type observable_t
+    type(clock_t), public :: clock              !< Clock storing the time at which the quantity was last updated.
+    logical,       public :: internal = .false. !< Is this quantity internal to the system?
+  end type quantity_t
 
 contains
 
-end module observable_oct_m
+end module quantity_oct_m
 
 !! Local Variables:
 !! mode: f90

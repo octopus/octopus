@@ -30,10 +30,10 @@ module celestial_body_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
-  use observable_oct_m
   use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use quantity_oct_m
   use space_oct_m
   use system_abst_oct_m
   use write_iter_oct_m
@@ -68,8 +68,8 @@ module celestial_body_oct_m
     procedure :: td_write_end => celestial_body_td_write_end
     procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
     procedure :: store_current_status => celestial_body_store_current_status
-    procedure :: update_observable_as_system => celestial_body_update_observable_as_system
-    procedure :: update_observable_as_partner => celestial_body_update_observable_as_partner
+    procedure :: update_quantity_as_system => celestial_body_update_quantity_as_system
+    procedure :: update_quantity_as_partner => celestial_body_update_quantity_as_partner
     procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
     final :: celestial_body_finalize
   end type celestial_body_t
@@ -146,8 +146,8 @@ contains
     sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
 
-    sys%observables(POSITION)%internal = .true.
-    sys%observables(VELOCITY)%internal = .true.
+    sys%quantities(POSITION)%internal = .true.
+    sys%quantities(VELOCITY)%internal = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -211,7 +211,7 @@ contains
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                    + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
 
-      call this%observables(POSITION)%clock%increment()
+      call this%quantities(POSITION)%clock%increment()
 
     case(VERLET_COMPUTE_ACC)
       if (debug%info) then
@@ -245,7 +245,7 @@ contains
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
          M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
-      call this%observables(VELOCITY)%clock%increment()
+      call this%quantities(VELOCITY)%clock%increment()
 
     case(BEEMAN_PREDICT_POS)
       if (debug%info) then
@@ -260,7 +260,7 @@ contains
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
       if(.not. this%prop%predictor_corrector) then
-        call this%observables(POSITION)%clock%increment()
+        call this%quantities(POSITION)%clock%increment()
       end if
 
     case(BEEMAN_PREDICT_VEL)
@@ -272,7 +272,7 @@ contains
                        + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
                          + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
 
-      call this%observables(VELOCITY)%clock%increment()
+      call this%quantities(VELOCITY)%clock%increment()
 
 
     case(BEEMAN_CORRECT_POS)
@@ -286,7 +286,7 @@ contains
                              * ( M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
       !We set it to the propagation time to avoid double increment
-      call this%observables(POSITION)%clock%set_time(this%prop%clock)
+      call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
     case(BEEMAN_CORRECT_VEL)
       if (debug%info) then
@@ -299,7 +299,7 @@ contains
 
 
       !We set it to the propagation time to avoid double increment
-      call this%observables(VELOCITY)%clock%set_time(this%prop%clock)
+      call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
 
     case default
       message(1) = "Unsupported TD operation."
@@ -444,50 +444,50 @@ contains
   end subroutine celestial_body_td_write_end
 
   ! ---------------------------------------------------------
-  logical function celestial_body_update_observable_as_system(this, obs_index, clock) result(updated)
+  logical function celestial_body_update_quantity_as_system(this, iq, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
-    integer,                   intent(in)    :: obs_index
+    integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
-    PUSH_SUB(celestial_body_update_observable_as_system)
+    PUSH_SUB(celestial_body_update_quantity_as_system)
 
-    if(this%observables(obs_index)%clock > clock) then
-      message(1) = "The system observable is in advance compared to the requested clock."
+    if(this%quantities(iq)%clock > clock) then
+      message(1) = "The system quantity is in advance compared to the requested clock."
       call messages_fatal(1)
     end if
 
-    if (this%observables(obs_index)%internal) then
+    if (this%quantities(iq)%internal) then
       !Don`t do anything, this is a protected quantity. The propagator update it
       !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
       updated = .true.
     else
-      select case (obs_index)
+      select case (iq)
       case (MASS)
         !The celestial body has a mass, but it does not require any update, as it does not change with time.
         updated = .true.
       case default
-        message(1) = "Incompatible observable."
+        message(1) = "Incompatible quantity."
         call messages_fatal(1)
       end select
     end if
 
-    POP_SUB(celestial_body_update_observable_as_system)
-  end function celestial_body_update_observable_as_system
+    POP_SUB(celestial_body_update_quantity_as_system)
+  end function celestial_body_update_quantity_as_system
 
  ! ---------------------------------------------------------
- logical function celestial_body_update_observable_as_partner(this, obs_index, clock) result(updated)
+ logical function celestial_body_update_quantity_as_partner(this, iq, clock) result(updated)
     class(celestial_body_t),   intent(inout) :: this
-    integer,                   intent(in)    :: obs_index
+    integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
-    PUSH_SUB(celestial_body_update_observable_as_partner)
+    PUSH_SUB(celestial_body_update_quantity_as_partner)
 
-    if (this%observables(obs_index)%clock > clock) then
-      message(1) = "The partner observable is in advance compared to the requested clock."
+    if (this%quantities(iq)%clock > clock) then
+      message(1) = "The partner quantity is in advance compared to the requested clock."
       call messages_fatal(1)
     end if
 
-    if (this%observables(obs_index)%internal) then
+    if (this%quantities(iq)%internal) then
       !Don`t do anything, this is a protected quantity. The propagator update it.
       !However, it can only be used if the predictor-corrector step is done.
       if (this%prop%predictor_corrector) then
@@ -496,18 +496,18 @@ contains
         updated = .true.
       end if
     else
-      select case (obs_index)
+      select case (iq)
       case (MASS)
         !The celestial body has a mass, but it does not require any update, as it does not change with time.
         updated = .true.
       case default
-        message(1) = "Incompatible observable."
+        message(1) = "Incompatible quantity."
         call messages_fatal(1)
       end select
     end if
 
-    POP_SUB(celestial_body_update_observable_as_partner)
-  end function celestial_body_update_observable_as_partner
+    POP_SUB(celestial_body_update_quantity_as_partner)
+  end function celestial_body_update_quantity_as_partner
 
   ! ---------------------------------------------------------
   subroutine celestial_set_pointers_to_interaction(this, inter)

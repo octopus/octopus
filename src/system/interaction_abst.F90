@@ -17,8 +17,6 @@
 !!
 #include "global.h"
 
-#include "global.h"
-
 module interaction_abst_oct_m
   use clock_oct_m
   use global_oct_m
@@ -39,13 +37,13 @@ module interaction_abst_oct_m
   !! refered to as the interaction partner.
   type, abstract :: interaction_abst_t
     private
-    !> The interaction requires access to some observables to be evaluated, both
+    !> The interaction requires access to some quantities to be evaluated, both
     !> form the system and form the partner.
-    integer,              public :: n_system_observables  !< Number of observables needed from the system
-    integer, allocatable, public :: system_observables(:) !< Identifiers of the observables needed from the system
+    integer,              public :: n_system_quantities  !< Number of quantities needed from the system
+    integer, allocatable, public :: system_quantities(:) !< Identifiers of the quantities needed from the system
 
-    integer,              public :: n_partner_observables !< Number of observables needed from the partner
-    integer, allocatable, public :: partner_observables(:)!< Identifiers of the observables needed from the parner
+    integer,              public :: n_partner_quantities !< Number of quantities needed from the partner
+    integer, allocatable, public :: partner_quantities(:)!< Identifiers of the quantities needed from the parner
 
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
   contains
@@ -92,8 +90,8 @@ contains
 
     PUSH_SUB(interaction_abst_end)
 
-    SAFE_DEALLOCATE_A(this%system_observables)
-    SAFE_DEALLOCATE_A(this%partner_observables)
+    SAFE_DEALLOCATE_A(this%system_quantities)
+    SAFE_DEALLOCATE_A(this%partner_quantities)
 
     POP_SUB(interaction_abst_end)
 

@@ -26,9 +26,9 @@ module system_abst_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
-  use observable_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use quantity_oct_m
   use space_oct_m
   implicit none
 
@@ -49,9 +49,9 @@ module system_abst_oct_m
     type(linked_list_t), public :: interactions !< List we all the interactions of this system with other systems
 
 
-    type(observable_t),   public :: observables(MAX_OBSERVABLES) !< Array of all possible observables.
-                                                                 !< The elements of the array are accsessed using the
-                                                                 !< observable`s identifiers.
+    type(quantity_t), public :: quantities(MAX_QUANTITIES) !< Array of all possible quantities.
+                                                           !< The elements of the array are accessed using the
+                                                           !< quantity`s identifiers.
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: set_propagator => system_set_propagator
@@ -63,8 +63,8 @@ module system_abst_oct_m
     procedure(system_write_td_info),                  deferred :: write_td_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
-    procedure(system_update_observable_as_system),    deferred :: update_observable_as_system
-    procedure(system_update_observable_as_partner),   deferred :: update_observable_as_partner
+    procedure(system_update_quantity_as_system),      deferred :: update_quantity_as_system
+    procedure(system_update_quantity_as_partner),     deferred :: update_quantity_as_partner
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
   end type system_abst_t
 
@@ -111,22 +111,22 @@ module system_abst_oct_m
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
-    logical function system_update_observable_as_system(this, obs_index, clock)
+    logical function system_update_quantity_as_system(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
-      integer,                   intent(in)    :: obs_index
+      integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_observable_as_system
+    end function system_update_quantity_as_system
 
     ! ---------------------------------------------------------
-    logical function system_update_observable_as_partner(this, obs_index, clock)
+    logical function system_update_quantity_as_partner(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
-      integer,                   intent(in)    :: obs_index
+      integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_observable_as_partner
+    end function system_update_quantity_as_partner
 
     ! ---------------------------------------------------------
     subroutine system_set_pointers_to_interaction(this, inter)
@@ -144,7 +144,7 @@ contains
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
-    integer :: tdop, iobs
+    integer :: tdop, iq
     logical :: all_updated, obs_updated
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
@@ -178,10 +178,10 @@ contains
       do while (iter%has_next())
         interaction => iter%get_next_interaction()
 
-        ! Update the system observables that will be needed for computing the interaction
+        ! Update the system quantities that will be needed for computing the interaction
         obs_updated = .true.
-        do iobs = 1, interaction%n_system_observables
-          obs_updated = this%update_observable_as_system(interaction%system_observables(iobs), this%prop%clock) .and. obs_updated
+        do iq = 1, interaction%n_system_quantities
+          obs_updated = this%update_quantity_as_system(interaction%system_quantities(iq), this%prop%clock) .and. obs_updated
         end do
 
         if (obs_updated) then
@@ -191,7 +191,7 @@ contains
           ! We are not able to update the interaction
           all_updated = .false.
           if (debug%info) then
-            write(message(1), '(a)') " -- Internal observables are not up-to-date, so could not update interactions for  " // &
+            write(message(1), '(a)') " -- Internal quantities are not up-to-date, so could not update interactions for  " // &
               trim(this%namespace%get())
             call messages_info(1)
           end if
@@ -284,7 +284,7 @@ contains
     class(system_abst_t), intent(inout) :: this
     FLOAT,                intent(in)    :: dt, smallest_algo_dt
 
-    integer :: iobs
+    integer :: iq
     type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
 
@@ -303,9 +303,9 @@ contains
       call interaction%init_clock(this%namespace, dt, smallest_algo_dt)
     end do
 
-    ! Internal observables clocks
-    where (this%observables%internal)
-      this%observables%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    ! Internal quantities clocks
+    where (this%quantities%internal)
+      this%quantities%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
     end where
 
     POP_SUB(system_init_clocks)
@@ -316,7 +316,7 @@ contains
     class(system_abst_t),      intent(inout) :: this
     integer,                   intent(in)    :: accumulated_ticks
 
-    integer :: it, iobs
+    integer :: it, iq
     type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
 
@@ -333,9 +333,9 @@ contains
         call interaction%clock%decrement()
       end do
 
-      ! Internal observables clocks
-      do iobs = 1, MAX_OBSERVABLES
-        if (this%observables(iobs)%internal) call this%observables(iobs)%clock%decrement()
+      ! Internal quantities clocks
+      do iq = 1, MAX_QUANTITIES
+        if (this%quantities(iq)%internal) call this%quantities(iq)%clock%decrement()
       end do
     end do
 

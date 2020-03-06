@@ -23,8 +23,8 @@ module interaction_gravity_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use messages_oct_m
-  use observable_oct_m
   use profiling_oct_m
+  use quantity_oct_m
   use system_abst_oct_m
 
   implicit none
@@ -72,15 +72,15 @@ contains
     this%dim = dim
     this%partner => partner
 
-    !Gravity interaction needs only one observable from each system, which is the position
-    this%n_system_observables = 2
-    this%n_partner_observables = 2
-    SAFE_ALLOCATE(this%system_observables(this%n_system_observables))
-    SAFE_ALLOCATE(this%partner_observables(this%n_partner_observables))
-    this%system_observables(1) = POSITION
-    this%system_observables(2) = MASS
-    this%partner_observables(1) = POSITION
-    this%partner_observables(2) = MASS
+    !Gravity interaction needs only one quantity from each system, which is the position
+    this%n_system_quantities = 2
+    this%n_partner_quantities = 2
+    SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
+    SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
+    this%system_quantities(1) = POSITION
+    this%system_quantities(2) = MASS
+    this%partner_quantities(1) = POSITION
+    this%partner_quantities(2) = MASS
 
     call partner%set_pointers_to_interaction(this)
 
@@ -93,7 +93,7 @@ contains
     class(clock_t),               intent(in)    :: clock
 
     logical :: obs_updated
-    integer :: iobs
+    integer :: iq
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
 
@@ -127,12 +127,12 @@ contains
     else
       !This is the best moment to update the interaction
 
-      !We first request the partner to update its observables. The observables
+      !We first request the partner to update its quantities. The quantities
       !from system have already been updated. This might not be possible if the
       !partner has a predictor corrector propagator
       obs_updated = .true.
-      do iobs = 1, this%n_partner_observables
-        obs_updated = this%partner%update_observable_as_partner(this%partner_observables(iobs), clock) .and. obs_updated
+      do iq = 1, this%n_partner_quantities
+        obs_updated = this%partner%update_quantity_as_partner(this%partner_quantities(iq), clock) .and. obs_updated
       end do
 
       if(obs_updated) then
@@ -153,7 +153,7 @@ contains
         call this%clock%set_time(clock)
       else
         if (debug%info) then
-          write(message(1), '(a)') " -- Partner observables are not up-to-date, so cannot update interaction with " // &
+          write(message(1), '(a)') " -- Partner quantities are not up-to-date, so cannot update interaction with " // &
             trim(this%partner%namespace%get())
           call messages_info(1)
         end if
