@@ -57,6 +57,7 @@ module system_abst_oct_m
     procedure :: set_propagator => system_set_propagator
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
+    procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -341,6 +342,28 @@ contains
 
     POP_SUB(system_reset_clocks)
   end subroutine system_reset_clocks
+
+  ! ---------------------------------------------------------
+  logical function system_update_exposed_quantities(this, clock, n_quantities, quantities) result(updated)
+    class(system_abst_t),      intent(inout) :: this
+    type(clock_t),             intent(in)    :: clock
+    integer,                   intent(in)    :: n_quantities
+    integer,                   intent(in)    :: quantities(:)
+
+    integer :: iq
+
+    if (this%clock < clock .and. this%clock%is_earlier_with_step(clock)) then
+      !This is not the best moment to update the interaction
+      updated = .false.
+    else
+      !This is the best moment to update the interaction
+      updated = .true.
+      do iq = 1, n_quantities
+        updated = this%update_exposed_quantity(quantities(iq), clock) .and. updated
+      end do
+    end if
+
+  end function system_update_exposed_quantities
 
 end module system_abst_oct_m
 

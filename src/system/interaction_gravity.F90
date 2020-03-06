@@ -92,17 +92,11 @@ contains
     class(interaction_gravity_t), intent(inout) :: this
     class(clock_t),               intent(in)    :: clock
 
-    logical :: obs_updated
-    integer :: iq
+    logical :: allowed_to_update
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
 
     PUSH_SUB(interaction_gravity_update)
-
-    ASSERT(associated(this%partner_pos))
-    ASSERT(associated(this%system_pos))
-    ASSERT(associated(this%partner_mass))
-    ASSERT(associated(this%system_mass))
 
     !The interaction has already been updated to the desired time
     if (this%clock == clock) then
@@ -115,50 +109,36 @@ contains
       return
     end if
 
-    if (this%partner%clock < clock .and. this%partner%clock%is_earlier_with_step(clock)) then
-      !This is not the best moment to update the interaction
+    allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
+
+    if (allowed_to_update) then
       if (debug%info) then
-        write(message(1), '(a)') " -- Cannot update interaction with " // trim(this%partner%namespace%get())
+        write(message(1), '(a)') " -- Update interaction with " // trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
+        call messages_info(2)
+      end if
+
+      !We can now compute the interaction from the updated pointers
+      ASSERT(associated(this%partner_pos))
+      ASSERT(associated(this%system_pos))
+      ASSERT(associated(this%partner_mass))
+      ASSERT(associated(this%system_mass))
+
+      dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
+
+      this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
+        / dist3 * (GG * this%system_mass * this%partner_mass)
+
+      ! Update was successful, so set new interaction time
+      updated = .true.
+      call this%clock%set_time(clock)
+    else
+      if (debug%info) then
+        write(message(1), '(a)') " -- Cannot update yet the interaction with " // trim(this%partner%namespace%get())
         write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
         call messages_info(2)
       end if
       updated = .false.
-
-    else
-      !This is the best moment to update the interaction
-
-      !We first request the partner to update its quantities. The quantities
-      !from system have already been updated. This might not be possible if the
-      !partner has a predictor corrector propagator
-      obs_updated = .true.
-      do iq = 1, this%n_partner_quantities
-        obs_updated = this%partner%update_exposed_quantity(this%partner_quantities(iq), clock) .and. obs_updated
-      end do
-
-      if(obs_updated) then
-        if (debug%info) then
-          write(message(1), '(a)') " -- Update interaction with " // trim(this%partner%namespace%get())
-          write(message(2), '(a,i3,a,i3)') " --- clocks are ", clock%get_tick(), " and ", this%clock%get_tick()
-          call messages_info(2)
-        end if
-
-        !We can now compute the interaction from the updated pointers
-        dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
-
-        this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-          / dist3 * (GG * this%system_mass * this%partner_mass)
-
-        ! Update was successful, so set new interaction time
-        updated = .true.
-        call this%clock%set_time(clock)
-      else
-        if (debug%info) then
-          write(message(1), '(a)') " -- Partner quantities are not up-to-date, so cannot update interaction with " // &
-            trim(this%partner%namespace%get())
-          call messages_info(1)
-        end if
-        updated = .false.
-      end if
     end if
 
     POP_SUB(interaction_gravity_update)
