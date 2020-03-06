@@ -1009,14 +1009,12 @@ contains
     logical, optional,             intent(in)    :: skip(:)
     logical, optional,             intent(in)    :: packed
 
-    integer :: ib, iqn, ist, istmin, istmax, size1
+    integer :: ib, iqn, ist, istmin, istmax, rank, size1
     logical :: same_node, verbose_, packed_
-    integer, allocatable :: bstart(:), bend(:)
+    integer, allocatable :: bstart(:), bend(:), blocks_per_rank(:), block_offsets(:)
 
     PUSH_SUB(states_elec_init_block)
 
-    SAFE_ALLOCATE(bstart(1:st%nst))
-    SAFE_ALLOCATE(bend(1:st%nst))
     SAFE_ALLOCATE(st%group%iblock(1:st%nst, 1:st%d%nik))
 
     st%group%iblock = 0
@@ -1053,45 +1051,64 @@ contains
       call messages_info()
     end if
 
-    ! count and assign blocks
-    ib = 0
-    st%group%nblocks = 0
-    bstart(1) = istmin
-    do ist = istmin, istmax
-      INCR(ib, 1)
+    SAFE_ALLOCATE(blocks_per_rank(0:st%mpi_grp%size-1))
+    SAFE_ALLOCATE(block_offsets(0:st%mpi_grp%size-1))
 
-      st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
+    ! get block sizes
+    blocks_per_rank(:) = ceiling(real(st%dist%num(:), kind=8) / st%d%block_size)
+    st%group%nblocks = sum(blocks_per_rank)
 
-      same_node = .true.
-      if(st%parallel_in_states .and. ist /= istmax) then
-        ! We have to avoid that states that are in different nodes end
-        ! up in the same block
-        same_node = (st%node(ist + 1) == st%node(ist))
-      end if
-
-      if(ib == st%d%block_size .or. ist == istmax .or. .not. same_node) then
-        ib = 0
-        INCR(st%group%nblocks, 1)
-        bend(st%group%nblocks) = ist
-        if(ist /= istmax) bstart(st%group%nblocks + 1) = ist + 1
-      end if
-    end do
+    SAFE_ALLOCATE(bstart(1:st%group%nblocks))
+    SAFE_ALLOCATE(bend(1:st%group%nblocks))
 
     SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
-
     SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
-    st%group%block_is_local = .false.
-    st%group%block_start  = -1
-    st%group%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
+    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
+    SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
+    SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
 
-    do ib = 1, st%group%nblocks
-      if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
-        if(st%group%block_start == -1) st%group%block_start = ib
-        st%group%block_end = ib
-        do iqn = st%d%kpt%start, st%d%kpt%end
-          st%group%block_is_local(ib, iqn) = .true.
-        end do
+    ! compute block offsets, starts, ends
+    block_offsets(0) = 0
+    do rank = 0, st%mpi_grp%size - 1
+      if(rank > 0) then
+        block_offsets(rank) = block_offsets(rank - 1) + blocks_per_rank(rank - 1)
       end if
+      do ib = 1, blocks_per_rank(rank)
+        bstart(block_offsets(rank) + ib) = st%dist%range(1, rank) + st%d%block_size * (ib - 1)
+        st%group%block_node(block_offsets(rank) + ib) = rank
+      end do
+    end do
+    do ib = 1, st%group%nblocks - 1
+      bend(ib) = bstart(ib + 1) - 1
+    end do
+    bend(st%group%nblocks) = st%nst
+
+    st%group%block_start = block_offsets(st%mpi_grp%rank) + 1
+    if(st%mpi_grp%rank < st%mpi_grp%size - 1) then
+      st%group%block_end = block_offsets(st%mpi_grp%rank + 1)
+    else
+      st%group%block_end = st%group%nblocks
+    end if
+
+    ! get inverse mapping and block-to-rank mapping
+    st%group%block_is_local = .false.
+    do ib = 1, st%group%nblocks
+      st%group%iblock(bstart(ib):bend(ib), st%d%kpt%start:st%d%kpt%end) = ib
+      st%group%block_is_local(ib, st%d%kpt%start:st%d%kpt%end) = st%group%block_node(ib) == st%mpi_grp%rank
+    end do
+
+    ! store start, end, and size
+    st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
+    st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
+    st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
+
+    st%group%block_initialized = .true.
+
+    ! some checks
+    ASSERT(associated(st%node))
+    ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
+    do ib = 1, st%group%nblocks
+      ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
     end do
 
     ! allocate one big chunk of memory for all states
@@ -1104,9 +1121,9 @@ contains
       nullify(st%group%dpsi)
     end if
 
-
-    do ib = st%group%block_start, st%group%block_end
-      do iqn = st%d%kpt%start, st%d%kpt%end
+    ! initialize batches
+    do iqn = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
         if (states_are_real(st)) then
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             st%group%dpsi(:, :, ib, iqn), iqn, packed=.true.)
@@ -1117,25 +1134,6 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
-    SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
-    
-    st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
-    st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
-    st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
-
-    st%group%block_initialized = .true.
-
-    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
-
-    ASSERT(associated(st%node))
-    ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
-    
-    do ib = 1, st%group%nblocks
-      st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
-      ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
-    end do
-    
     if(verbose_) then
       call messages_write('Info: Blocks of states')
       call messages_info()
@@ -1783,15 +1781,16 @@ contains
         call messages_fatal(2, namespace=namespace)
       end if
 
-      call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
-
-      st%st_start = st%dist%start
-      st%st_end   = st%dist%end
-      st%lnst     = st%dist%nlocal
-      st%node(1:st%nst) = st%dist%node(1:st%nst)
-      st%parallel_in_states = st%dist%parallel
 
     end if
+
+    call distributed_init(st%dist, st%nst, st%mpi_grp%comm, "states", scalapack_compat = st%scalapack_compatible)
+
+    st%st_start = st%dist%start
+    st%st_end   = st%dist%end
+    st%lnst     = st%dist%nlocal
+    st%node(1:st%nst) = st%dist%node(1:st%nst)
+    st%parallel_in_states = st%dist%parallel
 
     POP_SUB(states_elec_distribute_nodes)
   end subroutine states_elec_distribute_nodes
