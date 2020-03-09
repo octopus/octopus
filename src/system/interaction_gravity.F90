@@ -72,7 +72,7 @@ contains
     this%dim = dim
     this%partner => partner
 
-    !Gravity interaction needs only one quantity from each system, which is the position
+    !Gravity interaction needs two quantities from each system: the position and the mass
     this%n_system_quantities = 2
     this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
