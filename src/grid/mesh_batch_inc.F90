@@ -458,8 +458,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
   integer :: ist, indb, idim, ip, nst_
   type(profile_t), save :: prof, profcomm
-  R_TYPE, allocatable :: tmp(:), phi(:, :)
-  R_TYPE :: temp
+  R_TYPE, allocatable :: phi(:, :)
 
   ! Variables related to the GPU:
   type(accel_mem_t) :: phi_buffer
@@ -608,7 +607,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
   R_TYPE,            intent(in)    :: aa(:)
   integer, optional, intent(in)    :: nst
 
-  integer :: ist, indb, idim, ip, nst_
+  integer :: ist, indb, idim, nst_
   type(profile_t), save :: prof
   R_TYPE, allocatable :: phi(:,:)
 

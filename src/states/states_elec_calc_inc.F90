@@ -622,7 +622,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
   R_TYPE,  optional,   intent(in)    :: beta_ij(:)   !< beta_ij(nst)
   logical, optional,   intent(in)    :: against_all
 
-  integer :: ib, minst, maxst, ist, idim, length_ss, ibind
+  integer :: ib, minst, maxst, ist, length_ss
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:)
   type(profile_t), save :: prof
