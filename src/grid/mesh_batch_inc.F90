@@ -482,7 +482,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), psi(1:mesh%np,idim),& 
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%X(ff_linear)(:, indb), psi(1:mesh%np,idim),& 
            reduce = .false.)
       end do
     end do
@@ -511,8 +511,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
         end do
       end if
 
-      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%pack%X(psi)(1,1), & 
-               ubound(aa%pack%X(psi), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%X(ff_linear)(1,1), & 
+               ubound(aa%X(ff_linear), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
 
       do ist = 1, nst_
         dot(ist) = R_CONJ(dot(ist))
@@ -561,15 +561,15 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     local_sizes  = (/ wgsize/aa%dim,               aa%dim, 1 /)
    
 
-    ASSERT(accel_buffer_is_allocated(aa%pack%buffer))
+    ASSERT(accel_buffer_is_allocated(aa%ff_device))
     ASSERT(accel_buffer_is_allocated(phi_buffer))
     ASSERT(accel_buffer_is_allocated(dot_buffer))
 
     call accel_set_kernel_arg(X(kernel_batch_dotp), 0, mesh%np)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 1, nst_)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 2, aa%dim)
-    call accel_set_kernel_arg(X(kernel_batch_dotp), 3, aa%pack%buffer)
-    call accel_set_kernel_arg(X(kernel_batch_dotp), 4, log2(aa%pack%size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 3, aa%ff_device)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 4, log2(aa%pack_size(1)))
     call accel_set_kernel_arg(X(kernel_batch_dotp), 5, phi_buffer)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 6, log2(np_padded))
     call accel_set_kernel_arg(X(kernel_batch_dotp), 7, dot_buffer)
@@ -634,7 +634,7 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
       do idim = 1, xx%dim
         indb = xx%ist_idim_to_linear((/ist, idim/))
         if(abs(aa(ist)) < M_EPSILON) cycle
-        call lalg_axpy(mesh%np, aa(ist), xx%states_linear(indb)%X(psi), psi(1:mesh%np, idim))
+        call lalg_axpy(mesh%np, aa(ist), xx%X(ff_linear)(:, indb), psi(1:mesh%np, idim))
       end do
     end do
 
@@ -642,8 +642,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
     if(xx%dim == 1) then 
 
-      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%pack%X(psi)(1,1), &
-                    ubound(xx%pack%X(psi), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+      call blas_gemv('T', nst_, mesh%np, R_TOTYPE(M_ONE), xx%X(ff_pack)(1,1), &
+                    ubound(xx%X(ff_pack), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
 
     else !Spinor case
 
@@ -681,8 +681,8 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 0, mesh%np)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 1, nst_)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 2, xx%dim)
-    call accel_set_kernel_arg(X(kernel_batch_axpy), 3, xx%pack%buffer)
-    call accel_set_kernel_arg(X(kernel_batch_axpy), 4, log2(xx%pack%size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 3, xx%ff_device)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 4, log2(xx%pack_size(1)))
     call accel_set_kernel_arg(X(kernel_batch_axpy), 5, aa_buffer)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 6, psi_buffer)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 7, log2(np_padded))
