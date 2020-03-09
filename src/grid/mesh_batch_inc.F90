@@ -511,8 +511,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
         end do
       end if
 
-      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%X(ff_linear)(1,1), & 
-               ubound(aa%X(ff_linear), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%X(ff_pack)(1,1), & 
+               ubound(aa%X(ff_pack), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
 
       do ist = 1, nst_
         dot(ist) = R_CONJ(dot(ist))
