@@ -26,19 +26,18 @@
     PUSH_SUB(X(write_header))
 
     iio = 0;
-    call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, trim(fname))
+    call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
     
     POP_SUB(X(write_header))
   end subroutine X(write_header)
-
 
   ! ------------------------------------------------------
 
   subroutine X(write_binary)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:)
+    R_TYPE, target,      intent(in)  :: ff(:)
     integer,             intent(out) :: ierr
     logical, optional,   intent(in)  :: nohead   !< skip header
     logical, optional,   intent(in)  :: fendian  !< flip endianness
@@ -53,7 +52,7 @@
     flpe = logical_to_integer(optional_default(fendian, .false.))
       
     iio = 0;
-    call write_binary(np, ff(1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+    call write_binary(np, c_loc(ff(1)), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(write_binary))
@@ -64,7 +63,7 @@
   subroutine X(write_binary2)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:, :)
+    R_TYPE, target,      intent(in)  :: ff(:, :)
     integer,             intent(out) :: ierr
     logical, optional,   intent(in)  :: nohead   !> skip header
     logical, optional,   intent(in)  :: fendian  !> flip endianness
@@ -79,7 +78,7 @@
     flpe = logical_to_integer(optional_default(fendian, .false.))
 
     iio = 0;
-    call write_binary(np, ff(1, 1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+    call write_binary(np, c_loc(ff(1, 1)), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(write_binary2))
@@ -90,7 +89,7 @@
   subroutine X(write_binary3)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:)
+    R_TYPE, target,      intent(in)  :: ff(:,:,:)
     integer,             intent(out) :: ierr
     logical, optional,   intent(in)  :: nohead   !> skip header
     logical, optional,   intent(in)  :: fendian  !> flip endianness
@@ -106,7 +105,7 @@
     flpe = logical_to_integer(optional_default(fendian, .false.))
 
     iio = 0;
-    call write_binary(np, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+    call write_binary(np, c_loc(ff(1,1,1)), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(write_binary3))
@@ -117,7 +116,7 @@
   subroutine X(write_binary4)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:,:)
+    R_TYPE, target,      intent(in)  :: ff(:,:,:,:)
     integer,             intent(out) :: ierr
     logical, optional,   intent(in)  :: nohead   !> skip header
     logical, optional,   intent(in)  :: fendian  !> flip endianness
@@ -133,7 +132,7 @@
     flpe = logical_to_integer(optional_default(fendian, .false.))
 
     iio = 0;
-    call write_binary(np, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+    call write_binary(np, c_loc(ff(1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(write_binary4))
@@ -144,7 +143,7 @@
   subroutine X(write_binary5)(fname, np, ff, ierr, nohead, fendian)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(in)  :: ff(:,:,:,:,:)
+    R_TYPE, target,      intent(in)  :: ff(:,:,:,:,:)
     integer,             intent(out) :: ierr
     logical, optional,   intent(in)  :: nohead   !> skip header
     logical, optional,   intent(in)  :: fendian  !> flip endianness
@@ -160,7 +159,7 @@
     flpe = logical_to_integer(optional_default(fendian, .false.))
 
     iio = 0;
-    call write_binary(np, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, trim(fname))
+    call write_binary(np, c_loc(ff(1,1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, nhd, flpe, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(write_binary5))
@@ -210,7 +209,7 @@
   subroutine X(read_binary)(fname, np, ff, ierr, offset)
     character(len=*),    intent(in)   :: fname
     integer,             intent(in)   :: np
-    R_TYPE,              intent(out)  :: ff(:)
+    R_TYPE, target,      intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
     integer, optional,   intent(in)   :: offset
 
@@ -227,7 +226,7 @@
 #endif
     if(ierr == -1) then
       iio = 0
-      call read_binary(np, optional_default(offset, 0), ff(1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+      call read_binary(np, optional_default(offset, 0), c_loc(ff(1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
       call io_incr_counters(iio)
     end if
 
@@ -286,7 +285,7 @@
   subroutine X(read_binary2)(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:)
+    R_TYPE, target,      intent(out) :: ff(:,:)
     integer,             intent(out) :: ierr
 
     integer :: iio
@@ -296,7 +295,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, ff(1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+    call read_binary(np, 0, c_loc(ff(1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary2))
@@ -307,7 +306,7 @@
   subroutine X(read_binary3)(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:)
+    R_TYPE, target,      intent(out) :: ff(:,:,:)
     integer,             intent(out) :: ierr
 
     integer :: iio
@@ -317,7 +316,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, ff(1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+    call read_binary(np, 0, c_loc(ff(1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary3))
@@ -328,7 +327,7 @@
   subroutine X(read_binary4)(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:,:)
+    R_TYPE, target,      intent(out) :: ff(:,:,:,:)
     integer,             intent(out) :: ierr
 
     integer :: iio
@@ -338,7 +337,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, ff(1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+    call read_binary(np, 0, c_loc(ff(1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary4))
@@ -349,7 +348,7 @@
   subroutine X(read_binary5)(fname, np, ff, ierr)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np
-    R_TYPE,              intent(out) :: ff(:,:,:,:,:)
+    R_TYPE, target,      intent(out) :: ff(:,:,:,:,:)
     integer,             intent(out) :: ierr
 
     integer :: iio
@@ -359,7 +358,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, ff(1,1,1,1,1), R_TYPE_IOBINARY, ierr, iio, trim(fname))
+    call read_binary(np, 0, c_loc(ff(1,1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary5))

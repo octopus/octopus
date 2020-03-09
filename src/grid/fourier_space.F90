@@ -23,6 +23,7 @@ module fourier_space_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use global_oct_m
+  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use fft_oct_m
@@ -45,6 +46,7 @@ module fourier_space_oct_m
     dcube_function_fs2rs,       &
     zcube_function_fs2rs,       &
     fourier_space_op_t,         &
+    fourier_space_op_nullify,   &
     dfourier_space_op_init,     &
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
@@ -57,9 +59,32 @@ module fourier_space_oct_m
     CMPLX, pointer :: zop(:, :, :)
     logical :: in_device_memory
     type(accel_mem_t) :: op_buffer
+    logical :: real_op
+
+    !Parameters used to generate this kernel
+    FLOAT, public :: qq(1:MAX_DIM)
+    FLOAT, public :: singularity
   end type fourier_space_op_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine fourier_space_op_nullify(this)
+    type(fourier_space_op_t), intent(inout) :: this
+
+    PUSH_SUB(fourier_space_op_end)
+
+    nullify(this%dop)
+    nullify(this%zop) 
+    this%in_device_memory = .false.
+ 
+    !We just set a very large q to guaranty that the kernel is always
+    this%qq = CNST(1e5)  
+    this%singularity = M_ZERO
+
+    POP_SUB(fourier_space_op_end)
+
+  end subroutine fourier_space_op_nullify
 
   ! ---------------------------------------------------------
 
@@ -107,6 +132,12 @@ contains
         call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
       end if
 
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        allocated = .true.
+        ASSERT(associated(cube%fft))
+        cf%fs => cube%fft%fs_data(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3))
+      end if
     end select
 
     if(.not. allocated) then
@@ -142,6 +173,11 @@ contains
         deallocated = .true.
         call accel_release_buffer(cf%fourier_space_buffer)
       end if
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        deallocated = .true.
+        nullify(cf%fs)
+      end if
     end select
 
     if(.not. deallocated) then
@@ -165,6 +201,7 @@ contains
     end if
     SAFE_DEALLOCATE_P(this%dop)
     SAFE_DEALLOCATE_P(this%zop)
+    
 
     POP_SUB(fourier_space_op_end)
   end subroutine fourier_space_op_end

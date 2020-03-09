@@ -28,6 +28,7 @@ module v_ks_oct_m
   use energy_oct_m
   use energy_calc_oct_m
   use epot_oct_m
+  use exchange_operator_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -211,6 +212,7 @@ contains
     
     ks%xc_family = XC_FAMILY_NONE
     ks%sic_type  = SIC_NONE
+    ks%oep%level = XC_OEP_NONE
    
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
@@ -355,7 +357,7 @@ contains
 
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree-Fock with k-points", namespace=namespace)
+        call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE
 
@@ -395,6 +397,8 @@ contains
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
         call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+      else
+        ks%oep%level = XC_OEP_NONE
       end if
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
@@ -532,7 +536,6 @@ contains
     else
       ks%vdw_self_consistent = .false.
     end if
-    
     
     POP_SUB(v_ks_init)
 
@@ -793,10 +796,11 @@ contains
       call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
-    nullify(ks%calc%hf_st) 
+    nullify(ks%calc%hf_st)
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_elec_copy(ks%calc%hf_st, st)
+
       if(st%parallel_in_states) then
         if(accel_is_enabled()) then
           call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
@@ -809,6 +813,7 @@ contains
         call states_elec_parallel_remote_access_start(ks%calc%hf_st)
       end if
     end if
+
 
     ! Calculate the vector potential induced by the electronic current.
     ! WARNING: calculating the self-induced magnetic field here only makes
@@ -907,7 +912,7 @@ contains
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, &
-            -minval(st%eigenval(st%nst,:)), qsp(ispin), vxc_sic)
+            -minval(st%eigenval(st%nst,:)), qsp(ispin), hm%exxop, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -962,20 +967,21 @@ contains
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, vtau = ks%calc%vtau)
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, &
+            ks%calc%vxc, vtau = ks%calc%vtau)
         else
           call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc)
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc)
         end if
       end if
 
@@ -992,6 +998,9 @@ contains
           else
             call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
               hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+          end if
+          if (ks%oep%has_photons) then
+            ks%calc%energy%photon_exchange = ks%oep%pt%ex
           end if
         end if
 
@@ -1187,28 +1196,27 @@ contains
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if
 
+      
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
-        if(associated(hm%hf_st)) then
-          if(hm%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%hf_st)
-          call states_elec_end(hm%hf_st)
-          SAFE_DEALLOCATE_P(hm%hf_st)
+        if(associated(hm%exxop%st)) then
+          if(hm%exxop%st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%exxop%st)
+          call states_elec_end(hm%exxop%st)
+          SAFE_DEALLOCATE_P(hm%exxop%st)
         end if
-        
-        hm%hf_st => ks%calc%hf_st
 
         select case(ks%theory_level)
         case(HARTREE_FOCK)
-          hm%exx_coef = ks%xc%exx_coef
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
         case(HARTREE)
-          hm%exx_coef = M_ONE
-        case(RDMFT) 
-          hm%exx_coef = M_ONE
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
+        case(RDMFT)
+          call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, M_ZERO, M_ONE, M_ZERO)
         end select
       end if
-      
+
     end if
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
@@ -1301,7 +1309,7 @@ contains
           kick_real = M_ZERO
           kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
@@ -1325,7 +1333,7 @@ contains
           kick_real = M_ZERO
           kick_time =((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
           if ( kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, 1, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if

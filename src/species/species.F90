@@ -330,8 +330,6 @@ contains
     select case (default_pseudopotential_set_id)
     case (OPTION__PSEUDOPOTENTIALSET__NONE)
       call messages_experimental('PseudopotentialSet = none')
-    case (OPTION__PSEUDOPOTENTIALSET__SG15)
-      call messages_experimental('PseudopotentialSet = sg15')
     case (OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
       call messages_experimental('PseudopotentialSet = hscv_lda')
     case (OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)

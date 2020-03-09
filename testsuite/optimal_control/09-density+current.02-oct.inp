@@ -8,6 +8,7 @@ fromScratch = yes
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 
 # ------------------

@@ -594,10 +594,10 @@ contains
       integer :: coords(MAX_INDEX)
       integer :: new_comm, new_comm_size
       character(len=6) :: node_type
-#endif
       type(mpi_grp_t) :: reorder_grp
       integer :: base_group, reorder_group, ranks(base_grp%size)
       integer :: ii, jj, kk, ll, nn, reorder_comm
+#endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
 
@@ -1041,8 +1041,8 @@ contains
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
 
     integer :: rank
-    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 #ifdef HAVE_OPENMP
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     integer :: nthreads
 #endif
 

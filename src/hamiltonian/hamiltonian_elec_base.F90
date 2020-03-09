@@ -22,6 +22,7 @@ module hamiltonian_elec_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -51,7 +52,7 @@ module hamiltonian_elec_base_oct_m
 
   private
 
-  public ::                                    &
+  public ::                                         &
     hamiltonian_elec_base_t,                        &
     dhamiltonian_elec_base_local,                   &
     zhamiltonian_elec_base_local,                   &
@@ -76,6 +77,8 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_update,                   &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
+    dhamiltonian_elec_base_phase_spiral,            &
+    zhamiltonian_elec_base_phase_spiral,            &
     dhamiltonian_elec_base_nlocal_force,            &
     zhamiltonian_elec_base_nlocal_force,            &
     projection_t,                                   &
@@ -105,7 +108,7 @@ module hamiltonian_elec_base_oct_m
     integer,                               public :: total_points
     integer                                       :: max_nprojs
     logical                                       :: projector_mix
-    CMPLX,                    allocatable, public :: projector_phases(:, :, :)
+    CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
     integer,                  allocatable         :: regions(:)
@@ -121,9 +124,12 @@ module hamiltonian_elec_base_oct_m
     type(accel_mem_t)                             :: buff_mix
     CMPLX,                    pointer,     public :: phase(:, :)
     CMPLX,                    allocatable, public :: phase_corr(:,:)
+    CMPLX,                    allocatable, public :: phase_spiral(:,:)
     type(accel_mem_t),                     public :: buff_phase
+    type(accel_mem_t),                     public :: buff_phase_spiral
     integer,                               public :: buff_phase_qn_start
     logical                                       :: projector_self_overlap  !< if .true. some projectors overlap with themselves
+    FLOAT,                    pointer,     public :: spin(:,:,:)
   end type hamiltonian_elec_base_t
 
   type projection_t
@@ -171,6 +177,7 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    nullify(this%spin)
     this%projector_self_overlap = .false.
     
     POP_SUB(hamiltonian_elec_base_init)
@@ -192,6 +199,8 @@ contains
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_elec_base_destroy_proj(this)
+
+    nullify(this%spin)
 
     POP_SUB(hamiltonian_elec_base_end)
   end subroutine hamiltonian_elec_base_end

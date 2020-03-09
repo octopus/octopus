@@ -68,8 +68,10 @@ AC_DEFUN([AX_PATH_GSL],
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_spline.h>
 ],[
-  gsl_spline x;
+  double *a, *b;
+  gsl_spline *x;
   gsl_asinh(1.0);
+  gsl_spline_init (x, a, b, 3);
 ])],
       AC_MSG_RESULT(yes),[
       AC_MSG_RESULT(no)

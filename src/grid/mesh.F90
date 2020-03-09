@@ -474,8 +474,9 @@ contains
       position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
-      message(1) = "Unable to open file '"//io_workpath(trim(dir)//"/"//trim(filename), namespace)//"'."
-      call messages_warning(1)
+      message(1) = "Unable to open file:"
+      message(2) = io_workpath(trim(dir)//"/"//trim(filename), namespace)
+      call messages_warning(2)
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag

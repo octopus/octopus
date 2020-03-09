@@ -17,23 +17,24 @@
 !!
 
 subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
-    vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
-  type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
-  type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
-  type(states_elec_t),  intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
-  type(poisson_t),      intent(in)    :: psolver
-  type(namespace_t),    intent(in)    :: namespace
-  FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
-  integer,              intent(in)    :: ispin           !< Number of spin channels 
-  FLOAT,                intent(in)    :: ioniz_pot
-  FLOAT,                intent(in)    :: qtot 
-  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
-  FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
-  FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
-  FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
-  FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
-  FLOAT, optional, target, intent(out)   :: ex_density(:)   !< The exchange energy density
-  FLOAT, optional, target, intent(out)   :: ec_density(:)   !< The correlation energy density
+    exx_op, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+  type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
+  type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
+  type(states_elec_t),    intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(poisson_t),        intent(in)    :: psolver
+  type(namespace_t),      intent(in)    :: namespace
+  FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
+  integer,                intent(in)    :: ispin           !< Number of spin channels 
+  FLOAT,                  intent(in)    :: ioniz_pot
+  FLOAT,                  intent(in)    :: qtot 
+  type(exchange_operator_t), intent(in) :: exx_op
+  FLOAT, optional,        intent(inout) :: vxc(:,:)        !< XC potential
+  FLOAT, optional,        intent(inout) :: ex              !< Exchange energy.
+  FLOAT, optional,        intent(inout) :: ec              !< Correlation energy.
+  FLOAT, optional,        intent(inout) :: deltaxc         !< The XC derivative discontinuity
+  FLOAT, optional,        intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
+  FLOAT, optional, target, intent(out)  :: ex_density(:)   !< The exchange energy density
+  FLOAT, optional, target, intent(out)  :: ec_density(:)   !< The correlation energy density
 
   integer, parameter :: N_BLOCK_MAX = 10000
   integer :: n_block
@@ -170,6 +171,18 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
     end if
 
   end if
+
+  if(xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_GGA .or. &
+         xcs%functional(FUNC_C,1)%family == XC_FAMILY_HYB_MGGA) then
+
+    if (xcs%functional(FUNC_C,1)%id == XC_HYB_GGA_XC_MVORB_HSE06  &
+     .or. xcs%functional(FUNC_C,1)%id == XC_HYB_GGA_XC_MVORB_PBEH) then
+      call calc_mvorb_alpha()
+    end if
+
+  end if
+
+
 
   if(xcs%parallel) then
     call distributed_init(distribution, der%mesh%np, st%st_kpt_mpi_grp%comm)
@@ -718,6 +731,92 @@ contains
 
     POP_SUB(xc_get_vxc.mgga_init)
   end subroutine mgga_init
+
+    ! ---------------------------------------------------------
+
+  subroutine calc_mvorb_alpha()
+    FLOAT, allocatable :: gnon(:)
+    FLOAT :: tb09_c, alpha
+    FLOAT :: gn(MAX_DIM), n
+    integer :: ii
+#ifdef HAVE_LIBXC4
+    FLOAT :: parameters(3)
+#endif
+
+    PUSH_SUB(xc_get_vxc.calc_mvorb_alpha)
+
+    SAFE_ALLOCATE(gnon(1:der%mesh%np))
+
+     do ii = 1, der%mesh%np
+      if(ispin == UNPOLARIZED) then
+        n = dens(ii, 1)
+        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1)
+      else
+        n = dens(ii, 1) + dens(ii, 2)
+        gn(1:der%mesh%sb%dim) = gdens(ii, 1:der%mesh%sb%dim, 1) + gdens(ii, 1:der%mesh%sb%dim, 2)
+      end if
+
+      if (n <= CNST(1e-7)) then
+        gnon(ii) = M_ZERO
+      else
+        gnon(ii) = sqrt(sum((gn(1:der%mesh%sb%dim)/n)**2))
+        gnon(ii) = sqrt(gnon(ii))
+      end if
+    end do
+
+    tb09_c =  dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume
+
+    SAFE_DEALLOCATE_A(gnon)
+
+    select case(functl(FUNC_C)%id)
+    case(XC_HYB_GGA_XC_MVORB_HSE06)
+      alpha = CNST(0.121983)+CNST(0.130711)*tb09_c**4
+
+      if(alpha > 1) then
+        write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
+        call messages_warning(1, namespace=namespace)
+        alpha = 0.25
+      end if
+
+
+#ifdef HAVE_LIBXC4
+      parameters(1) = alpha
+      parameters(2) = xcs%cam_omega
+      parameters(3) = xcs%cam_omega
+      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters(1))
+#else
+      call XC_F90(hyb_gga_xc_hse_set_par)(functl(FUNC_C)%conf, alpha, xcs%cam_omega)
+#endif
+      !The name is confusing. Here alpha is the beta of hybrids in functionals, 
+      !but is called alpha in the original paper.
+      xcs%cam_beta = alpha
+
+    case(XC_HYB_GGA_XC_MVORB_PBEH)
+      alpha = -CNST(1.00778)+CNST(1.10507)*tb09_c
+
+      if(alpha > 1) then
+        write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
+        call messages_warning(1, namespace=namespace)
+        alpha = 0.25
+      end if
+      if(alpha < 0) then
+        write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter smaller than zero (' , alpha ,').'
+        call messages_warning(1, namespace=namespace)
+        alpha = 0.25
+      end if
+
+#ifdef HAVE_LIBXC4
+      call messages_not_implemented("MVORB with PBE0 and libxc >= 4.0", namespace=namespace)
+#else
+      call XC_F90(hyb_gga_xc_pbeh_set_par)(functl(FUNC_C)%conf, alpha)
+#endif
+      xcs%cam_alpha = alpha
+    case default
+      call messages_not_implemented("MVORB density-based mixing for functionals other than PBE0 and HSE06", namespace=namespace)
+    end select
+
+    POP_SUB(xc_get_vxc.calc_mvorb_alpha)
+  end subroutine calc_mvorb_alpha
 
 
   ! ---------------------------------------------------------

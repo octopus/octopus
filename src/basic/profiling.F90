@@ -334,7 +334,10 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer :: ii
     real(8), parameter :: megabyte = 1048576.0_8
-    integer(8) :: io_open_count, io_close_count, io_open_count_red, io_close_count_red
+    integer(8) :: io_open_count, io_close_count
+#ifdef HAVE_MPI
+    integer(8) :: io_open_count_red, io_close_count_red
+#endif
 
     if(.not. in_profiling_mode) return
     PUSH_SUB(profiling_end)

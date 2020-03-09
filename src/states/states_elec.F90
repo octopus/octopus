@@ -965,11 +965,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_elec_t structure.
-  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip)
+  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip, packed)
     type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: skip(:)
+    logical,      optional, intent(in)      :: packed
 
     PUSH_SUB(states_elec_allocate_wfns)
 
@@ -978,7 +979,7 @@ contains
       st%wfs_type = wfs_type
     end if
 
-    call states_elec_init_block(st, mesh, skip = skip)
+    call states_elec_init_block(st, mesh, skip = skip, packed=packed)
     call states_elec_set_zero(st)
 
     POP_SUB(states_elec_allocate_wfns)
@@ -1001,14 +1002,15 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_elec_init_block(st, mesh, verbose, skip)
+  subroutine states_elec_init_block(st, mesh, verbose, skip, packed)
     type(states_elec_t),           intent(inout) :: st
     type(mesh_t),                  intent(in)    :: mesh
     logical, optional,             intent(in)    :: verbose
     logical, optional,             intent(in)    :: skip(:)
+    logical, optional,             intent(in)    :: packed
 
     integer :: ib, iqn, ist, istmin, istmax
-    logical :: same_node, verbose_
+    logical :: same_node, verbose_, packed_
     integer, allocatable :: bstart(:), bend(:)
 
     PUSH_SUB(states_elec_init_block)
@@ -1020,6 +1022,7 @@ contains
     st%group%iblock = 0
 
     verbose_ = optional_default(verbose, .true.)
+    packed_ = optional_default(packed, .false.)
 
     !In case we have a list of state to skip, we do not allocate them 
     istmin = 1
@@ -1089,13 +1092,11 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
-            call st%group%psib(ib, iqn)%dallocate(bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              special=.true., packed=packed_)
           else
-            call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1, iqn)
-            call st%group%psib(ib, iqn)%zallocate(bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              special=.true., packed=packed_)
           end if
           
         end do
@@ -1267,26 +1268,7 @@ contains
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
-    !%Variable StatesMirror
-    !%Type logical
-    !%Section Execution::Optimization
-    !%Description
-    !% When this is enabled, Octopus keeps a copy of the states in
-    !% main memory. This speeds up calculations when working with
-    !% GPUs, as the memory does not to be copied back, but consumes
-    !% more main memory.
-    !%
-    !% The default is false, except when acceleration is enabled and
-    !% StatesPack is disabled.
-    !%End
-
-    defaultl = .false.
-    if(accel_is_enabled() .and. .not. st%d%pack_states) then
-      defaultl = .true.
-    end if
-    call parse_variable(namespace, 'StatesMirror', defaultl, st%d%mirror_states)
-
-    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
+    call messages_obsolete_variable(namespace, 'StatesMirror')
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1639,10 +1621,11 @@ contains
   end subroutine states_elec_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_elec_fermi(st, namespace, mesh)
+  subroutine states_elec_fermi(st, namespace, mesh, compute_spin)
     type(states_elec_t), intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
+    logical, optional,   intent(in)    :: compute_spin
 
     !> Local variables.
     integer            :: ist, ik
@@ -1672,7 +1655,7 @@ contains
       end if
     end if
 
-    if(st%d%ispin == SPINORS) then
+    if(st%d%ispin == SPINORS .and. optional_default(compute_spin,.true.)) then
       ASSERT(states_are_complex(st))
       
       st%spin(:,:,:) = M_ZERO
@@ -2264,7 +2247,7 @@ contains
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        mem = mem + st%group%psib(ib, iqn)%pack_size()
+        mem = mem + st%group%psib(ib, iqn)%pack_total_size()
 
         if(mem > max_mem) then
           call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)

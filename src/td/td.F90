@@ -19,10 +19,12 @@
 #include "global.h"
 
 module td_oct_m
+  use boundaries_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use epot_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -331,6 +333,17 @@ contains
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
 
+    if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
+      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+      call messages_fatal(1, namespace=sys%namespace)
+    end if
+
+    if(sys%gr%der%boundaries%spiralBC .and. &
+          any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then 
+      message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
+      call messages_fatal(1, namespace=sys%namespace)
+    end if
+
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -385,14 +398,14 @@ contains
       if(sys%hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(sys%hm%lda_u)
         !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
         call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%hm%psolver)
       else
         !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
       end if 
     else
-      call states_elec_allocate_wfns(st, gr%mesh)
+      call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
     end if
 
@@ -488,6 +501,9 @@ contains
             call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
           end if
           call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
+          !We activate the sprial BC only after the kick, 
+          !to be sure that the first iteration corresponds to the ground state
+          if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
         end if
       end if
 
@@ -583,7 +599,7 @@ contains
           fromScratch = .false.
           call states_elec_deallocate_wfns(sys%st)
           call ground_state_run(sys, fromScratch)
-          call states_elec_allocate_wfns(sys%st, gr%mesh)
+          call states_elec_allocate_wfns(sys%st, gr%mesh, packed=.true.)
           call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
@@ -698,6 +714,17 @@ contains
         call restart_end(restart)
       end if
 
+      !We activate the sprial BC only after the kick, 
+      !to be sure that the first iteration corresponds to the ground state
+      if(gr%der%boundaries%spiralBC) then
+        if((td%iter-1)*td%dt > sys%hm%ep%kick%time .and. gr%der%boundaries%spiralBC) then
+          gr%der%boundaries%spiral = .true.
+        end if
+        sys%hm%hm_base%spin => st%spin
+        !We fill st%spin. In case of restart, we read it in td_load
+        if(fromScratch) call states_elec_fermi(st, sys%namespace, gr%mesh) 
+      end if
+
       ! Initialize the occupation matrices and U for LDA+U
       ! This must be called before parsing TDFreezeOccupations and TDFreezeU
       ! in order that the code does properly the initialization.
@@ -771,7 +798,7 @@ contains
 #endif
       call sys%hm%update_span(minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_elec_fermi(st, sys%namespace, gr%mesh)
+      call states_elec_fermi(st, sys%namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
       call energy_calc_total(sys%namespace, sys%hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
@@ -840,6 +867,11 @@ contains
           call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
         end if
         call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, 0)
+
+        !We activate the sprial BC only after the kick 
+        if(gr%der%boundaries%spiralBC) then
+          gr%der%boundaries%spiral = .true.
+        end if
       end if
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
@@ -1047,6 +1079,11 @@ contains
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
     end if
 
+    if(gr%der%boundaries%spiralBC) then
+      call states_elec_dump_spin(restart, st, gr, err)
+      if(err /= 0) ierr = ierr + 8
+    end if
+
     if(associated(st%frozen_rho)) then
       call states_elec_dump_frozen(restart, st, gr, ierr)
     end if
@@ -1110,6 +1147,13 @@ contains
       else
         call hamiltonian_elec_update(hm, gr%mesh, namespace, time = td%dt*td%iter)
       end if
+    end if
+
+    if(gr%der%boundaries%spiralBC) then
+      call states_elec_load_spin(restart, st, gr, err)
+      !To ensure back compatibility, if the file is not present, we use the 
+      !current states to get the spins
+      if(err /= 0) call states_elec_fermi(st, namespace, gr%mesh)
     end if
 
     if (debug%info) then

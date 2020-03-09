@@ -116,6 +116,7 @@ module lcao_oct_m
     FLOAT               :: diag_tol
     type(submesh_t), pointer :: sphere(:)
     type(batch_t),   pointer :: orbitals(:)
+    logical, allocatable :: is_orbital_initialized(:) !< array to store which orbitals are already initialized
   end type lcao_t
   
   type(profile_t), save :: prof_orbitals
@@ -563,6 +564,8 @@ contains
 
       SAFE_ALLOCATE(this%sphere(1:geo%natoms))
       SAFE_ALLOCATE(this%orbitals(1:geo%natoms))
+      SAFE_ALLOCATE(this%is_orbital_initialized(1:geo%natoms))
+      this%is_orbital_initialized = .false.
 
       SAFE_ALLOCATE(this%norb_atom(1:geo%natoms))
 
@@ -729,7 +732,7 @@ contains
 
       if(sys%st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
       end if
 
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -775,7 +778,7 @@ contains
           call system_h_setup(sys, calc_eigenval = .false., calc_current=.false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
           end if
         end if
       end if
@@ -947,13 +950,15 @@ contains
   !> This function deallocates a set of an atomic orbitals for an
   !! atom. It can be called when the batch is empty, in that case it
   !! does not do anything.
-  subroutine lcao_alt_end_orbital(orbitalb)
-    type(batch_t),   intent(inout) :: orbitalb
+  subroutine lcao_alt_end_orbital(this, iatom)
+    type(lcao_t),   intent(inout) :: this
+    integer,        intent(in)    :: iatom
 
     PUSH_SUB(lcao_alt_end_orbital)
 
-    if(orbitalb%is_ok()) then
-      call orbitalb%deallocate
+    if(this%is_orbital_initialized(iatom)) then
+      call this%orbitals(iatom)%end()
+      this%is_orbital_initialized(iatom) = .false.
     end if
 
     POP_SUB(lcao_alt_end_orbital)
@@ -1031,7 +1036,7 @@ contains
       else
 
         ! for simplicity, always use real ones here.
-        call dlcao_alt_get_orbital(this%orbitals(iatom), this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
+        call dlcao_alt_get_orbital(this, this%sphere(iatom), geo, 1, iatom, this%norb_atom(iatom))
 
         ! the extra orbitals with the derivative are not relevant here, hence we divide by this%mult
         SAFE_ALLOCATE(factors(1:this%norb_atom(iatom)/this%mult))
@@ -1045,7 +1050,7 @@ contains
         do ip = 1, this%sphere(iatom)%np
           aa = CNST(0.0)
           do iorb = 1, this%norb_atom(iatom)/this%mult
-            aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
+            aa = aa + factors(iorb)*this%orbitals(iatom)%dff_linear(ip, iorb)**2
           end do
           !Due to the mapping function, more than one task could write to the same point in the array
           !$omp critical

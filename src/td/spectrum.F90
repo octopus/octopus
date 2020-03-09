@@ -841,7 +841,7 @@ contains
 
     type(pcm_t) :: pcm
     FLOAT :: dipole_pcm(1:3)
-    integer :: ia, it, ii
+    integer :: ia, it
 
     ! unit io variables
     integer :: asc_unit_test
@@ -1274,7 +1274,7 @@ contains
       energy = (ie-1) * spectrum%energy_step + spectrum%min_energy
       fsum = fsum + energy * aimag(chi(ie))
     end do
-    fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:)**2)
+    fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:,1)**2)
 
     write(out_file, '(a)') '#%'
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
@@ -1348,13 +1348,9 @@ contains
     SAFE_ALLOCATE(resp(1:no_e))
     SAFE_ALLOCATE(imsp(1:no_e))
 
-    call batch_init(angularb, 1, 1)
-    call batch_init(respb, 1, 1)
-    call batch_init(imspb, 1, 1)
-
-    call angularb%add_state(angular(:, 1))
-    call respb%add_state(resp)
-    call imspb%add_state(imsp)
+    call batch_init(angularb, angular(:, 1))
+    call batch_init(respb, resp)
+    call batch_init(imspb, imsp)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, angularb)
 
@@ -1909,13 +1905,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call acc_batch%add_state(racc)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(acc_batch, racc)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -2016,13 +2008,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(acc_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call acc_batch%add_state(racc)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(acc_batch, racc)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, acc_batch, spectrum%min_energy, &
@@ -2122,13 +2110,9 @@ contains
       sps = M_ZERO
       spc = M_ZERO
 
-      call batch_init(cur_batch, 1, 1)
-      call batch_init(sps_batch, 1, 1)
-      call batch_init(spc_batch, 1, 1)
-
-      call cur_batch%add_state(rcur)
-      call sps_batch%add_state(sps)
-      call spc_batch%add_state(spc)
+      call batch_init(cur_batch, rcur)
+      call batch_init(sps_batch, sps)
+      call batch_init(spc_batch, spc)
 
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, cur_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, spc_batch)
@@ -2469,7 +2453,6 @@ contains
 
     PUSH_SUB(signal_damp)
 
-    ASSERT(time_function%is_ok())
     ASSERT(time_function%status() == BATCH_NOT_PACKED)
 
     SAFE_ALLOCATE(weight(time_start:time_end))
@@ -2506,13 +2489,13 @@ contains
     if(time_function%type() == TYPE_CMPLX) then
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
-          time_function%states_linear(ii)%zpsi(itime) = weight(itime)*time_function%states_linear(ii)%zpsi(itime)
+          time_function%zff_linear(itime, ii) = weight(itime)*time_function%zff_linear(itime, ii)
         end do      
       end do
     else     
       do ii = 1, time_function%nst_linear
         do itime = time_start, time_end
-          time_function%states_linear(ii)%dpsi(itime) = weight(itime)*time_function%states_linear(ii)%dpsi(itime)
+          time_function%dff_linear(itime, ii) = weight(itime)*time_function%dff_linear(itime, ii)
         end do
       end do
     end if      
@@ -2556,8 +2539,6 @@ contains
 
     PUSH_SUB(fourier_transform)
     
-    ASSERT(time_function%is_ok())
-    ASSERT(energy_function%is_ok())
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(time_function%status() == energy_function%status())
     ASSERT(time_function%status() == BATCH_NOT_PACKED)
@@ -2575,7 +2556,7 @@ contains
         energy = energy_step*(ienergy - 1) + energy_start
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
+          energy_function%dff_linear(ienergy, ii) = M_ZERO
         end do
 
         select case(transform)
@@ -2590,9 +2571,9 @@ contains
           sinz = aimag(ez)
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  time_function%states_linear(ii)%dpsi(itime) * sinz
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                  time_function%dff_linear(itime, ii) * sinz
             end do
             ez = ez * eidt
             sinz = aimag(ez)
@@ -2605,9 +2586,9 @@ contains
           cosz = real(ez, REAL_PRECISION)
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  time_function%states_linear(ii)%dpsi(itime) * cosz
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                  time_function%dff_linear(itime, ii) * cosz
             end do
             ez = ez * eidt
             cosz = real(ez, REAL_PRECISION)
@@ -2619,9 +2600,9 @@ contains
           ez = exp( -energy * ( (time_start-1)*time_step - t0) )
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
-              energy_function%states_linear(ii)%dpsi(ienergy) = &
-                energy_function%states_linear(ii)%dpsi(ienergy) + &
-                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
+              energy_function%dff_linear(ienergy, ii) = &
+                energy_function%dff_linear(ienergy, ii) + &
+                real( time_function%dff_linear(itime, ii) * ez, REAL_PRECISION)
             end do
             ez = ez * eidt
           end do
@@ -2629,8 +2610,8 @@ contains
 
         ! The total sum must be multiplied by time_step in order to get the integral.
         do ii = 1, time_function%nst_linear
-            energy_function%states_linear(ii)%dpsi(ienergy) = &
-              energy_function%states_linear(ii)%dpsi(ienergy) * time_step
+            energy_function%dff_linear(ienergy, ii) = &
+              energy_function%dff_linear(ienergy, ii) * time_step
         end do
         
 
@@ -2643,8 +2624,8 @@ contains
         energy_steps, energy_step, energy_start, noise)
 
       do ii = 1, time_function%nst_linear
-        call compressed_sensing_spectral_analysis(cs, time_function%states_linear(ii)%dpsi, &
-          energy_function%states_linear(ii)%dpsi)
+        call compressed_sensing_spectral_analysis(cs, time_function%dff_linear(:, ii), &
+          energy_function%dff_linear(:, ii))
       end do
 
       call compressed_sensing_end(cs)

@@ -28,3 +28,5 @@ AONormalize = no
 ACBN0IntersiteInteraction = yes
 ACBN0IntersiteCutoff = 7
 OutputLDA_U = effectiveU
+
+DFTUPoissonSolver = dft_u_poisson_isf

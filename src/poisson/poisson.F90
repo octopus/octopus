@@ -25,7 +25,9 @@ module poisson_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
+  use dressed_interaction_oct_m
   use fft_oct_m
+  use fourier_space_oct_m
   use global_oct_m
   use index_oct_m
   use io_oct_m
@@ -49,7 +51,7 @@ module poisson_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
   use poisson_fmm_oct_m
-  use poisson_libisf_oct_m
+  use poisson_psolver_oct_m
   use poisson_multigrid_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
@@ -71,10 +73,8 @@ module poisson_oct_m
     poisson_t,                   &
     poisson_fmm_t,               &
     poisson_get_solver,          &
-    poisson_get_qpoint,          &
     poisson_init,                &
     poisson_init_sm,             &
-    poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
     dpoisson_solve_sm,           &
@@ -92,6 +92,7 @@ module poisson_oct_m
     dpoisson_solve_finish,       &
     zpoisson_solve_start,        &
     zpoisson_solve_finish,       &
+    poisson_build_kernel,        &
     poisson_is_async
 
   integer, public, parameter ::         &
@@ -102,7 +103,7 @@ module poisson_oct_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_LIBISF        = 10,         &
+    POISSON_PSOLVER       = 10,         &
     POISSON_POKE          = 11,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
@@ -120,11 +121,12 @@ module poisson_oct_m
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
-    type(poisson_libisf_t) :: libisf_solver
+    type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
-    FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
+    logical, public :: is_dressed
+    type(dressed_interaction_t), public :: dressed
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -144,15 +146,18 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, label, theta, qq, solver)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, solver, verbose, force_serial, force_cmplx)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
+    FLOAT,                       intent(in)  :: qtot !< total charge
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
-    FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     integer,           optional, intent(in)  :: solver
+    logical,           optional, intent(in)  :: verbose
+    logical,           optional, intent(in)  :: force_serial
+    logical,           optional, intent(in)  :: force_cmplx
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -165,32 +170,54 @@ contains
 
     this%theta = optional_default(theta, M_ZERO)
 
-    str = "Hartree"
-    if(present(label)) str = trim(str) // trim(label)
-    call messages_print_stress(stdout, trim(str))
+    if(optional_default(verbose,.true.)) then
+      str = "Hartree"
+      if(present(label)) str = trim(str) // trim(label)
+      call messages_print_stress(stdout, trim(str))
+    end if
 
     this%nslaves = 0
     this%der => der
 
-    this%qq = M_ZERO
-    if(present(qq)  .and. simul_box_is_periodic(der%mesh%sb)) then
-      ASSERT(ubound(qq, 1) >= der%mesh%sb%periodic_dim)
-      ASSERT(this%method == POISSON_FFT)
-      this%qq(1:der%mesh%sb%periodic_dim) = qq(1:der%mesh%sb%periodic_dim)
+    !%Variable DressedOrbitals
+    !%Type logical
+    !%Default false
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% Allows for the calculation of coupled elecron-photon problems
+    !% by applying the dressed orbital approach. Details can be found in
+    !% https://arxiv.org/abs/1812.05562
+    !% At the moment, N electrons in d (<=3) spatial dimensions, coupled
+    !% to one photon mode can be described. The photon mode is included by
+    !% raising the orbital dimension to d+1 and changing the particle interaction
+    !% kernel and the local potential, where the former is included automatically,
+    !% but the latter needs to by added by hand as a user_defined_potential!
+    !% Coordinate 1-d: electron; coordinate d+1: photon.
+    !%End
+    call parse_variable(namespace, 'DressedOrbitals', .false., this%is_dressed)
+    call messages_print_var_value(stdout, 'DressedOrbitals', this%is_dressed)
+    if (this%is_dressed) then
+      call messages_experimental('Dressed Orbitals')
+      ASSERT(qtot > M_ZERO)
+      call dressed_init(this%dressed, namespace, der%mesh%sb%dim, qtot)
     end if
 
 #ifdef HAVE_MPI
-    !%Variable ParallelizationPoissonAllNodes
-    !%Type logical
-    !%Default true
-    !%Section Execution::Parallelization
-    !%Description
-    !% When running in parallel, this variable selects whether the
-    !% Poisson solver should divide the work among all nodes or only
-    !% among the parallelization-in-domains groups.
-    !%End
+    if(.not.optional_default(force_serial,.false.)) then
+      !%Variable ParallelizationPoissonAllNodes
+      !%Type logical
+      !%Default true
+      !%Section Execution::Parallelization
+      !%Description
+      !% When running in parallel, this variable selects whether the
+      !% Poisson solver should divide the work among all nodes or only
+      !% among the parallelization-in-domains groups.
+      !%End
 
-    call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+      call parse_variable(namespace, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+    else
+      this%all_nodes_default = .false.
+    end if
 #endif
 
     !%Variable PoissonSolver
@@ -205,6 +232,7 @@ contains
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
     !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
+    !% <br> Dressed orbitals: <tt>direct_sum</tt>.
     !%Option NoPoisson -99
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
@@ -225,14 +253,10 @@ contains
     !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
-    !%Option libisf 10
-    !% Meant to be exactly the same as Interpolating
-    !% Scaling Functions (isf) Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.6. Only for finite systems.
-    !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
-    !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
-    !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
+    !%Option psolver 10
+    !% Solver based on Interpolating Scaling Functions as implemented in the PSolver library.
+    !% Parallelization in k-points requires <tt>PoissonSolverPSolverParallelData</tt> = no.
+    !% Requires the PSolver external library.
     !%Option poke 11
     !% (Experimental) Solver from the Poke library.
     !%End
@@ -240,7 +264,7 @@ contains
     default_solver = POISSON_FFT
 
     if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
-    
+
     if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
 
 #ifdef HAVE_CLFFT
@@ -262,37 +286,40 @@ contains
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
+    if (this%is_dressed) default_solver = POISSON_DIRECT_SUM
+
     if(.not.present(solver)) then
       call parse_variable(namespace, 'PoissonSolver', default_solver, this%method)
     else
       this%method = solver
     end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
-   
-    select case(this%method)
-    case (POISSON_DIRECT_SUM)
-      str = "direct sum"
-    case (POISSON_FMM)
-      str = "fast multipole method"
-    case (POISSON_FFT)
-      str = "fast Fourier transform"
-    case (POISSON_CG)
-      str = "conjugate gradients"
-    case (POISSON_CG_CORRECTED)
-      str = "conjugate gradients, corrected"
-    case (POISSON_MULTIGRID)
-      str = "multigrid"
-    case (POISSON_ISF)
-      str = "interpolating scaling functions"
-    case (POISSON_LIBISF)
-      str = "interpolating scaling functions (from BigDFT)"
-    case (POISSON_NO)
-      str = "no Poisson solver - Hartree set to 0"
-    case (POISSON_POKE)
-      str = "Poke library"
-    end select
-    write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
-    call messages_info(1)
+    if(optional_default(verbose,.true.)) then
+      select case(this%method)
+      case (POISSON_DIRECT_SUM)
+        str = "direct sum"
+      case (POISSON_FMM)
+        str = "fast multipole method"
+      case (POISSON_FFT)
+        str = "fast Fourier transform"
+      case (POISSON_CG)
+        str = "conjugate gradients"
+      case (POISSON_CG_CORRECTED)
+        str = "conjugate gradients, corrected"
+      case (POISSON_MULTIGRID)
+        str = "multigrid"
+      case (POISSON_ISF)
+        str = "interpolating scaling functions"
+      case (POISSON_PSOLVER)
+        str = "interpolating scaling functions (from BigDFT)"
+      case (POISSON_NO)
+        str = "no Poisson solver - Hartree set to 0"
+      case (POISSON_POKE)
+        str = "Poke library"
+      end select
+      write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
+      call messages_info(1)
+    end if
 
     if(this%method /= POISSON_FFT) then
       this%kernel = POISSON_FFT_KERNEL_NONE
@@ -350,11 +377,12 @@ contains
       call parse_variable(namespace, 'PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
 
-      call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
+      if(optional_default(verbose,.true.)) &
+        call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
 
     end if
 
-    !We assume the developr knows what he is doing by providing the solver option
+    !We assume the developer knows what he is doing by providing the solver option
     if(.not. present(solver)) then 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
         message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
@@ -404,8 +432,8 @@ contains
 
       case(2)
 
-        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
-          message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
+        if ((this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
+          message(1) = 'A 2D system may only use fft or direct_sum solvers.'
           call messages_fatal(1)
         end if
 
@@ -459,34 +487,41 @@ contains
       end select
     end if
 
-    if (this%method == POISSON_LIBISF) then
-#ifndef HAVE_LIBISF
-      message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
+    if (this%method == POISSON_PSOLVER) then
+#if !((defined HAVE_LIBISF) || (defined HAVE_PSOLVER))
+      message(1) = "The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
       call messages_fatal(1)
+#endif
+#ifdef HAVE_LIBISF
+      message(1) = "The use of versions older than 1.8 of the PSolver library (previously known as LibISF)"
+      message(2) = "are deprecated and will be removed in the next major release."
+      call messages_warning(2)
 #endif
     end if
 
-    call messages_print_stress(stdout)
+    if(optional_default(verbose,.true.)) &
+      call messages_print_stress(stdout)
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
     fft_type = FFT_REAL
+    if(optional_default(force_cmplx, .false.)) fft_type = FFT_COMPLEX
 
-    if (this%method == POISSON_ISF .or. this%method == POISSON_LIBISF) then
+    if (this%method == POISSON_ISF .or. this%method == POISSON_PSOLVER) then
       fft_type = FFT_NONE
       box(:) = der%mesh%idx%ll(:)
       need_cube = .true.
     end if
 
-    if (this%method == POISSON_LIBISF .and. multicomm_have_slaves(mc)) then
+    if (this%method == POISSON_PSOLVER .and. multicomm_have_slaves(mc)) then
       call messages_not_implemented('Task parallelization with LibISF Poisson solver')
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
-      ! Documentation in poisson_libisf.F90
-      call parse_variable(namespace, 'PoissonSolverISFParallelData', .true., isf_data_is_parallel)
-      if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
-        call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
+      ! Documentation in poisson_psolver.F90
+      call parse_variable(namespace, 'PoissonSolverPSolverParallelData', .true., isf_data_is_parallel)
+      if ( this%method == POISSON_PSOLVER .and. isf_data_is_parallel ) then
+        call messages_not_implemented("k-point parallelization with PSolver library and PoissonSolverPSolverParallelData = yes")
       end if
       if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
         call messages_not_implemented("k-point parallelization with PFFT library for Poisson solver")
@@ -579,7 +614,8 @@ contains
 
     ! Create the cube
     if (need_cube) then
-      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, verbose = .true., &
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, &
+                   verbose = optional_default(verbose,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
@@ -598,6 +634,11 @@ contains
       this%poke_solver = PokeSolver(this%poke_grid)
       call this%poke_solver%build()
 #endif
+    end if
+
+    if (this%is_dressed .and. .not. this%method == POISSON_DIRECT_SUM) then
+      write(message(1), '(a)')'Dressed Orbital calculation currently only working with direct sum Poisson solver.'
+      call messages_fatal(1)
     end if
     
     call poisson_kernel_init(this, namespace, mc%master_comm)
@@ -632,8 +673,8 @@ contains
       call poisson_isf_end(this%isf_solver)
       has_cube = .true.
 
-    case(POISSON_LIBISF)
-      call poisson_libisf_end(this%libisf_solver)
+    case(POISSON_PSOLVER)
+      call poisson_psolver_end(this%psolver_solver)
       has_cube = .true.
 
     case(POISSON_FMM)
@@ -647,9 +688,10 @@ contains
       call this%poke_grid%end()
       call this%poke_solver%end()
 #endif
-      
+
     end select
     this%method = POISSON_NULL
+    this%is_dressed = .false.
 
     if (has_cube) then
       if (this%cube%parallel_in_domains) then
@@ -663,67 +705,89 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    CMPLX,                              intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                              intent(in)    :: rho(:)  !< rho(mesh%np)
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     FLOAT, allocatable :: aux1(:), aux2(:)
     type(derivatives_t), pointer :: der
     logical :: all_nodes_value
 
+    type(profile_t), save :: prof
+
     der => this%der
 
     PUSH_SUB(zpoisson_solve_real_and_imag_separately)
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
+    call profiling_in(prof, 'POISSON_RE_IM_SOLVE')
+
+    if(present(kernel)) then
+      ASSERT(.not. any(abs(kernel%qq(:))>CNST(1e-8)))
     end if
+
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     SAFE_ALLOCATE(aux1(1:der%mesh%np))
     SAFE_ALLOCATE(aux2(1:der%mesh%np))
     ! first the real part
     aux1(1:der%mesh%np) = real(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = real(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value, kernel=kernel)
     pot(1:der%mesh%np)  = aux2(1:der%mesh%np)
     
     ! now the imaginary part
     aux1(1:der%mesh%np) = aimag(rho(1:der%mesh%np))
     aux2(1:der%mesh%np) = aimag(pot(1:der%mesh%np))
-    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value)
+    call dpoisson_solve(this, aux2, aux1, all_nodes=all_nodes_value, kernel=kernel)
     pot(1:der%mesh%np) = pot(1:der%mesh%np) + M_zI*aux2(1:der%mesh%np)
     
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
+
+    call profiling_out(prof)
 
     POP_SUB(zpoisson_solve_real_and_imag_separately)
   end subroutine zpoisson_solve_real_and_imag_separately
 
   !-----------------------------------------------------------------
 
-  subroutine zpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    CMPLX,                intent(inout) :: pot(:)  !< pot(mesh%np)
-    CMPLX,                intent(in)    :: rho(:)  !< rho(mesh%np)
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine zpoisson_solve(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    CMPLX,                              intent(inout) :: pot(:)  !< pot(mesh%np)
+    CMPLX,                              intent(in)    :: rho(:)  !< rho(mesh%np)
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     logical :: all_nodes_value
+    type(profile_t), save :: prof
 
     PUSH_SUB(zpoisson_solve)
 
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
+
+    ASSERT(ubound(pot, dim = 1) == this%der%mesh%np_part .or. ubound(pot, dim = 1) == this%der%mesh%np)
+    ASSERT(ubound(rho, dim = 1) == this%der%mesh%np_part .or. ubound(rho, dim = 1) == this%der%mesh%np)
 
     ASSERT(this%method /= POISSON_NULL)
 
-    call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
+    if(this%method == POISSON_FFT .and. this%kernel /= POISSON_FFT_KERNEL_CORRECTED  &
+          .and. .not. this%is_dressed) then
+      !The default (real) Poisson solver is used for OEP and Sternheimer calls were we do not need
+      !a complex-to-xomplex FFT as these parts use the normal Coulomb potential
+      if(this%cube%fft%type == FFT_COMPLEX) then
+        !We add the profiling here, as the other path uses dpoisson_solve
+        call profiling_in(prof, 'ZPOISSON_SOLVE')
+        call zpoisson_fft_solve(this%fft_solver, this%der%mesh, this%cube, pot, rho, this%mesh_cube_map, kernel=kernel)
+        call profiling_out(prof)
+      else 
+        call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel=kernel)
+      end if
+    else
+      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel = kernel)
+    end if
     if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
@@ -732,11 +796,12 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine poisson_solve_batch(this, potb, rhob, all_nodes)
-    type(poisson_t),      intent(inout) :: this
-    type(batch_t),        intent(inout) :: potb 
-    type(batch_t),        intent(inout) :: rhob 
-    logical, optional,    intent(in)    :: all_nodes
+  subroutine poisson_solve_batch(this, potb, rhob, all_nodes, kernel)
+    type(poisson_t),                    intent(inout) :: this
+    type(batch_t),                      intent(inout) :: potb 
+    type(batch_t),                      intent(inout) :: rhob 
+    logical, optional,                  intent(in)    :: all_nodes
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
 
     integer :: ii
 
@@ -747,11 +812,11 @@ contains
 
     if(potb%type() == TYPE_FLOAT) then
       do ii = 1, potb%nst_linear
-        call dpoisson_solve(this, potb%states_linear(ii)%dpsi, rhob%states_linear(ii)%dpsi, all_nodes)
+        call dpoisson_solve(this, potb%dff_linear(:, ii), rhob%dff_linear(:, ii), all_nodes, kernel=kernel)
       end do
     else
       do ii = 1, potb%nst_linear
-        call zpoisson_solve(this, potb%states_linear(ii)%zpsi, rhob%states_linear(ii)%zpsi, all_nodes)
+        call zpoisson_solve(this, potb%zff_linear(:, ii), rhob%zff_linear(:, ii), all_nodes, kernel=kernel)
       end do
     end if
 
@@ -765,18 +830,19 @@ contains
   !!
   !! Different solvers are available that can be chosen in the input file
   !! with the "PoissonSolver" parameter
-  subroutine dpoisson_solve(this, pot, rho, all_nodes)
-    type(poisson_t),      intent(in)    :: this
-    FLOAT,                intent(inout) :: pot(:) !< Local size of the \b potential vector. 
-    FLOAT,                intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
+  subroutine dpoisson_solve(this, pot, rho, all_nodes, kernel)
+    type(poisson_t),                    intent(in)    :: this
+    FLOAT,                              intent(inout) :: pot(:) !< Local size of the \b potential vector. 
+    FLOAT,                              intent(inout) :: rho(:) !< Local size of the \b density (rho) vector.
     !> Is the Poisson solver allowed to utilise
     !! all nodes or only the domain nodes for
     !! its calculations? (Defaults to .true.)
-    logical, optional,    intent(in)    :: all_nodes 
+    logical, optional,                  intent(in)    :: all_nodes 
+    type(fourier_space_op_t), optional, intent(in)    :: kernel
+
     type(derivatives_t), pointer :: der
     type(cube_function_t) :: crho, cpot
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-
     logical               :: all_nodes_value
     type(profile_t), save :: prof
 
@@ -789,27 +855,21 @@ contains
     ASSERT(ubound(rho, dim = 1) == der%mesh%np_part .or. ubound(rho, dim = 1) == der%mesh%np)
 
     ! Check optional argument and set to default if necessary.
-    if(present(all_nodes)) then
-      all_nodes_value = all_nodes
-    else
-      all_nodes_value = this%all_nodes_default
-    end if
+    all_nodes_value = optional_default(all_nodes, this%all_nodes_default)
 
     ASSERT(this%method /= POISSON_NULL)
+
+    if(present(kernel)) then
+      ASSERT(this%method == POISSON_FFT)
+    end if
       
     select case(this%method)
     case(POISSON_DIRECT_SUM)
-      select case(this%der%mesh%sb%dim)
-      case(1)
-        call poisson_solve_direct(this, pot, rho)
-      case(2)
-        call poisson_solve_direct(this, pot, rho)
-      case(3)
-        call poisson_solve_direct(this, pot, rho)
-      case default
+      if ( (this%is_dressed .and. this%der%mesh%sb%dim - 1 > 3) .or. this%der%mesh%sb%dim > 3) then
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
-      end select
+      end if
+      call poisson_solve_direct(this, pot, rho)
 
     case(POISSON_FMM)
       call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
@@ -835,14 +895,14 @@ contains
 
     case(POISSON_FFT)
       if(this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map, kernel=kernel)
       else
         SAFE_ALLOCATE(rho_corrected(1:der%mesh%np))
         SAFE_ALLOCATE(vh_correction(1:der%mesh%np_part))
         
         call correct_rho(this%corrector, der, rho, rho_corrected, vh_correction)
-        call poisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
-          average_to_zero = .true.)
+        call dpoisson_fft_solve(this%fft_solver, der%mesh, this%cube, pot, rho_corrected, this%mesh_cube_map, &
+          average_to_zero = .true., kernel=kernel)
         
         pot(1:der%mesh%np) = pot(1:der%mesh%np) + vh_correction(1:der%mesh%np)
         SAFE_DEALLOCATE_A(rho_corrected)
@@ -853,12 +913,12 @@ contains
       call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
 
-    case(POISSON_LIBISF)
-      if (this%libisf_solver%datacode == "G") then
+    case(POISSON_PSOLVER)
+      if (this%psolver_solver%datacode == "G") then
         ! Global version
-        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho)
+        call poisson_psolver_global_solve(this%psolver_solver, der%mesh, this%cube, pot, rho)
       else ! "D" Distributed version
-        call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
+        call poisson_psolver_parallel_solve(this%psolver_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
 
     case(POISSON_POKE)
@@ -873,37 +933,42 @@ contains
       call dcube_to_mesh(this%cube, cpot, der%mesh, pot)
       call dcube_function_free_RS(this%cube, crho)
       call dcube_function_free_RS(this%cube, cpot)
-      
+
     case(POISSON_NO)
       call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select
+
+
+    ! Add extra terms for dressed interaction
+    if (this%is_dressed .and. this%method /= POISSON_NO) then
+      call dressed_add_poisson_terms(this%dressed, der%mesh, rho, pot)
+    end if
 
     POP_SUB(dpoisson_solve)
     call profiling_out(prof)
   end subroutine dpoisson_solve
 
-    !-----------------------------------------------------------------
+  !-----------------------------------------------------------------
+  subroutine poisson_init_sm(this, namespace, main, der, sm, method)
+    type(poisson_t),             intent(out)   :: this
+    type(namespace_t),           intent(in)    :: namespace
+    type(poisson_t),             intent(in)    :: main
+    type(derivatives_t), target, intent(in)    :: der
+    type(submesh_t),             intent(inout) :: sm
+    integer, optional,           intent(in)    :: method
 
-    !-----------------------------------------------------------------
-  subroutine poisson_init_sm(this, main, der, sm)
-    type(poisson_t),             intent(out) :: this
-    type(poisson_t),             intent(in)  :: main
-    type(derivatives_t), target, intent(in)  :: der
-    type(submesh_t),           intent(in)    :: sm
-
-    logical :: need_cube
     integer :: default_solver
+    integer :: box(MAX_DIM)
 
     if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init_sm)
 
+    this%is_dressed = .false.
     this%theta = M_ZERO
 
     this%nslaves = 0
     this%der => der
-
-    this%qq = M_ZERO
 
 #ifdef HAVE_MPI
     this%all_nodes_default = main%all_nodes_default
@@ -911,15 +976,28 @@ contains
 
     default_solver = POISSON_DIRECT_SUM 
     this%method = default_solver
+    if(present(method)) this%method = method
 
     if(der%mesh%use_curvilinear) then
-      call messages_not_implemented("lda+u with curvilinear mesh")    
+      call messages_not_implemented("Submesh Poisson solver with curvilinear mesh")    
     end if
 
     this%kernel = POISSON_FFT_KERNEL_NONE
 
-    ! Now that we know the method, we check if we need a cube and its dimentions
-    need_cube = .false.
+    nullify(sm%cube_map%map)
+
+    select case(this%method)
+    case(POISSON_DIRECT_SUM)
+      !Nothing to be done
+    case(POISSON_ISF)    
+      !TODO: Add support for domain parrallelization
+      ASSERT(.not. der%mesh%parallel_in_domains)
+      call submesh_get_cube_dim(sm, box, der%dim)
+      call submesh_init_cube_map(sm, box, der%dim)
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, verbose = .false., &
+                     need_partition=.not.der%mesh%parallel_in_domains)
+      call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
+    end select
 
     POP_SUB(poisson_init_sm)
   end subroutine poisson_init_sm
@@ -1131,15 +1209,6 @@ contains
   end function poisson_get_solver
 
   !-----------------------------------------------------------------
-
-  pure subroutine poisson_get_qpoint(this, qq)
-    type(poisson_t), intent(in)  :: this
-    FLOAT,           intent(out) :: qq(:)
-
-    qq = this%qq
-  end subroutine poisson_get_qpoint
-
-  !-----------------------------------------------------------------
   
   subroutine poisson_async_init(this, mc)
     type(poisson_t), intent(inout) :: this
@@ -1252,7 +1321,46 @@ contains
 
   end function poisson_is_async
 
-#include "poisson_init_direct_inc.F90"
+  !----------------------------------------------------------------
+
+  subroutine poisson_build_kernel(this, namespace, sb, coulb, qq, singul)
+    type(poisson_t),  intent(in) :: this
+    type(namespace_t),intent(in) :: namespace
+    type(simul_box_t),intent(in) :: sb
+    type(fourier_space_op_t), intent(inout) :: coulb
+    FLOAT,            intent(in) :: qq(:)
+    FLOAT, optional,  intent(in) :: singul
+
+    PUSH_SUB(poisson_build_kernel)
+
+    if(simul_box_is_periodic(sb)) then
+      ASSERT(ubound(qq, 1) >= sb%periodic_dim)
+      ASSERT(this%method == POISSON_FFT)
+    end if
+
+    !TODO: this should be a select case supporting other kernels.
+    ! This means that we need an abstract object for kernels.
+    select case(this%method)
+    case(POISSON_FFT)
+      !We only reinitialize the poisson sover if needed
+      if(any(abs(coulb%qq(1:sb%periodic_dim) - qq(1:sb%periodic_dim)) > M_EPSILON)) then
+        call fourier_space_op_end(coulb) 
+        coulb%qq(1:sb%periodic_dim) = qq(1:sb%periodic_dim)
+        !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
+        coulb%singularity = optional_default(singul, M_ZERO)
+        call poisson_fft_get_kernel(this%fft_solver, namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+          this%poisson_soft_coulomb_param)
+      end if
+    case default
+      call messages_not_implemented("poisson_build_kernel with other methods than FFT")
+    end select
+    
+
+    POP_SUB(poisson_build_kernel)
+  end subroutine poisson_build_kernel
+
+#include "poisson_init_inc.F90"
+#include "poisson_direct_inc.F90"
 #include "poisson_direct_sm_inc.F90"
 
 #include "undef.F90"

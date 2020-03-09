@@ -812,8 +812,7 @@ contains
     type(pes_mask_t),  intent(inout) :: mask
     type(simul_box_t),   intent(in)  :: sb
 
-    integer :: ii,dim
-    FLOAT   :: temp
+    integer :: ii, dim
 
     PUSH_SUB(pes_mask_generate_Lk)
 

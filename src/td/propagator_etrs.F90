@@ -77,9 +77,6 @@ contains
     logical,                          intent(in)    :: move_ions
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-    integer :: ik, ib
-    type(batch_t) :: zpsib_dt
-    type(density_calc_t) :: dens_calc
 
     PUSH_SUB(td_etrs)
 
@@ -189,14 +186,12 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    allocate(wfs_elec_t::psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psi2, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call st%group%psib(ib, ik)%copy_to(psi2(ib, ik))
-        if(st%group%psib(ib, ik)%is_packed()) call psi2(ib, ik)%do_pack(copy = .false.)
-        call st%group%psib(ib, ik)%copy_data_to(gr%mesh%np, psi2(ib, ik))
+        call st%group%psib(ib, ik)%copy_to(psi2(ib, ik), copy_data=.true.)
       end do
     end do
 
@@ -407,7 +402,7 @@ contains
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
             forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
+              st%group%psib(ib, ik)%zff_linear(ip, ist) = st%group%psib(ib, ik)%zff_linear(ip, ist)*phase
             end forall
           end do
         case(BATCH_PACKED)
@@ -415,19 +410,19 @@ contains
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
             forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
+              st%group%psib(ib, ik)%zff_pack(ist, ip) = st%group%psib(ib, ik)%zff_pack(ist, ip)*phase
             end forall
           end do
         case(BATCH_DEVICE_PACKED)
           call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
-          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
-          call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
+          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%ff_device)
+          call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack_size(1)))
 
-          iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
+          iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack_size(1)
 
-          call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
-            (/st%group%psib(ib, ik)%pack%size(1), iprange/))
+          call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack_size(1), pnp/), &
+            (/st%group%psib(ib, ik)%pack_size(1), iprange/))
         end select
         call profiling_out(phase_prof)
 

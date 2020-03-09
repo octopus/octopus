@@ -75,7 +75,7 @@ program wannier90_interface
   integer              :: ii, nik, iter, nst
 
   type(restart_t)      :: restart
-  type(system_t)       :: sys
+  type(system_t), pointer :: sys
   logical              :: w90_spinors, scdm_proj, w90_scdm
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !
@@ -120,7 +120,7 @@ program wannier90_interface
   call unit_system_init(namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, namespace)
+  sys => system_init(namespace)
 
   !%Variable Wannier90Prefix
   !%Type string
@@ -257,7 +257,7 @@ program wannier90_interface
   SAFE_DEALLOCATE_A(band_index)
   SAFE_DEALLOCATE_A(w90_nnk_list)
 
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call fft_all_end()
   call io_end()
   call profiling_end(namespace)
@@ -328,10 +328,7 @@ contains
       end if
 
       !In case the user used also a k-point path, we ignore it
-      npath = 0
-      if(associated(sb%kpoints%coord_along_path)) then
-        npath = SIZE(sb%kpoints%coord_along_path)
-      end if
+      npath = kpoints_nkpt_in_path(sb%kpoints)
 
       axis(1:3) = sb%kpoints%nik_axis(1:3)
       ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
@@ -806,7 +803,7 @@ contains
              do idim = 1, st%d%dim
                ibind = batch%inv_index((/ist, idim/))
                overlap(band_index(ist)) = overlap(band_index(ist)) + &
-                    zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+                    zmf_dotp(mesh, batch%zff_linear(:, ibind), psin(:,idim), reduce = .false.)
              end do
            !Not properly done at the moment
            case(BATCH_PACKED, BATCH_DEVICE_PACKED)
@@ -1317,7 +1314,7 @@ contains
     end do
     
     ! back interpolation                                                                                                                                                                         
-    npath = SIZE(sys%gr%sb%kpoints%coord_along_path)
+    npath = kpoints_nkpt_in_path(sys%gr%sb%kpoints)
     do ik = st%d%kpt%start, st%d%kpt%end
       if(ik < st%d%nik-npath+1 ) cycle
       hk(:,:) = M_ZERO
@@ -1332,7 +1329,8 @@ contains
       end do
     end do
  
-    call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
+    call states_elec_write_bandstructure('.', namespace, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, &
+                                               dummyphase)
  
     SAFE_DEALLOCATE_A(eigk)
     SAFE_DEALLOCATE_A(hk_eigenval)

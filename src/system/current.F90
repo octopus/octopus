@@ -152,9 +152,6 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
- 
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
@@ -193,6 +190,10 @@ contains
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
+
+      SAFE_ALLOCATE(weight(1:psib%nst))
+      forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+
       
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
@@ -204,12 +205,12 @@ contains
       call accel_set_kernel_arg(kernel, 0, psib%nst)
       call accel_set_kernel_arg(kernel, 1, der%mesh%np)
       call accel_set_kernel_arg(kernel, 2, buff_weight)
-      call accel_set_kernel_arg(kernel, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
-      call accel_set_kernel_arg(kernel, 5, gpsib(1)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 6, gpsib(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 7, gpsib(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack%size(1)))
+      call accel_set_kernel_arg(kernel, 3, psib%ff_device)
+      call accel_set_kernel_arg(kernel, 4, log2(psib%pack_size(1)))
+      call accel_set_kernel_arg(kernel, 5, gpsib(1)%ff_device)
+      call accel_set_kernel_arg(kernel, 6, gpsib(2)%ff_device)
+      call accel_set_kernel_arg(kernel, 7, gpsib(3)%ff_device)
+      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack_size(1)))
       call accel_set_kernel_arg(kernel, 9, buff_current)
       
       wgsize = accel_kernel_workgroup_size(kernel)
@@ -232,8 +233,12 @@ contains
       
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
+
+      SAFE_DEALLOCATE_A(weight)
       
     else
+
+      ASSERT(psib%is_packed() .eqv. gpsib(1)%is_packed())
 
       do ii = 1, psib%nst
         ist = states_elec_block_min(st, ib) + ii - 1
@@ -245,7 +250,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+                + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
           end do
@@ -254,7 +259,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%states(ii)%zpsi(ip, 1))*gpsib(idir)%states(ii)%zpsi(ip, 1))
+                + ww*aimag(conjg(psib%zff(ip, 1, ii))*gpsib(idir)%zff(ip, 1, ii))
             end do
             !$omp end parallel do
           end do          
@@ -287,7 +292,6 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     class(wfs_elec_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -305,7 +309,7 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    allocate(wfs_elec_t::commpsib(1:der%mesh%sb%dim))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%mesh%sb%dim))
 
     current = M_ZERO
     current_kpt = M_ZERO
@@ -385,7 +389,7 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
+        .and. hm%lda_u_level == DFT_U_NONE) then
 
         ! we can use the packed version
         
@@ -404,25 +408,16 @@ contains
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
-            !The call to individual derivatives_perfom routines returns the derivatives along
-            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-            !along the Cartesian axis.
-            ASSERT(.not.der%mesh%sb%nonorthogonal)
+            ! this now takes non-orthogonal axis into account
             do idir = 1, der%mesh%sb%dim
               call epsib%copy_to(commpsib(idir))
-              call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
+            call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
-            if(associated(hm%hm_base%phase)) then
-              do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, conjugate = .true., &
-                  psib = commpsib(idir))
-              end do
-            end if
-            
-            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
+
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
               call commpsib(idir)%end()
@@ -888,8 +883,8 @@ contains
     FLOAT,          intent(in)    :: time
     FLOAT,          intent(inout) :: current(:,:)
 
-    integer :: ip, jn, idir, il
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), omega, shift, width, amp(MAX_DIM)
+    integer :: ip, jn, idir
+    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
 
     PUSH_SUB(external_current_calculation)

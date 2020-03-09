@@ -29,6 +29,7 @@ module states_elec_calc_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
+  use fourier_space_oct_m
   use global_oct_m
   use grid_oct_m
   use hardware_oct_m
@@ -48,6 +49,7 @@ module states_elec_calc_oct_m
   use profiling_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m

@@ -69,7 +69,8 @@ testprog4="AC_LANG_PROGRAM([],[
   integer :: minor
   integer :: micro
   integer :: flags = XC_FLAGS_NEEDS_LAPLACIAN
-  call xc_f90_version(major, minor, micro)])"
+  call xc_f90_version(major, minor, micro)]
+  write(*,*) flags)"
 
 FCFLAGS="$FCFLAGS_LIBXC $acx_libxc_save_FCFLAGS"
 
@@ -186,7 +187,8 @@ AC_MSG_CHECKING([whether libxc has support for hybrid meta-GGAs (>= v 2.1)])
 testprog="AC_LANG_PROGRAM([],[
   use xc_f90_lib_m
   implicit none
-  integer :: x = XC_FAMILY_HYB_MGGA])"
+  integer :: x = XC_FAMILY_HYB_MGGA
+  write(*,*) x])"
 AC_LINK_IFELSE($testprog, [acx_libxc_hyb_mgga_ok=yes], [])
 
 AC_MSG_RESULT([$acx_libxc_hyb_mgga_ok])

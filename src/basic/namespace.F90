@@ -44,7 +44,6 @@ contains
   ! ---------------------------------------------------------
   type(namespace_t) function namespace_init(name)
     character(len=*), intent(in) :: name
-    type(namespace_t) :: namespace
 
     if (len(name) <= MAX_NAMESPACE_LEN) then
       namespace_init%name = name
