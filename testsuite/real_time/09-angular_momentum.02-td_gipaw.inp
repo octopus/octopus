@@ -31,3 +31,4 @@ MagneticGaugeCorrection = gipaw
 TDMultipoleLmax = 2
 
 TDEnergyUpdateIter = 25
+StatesPack=yes

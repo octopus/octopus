@@ -34,3 +34,4 @@ Output = potential
 OutputFormat = axis_x
 
 FilterPotentials = filter_none
+StatesPack=yes

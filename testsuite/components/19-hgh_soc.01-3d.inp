@@ -20,3 +20,4 @@ RelativisticCorrection = spin_orbit
 TestRepetitions = 10
 
 StatesBlockSize = 4
+StatesPack=yes

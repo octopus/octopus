@@ -53,3 +53,4 @@ TDMaxSteps = round(totaltime/TDTimeStep)
 
 OutputInterval = 600
 RestartWriteInterval = 600
+StatesPack=yes

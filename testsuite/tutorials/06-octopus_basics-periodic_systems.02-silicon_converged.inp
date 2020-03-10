@@ -32,3 +32,4 @@ KPointsUseSymmetries = yes
 
 ExtraStates = 1
 Output = dos
+StatesPack=yes

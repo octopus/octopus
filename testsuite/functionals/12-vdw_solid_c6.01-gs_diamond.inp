@@ -35,3 +35,4 @@ PseudopotentialSet= sg15
 VDWCorrection = vdw_ts
 VDW_TS_cutoff = 40
 
+StatesPack=yes

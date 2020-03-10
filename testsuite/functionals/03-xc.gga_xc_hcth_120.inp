@@ -22,3 +22,4 @@ XCFunctional = gga_xc_hcth_120
 
 FilterPotentials = filter_none
 
+StatesPack=yes

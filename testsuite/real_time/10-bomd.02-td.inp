@@ -31,3 +31,4 @@ ParDomains = no
 MixField = density
 
 TDMultipoleLmax = 0
+StatesPack=yes

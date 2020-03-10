@@ -44,3 +44,4 @@ EMPerturbationType = magnetic
 FilterPotentials = filter_none
 
 MixField = density
+StatesPack=yes

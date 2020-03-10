@@ -25,3 +25,4 @@ Output = current
 OutputFormat = axis_z
 
 ConvRelDens = 1e-6
+StatesPack=yes

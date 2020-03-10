@@ -31,3 +31,4 @@ ExtraStatesToConverge = 5
  1.0 | 1.0 | 1.0  # Another Gamma point
 %
 KPointsUseSymmetries = no
+StatesPack=yes

@@ -35,3 +35,4 @@ ProfilingMode = prof_time
 
 DisableAccel = yes
 
+StatesPack=yes

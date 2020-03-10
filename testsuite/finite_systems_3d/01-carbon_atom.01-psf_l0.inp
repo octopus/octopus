@@ -47,3 +47,4 @@ PoissonFFTKernel = multipole_correction
 FilterPotentials = filter_none
 
 MixField = density
+StatesPack=yes

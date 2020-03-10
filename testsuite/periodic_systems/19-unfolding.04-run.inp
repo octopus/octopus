@@ -46,3 +46,4 @@ UnfoldMode = unfold_run
 
 UnfoldMinEnergy = -8.0*eV
 UnfoldMaxEnergy =  9.0*eV
+StatesPack=yes

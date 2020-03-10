@@ -18,3 +18,4 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 FilterPotentials = no
 
 Debug = info
+StatesPack=yes

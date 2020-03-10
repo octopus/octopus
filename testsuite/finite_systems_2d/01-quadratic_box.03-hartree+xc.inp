@@ -42,3 +42,4 @@ PoissonSolver = fft
 
 
 MixField = density
+StatesPack=yes

@@ -9,3 +9,4 @@ Output = wfs + density + elf + potential
 OutputFormat = cube + xcrysden + dx + axis_x + plane_z
 
 XYZCoordinates = "benzene.xyz"
+StatesPack=yes

@@ -27,3 +27,4 @@ a = 10.26120
 Spacing = 0.5
 
 FilterPotentials = filter_none
+StatesPack=yes

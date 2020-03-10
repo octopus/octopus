@@ -19,3 +19,4 @@ TotalStates = 5
 FromScratch = yes
 
 EigenSilver = cg_new
+StatesPack=yes

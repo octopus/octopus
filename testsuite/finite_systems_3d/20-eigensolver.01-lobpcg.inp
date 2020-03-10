@@ -26,3 +26,4 @@ SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 MixField = density
+StatesPack=yes

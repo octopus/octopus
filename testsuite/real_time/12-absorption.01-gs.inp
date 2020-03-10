@@ -21,3 +21,4 @@ MixField = density
 StatesPack = no
 
 ProfilingMode = prof_io
+StatesPack=yes

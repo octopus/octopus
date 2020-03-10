@@ -22,3 +22,4 @@ XCFunctional = gga_c_pbe
 
 FilterPotentials = filter_none
 
+StatesPack=yes

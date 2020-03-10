@@ -31,3 +31,4 @@ FilterPotentials = filter_none
 MixField = density
 
 ConvAbsEv = 1e-5
+StatesPack=yes

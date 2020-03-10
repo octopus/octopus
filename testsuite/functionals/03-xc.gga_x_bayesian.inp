@@ -22,3 +22,4 @@ XCFunctional = gga_x_bayesian
 
 FilterPotentials = filter_none
 
+StatesPack=yes

@@ -21,3 +21,4 @@ XCFunctional = lda_c_pz
 
 FilterPotentials = filter_none
 
+StatesPack=yes

@@ -27,3 +27,4 @@ EigenSolver = rmmdiis
 ProfilingMode = yes
 
 DisableAccel = yes
+StatesPack=yes

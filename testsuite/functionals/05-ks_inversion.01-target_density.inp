@@ -30,3 +30,4 @@ OutputFormat = Axis_X
 
 ConvRelDens = 1e-8
 Eigensolver = cg_new
+StatesPack=yes

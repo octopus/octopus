@@ -27,3 +27,4 @@ LinearSolverMaxIter = 100
 #This is now the default for a magnetic perturbation, via LRTolScheme
 
 FilterPotentials = filter_none
+StatesPack=yes

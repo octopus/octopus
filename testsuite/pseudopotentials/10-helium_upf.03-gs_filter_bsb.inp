@@ -19,3 +19,4 @@ FilterPotentials = filter_bsb
 
 Debug = info
 
+StatesPack=yes

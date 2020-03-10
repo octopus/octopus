@@ -24,3 +24,4 @@ XCFunctional = hyb_gga_xc_pbeh
 
 FilterPotentials = filter_none
 
+StatesPack=yes

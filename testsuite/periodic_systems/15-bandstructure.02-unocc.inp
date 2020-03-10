@@ -43,3 +43,4 @@ LCAOStart = lcao_states
 Output = geometry + dos
 OutputFormat = xyz
 
+StatesPack=yes
