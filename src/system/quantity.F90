@@ -47,8 +47,9 @@ module quantity_oct_m
   !! cannot simply be calculated on-demand.
   type quantity_t
     private
-    type(clock_t), public :: clock              !< Clock storing the time at which the quantity was last updated.
-    logical,       public :: internal = .false. !< Is this quantity internal to the system?
+    type(clock_t), public :: clock               !< Clock storing the time at which the quantity was last updated.
+    logical,       public :: required = .false.  !< Should this quantities be calculated?
+    logical,       public :: protected = .false. !< Is this quantity protected, i.e., it cannot be updated on-demand
   end type quantity_t
 
 contains

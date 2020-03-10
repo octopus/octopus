@@ -146,8 +146,10 @@ contains
     sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
 
-    sys%quantities(POSITION)%internal = .true.
-    sys%quantities(VELOCITY)%internal = .true.
+    sys%quantities(POSITION)%required = .true.
+    sys%quantities(VELOCITY)%required = .true.
+    sys%quantities(POSITION)%protected = .true.
+    sys%quantities(VELOCITY)%protected = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -157,7 +159,7 @@ contains
   ! ---------------------------------------------------------
   subroutine celestial_body_add_interaction_partner(this, partner)
     class(celestial_body_t), target, intent(inout) :: this
-    class(system_abst_t),            intent(in)    :: partner
+    class(system_abst_t),            intent(inout) :: partner
 
     class(interaction_gravity_t), pointer :: gravity
     type(interaction_gravity_t) :: gravity_t
@@ -166,6 +168,8 @@ contains
 
     if (partner%has_interaction(gravity_t)) then
       gravity => interaction_gravity_t(this%space%dim, partner)
+      this%quantities(POSITION)%required = .true.
+      this%quantities(MASS)%required = .true.
       gravity%system_mass => this%mass
       gravity%system_pos  => this%pos
       call this%interactions%add(gravity)
@@ -415,24 +419,31 @@ contains
 
     PUSH_SUB(celestial_body_update_quantity)
 
-    if(this%quantities(iq)%clock > clock) then
-      message(1) = "The system quantity is in advance compared to the requested clock."
-      call messages_fatal(1)
-    end if
+    ASSERT(this%quantities(iq)%required)
 
-    if (this%quantities(iq)%internal) then
-      !Don`t do anything, this is a protected quantity. The propagator update it
-      !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+    if (this%quantities(iq)%clock == clock) then
       updated = .true.
     else
-      select case (iq)
-      case (MASS)
-        !The celestial body has a mass, but it does not require any update, as it does not change with time.
-        updated = .true.
-      case default
-        message(1) = "Incompatible quantity."
+      if (this%quantities(iq)%clock > clock) then
+        message(1) = "The quantity clock is in advance compared to the requested clock."
         call messages_fatal(1)
-      end select
+      end if
+
+      if (this%quantities(iq)%protected) then
+        !Don`t do anything, this is a protected quantity. The propagator update it
+        !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
+        updated = .true.
+      else
+        select case (iq)
+        case (MASS)
+          !The celestial body has a mass, but it does not require any update, as it does not change with time.
+          updated = .true.
+          call this%quantities(iq)%clock%set_time(clock)
+        case default
+          message(1) = "Incompatible quantity."
+          call messages_fatal(1)
+        end select
+      end if
     end if
 
     POP_SUB(celestial_body_update_quantity)
@@ -446,42 +457,54 @@ contains
 
     PUSH_SUB(celestial_body_update_exposed_quantity)
 
-    if (this%quantities(iq)%clock > clock) then
-      message(1) = "The partner quantity is in advance compared to the requested clock."
-      call messages_fatal(1)
-    end if
+    ASSERT(this%quantities(iq)%required)
 
-    if (this%quantities(iq)%internal) then
-      !Don`t do anything, this is a protected quantity. The propagator update it.
-      !However, it can only be used if the predictor-corrector step is done.
-      if (this%prop%predictor_corrector) then
-        updated = this%prop%last_step_done_tick == clock%get_tick()
-      else
+    if (.not. this%prop%predictor_corrector .or. &
+      (this%prop%predictor_corrector .and. this%prop%last_step_done_tick == this%clock%get_tick())) then
+
+      if (this%quantities(iq)%clock == clock .or. &
+        (this%quantities(iq)%clock < clock .and. this%quantities(iq)%clock%is_later_with_step(clock))) then
         updated = .true.
+        !Don`t do anything, this is a protected quantity. The propagator update it.
+        !However, it can only be used if the predictor-corrector step is done.
+      else
+        if (this%quantities(iq)%clock > clock) then
+          message(1) = "The partner quantity is in advance compared to the requested clock."
+          call messages_fatal(1)
+        end if
+
+        if (this%quantities(iq)%protected) then
+          updated = .false.
+        else
+          select case (iq)
+          case (MASS)
+            !The celestial body has a mass, but it does not require any update, as it does not change with time.
+            updated = .true.
+            call this%quantities(iq)%clock%set_time(this%clock)
+          case default
+            message(1) = "Incompatible quantity."
+            call messages_fatal(1)
+          end select
+        end if
       end if
     else
-      select case (iq)
-      case (MASS)
-        !The celestial body has a mass, but it does not require any update, as it does not change with time.
-        updated = .true.
-      case default
-        message(1) = "Incompatible quantity."
-        call messages_fatal(1)
-      end select
-    end if
+      updated = .false.
+    end if  
 
     POP_SUB(celestial_body_update_exposed_quantity)
   end function celestial_body_update_exposed_quantity
 
   ! ---------------------------------------------------------
   subroutine celestial_set_pointers_to_interaction(this, inter)
-    class(celestial_body_t), target,  intent(in)   :: this
-    class(interaction_abst_t),       intent(inout) :: inter
+    class(celestial_body_t), target,  intent(inout) :: this
+    class(interaction_abst_t),        intent(inout) :: inter
 
     PUSH_SUB(celestial_set_pointers_to_interaction)
 
     select type(inter)
     type is(interaction_gravity_t)
+      this%quantities(POSITION)%required = .true.
+      this%quantities(MASS)%required = .true.
       inter%partner_mass => this%mass
       inter%partner_pos => this%pos
     class default

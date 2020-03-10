@@ -74,7 +74,7 @@ module system_abst_oct_m
     subroutine system_add_interaction_partner(this, partner)
       import system_abst_t
       class(system_abst_t), target,    intent(inout) :: this
-      class(system_abst_t),            intent(in)    :: partner
+      class(system_abst_t),            intent(inout) :: partner
     end subroutine system_add_interaction_partner
 
     ! ---------------------------------------------------------
@@ -133,7 +133,7 @@ module system_abst_oct_m
     subroutine system_set_pointers_to_interaction(this, inter)
       import system_abst_t
       import interaction_abst_t
-      class(system_abst_t),   target,   intent(in)    :: this
+      class(system_abst_t),   target,   intent(inout) :: this
       class(interaction_abst_t),        intent(inout) :: inter
     end subroutine system_set_pointers_to_interaction
 
@@ -294,8 +294,8 @@ contains
       call interaction%init_clock(this%namespace%get(), dt, smallest_algo_dt)
     end do
 
-    ! Internal quantities clocks
-    where (this%quantities%internal)
+    ! Required quantities clocks
+    where (this%quantities%required)
       this%quantities%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
     end where
 
@@ -326,7 +326,7 @@ contains
 
       ! Internal quantities clocks
       do iq = 1, MAX_QUANTITIES
-        if (this%quantities(iq)%internal) call this%quantities(iq)%clock%decrement()
+        if (this%quantities(iq)%required) call this%quantities(iq)%clock%decrement()
       end do
     end do
 

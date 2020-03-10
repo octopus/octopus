@@ -61,9 +61,9 @@ contains
   ! ---------------------------------------------------------
 
   function interaction_gravity_init(dim, partner) result(this)
-    integer,                      intent(in) :: dim
-    class(system_abst_t), target, intent(in) :: partner
-    class(interaction_gravity_t), pointer    :: this
+    integer,                      intent(in)    :: dim
+    class(system_abst_t), target, intent(inout) :: partner
+    class(interaction_gravity_t), pointer       :: this
 
     PUSH_SUB(interaction_gravity_init)
 
