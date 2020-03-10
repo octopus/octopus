@@ -49,7 +49,7 @@ module propagator_abst_oct_m
     FLOAT, public   :: scf_tol
 
     logical :: step_done
-    integer, public :: last_step_done_tick = -1
+    logical, public :: inside_scf = .false.
 
     type(clock_t), public :: clock
 
@@ -100,7 +100,6 @@ contains
     PUSH_SUB(propagator_finished)
 
     this%step_done = .true.
-    this%last_step_done_tick = this%clock%get_tick()
 
     POP_SUB(propagator_finished)
   end subroutine propagator_finished

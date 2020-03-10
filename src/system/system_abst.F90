@@ -209,6 +209,7 @@ contains
       ASSERT(this%prop%predictor_corrector)
  
       call this%prop%save_scf_start()
+      this%prop%inside_scf = .true.
       this%accumulated_loop_ticks = 0
 
       if (debug%info) then
@@ -224,6 +225,7 @@ contains
           message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
           call messages_info(1)
         end if
+        this%prop%inside_scf = .false.
         call this%prop%next()
       else
         !We reset the pointer to the begining of the scf loop
@@ -232,6 +234,7 @@ contains
             message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
             call messages_info(1)
           end if
+          this%prop%inside_scf = .false.
           call this%prop%next()
         else
           !We rewind the instruction stack

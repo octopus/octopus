@@ -460,7 +460,7 @@ contains
     ASSERT(this%quantities(iq)%required)
 
     if (.not. this%prop%predictor_corrector .or. &
-      (this%prop%predictor_corrector .and. this%prop%last_step_done_tick == this%clock%get_tick())) then
+      (this%prop%predictor_corrector .and. .not. this%prop%inside_scf)) then
 
       if (this%quantities(iq)%clock == clock .or. &
         (this%quantities(iq)%clock < clock .and. this%quantities(iq)%clock%is_later_with_step(clock))) then
