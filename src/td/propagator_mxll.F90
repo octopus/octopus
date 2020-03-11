@@ -636,7 +636,7 @@ contains
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
     else 
-      ff_rs_state(:,:) = rs_state(:,:)
+      ff_rs_state(:,1:3) = rs_state(:,1:3)
     end if
 
   end subroutine transform_rs_state_forward
