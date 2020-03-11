@@ -380,7 +380,7 @@ contains
 
     !%Variable TDSystemPropagator
     !%Type integer
-    !%Default etrs
+    !%Default verlet
     !%Section Time-Dependent::Propagation
     !%Description
     !% A temporary variable to set the propagator in the multisystem framework
