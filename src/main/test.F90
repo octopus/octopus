@@ -23,7 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use celestial_body_oct_m
+  use classical_particle_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -918,7 +918,7 @@ contains
     type(test_parameters_t), intent(in) :: param
 
     type(namespace_t) :: global_namespace
-    class(celestial_body_t), pointer :: sun, earth, moon
+    class(classical_particle_t), pointer :: sun, earth, moon
     integer :: it, internal_loop
     logical :: any_td_step_done, all_done_max_td_steps
     FLOAT :: smallest_algo_dt
@@ -972,7 +972,7 @@ contains
     do while (iter%has_next())
       sys => iter%get_next()
       select type(sys)
-      type is (celestial_body_t)
+      type is (classical_particle_t)
 
         !Initialize output and write data at time zero
         call sys%td_write_init(sys%prop%dt)
@@ -1000,7 +1000,7 @@ contains
         do while (iter%has_next())
           sys => iter%get_next()
           select type (sys)
-          type is (celestial_body_t)
+          type is (classical_particle_t)
 
             call sys%dt_operation()
 
@@ -1024,7 +1024,7 @@ contains
         sys => iter%get_next()
 
         select type (sys)
-        type is (celestial_body_t)
+        type is (classical_particle_t)
 
           if(sys%prop%step_is_done()) then
             call sys%prop%rewind()
@@ -1047,7 +1047,7 @@ contains
     do while (iter%has_next())
       sys => iter%get_next()
       select type (sys)
-      type is (celestial_body_t)
+      type is (classical_particle_t)
 
         call sys%td_write_end()
 

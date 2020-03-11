@@ -19,7 +19,7 @@
 #include "global.h"
 
 module multisystem_oct_m
-  use celestial_body_oct_m
+  use classical_particle_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -67,7 +67,7 @@ contains
     !% An electronic system.
     !%Option maxwell 2
     !% A maxwell system.
-    !%Option celestial_body 3
+    !%Option classical_particle 3
     !% A celestial body. Used for testing purposes only.
     !%End
     if(parse_block(global_namespace, 'Systems', blk) == 0) then
@@ -81,7 +81,7 @@ contains
           sys => system_init(namespace_t(system_name))
           call systems%add(sys)
         case (SYSTEM_CELESTIAL_BODY)
-          sys => celestial_body_t(namespace_t(system_name))
+          sys => classical_particle_t(namespace_t(system_name))
           call systems%add(sys)
         case default
           call messages_input_error('Systems')
