@@ -919,8 +919,6 @@ contains
 
     type(namespace_t) :: global_namespace
     class(celestial_body_t), pointer :: sun, earth, moon
-    class(propagator_verlet_t), pointer :: prop_sun, prop_earth
-    class(propagator_beeman_t), pointer :: prop_moon
     integer :: it, internal_loop
     logical :: any_td_step_done, all_done_max_td_steps
     FLOAT :: smallest_algo_dt
@@ -1058,10 +1056,6 @@ contains
         call messages_fatal(1)
       end select
     end do
-
-    SAFE_DEALLOCATE_P(prop_moon)
-    SAFE_DEALLOCATE_P(prop_earth)
-    SAFE_DEALLOCATE_P(prop_sun)
 
     ! Finalize systems
     call multisystem_end(systems)
