@@ -38,7 +38,8 @@ module system_abst_oct_m
 
   private
   public ::               &
-    system_abst_t
+    system_abst_t,        &
+    system_iterator_t
 
   type, abstract :: system_abst_t
     private
@@ -143,6 +144,14 @@ module system_abst_oct_m
     end subroutine system_set_pointers_to_interaction
 
   end interface
+
+  !> This class extends the list iterator and adds one method to get the
+  !! system as a pointer of type class(system_abst_t).
+  type, extends(list_iterator_t) :: system_iterator_t
+    private
+  contains
+    procedure :: get_next_system => system_iterator_get_next
+  end type system_iterator_t
 
 contains
 
@@ -396,6 +405,27 @@ contains
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
+
+  ! ---------------------------------------------------------
+  function system_iterator_get_next(this) result(value)
+    class(system_iterator_t), intent(inout) :: this
+    class(system_abst_t),     pointer       :: value
+
+    class(*), pointer :: ptr
+
+    PUSH_SUB(system_iterator_get_next)
+
+    ptr => this%get_next()
+    select type (ptr)
+    class is (system_abst_t)
+      value => ptr
+    class default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(system_iterator_get_next)
+  end function system_iterator_get_next
+
 
 end module system_abst_oct_m
 

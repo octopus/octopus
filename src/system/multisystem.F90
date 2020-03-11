@@ -101,38 +101,21 @@ contains
   subroutine multisystem_init_interactions(systems)
     type(linked_list_t), intent(inout) :: systems
 
-    type(list_iterator_t) :: iter, iter2
-    class(*), pointer :: sys, sys2
+    class(system_abst_t), pointer :: sys1, sys2
+    type(system_iterator_t) :: iter1, iter2
 
     PUSH_SUB(multisystem_init_interactions)
 
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next()
+    call iter1%start(systems)
+    do while (iter1%has_next())
+      sys1 => iter1%get_next_system()
       call iter2%start(systems)
       do while (iter2%has_next())
-        select type (sys)
-        !At the moment we are doing all system interacting with all of the other systems, 
-        !irrespective of their type.
-        class is (system_abst_t)
-
-          select type (sys2 => iter2%get_next())
-          class is (system_abst_t)
-
-            !No self interaction
-            if(.not.associated(sys, sys2)) then
-              call sys%add_interaction_partner(sys2)
-            end if
-    
-          class default
-            message(1) = "Unsupported system type."
-            call messages_fatal(1)
-          end select
-       
-        class default
-          message(1) = "Unsupported system type."
-          call messages_fatal(1)
-        end select
+        sys2 => iter2%get_next_system()
+        !No self interaction
+        if(.not.associated(sys1, sys2)) then
+          call sys1%add_interaction_partner(sys2)
+        end if
       end do
     end do
 
