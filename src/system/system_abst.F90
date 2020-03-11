@@ -112,13 +112,13 @@ module system_abst_oct_m
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
-    logical function system_update_quantity(this, iq, clock)
+    subroutine system_update_quantity(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_quantity
+    end subroutine system_update_quantity
 
     ! ---------------------------------------------------------
     logical function system_update_exposed_quantity(this, iq, clock)
@@ -145,8 +145,8 @@ contains
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
-    integer :: tdop, iq
-    logical :: all_updated, obs_updated
+    integer :: tdop, iq, q_id
+    logical :: all_updated, quantities_updated
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
 
@@ -176,23 +176,35 @@ contains
       do while (iter%has_next())
         interaction => iter%get_next_interaction()
 
-        ! Update the system quantities that will be needed for computing the interaction
-        obs_updated = .true.
-        do iq = 1, interaction%n_system_quantities
-          obs_updated = this%update_quantity(interaction%system_quantities(iq), this%prop%clock) .and. obs_updated
-        end do
+        if (.not. interaction%clock == this%prop%clock) then
+          ! Update the system quantities that will be needed for computing the interaction
+          do iq = 1, interaction%n_system_quantities
+            ! Get requested quantity ID
+            q_id = interaction%system_quantities(iq)
 
-        if (obs_updated) then
-          ! Try to update the interaction
+            ! All needed quantities must have been marked as required. If not, then fix your code!
+            ASSERT(this%quantities(q_id)%required)
+
+            ! We do not need to update the protected quantities, the propagator takes care of that
+            if (this%quantities(q_id)%protected) cycle
+
+            if (.not. this%quantities(q_id)%clock == this%prop%clock) then
+              ! The requested quantity is not at the requested time, so we try to update it
+
+              ! Sanity check: it should never happen that the quantity is in advance
+              ! with respect to the requested time.
+              if (this%quantities(q_id)%clock > this%prop%clock) then
+                message(1) = "The quantity clock is in advance compared to the requested clock."
+                call messages_fatal(1)
+              end if
+
+              call this%update_quantity(q_id, this%prop%clock)
+            end if
+
+          end do
+
+          ! We can now try to update the interaction
           all_updated = interaction%update(this%prop%clock) .and. all_updated
-        else
-          ! We are not able to update the interaction
-          all_updated = .false.
-          if (debug%info) then
-            write(message(1), '(a,a)') "Debug: -- Internal quantities are not up-to-date, so could not update interactions for ", &
-              trim(this%namespace%get())
-            call messages_info(1)
-          end if
         end if
       end do
 
@@ -337,25 +349,56 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, clock, n_quantities, quantities) result(updated)
+  logical function system_update_exposed_quantities(this, clock, n_quantities, quantities_id) result(all_updated)
     class(system_abst_t),      intent(inout) :: this
     type(clock_t),             intent(in)    :: clock
     integer,                   intent(in)    :: n_quantities
-    integer,                   intent(in)    :: quantities(:)
+    integer,                   intent(in)    :: quantities_id(:)
 
-    integer :: iq
+    integer :: iq, q_id
 
-    if (this%clock < clock .and. this%clock%is_earlier_with_step(clock)) then
-      !This is not the best moment to update the quantities
-      updated = .false.
+    PUSH_SUB(system_update_exposed_quantities)
+
+    if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
+      ! We have to wait, either because this is not the best moment to update the quantities or
+      ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
+      all_updated = .false.
     else
       !This is the best moment to update the quantities
-      updated = .true.
+
+      all_updated = .true.
       do iq = 1, n_quantities
-        updated = this%update_exposed_quantity(quantities(iq), clock) .and. updated
+        ! Get the requested quantity ID
+        q_id = quantities_id(iq)
+
+        ! All needed quantities must have been marked as required. If not, then fix your code!
+        ASSERT(this%quantities(q_id)%required)
+
+        if (.not. (this%quantities(q_id)%clock == clock .or. &
+          (this%quantities(q_id)%clock < clock .and. this%quantities(q_id)%clock%is_later_with_step(clock)))) then
+          ! The quantity is not at the requested time nor at the best possible time, so we try to update it
+
+          ! Sanity check: it can never happen that the quantity is in advance with respect to the
+          ! requested time.
+          if (this%quantities(q_id)%clock > clock) then
+            message(1) = "The partner quantity is in advance compared to the requested clock."
+            call messages_fatal(1)
+          end if
+
+          if (this%quantities(q_id)%protected) then
+            ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
+            ! So we have to wait until the quantity is at the right time.
+            all_updated = .false.
+          else
+            ! This is not a protected quantity and we are the right time, so we update it
+            all_updated = this%update_exposed_quantity(q_id, clock) .and. all_updated
+          end if
+        end if
       end do
+
     end if
 
+    POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
 
 end module system_abst_oct_m

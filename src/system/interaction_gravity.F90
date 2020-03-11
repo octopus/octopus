@@ -98,16 +98,8 @@ contains
 
     PUSH_SUB(interaction_gravity_update)
 
-    !The interaction has already been updated to the desired time
-    if (this%clock == clock) then
-      if (debug%info) then
-        write(message(1), '(a,a)') "Debug: -- Interaction already up-to-date with ", trim(this%partner%namespace%get())
-        call messages_info(1)
-      end if
-      updated = .true.
-      POP_SUB(interaction_gravity_update)
-      return
-    end if
+    ! We should only try to update the interaction if it is not yet at the desired time
+    ASSERT(.not. (this%clock == clock))
 
     allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
 

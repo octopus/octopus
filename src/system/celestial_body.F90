@@ -412,42 +412,27 @@ contains
   end subroutine celestial_body_td_write_end
 
   ! ---------------------------------------------------------
-  logical function celestial_body_update_quantity(this, iq, clock) result(updated)
+  subroutine celestial_body_update_quantity(this, iq, clock)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
     PUSH_SUB(celestial_body_update_quantity)
 
-    ASSERT(this%quantities(iq)%required)
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
 
-    if (this%quantities(iq)%clock == clock) then
-      updated = .true.
-    else
-      if (this%quantities(iq)%clock > clock) then
-        message(1) = "The quantity clock is in advance compared to the requested clock."
-        call messages_fatal(1)
-      end if
-
-      if (this%quantities(iq)%protected) then
-        !Don`t do anything, this is a protected quantity. The propagator update it
-        !If I have (system) a SCF propagator, this is not a problem here, as I handle the self-concistency.
-        updated = .true.
-      else
-        select case (iq)
-        case (MASS)
-          !The celestial body has a mass, but it does not require any update, as it does not change with time.
-          updated = .true.
-          call this%quantities(iq)%clock%set_time(clock)
-        case default
-          message(1) = "Incompatible quantity."
-          call messages_fatal(1)
-        end select
-      end if
-    end if
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
+      call this%quantities(iq)%clock%set_time(clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
 
     POP_SUB(celestial_body_update_quantity)
-  end function celestial_body_update_quantity
+  end subroutine celestial_body_update_quantity
 
  ! ---------------------------------------------------------
  logical function celestial_body_update_exposed_quantity(this, iq, clock) result(updated)
@@ -457,39 +442,18 @@ contains
 
     PUSH_SUB(celestial_body_update_exposed_quantity)
 
-    ASSERT(this%quantities(iq)%required)
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
 
-    if (.not. this%prop%predictor_corrector .or. &
-      (this%prop%predictor_corrector .and. .not. this%prop%inside_scf)) then
-
-      if (this%quantities(iq)%clock == clock .or. &
-        (this%quantities(iq)%clock < clock .and. this%quantities(iq)%clock%is_later_with_step(clock))) then
-        updated = .true.
-        !Don`t do anything, this is a protected quantity. The propagator update it.
-        !However, it can only be used if the predictor-corrector step is done.
-      else
-        if (this%quantities(iq)%clock > clock) then
-          message(1) = "The partner quantity is in advance compared to the requested clock."
-          call messages_fatal(1)
-        end if
-
-        if (this%quantities(iq)%protected) then
-          updated = .false.
-        else
-          select case (iq)
-          case (MASS)
-            !The celestial body has a mass, but it does not require any update, as it does not change with time.
-            updated = .true.
-            call this%quantities(iq)%clock%set_time(this%clock)
-          case default
-            message(1) = "Incompatible quantity."
-            call messages_fatal(1)
-          end select
-        end if
-      end if
-    else
-      updated = .false.
-    end if  
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it does not require any update, as it does not change with time.
+      updated = .true.
+      call this%quantities(iq)%clock%set_time(this%clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
 
     POP_SUB(celestial_body_update_exposed_quantity)
   end function celestial_body_update_exposed_quantity
