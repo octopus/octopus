@@ -20,6 +20,7 @@ Earth.CelestialBodyMass = 5.97237e24
  0.0 | 29780.0
 %
 
+Moon.TDSystemPropagator = beeman_scf
 Moon.CelestialBodyMass = 7.342e22
 %Moon.CelestialBodyInitialPosition
  149982422000.0 | 0.0
