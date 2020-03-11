@@ -146,7 +146,7 @@ contains
     class(system_abst_t),     intent(inout) :: this
 
     integer :: tdop, iq, q_id
-    logical :: all_updated, quantities_updated
+    logical :: all_updated
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
 
