@@ -26,6 +26,7 @@ module states_elec_restart_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use loct_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -41,6 +42,7 @@ module states_elec_restart_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use states_elec_group_oct_m
   use string_oct_m
   use types_oct_m
 
@@ -137,6 +139,73 @@ contains
     POP_SUB(states_elec_look_and_load)
   end subroutine states_elec_look_and_load
 
+  subroutine states_elec_get_restart_types(st, gr, mpitype, localtype, filetype)
+    type(states_elec_t),  intent(in)  :: st
+    type(grid_t),         intent(in)  :: gr
+    integer,              intent(in)  :: mpitype
+    integer,              intent(out) :: localtype
+    integer,              intent(out) :: filetype
+
+    integer :: nblocks_local, offset, ib, ierr
+    integer :: local_block_type, global_block_type
+    integer, allocatable :: blocklengths(:), displacements(:)
+
+    PUSH_SUB(states_elec_get_restart_types)
+
+    nblocks_local = st%group%block_end - st%group%block_start + 1
+    SAFE_ALLOCATE(blocklengths(nblocks_local))
+    SAFE_ALLOCATE(displacements(nblocks_local))
+
+    ! create local type for state blocks
+    offset = 0
+    do ib = st%group%block_start, st%group%block_end
+      blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
+      displacements(ib - st%group%block_start + 1) = offset
+      offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+    end do
+    !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
+    !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
+
+    call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, local_block_type, ierr)
+    call MPI_Type_commit(local_block_type, ierr)
+
+    ! local type including k points
+    blocklengths(1) = st%d%kpt%nlocal
+    displacements(1) = 0
+    call MPI_Type_indexed(1, blocklengths, displacements, local_block_type, localtype, ierr)
+    call MPI_Type_commit(localtype, ierr)
+
+    ! create global type for state blocks
+    offset = 0
+    ! get global offset for current block
+    do ib = 1, st%group%block_start - 1
+      offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+    end do
+    ! offset for domain distribution
+    offset = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(1)
+    do ib = st%group%block_start, st%group%block_end
+      blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
+      displacements(ib - st%group%block_start + 1) = offset
+      offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+    end do
+    !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
+    !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
+
+    call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, global_block_type, ierr)
+    call MPI_Type_commit(global_block_type, ierr)
+
+    ! global type including k points
+    blocklengths(1) = st%d%kpt%nlocal
+    displacements(1) = st%d%kpt%start - 1
+    call MPI_Type_indexed(1, blocklengths, displacements, global_block_type, filetype, ierr)
+    call MPI_Type_commit(filetype, ierr)
+
+    SAFE_DEALLOCATE_A(blocklengths)
+    SAFE_DEALLOCATE_A(displacements)
+
+    POP_SUB(states_elec_get_restart_types)
+  end subroutine states_elec_get_restart_types
+
 
   ! ---------------------------------------------------------
   subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
@@ -150,15 +219,16 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states
-    integer :: err, err2(2), ik, idir, ist, idim, itot
+    integer :: iunit_wfns, iunit_occs, iunit_states, iunit_blocks
+    integer :: err, err2(2), ik, idir, ist, idim, itot, ib
     integer :: root(1:P_STRATEGY_MAX)
-    character(len=MAX_PATH_LEN) :: filename
+    character(len=MAX_PATH_LEN) :: filename, workpath
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
+    integer :: filetype, localtype, mpitype, fh, mpistat
 
     PUSH_SUB(states_elec_dump)
 
@@ -177,6 +247,47 @@ contains
     end if
 
     call profiling_in(prof_write, "RESTART_WRITE")
+
+    if (states_are_real(st)) then
+      mpitype = MPI_DOUBLE_PRECISION
+    else
+      mpitype = MPI_DOUBLE_COMPLEX
+    end if
+
+    call states_elec_get_restart_types(st, gr, mpitype, localtype, filetype)
+
+    filename = "restart_states.obf"
+    call MPI_File_open(mpi_world, trim(filename), MPI_MODE_CREATE + MPI_MODE_WRONLY, &
+      MPI_INFO_NULL, fh, ierr)
+
+    call MPI_File_set_view(fh, 0_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
+
+    if (states_are_real(st)) then
+      st%group%dpsi = mpi_world%rank
+      call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
+    else
+      st%group%zpsi = mpi_world%rank
+      call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
+    end if
+
+    call MPI_File_close(fh, ierr)
+
+    iunit_blocks = restart_open(restart, 'blocks')
+    write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
+    lines(2) = '#     #block        start          end        range'
+    lines(3) = '%StateBlocks'
+    call restart_write(restart, iunit_blocks, lines, 3, err)
+    if (err /= 0) ierr = ierr + 256
+    do ib = 1, st%group%nblocks
+      write(lines(1), '(2X, I10, A, I10, A, I10, A, I10)') ib, ' | ', st%group%block_range(ib, 1), &
+        ' | ', st%group%block_range(ib, 2), ' | ', st%group%block_size(ib)
+      call restart_write(restart, iunit_blocks, lines, 1, err)
+    end do
+    lines(1) = '%'
+    call restart_write(restart, iunit_blocks, lines, 1, err)
+    if (err /= 0) ierr = ierr + 512
+    call restart_close(restart, iunit_blocks)
+
 
     if (present(lr)) then
       lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
@@ -340,7 +451,7 @@ contains
     logical,          optional, intent(in)    :: verbose
     logical,          optional, intent(in)    :: skip(:) !< A mask for reading or skipping the states. For expert use only.
 
-    integer              :: states_elec_file, wfns_file, occ_file, err, ik, ist, idir, idim
+    integer              :: states_elec_file, wfns_file, occ_file, blocks_file, err, ik, ist, idir, idim, ib
     integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
@@ -356,6 +467,13 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
+    integer :: filetype, localtype, mpitype, fh, mpistat
+    character(len=MPI_MAX_ERROR_STRING) :: string
+    integer :: errorcode, resultlen
+    character(len=MAX_PATH_LEN) :: restart_filename, workpath
+    type(states_elec_group_t) :: group_file
+    logical :: same_block_layout
+
 
 #if defined(HAVE_MPI)
     integer              :: iread_tmp
@@ -591,6 +709,62 @@ contains
     ! Now we read the wavefunctions. At this point we need to have all the information from the
     ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
     ! works as a barrier.
+
+    call states_elec_group_null(group_file)
+
+    blocks_file = restart_open(restart, 'blocks')
+    call restart_read(restart, blocks_file, lines, 3, err)
+    if (err /= 0) ierr = ierr + 1024
+    read(lines(1), '(10X,I10)') group_file%nblocks
+    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
+    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
+    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
+    do ib = 1, group_file%nblocks
+      call restart_read(restart, blocks_file, lines, 1, err)
+      if (err /= 0) ierr = ierr + 4096
+      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
+        group_file%block_range(ib, 2), group_file%block_size(ib)
+    end do
+    call restart_close(restart, blocks_file)
+
+    if(group_file%nblocks == st%group%nblocks) then
+      same_block_layout = all(group_file%block_range == st%group%block_range)
+    else
+      same_block_layout = .false.
+    end if
+
+    if (states_are_real(st)) then
+      mpitype = MPI_DOUBLE_PRECISION
+    else
+      mpitype = MPI_DOUBLE_COMPLEX
+    end if
+
+    call states_elec_get_restart_types(st, gr, mpitype, localtype, filetype)
+
+    restart_filename = "restart_states.obf"
+    call MPI_File_open(mpi_world, trim(restart_filename), MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
+    if(ierr /= MPI_SUCCESS) then
+      errorcode = ierr
+      call MPI_Error_string(errorcode, string, resultlen, ierr)
+      print*, string
+      ierr = 0
+    else
+      call MPI_File_set_view(fh, 0_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
+
+      if (states_are_real(st)) then
+        st%group%dpsi = mpi_world%rank
+        call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
+      else
+        st%group%zpsi = mpi_world%rank
+        call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
+      end if
+
+      call MPI_File_close(fh, ierr)
+    end if
+
+    SAFE_DEALLOCATE_P(group_file%block_range)
+    SAFE_DEALLOCATE_P(group_file%block_size)
+
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
     filled = .false.
