@@ -1136,9 +1136,8 @@ contains
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         size1 = st%group%batch_size(ib)
-        offset = offset + size1*mesh%np_part
         if (states_are_real(st)) then
-          dpsi(1:size1, 1:mesh%np_part) => st%group%dpsi(offset:offset+size1*mesh%np_part)
+          dpsi(1:size1, 1:mesh%np_part) => st%group%dpsi(offset:offset+size1*mesh%np_part-1)
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             dpsi, iqn, packed=.true.)
         else
@@ -1146,6 +1145,7 @@ contains
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             zpsi, iqn, packed=.true.)
         end if
+        offset = offset + size1*mesh%np_part
       end do
     end do
 
