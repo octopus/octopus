@@ -1068,6 +1068,7 @@ contains
     SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
     SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
     SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
+    SAFE_ALLOCATE(st%group%batch_size(1:st%group%nblocks))
 
     ! compute block offsets, starts, ends
     block_offsets(0) = 0
@@ -1103,6 +1104,9 @@ contains
     st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
     st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
     st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
+    do ib = 1, st%group%nblocks
+      st%group%batch_size(ib) = pad_pow2(st%group%block_size(ib) * st%d%dim)
+    end do
 
     st%group%block_initialized = .true.
 
@@ -1116,7 +1120,7 @@ contains
     ! total size of array needed
     total_size = 0
     do ib = st%group%block_start, st%group%block_end
-      total_size = total_size + pad_pow2(st%group%block_size(ib) * st%d%dim) * mesh%np_part * st%d%kpt%nlocal
+      total_size = total_size + st%group%batch_size(ib) * mesh%np_part * st%d%kpt%nlocal
     end do
 
     if (states_are_real(st)) then
@@ -1131,16 +1135,14 @@ contains
     offset = 1
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
+        size1 = st%group%batch_size(ib)
+        offset = offset + size1*mesh%np_part
         if (states_are_real(st)) then
-          size1 = pad_pow2(st%group%block_size(ib) * st%d%dim)
           dpsi(1:size1, 1:mesh%np_part) => st%group%dpsi(offset:offset+size1*mesh%np_part)
-          offset = offset + size1*mesh%np_part
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             dpsi, iqn, packed=.true.)
         else
-          size1 = pad_pow2(st%group%block_size(ib) * st%d%dim)
           zpsi(1:size1, 1:mesh%np_part) => st%group%zpsi(offset:offset+size1*mesh%np_part-1)
-          offset = offset + size1*mesh%np_part
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             zpsi, iqn, packed=.true.)
         end if

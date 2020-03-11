@@ -46,6 +46,7 @@ module states_elec_group_oct_m
     integer, pointer         :: iblock(:, :)          !< A map, that for each state index, returns the index of block containing it
     integer, pointer         :: block_range(:, :)     !< Each block contains states from block_range(:, 1) to block_range(:, 2)
     integer, pointer         :: block_size(:)         !< The number of states in each block.
+    integer, pointer         :: batch_size(:)         !< The size of the batch corresponding to the block
     logical, pointer         :: block_is_local(:, :)  !< It is true if the block is in this node.
     integer, allocatable     :: block_node(:)         !< The node that contains each block
     integer, allocatable     :: rma_win(:, :)         !< The MPI window for one side communication
@@ -66,6 +67,7 @@ contains
     nullify(this%iblock)
     nullify(this%block_range)
     nullify(this%block_size)
+    nullify(this%batch_size)
     nullify(this%block_is_local)
     nullify(this%dpsi)
     nullify(this%zpsi)
@@ -101,6 +103,7 @@ contains
       SAFE_DEALLOCATE_P(this%iblock)
       SAFE_DEALLOCATE_P(this%block_range)
       SAFE_DEALLOCATE_P(this%block_size)
+      SAFE_DEALLOCATE_P(this%batch_size)
       SAFE_DEALLOCATE_P(this%block_is_local)
       SAFE_DEALLOCATE_A(this%block_node)
       this%block_initialized = .false.
@@ -149,6 +152,7 @@ contains
       call loct_pointer_copy(group_out%iblock, group_in%iblock)
       call loct_pointer_copy(group_out%block_range, group_in%block_range)
       call loct_pointer_copy(group_out%block_size, group_in%block_size)
+      call loct_pointer_copy(group_out%batch_size, group_in%batch_size)
       call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
       call loct_allocatable_copy(group_out%block_node, group_in%block_node)
       call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
