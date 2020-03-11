@@ -38,13 +38,12 @@ module quantity_oct_m
     MASS                         =  9,  &
     MAX_QUANTITIES               =  9
 
-  !> Quantities are quantities that can be exposed by a system and used to
-  !! calculate interactions with other systems.
+  !> Systems can expose quantities that can be used to calculate interactions
+  !! with other systems.
   !!
-  !! Quantities that determine the state of the system are called
-  !! "internal" and should have the corresponding flag set to yes.
-  !! Such quantities are usually updated by the propagation algorithm and
-  !! cannot simply be calculated on-demand.
+  !! Some quantities are dynamical variables of the system. Such quantities are
+  !! usually updated by the propagation algorithm and cannot be calculated
+  !! on-demand. Such quantities must be marked as "protected".
   type quantity_t
     private
     type(clock_t), public :: clock               !< Clock storing the time at which the quantity was last updated.
