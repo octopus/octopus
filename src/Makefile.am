@@ -481,6 +481,7 @@ noinst_HEADERS +=                                    \
 # Sources in system
 system_f_srcs =                                 \
 	system/current.F90                      \
+	system/charged_particle.F90             \
 	system/classical_particle.F90           \
 	system/dos.F90                          \
 	system/eigen_cg.F90                     \
