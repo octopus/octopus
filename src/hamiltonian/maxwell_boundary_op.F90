@@ -171,6 +171,7 @@ contains
 
     PUSH_SUB(bc_mxll_init)
 
+    bc%ab_user_def = .false.
 
     !%Variable MaxwellBoundaryConditions
     !%Type block
@@ -1958,47 +1959,47 @@ contains
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
 
-      if(bc%ab_user_def) then
+    if(bc%ab_user_def) then
 
-        dd = bc%ab_ufn(ip) - bounds(1, 1)
-        if(dd > M_ZERO) then
-          if(bc%ab_ufn(ip) < bounds(2, 1) ) then
-             point_info = 1
-          end if
-        end if
-
-      else ! bc%ab_user_def == .false.
-
-        if(mesh%sb%box_shape == SPHERE) then
-
-          dd = rr -  bounds(1, 1)
-          if(dd > M_ZERO ) then
-            if (dd  <  width(1)) then
-              point_info = 1
-            end if
-          end if
-
-        else if (mesh%sb%box_shape == PARALLELEPIPED) then
-
-          ! Limits of boundary region
-          if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
-            if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
-              point_info = 1
-            else
-              point_info = 0
-            end if
-          else
-            point_info = -1
-          end if
-
-        else
-
-          if(mesh_inborder(mesh, geo, ip, dd, width(1))) then
-            point_info = 1
-          end if
-
+      dd = bc%ab_ufn(ip) - bounds(1, 1)
+      if(dd > M_ZERO) then
+        if(bc%ab_ufn(ip) < bounds(2, 1) ) then
+           point_info = 1
         end if
       end if
+
+    else ! bc%ab_user_def == .false.
+
+      if(mesh%sb%box_shape == SPHERE) then
+
+        dd = rr -  bounds(1, 1)
+        if(dd > M_ZERO ) then
+          if (dd  <  width(1)) then
+            point_info = 1
+          end if
+        end if
+
+      else if (mesh%sb%box_shape == PARALLELEPIPED) then
+
+        ! Limits of boundary region
+        if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
+          if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
+            point_info = 1
+          else
+            point_info = 0
+          end if
+        else
+          point_info = -1
+        end if
+
+      else
+
+        if(mesh_inborder(mesh, geo, ip, dd, width(1))) then
+          point_info = 1
+        end if
+
+      end if
+    end if
 
   end subroutine maxwell_box_point_info
 
