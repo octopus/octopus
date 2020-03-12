@@ -63,26 +63,36 @@ module charged_particle_oct_m
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
     procedure :: set_pointers_to_interaction => classical_set_pointers_to_interaction
     final :: charged_particle_finalize
+    procedure :: init => charged_particle_init
   end type charged_particle_t
 
   interface charged_particle_t
-    procedure charged_particle_init
+    procedure charged_particle_constructor
   end interface charged_particle_t
 
 contains
+  ! ---------------------------------------------------------
+  function charged_particle_constructor(namespace) result(sys)
+    class(charged_particle_t), pointer    :: sys
+    type(namespace_t),       intent(in) :: namespace
+
+    PUSH_SUB(charged_particle_constructor)
+
+    SAFE_ALLOCATE(sys)
+
+    call sys%init(namespace)
+
+    POP_SUB(charged_particle_constructor)
+  end function charged_particle_constructor
 
   ! ---------------------------------------------------------
-  function charged_particle_init(this, namespace) result(sys)
-    class(charged_particle_t), target, intent(in) :: this
-    class(charged_particle_t), pointer  :: sys
-    type(namespace_t),       intent(in) :: namespace
+  subroutine charged_particle_init(this, namespace)
+    class(charged_particle_t), intent(inout) :: this
+    type(namespace_t),         intent(in)    :: namespace
 
     PUSH_SUB(charged_particle_init)
 
-    ! calling the parent routine here triggers a compiler error
-    ! since classical_particle_init is not a member of the 
-    ! ‘system_abst_t’ structure
-    this%classical_particle_t%classical_particle_init(namespace)
+    call this%classical_particle_t%init(namespace)
 
     !%Variable ClassicalParticleCharge
     !%Type float
@@ -90,11 +100,11 @@ contains
     !%Description
     !% Charge of classical particle
     !%End
-    call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, sys%charge)
-    call messages_print_var_value(stdout, 'ClassicalParticleCharge', sys%charge)
+    call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, this%charge)
+    call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
 
     POP_SUB(charged_particle_init)
-  end function charged_particle_init
+  end subroutine charged_particle_init
 
   ! ---------------------------------------------------------
   subroutine charged_particle_add_interaction_partner(this, partner)
@@ -106,6 +116,7 @@ contains
 
     PUSH_SUB(charged_particle_add_interaction_partner)
 
+    call this%classical_particle_t%add_interaction_partner(partner)
 
     POP_SUB(charged_particle_add_interaction_partner)
   end subroutine charged_particle_add_interaction_partner
@@ -117,6 +128,7 @@ contains
 
     PUSH_SUB(charged_particle_has_interaction)
 
+    charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction)
 
     POP_SUB(charged_particle_has_interaction)
   end function charged_particle_has_interaction
@@ -130,6 +142,7 @@ contains
 
     PUSH_SUB(charged_particle_do_td)
 
+    call this%classical_particle_t%do_td_operation(operation)
 
     POP_SUB(charged_particle_do_td)
   end subroutine charged_particle_do_td
@@ -141,6 +154,8 @@ contains
 
     PUSH_SUB(charged_particle_is_tolerance_reached)
 
+    converged = this%classical_particle_t%is_tolerance_reached(tol)
+
     POP_SUB(charged_particle_is_tolerance_reached)
    end function charged_particle_is_tolerance_reached
 
@@ -149,6 +164,8 @@ contains
      class(charged_particle_t),   intent(inout)    :: this
 
      PUSH_SUB(charged_particle_store_current_status) 
+
+     call this%classical_particle_t%store_current_status()
 
      POP_SUB(charged_particle_store_current_status)
    end subroutine charged_particle_store_current_status
@@ -162,6 +179,8 @@ contains
 
     PUSH_SUB(charged_particle_write_td_info)
 
+    call this%classical_particle_t%write_td_info()
+
     POP_SUB(charged_particle_write_td_info)
   end subroutine charged_particle_write_td_info
 
@@ -171,6 +190,8 @@ contains
     FLOAT,                       intent(in)    :: dt
 
     PUSH_SUB(charged_particle_td_write_init)
+
+    call this%classical_particle_t%td_write_init(dt)
 
     POP_SUB(charged_particle_td_write_init)
   end subroutine charged_particle_td_write_init
@@ -187,6 +208,8 @@ contains
 
     PUSH_SUB(charged_particle_td_write_iter)
 
+    call this%classical_particle_t%td_write_iter(iter)
+
     POP_SUB(charged_particle_td_write_iter)
   end subroutine charged_particle_td_write_iter
 
@@ -195,6 +218,8 @@ contains
     class(charged_particle_t), intent(inout) :: this
 
     PUSH_SUB(charged_particle_td_write_end)
+
+    call this%classical_particle_t%td_write_end()
 
     POP_SUB(charged_particle_td_write_end)
   end subroutine charged_particle_td_write_end
@@ -207,6 +232,8 @@ contains
 
     PUSH_SUB(charged_particle_update_quantity)
 
+    updated = this%classical_particle_t%update_quantity(iq, clock)
+
     POP_SUB(charged_particle_update_quantity)
   end function charged_particle_update_quantity
 
@@ -218,6 +245,8 @@ contains
 
     PUSH_SUB(charged_particle_update_exposed_quantity)
 
+    updated = this%classical_particle_t%update_exposed_quantity(iq, clock)
+
     POP_SUB(charged_particle_update_exposed_quantity)
   end function charged_particle_update_exposed_quantity
 
@@ -228,15 +257,14 @@ contains
 
     PUSH_SUB(classical_set_pointers_to_interaction)
 
+    call this%classical_particle_t%set_pointers_to_interaction(inter)
+
     POP_SUB(classical_set_pointers_to_interaction)
   end subroutine classical_set_pointers_to_interaction
 
   ! ---------------------------------------------------------
   subroutine charged_particle_finalize(this)
     type(charged_particle_t), intent(inout) :: this
-
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
 
     PUSH_SUB(charged_particle_finalize)
 

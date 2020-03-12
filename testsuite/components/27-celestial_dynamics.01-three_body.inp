@@ -5,35 +5,35 @@ TestMode = celestial_dynamics
 Dimensions = 2
 
 %Systems
- "Sun"   | celestial_body
- "Earth" | celestial_body
- "Moon"  | celestial_body
+ "Sun"   | charged_particle
+ "Earth" | classical_particle
+ "Moon"  | classical_particle
 %
 
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
 
-Earth.CelestialBodyMass = 5.97237e24
-%Earth.CelestialBodyInitialPosition
+Earth.ClassicleParticleMass = 5.97237e24
+%Earth.ClassicleParticleInitialPosition
  149598023000.0 | 0.0
 %
-%Earth.CelestialBodyInitialVelocity
+%Earth.ClassicleParticleInitialVelocity
  0.0 | 29780.0
 %
 
 Moon.TDSystemPropagator = beeman_scf
-Moon.CelestialBodyMass = 7.342e22
-%Moon.CelestialBodyInitialPosition
+Moon.ClassicleParticleMass = 7.342e22
+%Moon.ClassicleParticleInitialPosition
  149982422000.0 | 0.0
 %
-%Moon.CelestialBodyInitialVelocity
+%Moon.ClassicleParticleInitialVelocity
  0.0 | 30902.0
 %
 
-Sun.CelestialBodyMass = 1.98855e30
-%Sun.CelestialBodyInitialPosition
+Sun.ClassicleParticleMass = 1.98855e30
+%Sun.ClassicleParticleInitialPosition
  0.0 | 0.0
 %
-%Sun.CelestialBodyInitialVelocity
+%Sun.ClassicleParticleInitialVelocity
  0.0 | 0.0
 %
 

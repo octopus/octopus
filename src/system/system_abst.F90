@@ -310,9 +310,9 @@ contains
     end do
 
     ! Internal quantities clocks
-    where (this%quantities%internal)
-      this%quantities%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
-    end where
+    do iq = 1, MAX_QUANTITIES
+      if (this%quantities(iq)%internal) this%quantities(iq)%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    end do
 
     POP_SUB(system_init_clocks)
   end subroutine system_init_clocks

@@ -72,31 +72,43 @@ module classical_particle_oct_m
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
     procedure :: set_pointers_to_interaction => classical_set_pointers_to_interaction
     final :: classical_particle_finalize
+    procedure :: init => classical_particle_init
   end type classical_particle_t
 
   interface classical_particle_t
-    procedure classical_particle_init
+    procedure classical_particle_constructor
   end interface classical_particle_t
 
 contains
-
   ! ---------------------------------------------------------
-  function classical_particle_init(namespace) result(sys)
+  function classical_particle_constructor(namespace) result(sys)
     class(classical_particle_t), pointer    :: sys
     type(namespace_t),       intent(in) :: namespace
+
+    PUSH_SUB(classical_particle_constructor)
+
+    SAFE_ALLOCATE(sys)
+
+    call sys%init(namespace)
+
+    POP_SUB(classical_particle_constructor)
+  end function classical_particle_constructor
+
+  ! ---------------------------------------------------------
+  subroutine classical_particle_init(this, namespace)
+    class(classical_particle_t), intent(inout) :: this
+    type(namespace_t),           intent(in)    :: namespace
 
     integer :: n_rows, idir
     type(block_t) :: blk
 
     PUSH_SUB(classical_particle_init)
 
-    SAFE_ALLOCATE(sys)
-
-    sys%namespace = namespace
+    this%namespace = namespace
 
     call messages_print_stress(stdout, "Classicle Particle", namespace=namespace)
 
-    call space_init(sys%space, namespace)
+    call space_init(this%space, namespace)
 
     !%Variable ClassicleParticleMass
     !%Type float
@@ -104,8 +116,8 @@ contains
     !%Description
     !% Mass of classical body in Kg.
     !%End
-    call parse_variable(namespace, 'ClassicleParticleMass', M_ONE, sys%mass)
-    call messages_print_var_value(stdout, 'ClassicleParticleMass', sys%mass)
+    call parse_variable(namespace, 'ClassicleParticleMass', M_ONE, this%mass)
+    call messages_print_var_value(stdout, 'ClassicleParticleMass', this%mass)
 
     !%Variable ClassicleParticleInitialPosition
     !%Type block
@@ -113,17 +125,17 @@ contains
     !%Description
     !% Initial position of classical body, in Km.
     !%End
-    sys%pos = M_ZERO
+    this%pos = M_ZERO
     if (parse_block(namespace, 'ClassicleParticleInitialPosition', blk) == 0) then
       n_rows = parse_block_n(blk)
       if (n_rows > 1) call  messages_input_error('ClassicleParticleInitialPosition')
 
-      do idir = 1, sys%space%dim
-        call parse_block_float(blk, 0, idir - 1, sys%pos(idir))
+      do idir = 1, this%space%dim
+        call parse_block_float(blk, 0, idir - 1, this%pos(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicleParticleInitialPosition', sys%pos(1:sys%space%dim))
+    call messages_print_var_value(stdout, 'ClassicleParticleInitialPosition', this%pos(1:this%space%dim))
 
     !%Variable ClassicleParticleInitialVelocity
     !%Type block
@@ -131,28 +143,28 @@ contains
     !%Description
     !% Initial velocity of classical body in Km/s.
     !%End
-    sys%vel = M_ZERO
+    this%vel = M_ZERO
     if (parse_block(namespace, 'ClassicleParticleInitialVelocity', blk) == 0) then
       n_rows = parse_block_n(blk)
       if (n_rows > 1) call  messages_input_error('ClassicleParticleInitialVelocity')
-      do idir = 1, sys%space%dim
-        call parse_block_float(blk, 0, idir - 1, sys%vel(idir))
+      do idir = 1, this%space%dim
+        call parse_block_float(blk, 0, idir - 1, this%vel(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicleParticleInitialVelocity', sys%vel(1:sys%space%dim))
+    call messages_print_var_value(stdout, 'ClassicleParticleInitialVelocity', this%vel(1:this%space%dim))
 
-    sys%acc = M_ZERO
-    sys%prev_acc = M_ZERO
-    sys%tot_force = M_ZERO
+    this%acc = M_ZERO
+    this%prev_acc = M_ZERO
+    this%tot_force = M_ZERO
 
-    sys%quantities(POSITION)%internal = .true.
-    sys%quantities(VELOCITY)%internal = .true.
+    this%quantities(POSITION)%internal = .true.
+    this%quantities(VELOCITY)%internal = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(classical_particle_init)
-  end function classical_particle_init
+  end subroutine classical_particle_init
 
   ! ---------------------------------------------------------
   subroutine classical_particle_add_interaction_partner(this, partner)
@@ -416,6 +428,8 @@ contains
     PUSH_SUB(classical_particle_update_quantity)
 
     if(this%quantities(iq)%clock > clock) then
+      call this%quantities(iq)%clock%print()
+      call clock%print()
       message(1) = "The system quantity is in advance compared to the requested clock."
       call messages_fatal(1)
     end if

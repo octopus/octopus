@@ -972,7 +972,7 @@ contains
     do while (iter%has_next())
       sys => iter%get_next()
       select type(sys)
-      type is (classical_particle_t)
+      class is (classical_particle_t)
 
         !Initialize output and write data at time zero
         call sys%td_write_init(sys%prop%dt)
@@ -1000,7 +1000,7 @@ contains
         do while (iter%has_next())
           sys => iter%get_next()
           select type (sys)
-          type is (classical_particle_t)
+          class is (classical_particle_t)
 
             call sys%dt_operation()
 
@@ -1024,7 +1024,7 @@ contains
         sys => iter%get_next()
 
         select type (sys)
-        type is (classical_particle_t)
+        class is (classical_particle_t)
 
           if(sys%prop%step_is_done()) then
             call sys%prop%rewind()
@@ -1047,7 +1047,7 @@ contains
     do while (iter%has_next())
       sys => iter%get_next()
       select type (sys)
-      type is (classical_particle_t)
+      class is (classical_particle_t)
 
         call sys%td_write_end()
 
