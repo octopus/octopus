@@ -655,7 +655,7 @@ contains
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
     else 
-      rs_state(:,:) = ff_rs_state(:,:)
+      rs_state(:,1:3) = ff_rs_state(:,1:3)
     end if
 
   end subroutine transform_rs_state_backward
@@ -674,7 +674,7 @@ contains
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
     else 
-      ff_density(:,:) = rs_current_density(:,:)
+      ff_density(:,1:3) = rs_current_density(:,1:3)
     end if
 
   end subroutine transform_rs_densities_forward
@@ -693,7 +693,7 @@ contains
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
     else 
-      rs_current_density = ff_density(:,:)
+      rs_current_density(:,1:3) = ff_density(:,1:3)
     end if
 
   end subroutine transform_rs_densities_backward
