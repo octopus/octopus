@@ -20,6 +20,7 @@
 
 module multisystem_oct_m
   use classical_particle_oct_m
+  use charged_particle_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
@@ -39,7 +40,8 @@ module multisystem_oct_m
   integer, parameter ::         &
     SYSTEM_ELECTRONIC     = 1,  &
     SYSTEM_MAXWELL        = 2,  &
-    SYSTEM_CELESTIAL_BODY = 3
+    SYSTEM_CELESTIAL_BODY = 3,  &
+    SYSTEM_CHARGED_PARTICLE = 4
   
 contains
 
@@ -69,6 +71,8 @@ contains
     !% A maxwell system.
     !%Option classical_particle 3
     !% A celestial body. Used for testing purposes only.
+    !%Option charged_particle 4
+    !% A celestial body. Used for testing purposes only.
     !%End
     if(parse_block(global_namespace, 'Systems', blk) == 0) then
 
@@ -82,6 +86,9 @@ contains
           call systems%add(sys)
         case (SYSTEM_CELESTIAL_BODY)
           sys => classical_particle_t(namespace_t(system_name))
+          call systems%add(sys)
+        case (SYSTEM_CHARGED_PARTICLE)
+          sys => charged_particle_t(namespace_t(system_name))
           call systems%add(sys)
         case default
           call messages_input_error('Systems')
