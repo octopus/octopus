@@ -139,69 +139,135 @@ contains
     POP_SUB(states_elec_look_and_load)
   end subroutine states_elec_look_and_load
 
-  subroutine states_elec_get_restart_types(st, gr, mpitype, localtype, filetype)
+  subroutine states_elec_get_restart_types(st, gr, mpitype, localtype, filetype, group)
     type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     integer,              intent(in)  :: mpitype
     integer,              intent(out) :: localtype
     integer,              intent(out) :: filetype
+    type(states_elec_group_t), optional, intent(in) :: group
 
-    integer :: nblocks_local, offset, ib, ierr
+    integer :: nblocks_local, offset, ib, ierr, ist
     integer :: local_block_type, global_block_type
-    integer, allocatable :: blocklengths(:), displacements(:)
+    integer, allocatable :: blocklengths(:), displacements(:), types(:), offsets(:)
+    logical :: same_block_layout
+    integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
+    integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
 
     PUSH_SUB(states_elec_get_restart_types)
 
+    if(present(group)) then
+      if(group%nblocks == st%group%nblocks) then
+        same_block_layout = all(group%block_range == st%group%block_range)
+      else
+        same_block_layout = .false.
+      end if
+    else
+      same_block_layout = .true.
+    end if
+
     nblocks_local = st%group%block_end - st%group%block_start + 1
-    SAFE_ALLOCATE(blocklengths(nblocks_local))
-    SAFE_ALLOCATE(displacements(nblocks_local))
+    if(same_block_layout) then
+      SAFE_ALLOCATE(blocklengths(nblocks_local))
+      SAFE_ALLOCATE(displacements(nblocks_local))
 
-    ! create local type for state blocks
-    offset = 0
-    do ib = st%group%block_start, st%group%block_end
-      blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
-      displacements(ib - st%group%block_start + 1) = offset
-      offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
-    end do
-    !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
-    !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
+      ! create local type for state blocks
+      offset = 0
+      do ib = st%group%block_start, st%group%block_end
+        blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
+        displacements(ib - st%group%block_start + 1) = offset
+        offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+      end do
+      !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
+      !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
 
-    call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, local_block_type, ierr)
-    call MPI_Type_commit(local_block_type, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, local_block_type, ierr)
+      !call MPI_Type_commit(local_block_type, ierr)
 
-    ! local type including k points
-    blocklengths(1) = st%d%kpt%nlocal
-    displacements(1) = 0
-    call MPI_Type_indexed(1, blocklengths, displacements, local_block_type, localtype, ierr)
-    call MPI_Type_commit(localtype, ierr)
+      ! local type including k points
+      blocklengths(1) = st%d%kpt%nlocal
+      displacements(1) = 0
+      call MPI_Type_indexed(1, blocklengths, displacements, local_block_type, localtype, ierr)
+      call MPI_Type_commit(localtype, ierr)
 
-    ! create global type for state blocks
-    offset = 0
-    ! get global offset for current block
-    do ib = 1, st%group%block_start - 1
-      offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-    end do
-    ! offset for domain distribution
-    offset = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(1)
-    do ib = st%group%block_start, st%group%block_end
-      blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
-      displacements(ib - st%group%block_start + 1) = offset
-      offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-    end do
-    !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
-    !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
+      ! create global type for state blocks
+      offset = 0
+      ! get global offset for current block
+      do ib = 1, st%group%block_start - 1
+        offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+      end do
+      ! offset for domain distribution
+      offset = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(1)
+      do ib = st%group%block_start, st%group%block_end
+        blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
+        displacements(ib - st%group%block_start + 1) = offset
+        offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+      end do
+      !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
+      !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
 
-    call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, global_block_type, ierr)
-    call MPI_Type_commit(global_block_type, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpitype, global_block_type, ierr)
+      !call MPI_Type_commit(global_block_type, ierr)
 
-    ! global type including k points
-    blocklengths(1) = st%d%kpt%nlocal
-    displacements(1) = st%d%kpt%start - 1
-    call MPI_Type_indexed(1, blocklengths, displacements, global_block_type, filetype, ierr)
-    call MPI_Type_commit(filetype, ierr)
+      ! global type including k points
+      blocklengths(1) = st%d%kpt%nlocal
+      displacements(1) = st%d%kpt%start - 1
+      call MPI_Type_indexed(1, blocklengths, displacements, global_block_type, filetype, ierr)
+      call MPI_Type_commit(filetype, ierr)
 
-    SAFE_DEALLOCATE_A(blocklengths)
-    SAFE_DEALLOCATE_A(displacements)
+      SAFE_DEALLOCATE_A(blocklengths)
+      SAFE_DEALLOCATE_A(displacements)
+    else
+      call MPI_Type_get_extent(mpitype, lb, size_mpitype, ierr)
+
+      SAFE_ALLOCATE(bdisplacements(st%lnst))
+      SAFE_ALLOCATE(types(st%lnst))
+      SAFE_ALLOCATE(blocklengths(st%lnst))
+      SAFE_ALLOCATE(offsets(st%group%nblocks))
+      ! local state
+      offsets(st%group%block_start) = 0
+      do ib = st%group%block_start + 1, st%group%block_end
+        offsets(ib) = offsets(ib-1) + st%group%batch_size(ib-1) * gr%mesh%np_part
+      end do
+      do ist = st%st_start, st%st_end
+        ib = st%group%iblock(ist, st%d%kpt%start)
+        ! create vector for each state
+        call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpitype, &
+          types(ist - st%st_start + 1), ierr)
+        offset = offsets(ib) + ist - st%group%block_range(ib, 1)
+        bdisplacements(ist - st%st_start + 1) = offset * size_mpitype
+      end do
+      blocklengths = 1
+      ! struct is needed because of different displacements in different batches
+      call MPI_Type_create_struct(1, blocklengths, bdisplacements, types, localtype, ierr)
+      call MPI_Type_commit(localtype, ierr)
+      SAFE_DEALLOCATE_A(offsets)
+
+      SAFE_ALLOCATE(offsets(group%nblocks))
+      ! global state
+      offsets(1) = 0
+      do ib = 2, group%nblocks
+        offsets(ib) = offsets(ib-1) + group%batch_size(ib-1) * gr%mesh%np_global
+      end do
+      do ist = st%st_start, st%st_end
+        ib = group%iblock(ist, st%d%kpt%start)
+        ! create vector for each state
+        call MPI_Type_vector(gr%mesh%np, 1, group%batch_size(ib), mpitype, &
+          types(ist - st%st_start + 1), ierr)
+        offset = offsets(ib) + ist - group%block_range(ib, 1) + &
+          (gr%mesh%vp%xlocal - 1) * group%batch_size(ib)
+        bdisplacements(ist - st%st_start + 1) = offset * size_mpitype
+      end do
+      blocklengths = 1
+      ! struct is needed because of different displacements in different batches
+      call MPI_Type_create_struct(1, blocklengths, bdisplacements, types, filetype, ierr)
+      call MPI_Type_commit(filetype, ierr)
+
+      SAFE_DEALLOCATE_A(offsets)
+      SAFE_DEALLOCATE_A(bdisplacements)
+      SAFE_DEALLOCATE_A(types)
+      SAFE_DEALLOCATE_A(blocklengths)
+    end if
 
     POP_SUB(states_elec_get_restart_types)
   end subroutine states_elec_get_restart_types
@@ -263,10 +329,10 @@ contains
     call MPI_File_set_view(fh, 0_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
 
     if (states_are_real(st)) then
-      st%group%dpsi = mpi_world%rank
+      !st%group%dpsi = mpi_world%rank
       call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
     else
-      st%group%zpsi = mpi_world%rank
+      !st%group%zpsi = mpi_world%rank
       call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
     end if
 
@@ -472,7 +538,6 @@ contains
     integer :: errorcode, resultlen
     character(len=MAX_PATH_LEN) :: restart_filename, workpath
     type(states_elec_group_t) :: group_file
-    logical :: same_block_layout
 
 
 #if defined(HAVE_MPI)
@@ -719,19 +784,18 @@ contains
     if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
     SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
     SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
     do ib = 1, group_file%nblocks
       call restart_read(restart, blocks_file, lines, 1, err)
       if (err /= 0) ierr = ierr + 4096
       read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
         group_file%block_range(ib, 2), group_file%block_size(ib)
+      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
+      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
+        st%d%kpt%start:st%d%kpt%end) = ib
     end do
     call restart_close(restart, blocks_file)
-
-    if(group_file%nblocks == st%group%nblocks) then
-      same_block_layout = all(group_file%block_range == st%group%block_range)
-    else
-      same_block_layout = .false.
-    end if
 
     if (states_are_real(st)) then
       mpitype = MPI_DOUBLE_PRECISION
@@ -739,7 +803,7 @@ contains
       mpitype = MPI_DOUBLE_COMPLEX
     end if
 
-    call states_elec_get_restart_types(st, gr, mpitype, localtype, filetype)
+    call states_elec_get_restart_types(st, gr, mpitype, localtype, filetype, group=group_file)
 
     restart_filename = "restart_states.obf"
     call MPI_File_open(mpi_world, trim(restart_filename), MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
@@ -752,10 +816,8 @@ contains
       call MPI_File_set_view(fh, 0_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
 
       if (states_are_real(st)) then
-        st%group%dpsi = mpi_world%rank
         call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
       else
-        st%group%zpsi = mpi_world%rank
         call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
       end if
 
@@ -792,25 +854,25 @@ contains
             cycle
           end if
 
-          if (states_are_real(st)) then
-            call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
-          else
-            call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
-          end if
+          !if (states_are_real(st)) then
+          !  call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
+          !else
+          !  call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+          !end if
 
-          if(states_are_real(st)) then
-            if(.not. present(lr)) then
-              call states_elec_set_state(st, gr%mesh, idim, ist, ik, dpsi)
-            else
-              call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
-            end if
-          else
-            if(.not. present(lr)) then
-              call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi)
-            else
-              call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
-            end if
-          end if
+          !if(states_are_real(st)) then
+          !  if(.not. present(lr)) then
+          !    call states_elec_set_state(st, gr%mesh, idim, ist, ik, dpsi)
+          !  else
+          !    call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
+          !  end if
+          !else
+          !  if(.not. present(lr)) then
+          !    call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi)
+          !  else
+          !    call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
+          !  end if
+          !end if
 
 
           if (err == 0) then
