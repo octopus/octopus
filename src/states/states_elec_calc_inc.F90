@@ -1328,7 +1328,7 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
         call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
       end if
 
-      call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
+      call X(accel_gemm)(transA = CUBLAS_OP_C, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
         A = uu_buffer, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
         B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
