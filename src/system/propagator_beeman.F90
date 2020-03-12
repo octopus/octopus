@@ -21,9 +21,9 @@
 module propagator_beeman_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use system_abst_oct_m
 
   implicit none
 
@@ -42,9 +42,9 @@ module propagator_beeman_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_beeman_init(dt, predictor_corrector) result(this)
-    FLOAT,   intent(in)    :: dt
-    logical, intent(in)    :: predictor_corrector
+  function propagator_beeman_init(namespace, predictor_corrector) result(this)
+    type(namespace_t),   intent(in)    :: namespace
+    logical,             intent(in)    :: predictor_corrector
     type(propagator_beeman_t), pointer :: this
 
     PUSH_SUB(propagator_beeman_init)
@@ -81,7 +81,7 @@ contains
     ! Beeman has only one algorithmic step
     this%algo_steps = 1
 
-    this%dt = dt
+    call this%parse_td_variables(namespace)
 
     POP_SUB(propagator_beeman_init)
   end function propagator_beeman_init

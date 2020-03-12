@@ -51,11 +51,11 @@ module celestial_body_oct_m
     FLOAT, public :: pos(1:MAX_DIM)
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
-    FLOAT, public :: prev_acc(1:MAX_DIM)
-    FLOAT, public :: save_pos(1:MAX_DIM)
-    FLOAT, public :: save_vel(1:MAX_DIM)
+    FLOAT, public :: prev_acc(1:MAX_DIM,1) !< A storage of the prior times. At the moment we only can store one time 
+    FLOAT, public :: save_pos(1:MAX_DIM) !< A storage for the SCF loops
+    FLOAT, public :: save_vel(1:MAX_DIM) !< A storage for the SCF loops
     FLOAT, public :: tot_force(1:MAX_DIM)
-    FLOAT, public :: prev_tot_force(1:MAX_DIM)
+    FLOAT, public :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
 
     type(c_ptr) :: output_handle
   contains
@@ -239,8 +239,8 @@ contains
     case (BEEMAN_PREDICT_POS)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                                 * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
-      this%prev_acc(1:this%space%dim) = this%acc(1:this%space%dim)
+                                 * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
+      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
       if (.not. this%prop%predictor_corrector) then
@@ -250,7 +250,7 @@ contains
     case (BEEMAN_PREDICT_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
                                  + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
-                                 + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+                                 + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
 
       call this%quantities(VELOCITY)%clock%increment()
 
