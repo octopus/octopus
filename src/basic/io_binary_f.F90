@@ -254,19 +254,22 @@ contains
 
   !------------------------------------------------------
 
-  subroutine io_binary_get_info(fname, np, file_size, ierr)
+  subroutine io_binary_get_info(fname, np, file_size, ierr, type)
     character(len=*),    intent(in)    :: fname
     integer,             intent(out)   :: np
     integer,             intent(out)   :: file_size
     integer,             intent(out)   :: ierr
+    integer, optional,   intent(out)   :: type
 
-    integer :: type, iio
+    integer :: type_, iio
     
     PUSH_SUB(io_binary_get_info)
 
     iio = 0
-    call get_info_binary(np, type, file_size, ierr, iio, string_f_to_c(fname))
+    call get_info_binary(np, type_, file_size, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
+
+    if(present(type)) type = type_
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info
