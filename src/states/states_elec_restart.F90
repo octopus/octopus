@@ -324,6 +324,8 @@ contains
 
     call profiling_in(prof_write, "RESTART_WRITE")
 
+    call restart_block_signals()
+
     if (states_are_real(st)) then
       mpitype = MPI_DOUBLE_PRECISION
     else
@@ -399,8 +401,6 @@ contains
         (associated(lr%zdl_psi) .and. states_are_complex(st))
       ASSERT(lr_wfns_are_associated)
     end if
-
-    call restart_block_signals()
 
 
     iunit_states = restart_open(restart, 'states')
