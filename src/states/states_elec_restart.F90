@@ -344,7 +344,7 @@ contains
       end do
     end if
 
-    filename = "restart_states.obf"
+    filename = trim(restart%pwd)//'/'//"restart_states.obf"
     if (states_are_real(st)) then
       call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
     else
@@ -839,7 +839,7 @@ contains
     end do
     call restart_close(restart, blocks_file)
 
-    restart_filename = "restart_states.obf"
+    restart_filename = trim(restart%pwd)//'/'//"restart_states.obf"
     call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, type=number_type)
 
     ! data type of file
