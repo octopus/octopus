@@ -470,7 +470,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(aa%type() == R_TYPE_VAL)
-  packed_on_entry = aa%status() == BATCH_NOT_PACKED
+  packed_on_entry = aa%status() == BATCH_DEVICE_PACKED
   if (packed_on_entry) then
     call aa%do_unpack(force=.true.)
   end if
@@ -567,7 +567,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_inner(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        if(aa%status() == BATCH_NOT_PACKED) then
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        else
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
+        end if
       end do
       ! Then boundary points
       do ip = 1, np_bndry
@@ -575,7 +579,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_bndry(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        if(aa%status() == BATCH_NOT_PACKED) then
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        else
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
+        end if
       end do
 
       SAFE_DEALLOCATE_A(partno_bndry)
@@ -598,7 +606,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
           pos = recv_disp(ipart) + recv_count(ipart)
-          forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+          if(aa%status() == BATCH_NOT_PACKED) then
+            forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+          else
+            forall(ist = 1:nstl) aa%X(ff_pack)(ist, ip) = recv_buffer(ist, pos)
+          end if
         end if
       end do
 
@@ -622,7 +634,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist) 
+        if(aa%status() == BATCH_NOT_PACKED) then
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        else
+          forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_pack)(ist, ip)
+        end if
       end do
       
       send_count_nstl = send_count * nstl
@@ -641,7 +657,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local_rev(ip)
         INCR(recv_count(ipart), 1)
         pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
-        forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+        if(aa%status() == BATCH_NOT_PACKED) then
+          forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+        else
+          forall(ist = 1:nstl) aa%X(ff_pack)(ist, ip) = recv_buffer(ist, pos)
+        end if
       end do
 
     end if
