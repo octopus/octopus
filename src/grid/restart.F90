@@ -62,6 +62,7 @@ module restart_oct_m
     restart_skip,                 &
     restart_has_flag,             &
     restart_has_map,              &
+    restart_get_comm,             &
     drestart_write_mesh_function, &
     zrestart_write_mesh_function, &
     drestart_read_mesh_function,  &
@@ -911,6 +912,12 @@ contains
     restart_are_basedirs_equal = trim(info(type1)%basedir) == trim(info(type2)%basedir)
 
   end function restart_are_basedirs_equal
+
+  integer function restart_get_comm(restart)
+    type(restart_t), intent(in) :: restart
+
+    restart_get_comm = restart%mpi_grp%comm
+  end function restart_get_comm
 
 
 #include "undef.F90"

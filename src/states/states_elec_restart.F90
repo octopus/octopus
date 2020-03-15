@@ -346,15 +346,15 @@ contains
       end do
     end if
 
-    filename = trim(restart%pwd)//'/'//"restart_states.obf"
+    filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
     if (states_are_real(st)) then
       call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
     else
       call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
     end if
 
-    call MPI_File_open(restart%mpi_grp, trim(filename), MPI_MODE_CREATE + MPI_MODE_WRONLY, &
-      MPI_INFO_NULL, fh, ierr)
+    call MPI_File_open(restart_get_comm(restart), trim(filename), &
+      MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, ierr)
 
     call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
 
@@ -839,7 +839,7 @@ contains
     end do
     call restart_close(restart, blocks_file)
 
-    restart_filename = trim(restart%pwd)//'/'//"restart_states.obf"
+    restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
     call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, type=number_type)
 
     ! data type of file
@@ -879,7 +879,8 @@ contains
     call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
 
 
-    call MPI_File_open(restart%mpi_grp, trim(restart_filename), MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
+    call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
+      MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
     if(ierr /= MPI_SUCCESS) then
       errorcode = ierr
       call MPI_Error_string(errorcode, string, resultlen, ierr)
