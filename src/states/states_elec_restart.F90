@@ -19,6 +19,7 @@
 #include "global.h"
 
 module states_elec_restart_oct_m
+  use batch_oct_m
   use global_oct_m
   use grid_oct_m
   use io_binary_oct_m
@@ -30,6 +31,7 @@ module states_elec_restart_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
+  use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
@@ -170,7 +172,7 @@ contains
 
     nblocks_local = st%group%block_end - st%group%block_start + 1
     if(same_block_layout) then
-      print*,"Same block layout"
+      !print*,"Same block layout"
       SAFE_ALLOCATE(blocklengths(nblocks_local))
       SAFE_ALLOCATE(displacements(nblocks_local))
 
@@ -188,6 +190,7 @@ contains
       !call MPI_Type_commit(local_block_type, ierr)
 
       ! local type including k points
+      ! TODO: does this work with correct strides?
       blocklengths(1) = st%d%kpt%nlocal
       displacements(1) = 0
       call MPI_Type_indexed(1, blocklengths, displacements, local_block_type, localtype, ierr)
@@ -221,7 +224,7 @@ contains
       SAFE_DEALLOCATE_A(blocklengths)
       SAFE_DEALLOCATE_A(displacements)
     else
-      print*,"Different block layout"
+      !print*,"Different block layout"
       call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, ierr)
 
       SAFE_ALLOCATE(bdisplacements(st%lnst))
@@ -328,6 +331,18 @@ contains
     end if
 
     call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
+    ! exchange points for writeout
+    if(gr%mesh%parallel_in_domains) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if (states_are_real(st)) then
+            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
+          else
+            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
+          end if
+        end do
+      end do
+    end if
 
     filename = "restart_states.obf"
     if (states_are_real(st)) then
@@ -342,14 +357,25 @@ contains
     call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
 
     if (states_are_real(st)) then
-      !st%group%dpsi = mpi_world%rank
       call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
     else
-      !st%group%zpsi = mpi_world%rank
       call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
     end if
 
     call MPI_File_close(fh, ierr)
+
+    ! exchange points back
+    if(gr%mesh%parallel_in_domains) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if (states_are_real(st)) then
+            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
+          else
+            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
+          end if
+        end do
+      end do
+    end if
 
     iunit_blocks = restart_open(restart, 'blocks')
     write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
@@ -830,6 +856,7 @@ contains
     if (states_are_real(st)) then
       if(number_type == FILETYPE_FLOAT) then
         mpi_localtype = MPI_DOUBLE_PRECISION
+        !print*,"Reading real states from real states"
       else
         message(1) = "Reading real states from complex restart files not supported"
         call messages_fatal(1)
@@ -837,6 +864,7 @@ contains
     else
       if(number_type == FILETYPE_CMPLX) then
         mpi_localtype = MPI_DOUBLE_COMPLEX
+        !print*,"Reading complex states from complex states"
       else
         ! reading real from file, but saving to complex states
         ! The idea is to have a mpi type that has a real number and an empty space.
@@ -844,6 +872,7 @@ contains
         ! the real part of the complex numbers.
         call MPI_Type_get_extent(MPI_DOUBLE_PRECISION, lb, extent, ierr)
         call MPI_Type_create_resized(MPI_DOUBLE_PRECISION, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, ierr)
+        !print*,"Reading complex states from real states"
       end if
     end if
 
@@ -871,14 +900,28 @@ contains
       end if
 
       call MPI_Get_elements(mpistat, mpi_localtype, read_np, ierr)
-      print *, "Elements read localtype: ", read_np
+      !print *, "Elements read localtype: ", read_np
       call MPI_Get_elements(mpistat, mpi_filetype, read_np, ierr)
-      print *, "Elements read filetype: ", read_np
-      print *, "Expected: ", st%lnst*gr%mesh%np
-      ASSERT(read_np == st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal)
+      !print *, "Elements read filetype: ", read_np
+      !print *, "Expected: ", st%lnst*gr%mesh%np
+      !SSERT(read_np == st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal)
 
       call MPI_File_close(fh, ierr)
     end if
+
+    ! exchange points back into right order
+    if(gr%mesh%parallel_in_domains) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if (states_are_real(st)) then
+            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
+          else
+            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
+          end if
+        end do
+      end do
+    end if
+
 
     SAFE_DEALLOCATE_P(group_file%block_range)
     SAFE_DEALLOCATE_P(group_file%block_size)
