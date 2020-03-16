@@ -151,8 +151,7 @@ contains
     integer,              intent(out) :: filetype
     type(states_elec_group_t), optional, intent(in) :: group
 
-    integer :: nblocks_local, offset, ib, ierr, ist
-    integer :: local_block_type, global_block_type
+    integer :: nblocks_local, offset, ib, ierr, ist, ik, ii
     integer, allocatable :: blocklengths(:), displacements(:), types(:), offsets(:)
     logical :: same_block_layout
     integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
@@ -170,56 +169,64 @@ contains
       same_block_layout = .true.
     end if
 
-    nblocks_local = st%group%block_end - st%group%block_start + 1
     if(same_block_layout) then
       !print*,"Same block layout"
+      nblocks_local = (st%group%block_end - st%group%block_start + 1) * st%d%kpt%nlocal
       SAFE_ALLOCATE(blocklengths(nblocks_local))
       SAFE_ALLOCATE(displacements(nblocks_local))
 
-      ! create local type for state blocks
+      ! create local type for state blocks, including k points
       offset = 0
-      do ib = st%group%block_start, st%group%block_end
-        blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
-        displacements(ib - st%group%block_start + 1) = offset
-        offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
+          blocklengths(ii) = st%group%batch_size(ib) * gr%mesh%np
+          displacements(ii) = offset
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+        end do
       end do
-      !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
-      !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
+      print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
+      print *, "rank ", mpi_world%rank, "local displacement: ", displacements
 
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, local_block_type, ierr)
-      !call MPI_Type_commit(local_block_type, ierr)
-
-      ! local type including k points
-      ! TODO: does this work with correct strides?
-      blocklengths(1) = st%d%kpt%nlocal
-      displacements(1) = 0
-      call MPI_Type_indexed(1, blocklengths, displacements, local_block_type, localtype, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, ierr)
       call MPI_Type_commit(localtype, ierr)
+
+      call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
+      call MPI_Type_size(localtype, offset, ierr)
+      print*,"localtype", lb, size_mpitype, offset
 
       ! create global type for state blocks
       offset = 0
-      ! get global offset for current block
-      do ib = 1, st%group%block_start - 1
-        offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+      ! get global offset for first k points
+      do ik = 1, st%d%kpt%start - 1
+        do ib = 1, st%group%nblocks
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+        end do
       end do
-      do ib = st%group%block_start, st%group%block_end
-        blocklengths(ib - st%group%block_start + 1) = st%group%batch_size(ib) * gr%mesh%np
-        displacements(ib - st%group%block_start + 1) = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(ib)
-        offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+      do ik = st%d%kpt%start, st%d%kpt%end
+        ! get global offset for current k point and block
+        do ib = 1, st%group%block_start - 1
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+        end do
+        do ib = st%group%block_start, st%group%block_end
+          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
+          blocklengths(ii) = st%group%batch_size(ib) * gr%mesh%np
+          displacements(ii) = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(ib)
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+        end do
+        do ib = st%group%block_end + 1, st%group%nblocks
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
+        end do
       end do
-      !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
-      !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
+      print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
+      print *, "rank ", mpi_world%rank, "global displacement: ", displacements
 
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, global_block_type, ierr)
-      !call MPI_Type_commit(global_block_type, ierr)
-
-      ! global type including k points
-      blocklengths(1) = st%d%kpt%nlocal
-      displacements(1) = st%d%kpt%start - 1
-      call MPI_Type_indexed(1, blocklengths, displacements, global_block_type, filetype, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, ierr)
       call MPI_Type_commit(filetype, ierr)
-      !print *, "rank ", mpi_world%rank, "global kpt blocklength: ", blocklengths
-      !print *, "rank ", mpi_world%rank, "global kpt displacement: ", displacements
+
+      call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
+      call MPI_Type_size(filetype, offset, ierr)
+      print*,"filetype", lb, size_mpitype, offset
 
       SAFE_DEALLOCATE_A(blocklengths)
       SAFE_DEALLOCATE_A(displacements)
@@ -856,7 +863,7 @@ contains
     if (states_are_real(st)) then
       if(number_type == FILETYPE_FLOAT) then
         mpi_localtype = MPI_DOUBLE_PRECISION
-        !print*,"Reading real states from real states"
+        print*,"Reading real states from real states"
       else
         message(1) = "Reading real states from complex restart files not supported"
         call messages_fatal(1)
@@ -864,7 +871,7 @@ contains
     else
       if(number_type == FILETYPE_CMPLX) then
         mpi_localtype = MPI_DOUBLE_COMPLEX
-        !print*,"Reading complex states from complex states"
+        print*,"Reading complex states from complex states"
       else
         ! reading real from file, but saving to complex states
         ! The idea is to have a mpi type that has a real number and an empty space.
@@ -872,7 +879,7 @@ contains
         ! the real part of the complex numbers.
         call MPI_Type_get_extent(MPI_DOUBLE_PRECISION, lb, extent, ierr)
         call MPI_Type_create_resized(MPI_DOUBLE_PRECISION, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, ierr)
-        !print*,"Reading complex states from real states"
+        print*,"Reading complex states from real states"
       end if
     end if
 
@@ -901,10 +908,10 @@ contains
       end if
 
       call MPI_Get_elements(mpistat, mpi_localtype, read_np, ierr)
-      !print *, "Elements read localtype: ", read_np
+      print *, "Elements read localtype: ", read_np
       call MPI_Get_elements(mpistat, mpi_filetype, read_np, ierr)
-      !print *, "Elements read filetype: ", read_np
-      !print *, "Expected: ", st%lnst*gr%mesh%np
+      print *, "Elements read filetype: ", read_np
+      print *, "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
       !SSERT(read_np == st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal)
 
       call MPI_File_close(fh, ierr)
