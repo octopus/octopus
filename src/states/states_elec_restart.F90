@@ -151,7 +151,7 @@ contains
     integer,              intent(out) :: filetype
     type(states_elec_group_t), optional, intent(in) :: group
 
-    integer :: nblocks_local, offset, ib, ierr, ist, ik, ii
+    integer :: nblocks_local, offset, ib, ierr, ist, ik, ii, iist, nstates, idim
     integer, allocatable :: blocklengths(:), displacements(:), types(:), offsets(:)
     logical :: same_block_layout
     integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
@@ -185,15 +185,15 @@ contains
           offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
         end do
       end do
-      print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
-      print *, "rank ", mpi_world%rank, "local displacement: ", displacements
+      !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
+      !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
 
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, ierr)
       call MPI_Type_commit(localtype, ierr)
 
-      call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
-      call MPI_Type_size(localtype, offset, ierr)
-      print*,"localtype", lb, size_mpitype, offset
+      !call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
+      !call MPI_Type_size(localtype, offset, ierr)
+      !print*,"localtype", lb, size_mpitype, offset
 
       ! create global type for state blocks
       offset = 0
@@ -218,15 +218,15 @@ contains
           offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
         end do
       end do
-      print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
-      print *, "rank ", mpi_world%rank, "global displacement: ", displacements
+      !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
+      !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
 
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, ierr)
       call MPI_Type_commit(filetype, ierr)
 
-      call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
-      call MPI_Type_size(filetype, offset, ierr)
-      print*,"filetype", lb, size_mpitype, offset
+      !call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
+      !call MPI_Type_size(filetype, offset, ierr)
+      !print*,"filetype", lb, size_mpitype, offset
 
       SAFE_DEALLOCATE_A(blocklengths)
       SAFE_DEALLOCATE_A(displacements)
@@ -234,50 +234,72 @@ contains
       !print*,"Different block layout"
       call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, ierr)
 
-      SAFE_ALLOCATE(bdisplacements(st%lnst))
-      SAFE_ALLOCATE(types(st%lnst))
-      SAFE_ALLOCATE(blocklengths(st%lnst))
-      SAFE_ALLOCATE(offsets(st%group%nblocks))
+      nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
+      SAFE_ALLOCATE(bdisplacements(nstates))
+      SAFE_ALLOCATE(types(nstates))
+      SAFE_ALLOCATE(blocklengths(nstates))
+      SAFE_ALLOCATE(offsets(st%group%nblocks*st%d%kpt%nlocal))
       ! local state
-      offsets(st%group%block_start) = 0
-      do ib = st%group%block_start + 1, st%group%block_end
-        offsets(ib) = offsets(ib-1) + st%group%batch_size(ib-1) * gr%mesh%np_part
+      offset = 0
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
+          offsets(ii) = offset
+          offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+        end do
       end do
-      do ist = st%st_start, st%st_end
-        ib = st%group%iblock(ist, st%d%kpt%start)
-        ! create vector for each state
-        call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpi_localtype, &
-          types(ist - st%st_start + 1), ierr)
-        offset = offsets(ib) + ist - st%group%block_range(ib, 1)
-        bdisplacements(ist - st%st_start + 1) = offset * size_mpitype
-        !print *,"local: state, batch, batch_size, offset ", ist, ib, st%group%batch_size(ib), offset
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            ib = st%group%iblock(ist, ik)
+            iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
+            ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
+            ! create vector for each state
+            call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpi_localtype, &
+              types(iist), ierr)
+            offset = offsets(ii) + (ist - st%group%block_range(ib, 1))*st%d%dim + idim - 1
+            bdisplacements(iist) = offset * size_mpitype
+            !print *,"local: k, idim, ist, batch, batch_size, offset ", ik, idim, ist, ib, st%group%batch_size(ib), offset
+          end do
+        end do
       end do
       blocklengths = 1
       ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(st%lnst, blocklengths, bdisplacements, types, localtype, ierr)
+      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, localtype, ierr)
       call MPI_Type_commit(localtype, ierr)
       SAFE_DEALLOCATE_A(offsets)
 
       call MPI_Type_get_extent(mpi_filetype, lb, size_mpitype, ierr)
-      SAFE_ALLOCATE(offsets(group%nblocks))
+      SAFE_ALLOCATE(offsets(group%nblocks*st%d%kpt%nglobal))
       ! global state
-      offsets(1) = 0
-      do ib = 2, group%nblocks
-        offsets(ib) = offsets(ib-1) + group%batch_size(ib-1) * gr%mesh%np_global
+      offset = 0
+      ii = 1
+      do ik = 1, st%d%kpt%nglobal
+        do ib = 1, group%nblocks
+          offsets(ii) = offset
+          offset = offset + group%batch_size(ib) * gr%mesh%np_global
+          ii = ii + 1
+        end do
       end do
-      do ist = st%st_start, st%st_end
-        ib = group%iblock(ist, st%d%kpt%start)
-        ! create vector for each state
-        call MPI_Type_vector(gr%mesh%np, 1, group%batch_size(ib), mpi_filetype, &
-          types(ist - st%st_start + 1), ierr)
-        offset = offsets(ib) + ist - group%block_range(ib, 1) + &
-          (gr%mesh%vp%xlocal - 1) * group%batch_size(ib)
-        bdisplacements(ist - st%st_start + 1) = offset * size_mpitype
-        !print *,"global: state, batch, batch_size, offset ", ist, ib, group%batch_size(ib), offset
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          do idim = 1, st%d%dim
+            ib = group%iblock(ist, ik)
+            iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
+            ii = (ik - st%d%kpt%start)*group%nblocks + ib
+            ! create vector for each state
+            call MPI_Type_vector(gr%mesh%np, 1, group%batch_size(ib), mpi_filetype, &
+              types(iist), ierr)
+            offset = offsets(ii) + (ist - group%block_range(ib, 1))*st%d%dim + idim - 1 + &
+              (gr%mesh%vp%xlocal - 1) * group%batch_size(ib)
+            bdisplacements(iist) = offset * size_mpitype
+            !print *,"global: k, idim, ist, batch, batch_size, offset ", ik, idim, ist, ib, group%batch_size(ib), offset
+          end do
+        end do
       end do
       blocklengths = 1
       ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(st%lnst, blocklengths, bdisplacements, types, filetype, ierr)
+      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, ierr)
       call MPI_Type_commit(filetype, ierr)
 
       SAFE_DEALLOCATE_A(offsets)
