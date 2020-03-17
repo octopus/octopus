@@ -44,7 +44,9 @@ module utils_oct_m
     leading_dimension_is_known,   &
     lead_dim,                     &
     get_config_opts,              &
-    get_optional_libraries
+    get_optional_libraries,       &
+    convert_endianness_real,      &
+    convert_endianness_complex
 
   interface leading_dimension_is_known
     module procedure dleading_dimension_is_known, zleading_dimension_is_known
@@ -453,6 +455,25 @@ contains
     
     lead_dim = ubound(array, dim = 1) * ubound(array, dim = 2)
   end function zlead_dim2
+
+  FLOAT function convert_endianness_real(src) result(dst)
+    FLOAT, intent(in) :: src
+    character(len=1) :: src_arr(8), dst_arr(8)
+
+
+    src_arr = TRANSFER(src, src_arr)
+    dst_arr = src_arr([8, 7, 6, 5, 4, 3, 2, 1])
+    dst = TRANSFER(dst_arr, dst)
+  end function convert_endianness_real
+
+  CMPLX function convert_endianness_complex(src) result(dst)
+    CMPLX, intent(in) :: src
+    FLOAT :: real_part, imag_part
+
+    real_part = convert_endianness_real(real(src))
+    imag_part = convert_endianness_real(aimag(src))
+    dst = TOCMPLX(real_part, imag_part)
+  end function convert_endianness_complex
 
 end module utils_oct_m
 
