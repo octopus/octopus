@@ -926,28 +926,6 @@ contains
     ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
     ! works as a barrier.
 
-    call states_elec_group_null(group_file)
-
-    blocks_file = restart_open(restart, 'blocks')
-    call restart_read(restart, blocks_file, lines, 3, err)
-    if (err /= 0) ierr = ierr + 1024
-    read(lines(1), '(10X,I10)') group_file%nblocks
-    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
-    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
-    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
-    do ib = 1, group_file%nblocks
-      call restart_read(restart, blocks_file, lines, 1, err)
-      if (err /= 0) ierr = ierr + 4096
-      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
-        group_file%block_range(ib, 2), group_file%block_size(ib)
-      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
-      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
-        st%d%kpt%start:st%d%kpt%end) = ib
-    end do
-    call restart_close(restart, blocks_file)
-
     restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
     call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
 
@@ -985,8 +963,34 @@ contains
       end if
     end if
 
+    call states_elec_group_null(group_file)
+
+    blocks_file = restart_open(restart, 'blocks')
+    call restart_read(restart, blocks_file, lines, 3, err)
+    if (err /= 0) ierr = ierr + 1024
+    read(lines(1), '(10X,I10)') group_file%nblocks
+    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
+    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
+    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
+    do ib = 1, group_file%nblocks
+      call restart_read(restart, blocks_file, lines, 1, err)
+      if (err /= 0) ierr = ierr + 4096
+      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
+        group_file%block_range(ib, 2), group_file%block_size(ib)
+      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
+      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
+        st%d%kpt%start:st%d%kpt%end) = ib
+    end do
+    call restart_close(restart, blocks_file)
+
     call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
 
+    SAFE_DEALLOCATE_P(group_file%block_range)
+    SAFE_DEALLOCATE_P(group_file%block_size)
+    SAFE_DEALLOCATE_P(group_file%batch_size)
+    SAFE_DEALLOCATE_P(group_file%iblock)
 
     call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
       MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
@@ -1026,11 +1030,6 @@ contains
       call states_elec_convert_endianness(st, gr)
     end if
 
-
-    SAFE_DEALLOCATE_P(group_file%block_range)
-    SAFE_DEALLOCATE_P(group_file%block_size)
-    SAFE_DEALLOCATE_P(group_file%batch_size)
-    SAFE_DEALLOCATE_P(group_file%iblock)
 
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
     filled = .false.
