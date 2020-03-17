@@ -97,6 +97,13 @@ module pes_flux_oct_m
     CMPLX, pointer   :: ylm_k(:,:,:)                   !< for spherical surface
     FLOAT, pointer   :: j_l(:,:)                       !< for spherical surface
     FLOAT            :: radius
+    integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
+
+
+    CMPLX, pointer   :: expg(:,:,:)                    !< Fourier basis on a face of the cube
+    FLOAT, pointer   :: sinc(:,:,:,:)                  !< Sync function for Fourier components parallel to cube faces
+    FLOAT, pointer   :: LLr(:,:)                       !< Coordinates of the face edges
+    integer, pointer :: NN(:,:)                        !< Number of points on each face mapping coord
 
     integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
                                                        !< = mesh%mpi_grp%size (M_SPHERICAL)
@@ -123,6 +130,7 @@ module pes_flux_oct_m
       
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
     logical          :: arpes_grid
+    logical          :: surf_interp                    !< interpolate points on the surface
 
     integer          :: dim                            !< dimensions
     integer          :: pdim                           !< periodi dimensions
@@ -167,6 +175,8 @@ contains
     integer            :: nstepsphir, nstepsthetar
     integer            :: ll, mm
     integer            :: default_shape
+    FLOAT              :: fc_ptdens        !< density of points on face 
+    
 
     PUSH_SUB(pes_flux_init)
 
@@ -177,6 +187,8 @@ contains
     sdim   = st%d%dim
     mdim   = mesh%sb%dim
     pdim   = mesh%sb%periodic_dim
+
+    this%surf_interp = .false.
 
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
@@ -290,17 +302,23 @@ contains
         do imdim = 1, mdim
           call parse_block_float(blk, 0, imdim - 1, border(imdim))
         end do
-        border(1:mdim) = int(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
+        ! Snap the face to the closest grid point
+        border(1:mdim) = floor(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
         call parse_block_end(blk)
 
-      else if (simul_box_is_periodic(mesh%sb)) then
-        ! the cube sides along the periodic directions are out of the simulation box
-        border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
+      else if (parse_is_defined(namespace, 'PES_Flux_Lsize')) then 
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
-        call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
-        ! Snap the plane to the closest grid point
-        border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
-        
+        if (simul_box_is_periodic(mesh%sb)) then        
+          ! the cube sides along the periodic directions are out of the simulation box
+          border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
+          call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
+          ! Snap the plane to the closest grid point
+          border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
+        else 
+          call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
+          border(1:mdim-1) = border(mdim)
+          border(1:mdim) = floor(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)            
+        end if
       else
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
@@ -319,7 +337,23 @@ contains
 
       call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
 
+      !%Variable PES_Flux_Face_Dens
+      !%Type block
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Define the number of points density per unit of area (in au) on the 
+      !% face of the 'cub' surface.
+      !%End
+      if(parse_is_defined(namespace, 'PES_Flux_Face_Dens')) then
+        this%surf_interp = .true.
+        call parse_variable(namespace, 'PES_Flux_Face_Dens', M_ONE, fc_ptdens)
+        call messages_print_var_value(stdout, 'PES_Flux_Face_Dens', fc_ptdens)
+      end if
+
     else
+      
+      this%surf_interp = .true.
+      
       !%Variable PES_Flux_Radius
       !%Type float
       !%Section Time-Dependent::PhotoElectronSpectrum
@@ -373,14 +407,16 @@ contains
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
     end if
+    
+    
+    if(this%surf_interp)  call mesh_interpolation_init(this%interp, mesh)
 
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
-      call pes_flux_getcube(this, mesh, hm, border, offset)
+      call pes_flux_getcube(this, mesh, hm, border, offset, fc_ptdens)
     else
-      call mesh_interpolation_init(this%interp, mesh)
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
@@ -448,6 +484,16 @@ contains
 #endif
     end if
 
+    !FIXME: CURRENT HACK 
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+      call pes_flux_tabulate_cub_pw(this, mesh, st)
+      this%tdsteps = 1
+#if defined(HAVE_MPI)
+      if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
+#endif
+
+    end if
+   
     ! -----------------------------------------------------------------
     ! Other stuff
     ! -----------------------------------------------------------------
@@ -544,6 +590,12 @@ contains
 
       SAFE_DEALLOCATE_P(this%srfcpnt)
       SAFE_DEALLOCATE_P(this%rankmin)
+      
+      SAFE_DEALLOCATE_P(this%face_idx_range)
+      SAFE_DEALLOCATE_P(this%expg)
+      SAFE_DEALLOCATE_P(this%sinc)
+      SAFE_DEALLOCATE_P(this%LLr)
+      SAFE_DEALLOCATE_P(this%NN)
     end if
 
     SAFE_DEALLOCATE_P(this%srfcnrml)
@@ -627,8 +679,8 @@ contains
     !%Type block
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
-    !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid to 
-    !% be used. Only for <tt> PES_Flux_Shape = pln</tt>.
+    !% The block <tt>PES_Flux_EnergyGrid</tt> specifies the energy grid 
+    !% in momentum space. 
     !% <tt><br>%PES_Flux_EnergyGrid
     !% <br>&nbsp;&nbsp; Emin | Emax | DeltaE
     !% <br>%</tt>
@@ -923,11 +975,9 @@ contains
         end if
     
         ! we split the k-mesh in radial & angular part
-        if (.not. post) then
-          call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
-          if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
-          call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
-        end if
+        call pes_flux_distribute(1, this%nk, this%nk_start, this%nk_end, comm)
+        if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
+        call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
 
         if(debug%info) then
 #if defined(HAVE_MPI)
@@ -976,7 +1026,6 @@ contains
           ! Bessel functions & kcoords_sph
           do ikk = this%nk_start, this%nk_end
             kact = this%krad(ikk)
-!             kact = ikk * this%dk + kmin
             do ll = 0, this%lmax
               this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
                                   M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
@@ -1182,7 +1231,7 @@ contains
       SAFE_ALLOCATE(psi(1:mesh%np_part))
       SAFE_ALLOCATE(gpsi(1:mesh%np_part, 1:mdim))
 
-      if(this%surf_shape == M_SPHERICAL) then
+      if(this%surf_interp) then
         SAFE_ALLOCATE(interp_values(1:this%nsrfcpnts))
       end if
 
@@ -1201,7 +1250,7 @@ contains
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
 
-            if(this%surf_shape == M_SPHERICAL) then
+            if(this%surf_interp) then
               call mesh_interpolation_evaluate(this%interp, this%nsrfcpnts, psi(1:mesh%np_part), &
                 this%rcoords(1:mdim, 1:this%nsrfcpnts), interp_values(1:this%nsrfcpnts))
               this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep) = st%occ(ist, ik) * interp_values(1:this%nsrfcpnts)
@@ -1248,7 +1297,7 @@ contains
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
-          call pes_flux_integrate_cub(this, mesh, st, dt)
+          call pes_flux_integrate_cub_pw(this, mesh, st, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
         end if
@@ -1264,6 +1313,8 @@ contains
 
     POP_SUB(pes_flux_calc)
   end subroutine pes_flux_calc
+
+
 
   ! ---------------------------------------------------------
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
@@ -1426,6 +1477,379 @@ contains
 
     POP_SUB(pes_flux_integrate_cub)
   end subroutine pes_flux_integrate_cub
+
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_tabulate_cub_pw(this, mesh, st)
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(in)    :: st
+      
+    integer   :: mdim,nfaces, ikp_start, ikp_end, fdim, ng, nfp, kptst, kptend
+    integer   :: ifc, ig, igu, igv,  idim, idir, n_dir, ifp, max_fcpts, ik, ikp
+    integer   :: isp_start, isp_end, isp, iguv(1:2)
+    FLOAT     :: gvec(this%nsrfcpnts,1:2),  DRS(1:2), shift 
+    FLOAT, allocatable :: gg(:,:)
+
+    PUSH_SUB(pes_flux_tabulate_cub_pw)
+  
+    mdim      = mesh%sb%dim 
+    fdim      = mdim - 1
+
+    ikp_start = this%nkpnts_start
+    ikp_end   = this%nkpnts_end
+    kptst     = st%d%kpt%start
+    kptend    = st%d%kpt%end
+  
+    nfaces = mdim*2
+    if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+  
+  
+    ! maximum number of face points
+    max_fcpts = maxval(this%face_idx_range(1:nfaces, 2)-this%face_idx_range(1:nfaces, 1)) + 1
+
+    SAFE_ALLOCATE(this%expg(1:max_fcpts,1:max_fcpts,1:nint((nfaces+0.5)/2)))
+    SAFE_ALLOCATE(this%sinc(ikp_start:ikp_end, 1:max_fcpts, kptst:kptend, 1:nint((nfaces+0.5)/2)))
+  
+    this%expg = M_z0
+    this%sinc = M_ZERO
+    
+    do ifc = 1, nint((nfaces+0.5)/2)
+      isp_start = this%face_idx_range(ifc, 1)
+      isp_end   = this%face_idx_range(ifc, 2)
+      ng = isp_end - isp_start + 1 
+      nfp = ng ! number of points on face
+print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
+      
+      n_dir = 0 
+      do idir = 1, mdim
+        if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+      end do 
+            
+      SAFE_ALLOCATE(gg(1:2,1:ng))
+      
+      gg(:,:) = M_ZERO
+      
+      ig = 1 
+      do igu = 1, this%NN(n_dir,1)
+        do igv = 1, this%NN(n_dir,2)
+          iguv=(/igu,igv/)
+          do idim = 1, fdim
+            if(this%LLr(n_dir,idim) > M_EPSILON) then
+              gg(idim, ig)= (iguv(idim) - this%NN(n_dir,idim)/2 - &
+                            (M_ONE + mod(this%NN(n_dir,idim),2))*M_HALF ) * & !even/odd grid centering
+                             M_TWO*M_PI/this%LLr(n_dir,idim)          
+            end if
+          end do
+          ig = ig + 1
+        end do
+      end do
+      
+      print *, ig, ng
+      
+      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+        do ig = 1,ng
+          write(225,*) ifc, ig, gg(1,ig), gg(2,ig)
+        end do
+        if(ig > 0) flush(225)
+      end if
+      
+      
+print *, isp_start, isp_end, this%nsrfcpnts
+      
+      this%expg(:,:,:) = M_z1
+      do ig = 1,ng
+        do ifp = 1, nfp
+          idim = 1
+          do idir = 1, mdim 
+            if (idir == n_dir ) cycle
+            if(this%LLr(n_dir,idim)> M_EPSILON) &
+              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig)* this%rcoords(idir, isp_start+ifp-1)) * &
+                                       (M_PI/this%LLr(n_dir,idim))**(fdim/M_z2)
+            idim= idim+1
+          end do
+        end do
+      end do  
+        
+      this%sinc(:,:,:,:) = M_ONE
+      do ik = kptst, kptend
+        do ig = 1,ng
+          do ikp = ikp_start, ikp_end
+            idim = 1
+            do idir = 1, mdim 
+              if (idir == n_dir ) cycle
+              if(abs(gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) > M_EPSILON) then
+                this%sinc(ikp,ig,ik,ifc) = this%sinc(ikp,ig, ik, ifc)* &
+                              sin(M_HALF*this%LLr(n_dir,idim) *(gg(idim,ig) - this%kcoords_cub(idir,ikp, ik))) / &
+                              (gg(idim,ig) - this%kcoords_cub(idir, ikp, ik))
+              else
+                this%sinc(ikp,ig,ik,ifc) = M_ONE
+              end if   
+              if(this%LLr(n_dir,idim)> M_EPSILON) &
+                this%sinc(ikp,ig,ik,ifc) = this%sinc(ikp,ig,ik,ifc) *  sqrt(M_TWO/this%LLr(n_dir,idim))            
+              idim= idim+1
+            end do          
+          end do
+        end do
+      end do      
+      
+        
+      SAFE_DEALLOCATE_A(gg)  
+            
+    end do
+    
+    
+    
+    POP_SUB(pes_flux_tabulate_cub_pw)
+  end subroutine pes_flux_tabulate_cub_pw
+
+
+
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_integrate_cub_pw(this, mesh, st, dt)
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(inout) :: st
+    FLOAT,               intent(in)    :: dt
+
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
+    integer            :: ist, ik, isdim, imdim
+    integer            :: isp, ikp, itstep
+    integer            :: idir, n_dir, nfaces
+    CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
+    CMPLX, allocatable :: conjgplanewf_cub(:,:)
+    CMPLX, allocatable :: conjgphase_cub(:,:,:)
+    FLOAT, allocatable :: k_dot_aux(:)
+    integer            :: ikp_start, ikp_end, isp_start, isp_end
+    FLOAT              :: vec, kpoint(1:3), k_dot_r, expkr 
+    integer            :: ifc
+    CMPLX, allocatable :: wfpw_node(:,:,:,:), gwfpw_node(:,:,:,:),wfpw(:), gwfpw(:)
+    CMPLX, allocatable :: phase(:,:),vphase(:,:)
+    
+    integer            :: tdstep_on_node
+    integer            :: ng, ig, nfp
+    
+    type(profile_t), save :: prof_init
+      
+    PUSH_SUB(pes_flux_integrate_cub_pw)
+
+    ! this routine is parallelized over surface points since the number of 
+    ! states is in most cases less than the number of surface points
+
+    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_PW') 
+
+    if (debug%info) then
+      call messages_write("Debug: calculating pes_flux surface integral (pw expression)")
+      call messages_info()
+    end if
+
+
+    tdstep_on_node = 1
+#if defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) tdstep_on_node = mesh%mpi_grp%rank + 1
+#endif
+
+    stst      = st%st_start
+    stend     = st%st_end
+    kptst     = st%d%kpt%start
+    kptend    = st%d%kpt%end
+    sdim      = st%d%dim
+    mdim      = mesh%sb%dim
+
+    ikp_start = this%nkpnts_start
+    ikp_end   = this%nkpnts_end
+    isp_start = this%nsrfcpnts_start
+    isp_end   = this%nsrfcpnts_end
+
+
+
+    SAFE_ALLOCATE(Jk_cub(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+    SAFE_ALLOCATE(spctramp_cub(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+    spctramp_cub = M_z0
+
+    
+    SAFE_ALLOCATE(vphase(ikp_start:ikp_end, kptst:kptend))
+    SAFE_ALLOCATE(phase(ikp_start:ikp_end, kptst:kptend))
+    vphase(:,:) = M_z0
+    phase(:,:) = M_z0
+
+    
+    
+
+!     print *, this%face_idx_range(:, 1)
+    
+    nfaces = mdim*2
+    if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+                  
+          
+    do ifc = 1, nfaces
+      
+      isp_start = this%face_idx_range(ifc, 1)
+      isp_end   = this%face_idx_range(ifc, 2)
+      
+      ng = isp_end - isp_start + 1 
+      nfp = ng
+
+      SAFE_ALLOCATE( wfpw_node(stst:stend, 1:sdim, kptst:kptend, 1:ng))
+      SAFE_ALLOCATE(gwfpw_node(stst:stend, 1:sdim, kptst:kptend, 1:ng))
+
+      SAFE_ALLOCATE( wfpw(1:ng))
+      SAFE_ALLOCATE(gwfpw(1:ng))
+
+      wfpw = M_z0
+      gwfpw = M_z0
+
+!       print *,ifc, isp_start, isp_end
+      ! get the direction normal to the surface 
+      n_dir = 0 
+      do idir = 1, mdim
+        if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+      end do 
+
+      do itstep = 1, this%itstep      
+
+        do ik = kptst, kptend
+          do ist = stst, stend
+            do isdim = 1, sdim
+          
+              do ig = 1, ng
+                
+!                 print *, int(ifc/2), int((ifc+0.5)/2),nint((ifc+0.5)/2), nint((2+0.5)/2), nint((3+0.5)/2)
+                gwfpw(ig) = &
+                  sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                    * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) &
+                    * this%srfcnrml(n_dir, isp_start:isp_end)) ! surface area element ds
+                
+                wfpw(ig) = &
+                  sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
+                    * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) & 
+                    * this%srfcnrml(n_dir, isp_start:isp_end))
+          
+              end do 
+              
+              if(mesh%parallel_in_domains) then
+                call comm_allreduce(mesh%mpi_grp%comm, gwfpw)
+                call comm_allreduce(mesh%mpi_grp%comm, wfpw)
+              end if
+              
+              if(itstep == tdstep_on_node) then
+                gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
+                 wfpw_node(ist, isdim, ik, :) = wfpw(:)
+              end if              
+              
+
+            end do 
+          end do 
+        end do 
+
+      end do !itstep
+
+!       print *, "done FT"
+
+      ! get the previous Volkov phase
+
+      vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
+
+
+      
+      Jk_cub(:, :, :, :) = M_z0
+
+      do itstep = 1, this%itstep
+
+        do ik = kptst, kptend
+          
+          kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+          do ikp = ikp_start, ikp_end
+            vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+            vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
+
+            vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, this%face_idx_range(ifc, 1))
+            phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
+          end do
+          
+          do ist = stst, stend
+            do isdim = 1, sdim
+              
+              ! communicate the current surface integrals
+              if(itstep == tdstep_on_node) then
+                gwfpw(:) = gwfpw_node(ist, isdim, ik, :)
+                 wfpw(:) =  wfpw_node(ist, isdim, ik, :)
+              end if
+#if defined(HAVE_MPI)
+              if(mesh%parallel_in_domains) then
+                call MPI_Bcast(gwfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+                call MPI_Bcast(wfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+                call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+              end if
+#endif
+
+
+              do ig = 1, ng
+                
+                Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
+                  phase(ikp_start:ikp_end, ik) * ( wfpw(ig) * &
+                     (M_TWO * this%veca(n_dir, itstep) / P_c   -  this%kcoords_cub(n_dir, ikp_start:ikp_end, ik)) + &
+                      M_zI * gwfpw(ig))* this%sinc(ikp_start:ikp_end, ig, ik, nint((ifc+0.5)/2))
+              end do
+              
+              if(mesh%parallel_in_domains) then
+                call comm_allreduce(mesh%mpi_grp%comm, Jk_cub)
+              end if
+              
+
+          end do ! isdim
+        end do ! ist     
+      end do ! is
+
+    end do !istep
+    
+    
+    spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * &
+                            this%srfcnrml(n_dir, this%face_idx_range(ifc, 1)) / M_TWO
+      
+        
+        
+        
+    SAFE_DEALLOCATE_A(gwfpw)
+    SAFE_DEALLOCATE_A(wfpw)
+    SAFE_DEALLOCATE_A(gwfpw_node)
+    SAFE_DEALLOCATE_A(wfpw_node)
+        
+    end do ! face loop 
+
+
+    this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
+
+
+    if(this%parallel_in_momentum) then
+      do ist = stst, stend
+        do isdim = 1, sdim
+          do ik = kptst, kptend
+            call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub(ist, isdim, ik, :))
+          end do
+        end do
+      end do
+    end if
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_cub)
+      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+    end if
+
+
+    this%spctramp_cub = this%spctramp_cub + spctramp_cub
+
+    SAFE_DEALLOCATE_A(Jk_cub)
+    SAFE_DEALLOCATE_A(spctramp_cub)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(vphase)
+
+    call profiling_out(prof_init)
+
+    POP_SUB(pes_flux_integrate_cub_pw)
+  end subroutine pes_flux_integrate_cub_pw
+
 
   ! ---------------------------------------------------------
   subroutine pes_flux_integrate_sph(this, mesh, st, dt)
@@ -1637,107 +2061,283 @@ contains
   end subroutine pes_flux_integrate_sph
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getcube(this, mesh, hm, border, offset)
+  subroutine pes_flux_getcube(this, mesh, hm, border, offset, fc_ptdens)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
     type(hamiltonian_elec_t), intent(in) :: hm
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
+    FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(MAX_DIM), dd
-    integer               :: mdim, imdim, idir, isp
+    FLOAT                 :: xx(MAX_DIM), dd, area, dS(MAX_DIM,1:2)
+    integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
     integer               :: ip_global
     integer               :: rankmin, nsurfaces
     logical               :: in_ab
-    integer               :: ip_local
+    integer               :: ip_local, nsrfcpnts, NN(MAX_DIM,1:2), idx(MAX_DIM,1:2) 
+    integer               :: isp_end, isp_start, ifc, n_dir, nfaces, mindim
+    FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2)
+
 
     PUSH_SUB(pes_flux_getcube)
 
     ! this routine is parallelized over the mesh in any case
 
     mdim = mesh%sb%dim
-    in_ab = .false.
+    
+    
 
-    SAFE_ALLOCATE(which_surface(1:mesh%np_global))
-    which_surface = 0
+    SAFE_ALLOCATE(this%face_idx_range(1:mdim*2,1:2))
+    SAFE_ALLOCATE(this%LLr(mdim,1:2))
+    SAFE_ALLOCATE(this%NN(mdim,1:2))
 
-    ! get the surface points
-    this%nsrfcpnts = 0
-    do ip_local = 1, mesh%np
-      if(mesh%parallel_in_domains) then
-        ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
-      else
-        ip_global = ip_local
-      end if
+    this%face_idx_range(:,:) = 0
+    this%LLr(:,:) = M_ZERO
+    this%NN(:,:) = 1
+    NN(:,:) = 1
+
+    if (this%surf_interp) then
+      ! Create a surface with points not on the mesh
       
-      nsurfaces = 0
-
-      xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
-
-      ! eventually check whether we are in absorbing zone
-      if(this%avoid_ab) then
-        select case(hm%bc%abtype)
-        case(MASK_ABSORBING)
-          in_ab = (hm%bc%mf(ip_local) /= M_ONE)
-        case(IMAGINARY_ABSORBING)
-          in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
-        end select
-      end if
-
-      ! check whether the point is inside the cube
-      if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
-        ! check whether the point is close to any border
-        do imdim = 1, mdim
-          dd = border(imdim) - abs(xx(imdim))
-          if(dd < mesh%spacing(imdim)/M_TWO) then
-            nsurfaces = nsurfaces + 1
-            which_surface(ip_global) = int(sign(M_ONE, xx(imdim))) * imdim  ! +-x=+-1, +-y=+-2, +-z=+-3
-          end if
+      idx(:,:) = 0 
+      
+      mindim  = 1 
+      if(this%surf_shape == M_PLANES) mindim = mdim  ! We only have two planes along the non periodic dimension 
+      
+      
+      this%nsrfcpnts = 0 
+      do ndir = mdim, mindim, -1
+        area = M_ONE
+        do idir=1, mdim
+          if (idir == ndir) cycle
+          area = area * border(idir)*M_TWO 
         end do
         
-        ! check whether the point is close to one border only (not an edge)
-        if(nsurfaces == 1) then
-          this%nsrfcpnts = this%nsrfcpnts + 1
-        else
-          which_surface(ip_global) = 0
-        end if
-      end if
-    end do
-
-    if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
-      call comm_allreduce(mesh%mpi_grp%comm, which_surface)
-    end if
-
-    SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
-    SAFE_ALLOCATE(this%rankmin(1:this%nsrfcpnts))
-
-    this%srfcnrml = M_ZERO
-    this%rcoords  = M_ZERO
-
-    isp = 0
-    do ip_global = 1, mesh%np_global
-      if(which_surface(ip_global) /= 0) then
-        isp = isp + 1
-        ! coordinate of surface point
-        xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global)
-        this%rcoords(1:mdim, isp) = xx(1:mdim)
-        ! local ip & node which has the surface point
-        this%srfcpnt(isp) = mesh_nearest_point(mesh, this%rcoords(1:mdim, isp), dd, rankmin)
-        this%rankmin(isp) = rankmin
-        ! surface normal
-        idir = abs(which_surface(ip_global))
-        this%srfcnrml(idir, isp) = sign(1, which_surface(ip_global))
-        ! add the surface element (of directions orthogonal to the normal vector)
-        do imdim = 1, mdim
-          if(imdim == idir) cycle
-          this%srfcnrml(idir, isp) = this%srfcnrml(idir, isp) * mesh%spacing(imdim)
+        area = fc_ptdens * area
+        
+        idim = 1 
+        do idir=1, mdim
+          if (idir == ndir) cycle
+          NN(ndir,idim) = int(area / (border(idir)*M_TWO)) + 1
+          dS(ndir,idim) = border(idir)*M_TWO/NN(ndir,idim)
+          this%LLr(ndir,idim) = NN(ndir,idim)*dS(ndir,idim)
+          idx(ndir,idim) = idir
+          idim = idim + 1
         end do
+        this%nsrfcpnts = this%nsrfcpnts + 2*product(NN(ndir,1:mdim-1))
+      end do
+      
+      this%NN(1:mdim,:)  = NN(1:mdim,:)
+      
+      print *,  this%nsrfcpnts, NN(1,:),NN(2,:)
+
+      print *,  idx(1,:),idx(2,:)
+      
+      SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
+      SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
+    
+      this%srfcnrml(:,:) = M_ZERO
+      this%rcoords(:,:)  = M_ZERO
+    
+
+      isp = 1  
+      ifc = 1
+      do ndir = mdim, mindim, -1
+
+        !Up face
+        this%face_idx_range(ifc,1) = isp
+        do iu = 1, NN(ndir,1)
+          do iv = 1, NN(ndir,2)
+            this%rcoords(ndir, isp)  =  border(ndir)
+            this%srfcnrml(ndir, isp) =  product(dS(ndir,1:mdim-1))             
+            iuv =(/iu,iv/)
+            do idim = 1, mdim-1
+              this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
+            end do              
+            isp = isp + 1
+          end do
+        end do
+        this%face_idx_range(ifc,2) = isp-1
+
+        ifc = ifc + 1
+
+        !Down face
+        this%face_idx_range(ifc,1) = isp
+        do iu = 1, NN(ndir,1)
+          do iv = 1, NN(ndir,2)
+            this%rcoords(ndir, isp)  = -border(ndir)
+            this%srfcnrml(ndir, isp) = -product(dS(ndir,1:mdim-1)) 
+            iuv =(/iu,iv/)              
+            do idim = 1, mdim-1
+              this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
+            end do              
+            isp = isp + 1
+          end do
+        end do
+        this%face_idx_range(ifc,2) = isp-1
+
+        ifc = ifc + 1 
+      end do
+            
+      
+    else
+      ! Surface points are on the mesh
+      
+      nfaces = mdim*2
+      if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+
+      in_ab = .false.
+
+      SAFE_ALLOCATE(which_surface(1:mesh%np_global))
+      which_surface = 0
+
+      ! get the surface points
+      this%nsrfcpnts = 0
+      do ip_local = 1, mesh%np
+        if(mesh%parallel_in_domains) then
+          ip_global = mesh%vp%local(mesh%vp%xlocal + ip_local - 1)
+        else
+          ip_global = ip_local
+        end if
+      
+        nsurfaces = 0
+
+        xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
+
+        ! eventually check whether we are in absorbing zone
+        if(this%avoid_ab) then
+          select case(hm%bc%abtype)
+          case(MASK_ABSORBING)
+            in_ab = (hm%bc%mf(ip_local) /= M_ONE)
+          case(IMAGINARY_ABSORBING)
+            in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
+          end select
+        end if
+
+        ! check whether the point is inside the cube
+        if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
+          ! check whether the point is close to any border
+          do imdim = 1, mdim
+            dd = border(imdim) - abs(xx(imdim))
+            if(dd < mesh%spacing(imdim)/M_TWO) then
+              nsurfaces = nsurfaces + 1
+              which_surface(ip_global) = int(sign(M_ONE, xx(imdim))) * imdim  ! +-x=+-1, +-y=+-2, +-z=+-3
+            end if
+          end do
+        
+          ! check whether the point is close to one border only (not an edge)
+          if(nsurfaces == 1) then
+            this%nsrfcpnts = this%nsrfcpnts + 1
+          else
+            which_surface(ip_global) = 0
+          end if
+        end if
+      
+      end do
+
+      if(mesh%parallel_in_domains) then
+        call comm_allreduce(mesh%mpi_grp%comm, this%nsrfcpnts)
+        call comm_allreduce(mesh%mpi_grp%comm, which_surface)
       end if
-    end do
+
+      SAFE_ALLOCATE(this%srfcpnt(1:this%nsrfcpnts))
+      SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
+      SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
+      SAFE_ALLOCATE(this%rankmin(1:this%nsrfcpnts))
+
+      this%srfcnrml = M_ZERO
+      this%rcoords  = M_ZERO
+
+      this%face_idx_range = 0
+    
+      isp = 0
+      nface = 0
+      do idir = mdim, 1, -1
+        do pm = -1, 1, 2 
+          nface = nface + 1
+          this%face_idx_range(nface,1) = isp + 1
+        
+          do ip_global = 1, mesh%np_global
+            if(abs(which_surface(ip_global)) == idir .and. sign(1, which_surface(ip_global)) == pm) then
+              isp = isp + 1
+              ! coordinate of surface point
+              xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global)
+              this%rcoords(1:mdim, isp) = xx(1:mdim)
+              ! local ip & node which has the surface point
+              this%srfcpnt(isp) = mesh_nearest_point(mesh, this%rcoords(1:mdim, isp), dd, rankmin)
+              this%rankmin(isp) = rankmin
+              ! surface normal
+              this%srfcnrml(idir, isp) = sign(1, which_surface(ip_global))
+              ! add the surface element (of directions orthogonal to the normal vector)
+              do imdim = 1, mdim
+                if(imdim == idir) cycle
+                this%srfcnrml(idir, isp) = this%srfcnrml(idir, isp) * mesh%spacing(imdim)
+              end do
+            end if
+          end do
+
+          this%face_idx_range(nface,2) = isp
+        
+!           print *, idir, pm, "this%face_idx_range=",  this%face_idx_range(nface,:)
+        end do      
+      end do
+      
+      do ifc = 1, nint((nfaces+0.5)/2)
+        isp_start = this%face_idx_range(ifc, 1)
+        isp_end   = this%face_idx_range(ifc, 2)
+      
+        !retrieve face normal direction
+        n_dir = 0 
+        do idir = 1, mdim
+          if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+        end do 
+      
+! print *, n_dir,  isp_start, isp_start     
+        !retrieve the spacing on the face
+        dRS(:) = M_ZERO
+        idim = 1
+        do idir = 1, mdim 
+          if (idir == n_dir ) cycle
+          dRS(idim)= mesh%spacing(idir)
+          idim = idim+1
+        end do
+
+      
+        !retrieve the dimensions of the face
+        RSmin = M_ZERO
+        RSmax = M_ZERO
+        do isp = isp_start, isp_end
+          idim = 1
+          do idir = 1, mdim 
+            if (idir == n_dir ) cycle
+            RS(idim)=this%rcoords(idir,isp)
+            if (RS(idim) < RSmin(idim)) RSmin(idim) = RS(idim)
+            if (RS(idim) > RSmax(idim)) RSmax(idim) = RS(idim)
+            idim = idim+1
+          end do        
+        end do
+        
+   
+        do idir = 1, mdim -1
+          this%LLr(n_dir,idir) = RSmax(idir) - RSmin(idir)
+          if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir)/dRS(idir))+1
+        end do        
+
+!         LL(:) = RSmax(:) - RSmin(:)
+!         do idir = 1, fdim
+!           NN(idir) = int(LL(idir)/dS(idir))+1
+!         end do
+
+
+! print *, ifc, this%LLr(n_dir,:), dRS(:), this%NN(n_dir,:), isp_end - isp_start+1
+      end do
+      
+      
+    end if
+    
+!     print *, this%LLr(:,:), this%NN(:,:), dS(1,1)
+!     print *, ifc, this%LLr, dS, this%NN, isp_end - isp_start+1
 
     SAFE_DEALLOCATE_A(which_surface)
 

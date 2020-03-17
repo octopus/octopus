@@ -960,12 +960,12 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
                   ikp = ikp + 1
                   spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                     abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
-     
                   if(ith == 0 .or. ith == this%nstepsthetak) exit
                 end do
               end do
             end do
           end select
+          
           ! distribution
           spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
             abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO
@@ -988,6 +988,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
 #endif
   end if
+
 
   ! -----------------------------------------------------------------
   ! OUTPUT 
@@ -1069,7 +1070,6 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
 
       case(2)
         write(iunittwo, '(a22)') '# k, phi, distribution'
-        kmin = minval(sqrt(sum(this%kcoords_cub(1:2, :, kptend+1)**2, dim=1)))
         ikp = 0
         do ikk = 1, this%nk
           kact = this%krad(ikk)
@@ -1099,11 +1099,9 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
 
       case(3)
         write(iunittwo, '(a29)') '# k, theta, phi, distribution'
-        kmin = minval(sqrt(sum(this%kcoords_cub(1:3, :, kptend+1)**2, dim=1)))
         ikp    = 0
         do ikk = 1, this%nk
           kact = this%krad(ikk)
-          spctrsum = M_ZERO
 
           do ith = 0, this%nstepsthetak
             thetak = ith * M_PI / this%nstepsthetak 
