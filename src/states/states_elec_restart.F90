@@ -346,6 +346,42 @@ contains
     end subroutine get_restart_types_different_block_layout
   end subroutine states_elec_get_restart_types
 
+  ! ---------------------------------------------------------
+  subroutine states_elec_exchange_points(st, gr, forward)
+    type(states_elec_t),  intent(in) :: st
+    type(grid_t),         intent(in) :: gr
+    logical,              intent(in) :: forward
+
+    integer :: ik, ib
+
+    PUSH_SUB(states_elec_exchange_points)
+
+    ! exchange points
+    if(gr%mesh%parallel_in_domains) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if(forward) then
+            ! use forward map -> needed for writing out
+            if (states_are_real(st)) then
+              call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
+            else
+              call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
+            end if
+          else
+            ! use backward map -> needed after writing out and after reading
+            if (states_are_real(st)) then
+              call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map=.true.)
+            else
+              call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map=.true.)
+            end if
+          end if
+        end do
+      end do
+    end if
+
+    POP_SUB(states_elec_exchange_points)
+  end subroutine states_elec_exchange_points
+
 
   ! ---------------------------------------------------------
   subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
@@ -397,18 +433,7 @@ contains
     end if
 
     call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
-    ! exchange points for writeout
-    if(gr%mesh%parallel_in_domains) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          if (states_are_real(st)) then
-            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
-          else
-            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), forward_map=gr%mesh%vp%local_vec)
-          end if
-        end do
-      end do
-    end if
+    call states_elec_exchange_points(st, gr, forward=.true.)
 
     filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
     if (states_are_real(st)) then
@@ -430,18 +455,7 @@ contains
 
     call MPI_File_close(fh, ierr)
 
-    ! exchange points back
-    if(gr%mesh%parallel_in_domains) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          if (states_are_real(st)) then
-            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
-          else
-            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
-          end if
-        end do
-      end do
-    end if
+    call states_elec_exchange_points(st, gr, forward=.false.)
 
     iunit_blocks = restart_open(restart, 'blocks')
     write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
@@ -975,18 +989,7 @@ contains
       call MPI_File_close(fh, ierr)
     end if
 
-    ! exchange points back into right order
-    if(gr%mesh%parallel_in_domains) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          if (states_are_real(st)) then
-            call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
-          else
-            call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
-          end if
-        end do
-      end do
-    end if
+    call states_elec_exchange_points(st, gr, forward=.false.)
 
     ! convert endianness if needed
     if(correct_endianness) then
