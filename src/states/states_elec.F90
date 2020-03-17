@@ -165,6 +165,7 @@ module states_elec_oct_m
     logical                     :: symmetrize_density
 
     integer                     :: randomization      !< Method used to generate random states
+    logical                     :: parallel_restart   !< use parallel implementation of restart I/O for the states
     
     contains 
       procedure :: nullify => states_elec_null
@@ -228,6 +229,7 @@ contains
     nullify(st%ap%schedule)
 
     st%packed = .false.
+    st%parallel_restart = .false.
 
     POP_SUB(states_elec_null)
   end subroutine states_elec_null
@@ -584,6 +586,16 @@ contains
     call parse_variable(namespace, 'ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
+
+    !%Variable StateRestartParallel
+    !%Type logical
+    !%Default yes
+    !%Section Execution::IO
+    !%Description
+    !% Use the parallel IO for writing and reading the states. This is
+    !% more efficient than the older, serial version.
+    !%End
+    call parse_variable(namespace, 'StateRestartParallel', .true., st%parallel_restart)
 
     st%packed = .false.
 
@@ -1010,7 +1022,7 @@ contains
     logical, optional,             intent(in)    :: packed
 
     integer :: ib, iqn, ist, istmin, istmax, rank, total_size, size1, offset
-    logical :: same_node, verbose_, packed_
+    logical :: verbose_, packed_
     integer, allocatable :: bstart(:), bend(:), blocks_per_rank(:), block_offsets(:)
     FLOAT, pointer :: dpsi(:, :)
     CMPLX, pointer :: zpsi(:, :)
@@ -1450,6 +1462,8 @@ contains
     stout%packed = stin%packed
 
     stout%randomization = stin%randomization
+
+    stout%parallel_restart = stin%parallel_restart
 
     POP_SUB(states_elec_copy)
   end subroutine states_elec_copy

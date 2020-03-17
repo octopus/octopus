@@ -198,8 +198,10 @@ contains
         end do
       end do
 
+#ifdef HAVE_MPI
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, mpi_err)
       call MPI_Type_commit(localtype, mpi_err)
+#endif
 
       ! create global type for state blocks
       offset = 0
@@ -227,6 +229,7 @@ contains
       !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
       !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
 
+#ifdef HAVE_MPI
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, mpi_err)
       call MPI_Type_commit(filetype, mpi_err)
 
@@ -242,6 +245,7 @@ contains
           ", extent: ", size_mpitype, ", size: ", offset
         call messages_info(2)
       end if
+#endif
 
       SAFE_DEALLOCATE_A(blocklengths)
       SAFE_DEALLOCATE_A(displacements)
@@ -256,7 +260,9 @@ contains
       message(1) = "Reading restart file with different block layout"
       call messages_info(1)
 
+#ifdef HAVE_MPI
       call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, mpi_err)
+#endif
 
       nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
       SAFE_ALLOCATE(bdisplacements(nstates))
@@ -278,9 +284,11 @@ contains
             ib = st%group%iblock(ist, ik)
             iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
             ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
+#ifdef HAVE_MPI
             ! create vector for each state
             call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpi_localtype, &
               types(iist), ierr)
+#endif
             offset = offsets(ii) + (ist - st%group%block_range(ib, 1))*st%d%dim + idim - 1
             bdisplacements(iist) = offset * size_mpitype
             !print *,"local: k, idim, ist, batch, batch_size, offset ", ik, idim, ist, ib, st%group%batch_size(ib), offset
@@ -288,12 +296,14 @@ contains
         end do
       end do
       blocklengths = 1
+#ifdef HAVE_MPI
       ! struct is needed because of different displacements in different batches
       call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, localtype, mpi_err)
       call MPI_Type_commit(localtype, mpi_err)
       SAFE_DEALLOCATE_A(offsets)
 
       call MPI_Type_get_extent(mpi_filetype, lb, size_mpitype, mpi_err)
+#endif
       SAFE_ALLOCATE(offsets(group%nblocks*st%d%kpt%nglobal))
       ! global state
       offset = 0
@@ -311,9 +321,11 @@ contains
             ib = group%iblock(ist, ik)
             iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
             ii = (ik - st%d%kpt%start)*group%nblocks + ib
+#ifdef HAVE_MPI
             ! create vector for each state
             call MPI_Type_vector(gr%mesh%np, 1, group%batch_size(ib), mpi_filetype, &
               types(iist), ierr)
+#endif
             offset = offsets(ii) + (ist - group%block_range(ib, 1))*st%d%dim + idim - 1 + &
               (gr%mesh%vp%xlocal - 1) * group%batch_size(ib)
             bdisplacements(iist) = offset * size_mpitype
@@ -322,6 +334,7 @@ contains
         end do
       end do
       blocklengths = 1
+#ifdef HAVE_MPI
       ! struct is needed because of different displacements in different batches
       call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, mpi_err)
       call MPI_Type_commit(filetype, mpi_err)
@@ -338,6 +351,7 @@ contains
           ", extent: ", size_mpitype, ", size: ", offset
         call messages_info(2)
       end if
+#endif
 
       SAFE_DEALLOCATE_A(offsets)
       SAFE_DEALLOCATE_A(bdisplacements)
@@ -573,38 +587,9 @@ contains
 
     call restart_block_signals()
 
-    if (states_are_real(st)) then
-      mpitype = MPI_FLOAT
-    else
-      mpitype = MPI_CMPLX
+    if(st%parallel_restart .and. .not. present(lr)) then
+      call dump_parallel
     end if
-
-    call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
-    call states_elec_exchange_points(st, gr, forward=.true.)
-
-    filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
-    if (states_are_real(st)) then
-      call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
-    else
-      call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
-    end if
-
-    call MPI_File_open(restart_get_comm(restart), trim(filename), &
-      MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, mpi_err)
-
-    call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, mpi_err)
-
-    if (states_are_real(st)) then
-      call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
-    else
-      call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
-    end if
-
-    call MPI_File_close(fh, mpi_err)
-
-    call states_elec_exchange_points(st, gr, forward=.false.)
-    call states_elec_write_block_file(restart, st, ierr)
-
 
     if (present(lr)) then
       lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
@@ -679,6 +664,7 @@ contains
           if (should_write .and. present(st_start_writing)) then
             if (ist < st_start_writing) should_write = .false.
           end if
+          if(st%parallel_restart .and. .not. present(lr)) should_write = .false.
 
           if (should_write) then
             if (.not. present(lr)) then
@@ -745,8 +731,47 @@ contains
     call profiling_out(prof_write)
     POP_SUB(states_elec_dump)
     return
-  end subroutine states_elec_dump
+  contains
+    subroutine dump_parallel
+      PUSH_SUB(states_elec_dump.dump_parallel)
 
+      if (states_are_real(st)) then
+        mpitype = MPI_FLOAT
+      else
+        mpitype = MPI_CMPLX
+      end if
+
+      call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
+      call states_elec_exchange_points(st, gr, forward=.true.)
+
+      filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
+      if (states_are_real(st)) then
+        call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
+      else
+        call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
+      end if
+
+#ifdef HAVE_MPI
+      call MPI_File_open(restart_get_comm(restart), trim(filename), &
+        MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, mpi_err)
+
+      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, mpi_err)
+
+      if (states_are_real(st)) then
+        call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
+      else
+        call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
+      end if
+
+      call MPI_File_close(fh, mpi_err)
+#endif
+
+      call states_elec_exchange_points(st, gr, forward=.false.)
+      call states_elec_write_block_file(restart, st, ierr)
+
+      POP_SUB(states_elec_dump.dump_parallel)
+    end subroutine dump_parallel
+  end subroutine states_elec_dump
 
   ! ---------------------------------------------------------
   !> returns in ierr:
@@ -782,9 +807,12 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
-    integer :: filetype, localtype, mpi_filetype, mpi_localtype, fh, mpistat(MPI_STATUS_SIZE)
-    character(len=MPI_MAX_ERROR_STRING) :: string
+    integer :: filetype, localtype, mpi_filetype, mpi_localtype, fh
     integer :: errorcode, resultlen
+#ifdef HAVE_MPI
+    integer :: mpistat(MPI_STATUS_SIZE)
+    character(len=MPI_MAX_ERROR_STRING) :: string
+#endif
     character(len=MAX_PATH_LEN) :: restart_filename
     type(states_elec_group_t) :: group_file
     integer :: read_np, number_type, file_size
@@ -1021,134 +1049,82 @@ contains
       call smear_init(st%smear, namespace, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
     end if
 
-
-    ! Now we read the wavefunctions. At this point we need to have all the information from the
-    ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
-    ! works as a barrier.
-
-    restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
-    call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
-
-
-    call states_elec_read_block_file(restart, st, group_file, ierr)
-    call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
-    call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
-
-    SAFE_DEALLOCATE_P(group_file%block_range)
-    SAFE_DEALLOCATE_P(group_file%block_size)
-    SAFE_DEALLOCATE_P(group_file%batch_size)
-    SAFE_DEALLOCATE_P(group_file%iblock)
-
-    call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
-      MPI_MODE_RDONLY, MPI_INFO_NULL, fh, mpi_err)
-    if(mpi_err /= MPI_SUCCESS) then
-      errorcode = mpi_err
-      call MPI_Error_string(errorcode, string, resultlen, mpi_err)
-      message(1) = string
-      call messages_warning(1)
-    else
-      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
-
-      if (states_are_real(st)) then
-        st%group%dpsi = M_ZERO
-        call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
-        ASSERT(mpi_err == MPI_SUCCESS)
-      else
-        st%group%zpsi = M_z0
-        call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
-        ASSERT(mpi_err == MPI_SUCCESS)
-      end if
-
-      call MPI_Get_elements(mpistat, mpi_localtype, read_np, mpi_err)
-      if(debug%info) then
-        write(message(1), "(A,I15)") "Elements read localtype: ", read_np
-      end if
-      call MPI_Get_elements(mpistat, mpi_filetype, read_np, mpi_err)
-      if(debug%info) then
-        write(message(2), "(A,I15)") "Elements read filetype: ", read_np
-        write(message(3), "(A,I15)") "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
-        call messages_info(3)
-      end if
-      if(read_np /= st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal) then
-        write(message(1), "(A,I15,A,I15)") "Elements read: ", read_np, &
-          ", but expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
-        call messages_fatal(1)
-      end if
-
-
-      call MPI_File_close(fh, mpi_err)
-    end if
-
-    call states_elec_exchange_points(st, gr, forward=.false.)
-
-    ! convert endianness if needed
-    if(correct_endianness) then
-      call states_elec_convert_endianness(st, gr)
-    end if
-
-
     SAFE_ALLOCATE(filled(1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
     filled = .false.
 
-    if (present(lowest_missing)) lowest_missing = st%nst + 1
 
-    iread = 0
-    if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-      idone = 0
-      ntodo = st%lnst*st%d%kpt%nlocal*st%d%dim
-      call loct_progress_bar(-1, ntodo)
-    end if
+    if(st%parallel_restart) then
+      if(restart_has_map(restart)) then
+        message(1) = "Reading from reordered grid not supported for parallel restart."
+        call messages_fatal(1)
+      end if
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        if(present(skip)) then
-          if(skip(ist)) cycle
-        end if
+      call load_parallel
+      filled = .true.
+    else
+      ! Now we read the wavefunctions. At this point we need to have all the information from the
+      ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
+      ! works as a barrier.
 
-        do idim = 1, st%d%dim
+      if (present(lowest_missing)) lowest_missing = st%nst + 1
 
-          if (.not. restart_file_present(idim, ist, ik)) then
-            if (present(lowest_missing)) &
+      iread = 0
+      if (mpi_grp_is_root(mpi_world) .and. verbose_) then
+        idone = 0
+        ntodo = st%lnst*st%d%kpt%nlocal*st%d%dim
+        call loct_progress_bar(-1, ntodo)
+      end if
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          if(present(skip)) then
+            if(skip(ist)) cycle
+          end if
+
+          do idim = 1, st%d%dim
+
+            if (.not. restart_file_present(idim, ist, ik)) then
+              if (present(lowest_missing)) &
+                lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
+              cycle
+            end if
+
+            if (states_are_real(st)) then
+              call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
+            else
+              call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+            end if
+
+            if(states_are_real(st)) then
+              if(.not. present(lr)) then
+                call states_elec_set_state(st, gr%mesh, idim, ist, ik, dpsi)
+              else
+                call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
+              end if
+            else
+              if(.not. present(lr)) then
+                call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi)
+              else
+                call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
+              end if
+            end if
+
+            if (err == 0) then
+              filled(idim, ist, ik) = .true.
+              iread = iread + 1
+            else if (present(lowest_missing)) then
               lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
-            cycle
-          end if
+            end if
 
-          !if (states_are_real(st)) then
-          !  call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
-          !else
-          !  call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
-          !end if
+            if (mpi_grp_is_root(mpi_world) .and. verbose_) then
+              idone = idone + 1
+              call loct_progress_bar(idone, ntodo)
+            end if
 
-          !if(states_are_real(st)) then
-          !  if(.not. present(lr)) then
-          !    call states_elec_set_state(st, gr%mesh, idim, ist, ik, dpsi)
-          !  else
-          !    call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
-          !  end if
-          !else
-          !  if(.not. present(lr)) then
-          !    call states_elec_set_state(st, gr%mesh, idim, ist, ik, zpsi)
-          !  else
-          !    call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
-          !  end if
-          !end if
-
-
-          if (err == 0) then
-            filled(idim, ist, ik) = .true.
-            iread = iread + 1
-          else if (present(lowest_missing)) then
-            lowest_missing(idim, ik) = min(lowest_missing(idim, ik), ist)
-          end if
-
-          if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-            idone = idone + 1
-            call loct_progress_bar(idone, ntodo)
-          end if
-
+          end do
         end do
       end do
-    end do
+    end if
 
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(zpsi)
@@ -1183,7 +1159,7 @@ contains
 
     SAFE_DEALLOCATE_A(filled)
 
-    if (ierr == 0 .and. iread /= st%nst * st%d%nik * st%d%dim) then
+    if (ierr == 0 .and. iread /= st%nst * st%d%nik * st%d%dim .and. .not. st%parallel_restart) then
       if(iread > 0) then
         ierr = iread
       else
@@ -1251,6 +1227,75 @@ contains
       POP_SUB(states_elec_load.index_is_wrong)
     end function index_is_wrong
 
+    subroutine load_parallel
+      PUSH_SUB(states_elec_load.load_parallel)
+
+      restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
+      call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
+
+
+      call states_elec_read_block_file(restart, st, group_file, ierr)
+      call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
+      call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
+
+      SAFE_DEALLOCATE_P(group_file%block_range)
+      SAFE_DEALLOCATE_P(group_file%block_size)
+      SAFE_DEALLOCATE_P(group_file%batch_size)
+      SAFE_DEALLOCATE_P(group_file%iblock)
+
+#ifdef HAVE_MPI
+      call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
+        MPI_MODE_RDONLY, MPI_INFO_NULL, fh, mpi_err)
+      if(mpi_err /= MPI_SUCCESS) then
+        errorcode = mpi_err
+        call MPI_Error_string(errorcode, string, resultlen, mpi_err)
+        message(1) = string
+        call messages_warning(1)
+      else
+        call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
+
+        if (states_are_real(st)) then
+          st%group%dpsi = M_ZERO
+          call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
+          ASSERT(mpi_err == MPI_SUCCESS)
+        else
+          st%group%zpsi = M_z0
+          call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
+          ASSERT(mpi_err == MPI_SUCCESS)
+        end if
+
+        call MPI_Get_elements(mpistat, mpi_localtype, read_np, mpi_err)
+        if(debug%info) then
+          write(message(1), "(A,I15)") "Elements read localtype: ", read_np
+        end if
+        call MPI_Get_elements(mpistat, mpi_filetype, read_np, mpi_err)
+        if(debug%info) then
+          write(message(2), "(A,I15)") "Elements read filetype: ", read_np
+          write(message(3), "(A,I15)") "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+          call messages_info(3)
+        end if
+        if(read_np /= st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal) then
+          write(message(1), "(A,I15,A,I15)") "Elements read: ", read_np, &
+            ", but expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+          call messages_fatal(1)
+        end if
+
+        call MPI_File_close(fh, mpi_err)
+      end if
+#else
+      message(1) = "Parallel restart not yet supported for serial runs."
+      call messages_fatal(1)
+#endif
+
+      call states_elec_exchange_points(st, gr, forward=.false.)
+
+      ! convert endianness if needed
+      if(correct_endianness) then
+        call states_elec_convert_endianness(st, gr)
+      end if
+
+      POP_SUB(states_elec_load.load_parallel)
+    end subroutine load_parallel
   end subroutine states_elec_load
 
 
