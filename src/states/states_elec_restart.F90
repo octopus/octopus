@@ -198,8 +198,8 @@ contains
         end do
       end do
 
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, ierr)
-      call MPI_Type_commit(localtype, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, mpi_err)
+      call MPI_Type_commit(localtype, mpi_err)
 
       ! create global type for state blocks
       offset = 0
@@ -227,17 +227,17 @@ contains
       !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
       !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
 
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, ierr)
-      call MPI_Type_commit(filetype, ierr)
+      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, mpi_err)
+      call MPI_Type_commit(filetype, mpi_err)
 
       if (debug%info) then
-        call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
-        call MPI_Type_size(localtype, offset, ierr)
+        call MPI_Type_get_extent(localtype, lb, size_mpitype, mpi_err)
+        call MPI_Type_size(localtype, offset, mpi_err)
         write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
           ", extent: ", size_mpitype, ", size: ", offset
 
-        call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
-        call MPI_Type_size(filetype, offset, ierr)
+        call MPI_Type_get_extent(filetype, lb, size_mpitype, mpi_err)
+        call MPI_Type_size(filetype, offset, mpi_err)
         write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
           ", extent: ", size_mpitype, ", size: ", offset
         call messages_info(2)
@@ -256,7 +256,7 @@ contains
       message(1) = "Reading restart file with different block layout"
       call messages_info(1)
 
-      call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, ierr)
+      call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, mpi_err)
 
       nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
       SAFE_ALLOCATE(bdisplacements(nstates))
@@ -289,11 +289,11 @@ contains
       end do
       blocklengths = 1
       ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, localtype, ierr)
-      call MPI_Type_commit(localtype, ierr)
+      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, localtype, mpi_err)
+      call MPI_Type_commit(localtype, mpi_err)
       SAFE_DEALLOCATE_A(offsets)
 
-      call MPI_Type_get_extent(mpi_filetype, lb, size_mpitype, ierr)
+      call MPI_Type_get_extent(mpi_filetype, lb, size_mpitype, mpi_err)
       SAFE_ALLOCATE(offsets(group%nblocks*st%d%kpt%nglobal))
       ! global state
       offset = 0
@@ -323,17 +323,17 @@ contains
       end do
       blocklengths = 1
       ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, ierr)
-      call MPI_Type_commit(filetype, ierr)
+      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, mpi_err)
+      call MPI_Type_commit(filetype, mpi_err)
 
       if (debug%info) then
-        call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
-        call MPI_Type_size(localtype, offset, ierr)
+        call MPI_Type_get_extent(localtype, lb, size_mpitype, mpi_err)
+        call MPI_Type_size(localtype, offset, mpi_err)
         write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
           ", extent: ", size_mpitype, ", size: ", offset
 
-        call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
-        call MPI_Type_size(filetype, offset, ierr)
+        call MPI_Type_get_extent(filetype, lb, size_mpitype, mpi_err)
+        call MPI_Type_size(filetype, offset, mpi_err)
         write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
           ", extent: ", size_mpitype, ", size: ", offset
         call messages_info(2)
@@ -457,9 +457,9 @@ contains
     call restart_block_signals()
 
     if (states_are_real(st)) then
-      mpitype = MPI_DOUBLE_PRECISION
+      mpitype = MPI_FLOAT
     else
-      mpitype = MPI_DOUBLE_COMPLEX
+      mpitype = MPI_CMPLX
     end if
 
     call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
@@ -473,17 +473,17 @@ contains
     end if
 
     call MPI_File_open(restart_get_comm(restart), trim(filename), &
-      MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, ierr)
+      MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, mpi_err)
 
-    call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, ierr)
+    call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, mpi_err)
 
     if (states_are_real(st)) then
-      call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
+      call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
     else
-      call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
+      call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
     end if
 
-    call MPI_File_close(fh, ierr)
+    call MPI_File_close(fh, mpi_err)
 
     call states_elec_exchange_points(st, gr, forward=.false.)
 
@@ -931,9 +931,9 @@ contains
 
     ! data type of file
     if(number_type == FILETYPE_FLOAT) then
-      mpi_filetype = MPI_DOUBLE_PRECISION
+      mpi_filetype = MPI_FLOAT
     else if(number_type == FILETYPE_CMPLX) then
-      mpi_filetype = MPI_DOUBLE_COMPLEX
+      mpi_filetype = MPI_CMPLX
     else
       message(1) = "Data type of restart file not recognized."
       call messages_fatal(1)
@@ -942,7 +942,7 @@ contains
     ! local datatype of states
     if (states_are_real(st)) then
       if(number_type == FILETYPE_FLOAT) then
-        mpi_localtype = MPI_DOUBLE_PRECISION
+        mpi_localtype = MPI_FLOAT
         print*,"Reading real states from real states"
       else
         message(1) = "Reading real states from complex restart files not supported"
@@ -950,15 +950,15 @@ contains
       end if
     else
       if(number_type == FILETYPE_CMPLX) then
-        mpi_localtype = MPI_DOUBLE_COMPLEX
+        mpi_localtype = MPI_CMPLX
         print*,"Reading complex states from complex states"
       else
         ! reading real from file, but saving to complex states
         ! The idea is to have a mpi type that has a real number and an empty space.
         ! When the real numbers are read from the file, they are directly saved into
         ! the real part of the complex numbers.
-        call MPI_Type_get_extent(MPI_DOUBLE_PRECISION, lb, extent, ierr)
-        call MPI_Type_create_resized(MPI_DOUBLE_PRECISION, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, ierr)
+        call MPI_Type_get_extent(MPI_FLOAT, lb, extent, mpi_err)
+        call MPI_Type_create_resized(MPI_FLOAT, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, mpi_err)
         print*,"Reading complex states from real states"
       end if
     end if
@@ -993,34 +993,33 @@ contains
     SAFE_DEALLOCATE_P(group_file%iblock)
 
     call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
-      MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierr)
-    if(ierr /= MPI_SUCCESS) then
-      errorcode = ierr
-      call MPI_Error_string(errorcode, string, resultlen, ierr)
+      MPI_MODE_RDONLY, MPI_INFO_NULL, fh, mpi_err)
+    if(mpi_err /= MPI_SUCCESS) then
+      errorcode = mpi_err
+      call MPI_Error_string(errorcode, string, resultlen, mpi_err)
       message(1) = string
       call messages_warning(1)
-      ierr = 0
     else
-      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpi_filetype, filetype, "internal", MPI_INFO_NULL, ierr)
+      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
 
       if (states_are_real(st)) then
         st%group%dpsi = M_ZERO
-        call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, ierr)
-        ASSERT(ierr == MPI_SUCCESS)
+        call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
+        ASSERT(mpi_err == MPI_SUCCESS)
       else
         st%group%zpsi = M_z0
-        call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, ierr)
-        ASSERT(ierr == MPI_SUCCESS)
+        call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
+        ASSERT(mpi_err == MPI_SUCCESS)
       end if
 
-      call MPI_Get_elements(mpistat, mpi_localtype, read_np, ierr)
+      call MPI_Get_elements(mpistat, mpi_localtype, read_np, mpi_err)
       print *, "Elements read localtype: ", read_np
-      call MPI_Get_elements(mpistat, mpi_filetype, read_np, ierr)
+      call MPI_Get_elements(mpistat, mpi_filetype, read_np, mpi_err)
       print *, "Elements read filetype: ", read_np
       print *, "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
       !SSERT(read_np == st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal)
 
-      call MPI_File_close(fh, ierr)
+      call MPI_File_close(fh, mpi_err)
     end if
 
     call states_elec_exchange_points(st, gr, forward=.false.)
