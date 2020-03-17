@@ -474,17 +474,16 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 }
 
 
-void get_info_binary(int * np, int * type, int * file_size, int * ierr, int * iio, char * fname)
+void get_info_binary(int * np, int * type, int * file_size, int * ierr, int * iio, int * correct_endianness, char * fname)
 {
   header_t * hp;
-  int correct_endianness;
   struct stat st;
 
   hp = (header_t *) malloc(sizeof(header_t));
   assert(hp != NULL);
 
   /* read header */
-  io_read_header(hp, &correct_endianness, ierr, iio, fname);
+  io_read_header(hp, correct_endianness, ierr, iio, fname);
 
   if(*ierr == 0) {
     *np  = hp->np;

@@ -606,7 +606,8 @@ contains
     integer :: errorcode, resultlen
     character(len=MAX_PATH_LEN) :: restart_filename, workpath
     type(states_elec_group_t) :: group_file
-    integer :: read_np, number_type, file_size, iio
+    integer :: read_np, number_type, file_size, iio, ip
+    logical :: correct_endianness
     integer, parameter :: FILETYPE_FLOAT = 1, FILETYPE_CMPLX = 3
     integer(kind=MPI_ADDRESS_KIND) :: lb, extent
 
@@ -869,7 +870,7 @@ contains
     call restart_close(restart, blocks_file)
 
     restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
-    call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, type=number_type)
+    call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
 
     ! data type of file
     if(number_type == FILETYPE_FLOAT) then
@@ -947,6 +948,27 @@ contains
             call dmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
           else
             call zmesh_batch_exchange_points(gr%mesh, st%group%psib(ib, ik), backward_map = .true.)
+          end if
+        end do
+      end do
+    end if
+
+    ! convert endianness if needed
+    if(correct_endianness) then
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if (states_are_real(st)) then
+            do ip = 1, gr%mesh%np
+              do ist = 1, st%group%psib(ib, ik)%nst_linear
+                st%group%psib(ib, ik)%dff_pack(ist, ip) = convert_endianness_real(st%group%psib(ib, ik)%dff_pack(ist, ip))
+              end do
+            end do
+          else
+            do ip = 1, gr%mesh%np
+              do ist = 1, st%group%psib(ib, ik)%nst_linear
+                st%group%psib(ib, ik)%zff_pack(ist, ip) = convert_endianness_complex(st%group%psib(ib, ik)%zff_pack(ist, ip))
+              end do
+            end do
           end if
         end do
       end do
@@ -1121,6 +1143,32 @@ contains
 
       POP_SUB(states_elec_load.index_is_wrong)
     end function index_is_wrong
+
+    FLOAT function convert_endianness_real(src) result(dst)
+      FLOAT, intent(in) :: src
+      character(len=1) :: src_arr(8), dst_arr(8)
+
+      PUSH_SUB(states_elec_load.convert_endianness_real)
+
+      src_arr = TRANSFER(src, src_arr)
+      dst_arr = src_arr([8, 7, 6, 5, 4, 3, 2, 1])
+      dst = TRANSFER(dst_arr, dst)
+
+      POP_SUB(states_elec_load.convert_endianness_real)
+    end function convert_endianness_real
+
+    CMPLX function convert_endianness_complex(src) result(dst)
+      CMPLX, intent(in) :: src
+      FLOAT :: real_part, imag_part
+
+      PUSH_SUB(states_elec_load.convert_endianness_complex)
+
+      real_part = convert_endianness_real(real(src))
+      imag_part = convert_endianness_real(aimag(src))
+      dst = TOCMPLX(real_part, imag_part)
+
+      POP_SUB(states_elec_load.convert_endianness_complex)
+    end function convert_endianness_complex
 
   end subroutine states_elec_load
 
