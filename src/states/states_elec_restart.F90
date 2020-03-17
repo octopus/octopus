@@ -382,6 +382,36 @@ contains
     POP_SUB(states_elec_exchange_points)
   end subroutine states_elec_exchange_points
 
+  ! ---------------------------------------------------------
+  subroutine states_elec_convert_endianness(st, gr)
+    type(states_elec_t),  intent(in) :: st
+    type(grid_t),         intent(in) :: gr
+
+    integer :: ik, ib, ip, ist
+
+    PUSH_SUB(states_elec_convert_endianness)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        if (states_are_real(st)) then
+          do ip = 1, gr%mesh%np
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
+              st%group%psib(ib, ik)%dff_pack(ist, ip) = convert_endianness_real(st%group%psib(ib, ik)%dff_pack(ist, ip))
+            end do
+          end do
+        else
+          do ip = 1, gr%mesh%np
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
+              st%group%psib(ib, ik)%zff_pack(ist, ip) = convert_endianness_complex(st%group%psib(ib, ik)%zff_pack(ist, ip))
+            end do
+          end do
+        end if
+      end do
+    end do
+
+    POP_SUB(states_elec_convert_endianness)
+  end subroutine states_elec_convert_endianness
+
 
   ! ---------------------------------------------------------
   subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
@@ -993,23 +1023,7 @@ contains
 
     ! convert endianness if needed
     if(correct_endianness) then
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          if (states_are_real(st)) then
-            do ip = 1, gr%mesh%np
-              do ist = 1, st%group%psib(ib, ik)%nst_linear
-                st%group%psib(ib, ik)%dff_pack(ist, ip) = convert_endianness_real(st%group%psib(ib, ik)%dff_pack(ist, ip))
-              end do
-            end do
-          else
-            do ip = 1, gr%mesh%np
-              do ist = 1, st%group%psib(ib, ik)%nst_linear
-                st%group%psib(ib, ik)%zff_pack(ist, ip) = convert_endianness_complex(st%group%psib(ib, ik)%zff_pack(ist, ip))
-              end do
-            end do
-          end if
-        end do
-      end do
+      call states_elec_convert_endianness(st, gr)
     end if
 
 
