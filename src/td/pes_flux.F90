@@ -1688,7 +1688,7 @@ print *, isp_start, isp_end, this%nsrfcpnts
       isp_start = this%face_idx_range(ifc, 1)
       isp_end   = this%face_idx_range(ifc, 2)
       
-      ng = isp_end - isp_start + 1 
+      ng = isp_end - isp_start + 1 ! faces can have a different number of points
       nfp = ng
 
       SAFE_ALLOCATE( wfpw_node(stst:stend, 1:sdim, kptst:kptend, 1:ng))
@@ -1707,8 +1707,8 @@ print *, isp_start, isp_end, this%nsrfcpnts
         if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
       end do 
 
-      do itstep = 1, this%itstep      
-
+!       do itstep = 1, this%itstep      
+itstep = tdstep_on_node
         do ik = kptst, kptend
           do ist = stst, stend
             do isdim = 1, sdim
@@ -1728,10 +1728,10 @@ print *, isp_start, isp_end, this%nsrfcpnts
           
               end do 
               
-              if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, gwfpw)
-                call comm_allreduce(mesh%mpi_grp%comm, wfpw)
-              end if
+!               if(mesh%parallel_in_domains) then
+!                 call comm_allreduce(mesh%mpi_grp%comm, gwfpw)
+!                 call comm_allreduce(mesh%mpi_grp%comm, wfpw)
+!               end if
               
               if(itstep == tdstep_on_node) then
                 gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
@@ -1743,7 +1743,7 @@ print *, isp_start, isp_end, this%nsrfcpnts
           end do 
         end do 
 
-      end do !itstep
+!       end do !itstep
 
 !       print *, "done FT"
 
@@ -1768,6 +1768,8 @@ print *, isp_start, isp_end, this%nsrfcpnts
             phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
           end do
           
+          if(itstep /= tdstep_on_node) cycle
+
           do ist = stst, stend
             do isdim = 1, sdim
               
@@ -1776,13 +1778,13 @@ print *, isp_start, isp_end, this%nsrfcpnts
                 gwfpw(:) = gwfpw_node(ist, isdim, ik, :)
                  wfpw(:) =  wfpw_node(ist, isdim, ik, :)
               end if
-#if defined(HAVE_MPI)
-              if(mesh%parallel_in_domains) then
-                call MPI_Bcast(gwfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-                call MPI_Bcast(wfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-                call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
-              end if
-#endif
+! #if defined(HAVE_MPI)
+!               if(mesh%parallel_in_domains) then
+!                 call MPI_Bcast(gwfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+!                 call MPI_Bcast(wfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+!                 call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+!               end if
+! #endif
 
 
               do ig = 1, ng
@@ -1793,9 +1795,9 @@ print *, isp_start, isp_end, this%nsrfcpnts
                       M_zI * gwfpw(ig))* this%sinc(ikp_start:ikp_end, ig, ik, nint((ifc+0.5)/2))
               end do
               
-              if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, Jk_cub)
-              end if
+!               if(mesh%parallel_in_domains) then
+!                 call comm_allreduce(mesh%mpi_grp%comm, Jk_cub)
+!               end if
               
 
           end do ! isdim
@@ -1805,8 +1807,8 @@ print *, isp_start, isp_end, this%nsrfcpnts
     end do !istep
     
     
-    spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * &
-                            this%srfcnrml(n_dir, this%face_idx_range(ifc, 1)) / M_TWO
+    spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * M_HALF !&
+!                             this%srfcnrml(n_dir, this%face_idx_range(ifc, 1)) / M_TWO
       
         
         
@@ -1833,7 +1835,7 @@ print *, isp_start, isp_end, this%nsrfcpnts
     end if
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_cub)
+!       call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_cub)
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
     end if
 
