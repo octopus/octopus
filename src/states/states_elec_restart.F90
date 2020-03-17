@@ -176,7 +176,7 @@ contains
 
   contains
     subroutine get_restart_types_same_block_layout
-      integer :: nblocks_local, offset, ib, ierr, ik, ii
+      integer :: nblocks_local, offset, ib, ik, ii
       integer, allocatable :: blocklengths(:), displacements(:)
       integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
 
@@ -412,6 +412,123 @@ contains
     POP_SUB(states_elec_convert_endianness)
   end subroutine states_elec_convert_endianness
 
+  ! ---------------------------------------------------------
+  subroutine states_elec_write_block_file(restart, st, ierr)
+    type(restart_t),      intent(in)    :: restart
+    type(states_elec_t),  intent(in)    :: st
+    integer,              intent(inout) :: ierr
+
+    integer :: ib, iunit_blocks, err
+    character(len=300) :: lines(3)
+
+    PUSH_SUB(states_elec_write_block_file)
+
+    iunit_blocks = restart_open(restart, 'blocks')
+    write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
+    lines(2) = '#     #block        start          end        range'
+    lines(3) = '%StateBlocks'
+    call restart_write(restart, iunit_blocks, lines, 3, err)
+    if (err /= 0) ierr = ierr + 256
+    do ib = 1, st%group%nblocks
+      write(lines(1), '(2X, I10, A, I10, A, I10, A, I10)') ib, ' | ', st%group%block_range(ib, 1), &
+        ' | ', st%group%block_range(ib, 2), ' | ', st%group%block_size(ib)
+      call restart_write(restart, iunit_blocks, lines, 1, err)
+    end do
+    lines(1) = '%'
+    call restart_write(restart, iunit_blocks, lines, 1, err)
+    if (err /= 0) ierr = ierr + 512
+    call restart_close(restart, iunit_blocks)
+
+    POP_SUB(states_elec_write_block_file)
+  end subroutine states_elec_write_block_file
+
+
+  ! ---------------------------------------------------------
+  subroutine states_elec_read_block_file(restart, st, group_file, ierr)
+    type(restart_t),           intent(in)    :: restart
+    type(states_elec_t),       intent(in)    :: st
+    type(states_elec_group_t), intent(inout) :: group_file
+    integer,                   intent(inout) :: ierr
+
+    integer :: ib, ik, iunit_blocks, err
+    character(len=300) :: lines(3)
+
+    PUSH_SUB(states_elec_read_block_file)
+
+    call states_elec_group_null(group_file)
+
+    iunit_blocks = restart_open(restart, 'blocks')
+    call restart_read(restart, iunit_blocks, lines, 3, err)
+    if (err /= 0) ierr = ierr + 1024
+    read(lines(1), '(10X,I10)') group_file%nblocks
+    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
+    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
+    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
+    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
+    do ib = 1, group_file%nblocks
+      call restart_read(restart, iunit_blocks, lines, 1, err)
+      if (err /= 0) ierr = ierr + 4096
+      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
+        group_file%block_range(ib, 2), group_file%block_size(ib)
+      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
+      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
+        st%d%kpt%start:st%d%kpt%end) = ib
+    end do
+    call restart_close(restart, iunit_blocks)
+
+    POP_SUB(states_elec_read_block_file)
+  end subroutine states_elec_read_block_file
+
+  ! ---------------------------------------------------------
+  subroutine states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
+    type(states_elec_t), intent(in)  :: st
+    integer,             intent(in)  :: number_type
+    integer,             intent(out) :: mpi_filetype
+    integer,             intent(out) :: mpi_localtype
+
+    integer, parameter :: FILETYPE_FLOAT = 1, FILETYPE_CMPLX = 3
+    integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+    PUSH_SUB(states_elec_get_mpi_types_reading)
+
+    ! data type of file
+    if(number_type == FILETYPE_FLOAT) then
+      mpi_filetype = MPI_FLOAT
+    else if(number_type == FILETYPE_CMPLX) then
+      mpi_filetype = MPI_CMPLX
+    else
+      message(1) = "Data type of restart file not recognized."
+      call messages_fatal(1)
+    end if
+
+    ! local datatype of states
+    if (states_are_real(st)) then
+      if(number_type == FILETYPE_FLOAT) then
+        mpi_localtype = MPI_FLOAT
+        message(1) = "Reading real states from a restart file with real data"
+        call messages_info(1)
+      else
+        message(1) = "Reading real states from complex restart files not supported"
+        call messages_fatal(1)
+      end if
+    else
+      if(number_type == FILETYPE_CMPLX) then
+        mpi_localtype = MPI_CMPLX
+        message(1) = "Reading complex states from a restart file with complex data"
+        call messages_info(1)
+      else
+        ! reading real from file, but saving to complex states
+        ! The idea is to have a mpi type that has a real number and an empty space.
+        ! When the real numbers are read from the file, they are directly saved into
+        ! the real part of the complex numbers.
+        call MPI_Type_get_extent(MPI_FLOAT, lb, extent, mpi_err)
+        call MPI_Type_create_resized(MPI_FLOAT, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, mpi_err)
+        message(1) = "Reading complex states from a restart file with real data"
+        call messages_info(1)
+      end if
+    end if
+    POP_SUB(states_elec_get_mpi_types_reading)
+  end subroutine states_elec_get_mpi_types_reading
 
   ! ---------------------------------------------------------
   subroutine states_elec_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
@@ -425,8 +542,8 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_occs, iunit_states, iunit_blocks
-    integer :: err, err2(2), ik, idir, ist, idim, itot, ib
+    integer :: iunit_wfns, iunit_occs, iunit_states
+    integer :: err, err2(2), ik, idir, ist, idim, itot
     integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
@@ -486,22 +603,7 @@ contains
     call MPI_File_close(fh, mpi_err)
 
     call states_elec_exchange_points(st, gr, forward=.false.)
-
-    iunit_blocks = restart_open(restart, 'blocks')
-    write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
-    lines(2) = '#     #block        start          end        range'
-    lines(3) = '%StateBlocks'
-    call restart_write(restart, iunit_blocks, lines, 3, err)
-    if (err /= 0) ierr = ierr + 256
-    do ib = 1, st%group%nblocks
-      write(lines(1), '(2X, I10, A, I10, A, I10, A, I10)') ib, ' | ', st%group%block_range(ib, 1), &
-        ' | ', st%group%block_range(ib, 2), ' | ', st%group%block_size(ib)
-      call restart_write(restart, iunit_blocks, lines, 1, err)
-    end do
-    lines(1) = '%'
-    call restart_write(restart, iunit_blocks, lines, 1, err)
-    if (err /= 0) ierr = ierr + 512
-    call restart_close(restart, iunit_blocks)
+    call states_elec_write_block_file(restart, st, ierr)
 
 
     if (present(lr)) then
@@ -664,7 +766,7 @@ contains
     logical,          optional, intent(in)    :: verbose
     logical,          optional, intent(in)    :: skip(:) !< A mask for reading or skipping the states. For expert use only.
 
-    integer              :: states_elec_file, wfns_file, occ_file, blocks_file, err, ik, ist, idir, idim, ib
+    integer              :: states_elec_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
@@ -685,10 +787,8 @@ contains
     integer :: errorcode, resultlen
     character(len=MAX_PATH_LEN) :: restart_filename
     type(states_elec_group_t) :: group_file
-    integer :: read_np, number_type, file_size, ip
+    integer :: read_np, number_type, file_size
     logical :: correct_endianness
-    integer, parameter :: FILETYPE_FLOAT = 1, FILETYPE_CMPLX = 3
-    integer(kind=MPI_ADDRESS_KIND) :: lb, extent
 
 
 #if defined(HAVE_MPI)
@@ -929,65 +1029,9 @@ contains
     restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
     call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
 
-    ! data type of file
-    if(number_type == FILETYPE_FLOAT) then
-      mpi_filetype = MPI_FLOAT
-    else if(number_type == FILETYPE_CMPLX) then
-      mpi_filetype = MPI_CMPLX
-    else
-      message(1) = "Data type of restart file not recognized."
-      call messages_fatal(1)
-    end if
 
-    ! local datatype of states
-    if (states_are_real(st)) then
-      if(number_type == FILETYPE_FLOAT) then
-        mpi_localtype = MPI_FLOAT
-        message(1) = "Reading real states from a restart file with real data"
-        call messages_info(1)
-      else
-        message(1) = "Reading real states from complex restart files not supported"
-        call messages_fatal(1)
-      end if
-    else
-      if(number_type == FILETYPE_CMPLX) then
-        mpi_localtype = MPI_CMPLX
-        message(1) = "Reading complex states from a restart file with complex data"
-        call messages_info(1)
-      else
-        ! reading real from file, but saving to complex states
-        ! The idea is to have a mpi type that has a real number and an empty space.
-        ! When the real numbers are read from the file, they are directly saved into
-        ! the real part of the complex numbers.
-        call MPI_Type_get_extent(MPI_FLOAT, lb, extent, mpi_err)
-        call MPI_Type_create_resized(MPI_FLOAT, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, mpi_err)
-        message(1) = "Reading complex states from a restart file with real data"
-        call messages_info(1)
-      end if
-    end if
-
-    call states_elec_group_null(group_file)
-
-    blocks_file = restart_open(restart, 'blocks')
-    call restart_read(restart, blocks_file, lines, 3, err)
-    if (err /= 0) ierr = ierr + 1024
-    read(lines(1), '(10X,I10)') group_file%nblocks
-    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
-    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
-    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
-    do ib = 1, group_file%nblocks
-      call restart_read(restart, blocks_file, lines, 1, err)
-      if (err /= 0) ierr = ierr + 4096
-      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
-        group_file%block_range(ib, 2), group_file%block_size(ib)
-      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
-      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
-        st%d%kpt%start:st%d%kpt%end) = ib
-    end do
-    call restart_close(restart, blocks_file)
-
+    call states_elec_read_block_file(restart, st, group_file, ierr)
+    call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
     call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
 
     SAFE_DEALLOCATE_P(group_file%block_range)
@@ -1016,11 +1060,21 @@ contains
       end if
 
       call MPI_Get_elements(mpistat, mpi_localtype, read_np, mpi_err)
-      print *, "Elements read localtype: ", read_np
+      if(debug%info) then
+        write(message(1), "(A,I15)") "Elements read localtype: ", read_np
+      end if
       call MPI_Get_elements(mpistat, mpi_filetype, read_np, mpi_err)
-      print *, "Elements read filetype: ", read_np
-      print *, "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
-      !SSERT(read_np == st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal)
+      if(debug%info) then
+        write(message(2), "(A,I15)") "Elements read filetype: ", read_np
+        write(message(3), "(A,I15)") "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+        call messages_info(3)
+      end if
+      if(read_np /= st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal) then
+        write(message(1), "(A,I15,A,I15)") "Elements read: ", read_np, &
+          ", but expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+        call messages_fatal(1)
+      end if
+
 
       call MPI_File_close(fh, mpi_err)
     end if
