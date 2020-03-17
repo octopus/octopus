@@ -428,6 +428,14 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
+      if(st%parallel_in_states) then
+        SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        SAFE_DEALLOCATE_A(psicopy)
+      end if
+
       call X(accel_trsm)(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
         trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
         M = int(st%nst, 8), N = int(size, 8), alpha = R_TOTYPE(M_ONE), &

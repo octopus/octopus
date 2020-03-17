@@ -35,4 +35,3 @@ StatesOrthogonalization = cholesky_serial
 SubspaceDiagonalization = standard
 
 StatesPack = yes
-StatesPack=yes

@@ -189,7 +189,6 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
     tsize = types_get_size(this%type())/types_get_size(TYPE_FLOAT)
     offset = this%linear_to_ist(1) - 1
 
-
     call accel_kernel_start_call(kernel, 'points.cl', 'get_points')
 
     call accel_set_kernel_arg(kernel, 0, sp)

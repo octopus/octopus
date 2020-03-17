@@ -167,7 +167,6 @@ module accel_oct_m
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
     integer                       :: arg_count
-    character(len=80)             :: name
   end type accel_kernel_t
 
   type(accel_t), public :: accel
@@ -1183,9 +1182,6 @@ contains
     gsizes(1:dim) = int(globalsizes(1:dim), 8)
     lsizes(1:dim) = int(localsizes(1:dim), 8)
 
-    ! message(1) = 'Launching '//kernel%name
-    ! call messages_warn(1)
-
 #ifdef HAVE_OPENCL
     call clEnqueueNDRangeKernel(accel%command_queue, kernel%kernel, gsizes(1:dim), lsizes(1:dim), ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
@@ -1763,8 +1759,6 @@ contains
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
-
-    this%name = trim(file_name)//'__'//trim(kernel_name)
 
 #ifdef HAVE_CUDA
     all_flags = '-I'//trim(conf%share)//'/opencl/'
