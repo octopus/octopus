@@ -25,6 +25,7 @@ module states_elec_restart_oct_m
   use grid_oct_m
   use io_binary_oct_m
   use io_function_oct_m
+  use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
@@ -1240,6 +1241,11 @@ contains
       PUSH_SUB(states_elec_load.load_parallel)
 
       restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
+      if(.not.io_file_exists(restart_filename)) then
+        message(1) = "Error: restart file not found."
+        message(2) = "File: "//trim(restart_filename)
+        call messages_fatal(2)
+      end if
       call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
 
 
