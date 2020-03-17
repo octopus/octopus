@@ -1246,8 +1246,16 @@ contains
         message(2) = "File: "//trim(restart_filename)
         call messages_fatal(2)
       end if
-      call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
-
+      ! read header only on root and broadcast to the others
+      if(restart_is_root(restart)) then
+        call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
+      end if
+#ifdef HAVE_MPI
+      call MPI_Bcast(read_np, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(file_size, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(number_type, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(correct_endianness, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+#endif HAVE_MPI
 
       call states_elec_read_block_file(restart, st, group_file, ierr)
       call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)

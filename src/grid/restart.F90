@@ -63,6 +63,7 @@ module restart_oct_m
     restart_has_flag,             &
     restart_has_map,              &
     restart_get_comm,             &
+    restart_is_root,              &
     drestart_write_mesh_function, &
     zrestart_write_mesh_function, &
     drestart_read_mesh_function,  &
@@ -918,6 +919,12 @@ contains
 
     restart_get_comm = restart%mpi_grp%comm
   end function restart_get_comm
+
+  logical function restart_is_root(restart)
+    type(restart_t), intent(in) :: restart
+
+    restart_is_root = mpi_grp_is_root(restart%mpi_grp)
+  end function restart_is_root
 
 
 #include "undef.F90"
