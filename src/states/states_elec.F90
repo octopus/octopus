@@ -245,7 +245,7 @@ contains
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
     integer :: nempty_conv
-    logical :: force
+    logical :: force, defaultl
 
     PUSH_SUB(states_elec_init)
 
@@ -594,8 +594,19 @@ contains
     !%Description
     !% Use the parallel IO for writing and reading the states. This is
     !% more efficient than the older, serial version.
+    !% This is by default activated if the code was compiled with MPI support
+    !% and deactivated otherwise.
     !%End
-    call parse_variable(namespace, 'StateRestartParallel', .true., st%parallel_restart)
+#ifdef HAVE_MPI
+    defaultl = .true.
+#else
+    defaultl = .false.
+#endif
+    call parse_variable(namespace, 'StateRestartParallel', defaultl, st%parallel_restart)
+
+#ifndef HAVE_MPI
+    if(st%parallel_restart) call messages_not_implemented("Parallel restart for builds without MPI support.")
+#endif
 
     st%packed = .false.
 
