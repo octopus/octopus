@@ -1032,7 +1032,7 @@ contains
     logical, optional,             intent(in)    :: skip(:)
     logical, optional,             intent(in)    :: packed
 
-    integer :: ib, iqn, ist, istmin, istmax, rank, total_size, size1, offset
+    integer :: ib, iqn, ist, istmin, istmax, rank, total_size, size1, offset, np_part
     logical :: verbose_, packed_
     integer, allocatable :: bstart(:), bend(:), blocks_per_rank(:), block_offsets(:)
     FLOAT, pointer :: dpsi(:, :)
@@ -1140,10 +1140,13 @@ contains
       ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
     end do
 
+    ! add padding for GPU runs
+    np_part = mesh%np_part
+    if(accel_is_enabled()) np_part = accel_padded_size(np_part)
     ! total size of array needed
     total_size = 0
     do ib = st%group%block_start, st%group%block_end
-      total_size = total_size + st%group%batch_size(ib) * mesh%np_part * st%d%kpt%nlocal
+      total_size = total_size + st%group%batch_size(ib) * np_part * st%d%kpt%nlocal
     end do
 
     if (states_are_real(st)) then
@@ -1160,15 +1163,15 @@ contains
       do ib = st%group%block_start, st%group%block_end
         size1 = st%group%batch_size(ib)
         if (states_are_real(st)) then
-          dpsi(1:size1, 1:mesh%np_part) => st%group%dpsi(offset:offset+size1*mesh%np_part-1)
+          dpsi(1:size1, 1:np_part) => st%group%dpsi(offset:offset+size1*np_part-1)
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             dpsi, iqn, packed=.true.)
         else
-          zpsi(1:size1, 1:mesh%np_part) => st%group%zpsi(offset:offset+size1*mesh%np_part-1)
+          zpsi(1:size1, 1:np_part) => st%group%zpsi(offset:offset+size1*np_part-1)
           call wfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), &
             zpsi, iqn, packed=.true.)
         end if
-        offset = offset + size1*mesh%np_part
+        offset = offset + size1*np_part
       end do
     end do
 

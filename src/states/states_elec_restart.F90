@@ -19,6 +19,7 @@
 #include "global.h"
 
 module states_elec_restart_oct_m
+  use accel_oct_m
   use batch_oct_m
   use global_oct_m
   use grid_oct_m
@@ -176,12 +177,16 @@ contains
 
   contains
     subroutine get_restart_types_same_block_layout
-      integer :: nblocks_local, offset, ib, ik, ii
+      integer :: nblocks_local, offset, ib, ik, ii, np_part
       integer, allocatable :: blocklengths(:), displacements(:)
       integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
 
       message(1) = "Reading restart file with same block layout"
       call messages_info(1)
+
+      ! add padding for GPU runs
+      np_part = gr%mesh%np_part
+      if(accel_is_enabled()) np_part = accel_padded_size(np_part)
 
       nblocks_local = (st%group%block_end - st%group%block_start + 1) * st%d%kpt%nlocal
       SAFE_ALLOCATE(blocklengths(nblocks_local))
@@ -194,7 +199,7 @@ contains
           ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
           blocklengths(ii) = st%group%batch_size(ib) * gr%mesh%np
           displacements(ii) = offset
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+          offset = offset + st%group%batch_size(ib) * np_part
         end do
       end do
 
@@ -252,7 +257,7 @@ contains
     end subroutine get_restart_types_same_block_layout
 
     subroutine get_restart_types_different_block_layout
-      integer :: offset, ib, ierr, ist, ik, ii, iist, nstates, idim
+      integer :: offset, ib, ierr, ist, ik, ii, iist, nstates, idim, np_part
       integer, allocatable :: blocklengths(:), types(:), offsets(:)
       integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
       integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
@@ -263,6 +268,10 @@ contains
 #ifdef HAVE_MPI
       call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, mpi_err)
 #endif
+
+      ! add padding for GPU runs
+      np_part = gr%mesh%np_part
+      if(accel_is_enabled()) np_part = accel_padded_size(np_part)
 
       nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
       SAFE_ALLOCATE(bdisplacements(nstates))
@@ -275,7 +284,7 @@ contains
         do ib = st%group%block_start, st%group%block_end
           ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
           offsets(ii) = offset
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
+          offset = offset + st%group%batch_size(ib) * np_part
         end do
       end do
       do ik = st%d%kpt%start, st%d%kpt%end
