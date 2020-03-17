@@ -152,11 +152,7 @@ contains
     integer,              intent(out) :: filetype
     type(states_elec_group_t), optional, intent(in) :: group
 
-    integer :: nblocks_local, offset, ib, ierr, ist, ik, ii, iist, nstates, idim
-    integer, allocatable :: blocklengths(:), displacements(:), types(:), offsets(:)
     logical :: same_block_layout
-    integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
-    integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
 
     PUSH_SUB(states_elec_get_restart_types)
 
@@ -171,7 +167,22 @@ contains
     end if
 
     if(same_block_layout) then
-      !print*,"Same block layout"
+      call get_restart_types_same_block_layout
+    else
+      call get_restart_types_different_block_layout
+    end if
+
+    POP_SUB(states_elec_get_restart_types)
+
+  contains
+    subroutine get_restart_types_same_block_layout
+      integer :: nblocks_local, offset, ib, ierr, ik, ii
+      integer, allocatable :: blocklengths(:), displacements(:)
+      integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
+
+      message(1) = "Reading restart file with same block layout"
+      call messages_info(1)
+
       nblocks_local = (st%group%block_end - st%group%block_start + 1) * st%d%kpt%nlocal
       SAFE_ALLOCATE(blocklengths(nblocks_local))
       SAFE_ALLOCATE(displacements(nblocks_local))
@@ -186,15 +197,9 @@ contains
           offset = offset + st%group%batch_size(ib) * gr%mesh%np_part
         end do
       end do
-      !print *, "rank ", mpi_world%rank, "local blocklength: ", blocklengths
-      !print *, "rank ", mpi_world%rank, "local displacement: ", displacements
 
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, ierr)
       call MPI_Type_commit(localtype, ierr)
-
-      !call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
-      !call MPI_Type_size(localtype, offset, ierr)
-      !print*,"localtype", lb, size_mpitype, offset
 
       ! create global type for state blocks
       offset = 0
@@ -225,14 +230,32 @@ contains
       call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, ierr)
       call MPI_Type_commit(filetype, ierr)
 
-      !call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
-      !call MPI_Type_size(filetype, offset, ierr)
-      !print*,"filetype", lb, size_mpitype, offset
+      if (debug%info) then
+        call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
+        call MPI_Type_size(localtype, offset, ierr)
+        write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
+          ", extent: ", size_mpitype, ", size: ", offset
+
+        call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
+        call MPI_Type_size(filetype, offset, ierr)
+        write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
+          ", extent: ", size_mpitype, ", size: ", offset
+        call messages_info(2)
+      end if
 
       SAFE_DEALLOCATE_A(blocklengths)
       SAFE_DEALLOCATE_A(displacements)
-    else
-      !print*,"Different block layout"
+    end subroutine get_restart_types_same_block_layout
+
+    subroutine get_restart_types_different_block_layout
+      integer :: offset, ib, ierr, ist, ik, ii, iist, nstates, idim
+      integer, allocatable :: blocklengths(:), types(:), offsets(:)
+      integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
+      integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
+
+      message(1) = "Reading restart file with different block layout"
+      call messages_info(1)
+
       call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, ierr)
 
       nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
@@ -303,13 +326,24 @@ contains
       call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, ierr)
       call MPI_Type_commit(filetype, ierr)
 
+      if (debug%info) then
+        call MPI_Type_get_extent(localtype, lb, size_mpitype, ierr)
+        call MPI_Type_size(localtype, offset, ierr)
+        write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
+          ", extent: ", size_mpitype, ", size: ", offset
+
+        call MPI_Type_get_extent(filetype, lb, size_mpitype, ierr)
+        call MPI_Type_size(filetype, offset, ierr)
+        write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
+          ", extent: ", size_mpitype, ", size: ", offset
+        call messages_info(2)
+      end if
+
       SAFE_DEALLOCATE_A(offsets)
       SAFE_DEALLOCATE_A(bdisplacements)
       SAFE_DEALLOCATE_A(types)
       SAFE_DEALLOCATE_A(blocklengths)
-    end if
-
-    POP_SUB(states_elec_get_restart_types)
+    end subroutine get_restart_types_different_block_layout
   end subroutine states_elec_get_restart_types
 
 
@@ -328,7 +362,7 @@ contains
     integer :: iunit_wfns, iunit_occs, iunit_states, iunit_blocks
     integer :: err, err2(2), ik, idir, ist, idim, itot, ib
     integer :: root(1:P_STRATEGY_MAX)
-    character(len=MAX_PATH_LEN) :: filename, workpath
+    character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
@@ -605,9 +639,9 @@ contains
     integer :: filetype, localtype, mpi_filetype, mpi_localtype, fh, mpistat(MPI_STATUS_SIZE)
     character(len=MPI_MAX_ERROR_STRING) :: string
     integer :: errorcode, resultlen
-    character(len=MAX_PATH_LEN) :: restart_filename, workpath
+    character(len=MAX_PATH_LEN) :: restart_filename
     type(states_elec_group_t) :: group_file
-    integer :: read_np, number_type, file_size, iio, ip
+    integer :: read_np, number_type, file_size, ip
     logical :: correct_endianness
     integer, parameter :: FILETYPE_FLOAT = 1, FILETYPE_CMPLX = 3
     integer(kind=MPI_ADDRESS_KIND) :: lb, extent
