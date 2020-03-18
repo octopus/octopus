@@ -1519,7 +1519,7 @@ contains
       isp_end   = this%face_idx_range(ifc, 2)
       ng = isp_end - isp_start + 1 
       nfp = ng ! number of points on face
-print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
+! print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
       
       n_dir = 0 
       do idir = 1, mdim
@@ -1545,7 +1545,7 @@ print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
         end do
       end do
       
-      print *, ig, ng
+! print *, ig, ng
       
       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         do ig = 1,ng
@@ -1555,7 +1555,7 @@ print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
       end if
       
       
-print *, isp_start, isp_end, this%nsrfcpnts
+! print *, isp_start, isp_end, this%nsrfcpnts
       
       this%expg(:,:,:) = M_z1
       do ig = 1,ng
@@ -1564,7 +1564,8 @@ print *, isp_start, isp_end, this%nsrfcpnts
           do idir = 1, mdim 
             if (idir == n_dir ) cycle
             if(this%LLr(n_dir,idim)> M_EPSILON) &
-              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig)* this%rcoords(idir, isp_start+ifp-1)) * &
+              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) * &
+                                       this%rcoords(idir, isp_start+ifp-1)) * &
                                        (M_PI/this%LLr(n_dir,idim))**(fdim/M_z2)
             idim= idim+1
           end do
@@ -1707,51 +1708,40 @@ print *, isp_start, isp_end, this%nsrfcpnts
         if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
       end do 
 
-!       do itstep = 1, this%itstep      
-itstep = tdstep_on_node
-        do ik = kptst, kptend
-          do ist = stst, stend
-            do isdim = 1, sdim
-          
-              do ig = 1, ng
-                
+      itstep = tdstep_on_node
+      do ik = kptst, kptend
+        do ist = stst, stend
+          do isdim = 1, sdim
+        
+            do ig = 1, ng
+              
 !                 print *, int(ifc/2), int((ifc+0.5)/2),nint((ifc+0.5)/2), nint((2+0.5)/2), nint((3+0.5)/2)
-                gwfpw(ig) = &
-                  sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                    * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) &
-                    * this%srfcnrml(n_dir, isp_start:isp_end)) ! surface area element ds
-                
-                wfpw(ig) = &
-                  sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                    * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) & 
-                    * this%srfcnrml(n_dir, isp_start:isp_end))
-          
-              end do 
+              gwfpw(ig) = &
+                sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) &
+                  * this%srfcnrml(n_dir, isp_start:isp_end)) ! surface area element ds
               
-!               if(mesh%parallel_in_domains) then
-!                 call comm_allreduce(mesh%mpi_grp%comm, gwfpw)
-!                 call comm_allreduce(mesh%mpi_grp%comm, wfpw)
-!               end if
-              
-              if(itstep == tdstep_on_node) then
-                gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
-                 wfpw_node(ist, isdim, ik, :) = wfpw(:)
-              end if              
-              
-
+              wfpw(ig) = &
+                sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
+                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) & 
+                  * this%srfcnrml(n_dir, isp_start:isp_end))
+        
             end do 
+            
+            
+            if(itstep == tdstep_on_node) then
+              gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
+               wfpw_node(ist, isdim, ik, :) = wfpw(:)
+            end if              
+            
+
           end do 
         end do 
+      end do 
 
-!       end do !itstep
-
-!       print *, "done FT"
 
       ! get the previous Volkov phase
-
       vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
-
-
       
       Jk_cub(:, :, :, :) = M_z0
 
@@ -1778,13 +1768,6 @@ itstep = tdstep_on_node
                 gwfpw(:) = gwfpw_node(ist, isdim, ik, :)
                  wfpw(:) =  wfpw_node(ist, isdim, ik, :)
               end if
-! #if defined(HAVE_MPI)
-!               if(mesh%parallel_in_domains) then
-!                 call MPI_Bcast(gwfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-!                 call MPI_Bcast(wfpw, ng, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-!                 call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
-!               end if
-! #endif
 
 
               do ig = 1, ng
@@ -1794,11 +1777,7 @@ itstep = tdstep_on_node
                      (M_TWO * this%veca(n_dir, itstep) / P_c   -  this%kcoords_cub(n_dir, ikp_start:ikp_end, ik)) + &
                       M_zI * gwfpw(ig))* this%sinc(ikp_start:ikp_end, ig, ik, nint((ifc+0.5)/2))
               end do
-              
-!               if(mesh%parallel_in_domains) then
-!                 call comm_allreduce(mesh%mpi_grp%comm, Jk_cub)
-!               end if
-              
+                            
 
           end do ! isdim
         end do ! ist     
@@ -2072,9 +2051,9 @@ itstep = tdstep_on_node
     FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(MAX_DIM), dd, area, dS(MAX_DIM,1:2)
+    FLOAT                 :: xx(MAX_DIM), dd, area, dS(MAX_DIM,1:2), factor
     integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
-    integer               :: ip_global
+    integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
     logical               :: in_ab
     integer               :: ip_local, nsrfcpnts, NN(MAX_DIM,1:2), idx(MAX_DIM,1:2) 
@@ -2105,7 +2084,11 @@ itstep = tdstep_on_node
       idx(:,:) = 0 
       
       mindim  = 1 
-      if(this%surf_shape == M_PLANES) mindim = mdim  ! We only have two planes along the non periodic dimension 
+      factor = M_TWO
+      if(this%surf_shape == M_PLANES) then
+        mindim = mdim  ! We only have two planes along the non periodic dimension 
+        factor = M_ONE
+      end if
       
       
       this%nsrfcpnts = 0 
@@ -2113,16 +2096,16 @@ itstep = tdstep_on_node
         area = M_ONE
         do idir=1, mdim
           if (idir == ndir) cycle
-          area = area * border(idir)*M_TWO 
+          area = area * border(idir)*factor
         end do
         
-        area = fc_ptdens * area
+        npface = int(fc_ptdens * area) ! number of points on the face
         
         idim = 1 
         do idir=1, mdim
           if (idir == ndir) cycle
-          NN(ndir,idim) = int(area / (border(idir)*M_TWO)) + 1
-          dS(ndir,idim) = border(idir)*M_TWO/NN(ndir,idim)
+          NN(ndir,idim) = int(npface / (border(idir)*factor)) 
+          dS(ndir,idim) = border(idir)*factor/NN(ndir,idim)
           this%LLr(ndir,idim) = NN(ndir,idim)*dS(ndir,idim)
           idx(ndir,idim) = idir
           idim = idim + 1
@@ -2132,9 +2115,9 @@ itstep = tdstep_on_node
       
       this%NN(1:mdim,:)  = NN(1:mdim,:)
       
-      print *,  this%nsrfcpnts, NN(1,:),NN(2,:)
-
-      print *,  idx(1,:),idx(2,:)
+!       print *,  this%nsrfcpnts, NN(1,:),NN(2,:)
+!
+!       print *,  this%LLr(1,:), this%LLr(2,:)
       
       SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
       SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
@@ -2156,7 +2139,7 @@ itstep = tdstep_on_node
             iuv =(/iu,iv/)
             do idim = 1, mdim-1
               this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
-            end do              
+            end do 
             isp = isp + 1
           end do
         end do

@@ -1212,6 +1212,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
             SAFE_DEALLOCATE_P(psi1)
 
+! print *,mpi_world%rank, filename, err
           end if
         else 
           err = 0  
@@ -1234,6 +1235,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         SAFE_ALLOCATE(psi1(this%nkpnts))
         psi1(:)=this%conjgphase_prev_cub(:,ik)
         call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
+! print *,mpi_world%rank, filename, err
         SAFE_DEALLOCATE_P(psi1)
       else
         err = 0
@@ -1243,7 +1245,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   
   end if
 
-
+! print *,mpi_world%rank,"suuca"
 
   if(this%surf_shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
