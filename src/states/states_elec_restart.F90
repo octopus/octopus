@@ -145,34 +145,104 @@ contains
     POP_SUB(states_elec_look_and_load)
   end subroutine states_elec_look_and_load
 
-  subroutine states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group)
+  subroutine states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, offset)
     type(states_elec_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     integer,              intent(in)  :: mpi_localtype
     integer,              intent(in)  :: mpi_filetype
     integer,              intent(out) :: localtype
     integer,              intent(out) :: filetype
-    type(states_elec_group_t), optional, intent(in) :: group
+    integer,              intent(out) :: offset
+    !type(states_elec_group_t), optional, intent(in) :: group
+    type(states_elec_group_t):: group
 
     logical :: same_block_layout
 
+    integer :: filetype_states, sizef
+    integer(kind=MPI_ADDRESS_KIND) :: lb, extent, extent_mpitype
+    integer :: localtype_state, localtype_block, localtype_all_blocks
+    integer :: ib, np_part, nblocks_local, offset_local
+
+    integer, allocatable :: blocklengths(:), types(:)
+    integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
+
     PUSH_SUB(states_elec_get_restart_types)
 
-    if(present(group)) then
-      if(group%nblocks == st%group%nblocks) then
-        same_block_layout = all(group%block_range == st%group%block_range)
-      else
-        same_block_layout = .false.
-      end if
-    else
-      same_block_layout = .true.
-    end if
+    ! add padding for GPU runs
+    np_part = gr%mesh%np_part
+    if(accel_is_enabled()) np_part = accel_padded_size(np_part)
+    print *, "expected size: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+    print*,"sizes: ", st%lnst, st%d%dim, gr%mesh%np, st%d%kpt%nlocal
 
-    if(same_block_layout) then
-      call get_restart_types_same_block_layout
-    else
-      call get_restart_types_different_block_layout
-    end if
+    ! type for reading file
+    call MPI_Type_get_extent(mpi_filetype, lb, extent_mpitype, mpi_err)
+    ! type for all local states for one k point
+    call MPI_Type_vector(st%lnst*st%d%dim, gr%mesh%np, gr%mesh%np_global, mpi_filetype, filetype_states, mpi_err)
+    ! use full states size to get correct strides
+    extent = st%nst*st%d%dim*gr%mesh%np_global * extent_mpitype
+    call MPI_Type_hvector(st%d%kpt%nlocal, 1, extent, filetype_states, filetype, mpi_err)
+    call MPI_Type_commit(filetype, mpi_err)
+    ! offset for first data to write/read
+    offset = gr%mesh%vp%xlocal - 1 + &
+      (st%st_start - 1) * st%d%dim * gr%mesh%np_global + &
+      (st%d%kpt%start - 1) * st%nst * st%d%dim * gr%mesh%np_global
+
+    call MPI_Type_size(filetype, sizef, mpi_err)
+    call MPI_Type_get_extent(filetype, lb, extent, mpi_err)
+    print *, "File: rank ", mpi_world%rank, ", offset ", offset, " size ", sizef, "extent", extent
+
+
+    ! type for local data distribution
+    call MPI_Type_get_extent(mpi_localtype, lb, extent_mpitype, mpi_err)
+
+    nblocks_local = st%group%block_end - st%group%block_start + 1
+    SAFE_ALLOCATE(blocklengths(nblocks_local))
+    SAFE_ALLOCATE(types(nblocks_local))
+    SAFE_ALLOCATE(bdisplacements(nblocks_local))
+
+    ! create one type for each batch
+    offset_local = 0
+    do ib = st%group%block_start, st%group%block_end
+      ! one state in batch
+      call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpi_localtype, localtype_state, mpi_err)
+      ! all states in batch with stride of one of basis type
+      call MPI_Type_hvector(st%group%block_size(ib)*st%d%dim, 1, extent_mpitype, localtype_state, localtype_block, mpi_err)
+      types(ib - st%group%block_start + 1) = localtype_block
+      bdisplacements(ib - st%group%block_start + 1) = offset_local * extent_mpitype
+      offset_local = offset_local + st%group%batch_size(ib) * np_part
+      print *, "rank ", mpi_world%rank, ib, st%group%block_size(ib), st%d%dim, st%group%batch_size(ib)
+    end do
+    blocklengths = 1
+    ! use struct for all batches
+    call MPI_Type_create_struct(nblocks_local, blocklengths, bdisplacements, types, localtype_all_blocks, mpi_err)
+    ! use offset to get correct strides
+    extent = offset_local * extent_mpitype
+    call MPI_Type_hvector(st%d%kpt%nlocal, 1, extent, localtype_all_blocks, localtype, mpi_err)
+    call MPI_Type_commit(localtype, mpi_err)
+
+    call MPI_Type_size(localtype, sizef, mpi_err)
+    call MPI_Type_get_extent(filetype, lb, extent, mpi_err)
+    print *, "Local:  rank ", mpi_world%rank, " size ", sizef, "extent", extent
+    !call messages_fatal(0)
+
+    SAFE_DEALLOCATE_A(blocklengths)
+    SAFE_DEALLOCATE_A(types)
+    SAFE_DEALLOCATE_A(bdisplacements)
+    !if(present(group)) then
+    !  if(group%nblocks == st%group%nblocks) then
+    !    same_block_layout = all(group%block_range == st%group%block_range)
+    !  else
+    !    same_block_layout = .false.
+    !  end if
+    !else
+    !  same_block_layout = .true.
+    !end if
+
+    !if(same_block_layout) then
+    !  call get_restart_types_same_block_layout
+    !else
+    !  call get_restart_types_different_block_layout
+    !end if
 
     POP_SUB(states_elec_get_restart_types)
 
@@ -575,7 +645,7 @@ contains
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
-    integer :: filetype, localtype, mpitype, fh, mpistat(MPI_STATUS_SIZE)
+    integer :: filetype, localtype, mpitype, fh, mpistat(MPI_STATUS_SIZE), offset
 
     PUSH_SUB(states_elec_dump)
 
@@ -743,6 +813,8 @@ contains
     return
   contains
     subroutine dump_parallel
+      integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+      integer :: written_np
       PUSH_SUB(states_elec_dump.dump_parallel)
 
       if (states_are_real(st)) then
@@ -750,27 +822,50 @@ contains
       else
         mpitype = MPI_CMPLX
       end if
+      call MPI_Type_get_extent(mpitype, lb, extent, mpi_err)
 
-      call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype)
+      call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype, offset)
       call states_elec_exchange_points(st, gr, forward=.true.)
 
       filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
-      if (states_are_real(st)) then
-        call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
-      else
-        call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
+      if(restart_is_root(restart)) then
+        if (states_are_real(st)) then
+          call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
+        else
+          call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
+        end if
       end if
 
 #ifdef HAVE_MPI
       call MPI_File_open(restart_get_comm(restart), trim(filename), &
         MPI_MODE_CREATE + MPI_MODE_WRONLY, MPI_INFO_NULL, fh, mpi_err)
+      call MPI_File_set_errhandler(fh, MPI_ERRORS_ARE_FATAL, mpi_err)
 
-      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpitype, filetype, "internal", MPI_INFO_NULL, mpi_err)
+      call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND + offset*extent, mpitype, filetype, "internal", MPI_INFO_NULL, mpi_err)
 
       if (states_are_real(st)) then
+        !st%group%dpsi = mpi_world%rank + 1
         call MPI_File_write_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
       else
+        !st%group%zpsi = TOCMPLX(mpi_world%rank + 1,mpi_world%rank +1)
         call MPI_File_write_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
+      end if
+      ASSERT(mpi_err == MPI_SUCCESS)
+
+      call MPI_Get_elements(mpistat, mpitype, written_np, mpi_err)
+      if(debug%info) then
+        write(message(1), "(A,I15)") "Elements written localtype: ", written_np
+      end if
+      call MPI_Get_elements(mpistat, mpitype, written_np, mpi_err)
+      if(debug%info) then
+        write(message(2), "(A,I15)") "Elements written filetype: ", written_np
+        write(message(3), "(A,I15)") "Expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+        call messages_info(3)
+      end if
+      if(written_np /= st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal) then
+        write(message(1), "(A,I15,A,I15)") "Elements written: ", written_np, &
+          ", but expected: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+        call messages_fatal(1)
       end if
 
       call MPI_File_close(fh, mpi_err)
@@ -1238,6 +1333,8 @@ contains
     end function index_is_wrong
 
     subroutine load_parallel
+      integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+      integer :: offset
       PUSH_SUB(states_elec_load.load_parallel)
 
       restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
@@ -1259,7 +1356,10 @@ contains
 
       call states_elec_read_block_file(restart, st, group_file, ierr)
       call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
-      call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
+      !call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
+      call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, offset)
+
+      call MPI_Type_get_extent(mpi_filetype, lb, extent, mpi_err)
 
       SAFE_DEALLOCATE_P(group_file%block_range)
       SAFE_DEALLOCATE_P(group_file%block_size)
@@ -1275,17 +1375,16 @@ contains
         message(1) = string
         call messages_warning(1)
       else
-        call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
+        call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND + offset*extent, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
 
         if (states_are_real(st)) then
           st%group%dpsi = M_ZERO
           call MPI_File_read_all(fh, st%group%dpsi, 1, localtype, mpistat, mpi_err)
-          ASSERT(mpi_err == MPI_SUCCESS)
         else
           st%group%zpsi = M_z0
           call MPI_File_read_all(fh, st%group%zpsi, 1, localtype, mpistat, mpi_err)
-          ASSERT(mpi_err == MPI_SUCCESS)
         end if
+        ASSERT(mpi_err == MPI_SUCCESS)
 
         call MPI_Get_elements(mpistat, mpi_localtype, read_np, mpi_err)
         if(debug%info) then
