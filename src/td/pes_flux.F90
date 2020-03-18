@@ -1519,12 +1519,14 @@ contains
       isp_end   = this%face_idx_range(ifc, 2)
       ng = isp_end - isp_start + 1 
       nfp = ng ! number of points on face
-! print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
+print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
       
       n_dir = 0 
       do idir = 1, mdim
         if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
       end do 
+
+print *, "this%NN(n_dir,:)=", this%NN(n_dir,:)
             
       SAFE_ALLOCATE(gg(1:2,1:ng))
       
@@ -1545,7 +1547,7 @@ contains
         end do
       end do
       
-! print *, ig, ng
+print *, ig, ng
       
       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         do ig = 1,ng
@@ -1677,8 +1679,6 @@ contains
 
     
     
-
-!     print *, this%face_idx_range(:, 1)
     
     nfaces = mdim*2
     if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
@@ -2051,12 +2051,12 @@ contains
     FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(MAX_DIM), dd, area, dS(MAX_DIM,1:2), factor
+    FLOAT                 :: xx(1:MAX_DIM), dd, area, dS(1:MAX_DIM,1:2), factor
     integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
     integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
     logical               :: in_ab
-    integer               :: ip_local, nsrfcpnts, NN(MAX_DIM,1:2), idx(MAX_DIM,1:2) 
+    integer               :: ip_local, nsrfcpnts, NN(1:MAX_DIM,1:2), idx(1:MAX_DIM,1:2) 
     integer               :: isp_end, isp_start, ifc, n_dir, nfaces, mindim
     FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2)
 
@@ -2164,7 +2164,11 @@ contains
 
         ifc = ifc + 1 
       end do
-            
+      
+      do isp = 1, this%nsrfcpnts
+        xx(1:mdim) = matmul(mesh%sb%rlattice_primitive(1:mdim,1:mdim),this%rcoords(1:mdim, isp))
+        this%rcoords(1:mdim, isp) = xx(1:mdim)
+      end do
       
     else
       ! Surface points are on the mesh
@@ -2293,10 +2297,11 @@ contains
         RSmin = M_ZERO
         RSmax = M_ZERO
         do isp = isp_start, isp_end
+          xx(1:mdim) = matmul(this%rcoords(1:mdim,isp),mesh%sb%klattice_primitive(1:mdim,1:mdim))
           idim = 1
           do idir = 1, mdim 
             if (idir == n_dir ) cycle
-            RS(idim)=this%rcoords(idir,isp)
+            RS(idim)=xx(idir)
             if (RS(idim) < RSmin(idim)) RSmin(idim) = RS(idim)
             if (RS(idim) > RSmax(idim)) RSmax(idim) = RS(idim)
             idim = idim+1
