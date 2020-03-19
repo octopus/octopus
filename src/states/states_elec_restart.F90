@@ -146,21 +146,26 @@ contains
   end subroutine states_elec_look_and_load
 
   subroutine states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, offset)
-    type(states_elec_t),  intent(in)  :: st
-    type(grid_t),         intent(in)  :: gr
-    integer,              intent(in)  :: mpi_localtype
-    integer,              intent(in)  :: mpi_filetype
-    integer,              intent(out) :: localtype
-    integer,              intent(out) :: filetype
-    integer,              intent(out) :: offset
+    type(states_elec_t),           intent(in)  :: st
+    type(grid_t),                  intent(in)  :: gr
+    integer,                       intent(in)  :: mpi_localtype
+    integer,                       intent(in)  :: mpi_filetype
+    integer,                       intent(out) :: localtype
+    integer,                       intent(out) :: filetype
+#ifdef HAVE_MPI
+    integer(kind=MPI_OFFSET_KIND), intent(out) :: offset
+#else
+    integer,                       intent(out) :: offset
+#endif
 
     integer :: filetype_states, sizef
     integer :: localtype_state, localtype_block, localtype_all_blocks
-    integer :: ib, np_part, nblocks_local, offset_local
+    integer :: ib, np_part, nblocks_local
     integer, allocatable :: blocklengths(:), types(:)
 #ifdef HAVE_MPI
     integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
     integer(kind=MPI_ADDRESS_KIND) :: lb, extent, extent_mpitype
+    integer(kind=MPI_OFFSET_KIND) :: offset_local
 #endif
 
     PUSH_SUB(states_elec_get_restart_types)
@@ -181,9 +186,10 @@ contains
     call MPI_Type_hvector(st%d%kpt%nlocal, 1, extent, filetype_states, filetype, mpi_err)
     call MPI_Type_commit(filetype, mpi_err)
     ! offset for first data to write/read
-    offset = gr%mesh%vp%xlocal - 1 + &
-      (st%st_start - 1) * st%d%dim * gr%mesh%np_global + &
-      (st%d%kpt%start - 1) * st%nst * st%d%dim * gr%mesh%np_global
+    offset = int(gr%mesh%vp%xlocal - 1, MPI_OFFSET_KIND) + &
+      (st%st_start - 1) * st%d%dim * int(gr%mesh%np_global, MPI_OFFSET_KIND) + &
+      int((st%d%kpt%start - 1), MPI_OFFSET_KIND) * st%nst * st%d%dim * &
+      int(gr%mesh%np_global, MPI_OFFSET_KIND)
 
     call MPI_Type_size(filetype, sizef, mpi_err)
     call MPI_Type_get_extent(filetype, lb, extent, mpi_err)
@@ -372,7 +378,7 @@ contains
 #ifdef HAVE_MPI
     integer :: mpistat(MPI_STATUS_SIZE)
 #endif
-    integer :: filetype, localtype, mpitype, fh, offset
+    integer :: filetype, localtype, mpitype, fh
 
     PUSH_SUB(states_elec_dump)
 
@@ -542,6 +548,9 @@ contains
     subroutine dump_parallel
 #ifdef HAVE_MPI
       integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+      integer(kind=MPI_OFFSET_KIND) :: offset
+#else
+      integer :: offset
 #endif
       integer :: written_np
       PUSH_SUB(states_elec_dump.dump_parallel)
@@ -1071,8 +1080,10 @@ contains
     subroutine load_parallel
 #ifdef HAVE_MPI
       integer(kind=MPI_ADDRESS_KIND) :: lb, extent
-#endif
+      integer(kind=MPI_OFFSET_KIND) :: offset
+#else
       integer :: offset
+#endif
       PUSH_SUB(states_elec_load.load_parallel)
 
       restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
