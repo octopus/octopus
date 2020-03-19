@@ -153,27 +153,25 @@ contains
     integer,              intent(out) :: localtype
     integer,              intent(out) :: filetype
     integer,              intent(out) :: offset
-    !type(states_elec_group_t), optional, intent(in) :: group
-    type(states_elec_group_t):: group
-
-    logical :: same_block_layout
 
     integer :: filetype_states, sizef
-    integer(kind=MPI_ADDRESS_KIND) :: lb, extent, extent_mpitype
     integer :: localtype_state, localtype_block, localtype_all_blocks
     integer :: ib, np_part, nblocks_local, offset_local
-
     integer, allocatable :: blocklengths(:), types(:)
+#ifdef HAVE_MPI
     integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
+    integer(kind=MPI_ADDRESS_KIND) :: lb, extent, extent_mpitype
+#endif
 
     PUSH_SUB(states_elec_get_restart_types)
 
     ! add padding for GPU runs
     np_part = gr%mesh%np_part
     if(accel_is_enabled()) np_part = accel_padded_size(np_part)
-    print *, "expected size: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
-    print*,"sizes: ", st%lnst, st%d%dim, gr%mesh%np, st%d%kpt%nlocal
+    !print *, "expected size: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
+    !print*,"sizes: ", st%lnst, st%d%dim, gr%mesh%np, st%d%kpt%nlocal
 
+#ifdef HAVE_MPI
     ! type for reading file
     call MPI_Type_get_extent(mpi_filetype, lb, extent_mpitype, mpi_err)
     ! type for all local states for one k point
@@ -189,7 +187,7 @@ contains
 
     call MPI_Type_size(filetype, sizef, mpi_err)
     call MPI_Type_get_extent(filetype, lb, extent, mpi_err)
-    print *, "File: rank ", mpi_world%rank, ", offset ", offset, " size ", sizef, "extent", extent
+    !print *, "File: rank ", mpi_world%rank, ", offset ", offset, " size ", sizef, "extent", extent
 
 
     ! type for local data distribution
@@ -210,7 +208,7 @@ contains
       types(ib - st%group%block_start + 1) = localtype_block
       bdisplacements(ib - st%group%block_start + 1) = offset_local * extent_mpitype
       offset_local = offset_local + st%group%batch_size(ib) * np_part
-      print *, "rank ", mpi_world%rank, ib, st%group%block_size(ib), st%d%dim, st%group%batch_size(ib)
+      !print *, "rank ", mpi_world%rank, ib, st%group%block_size(ib), st%d%dim, st%group%batch_size(ib)
     end do
     blocklengths = 1
     ! use struct for all batches
@@ -222,222 +220,15 @@ contains
 
     call MPI_Type_size(localtype, sizef, mpi_err)
     call MPI_Type_get_extent(filetype, lb, extent, mpi_err)
-    print *, "Local:  rank ", mpi_world%rank, " size ", sizef, "extent", extent
+    !print *, "Local:  rank ", mpi_world%rank, " size ", sizef, "extent", extent
     !call messages_fatal(0)
 
     SAFE_DEALLOCATE_A(blocklengths)
     SAFE_DEALLOCATE_A(types)
     SAFE_DEALLOCATE_A(bdisplacements)
-    !if(present(group)) then
-    !  if(group%nblocks == st%group%nblocks) then
-    !    same_block_layout = all(group%block_range == st%group%block_range)
-    !  else
-    !    same_block_layout = .false.
-    !  end if
-    !else
-    !  same_block_layout = .true.
-    !end if
-
-    !if(same_block_layout) then
-    !  call get_restart_types_same_block_layout
-    !else
-    !  call get_restart_types_different_block_layout
-    !end if
+#endif
 
     POP_SUB(states_elec_get_restart_types)
-
-  contains
-    subroutine get_restart_types_same_block_layout
-      integer :: nblocks_local, offset, ib, ik, ii, np_part
-      integer, allocatable :: blocklengths(:), displacements(:)
-      integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
-
-      message(1) = "Reading restart file with same block layout"
-      call messages_info(1)
-
-      ! add padding for GPU runs
-      np_part = gr%mesh%np_part
-      if(accel_is_enabled()) np_part = accel_padded_size(np_part)
-
-      nblocks_local = (st%group%block_end - st%group%block_start + 1) * st%d%kpt%nlocal
-      SAFE_ALLOCATE(blocklengths(nblocks_local))
-      SAFE_ALLOCATE(displacements(nblocks_local))
-
-      ! create local type for state blocks, including k points
-      offset = 0
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
-          blocklengths(ii) = st%group%batch_size(ib) * gr%mesh%np
-          displacements(ii) = offset
-          offset = offset + st%group%batch_size(ib) * np_part
-        end do
-      end do
-
-#ifdef HAVE_MPI
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_localtype, localtype, mpi_err)
-      call MPI_Type_commit(localtype, mpi_err)
-#endif
-
-      ! create global type for state blocks
-      offset = 0
-      ! get global offset for first k points
-      do ik = 1, st%d%kpt%start - 1
-        do ib = 1, st%group%nblocks
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-        end do
-      end do
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ! get global offset for current k point and block
-        do ib = 1, st%group%block_start - 1
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-        end do
-        do ib = st%group%block_start, st%group%block_end
-          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
-          blocklengths(ii) = st%group%batch_size(ib) * gr%mesh%np
-          displacements(ii) = offset + (gr%mesh%vp%xlocal - 1) * st%group%batch_size(ib)
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-        end do
-        do ib = st%group%block_end + 1, st%group%nblocks
-          offset = offset + st%group%batch_size(ib) * gr%mesh%np_global
-        end do
-      end do
-      !print *, "rank ", mpi_world%rank, "global blocklength: ", blocklengths
-      !print *, "rank ", mpi_world%rank, "global displacement: ", displacements
-
-#ifdef HAVE_MPI
-      call MPI_Type_indexed(nblocks_local, blocklengths, displacements, mpi_filetype, filetype, mpi_err)
-      call MPI_Type_commit(filetype, mpi_err)
-
-      if (debug%info) then
-        call MPI_Type_get_extent(localtype, lb, size_mpitype, mpi_err)
-        call MPI_Type_size(localtype, offset, mpi_err)
-        write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
-          ", extent: ", size_mpitype, ", size: ", offset
-
-        call MPI_Type_get_extent(filetype, lb, size_mpitype, mpi_err)
-        call MPI_Type_size(filetype, offset, mpi_err)
-        write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
-          ", extent: ", size_mpitype, ", size: ", offset
-        call messages_info(2)
-      end if
-#endif
-
-      SAFE_DEALLOCATE_A(blocklengths)
-      SAFE_DEALLOCATE_A(displacements)
-    end subroutine get_restart_types_same_block_layout
-
-    subroutine get_restart_types_different_block_layout
-      integer :: offset, ib, ierr, ist, ik, ii, iist, nstates, idim, np_part
-      integer, allocatable :: blocklengths(:), types(:), offsets(:)
-      integer(kind=MPI_ADDRESS_KIND) :: lb, size_mpitype
-      integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
-
-      message(1) = "Reading restart file with different block layout"
-      call messages_info(1)
-
-#ifdef HAVE_MPI
-      call MPI_Type_get_extent(mpi_localtype, lb, size_mpitype, mpi_err)
-#endif
-
-      ! add padding for GPU runs
-      np_part = gr%mesh%np_part
-      if(accel_is_enabled()) np_part = accel_padded_size(np_part)
-
-      nstates = st%lnst * st%d%kpt%nlocal * st%d%dim
-      SAFE_ALLOCATE(bdisplacements(nstates))
-      SAFE_ALLOCATE(types(nstates))
-      SAFE_ALLOCATE(blocklengths(nstates))
-      SAFE_ALLOCATE(offsets(st%group%nblocks*st%d%kpt%nlocal))
-      ! local state
-      offset = 0
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
-          offsets(ii) = offset
-          offset = offset + st%group%batch_size(ib) * np_part
-        end do
-      end do
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-            ib = st%group%iblock(ist, ik)
-            iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
-            ii = (ik - st%d%kpt%start)*(st%group%block_end - st%group%block_start + 1) + ib - st%group%block_start + 1
-#ifdef HAVE_MPI
-            ! create vector for each state
-            call MPI_Type_vector(gr%mesh%np, 1, st%group%batch_size(ib), mpi_localtype, &
-              types(iist), ierr)
-#endif
-            offset = offsets(ii) + (ist - st%group%block_range(ib, 1))*st%d%dim + idim - 1
-            bdisplacements(iist) = offset * size_mpitype
-            !print *,"local: k, idim, ist, batch, batch_size, offset ", ik, idim, ist, ib, st%group%batch_size(ib), offset
-          end do
-        end do
-      end do
-      blocklengths = 1
-#ifdef HAVE_MPI
-      ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, localtype, mpi_err)
-      call MPI_Type_commit(localtype, mpi_err)
-      SAFE_DEALLOCATE_A(offsets)
-
-      call MPI_Type_get_extent(mpi_filetype, lb, size_mpitype, mpi_err)
-#endif
-      SAFE_ALLOCATE(offsets(group%nblocks*st%d%kpt%nglobal))
-      ! global state
-      offset = 0
-      ii = 1
-      do ik = 1, st%d%kpt%nglobal
-        do ib = 1, group%nblocks
-          offsets(ii) = offset
-          offset = offset + group%batch_size(ib) * gr%mesh%np_global
-          ii = ii + 1
-        end do
-      end do
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-          do idim = 1, st%d%dim
-            ib = group%iblock(ist, ik)
-            iist = ((ik - st%d%kpt%start)*st%lnst + ist - st%st_start)*st%d%dim + idim
-            ii = (ik - st%d%kpt%start)*group%nblocks + ib
-#ifdef HAVE_MPI
-            ! create vector for each state
-            call MPI_Type_vector(gr%mesh%np, 1, group%batch_size(ib), mpi_filetype, &
-              types(iist), ierr)
-#endif
-            offset = offsets(ii) + (ist - group%block_range(ib, 1))*st%d%dim + idim - 1 + &
-              (gr%mesh%vp%xlocal - 1) * group%batch_size(ib)
-            bdisplacements(iist) = offset * size_mpitype
-            !print *,"global: k, idim, ist, batch, batch_size, offset ", ik, idim, ist, ib, group%batch_size(ib), offset
-          end do
-        end do
-      end do
-      blocklengths = 1
-#ifdef HAVE_MPI
-      ! struct is needed because of different displacements in different batches
-      call MPI_Type_create_struct(nstates, blocklengths, bdisplacements, types, filetype, mpi_err)
-      call MPI_Type_commit(filetype, mpi_err)
-
-      if (debug%info) then
-        call MPI_Type_get_extent(localtype, lb, size_mpitype, mpi_err)
-        call MPI_Type_size(localtype, offset, mpi_err)
-        write(message(1), "(A, I6, A, I6, A, I6)") "localtype lower bound: ", lb, &
-          ", extent: ", size_mpitype, ", size: ", offset
-
-        call MPI_Type_get_extent(filetype, lb, size_mpitype, mpi_err)
-        call MPI_Type_size(filetype, offset, mpi_err)
-        write(message(2), "(A, I6, A, I6, A, I6)") "filetype lower bound: ", lb, &
-          ", extent: ", size_mpitype, ", size: ", offset
-        call messages_info(2)
-      end if
-#endif
-
-      SAFE_DEALLOCATE_A(offsets)
-      SAFE_DEALLOCATE_A(bdisplacements)
-      SAFE_DEALLOCATE_A(types)
-      SAFE_DEALLOCATE_A(blocklengths)
-    end subroutine get_restart_types_different_block_layout
   end subroutine states_elec_get_restart_types
 
   ! ---------------------------------------------------------
@@ -506,73 +297,6 @@ contains
     POP_SUB(states_elec_convert_endianness)
   end subroutine states_elec_convert_endianness
 
-  ! ---------------------------------------------------------
-  subroutine states_elec_write_block_file(restart, st, ierr)
-    type(restart_t),      intent(in)    :: restart
-    type(states_elec_t),  intent(in)    :: st
-    integer,              intent(inout) :: ierr
-
-    integer :: ib, iunit_blocks, err
-    character(len=300) :: lines(3)
-
-    PUSH_SUB(states_elec_write_block_file)
-
-    iunit_blocks = restart_open(restart, 'blocks')
-    write(lines(1), '(A,I10)') 'nblocks = ', st%group%nblocks
-    lines(2) = '#     #block        start          end        range'
-    lines(3) = '%StateBlocks'
-    call restart_write(restart, iunit_blocks, lines, 3, err)
-    if (err /= 0) ierr = ierr + 256
-    do ib = 1, st%group%nblocks
-      write(lines(1), '(2X, I10, A, I10, A, I10, A, I10)') ib, ' | ', st%group%block_range(ib, 1), &
-        ' | ', st%group%block_range(ib, 2), ' | ', st%group%block_size(ib)
-      call restart_write(restart, iunit_blocks, lines, 1, err)
-    end do
-    lines(1) = '%'
-    call restart_write(restart, iunit_blocks, lines, 1, err)
-    if (err /= 0) ierr = ierr + 512
-    call restart_close(restart, iunit_blocks)
-
-    POP_SUB(states_elec_write_block_file)
-  end subroutine states_elec_write_block_file
-
-
-  ! ---------------------------------------------------------
-  subroutine states_elec_read_block_file(restart, st, group_file, ierr)
-    type(restart_t),           intent(in)    :: restart
-    type(states_elec_t),       intent(in)    :: st
-    type(states_elec_group_t), intent(inout) :: group_file
-    integer,                   intent(inout) :: ierr
-
-    integer :: ib, ik, iunit_blocks, err
-    character(len=300) :: lines(3)
-
-    PUSH_SUB(states_elec_read_block_file)
-
-    call states_elec_group_null(group_file)
-
-    iunit_blocks = restart_open(restart, 'blocks')
-    call restart_read(restart, iunit_blocks, lines, 3, err)
-    if (err /= 0) ierr = ierr + 1024
-    read(lines(1), '(10X,I10)') group_file%nblocks
-    if(lines(3) /= '%StateBlocks') ierr = ierr + 2048
-    SAFE_ALLOCATE(group_file%block_range(1:group_file%nblocks, 1:2))
-    SAFE_ALLOCATE(group_file%block_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%batch_size(1:group_file%nblocks))
-    SAFE_ALLOCATE(group_file%iblock(1:st%nst, 1:st%d%nik))
-    do ib = 1, group_file%nblocks
-      call restart_read(restart, iunit_blocks, lines, 1, err)
-      if (err /= 0) ierr = ierr + 4096
-      read(lines(1), '(2X, I10, 3X, I10, 3X, I10, 3X, I10)') ik, group_file%block_range(ib, 1), &
-        group_file%block_range(ib, 2), group_file%block_size(ib)
-      group_file%batch_size(ib) =  pad_pow2(group_file%block_size(ib) * st%d%dim)
-      group_file%iblock(group_file%block_range(ib, 1):group_file%block_range(ib, 2), &
-        st%d%kpt%start:st%d%kpt%end) = ib
-    end do
-    call restart_close(restart, iunit_blocks)
-
-    POP_SUB(states_elec_read_block_file)
-  end subroutine states_elec_read_block_file
 
   ! ---------------------------------------------------------
   subroutine states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
@@ -645,7 +369,10 @@ contains
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
-    integer :: filetype, localtype, mpitype, fh, mpistat(MPI_STATUS_SIZE), offset
+#ifdef HAVE_MPI
+    integer :: mpistat(MPI_STATUS_SIZE)
+#endif
+    integer :: filetype, localtype, mpitype, fh, offset
 
     PUSH_SUB(states_elec_dump)
 
@@ -813,7 +540,9 @@ contains
     return
   contains
     subroutine dump_parallel
+#ifdef HAVE_MPI
       integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+#endif
       integer :: written_np
       PUSH_SUB(states_elec_dump.dump_parallel)
 
@@ -872,7 +601,6 @@ contains
 #endif
 
       call states_elec_exchange_points(st, gr, forward=.false.)
-      call states_elec_write_block_file(restart, st, ierr)
 
       POP_SUB(states_elec_dump.dump_parallel)
     end subroutine dump_parallel
@@ -919,7 +647,6 @@ contains
     character(len=MPI_MAX_ERROR_STRING) :: string
 #endif
     character(len=MAX_PATH_LEN) :: restart_filename
-    type(states_elec_group_t) :: group_file
     integer :: read_np, number_type, file_size
     logical :: correct_endianness
 
@@ -1333,7 +1060,9 @@ contains
     end function index_is_wrong
 
     subroutine load_parallel
+#ifdef HAVE_MPI
       integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+#endif
       integer :: offset
       PUSH_SUB(states_elec_load.load_parallel)
 
@@ -1352,21 +1081,14 @@ contains
       call MPI_Bcast(file_size, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(number_type, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(correct_endianness, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
-#endif HAVE_MPI
+#endif
 
-      call states_elec_read_block_file(restart, st, group_file, ierr)
       call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
-      !call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, group=group_file)
       call states_elec_get_restart_types(st, gr, mpi_localtype, mpi_filetype, localtype, filetype, offset)
 
+#ifdef HAVE_MPI
       call MPI_Type_get_extent(mpi_filetype, lb, extent, mpi_err)
 
-      SAFE_DEALLOCATE_P(group_file%block_range)
-      SAFE_DEALLOCATE_P(group_file%block_size)
-      SAFE_DEALLOCATE_P(group_file%batch_size)
-      SAFE_DEALLOCATE_P(group_file%iblock)
-
-#ifdef HAVE_MPI
       call MPI_File_open(restart_get_comm(restart), trim(restart_filename), &
         MPI_MODE_RDONLY, MPI_INFO_NULL, fh, mpi_err)
       if(mpi_err /= MPI_SUCCESS) then
