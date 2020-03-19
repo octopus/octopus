@@ -42,7 +42,8 @@ module charged_particle_oct_m
 
   private
   public ::               &
-    charged_particle_t
+    charged_particle_t,   &
+    charged_particle_init
 
   type, extends(classical_particle_t) :: charged_particle_t
     private
@@ -63,7 +64,6 @@ module charged_particle_oct_m
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
     procedure :: set_pointers_to_interaction => classical_set_pointers_to_interaction
     final :: charged_particle_finalize
-    procedure :: init => charged_particle_init
   end type charged_particle_t
 
   interface charged_particle_t
@@ -80,7 +80,7 @@ contains
 
     SAFE_ALLOCATE(sys)
 
-    call sys%init(namespace)
+    call charged_particle_init(sys, namespace)
 
     POP_SUB(charged_particle_constructor)
   end function charged_particle_constructor
@@ -92,7 +92,7 @@ contains
 
     PUSH_SUB(charged_particle_init)
 
-    call this%classical_particle_t%init(namespace)
+    call classical_particle_init(this%classical_particle_t, namespace)
 
     !%Variable ClassicalParticleCharge
     !%Type float

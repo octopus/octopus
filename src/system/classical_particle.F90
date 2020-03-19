@@ -41,8 +41,9 @@ module classical_particle_oct_m
   implicit none
 
   private
-  public ::               &
-    classical_particle_t
+  public ::                 &
+    classical_particle_t,   &
+    classical_particle_init
 
   type, extends(system_abst_t) :: classical_particle_t
     private
@@ -72,7 +73,6 @@ module classical_particle_oct_m
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
     procedure :: set_pointers_to_interaction => classical_set_pointers_to_interaction
     final :: classical_particle_finalize
-    procedure :: init => classical_particle_init
   end type classical_particle_t
 
   interface classical_particle_t
@@ -89,7 +89,7 @@ contains
 
     SAFE_ALLOCATE(sys)
 
-    call sys%init(namespace)
+    call classical_particle_init(sys, namespace)
 
     POP_SUB(classical_particle_constructor)
   end function classical_particle_constructor
