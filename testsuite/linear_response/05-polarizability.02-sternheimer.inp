@@ -17,3 +17,4 @@ OutputFormat = xcrysden
 
 Debug = trace
 
+StatesPack = yes

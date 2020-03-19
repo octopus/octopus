@@ -59,3 +59,4 @@ TDTimeStep = 0.05
 OutputInterval = 200
 
 AbsorbingBoundaries = no
+StatesPack = yes

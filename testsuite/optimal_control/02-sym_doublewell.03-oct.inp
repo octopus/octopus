@@ -110,5 +110,3 @@ Output = potential + density + wfs
 OutputFormat = axis_x
 TDOutput = laser + td_occup 
 
-
-

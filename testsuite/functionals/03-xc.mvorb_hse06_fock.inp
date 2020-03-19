@@ -29,3 +29,4 @@ RestartWrite = no
 
 FilterPotentials = filter_none
 
+StatesPack = yes

@@ -44,3 +44,4 @@ FilterPotentials = filter_none
 
 Output = forces
 OutputFormat = xcrysden
+StatesPack = yes

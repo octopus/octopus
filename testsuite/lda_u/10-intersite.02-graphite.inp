@@ -51,3 +51,4 @@ ACBN0IntersiteInteraction = yes
 ACBN0IntersiteCutoff = 7
 
 UnitsOutput = ev_angstrom
+StatesPack = yes
