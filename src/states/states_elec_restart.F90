@@ -648,7 +648,7 @@ contains
 #endif
     character(len=MAX_PATH_LEN) :: restart_filename
     integer :: read_np, number_type, file_size
-    logical :: correct_endianness
+    logical :: correct_endianness, parallel_restart
 
 
 #if defined(HAVE_MPI)
@@ -885,14 +885,23 @@ contains
     filled = .false.
 
 
-    if(st%parallel_restart) then
-      if(restart_has_map(restart)) then
-        message(1) = "Reading from reordered grid not supported for parallel restart."
-        call messages_fatal(1)
-      end if
+    parallel_restart = st%parallel_restart
+    if(parallel_restart .and. restart_has_map(restart)) then
+      message(1) = "Reading from reordered grid not supported for parallel restart."
+      message(2) = "Trying to read serial restart files"
+      call messages_warning(1)
+      parallel_restart = .false.
+    end if
+    if(parallel_restart .and. present(lr)) then
+      message(1) = "Parallel restart not supported for linear response files."
+      message(2) = "Trying to read serial restart files"
+      call messages_warning(1)
+      parallel_restart = .false.
+    end if
 
-      call load_parallel
-      filled = .true.
+    if(parallel_restart) then
+        call load_parallel
+        filled = .true.
     else
       ! Now we read the wavefunctions. At this point we need to have all the information from the
       ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
@@ -991,7 +1000,7 @@ contains
 
     SAFE_DEALLOCATE_A(filled)
 
-    if (ierr == 0 .and. iread /= st%nst * st%d%nik * st%d%dim .and. .not. st%parallel_restart) then
+    if (ierr == 0 .and. iread /= st%nst * st%d%nik * st%d%dim .and. .not. parallel_restart) then
       if(iread > 0) then
         ierr = iread
       else
@@ -1094,8 +1103,11 @@ contains
       if(mpi_err /= MPI_SUCCESS) then
         errorcode = mpi_err
         call MPI_Error_string(errorcode, string, resultlen, mpi_err)
-        message(1) = string
-        call messages_warning(1)
+        message(1) = "Error opening the parallel restart file."
+        message(2) = "Message: "//string
+        message(3) = "Trying serial restart files."
+        call messages_warning(3)
+        parallel_restart = .false.
       else
         call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND + offset*extent, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)
 
@@ -1128,7 +1140,8 @@ contains
       end if
 #else
       message(1) = "Parallel restart not yet supported for serial runs."
-      call messages_fatal(1)
+      message(2) = "The default for serial runs is to not use this feature."
+      call messages_fatal(2)
 #endif
 
       call states_elec_exchange_points(st, gr, forward=.false.)
