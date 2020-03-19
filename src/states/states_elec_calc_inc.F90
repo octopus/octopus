@@ -420,20 +420,22 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
     call profiling_out(prof_copy)
 
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
+
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%group%block_start, st%group%block_end
         ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
       if(st%parallel_in_states) then
-        SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
         call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
         call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
         call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
-        SAFE_DEALLOCATE_A(psicopy)
       end if
 
       call X(accel_trsm)(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
@@ -447,7 +449,10 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
       end do
     end do
 
-    
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
+
     call accel_release_buffer(ss_buffer)
     call accel_release_buffer(psicopy_buffer)
 

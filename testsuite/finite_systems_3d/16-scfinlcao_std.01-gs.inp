@@ -36,4 +36,4 @@ OutputFormat = matlab + plane_z
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-StatesPack=yes
+StatesPack = yes

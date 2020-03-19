@@ -78,5 +78,3 @@ electric_field | 1 | 0 | 0 | freq1 | "envelope_function"
 %
 
 DisableAccel = yes
-
-StatesPack=yes

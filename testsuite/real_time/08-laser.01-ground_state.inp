@@ -24,4 +24,4 @@ EigenSolverMaxIter = 200
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes

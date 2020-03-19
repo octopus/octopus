@@ -41,4 +41,4 @@ ParStates = 3
 
 ExperimentalFeatures = yes
 ProfilingMode = prof_memory_full
-StatesPack=yes
+StatesPack = yes

@@ -80,4 +80,3 @@ TheoryLevel = independent_particles
 
 # test code path without CUDA-aware MPI for this test
 CudaAwareMPI = no
-StatesPack=yes

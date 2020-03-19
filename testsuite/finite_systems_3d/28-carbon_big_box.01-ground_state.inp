@@ -22,4 +22,4 @@ SpinComponents = spin_polarized
 %
 
 ParKpoints = no
-StatesPack=yes
+StatesPack = yes

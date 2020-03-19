@@ -41,4 +41,4 @@ TDOutput = laser + energy + multipoles
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes

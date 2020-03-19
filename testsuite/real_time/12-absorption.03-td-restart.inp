@@ -30,4 +30,3 @@ TDPolarizationEquivAxes = 3
 FilterPotentials = filter_none
 
 StatesPack = no
-StatesPack=yes

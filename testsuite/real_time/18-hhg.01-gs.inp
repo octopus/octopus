@@ -36,4 +36,4 @@ electric_field   | 1 | 0 | 0 | omega | "envelope_function"
 
 AbsorbingBoundaries = mask
 AbWidth = 50
-StatesPack=yes
+StatesPack = yes

@@ -11,4 +11,4 @@ Spacing = 0.3*angstrom
 PoissonSolver = cg_corrected
 
 PoissonSolverMaxMultipole = 8
-StatesPack=yes
+StatesPack = yes

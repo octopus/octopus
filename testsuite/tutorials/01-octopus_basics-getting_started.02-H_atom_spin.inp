@@ -5,4 +5,4 @@ CalculationMode = gs
 %
 
 SpinComponents = spin_polarized
-StatesPack=yes
+StatesPack = yes

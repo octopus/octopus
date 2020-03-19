@@ -35,4 +35,4 @@ Output = bader + density
 OutputFormat = axis_x
 
 SCFCalculatePartialCharges = yes
-StatesPack=yes
+StatesPack = yes

@@ -24,4 +24,4 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 PCMCalculation = true
 PCMStaticEpsilon = 78.39
 MixField = density
-StatesPack=yes
+StatesPack = yes

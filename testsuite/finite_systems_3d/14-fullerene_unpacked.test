@@ -32,3 +32,20 @@ match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; -0.059069
 match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; -0.008812
 match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ;  0.133556
 match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ;  0.194807
+
+Input: 14-fullerene_unpacked.02-td-unpacked.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -3.184059208162e+02
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -3.183951422465e+02
+Precision  : 1e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 8.612131780460e-03
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -2.016274380194e+00
+
+Input: 14-fullerene_unpacked.03-td-packed.inp
+Precision  : 1e-10
+match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -3.184059208162e+02
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -3.183951422465e+02
+Precision  : 1e-10
+match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 8.612131780460e-03
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -2.016274380194e+00
+

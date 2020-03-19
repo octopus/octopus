@@ -26,4 +26,4 @@ KPointsUseSymmetries = no
 %
 
 ExperimentalFeatures = yes
-StatesPack=yes
+StatesPack = yes

@@ -32,4 +32,4 @@ FromScratch = yes
 
 ProfilingMode = prof_memory
 SCFCalculateDipole = yes
-StatesPack=yes
+StatesPack = yes

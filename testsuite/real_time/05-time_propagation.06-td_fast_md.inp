@@ -46,4 +46,4 @@ ParStates = 2
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes

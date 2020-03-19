@@ -5,4 +5,4 @@ CalculationMode = gs
 %
 
 TheoryLevel = independent_particles
-StatesPack=yes
+StatesPack = yes

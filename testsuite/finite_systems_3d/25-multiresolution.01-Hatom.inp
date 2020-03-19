@@ -26,4 +26,4 @@ ExperimentalFeatures = yes
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes

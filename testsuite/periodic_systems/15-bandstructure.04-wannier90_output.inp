@@ -36,4 +36,4 @@ ParKPoints = no
 Wannier90Prefix = '15-bandstructure.04-wannier90'
 Wannier90Mode = w90_output
 
-StatesPack=yes
+StatesPack = yes

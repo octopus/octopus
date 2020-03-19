@@ -25,4 +25,4 @@ VDWCorrection = vdw_d3
 VDWD3Functional = 'dftb3'
 
 ExperimentalFeatures = yes
-StatesPack=yes
+StatesPack = yes

@@ -1,4 +1,4 @@
 omega = 0.05655
 PropagationSpectrumMaxEnergy = 50*omega
 PropagationSpectrumEnergyStep = omega/11
-StatesPack=yes
+StatesPack = yes

@@ -16,4 +16,4 @@ Radius = 10.0
 Spacing = 0.4
 
 Debug = info
-StatesPack=yes
+StatesPack = yes

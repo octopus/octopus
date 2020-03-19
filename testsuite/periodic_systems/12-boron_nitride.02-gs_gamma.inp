@@ -47,4 +47,4 @@ Smearing = 0.01*eV
 FilterPotentials = filter_none
 
 
-StatesPack=yes
+StatesPack = yes

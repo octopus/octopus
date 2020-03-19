@@ -14,4 +14,4 @@ PoissonFFTKernel = multipole_correction
 FFTLibrary = pfft
 
 PoissonSolverMaxMultipole = 5
-StatesPack=yes
+StatesPack = yes

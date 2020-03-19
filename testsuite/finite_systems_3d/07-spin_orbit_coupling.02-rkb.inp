@@ -34,4 +34,4 @@ GuessMagnetDensity = user_defined
 %
 
 ExperimentalFeatures = yes
-StatesPack=yes
+StatesPack = yes

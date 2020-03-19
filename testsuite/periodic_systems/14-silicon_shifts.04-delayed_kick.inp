@@ -71,4 +71,4 @@ Tpulse = 210
   10 | 0 | 0
 %
 GaugeFieldDelay =  50*0.5
-StatesPack=yes
+StatesPack = yes

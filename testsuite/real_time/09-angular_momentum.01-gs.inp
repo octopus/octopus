@@ -20,4 +20,4 @@ CalculationMode = gs
 Spacing = 0.6
 
 MixField = density
-StatesPack=yes
+StatesPack = yes

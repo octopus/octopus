@@ -66,4 +66,4 @@ ConvRelDens = 1e-6
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices
 
-StatesPack=yes
+StatesPack = yes

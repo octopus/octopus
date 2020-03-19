@@ -20,4 +20,4 @@ ParDomains = auto
 ParStates = 2
 
 StatesRandomization = par_independent
-StatesPack=yes
+StatesPack = yes

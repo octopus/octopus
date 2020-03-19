@@ -6,4 +6,4 @@ bond_length = 2.4
  "C" |  -bond_length/2 |  0.0 |  0.0
  "C" |   bond_length/2 |  0.0 |  0.0
 %
-StatesPack=yes
+StatesPack = yes

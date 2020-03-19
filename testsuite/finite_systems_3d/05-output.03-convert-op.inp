@@ -17,4 +17,4 @@ ConvertHow = operation
  'rho' | 'restart/gs' | 'density.obf' | '2.0*rho'
  'rho' | 'restart/gs' | 'density.obf' | '0.5*rho'
 %
-StatesPack=yes
+StatesPack = yes

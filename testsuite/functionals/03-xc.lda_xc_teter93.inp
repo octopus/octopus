@@ -21,4 +21,4 @@ XCFunctional = lda_xc_teter93
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes

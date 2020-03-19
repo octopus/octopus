@@ -26,4 +26,4 @@ KPointsUseSymmetries = yes
 "H" | 6.8000000000E-01 | 2.0000000000E-02 | 8.9000000000E-01
 "H" | 2.0000000000E-02 | 6.8000000000E-01 | 1.1000000000E-01
 %
-StatesPack=yes
+StatesPack = yes

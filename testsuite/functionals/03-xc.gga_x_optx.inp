@@ -22,4 +22,4 @@ XCFunctional = gga_x_optx
 
 FilterPotentials = filter_none
 
-StatesPack=yes
+StatesPack = yes
