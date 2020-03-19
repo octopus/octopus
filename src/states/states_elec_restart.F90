@@ -158,11 +158,11 @@ contains
     integer,                       intent(out) :: offset
 #endif
 
+#ifdef HAVE_MPI
     integer :: filetype_states, sizef
     integer :: localtype_state, localtype_block, localtype_all_blocks
     integer :: ib, np_part, nblocks_local
     integer, allocatable :: blocklengths(:), types(:)
-#ifdef HAVE_MPI
     integer(kind=MPI_ADDRESS_KIND), allocatable :: bdisplacements(:)
     integer(kind=MPI_ADDRESS_KIND) :: lb, extent, extent_mpitype
     integer(kind=MPI_OFFSET_KIND) :: offset_local
@@ -170,13 +170,13 @@ contains
 
     PUSH_SUB(states_elec_get_restart_types)
 
+#ifdef HAVE_MPI
     ! add padding for GPU runs
     np_part = gr%mesh%np_part
     if(accel_is_enabled()) np_part = accel_padded_size(np_part)
     !print *, "expected size: ", st%lnst*st%d%dim*gr%mesh%np*st%d%kpt%nlocal
     !print*,"sizes: ", st%lnst, st%d%dim, gr%mesh%np, st%d%kpt%nlocal
 
-#ifdef HAVE_MPI
     ! type for reading file
     call MPI_Type_get_extent(mpi_filetype, lb, extent_mpitype, mpi_err)
     ! type for all local states for one k point
@@ -311,10 +311,13 @@ contains
     integer,             intent(out) :: mpi_filetype
     integer,             intent(out) :: mpi_localtype
 
+#ifdef HAVE_MPI
     integer, parameter :: FILETYPE_FLOAT = 1, FILETYPE_CMPLX = 3
     integer(kind=MPI_ADDRESS_KIND) :: lb, extent
+#endif
     PUSH_SUB(states_elec_get_mpi_types_reading)
 
+#ifdef HAVE_MPI
     ! data type of file
     if(number_type == FILETYPE_FLOAT) then
       mpi_filetype = MPI_FLOAT
@@ -351,6 +354,7 @@ contains
         call messages_info(1)
       end if
     end if
+#endif
     POP_SUB(states_elec_get_mpi_types_reading)
   end subroutine states_elec_get_mpi_types_reading
 
@@ -376,9 +380,9 @@ contains
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
 #ifdef HAVE_MPI
-    integer :: mpistat(MPI_STATUS_SIZE)
+    integer :: mpistat(MPI_STATUS_SIZE), fh
 #endif
-    integer :: filetype, localtype, mpitype, fh
+    integer :: filetype, localtype, mpitype
 
     PUSH_SUB(states_elec_dump)
 
@@ -549,18 +553,20 @@ contains
 #ifdef HAVE_MPI
       integer(kind=MPI_ADDRESS_KIND) :: lb, extent
       integer(kind=MPI_OFFSET_KIND) :: offset
+      integer :: written_np
 #else
       integer :: offset
 #endif
-      integer :: written_np
       PUSH_SUB(states_elec_dump.dump_parallel)
 
+#ifdef HAVE_MPI
       if (states_are_real(st)) then
         mpitype = MPI_FLOAT
       else
         mpitype = MPI_CMPLX
       end if
       call MPI_Type_get_extent(mpitype, lb, extent, mpi_err)
+#endif
 
       call states_elec_get_restart_types(st, gr, mpitype, mpitype, localtype, filetype, offset)
       call states_elec_exchange_points(st, gr, forward=.true.)
@@ -649,10 +655,9 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
-    integer :: filetype, localtype, mpi_filetype, mpi_localtype, fh
-    integer :: errorcode, resultlen
+    integer :: filetype, localtype, mpi_filetype, mpi_localtype
 #ifdef HAVE_MPI
-    integer :: mpistat(MPI_STATUS_SIZE)
+    integer :: mpistat(MPI_STATUS_SIZE), errorcode, resultlen, fh
     character(len=MPI_MAX_ERROR_STRING) :: string
 #endif
     character(len=MAX_PATH_LEN) :: restart_filename
