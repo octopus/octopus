@@ -322,12 +322,20 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   ilin = st%group%psib(iblock, kk)%inv_index((/ii, idim/))
   alin = st%group%psib(ablock, kk)%inv_index((/ia, idim/))
 
-  ASSERT(.not. st%group%psib(iblock, kk)%is_packed())
-  ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
+  ASSERT(st%group%psib(iblock, kk)%status() /= BATCH_DEVICE_PACKED)
+  ASSERT(st%group%psib(ablock, kk)%status() /= BATCH_DEVICE_PACKED)
+  ASSERT(st%group%psib(iblock, kk)%status() == st%group%psib(ablock, kk)%status())
 
-  do ip = 1, mesh%np
-    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%X(ff_linear)(ip, ilin))*st%group%psib(ablock, kk)%X(ff_linear)(ip, alin)
-  end do
+  if(st%group%psib(iblock, kk)%status() == BATCH_NOT_PACKED) then
+    do ip = 1, mesh%np
+      rho(ip) = R_CONJ(st%group%psib(iblock, kk)%X(ff_linear)(ip, ilin))*st%group%psib(ablock, kk)%X(ff_linear)(ip, alin)
+    end do
+  else if(st%group%psib(iblock, kk)%status() == BATCH_PACKED) then
+    do ip = 1, mesh%np
+      rho(ip) = R_CONJ(st%group%psib(iblock, kk)%X(ff_pack)(ilin, ip))*st%group%psib(ablock, kk)%X(ff_pack)(alin, ip)
+    end do
+  end if
+
 
   call profiling_out(prof)
   POP_SUB(X(casida_get_rho))
