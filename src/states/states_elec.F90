@@ -1227,7 +1227,13 @@ contains
 
     PUSH_SUB(states_elec_deallocate_wfns)
 
+    if (states_are_real(st)) then
+      SAFE_DEALLOCATE_P(st%group%dpsi)
+    else
+      SAFE_DEALLOCATE_P(st%group%zpsi)
+    end if
     call states_elec_group_end(st%group, st%d)
+    st%packed = .false.
 
     POP_SUB(states_elec_deallocate_wfns)
   end subroutine states_elec_deallocate_wfns
