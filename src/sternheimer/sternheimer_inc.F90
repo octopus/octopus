@@ -163,6 +163,9 @@ subroutine X(sternheimer_solve)(                           &
           call orhsb%copy_data_to(mesh%np, rhsb)
           call orhsb%end()
         else
+          if(st%group%psib(ib, ik)%status() /= BATCH_NOT_PACKED) then
+            call rhsb%do_pack()
+          end if
           call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, st%group%psib(ib, ik), rhsb)
         end if
 
