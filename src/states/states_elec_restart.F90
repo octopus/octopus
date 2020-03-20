@@ -350,6 +350,7 @@ contains
         ! the real part of the complex numbers.
         call MPI_Type_get_extent(MPI_FLOAT, lb, extent, mpi_err)
         call MPI_Type_create_resized(MPI_FLOAT, lb, extent*2_MPI_OFFSET_KIND, mpi_localtype, mpi_err)
+        call MPI_Type_commit(mpi_localtype, mpi_err)
         message(1) = "Reading complex states from a restart file with real data"
         call messages_info(1)
       end if
