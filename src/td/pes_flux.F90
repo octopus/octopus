@@ -69,18 +69,24 @@ module pes_flux_oct_m
   type pes_flux_t
     private
     !< NOTE: On unfortunate choice of nomenclature. In this module we use the variable k to indicate 
-    !< the momentum of photoelectrons. This has to be distinguished from the electron pseudomomentum 
+    !< the momentum of photoelectrons. This has to be distinguished from the electrons' crystal momentum 
     !< in periodic systems and its discretized values (AKA kpoints). 
     
     integer          :: nkpnts                         !< total number of k-points
     integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
     integer          :: nk
     integer          :: nk_start, nk_end
+
+    ! spherical momentum grid
     integer          :: nstepsthetak, nstepsphik       !< parameters for k-mesh
+    FLOAT            :: thetak_rng(1:2)                !< the range of thetak in [0,pi]
+    FLOAT            :: phik_rng(1:2)                  !< the range of phik in [0,2pi]
     integer          :: nstepsomegak
     integer          :: nstepsomegak_start, nstepsomegak_end
-    FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: krad(:)                        !< the grid for the radial part of the k-mesh
+    FLOAT            :: ktransf(1:3,1:3)               !< transformation matrix for k-mesh 
+
+    FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
     integer          :: kgrid                          !< how is the grid in k: polar/cartesian
@@ -100,10 +106,10 @@ module pes_flux_oct_m
     integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
 
-    CMPLX, pointer   :: expg(:,:,:)                    !< Fourier basis on a face of the cube
-    FLOAT, pointer   :: sinc(:,:,:,:)                  !< Sync function for Fourier components parallel to cube faces
-    FLOAT, pointer   :: LLr(:,:)                       !< Coordinates of the face edges
-    integer, pointer :: NN(:,:)                        !< Number of points on each face mapping coord
+    CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
+    FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
+    FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
+    integer, pointer :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
 
     integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
                                                        !< = mesh%mpi_grp%size (M_SPHERICAL)
@@ -132,8 +138,9 @@ module pes_flux_oct_m
     logical          :: arpes_grid
     logical          :: surf_interp                    !< interpolate points on the surface
 
+    integer          :: par_strategy                   !< parallelization strategy 
     integer          :: dim                            !< dimensions
-    integer          :: pdim                           !< periodi dimensions
+    integer          :: pdim                           !< periodic dimensions
 
 
   end type pes_flux_t
@@ -146,6 +153,11 @@ module pes_flux_oct_m
   integer, parameter ::   &
     M_POLAR      = 1,     &
     M_CARTESIAN  = 2
+
+  integer, parameter ::   &
+    M_PAR_NONE      = 1,  &  
+    M_PAR_TIME      = 2,  &
+    M_PAR_MOMENTUM  = 3
     
 
 contains
@@ -468,6 +480,41 @@ contains
     ! Generate the reciprocal space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
+
+
+
+
+    !%Variable PES_Flux_Parallelization
+    !%Type integer
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The parallelization strategy to be used. This is parallelization layer 
+    !% specific to the flux module that uses the resources available in the 
+    !% domain parallelization pool. This means it is not available without 
+    !% domain parallelization.
+    !%Option pf_none 1
+    !% No parallelization.
+    !%Option pf_time 2
+    !% Parallelize time integration. This requires to store some quantities over a 
+    !% number of time steps equal to the number of cores available. 
+    !%Option pf_momentum 3
+    !% Parallelize over the final momentum grid. This strategy has a much lower
+    !% memory footprint than the one above (time) but seems to provide a smaller
+    !% speedup.
+    !%End
+
+    this%par_strategy = M_PAR_NONE
+    if(mesh%parallel_in_domains) this%par_strategy = M_PAR_TIME    
+    call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy,this%par_strategy)
+    if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
+      call messages_input_error('PES_Flux_Parallelization')
+    call messages_print_var_option(stdout, 'PES_Flux_Parallelization', this%par_strategy)
+
+
+
+
+
+
     ! -----------------------------------------------------------------
     ! Options for time integration 
     ! -----------------------------------------------------------------
@@ -620,7 +667,7 @@ contains
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
     integer           :: isp, ikp, ikpt, ibz1, ibz2
-    integer           :: il, ll, mm, idim
+    integer           :: il, ll, mm, idim, idir
     integer           :: ikk, ith, iph, iomk,ie
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk
@@ -630,7 +677,7 @@ contains
     
     integer             :: ig
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
-    FLOAT               :: dk(1:3), kpoint(1:3)
+    FLOAT               :: dk(1:3), kpoint(1:3), Dthetak, Dphik
     logical             :: use_enegy_grid
       
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
@@ -718,6 +765,7 @@ contains
     
     end if 
 
+
     
 !     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
     if (this%kgrid == M_POLAR) then  
@@ -740,12 +788,12 @@ contains
 
         !%Variable PES_Flux_Kmin
         !%Type float
-        !%Default 1.0
+        !%Default 0.0
         !%Section Time-Dependent::PhotoElectronSpectrum
         !%Description
         !% The minimum value of |k|.
         !%End
-        call parse_variable(namespace, 'PES_Flux_Kmin', M_ONE, kmin)
+        call parse_variable(namespace, 'PES_Flux_Kmin', M_ZERO, kmin)
         call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
         if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
 
@@ -762,6 +810,37 @@ contains
         call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
       endif
+      
+      
+      !%Variable PES_Flux_ThetaK
+      !%Type block
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Define the grid points on theta (<math>0 \le \theta \le \pi</math>) when
+      !% using a spherical grid in momentum. 
+      !% The block defines the maximum and minimum values of theta and the number of 
+      !% of points for the discretization.
+      !%
+      !% <tt>%PES_Flux_ThetaK
+      !% <br>&nbsp;&nbsp; theta_min | theta_max  | npoints
+      !% <br>%
+      !% </tt>
+      !%
+      !% By default theta_min=0, theta_max = pi, npoints = 45.
+      !%End
+      this%nstepsthetak = 45
+      this%thetak_rng(1:2) = (/M_ZERO, M_PI/)
+      if(parse_block(namespace, 'PES_Flux_ThetaK', blk) == 0) then
+        call parse_block_float(blk, 0, 0, this%thetak_rng(1))
+        call parse_block_float(blk, 0, 1, this%thetak_rng(2))
+        call parse_block_integer(blk, 0, 2, this%nstepsthetak)
+        call parse_block_end(blk)
+        do idim = 1,2
+          if (this%thetak_rng(idim) < M_ZERO .or. this%thetak_rng(idim) > M_PI) &
+             call messages_input_error('PES_Flux_ThetaK')              
+        end do 
+        if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_ThetaK')
+      end if
 
       !%Variable PES_Flux_StepsThetaK
       !%Type integer
@@ -772,6 +851,41 @@ contains
       !%End
       call parse_variable(namespace, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
       if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+      
+      ! should do this at some point 
+!       call messages_obsolete_variable(namespace, 'PES_Flux_StepsThetaK')
+    
+
+      !%Variable PES_Flux_PhiK
+      !%Type block
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Define the grid points on theta (<math>0 \le \theta \le 2\pi</math>) when
+      !% using a spherical grid in momentum. 
+      !% The block defines the maximum and minimum values of theta and the number of 
+      !% of points for the discretization.
+      !%
+      !% <tt>%PES_Flux_PhiK
+      !% <br>&nbsp;&nbsp; theta_min | theta_max  | npoints
+      !% <br>%
+      !% </tt>
+      !%
+      !% By default theta_min=0, theta_max = pi, npoints = 90.
+      !%End
+      this%nstepsphik = 90
+      this%phik_rng(1:2) = (/M_ZERO, 2*M_PI/)
+      if(parse_block(namespace, 'PES_Flux_PhiK', blk) == 0) then
+        call parse_block_float(blk, 0, 0, this%phik_rng(1))
+        call parse_block_float(blk, 0, 1, this%phik_rng(2))
+        call parse_block_integer(blk, 0, 2, this%nstepsphik)
+        call parse_block_end(blk)
+        do idim = 1,2
+          if (this%phik_rng(idim) < M_ZERO .or. this%phik_rng(idim) > M_PI) &
+             call messages_input_error('PES_Flux_PhiK')              
+        end do 
+        if(this%nstepsphik < 0) call messages_input_error('PES_Flux_PhiK')
+      end if
+
 
       !%Variable PES_Flux_StepsPhiK
       !%Type integer
@@ -783,6 +897,12 @@ contains
       call parse_variable(namespace, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
       if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
       if(this%nstepsphik == 0) this%nstepsphik = 1
+
+      
+      Dthetak  = M_ZERO
+      if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1))/(this%nstepsthetak)
+      Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
+
 
       select case(mdim)
       case(1)
@@ -799,12 +919,37 @@ contains
           this%nstepsphik   = 1
           this%nstepsthetak = 1
         end if
-        this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
-
+!         this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
+        ! count the omegak samples
+        iomk = 0
+        do ith = 0, this%nstepsthetak
+          thetak = ith * Dthetak + this%thetak_rng(1)
+          do iph = 0, this%nstepsphik - 1
+            phik = iph * Dphik + this%phik_rng(1)
+            iomk = iomk + 1
+            if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
+          end do
+        end do
+        this%nstepsomegak  = iomk
+        
       end select
 
-      if(mdim == 3) call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
-      call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
+      write(message(1),'(a)') "Polar grid:"
+      call messages_info(1)
+      if(mdim == 3)  then
+!         call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
+        write(message(1),'(a,f12.6,a,f12.6,a, i6)') & 
+            "  Theta = (", this%thetak_rng(1), ",",this%thetak_rng(2), &
+             "); n = ", this%nstepsthetak
+        call messages_info(1)
+      end if
+      write(message(1),'(a,f12.6,a,f12.6,a, i6)') & 
+          "  Phi   = (", this%phik_rng(1), ",",this%phik_rng(2), &
+           "); n = ", this%nstepsphik
+      call messages_info(1)
+
+!       call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
+
 
       if(use_enegy_grid) then
         this%nk     = nint(abs(Emax-Emin)/DE)
@@ -815,7 +960,7 @@ contains
 
       this%ll(1)      = this%nk  
       this%ll(2)      = this%nstepsphik
-      this%ll(3)      = this%nstepsthetak - 1
+      this%ll(3)      = this%nstepsthetak !- 1
       this%ll(mdim+1:3) = 1
       
       SAFE_ALLOCATE(this%krad(1:this%nk))
@@ -948,6 +1093,9 @@ contains
 
     end if    
 
+
+
+
   
     this%parallel_in_momentum = .false.
 
@@ -966,7 +1114,7 @@ contains
         end do
       end if
       
-
+      
       if (this%surf_shape == M_SPHERICAL) then
 
         if(optional_default(post, .false.)) then 
@@ -1002,9 +1150,11 @@ contains
         ! spherical harmonics & kcoords_sph
         iomk = 0
         do ith = 0, this%nstepsthetak
-          thetak = ith * M_PI / this%nstepsthetak
+!           thetak = ith * M_PI / this%nstepsthetak
+          thetak = ith * Dthetak + this%thetak_rng(1)
           do iph = 0, this%nstepsphik - 1
-            phik = iph * M_TWO * M_PI / this%nstepsphik
+!             phik = iph * M_TWO * M_PI / this%nstepsphik
+            phik = iph * Dphik + this%phik_rng(1)
             iomk = iomk + 1
             if(iomk >= this%nstepsomegak_start .and. iomk <= this%nstepsomegak_end) then
               do ll = 0, this%lmax
@@ -1018,7 +1168,8 @@ contains
               this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
               this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
             end if
-            if(ith == 0 .or. ith == this%nstepsthetak) exit
+!             if(ith == 0 .or. ith == this%nstepsthetak) exit
+            if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
           end do
         end do
 
@@ -1037,6 +1188,10 @@ contains
       else 
         !planar or cubic surface
         
+        call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
+        this%parallel_in_momentum = .true.
+
+
         ! no distribution
         this%nkpnts_start = 1 
         this%nkpnts_end   = this%nkpnts
@@ -1044,21 +1199,21 @@ contains
 
         ! store in the additional kpoint dim the gauge independent grid for final 
         ! momentum representation (i.e. the one at the Gamma point)
-        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend+1)) 
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend+1)) 
         
         this%kcoords_cub = M_ZERO
 
-        select case(mdim)
-        case(1)
-          ikp = 0
-          do ikk = -this%nk, this%nk
-            if(ikk == 0) cycle
-            ikp = ikp + 1
-            kact = this%krad(ikk)
-            this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
-          end do
-
-        case default
+!         select case(mdim)
+!         case(1)
+!           ikp = 0
+!           do ikk = -this%nk, this%nk
+!             if(ikk == 0) cycle
+!             ikp = ikp + 1
+!             kact = this%krad(ikk)
+!             this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
+!           end do
+!
+!         case default
           thetak = M_PI / M_TWO
           do ikpt = kptst, kptend+1
             if (ikpt == kptend+1) then
@@ -1075,14 +1230,14 @@ contains
                   phik = iph * M_TWO * M_PI / this%nstepsphik
                   kact = this%krad(ikk)
                                 this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
-                                this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
+                  if(mdim >= 2) this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
                   if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
                   if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
                 end do
               end do
             end do
           end do
-        end select
+!         end select
       end if
 
     case (M_CARTESIAN)
@@ -1152,6 +1307,79 @@ contains
       SAFE_DEALLOCATE_A(gpoints_reduced)
 
     end select
+    
+    
+    !%Variable PES_Flux_GridTransformMatrix
+    !%Type block
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Define an optional transformation matrix for the momentum grid.
+    !%
+    !% <tt>%PES_Flux_GridTransformMatrix
+    !% <br>&nbsp;&nbsp; M_11 | M_12  | M_13
+    !% <br>&nbsp;&nbsp; M_21 | M_22  | M_23
+    !% <br>&nbsp;&nbsp; M_31 | M_32  | M_33
+    !% <br>%
+    !% </tt>
+    !%End
+    this%ktransf(:,:) = M_ZERO
+    do idim = 1,mdim
+      this%ktransf(idim,idim) = M_ONE
+    end do
+    
+    if(parse_block(namespace, 'PES_Flux_GridTransformMatrix', blk) == 0) then
+      do idim = 1,mdim
+        do idir = 1, mdim
+          call parse_block_float(blk, idir-1, idim-1, this%ktransf(idim,idir))
+        end do
+      end do
+      call parse_block_end(blk)
+      
+      write(message(1),'(a)') 'Momentum grid transformation matrix :'
+      do idir = 1, sb%dim
+        write(message(1+idir),'(9f12.6)') ( this%ktransf(idim, idir), idim = 1, mdim) 
+      end do
+      call messages_info(1+mdim)
+
+
+      if (this%surf_shape == M_SPHERICAL) then
+
+        iomk = 0
+        do ith = 0, this%nstepsthetak
+          do iph = 0, this%nstepsphik - 1
+            iomk = iomk + 1
+            do ikk = this%nk_start, this%nk_end
+              kvec(1:mdim) = this%kcoords_sph(1:mdim, ikk, iomk) 
+              this%kcoords_sph(1:mdim, ikk, iomk) = matmul(this%ktransf(1:mdim, 1:mdim), kvec(1:mdim)) 
+            end do
+            if(ith == 0 .or. ith == this%nstepsthetak) exit
+          end do
+        end do
+    
+      else !planar or cubic surface
+      
+        do ikpt = kptst, kptend+1
+          if (ikpt == kptend+1) then
+            kpoint(1:sb%dim) = M_ZERO
+          else
+            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
+          end if
+
+          do ikp = 1, this%nkpnts
+          
+            kvec(1:mdim) = this%kcoords_cub(1:mdim, ikp, ikpt) - kpoint(1:mdim) 
+            this%kcoords_cub(1:mdim, ikp, ikpt) =  matmul(this%ktransf(1:mdim, 1:mdim), kvec(1:mdim)) &
+                                                   + kpoint(1:mdim)
+          end do
+        end do
+      
+      end if
+
+      
+    end if
+
+    
+    
     
     POP_SUB(pes_flux_reciprocal_mesh_gen)
     
@@ -1803,15 +2031,15 @@ print *, ig, ng
     this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
 
 
-    if(this%parallel_in_momentum) then
-      do ist = stst, stend
-        do isdim = 1, sdim
-          do ik = kptst, kptend
-            call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub(ist, isdim, ik, :))
-          end do
-        end do
-      end do
-    end if
+!     if(this%parallel_in_momentum) then
+!       do ist = stst, stend
+!         do isdim = 1, sdim
+!           do ik = kptst, kptend
+!             call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub(ist, isdim, ik, :))
+!           end do
+!         end do
+!       end do
+!     end if
 
     if(mesh%parallel_in_domains) then
 !       call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_cub)
@@ -2104,7 +2332,7 @@ print *, ig, ng
         idim = 1 
         do idir=1, mdim
           if (idir == ndir) cycle
-          NN(ndir,idim) = int(npface / (border(idir)*factor)) 
+          NN(ndir,idim) = int(npface / (border(idir)*factor))
           dS(ndir,idim) = border(idir)*factor/NN(ndir,idim)
           this%LLr(ndir,idim) = NN(ndir,idim)*dS(ndir,idim)
           idx(ndir,idim) = idir
@@ -2115,9 +2343,9 @@ print *, ig, ng
       
       this%NN(1:mdim,:)  = NN(1:mdim,:)
       
-!       print *,  this%nsrfcpnts, NN(1,:),NN(2,:)
-!
-!       print *,  this%LLr(1,:), this%LLr(2,:)
+      print *,  this%nsrfcpnts, NN(mdim,:)
+
+      print *,  this%LLr(mdim,:)
       
       SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
       SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
@@ -2139,6 +2367,7 @@ print *, ig, ng
             iuv =(/iu,iv/)
             do idim = 1, mdim-1
               this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
+!               this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_ONE + iuv(idim)) * dS(ndir,idim) + mesh%spacing(idx(ndir,idim))/M_TWO
             end do 
             isp = isp + 1
           end do
