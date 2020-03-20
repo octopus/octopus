@@ -22,6 +22,7 @@ module td_write_oct_m
   use blas_oct_m
   use comm_oct_m
   use current_oct_m
+  use distributed_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -436,6 +437,8 @@ contains
           SAFE_DEALLOCATE_P(writ%gs_st%spin)
           SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         end if
+        call mpi_grp_init(writ%gs_st%mpi_grp, MPI_COMM_NULL)
+        call distributed_init(writ%gs_st%dist, writ%gs_st%nst, writ%gs_st%mpi_grp%comm)
 
         call states_elec_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
         
