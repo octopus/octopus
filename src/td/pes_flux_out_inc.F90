@@ -857,7 +857,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
   integer            :: ist, ik, isdim
   integer            :: ikp, iomk, ikp_save, iomk_save
   integer            :: ikk, ith, iph, iphi
-  FLOAT              :: phik, thetak, kact,kmin, Dthetak, Dphik
+  FLOAT              :: phik, thetak, kact,kmin, Dthetak, Dphik, Lphik
 
   integer            :: iunitone, iunittwo
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
@@ -892,6 +892,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
   Dthetak  = M_ZERO
   if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1))/(this%nstepsthetak)
   Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
+  Lphik = abs(this%phik_rng(2) - this%phik_rng(1))
 
   ! calculate spectra & total distribution
   do ik = kptst, kptend
@@ -911,7 +912,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
 
               if(ith == 0 .or. ith == this%nstepsthetak) then
 !                 weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
-                weight = (M_ONE - cos(Dthetak / M_TWO)) * M_TWO * M_PI
+                weight = (M_ONE - cos(Dthetak / M_TWO)) * Lphik
               else
 !                 weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
 !                   * M_TWO * M_PI / this%nstepsphik
@@ -947,7 +948,8 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
             end do
      
           case(2)
-            weight = M_TWO * M_PI / this%nstepsphik
+!             weight = M_TWO * M_PI / this%nstepsphik
+            weight = Lphik / this%nstepsphik
 
             ikp = 0
             do ikk = 1, this%nk
@@ -962,20 +964,24 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
             ikp  = 0
             do ikk = 1, this%nk
               do ith = 0, this%nstepsthetak
-                thetak = ith * M_PI / this%nstepsthetak 
+!                 thetak = ith * M_PI / this%nstepsthetak 
+                thetak = ith * Dthetak + this%thetak_rng(1)
      
                 if(ith == 0 .or. ith == this%nstepsthetak) then
-                  weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
+!                   weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
+                  weight = (M_ONE - cos(Dthetak / M_TWO)) * Lphik
                 else
-                  weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-                    * M_TWO * M_PI / this%nstepsphik
+!                   weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
+!                     * M_TWO * M_PI / this%nstepsphik
+                  weight = abs(cos(thetak - Dthetak / M_TWO) - cos(thetak + Dthetak / M_TWO)) * Dphik  
                 end if
      
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
                   spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                     abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
-                  if(ith == 0 .or. ith == this%nstepsthetak) exit
+!                   if(ith == 0 .or. ith == this%nstepsthetak) exit
+                  if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
                 end do
               end do
             end do
@@ -1033,7 +1039,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
             ! just repeat the result for output
             if(this%nstepsphik > 1 .and. iph == (this%nstepsphik - 1)) &
 !               write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
-              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, this%phik_rng(2), spctrout_sph(ikk, iomk_save)
+              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, Lphik, spctrout_sph(ikk, iomk_save)
 
             ! just repeat the result for output and exit
 !             if(ith == 0 .or. ith == this%nstepsthetak) then
@@ -1124,21 +1130,25 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
           kact = this%krad(ikk)
 
           do ith = 0, this%nstepsthetak
-            thetak = ith * M_PI / this%nstepsthetak 
+!             thetak = ith * M_PI / this%nstepsthetak
+            thetak = ith * Dthetak + this%thetak_rng(1) 
 
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
 
-              phik = iph * M_TWO * M_PI / this%nstepsphik
+!               phik = iph * M_TWO * M_PI / this%nstepsphik
+              phik = iph * Dphik + this%phik_rng(1)
               if(iph == 0) ikp_save = ikp
               write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
 
               ! just repeat the result for output
               if(iph == (this%nstepsphik - 1)) &
-                write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
+!                 write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
+                write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, Lphik, spctrout_cub(ikp_save)
 
               ! just repeat the result for output and exit
-              if(ith == 0 .or. ith == this%nstepsthetak) then
+!               if(ith == 0 .or. ith == this%nstepsthetak) then
+              if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) then  
                 do iphi = 1, this%nstepsphik
                   phik = iphi * M_TWO * M_PI / this%nstepsphik
                   write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
