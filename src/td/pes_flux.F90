@@ -474,28 +474,23 @@ contains
         bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_MOMENTUM) /= 0) then
         call messages_input_error('PES_Flux_Parallelization', "Cannot combine pf_surface and pf_momentum")
     end if  
-      
-    call messages_write('Info: PES_Flux_Parallelization = ')
-    call messages_info()  
+
+    ! Quite verbose pretty output
+    write(message(1),'(a)') 'Input: [PES_Flux_Parallelization = '
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_NONE) /= 0) then
-      call messages_write('      pf_none')
-      call messages_info()  
+      write(message(1),'(a,x,a)') trim(message(1)), 'pf_none '
     end if
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      call messages_write('      pf_time')
-      call messages_info()  
+      write(message(1),'(a,x,a)') trim(message(1)), 'pf_time '
     end if
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_MOMENTUM) /= 0) then
-      call messages_write('      pf_momentum')
-      call messages_info()  
+      write(message(1),'(a,x,a)') trim(message(1)), 'pf_momentum'
     end if
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
-      call messages_write('      pf_surface')
-      call messages_info()  
+      write(message(1),'(a,x,a)') trim(message(1)), 'pf_surface'
     end if
-      
-      
-!     call messages_print_var_option(stdout, 'PES_Flux_Parallelization', this%par_strategy)
+    write(message(1),'(2a)') trim(message(1)), ']'
+    call messages_info(1)  
 
     
 
