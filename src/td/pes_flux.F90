@@ -1,4 +1,4 @@
-!! Copyright (C) 2015 P. Wopperer
+!! Copyright (C) 2015 P. Wopperer and U. De Giovannini
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -154,11 +154,6 @@ module pes_flux_oct_m
     M_POLAR      = 1,     &
     M_CARTESIAN  = 2
 
-  integer, parameter ::   &
-    M_PAR_NONE      = 1,  &  
-    M_PAR_TIME      = 2,  &
-    M_PAR_MOMENTUM  = 3
-    
 
 contains
 
@@ -434,20 +429,89 @@ contains
       ! nstepsphir   = M_TWO * this%lmax + 1
       call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
     end if
+    
+
+    !%Variable PES_Flux_Parallelization
+    !%Type flag
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% The parallelization strategy to be used to calculate the PES spectrum 
+    !% using the resources available in the domain parallelization pool. 
+    !% This option is not available without domain parallelization.
+    !% Parallelization over k-points and states is always enabled when available.
+    !%Option pf_none bit(1)
+    !% No parallelization.
+    !%Option pf_time bit(2)
+    !% Parallelize time integration. This requires to store some quantities over a 
+    !% number of time steps equal to the number of cores available. 
+    !%Option pf_momentum bit(3)
+    !% Parallelize over the final momentum grid. This strategy has a much lower
+    !% memory footprint than the one above (time) but seems to provide a smaller
+    !% speedup.
+    !%Option pf_surface bit(4)
+    !% Parallelize over surface points.
+    !%
+    !%
+    !% Option pf_time and pf_surface can be combined: pf_time + pf_surface.
+    !%   
+    !%End
+
+    this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+    if(mesh%parallel_in_domains) then
+      if(this%surf_shape == M_SPHERICAL) then
+        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
+                          + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
+      else 
+        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME    
+        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+      end if
+    end if
+    call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy, this%par_strategy)
+    if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
+      call messages_input_error('PES_Flux_Parallelization')
+      
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 .and. &
+        bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_MOMENTUM) /= 0) then
+        call messages_input_error('PES_Flux_Parallelization', "Cannot combine pf_surface and pf_momentum")
+    end if  
+      
+    call messages_write('Info: PES_Flux_Parallelization = ')
+    call messages_info()  
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_NONE) /= 0) then
+      call messages_write('      pf_none')
+      call messages_info()  
+    end if
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
+      call messages_write('      pf_time')
+      call messages_info()  
+    end if
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_MOMENTUM) /= 0) then
+      call messages_write('      pf_momentum')
+      call messages_info()  
+    end if
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
+      call messages_write('      pf_surface')
+      call messages_info()  
+    end if
+      
+      
+!     call messages_print_var_option(stdout, 'PES_Flux_Parallelization', this%par_strategy)
+
+    
 
     ! distribute the surface points on nodes,
     ! since mesh domains may have different numbers of surface points.
-    call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
-    if(debug%info) then
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
+      call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
+      if(debug%info) then
 #if defined(HAVE_MPI)
-      call MPI_Barrier(mpi_world%comm, mpi_err)
-      write(*,*) &
-        'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
-      call MPI_Barrier(mpi_world%comm, mpi_err)
+        call MPI_Barrier(mpi_world%comm, mpi_err)
+        write(*,*) &
+          'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
+        call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
-    end if
-
-    if(this%surf_shape == M_PLANES) then
+      end if
+    else
       this%nsrfcpnts_start = 1
       this%nsrfcpnts_end   = this%nsrfcpnts
     end if
@@ -475,44 +539,12 @@ contains
         end do
       end if
 
+    else 
+      if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
     end if
 
     ! Generate the reciprocal space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
-
-
-
-
-
-    !%Variable PES_Flux_Parallelization
-    !%Type integer
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% The parallelization strategy to be used. This is parallelization layer 
-    !% specific to the flux module that uses the resources available in the 
-    !% domain parallelization pool. This means it is not available without 
-    !% domain parallelization.
-    !%Option pf_none 1
-    !% No parallelization.
-    !%Option pf_time 2
-    !% Parallelize time integration. This requires to store some quantities over a 
-    !% number of time steps equal to the number of cores available. 
-    !%Option pf_momentum 3
-    !% Parallelize over the final momentum grid. This strategy has a much lower
-    !% memory footprint than the one above (time) but seems to provide a smaller
-    !% speedup.
-    !%End
-
-    this%par_strategy = M_PAR_NONE
-    if(mesh%parallel_in_domains) this%par_strategy = M_PAR_TIME    
-    call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy,this%par_strategy)
-    if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
-      call messages_input_error('PES_Flux_Parallelization')
-    call messages_print_var_option(stdout, 'PES_Flux_Parallelization', this%par_strategy)
-
-
-
-
 
 
     ! -----------------------------------------------------------------
@@ -522,23 +554,25 @@ contains
     this%save_iter = save_iter
     this%itstep    = 0
 
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
-      this%tdsteps = save_iter
+!     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+!       this%tdsteps = save_iter
+!     else
+!       this%tdsteps = 1
+! #if defined(HAVE_MPI)
+!       if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
+! #endif
+!     end if
+
+    if (mesh%sb%dim == 1) then
+      this%tdsteps = save_iter 
     else
       this%tdsteps = 1
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
-#endif
     end if
-
-    !FIXME: CURRENT HACK 
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
-      call pes_flux_tabulate_cub_pw(this, mesh, st)
-      this%tdsteps = 1
+    
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
 #if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
 #endif
-
     end if
    
     ! -----------------------------------------------------------------
@@ -874,6 +908,7 @@ contains
       !%End
       this%nstepsphik = 90
       this%phik_rng(1:2) = (/M_ZERO, 2*M_PI/)
+      if (mdim == 1) this%phik_rng(1:2) = (/M_PI, M_ZERO/)
       if(parse_block(namespace, 'PES_Flux_PhiK', blk) == 0) then
         call parse_block_float(blk, 0, 0, this%phik_rng(1))
         call parse_block_float(blk, 0, 1, this%phik_rng(2))
@@ -1188,8 +1223,8 @@ contains
       else 
         !planar or cubic surface
         
-        call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-        this%parallel_in_momentum = .true.
+!         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
+!         this%parallel_in_momentum = .true.
 
 
         ! no distribution
@@ -1203,17 +1238,18 @@ contains
         
         this%kcoords_cub = M_ZERO
 
-!         select case(mdim)
-!         case(1)
-!           ikp = 0
-!           do ikk = -this%nk, this%nk
-!             if(ikk == 0) cycle
-!             ikp = ikp + 1
-!             kact = this%krad(ikk)
-!             this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
-!           end do
-!
-!         case default
+        if (mdim == 1) then
+
+          ikp = 0
+          do ikk = -this%nk, this%nk
+            if(ikk == 0) cycle
+            ikp = ikp + 1
+!             kact = ikk * this%dk 
+            kact = sign(1,ikk)*this%krad(abs(ikk))
+            this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
+          end do
+
+        else !mdim = 2,3 
           thetak = M_PI / M_TWO
           do ikpt = kptst, kptend+1
             if (ikpt == kptend+1) then
@@ -1224,20 +1260,20 @@ contains
             ikp = 0            
             do ikk = 1, this%nk
               do ith = 0, this%nstepsthetak
-                if(mdim == 3) thetak = ith * M_PI / this%nstepsthetak 
+                if(mdim == 3) thetak = ith * Dthetak + this%thetak_rng(1)
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
-                  phik = iph * M_TWO * M_PI / this%nstepsphik
+                  phik = iph * Dphik + this%phik_rng(1)
                   kact = this%krad(ikk)
                                 this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
-                  if(mdim >= 2) this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
+                                this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
                   if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
-                  if(mdim == 3 .and. (ith == 0 .or. ith == this%nstepsthetak)) exit
+                  if(mdim == 3 .and. (thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON)) exit
                 end do
               end do
             end do
           end do
-!         end select
+        end if
       end if
 
     case (M_CARTESIAN)
@@ -1444,11 +1480,6 @@ contains
 
     if(iter > 0) then
 
-      if (debug%info) then
-        call messages_write("Debug: Calculating pes_flux")
-        call messages_info()
-      end if
-      
       stst   = st%st_start
       stend  = st%st_end
       kptst  = st%d%kpt%start
@@ -1525,7 +1556,7 @@ contains
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
-          call pes_flux_integrate_cub_pw(this, mesh, st, dt)
+          call pes_flux_integrate_cub(this, mesh, st, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
         end if
@@ -1543,9 +1574,26 @@ contains
   end subroutine pes_flux_calc
 
 
-
   ! ---------------------------------------------------------
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(inout) :: st
+    FLOAT,               intent(in)    :: dt
+     
+    PUSH_SUB(pes_flux_integrate_cub)
+    
+    if (mesh%sb%dim == 1) then
+      call pes_flux_integrate_cub_direct(this, mesh, st, dt)
+    else 
+      call pes_flux_integrate_cub_pw(this, mesh, st, dt)
+    end if 
+  
+    POP_SUB(pes_flux_integrate_cub)
+  end subroutine pes_flux_integrate_cub  
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_integrate_cub_direct(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
@@ -1564,15 +1612,15 @@ contains
 
     type(profile_t), save :: prof_init
       
-    PUSH_SUB(pes_flux_integrate_cub)
+    PUSH_SUB(pes_flux_integrate_cub_direct)
 
     ! this routine is parallelized over surface points since the number of 
     ! states is in most cases less than the number of surface points
 
-    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB') 
+    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_DIRECT') 
 
     if (debug%info) then
-      call messages_write("Debug: calculating pes_flux surface integral")
+      call messages_write("Debug: calculating pes_flux cub surface integral (direct form)")
       call messages_info()
     end if
 
@@ -1703,8 +1751,8 @@ contains
 
     call profiling_out(prof_init)
 
-    POP_SUB(pes_flux_integrate_cub)
-  end subroutine pes_flux_integrate_cub
+    POP_SUB(pes_flux_integrate_cub_direct)
+  end subroutine pes_flux_integrate_cub_direct
 
 
   ! ---------------------------------------------------------
@@ -1871,7 +1919,7 @@ print *, ig, ng
     call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_PW') 
 
     if (debug%info) then
-      call messages_write("Debug: calculating pes_flux surface integral (pw expression)")
+      call messages_write("Debug: calculating pes_flux cub surface integral (pw expression)")
       call messages_info()
     end if
 
@@ -2086,6 +2134,11 @@ print *, ig, ng
     PUSH_SUB(pes_flux_integrate_sph)
 
     ! this routine is parallelized over time steps
+
+    if (debug%info) then
+      call messages_write("Debug: calculating pes_flux sph surface integral")
+      call messages_info()
+    end if
 
     tdstep_on_node = 1
 #if defined(HAVE_MPI)
